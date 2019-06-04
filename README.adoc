@@ -1,0 +1,8 @@
+= toolchain-operator
+
+This is the CodeReady Toolchain Operator repository
+
+== Build
+
+This repository uses https://github.com/golang/go/wiki/Modules[Go modules]. You may need to `export GO111MODULE=on` to turn modules support "on".
+
