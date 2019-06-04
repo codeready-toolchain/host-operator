@@ -1,6 +1,6 @@
-= toolchain-operator
+= Host Operator
 
-This is the CodeReady Toolchain Operator repository
+This is the CodeReady Toolchain Host Operator repository. It contains the OpenShift Operator that is deployed on the "host" cluster in the SaaS.
 
 == Build
 
