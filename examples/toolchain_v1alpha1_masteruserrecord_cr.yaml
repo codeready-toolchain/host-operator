@@ -1,0 +1,24 @@
+apiVersion: toolchain.dev.openshift.com/v1alpha1
+kind: MasterUserRecord
+metadata:
+  name: johnsmith #username
+spec:
+  state: approved
+  userAccounts:
+    - targetCluster: east-2a
+      resourceVersion: 112233
+      spec:
+        nsLimit: admin
+        nsTemplateSet:
+          tierName: basic
+          namespaces:
+            - type: ide
+              revision: abcdef
+            - type: cicd
+              revision: 1d2f3q
+            - type: stage
+              revision: a34r57
+            - type: default
+              revison: ra24qw
+status:
+  status: provisioning
