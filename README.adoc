@@ -4,5 +4,7 @@ This is the CodeReady Toolchain Host Operator repository. It contains the OpenSh
 
 == Build
 
+Requires Go version 1.12.6 - download for your development environment https://golang.org/dl/[here].
+
 This repository uses https://github.com/golang/go/wiki/Modules[Go modules]. You may need to `export GO111MODULE=on` to turn modules support "on".
 
