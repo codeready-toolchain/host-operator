@@ -93,12 +93,31 @@ spec:
           type: object
         status:
           properties:
-            error:
-              description: The error message in case of failed status
-              type: string
             status:
               description: 'Observed status. For example: provisioning|provisioned'
               type: string
+            userAccounts:
+              description: The status of user accounts in the member clusters which
+                belong to this MasterUserRecord
+              items:
+                properties:
+                  error:
+                    description: The error message in case of failed status
+                    type: string
+                  resourceVersion:
+                    description: The resource version of the corresponding UserAccount
+                    type: string
+                  status:
+                    description: 'Observed status. For example: provisioning|provisioned'
+                    type: string
+                  targetCluster:
+                    description: The cluster in which the user exists
+                    type: string
+                required:
+                - targetCluster
+                - resourceVersion
+                type: object
+              type: array
           type: object
   version: v1alpha1
   versions:
