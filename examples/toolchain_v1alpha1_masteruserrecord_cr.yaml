@@ -6,7 +6,7 @@ spec:
   state: approved
   userAccounts:
     - targetCluster: east-2a
-      resourceVersion: 112233
+      resourceVersion: '135540409'
       spec:
         nsLimit: admin
         nsTemplateSet:
@@ -21,4 +21,7 @@ spec:
             - type: default
               revison: ra24qw
 status:
+  userAccounts:
+    - targetCluster: east-2a
+      resourceVersion: '135540409'
   status: provisioning
