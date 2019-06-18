@@ -19,7 +19,7 @@ spec:
             - type: stage
               revision: a34r57
             - type: default
-              revison: ra24qw
+              revision: ra24qw
 status:
   userAccounts:
     - targetCluster: east-2a
