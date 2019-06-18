@@ -17,6 +17,6 @@ spec:
       template: >
         {"apiVersion":"v1","kind":"Template","metadata":{"name":"stage-template"},"objects":{"apiVersion":"v1","kind":"ProjectRequest","metadata":{"name":"$USERNAME-stage"}}}
     - type: default
-      revison: ra24qw
+      revision: ra24qw
       template: >
         {"apiVersion":"v1","kind":"Template","metadata":{"name":"default-template"},"objects":{"apiVersion":"v1","kind":"ProjectRequest","metadata":{"name":"$USERNAME"}}}
