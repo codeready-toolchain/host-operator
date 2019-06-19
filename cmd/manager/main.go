@@ -103,8 +103,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	stopChannel := signals.SetupSignalHandler()
+
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := controller.AddToManager(mgr, stopChannel); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
@@ -118,7 +120,7 @@ func main() {
 	log.Info("Starting the Cmd.")
 
 	// Start the Cmd
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(stopChannel); err != nil {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}

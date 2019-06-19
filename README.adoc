@@ -8,3 +8,44 @@ Requires Go version 1.12.6 - download for your development environment https://g
 
 This repository uses https://github.com/golang/go/wiki/Modules[Go modules]. You may need to `export GO111MODULE=on` to turn modules support "on".
 
+== Development
+
+To run this operator locally you need to have at least one Minishift profile started:
+
+```bash
+$ minishift start --profile host
+```
+
+Then you can run the operator locally with the help of `operator-sdk`:
+
+```bash
+$ make up-local
+```
+
+That Makefile target takes care of additional several steps which can be executed separately:
+
+* logging as system:admin user: `$ make login-as-admin`
+* creating local test namespace: `$ make create-namespace`
+* deploy CRDs: `$ make deploy-crd`
+* building the project: `$ make build`
+* deploying ClusterRole/ClusterRoleBinding and creating ServiceAccount: `$ make deploy-rbac`
+
+There are a few more targets that you can find useful:
+
+* to login as system:admin user and enter the local test namespace: `$ make use-namespace`
+* to remove the local test namespace: `$ make clean-namespace`
+* to remove & create the local test namespace, and create ClusterRole/ClusterRoleBinding and ServiceAccount inside of the namespace: `$ make reset-namespace`
+
+
+=== Adding cluster to SaaS
+
+The CodeReady Toolchain architecture contains two types of clusters `host` and `member`.
+To connect these two clusters together it is necessary to run a script link:https://github.com/codeready-toolchain/toolchain/scripts/add-cluster.sh[add-cluster.sh] that is part of the link:https://github.com/codeready-toolchain/toolchain[toolchain] repository.
+For more detailed information about the script see the link:https://github.com/codeready-toolchain/toolchain#add-clustersh[README "Script add-cluster.sh" chapter].
+
+There are two Makefile targets available in this repository that execute the script:
+
+*  `$ make add-member-to-host` that executes `../toolchain/scripts/add-cluster.sh member member-cluster`
+*  `$ make add-host-to-member` that executes `../toolchain/scripts/add-cluster.sh host host-cluster`
+
+NOTE: In order to run them, you need to have the link:https://github.com/codeready-toolchain/toolchain[toolchain] repository cloned to the same parent directory as this repository exists in.
