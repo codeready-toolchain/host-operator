@@ -39,3 +39,10 @@ rules:
   - host-operator
   verbs:
   - "update"
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - masteruserrecords
+  - nstemplatetiers
+  verbs:
+  - '*'
