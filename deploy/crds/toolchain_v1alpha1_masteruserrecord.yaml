@@ -78,7 +78,13 @@ spec:
                         - tierName
                         - namespaces
                         type: object
+                      userID:
+                        description: UserID is the user ID from RHD Identity Provider
+                          token (“sub” claim) Is to be used to create Identity and
+                          UserIdentityMapping resources
+                        type: string
                     required:
+                    - userID
                     - nsLimit
                     - nsTemplateSet
                     type: object
@@ -91,6 +97,12 @@ spec:
                 - spec
                 type: object
               type: array
+            userID:
+              description: UserID is the user ID from RHD Identity Provider token
+                (“sub” claim)
+              type: string
+          required:
+          - userID
           type: object
         status:
           properties:
