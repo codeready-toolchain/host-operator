@@ -4,6 +4,7 @@ metadata:
   name: johnsmith #username
 spec:
   state: approved
+  userID: 1a03ecac-7c0b-44fc-b66d-12dd7fb21c40
   userAccounts:
     - targetCluster: east-2a
       resourceVersion: '135540409'
