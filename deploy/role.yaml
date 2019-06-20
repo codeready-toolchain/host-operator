@@ -1,4 +1,4 @@
-kind: Role
+kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: host-operator
@@ -39,6 +39,18 @@ rules:
   - host-operator
   verbs:
   - "update"
+- apiGroups:
+  - core.kubefed.k8s.io
+  resources:
+  - KubeFedCluster
+  verbs:
+  - "*"
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - list
 - apiGroups:
   - toolchain.dev.openshift.com
   resources:
