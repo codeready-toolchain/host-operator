@@ -103,10 +103,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	stopChannel := signals.SetupSignalHandler()
-
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr, stopChannel); err != nil {
+	if err := controller.AddToManager(mgr); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
@@ -115,6 +113,14 @@ func main() {
 	_, err = metrics.ExposeMetricsPort(ctx, metricsPort)
 	if err != nil {
 		log.Info(err.Error())
+	}
+
+	stopChannel := signals.SetupSignalHandler()
+
+	log.Info("Starting KubeFedCluster controllers.")
+	if err = controller.StartKubeFedClusterControllers(mgr, stopChannel); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
 	}
 
 	log.Info("Starting the Cmd.")
