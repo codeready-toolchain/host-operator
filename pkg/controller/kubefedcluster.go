@@ -2,13 +2,10 @@ package controller
 
 import (
 	"fmt"
-	"github.com/codeready-toolchain/host-operator/pkg/cluster"
-	"k8s.io/client-go/tools/cache"
+	"github.com/codeready-toolchain/toolchain/pkg/controller"
 	"k8s.io/klog"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	"sigs.k8s.io/kubefed/pkg/controller/kubefedcluster"
 	"sigs.k8s.io/kubefed/pkg/controller/util"
 )
@@ -19,35 +16,9 @@ func StartKubeFedClusterControllers(mgr manager.Manager, stopChan <-chan struct{
 	if err := startHealthCheckController(mgr, stopChan); err != nil {
 		return err
 	}
-	if err := startCachingController(mgr, stopChan); err != nil {
+	if err := controller.StartCachingController(mgr, stopChan); err != nil {
 		return err
 	}
-	return nil
-}
-
-func startCachingController(mgr manager.Manager, stopChan <-chan struct{}) error {
-	cntrlName := "controller_kubefedcluster_with_cache"
-	clusterCacheService := cluster.KubeFedClusterService{
-		LocalConfig: mgr.GetConfig(),
-		Log:         logf.Log.WithName(cntrlName),
-	}
-
-	_, clusterController, err := util.NewGenericInformerWithEventHandler(
-		mgr.GetConfig(),
-		"",
-		&v1beta1.KubeFedCluster{},
-		util.NoResyncPeriod,
-		&cache.ResourceEventHandlerFuncs{
-			DeleteFunc: clusterCacheService.DeleteKubeFedCluster,
-			AddFunc:    clusterCacheService.AddKubeFedCluster,
-			UpdateFunc: clusterCacheService.UpdateKubeFedCluster,
-		},
-	)
-	if err != nil {
-		return err
-	}
-	logf.Log.Info("Starting Controller", "controller", cntrlName)
-	go clusterController.Run(stopChan)
 	return nil
 }
 

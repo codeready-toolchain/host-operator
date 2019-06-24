@@ -90,7 +90,6 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 				RequeueAfter: syncStatus.RequeueAfter},
 				syncStatus.Err
 		}
-		continue
 	}
 
 	return reconcile.Result{}, nil
