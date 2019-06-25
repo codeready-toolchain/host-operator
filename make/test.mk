@@ -1,26 +1,22 @@
-ifndef TEST_MK
-TEST_MK:=# Prevent repeated "-include".
-UNAME_S := $(shell uname -s)
-
-include ./make/verbose.mk
-include ./make/out.mk
-
 .PHONY: test
-## Runs Go package tests and stops when the first one fails
-test:
-	$(Q)go test -vet off ${V_FLAG} $(shell go list ./... | grep -v /test/e2e) -failfast
-
-.PHONY: test-coverage
-## Runs Go package tests and produces coverage information
-test-coverage: ./out/cover.out
-
-.PHONY: test-coverage-html
-## Gather (if needed) coverage information and show it in your browser
-test-coverage-html: ./out/cover.out
-	$(Q)go tool cover -html=./out/cover.out
-
-./out/cover.out:
-	$(Q)go test ${V_FLAG} -race $(shell go list ./... | grep -v /test/e2e) -failfast -coverprofile=cover.out -covermode=atomic -outputdir=./out
-
-
+## runs the tests *with* coverage
+test: 
+	@echo "running the tests with coverage..."
+	-mkdir -p $(COV_DIR)
+	-rm $(COV_DIR)/coverage.txt
+	$(Q)go test -vet off ${V_FLAG} $(shell go list ./... | grep -v /test/e2e) -coverprofile=$(COV_DIR)/profile.out -covermode=atomic ./...
+ifeq (,$(wildcard $(COV_DIR)/profile.out))
+	cat $(COV_DIR)/profile.out >> $(COV_DIR)/coverage.txt
+	rm $(COV_DIR)/profile.out
 endif
+	# Upload coverage to codecov.io
+	bash <(curl -s https://codecov.io/bash) -f $(COV_DIR)/coverage.txt -t e0747034-8ed2-4165-8d0b-3015d94307f9
+
+# Output directory for coverage information
+COV_DIR = $(OUT_DIR)/coverage
+
+.PHONY: test-without-coverage
+## runs the tests without coverage and excluding E2E tests
+test-without-coverage:
+	@echo "running the tests without coverage and excluding E2E tests..."
+	$(Q)go test ${V_FLAG} -race $(shell go list ./... | grep -v /test/e2e) -failfast

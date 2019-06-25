@@ -1,6 +1,3 @@
-ifndef HELP_MK
-HELP_MK:=# Prevent repeated "-include".
-
 .PHONY: help
 # Based on https://gist.github.com/rcmachado/af3db315e31383502660
 ## Display this help text
@@ -25,5 +22,3 @@ help:/
 	    lastLine = $$0 \
           } \
         }' $(MAKEFILE_LIST)
-
-endif

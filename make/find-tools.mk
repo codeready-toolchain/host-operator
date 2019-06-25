@@ -1,6 +1,3 @@
-ifndef FIND_TOOLS_MK
-FIND_TOOLS_MK:=# Prevent repeated "-include".
-
 # Check all required tools are accessible
 REQUIRED_EXECUTABLES = go gofmt git oc operator-sdk sed yamllint find grep python3
 # If we're running e.g. "make docker-build", nothing but docker is required
@@ -18,7 +15,5 @@ endif
 K := $(foreach exec,$(REQUIRED_EXECUTABLES),\
         $(if $(shell which $(exec) 2>/dev/null),some string,$(error "ERROR: No "$(exec)" binary found in in PATH!")))
 endif
-endif
-
 endif
 

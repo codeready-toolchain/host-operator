@@ -1,5 +1,9 @@
 = Host Operator
 
+image:https://goreportcard.com/badge/github.com/codeready-toolchain/host-operator[Go Report Card, link="https://goreportcard.com/report/github.com/codeready-toolchain/host-operator"]
+image:https://godoc.org/github.com/codeready-toolchain/host-operator?status.png[GoDoc,link="https://godoc.org/github.com/codeready-toolchain/host-operator"]
+image:https://codecov.io/gh/codeready-toolchain/host-operator/branch/master/graph/badge.svg[Codecov.io,link="https://codecov.io/gh/codeready-toolchain/host-operator"]
+
 This is the CodeReady Toolchain Host Operator repository. It contains the OpenShift Operator that is deployed on the "host" cluster in the SaaS.
 
 == Build
