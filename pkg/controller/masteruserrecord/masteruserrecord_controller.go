@@ -2,7 +2,10 @@ package masteruserrecord
 
 import (
 	"context"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +49,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// TODO(user): Modify this to be the types you create that are owned by the primary resource
+	// Watch for changes to secondary resource Pods and requeue the owner MasterUserRecord
+	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &toolchainv1alpha1.MasterUserRecord{},
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -68,9 +81,9 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling MasterUserRecord")
 
-	// Fetch the MasterUserRecord userRecord
-	userRecord := &toolchainv1alpha1.MasterUserRecord{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, userRecord)
+	// Fetch the MasterUserRecord instance
+	instance := &toolchainv1alpha1.MasterUserRecord{}
+	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -82,15 +95,6 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
-	for _, account := range userRecord.Spec.UserAccounts {
-		syncStatus := syncWithUserAccount(account, userRecord)
-		if syncStatus.Requeue {
-			return reconcile.Result{
-				Requeue:      syncStatus.Requeue,
-				RequeueAfter: syncStatus.RequeueAfter},
-				syncStatus.Err
-		}
-	}
-
+	// Do nothing for now
 	return reconcile.Result{}, nil
 }

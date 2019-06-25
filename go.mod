@@ -3,70 +3,39 @@ module github.com/codeready-toolchain/host-operator
 require (
 	cloud.google.com/go v0.40.0 // indirect
 	contrib.go.opencensus.io/exporter/ocagent v0.4.9 // indirect
-	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Azure/go-autorest v11.5.2+incompatible // indirect
+	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20190620055220-0cc061e96781
-	github.com/codeready-toolchain/toolchain v0.0.0-20190620195250-dcc4d5fae6b6 // indirect
-	github.com/coreos/bbolt v1.3.3 // indirect
-	github.com/coreos/etcd v3.3.13+incompatible // indirect
-	github.com/coreos/go-oidc v0.0.0-20180117170138-065b426bd416 // indirect
-	github.com/coreos/go-semver v0.3.0 // indirect
-	github.com/coreos/go-systemd v0.0.0-20190620071333-e64a0ec8b42a // indirect
+	github.com/codeready-toolchain/toolchain v0.0.0-20190625083522-155ce61df4d9
 	github.com/coreos/prometheus-operator v0.26.0 // indirect
-	github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0 // indirect
-	github.com/go-logr/logr v0.1.0
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
+	github.com/go-logr/zapr v0.1.1 // indirect
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/gobuffalo/envy v1.7.0 // indirect
-	github.com/golang/mock v1.3.1 // indirect
-	github.com/google/pprof v0.0.0-20190515194954-54271f7e092f // indirect
-	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20190318015731-ff9851476e98 // indirect
+	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.9.2 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
-	github.com/magiconair/properties v1.8.1 // indirect
+	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/mailru/easyjson v0.0.0-20190620125010-da37f6c1e481 // indirect
-	github.com/natefinch/lumberjack v2.0.0+incompatible // indirect
 	github.com/operator-framework/operator-sdk v0.8.2-0.20190522220659-031d71ef8154
-	github.com/pelletier/go-toml v1.4.0 // indirect
-	github.com/pkg/errors v0.8.1
-	github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021 // indirect
 	github.com/prometheus/common v0.6.0 // indirect
-	github.com/rogpeppe/fastuuid v1.1.0 // indirect
-	github.com/russross/blackfriday v2.0.0+incompatible // indirect
-	github.com/sirupsen/logrus v1.4.2 // indirect
-	github.com/spf13/jwalterweatherman v1.1.0 // indirect
+	github.com/rogpeppe/go-internal v1.3.0 // indirect
 	github.com/spf13/pflag v1.0.3
-	github.com/spf13/viper v1.4.0 // indirect
-	github.com/stretchr/testify v1.3.0
-	github.com/ugorji/go v1.1.5-pre // indirect
-	go.etcd.io/bbolt v1.3.3 // indirect
 	go.opencensus.io v0.22.0 // indirect
-	golang.org/x/exp v0.0.0-20190510132918-efd6b22b2522 // indirect
-	golang.org/x/image v0.0.0-20190618124811-92942e4437e2 // indirect
-	golang.org/x/mobile v0.0.0-20190607214518-6fa95d984e88 // indirect
-	golang.org/x/mod v0.1.0 // indirect
 	golang.org/x/tools v0.0.0-20190620191750-1fa568393b23 // indirect
 	google.golang.org/genproto v0.0.0-20190620144150-6af8c5fc6601 // indirect
 	google.golang.org/grpc v1.21.1 // indirect
-	gopkg.in/h2non/gock.v1 v1.0.14
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
-	gopkg.in/square/go-jose.v2 v2.2.2 // indirect
-	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0 // indirect
-	gotest.tools v2.2.0+incompatible // indirect
-	honnef.co/go/tools v0.0.0-20190614002413-cb51c254f01b // indirect
 	k8s.io/api v0.0.0-20190620073856-dcce3486da33
 	k8s.io/apimachinery v0.0.0-20190620073744-d16981aedf33
 	k8s.io/apiserver v0.0.0-20190111033246-d50e9ac5404f // indirect
 	k8s.io/client-go v2.0.0-alpha.0.0.20181126152608-d082d5923d3c+incompatible
 	k8s.io/code-generator v0.0.0-20190620073620-d55040311883
-	k8s.io/component-base v0.0.0-20190620074451-e5083e713460 // indirect
 	k8s.io/gengo v0.0.0-20190327210449-e17681d19d3a
 	k8s.io/klog v0.3.3
 	k8s.io/kube-openapi v0.0.0-20190603182131-db7b694dc208
 	sigs.k8s.io/controller-runtime v0.1.12
 	sigs.k8s.io/controller-tools v0.1.11
 	sigs.k8s.io/kubefed v0.1.0-rc2
-	sigs.k8s.io/structured-merge-diff v0.0.0-20190302045857-e85c7b244fd2 // indirect
 )
 
 // Pinned to kubernetes-1.13.1
