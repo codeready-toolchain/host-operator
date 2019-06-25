@@ -1,7 +1,3 @@
-ifndef FORMAT_MK
-FORMAT_MK:=# Prevent repeated "-include".
-
-include ./make/out.mk
 
 GOFORMAT_FILES := $(shell find  . -name '*.go')
 
@@ -20,5 +16,3 @@ check-go-format:
 ## Formats any go file that does not match formatting defined by gofmt
 format-go-code:
 	$(Q)gofmt -s -l -w ${GOFORMAT_FILES}
-
-endif

@@ -1,6 +1,3 @@
-ifndef VERBOSE_MK
-VERBOSE_MK:=# Prevent repeated "-include".
-
 # When you run make VERBOSE=1 (the default), executed commands will be printed
 # before executed. If you run make VERBOSE=2 verbose flags are turned on and
 # quiet flags are turned off for various commands. Use V_FLAG in places where
@@ -24,6 +21,4 @@ ifeq ($(VERBOSE),2)
        S_FLAG =
        V_FLAG = -v
        X_FLAG = -x
-endif
-
 endif
