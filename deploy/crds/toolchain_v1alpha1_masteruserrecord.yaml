@@ -38,9 +38,6 @@ spec:
                 belong to this MasterUserRecord
               items:
                 properties:
-                  resourceVersion:
-                    description: The resource version of the corresponding UserAccount
-                    type: string
                   spec:
                     description: The spec of the corresponding UserAccount
                     properties:
@@ -88,12 +85,17 @@ spec:
                     - nsLimit
                     - nsTemplateSet
                     type: object
+                  syncIndex:
+                    description: SyncIndex is to be updated by UserAccount Controller
+                      when the member needs to trigger MasterUserRecord <-> UserAccount(s)
+                      synchronization
+                    type: string
                   targetCluster:
                     description: The cluster in which the user exists
                     type: string
                 required:
                 - targetCluster
-                - resourceVersion
+                - syncIndex
                 - spec
                 type: object
               type: array
