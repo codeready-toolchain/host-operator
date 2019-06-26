@@ -1,9 +1,3 @@
-ifndef DEV_MK
-DEV_MK:=# Prevent repeated "-include".
-
-include ./make/verbose.mk
-include ./make/git.mk
-
 DOCKER_REPO?=quay.io/codeready-toolchain
 IMAGE_NAME?=host-operator
 
@@ -74,5 +68,3 @@ add-member-to-host:
 ## Run script add-cluster.sh host host-cluster
 add-host-to-member:
 	@${ADD_CLUSTER_SCRIPT_PATH} host host-cluster
-
-endif
