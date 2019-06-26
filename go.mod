@@ -6,7 +6,7 @@ require (
 	github.com/Azure/go-autorest v11.5.2+incompatible // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20190620055220-0cc061e96781
-	github.com/codeready-toolchain/toolchain v0.0.0-20190625083522-155ce61df4d9
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20190626080028-fea973f4a1e4
 	github.com/coreos/prometheus-operator v0.26.0 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/go-logr/zapr v0.1.1 // indirect
