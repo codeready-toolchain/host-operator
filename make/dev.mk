@@ -7,7 +7,7 @@ TAG?=$(GIT_COMMIT_ID_SHORT)-$(TIMESTAMP)
 # to watch all namespaces, keep namespace empty
 APP_NAMESPACE ?= ""
 LOCAL_TEST_NAMESPACE ?= "toolchain-host-operator"
-ADD_CLUSTER_SCRIPT_PATH?=../toolchain/scripts/add-cluster.sh
+ADD_CLUSTER_SCRIPT_PATH?=../toolchain-common/scripts/add-cluster.sh
 
 .PHONY: up-local
 ## Run Operator locally
