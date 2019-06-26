@@ -44,12 +44,12 @@ There are a few more targets that you can find useful:
 === Adding cluster to SaaS
 
 The CodeReady Toolchain architecture contains two types of clusters `host` and `member`.
-To connect these two clusters together it is necessary to run a script link:https://github.com/codeready-toolchain/toolchain/scripts/add-cluster.sh[add-cluster.sh] that is part of the link:https://github.com/codeready-toolchain/toolchain[toolchain] repository.
-For more detailed information about the script see the link:https://github.com/codeready-toolchain/toolchain#add-clustersh[README "Script add-cluster.sh" chapter].
+To connect these two clusters together it is necessary to run a script link:https://raw.githubusercontent.com/codeready-toolchain/toolchain-common/master/scripts/add-cluster.sh[add-cluster.sh] that is part of the link:https://github.com/codeready-toolchain/toolchain-common[toolchain-common] repository.
+For more detailed information about the script see the link:https://github.com/codeready-toolchain/toolchain-common#add-clustersh[README "Script add-cluster.sh" chapter].
 
 There are two Makefile targets available in this repository that execute the script:
 
-*  `$ make add-member-to-host` that executes `../toolchain/scripts/add-cluster.sh member member-cluster`
-*  `$ make add-host-to-member` that executes `../toolchain/scripts/add-cluster.sh host host-cluster`
+*  `$ make add-member-to-host` that executes `../toolchain-common/scripts/add-cluster.sh member member-cluster`
+*  `$ make add-host-to-member` that executes `../toolchain-common/scripts/add-cluster.sh host host-cluster`
 
-NOTE: In order to run them, you need to have the link:https://github.com/codeready-toolchain/toolchain[toolchain] repository cloned to the same parent directory as this repository exists in.
+NOTE: In order to run them, you need to have the link:https://github.com/codeready-toolchain/toolchain-common[toolchain-common] repository cloned to the same parent directory as this repository exists in.
