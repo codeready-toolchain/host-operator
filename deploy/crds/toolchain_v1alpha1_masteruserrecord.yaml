@@ -87,7 +87,7 @@ spec:
                     type: object
                   syncIndex:
                     description: SyncIndex is to be updated by UserAccount Controller
-                      when the member needs to trigger MasterUserRecord <-> UserAccount(s)
+                      when the member needs to trigger MasterUserRecord <-> UserAccount
                       synchronization
                     type: string
                   targetCluster:
@@ -119,18 +119,20 @@ spec:
                   error:
                     description: The error message in case of failed status
                     type: string
-                  resourceVersion:
-                    description: The resource version of the corresponding UserAccount
-                    type: string
                   status:
                     description: 'Observed status. For example: provisioning|provisioned'
+                    type: string
+                  syncIndex:
+                    description: SyncIndex is used for checking if there is needed
+                      some MasterUserRecord <-> UserAccount synchronization for this
+                      specific UserAccount in the specific member cluster
                     type: string
                   targetCluster:
                     description: The cluster in which the user exists
                     type: string
                 required:
                 - targetCluster
-                - resourceVersion
+                - syncIndex
                 type: object
               type: array
           type: object
