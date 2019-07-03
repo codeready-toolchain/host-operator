@@ -33,6 +33,8 @@ github.com/census-instrumentation/opencensus-proto v0.2.0/go.mod h1:f6KPmirojxKA
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/codeready-toolchain/api v0.0.0-20190620055220-0cc061e96781 h1:PHcQvMxjFyY5DSRY4BlMVIJ4jZu2VZBX6enBc/jIssY=
 github.com/codeready-toolchain/api v0.0.0-20190620055220-0cc061e96781/go.mod h1:19DWz5JtVlZTj2FpVZMb/B9BehujyM2G4kfWDu3BtGI=
+github.com/codeready-toolchain/api v0.0.0-20190627153646-25d21e70de5d h1:hV+TNcbizmv1OA2wIeYpIJG3Vglp7LfCRt/ujxIPTE8=
+github.com/codeready-toolchain/api v0.0.0-20190627153646-25d21e70de5d/go.mod h1:19DWz5JtVlZTj2FpVZMb/B9BehujyM2G4kfWDu3BtGI=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190626080028-fea973f4a1e4 h1:jjrX0mqG2gYlZJzwCI4lagz8aS9uGZvaXadOS92DJwg=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190626080028-fea973f4a1e4/go.mod h1:lrW2V5UFR39oJLeIlMzeZ359KzNZ8a8KeMy4q6cHdow=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
