@@ -139,7 +139,11 @@ spec:
                   status:
                     description: Status of the condition, one of True, False, Unknown.
                     type: string
+                  type:
+                    description: Type of condition
+                    type: string
                 required:
+                - type
                 - status
                 type: object
               type: array
@@ -171,7 +175,11 @@ spec:
                           description: Status of the condition, one of True, False,
                             Unknown.
                           type: string
+                        type:
+                          description: Type of condition
+                          type: string
                       required:
+                      - type
                       - status
                       type: object
                     type: array

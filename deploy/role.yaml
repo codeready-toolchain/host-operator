@@ -56,5 +56,6 @@ rules:
   resources:
   - masteruserrecords
   - nstemplatetiers
+  - userprovisionrequests
   verbs:
   - '*'
