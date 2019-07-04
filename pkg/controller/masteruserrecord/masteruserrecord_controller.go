@@ -2,8 +2,10 @@ package masteruserrecord
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/types"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/config"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -83,7 +85,7 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 
 	// Fetch the MasterUserRecord instance
 	instance := &toolchainv1alpha1.MasterUserRecord{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: config.GetOperatorNamespace(), Name: request.Name}, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -94,6 +96,8 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+
+	instance.Spec.State = ""
 
 	// Do nothing for now
 	return reconcile.Result{}, nil
