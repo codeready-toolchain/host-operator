@@ -45,7 +45,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 		s.checkStatus("provisioning", "provisioned")
 		s.checkStatus("updating", "provisioned")
 
-		return s.hostClient.Update(context.TODO(), s.record)
+		return s.hostClient.Satus().Update(context.TODO(), s.record)
 	}
 	return nil
 }
