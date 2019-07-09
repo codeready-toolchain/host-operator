@@ -33,7 +33,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileUserSignup{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileUserSignup{client: mgr.GetClient(), scheme: mgr.GetScheme(), clientset: kubernetes.NewForConfigOrDie(mgr.GetConfig())}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -50,7 +50,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner UserSignup
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
@@ -63,7 +62,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileUserSignup implements reconcile.Reconciler
 var _ reconcile.Reconciler = &ReconcileUserSignup{}
 
 // ReconcileUserSignup reconciles a UserSignup object
@@ -77,8 +75,6 @@ type ReconcileUserSignup struct {
 
 // Reconcile reads that state of the cluster for a UserSignup object and makes changes based on the state read
 // and what is in the UserSignup.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -100,7 +96,41 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
+	pendingApproval := false
+
+	for _, condition := range(instance.Status.Conditions) {
+		if condition.Type == toolchainv1alpha1.UserSignupPendingApproval && condition.Status == corev1.ConditionTrue {
+			pendingApproval = true
+		}
+	}
+
+	if pendingApproval {
+		approved := instance.Spec.Approved
+
+		if !approved {
+			autoApprovalPolicy, err := r.ReadAutoApproveConfig()
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			approved = autoApprovalPolicy == config.UserApprovalPolicyAutomatic
+		}
+
+		if approved {
+			// Provision the MasterUserRecord
+
+			// Update the conditions: set PendingApproval to false, Provisioning to true
+
+		}
+	}
+
+
+	// Do nothing for now
 	return reconcile.Result{}, nil
 }
+
+// ReadAutoApproveConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
+// the config map value for the user approval policy (which will either be "manual" or "automatic")
+func (r *ReconcileUserSignup) ReadAutoApproveConfig() (string, error) {
 
 

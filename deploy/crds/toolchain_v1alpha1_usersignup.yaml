@@ -51,7 +51,6 @@ spec:
             conditions:
               description: 'Conditions is an array of current UserSignup conditions
                 Supported condition types: PendingApproval, Provisioning, Complete
-                +patchMergeKey=type +patchStrategy=merge'
               items:
                 properties:
                   lastTransitionTime:

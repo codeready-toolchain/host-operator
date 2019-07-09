@@ -1,5 +1,5 @@
 apiVersion: toolchain.dev.openshift.com/v1alpha1
-kind: UserProvisionRequest
+kind: UserSignup
 metadata:
   name: johnsmith #username
 spec:
