@@ -97,8 +97,6 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
-	instance.Spec.State = ""
-
 	// Do nothing for now
 	return reconcile.Result{}, nil
 }
