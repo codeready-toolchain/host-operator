@@ -2,8 +2,10 @@ package usersignup
 
 import (
 	"context"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/config"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -70,6 +72,7 @@ type ReconcileUserSignup struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	clientset kubernetes.Interface
 }
 
 // Reconcile reads that state of the cluster for a UserSignup object and makes changes based on the state read
@@ -99,3 +102,5 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 	return reconcile.Result{}, nil
 }
+
+
