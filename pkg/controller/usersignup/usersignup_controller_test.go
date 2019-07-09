@@ -1,4 +1,4 @@
-package userprovisionrequest
+package usersignup
 
 import (
 	"github.com/codeready-toolchain/host-operator/pkg/config"
@@ -36,13 +36,13 @@ func TestReadAutoApproveConfig(t *testing.T) {
 	require.Equal(t, config.UserApprovalPolicyAutomatic, policy)
 }
 
-func prepareReconcile(t *testing.T, username string, initObjs ...runtime.Object) (*ReconcileUserProvisionRequest, reconcile.Request) {
+func prepareReconcile(t *testing.T, username string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	client := fake.NewFakeClientWithScheme(s, initObjs...)
 
-	r := &ReconcileUserProvisionRequest{
+	r := &ReconcileUserSignup{
 		client: client,
 		scheme: s,
 		clientset: fakeclientset.NewSimpleClientset(),
