@@ -22,7 +22,7 @@ COV_DIR = $(OUT_DIR)/coverage
 
 .PHONY: test-with-coverage
 ## runs the tests with coverage
-test-with-coverage:q
+test-with-coverage:
 	@echo "running the tests with coverage..."
 	@-mkdir -p $(COV_DIR)
 	@-rm $(COV_DIR)/coverage.txt
