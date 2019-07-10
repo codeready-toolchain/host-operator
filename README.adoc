@@ -41,6 +41,39 @@ There are a few more targets that you can find useful:
 * to remove & create the local test namespace, and create ClusterRole/ClusterRoleBinding and ServiceAccount inside of the namespace: `$ make reset-namespace`
 
 
+=== End-to-End tests
+
+==== Prerequisites if running locally on minishift
+If you are running this tests locally on minishift, make sure that you have exposed minishift's docker-env, so that deployment can use locally built image. You can expose it by running following command.
+`eval $(minishift docker-env)`
+
+
+NOTE: This is not required for openshift-ci environment
+
+==== Running End-to-End Tests
+The `make test-e2e` will take care of creating a namespace/project with a random name (or see below for enforcing the namespace). It will also create all required CRDs, role and role binding for the service account, build the Docker image for the operator and push it to the OpenShift container registry. Finally, it will deploy the operator and run the tests using
+the operator-sdk.
+
+
+ NOTE: you can specify the namepace you want to use for running the end-to-end tests by writing its name in the `./build/_output/test-namespace` file. Otherwise, the file will be generated on the fly with a namespace in the form of `test-<UUID>`.
+
+=== Verifying the OpenShift CI configuration
+
+ It's possible to verify the OpenShift CI config from the developer's laptop while all the jobs are executed on the remote, online CI platform:
+
+1. checkout and build the https://github.com/openshift/ci-tools[CI Operator] command line tool
+2. login to https://console.svc.ci.openshift.org (via GH OAuth) and copy the login command (you may need to switch to the `application console`)
+3. login with the command aferementioned
+4. run the CI jobs with
++
+```
+ci-operator --config ../../openshift/release/ci-operator/config/codeready-toolchain/host-operator/codeready-toolchain-host-operator-master.yaml --git-ref=codeready-toolchain/host-operator@master
+```
+
+assuming that the https://github.com/openshift/release[OpenShift Release] repo was checked you.
+
+NOTE: you can ignore the RBAC issues that are displayed in the console
+
 === Adding cluster to SaaS
 
 The CodeReady Toolchain architecture contains two types of clusters `host` and `member`.
