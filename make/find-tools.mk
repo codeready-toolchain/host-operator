@@ -16,4 +16,3 @@ K := $(foreach exec,$(REQUIRED_EXECUTABLES),\
         $(if $(shell which $(exec) 2>/dev/null),some string,$(error "ERROR: No "$(exec)" binary found in in PATH!")))
 endif
 endif
-

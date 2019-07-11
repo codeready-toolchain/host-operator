@@ -14,7 +14,7 @@ $(OUT_DIR)/operator:
 	$(Q)CGO_ENABLED=0 GOARCH=amd64 GOOS=linux \
 		go build ${V_FLAG} \
 		-ldflags "-X ${GO_PACKAGE_PATH}/cmd/manager.Commit=${GIT_COMMIT_ID} -X ${GO_PACKAGE_PATH}/cmd/manager.BuildTime=${BUILD_TIME}" \
-		-o ./out/operator \
+		-o $(OUT_DIR)/bin/host-operator \
 		cmd/manager/main.go
 
 .PHONY: vendor
