@@ -5,7 +5,8 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: host-operator
-  namespace: toolchain-host-operator
+  # Replace this with the namespace in which the operator will be deployed
+  namespace: REPLACE_NAMESPACE
 roleRef:
   kind: ClusterRole
   name: host-operator

@@ -5,11 +5,10 @@ require (
 	contrib.go.opencensus.io/exporter/ocagent v0.4.9 // indirect
 	github.com/Azure/go-autorest v11.5.2+incompatible // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20190627153646-25d21e70de5d
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20190628103825-823b9290aa31
+	github.com/codeready-toolchain/api v0.0.0-20190703153909-5b2c0d42be1b
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20190626080028-fea973f4a1e4
 	github.com/coreos/prometheus-operator v0.26.0 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
-	github.com/go-logr/logr v0.1.0
 	github.com/go-logr/zapr v0.1.1 // indirect
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/gobuffalo/envy v1.7.0 // indirect
