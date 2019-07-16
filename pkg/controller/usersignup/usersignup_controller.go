@@ -3,6 +3,8 @@ package usersignup
 import (
 	"context"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/host-operator/pkg/condition"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -19,11 +21,6 @@ import (
 )
 
 var log = logf.Log.WithName("controller_usersignup")
-
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
 
 // Add creates a new UserSignup Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -96,15 +93,12 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	pendingApproval := false
+	// Read the status conditions and assign some variables
+	provisioning := condition.IsConditionTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupProvisioning)
+	completed := condition.IsConditionTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
 
-	for _, condition := range(instance.Status.Conditions) {
-		if condition.Type == toolchainv1alpha1.UserSignupPendingApproval && condition.Status == corev1.ConditionTrue {
-			pendingApproval = true
-		}
-	}
-
-	if pendingApproval {
+	// If the status is not yet provisioning or completed, check for automatic or manual approval
+	if !provisioning && !completed {
 		approved := instance.Spec.Approved
 
 		if !approved {
@@ -117,15 +111,66 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 
 		if approved {
+			// If a target cluster hasn't been selected, select one from the members
+
+			var targetCluster string
+
+			if instance.Spec.TargetCluster != "" {
+				targetCluster = instance.Spec.TargetCluster
+			} else {
+				// TODO implement cluster selection
+				targetCluster = ""
+			}
+
 			// Provision the MasterUserRecord
+			userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
+				{
+					TargetCluster: targetCluster,
+				},
+			}
 
-			// Update the conditions: set PendingApproval to false, Provisioning to true
+			mur := &toolchainv1alpha1.MasterUserRecord{
+				Spec: toolchainv1alpha1.MasterUserRecordSpec{
+					UserID: instance.Spec.UserID,
+					UserAccounts: userAccounts,
+				},
+			}
 
+			err := r.client.Create(context.TODO(), mur)
+			if err != nil {
+				// Error creating the MasterUserRecord - requeue the request.
+				reqLogger.Error(err, "Error creating MasterUserRecord", "UserID", instance.Spec.UserID, "TargetCluster", targetCluster)
+				return reconcile.Result{}, err
+			}
+			reqLogger.Info("Created MasterUserRecord", "UserID", instance.Spec.UserID, "TargetCluster", targetCluster)
+
+			// Update the UserSignup status conditions: set PendingApproval to false, Provisioning to true
+			updatedConditions, updated := commonCondition.AddOrUpdateStatusConditions(instance.Status.Conditions, toolchainv1alpha1.Condition{
+				Type: toolchainv1alpha1.UserSignupPendingApproval,
+				Message: "Approved",
+				Status: corev1.ConditionFalse,
+				Reason: "",
+			},
+				toolchainv1alpha1.Condition{
+					Type: toolchainv1alpha1.UserSignupProvisioning,
+					Message: "Provisioning",
+					Status: corev1.ConditionTrue,
+					Reason: "",
+				})
+
+			// If the condition values were updated, post the changes
+			if updated {
+				instance.Status.Conditions = updatedConditions
+				err = r.client.Update(context.TODO(), instance)
+				if err != nil {
+					reqLogger.Error(err, "Error updating UserSignup Status conditions", "UserID", instance.Spec.UserID)
+					// Error updating the status - requeue the request.
+					return reconcile.Result{}, err
+				}
+			}
 		}
 	}
 
-
-	// Do nothing for now
 	return reconcile.Result{}, nil
 }
 
