@@ -145,7 +145,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 			return nil
 		}
 		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusUserAccountRetrievalFailed, err,
-			"failed to get userAccount '%s' from cluster", record.Name, recAccount.TargetCluster)
+			"failed to get userAccount '%s' from cluster '%s'", record.Name, recAccount.TargetCluster)
 	}
 
 	sync := Synchronizer{

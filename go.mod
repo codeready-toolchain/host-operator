@@ -9,6 +9,7 @@ require (
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20190712173044-bb50b23fbdd7
 	github.com/coreos/prometheus-operator v0.26.0 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
+	github.com/go-logr/logr v0.1.0
 	github.com/go-logr/zapr v0.1.1 // indirect
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/gobuffalo/envy v1.7.0 // indirect
@@ -18,6 +19,7 @@ require (
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/mailru/easyjson v0.0.0-20190620125010-da37f6c1e481 // indirect
 	github.com/operator-framework/operator-sdk v0.8.2-0.20190522220659-031d71ef8154
+	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.6.0 // indirect
 	github.com/rogpeppe/go-internal v1.3.0 // indirect
 	github.com/spf13/pflag v1.0.3

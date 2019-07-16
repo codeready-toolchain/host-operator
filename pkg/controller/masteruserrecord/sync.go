@@ -3,6 +3,7 @@ package masteruserrecord
 import (
 	"context"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	corev1 "k8s.io/api/core/v1"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,14 +51,14 @@ func (s *Synchronizer) synchronizeStatus() error {
 	return nil
 }
 
-// alignReadiness checks if all embedded SAs has finished the ongoing job (has provisioned/updated)
+// alignReadiness checks if all embedded SAs if they are ready
 func (s *Synchronizer) alignReadiness() {
 	for _, uaStatus := range s.record.Status.UserAccounts {
 		if !IsReady(uaStatus.Conditions) {
 			return
 		}
 	}
-	updateStatusConditions(s.hostClient, s.record, toBeProvisioned())
+	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
 }
 
 func IsReady(conditions []toolchainv1alpha1.Condition) bool {
