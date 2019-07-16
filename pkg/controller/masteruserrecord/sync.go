@@ -3,6 +3,7 @@ package masteruserrecord
 import (
 	"context"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -16,10 +17,10 @@ type Synchronizer struct {
 }
 
 func (s *Synchronizer) synchronizeSpec() error {
-	if !reflect.DeepEqual(s.memberUserAcc.Spec, s.recordUserAcc.Spec) { // TODO maybe do not use reflect :-)
+	if !reflect.DeepEqual(s.memberUserAcc.Spec, s.recordUserAcc.Spec) {
 		// when UserAccount spec in record is updated - is not same as in member
 		s.memberUserAcc.Spec = s.recordUserAcc.Spec
-		if err := updateStatus(s.hostClient, s.record, "updating", ""); err != nil {
+		if err := updateStatusConditions(s.hostClient, s.record, toBeNotReady(updatingReason, "")); err != nil {
 			return err
 		}
 		err := s.memberClient.Update(context.TODO(), s.memberUserAcc)
@@ -42,24 +43,30 @@ func (s *Synchronizer) synchronizeStatus() error {
 			s.record.Status.UserAccounts[index] = recAccStatus
 		}
 
-		s.checkStatus("provisioning", "provisioned")
-		s.checkStatus("updating", "provisioned")
+		s.alignReadiness()
 
-		return s.hostClient.Satus().Update(context.TODO(), s.record)
+		return s.hostClient.Status().Update(context.TODO(), s.record)
 	}
 	return nil
 }
 
-// checkStatus checks if all embedded SAs has finished the ongoing job (has provisioned/updated)
-func (s *Synchronizer) checkStatus(currentStatus, followingStatus string) {
-	if s.record.Status.Status == currentStatus {
-		for _, ua := range s.record.Status.UserAccounts {
-			if string(ua.Status) != followingStatus {
-				return
-			}
+// alignReadiness checks if all embedded SAs has finished the ongoing job (has provisioned/updated)
+func (s *Synchronizer) alignReadiness() {
+	for _, uaStatus := range s.record.Status.UserAccounts {
+		if !IsReady(uaStatus.Conditions) {
+			return
 		}
-		s.record.Status.Status = followingStatus
 	}
+	updateStatusConditions(s.hostClient, s.record, toBeProvisioned())
+}
+
+func IsReady(conditions []toolchainv1alpha1.Condition) bool {
+	for _, con := range conditions {
+		if con.Type == toolchainv1alpha1.ConditionReady {
+			return con.Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }
 
 func getUserAccountStatus(clusterName string, record *toolchainv1alpha1.MasterUserRecord) (toolchainv1alpha1.UserAccountStatusEmbedded, int) {

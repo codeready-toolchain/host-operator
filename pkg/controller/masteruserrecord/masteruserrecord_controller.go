@@ -5,8 +5,11 @@ import (
 	"fmt"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
+	errs "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,6 +25,14 @@ import (
 )
 
 var log = logf.Log.WithName("controller_masteruserrecord")
+
+const (
+	// Status condition reasons
+	unableToGetUserAccountReason = "UnableToGetUserAccount"
+	provisioningReason           = "Provisioning"
+	updatingReason               = "Updating"
+	provisionedReason            = "Provisioned"
+)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -96,12 +107,6 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
-	// check if the user was already approved
-	if userRecord.Spec.State == "pending" { // TODO add statuses to MasterUserRecord in API repo
-		reqLogger.Info("The user hasn't been approved yet")
-		return reconcile.Result{}, nil
-	}
-
 	for _, account := range userRecord.Spec.UserAccounts {
 		err = r.ensureUserAccount(reqLogger, account, userRecord)
 		if err != nil {
@@ -131,7 +136,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 		if errors.IsNotFound(err) {
 			// does not exist - should create
 			userAccount = newUserAccount(nsdName, recAccount.Spec)
-			if err := updateStatus(r.client, record, "provisioning", ""); err != nil {
+			if err := r.setStatusProvisioning(record); err != nil {
 				return err
 			}
 			if err := fedCluster.Client.Create(context.TODO(), userAccount); err != nil {
@@ -139,10 +144,8 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 			}
 			return nil
 		}
-		if updateErr := updateStatus(r.client, record, "provisioning", ""); updateErr != nil {
-			log.Error(updateErr, "unable to update status")
-		}
-		return err
+		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusUserAccountRetrievalFailed, err,
+			"failed to get userAccount '%s' from cluster", record.Name, recAccount.TargetCluster)
 	}
 
 	sync := Synchronizer{
@@ -162,20 +165,57 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 	return nil
 }
 
-// updateStatus updates user account status to given status with errMsg but only if the current status doesn't match
-// If the current status already set to desired state then this method does nothing
-// TODO the status should be a specific type of a string or StatusUserAccount - same as for UserAccount
-func updateStatus(client client.Client, record *toolchainv1alpha1.MasterUserRecord, status, errMsg string) error {
-	// TODO we need to add record.Status.Error field to have place where to store internal errors
-	if record.Status.Status == status { //&& record.Status.Error == errMsg {
+// wrapErrorWithStatusUpdate wraps the error and update the user account status. If the update failed then logs the error.
+func (r *ReconcileMasterUserRecord) wrapErrorWithStatusUpdate(logger logr.Logger, record *toolchainv1alpha1.MasterUserRecord, statusUpdater func(record *toolchainv1alpha1.MasterUserRecord, message string) error, err error, format string, args ...interface{}) error {
+	if err == nil {
+		return nil
+	}
+	if err := statusUpdater(record, err.Error()); err != nil {
+		logger.Error(err, "status update failed")
+	}
+	return errs.Wrapf(err, format, args...)
+}
+
+func (r *ReconcileMasterUserRecord) setStatusProvisioning(record *toolchainv1alpha1.MasterUserRecord) error {
+	return updateStatusConditions(
+		r.client,
+		record,
+		toBeNotReady(provisioningReason, ""))
+}
+
+func (r *ReconcileMasterUserRecord) setStatusUserAccountRetrievalFailed(record *toolchainv1alpha1.MasterUserRecord, message string) error {
+	return updateStatusConditions(
+		r.client,
+		record,
+		toBeNotReady(unableToGetUserAccountReason, message))
+}
+
+func toBeProvisioned() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: corev1.ConditionTrue,
+		Reason: provisionedReason,
+	}
+}
+
+func toBeNotReady(reason, msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  reason,
+		Message: msg,
+	}
+}
+
+// updateStatusConditions updates user account status conditions with the new conditions
+func updateStatusConditions(cl client.Client, record *toolchainv1alpha1.MasterUserRecord, newConditions ...toolchainv1alpha1.Condition) error {
+	var updated bool
+	record.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(record.Status.Conditions, newConditions...)
+	if !updated {
 		// Nothing changed
 		return nil
 	}
-	record.Status = toolchainv1alpha1.MasterUserRecordStatus{
-		Status: status,
-		//Error:  errMsg,
-	}
-	return client.Status().Update(context.TODO(), record)
+	return cl.Status().Update(context.TODO(), record)
 }
 
 func newUserAccount(nsdName types.NamespacedName, spec toolchainv1alpha1.UserAccountSpec) *toolchainv1alpha1.UserAccount {
