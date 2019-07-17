@@ -20,6 +20,7 @@ require (
 	github.com/operator-framework/operator-sdk v0.8.2-0.20190522220659-031d71ef8154
 	github.com/prometheus/common v0.6.0 // indirect
 	github.com/rogpeppe/go-internal v1.3.0 // indirect
+	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/pflag v1.0.3
 	github.com/stretchr/testify v1.3.0
 	go.opencensus.io v0.22.0 // indirect

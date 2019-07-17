@@ -3,9 +3,10 @@ package usersignup
 import (
 	"context"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/host-operator/pkg/condition"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/api/core/v1"
@@ -111,15 +112,19 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 
 		if approved {
-			// If a target cluster hasn't been selected, select one from the members
-
 			var targetCluster string
 
+			// If a target cluster hasn't been selected, select one from the members
 			if instance.Spec.TargetCluster != "" {
 				targetCluster = instance.Spec.TargetCluster
 			} else {
-				// TODO implement cluster selection
-				targetCluster = ""
+				// Automatic cluster selection
+				members := cluster.GetMemberClusters()
+				if len(members) > 0 {
+					targetCluster = members[0].Name
+				} else {
+					// TODO how do we handle the situation where no members are available?
+				}
 			}
 
 			// Provision the MasterUserRecord
@@ -130,6 +135,10 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 
 			mur := &toolchainv1alpha1.MasterUserRecord{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: instance.Spec.UserID,
+					//Namespace: config.GetOperatorNamespace(),
+				},
 				Spec: toolchainv1alpha1.MasterUserRecordSpec{
 					UserID: instance.Spec.UserID,
 					UserAccounts: userAccounts,
