@@ -15,6 +15,8 @@ require (
 	github.com/mailru/easyjson v0.0.0-20190620125010-da37f6c1e481 // indirect
 	github.com/operator-framework/operator-sdk v0.10.0
 	github.com/prometheus/common v0.6.0 // indirect
+	github.com/rogpeppe/go-internal v1.3.0 // indirect
+	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/pflag v1.0.3
 	github.com/stretchr/testify v1.3.0
 	go.opencensus.io v0.22.0 // indirect
