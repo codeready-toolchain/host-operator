@@ -27,6 +27,7 @@ RUN yum install epel-release -y \
     kubectl \
     yamllint \
     python36-virtualenv \
+    jq \
     && yum clean all
 
 # download, verify and install openshift client tools (oc and kubectl)
