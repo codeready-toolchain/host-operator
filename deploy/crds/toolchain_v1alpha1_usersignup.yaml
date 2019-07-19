@@ -4,12 +4,12 @@ metadata:
   creationTimestamp: null
   labels:
     controller-tools.k8s.io: "1.0"
-  name: userprovisionrequests.toolchain.dev.openshift.com
+  name: usersignups.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
   names:
-    kind: UserProvisionRequest
-    plural: userprovisionrequests
+    kind: UserSignup
+    plural: usersignups
   scope: Namespaced
   subresources:
     status: {}
@@ -49,9 +49,9 @@ spec:
         status:
           properties:
             conditions:
-              description: 'Conditions is an array of current UserProvisionRequest
-                conditions Supported condition types: PendingApproval, Provisioning,
-                Complete +patchMergeKey=type +patchStrategy=merge'
+              description: 'Conditions is an array of current UserSignup conditions
+                Supported condition types: PendingApproval, Provisioning, Complete
+                +patchMergeKey=type +patchStrategy=merge'
               items:
                 properties:
                   lastTransitionTime:
