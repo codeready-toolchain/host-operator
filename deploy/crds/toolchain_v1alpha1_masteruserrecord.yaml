@@ -154,9 +154,8 @@ spec:
                 properties:
                   conditions:
                     description: 'Conditions is an array of current User Account conditions
-                      Supported condition types: Provisioning, UserNotReady, IdentityNotReady,
-                      UserIdentityMappingNotReady, NSTemplateSetNotReady and Ready
-                      +patchMergeKey=type +patchStrategy=merge'
+                      Supported condition types: ConditionReady +patchMergeKey=type
+                      +patchStrategy=merge'
                     items:
                       properties:
                         lastTransitionTime:
