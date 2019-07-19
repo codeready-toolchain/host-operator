@@ -137,7 +137,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			mur := &toolchainv1alpha1.MasterUserRecord{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: instance.Spec.UserID,
-					//Namespace: config.GetOperatorNamespace(),
+					Namespace: config.GetOperatorNamespace(),
 				},
 				Spec: toolchainv1alpha1.MasterUserRecordSpec{
 					UserID: instance.Spec.UserID,
