@@ -4,8 +4,17 @@ import (
 	"os"
 )
 
+const (
+	DefaultOperatorNamespace = "toolchain-host"
+)
+
 func GetOperatorNamespace() string {
-	return os.Getenv(OperatorNamespace)
+	ns := os.Getenv(OperatorNamespace)
+	if ns != "" {
+		return ns
+	}
+
+	return DefaultOperatorNamespace
 }
 
 func GetIdP() string {
