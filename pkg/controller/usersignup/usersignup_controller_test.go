@@ -30,7 +30,8 @@ func TestReadUserApprovalPolicy(t *testing.T) {
 	}
 	cm.Name = config.ToolchainConfigMapName
 
-	r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	require.NoError(t, err)
 
 	policy, err := r.ReadUserApprovalPolicyConfig()
 	require.NoError(t, err)
@@ -59,7 +60,8 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 		Data: cmValues,
 	}
 	cm.Name = config.ToolchainConfigMapName
-	r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	require.NoError(t, err)
 
 	res, err := r.Reconcile(req)
 	require.NoError(t, err)
@@ -97,7 +99,8 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		Data: cmValues,
 	}
 	cm.Name = config.ToolchainConfigMapName
-	r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	require.NoError(t, err)
 
 	res, err := r.Reconcile(req)
 	require.NoError(t, err)
@@ -136,7 +139,8 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		Data: cmValues,
 	}
 	cm.Name = config.ToolchainConfigMapName
-	r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	require.NoError(t, err)
 
 	res, err := r.Reconcile(req)
 	require.NoError(t, err)
