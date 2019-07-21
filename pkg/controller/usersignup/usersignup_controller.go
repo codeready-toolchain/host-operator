@@ -102,18 +102,14 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 	// If the status is not yet provisioning or completed, check for automatic or manual approval
 	if !provisioning && !completed {
-		approved := instance.Spec.Approved
-
-		if !approved {
-			autoApprovalPolicy, err := r.ReadAutoApproveConfig()
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-
-			approved = autoApprovalPolicy == config.UserApprovalPolicyAutomatic
+		userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig()
+		if err != nil {
+			return reconcile.Result{}, err
 		}
 
-		if approved {
+		// If the signup has been explicitly approved (by an admin), or the user approval policy is set to automatic,
+		// then proceed with the signup
+		if instance.Spec.Approved || userApprovalPolicy == config.UserApprovalPolicyAutomatic {
 			var targetCluster string
 
 			// If a target cluster hasn't been selected, select one from the members
@@ -124,9 +120,9 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				members := cluster.GetMemberClusters()
 				if len(members) > 0 {
 					targetCluster = members[0].Name
-				} else {
-					// TODO how do we handle the situation where no members are available?
 				}
+    			// TODO how do we handle the situation where no members are available?
+
 			}
 
 			// Provision the MasterUserRecord
@@ -185,8 +181,8 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	return reconcile.Result{}, nil
 }
 
-// ReadAutoApproveConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
+// ReadUserApprovalPolicyConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
 // the config map value for the user approval policy (which will either be "manual" or "automatic")
-func (r *ReconcileUserSignup) ReadAutoApproveConfig() (string, error) {
+func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig() (string, error) {
 
 
