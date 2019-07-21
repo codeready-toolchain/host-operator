@@ -19,7 +19,7 @@ import (
 	"testing"
 )
 
-func TestReadAutoApproveConfig(t *testing.T) {
+func TestReadUserApprovalPolicy(t *testing.T) {
 	r, _ := prepareReconcile(t, "test")
 
 	// Create a new ConfigMap
@@ -32,7 +32,7 @@ func TestReadAutoApproveConfig(t *testing.T) {
 
 	r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
 
-	policy, err := r.ReadAutoApproveConfig()
+	policy, err := r.ReadUserApprovalPolicyConfig()
 	require.NoError(t, err)
 	require.Equal(t, config.UserApprovalPolicyAutomatic, policy)
 }
