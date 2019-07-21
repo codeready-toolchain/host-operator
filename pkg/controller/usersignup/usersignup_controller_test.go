@@ -8,6 +8,7 @@ import (
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -51,14 +52,13 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 
 	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
 
-	// Create a new ConfigMap
+	// Create a new ConfigMap and set the user approval policy to automatic
 	cmValues := make(map[string]string)
 	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
 	cm := &v1.ConfigMap{
 		Data: cmValues,
 	}
 	cm.Name = config.ToolchainConfigMapName
-
 	r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
 
 	res, err := r.Reconcile(req)
@@ -76,11 +76,77 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 }
 
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
-	//r, req := prepareReconcile(t, "test")
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: config.GetOperatorNamespace(),
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+			Approved: true,
+		},
+	}
+
+	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
+
+	// Create a new ConfigMap and set the user approval policy to manual
+	cmValues := make(map[string]string)
+	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyManual
+	cm := &v1.ConfigMap{
+		Data: cmValues,
+	}
+	cm.Name = config.ToolchainConfigMapName
+	r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	mur := &v1alpha1.MasterUserRecord{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, mur)
+	require.NoError(t, err)
+
+	require.Equal(t, config.GetOperatorNamespace(), mur.Namespace)
+	require.Equal(t, userSignup.Name, mur.Name)
+	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
+	require.Len(t, mur.Spec.UserAccounts, 1)
+
 }
 
 func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
-	//r, req := prepareReconcile(t, "test")
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: config.GetOperatorNamespace(),
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+			Approved: false,
+		},
+	}
+
+	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
+
+	// Create a new ConfigMap and set the user approval policy to manual
+	cmValues := make(map[string]string)
+	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyManual
+	cm := &v1.ConfigMap{
+		Data: cmValues,
+	}
+	cm.Name = config.ToolchainConfigMapName
+	r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	mur := &v1alpha1.MasterUserRecord{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, mur)
+	require.Error(t, err)
+	require.IsType(t, err, &errors.StatusError{})
+	require.Equal(t, metav1.StatusReasonNotFound, err.(*errors.StatusError).ErrStatus.Reason)
 }
 
 func prepareReconcile(t *testing.T, userID string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request) {
