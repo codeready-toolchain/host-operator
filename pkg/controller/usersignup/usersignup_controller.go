@@ -7,6 +7,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/operator-framework/operator-sdk/pkg/predicate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/api/core/v1"
@@ -43,7 +44,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource UserSignup
-	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.UserSignup{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.UserSignup{}}, &handler.EnqueueRequestForObject{},
+		predicate.GenerationChangedPredicate{})
 	if err != nil {
 		return err
 	}
