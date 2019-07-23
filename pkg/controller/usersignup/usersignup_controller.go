@@ -50,15 +50,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to secondary resource Pods and requeue the owner UserSignup
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &toolchainv1alpha1.UserSignup{},
-	})
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -121,6 +112,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				if len(members) > 0 {
 					targetCluster = members[0].Name
 				}
+
     			// TODO how do we handle the situation where no members are available?
 
 			}
