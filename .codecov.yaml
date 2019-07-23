@@ -1,5 +1,6 @@
 # See http://docs.codecov.io/docs/coverage-configuration
 coverage:
+  max_report_age: off # see https://docs.codecov.io/docs/codecov-yaml#section-expired-reports
   precision: 2 # 2 = xx.xx%, 0 = xx%
   round: down
   # For example: 20...60 would result in any coverage less than 20%
