@@ -97,8 +97,8 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	// Read the status conditions and assign some variables
-	provisioning := condition.IsConditionTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupProvisioning)
-	completed := condition.IsConditionTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
+	provisioning := condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupProvisioning)
+	completed := condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
 
 	// If the status is not yet provisioning or completed, check for automatic or manual approval
 	if !provisioning && !completed {
