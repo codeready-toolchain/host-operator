@@ -25,7 +25,8 @@ import (
 const (
 	// Status condition reasons
 	noClustersAvailableReason = "NoClustersAvailable"
-	failedToCreateMUR = "FailedToCreateMUR"
+	failedToCreateMURReason = "FailedToCreateMUR"
+	provisioningReason = "Provisioning"
 )
 
 var log = logf.Log.WithName("controller_usersignup")
@@ -152,6 +153,13 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				}
 			}
 
+			// Set the "Provisioning" status condition
+			err := r.setStatusProvisioning(instance, "Provisioning User")
+			if err != nil {
+				reqLogger.Error(err, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
+				return reconcile.Result{}, err
+			}
+
 			// Provision the MasterUserRecord
 			userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 				{
@@ -170,7 +178,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				},
 			}
 
-			err := r.client.Create(context.TODO(), mur)
+			err = r.client.Create(context.TODO(), mur)
 			if err != nil {
 				err := r.setStatusFailedToCreateMUR(instance, "Failed to create MasterUserRecord")
 				if err != nil {
@@ -225,13 +233,24 @@ func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig() (string, error) {
 	return cm.Data[config.ToolchainConfigMapUserApprovalPolicy], nil
 }
 
+func (r *ReconcileUserSignup) setStatusProvisioning(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type: toolchainv1alpha1.UserSignupProvisioning,
+			Status: corev1.ConditionTrue,
+			Reason: provisioningReason,
+			Message: message,
+		})
+}
+
 func (r *ReconcileUserSignup) setStatusFailedToCreateMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return r.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type: toolchainv1alpha1.UserSignupComplete,
 			Status: corev1.ConditionFalse,
-			Reason: failedToCreateMUR,
+			Reason: failedToCreateMURReason,
 			Message: message,
 		})
 }
