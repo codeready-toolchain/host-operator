@@ -25,6 +25,7 @@ import (
 const (
 	// Status condition reasons
 	noClustersAvailableReason = "NoClustersAvailable"
+	failedToReadUserApprovalPolicy = "FailedToReadUserApprovalPolicy"
 	failedToCreateMURReason = "FailedToCreateMUR"
 	provisioningReason = "Provisioning"
 )
@@ -123,6 +124,12 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	if !provisioning && !completed {
 		userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig()
 		if err != nil {
+			err := r.setStatusFailedToReadUserApprovalPolicy(instance, "Failed to read ConfigMap value " + config.ToolchainConfigMapUserApprovalPolicy)
+			if err != nil {
+				reqLogger.Error(err, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
+				return reconcile.Result{}, err
+			}
+
 			reqLogger.Error(err, "Error reading user approval policy")
 			return reconcile.Result{}, err
 		}
@@ -240,6 +247,17 @@ func (r *ReconcileUserSignup) setStatusProvisioning(userSignup *toolchainv1alpha
 			Type: toolchainv1alpha1.UserSignupProvisioning,
 			Status: corev1.ConditionTrue,
 			Reason: provisioningReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusFailedToReadUserApprovalPolicy(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type: toolchainv1alpha1.UserSignupComplete,
+			Status: corev1.ConditionFalse,
+			Reason: failedToReadUserApprovalPolicy,
 			Message: message,
 		})
 }
