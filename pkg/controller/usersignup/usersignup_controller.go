@@ -25,6 +25,7 @@ import (
 const (
 	// Status condition reasons
 	noClustersAvailableReason = "NoClustersAvailable"
+	failedToCreateMUR = "FailedToCreateMUR"
 )
 
 var log = logf.Log.WithName("controller_usersignup")
@@ -171,6 +172,12 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 			err := r.client.Create(context.TODO(), mur)
 			if err != nil {
+				err := r.setStatusFailedToCreateMUR(instance, "Failed to create MasterUserRecord")
+				if err != nil {
+					reqLogger.Error(err, "Error creating MasterUserRecord", "UserID", instance.Spec.UserID)
+					return reconcile.Result{}, err
+				}
+
 				// Error creating the MasterUserRecord - requeue the request.
 				reqLogger.Error(err, "Error creating MasterUserRecord", "UserID", instance.Spec.UserID, "TargetCluster", targetCluster)
 				return reconcile.Result{}, err
@@ -216,6 +223,17 @@ func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig() (string, error) {
 	}
 
 	return cm.Data[config.ToolchainConfigMapUserApprovalPolicy], nil
+}
+
+func (r *ReconcileUserSignup) setStatusFailedToCreateMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type: toolchainv1alpha1.UserSignupComplete,
+			Status: corev1.ConditionFalse,
+			Reason: failedToCreateMUR,
+			Message: message,
+		})
 }
 
 func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
