@@ -27,6 +27,7 @@ require (
 	golang.org/x/tools v0.0.0-20190620191750-1fa568393b23 // indirect
 	google.golang.org/genproto v0.0.0-20190620144150-6af8c5fc6601 // indirect
 	google.golang.org/grpc v1.21.1 // indirect
+	gopkg.in/h2non/gock.v1 v1.0.15
 	k8s.io/api v0.0.0-20190620073856-dcce3486da33
 	k8s.io/apimachinery v0.0.0-20190620073744-d16981aedf33
 	k8s.io/apiserver v0.0.0-20190111033246-d50e9ac5404f // indirect

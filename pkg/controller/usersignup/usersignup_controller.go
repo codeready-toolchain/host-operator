@@ -22,6 +22,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const (
+	// Status condition reasons
+	noClustersAvailableReason = "NoClustersAvailable"
+)
+
 var log = logf.Log.WithName("controller_usersignup")
 
 // Add creates a new UserSignup Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -50,10 +55,31 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// Watch for changes to the secondary resource MasterUserRecord and requeue the owner UserSignup
+	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.MasterUserRecord{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &toolchainv1alpha1.UserSignup{},
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 var _ reconcile.Reconciler = &ReconcileUserSignup{}
+
+func NewUserSignupError(msg string) UserSignupError {
+	return UserSignupError{message: msg}
+}
+
+type UserSignupError struct {
+	message string
+}
+
+func (err UserSignupError) Error() string {
+	return err.message
+}
 
 // ReconcileUserSignup reconciles a UserSignup object
 type ReconcileUserSignup struct {
@@ -95,6 +121,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	if !provisioning && !completed {
 		userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig()
 		if err != nil {
+			reqLogger.Error(err, "Error reading user approval policy")
 			return reconcile.Result{}, err
 		}
 
@@ -111,10 +138,12 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				members := cluster.GetMemberClusters()
 				if len(members) > 0 {
 					targetCluster = members[0].Name
+				} else {
+					err := NewUserSignupError("No target clusters available")
+					reqLogger.Error(err, "No member clusters found")
+					r.setStatusNoClustersAvailable(instance, "No member clusters found")
+					return reconcile.Result{}, err
 				}
-
-    			// TODO how do we handle the situation where no members are available?
-
 			}
 
 			// Provision the MasterUserRecord
@@ -146,15 +175,15 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			// Update the UserSignup status conditions: set PendingApproval to false, Provisioning to true
 			updatedConditions, updated := commonCondition.AddOrUpdateStatusConditions(instance.Status.Conditions, toolchainv1alpha1.Condition{
 				Type: toolchainv1alpha1.UserSignupPendingApproval,
-				Message: "Approved",
+				Message: "",
 				Status: corev1.ConditionFalse,
-				Reason: "",
+				Reason: "Approved",
 			},
 				toolchainv1alpha1.Condition{
 					Type: toolchainv1alpha1.UserSignupProvisioning,
-					Message: "Provisioning",
+					Message: "",
 					Status: corev1.ConditionTrue,
-					Reason: "",
+					Reason: "Provisioning",
 				})
 
 			// If the condition values were updated, post the changes
@@ -176,5 +205,31 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 // ReadUserApprovalPolicyConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
 // the config map value for the user approval policy (which will either be "manual" or "automatic")
 func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig() (string, error) {
+	cm, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Get(config.ToolchainConfigMapName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
 
+	return cm.Data[config.ToolchainConfigMapUserApprovalPolicy], nil
+}
 
+func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type: toolchainv1alpha1.UserSignupComplete,
+			Status: corev1.ConditionFalse,
+			Reason: noClustersAvailableReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) updateStatusConditions(userSignup *toolchainv1alpha1.UserSignup, newConditions ...toolchainv1alpha1.Condition) error {
+	var updated bool
+	userSignup.Status.Conditions, updated = commonCondition.AddOrUpdateStatusConditions(userSignup.Status.Conditions, newConditions...)
+	if !updated {
+		// Nothing changed
+		return nil
+	}
+	return r.client.Status().Update(context.TODO(), userSignup)
+}
