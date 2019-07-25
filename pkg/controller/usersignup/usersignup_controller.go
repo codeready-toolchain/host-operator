@@ -139,9 +139,14 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				if len(members) > 0 {
 					targetCluster = members[0].Name
 				} else {
-					err := NewUserSignupError("No target clusters available")
+					err := r.setStatusNoClustersAvailable(instance, "No member clusters found")
+					if err != nil {
+						reqLogger.Error(err, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
+						return reconcile.Result{}, err
+					}
+
+					err = NewUserSignupError("No target clusters available")
 					reqLogger.Error(err, "No member clusters found")
-					r.setStatusNoClustersAvailable(instance, "No member clusters found")
 					return reconcile.Result{}, err
 				}
 			}

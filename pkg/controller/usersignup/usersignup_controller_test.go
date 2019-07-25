@@ -27,7 +27,6 @@ import (
 )
 
 const (
-	nameHost   = "dsaas"
 	nameMember = "east"
 )
 
