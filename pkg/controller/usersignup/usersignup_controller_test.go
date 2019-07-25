@@ -5,8 +5,11 @@ import (
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/h2non/gock.v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,9 +17,18 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	fakeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"sigs.k8s.io/kubefed/pkg/apis/core/common"
+	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	"testing"
+)
+
+const (
+	nameHost   = "dsaas"
+	nameMember = "east"
 )
 
 func TestReadUserApprovalPolicy(t *testing.T) {
@@ -52,6 +64,8 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 	}
 
 	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
+
+	createMemberCluster(r.client)
 
 	// Create a new ConfigMap and set the user approval policy to automatic
 	cmValues := make(map[string]string)
@@ -91,6 +105,8 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	}
 
 	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
+
+	createMemberCluster(r.client)
 
 	// Create a new ConfigMap and set the user approval policy to manual
 	cmValues := make(map[string]string)
@@ -132,6 +148,8 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 
 	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
 
+	createMemberCluster(r.client)
+
 	// Create a new ConfigMap and set the user approval policy to manual
 	cmValues := make(map[string]string)
 	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyManual
@@ -157,6 +175,20 @@ func prepareReconcile(t *testing.T, userID string, initObjs ...runtime.Object) (
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
+
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "secret",
+			Namespace: "test-namespace",
+		},
+		Type: v1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"token": []byte("mycooltoken"),
+		},
+	}
+
+	initObjs = append(initObjs, secret)
+
 	client := fake.NewFakeClientWithScheme(s, initObjs...)
 
 	r := &ReconcileUserSignup{
@@ -173,5 +205,60 @@ func newReconcileRequest(name string) reconcile.Request {
 			Name: name,
 			Namespace: config.GetOperatorNamespace(),
 		},
+	}
+}
+
+func createMemberCluster(client client.Client) {
+	status := newClusterStatus(common.ClusterReady, v1.ConditionTrue)
+
+	kubeFedCluster := newKubeFedCluster("east", "secret", status, labels(cluster.Member, "", nameMember))
+
+	service := cluster.KubeFedClusterService{Log: logf.Log, Client: client}
+	service.AddKubeFedCluster(kubeFedCluster)
+}
+
+func newClusterStatus(conType common.ClusterConditionType, conStatus v1.ConditionStatus) v1beta1.KubeFedClusterStatus {
+	return v1beta1.KubeFedClusterStatus{
+		Conditions: []v1beta1.ClusterCondition{{
+			Type:   conType,
+			Status: conStatus,
+		}},
+	}
+}
+
+func labels(clType cluster.Type, ns, ownerClusterName string) map[string]string {
+	labels := map[string]string{}
+	if clType != "" {
+		labels["type"] = string(clType)
+	}
+	if ns != "" {
+		labels["namespace"] = ns
+	}
+	labels["ownerClusterName"] = ownerClusterName
+	return labels
+}
+
+func newKubeFedCluster(name, secName string, status v1beta1.KubeFedClusterStatus, labels map[string]string) (*v1beta1.KubeFedCluster) {
+	logf.SetLogger(zap.Logger())
+	gock.New("http://cluster.com").
+		Get("api").
+		Persist().
+		Reply(200).
+		BodyString("{}")
+
+	return &v1beta1.KubeFedCluster{
+		Spec: v1beta1.KubeFedClusterSpec{
+			SecretRef: v1beta1.LocalSecretReference{
+				Name: secName,
+			},
+			APIEndpoint: "http://cluster.com",
+			CABundle:    []byte{},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test-namespace",
+			Labels:    labels,
+		},
+		Status: status,
 	}
 }
