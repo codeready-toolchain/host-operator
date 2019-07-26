@@ -65,6 +65,7 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
 
 	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
 
 	// Create a new ConfigMap and set the user approval policy to automatic
 	cmValues := make(map[string]string)
@@ -106,6 +107,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
 
 	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
 
 	// Create a new ConfigMap and set the user approval policy to manual
 	cmValues := make(map[string]string)
@@ -148,6 +150,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
 
 	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
 
 	// Create a new ConfigMap and set the user approval policy to manual
 	cmValues := make(map[string]string)
@@ -168,6 +171,36 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, err, &errors.StatusError{})
 	require.Equal(t, metav1.StatusReasonNotFound, err.(*errors.StatusError).ErrStatus.Reason)
+}
+
+func TestUserSignupNoMembersAvailableFails(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: config.GetOperatorNamespace(),
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+			Approved: true,
+		},
+	}
+
+	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
+
+	// Create a new ConfigMap and set the user approval policy to automatic
+	cmValues := make(map[string]string)
+	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
+	cm := &v1.ConfigMap{
+		Data: cmValues,
+	}
+	cm.Name = config.ToolchainConfigMapName
+	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	require.NoError(t, err)
+
+	_, err = r.Reconcile(req)
+	require.Error(t, err)
+	require.IsType(t, UserSignupError{}, err)
 }
 
 func prepareReconcile(t *testing.T, userID string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request) {
@@ -214,6 +247,19 @@ func createMemberCluster(client client.Client) {
 
 	service := cluster.KubeFedClusterService{Log: logf.Log, Client: client}
 	service.AddKubeFedCluster(kubeFedCluster)
+}
+
+func clearMemberClusters(client client.Client) {
+	service := cluster.KubeFedClusterService{Log: logf.Log, Client: client}
+	clusters := cluster.GetMemberClusters()
+
+	for _, cluster := range(clusters) {
+		service.DeleteKubeFedCluster(&v1beta1.KubeFedCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cluster.Name,
+			},
+		})
+	}
 }
 
 func newClusterStatus(conType common.ClusterConditionType, conStatus v1.ConditionStatus) v1beta1.KubeFedClusterStatus {
