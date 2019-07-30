@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
-	"time"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -40,6 +39,7 @@ func TestUserSignup(t *testing.T) {
 	t.Log("host-operator is ready and in a running state")
 
 	// Create user signup
+	t.Logf("Creating UserSignup with namespace %s", namespace)
 	userSignup := newUserSignup(namespace, "foo")
 	err = f.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(t, err)
@@ -67,7 +67,7 @@ func newUserSignup(namespace, name string) *v1alpha1.UserSignup {
 }
 
 func verifyResources(t *testing.T, f *framework.Framework, namespace string, userSignup *v1alpha1.UserSignup) error {
-	if err := waitForUserSignup(t, f.Client.Client, userSignup.Name); err != nil {
+	if err := waitForUserSignup(t, f.Client.Client, userSignup.Name, namespace); err != nil {
 		return err
 	}
 
