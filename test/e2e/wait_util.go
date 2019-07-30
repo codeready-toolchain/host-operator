@@ -20,10 +20,10 @@ const (
 	cleanupTimeout        = time.Second * 5
 )
 
-func waitForUserSignup(t *testing.T, client client.Client, name string) error {
+func waitForUserSignup(t *testing.T, client client.Client, name, namespace string) error {
 	return wait.Poll(retryInterval, timeout, func() (done bool, err error) {
 		userSignup := &v1alpha1.UserSignup{}
-		if err := client.Get(context.TODO(), types.NamespacedName{Name: name}, userSignup); err != nil {
+		if err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace,}, userSignup); err != nil {
 			if errors.IsNotFound(err) {
 				t.Logf("waiting for availability of UserSignup '%s'", name)
 				return false, nil
