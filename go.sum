@@ -41,6 +41,8 @@ github.com/codeready-toolchain/api v0.0.0-20190703153909-5b2c0d42be1b h1:n/a0Kw0
 github.com/codeready-toolchain/api v0.0.0-20190703153909-5b2c0d42be1b/go.mod h1:THipEIgxvhBvngWP2bmD5TXoCuQ1v2cz0IwAwQaaoPE=
 github.com/codeready-toolchain/api v0.0.0-20190712171113-7038210b9ba5 h1:bTmnva6ifSFde4whh3taRt83Ev6197G5IE0C4ywTlAs=
 github.com/codeready-toolchain/api v0.0.0-20190712171113-7038210b9ba5/go.mod h1:THipEIgxvhBvngWP2bmD5TXoCuQ1v2cz0IwAwQaaoPE=
+github.com/codeready-toolchain/api v0.0.0-20190730071751-421041795a07 h1:cKBgFJvHhAwc7EC4xMqNFcTF+HbUZbM7JLuKF7dl8nU=
+github.com/codeready-toolchain/api v0.0.0-20190730071751-421041795a07/go.mod h1:THipEIgxvhBvngWP2bmD5TXoCuQ1v2cz0IwAwQaaoPE=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190626080028-fea973f4a1e4 h1:jjrX0mqG2gYlZJzwCI4lagz8aS9uGZvaXadOS92DJwg=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190626080028-fea973f4a1e4/go.mod h1:lrW2V5UFR39oJLeIlMzeZ359KzNZ8a8KeMy4q6cHdow=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
