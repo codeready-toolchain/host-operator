@@ -47,6 +47,7 @@ ifneq ($(PR_COMMIT), null)
 		-r $(REPO_OWNER)/$(REPO_NAME) \
 		-P $(PULL_NUMBER) \
 		-Z
+		exit 1
 else
 	@echo "uploading test coverage report after PR was merged..."
 	bash <(curl -s https://codecov.io/bash) \
