@@ -1,6 +1,8 @@
+codecov:
+  max_report_age: "off" # see https://docs.codecov.io/docs/codecov-yaml#section-expired-reports
+
 # See http://docs.codecov.io/docs/coverage-configuration
 coverage:
-  max_report_age: off # see https://docs.codecov.io/docs/codecov-yaml#section-expired-reports
   precision: 2 # 2 = xx.xx%, 0 = xx%
   round: down
   # For example: 20...60 would result in any coverage less than 20%
@@ -30,7 +32,8 @@ coverage:
 # See http://docs.codecov.io/docs/pull-request-comments-1
 comment:
   layout: "header, diff, tree"
-  behavior: # default = posts once then update, posts new if delete
-            # once = post once then updates
-            # new = delete old, post new
-            # spammy = post new
+  # default = posts once then update, posts new if delete
+  # once = post once then updates
+  # new = delete old, post new
+  # spammy = post new
+  behavior: "new"
