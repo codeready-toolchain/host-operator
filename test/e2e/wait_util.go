@@ -37,3 +37,21 @@ func waitForUserSignup(t *testing.T, client client.Client, name, namespace strin
 		return false, nil
 	})
 }
+
+func waitForMasterUserRecord(t *testing.T, client client.Client, name, namespace string) error {
+	return wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+		mur := &v1alpha1.MasterUserRecord{}
+		if err := client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace,}, mur); err != nil {
+			if errors.IsNotFound(err) {
+				t.Logf("waiting for availability of MasterUserRecord '%s'", name)
+				return false, nil
+			}
+			return false, err
+		}
+		if mur.Name != "" {
+			t.Logf("found MasterUserRecord '%s'", name)
+			return true, nil
+		}
+		return false, nil
+	})
+}
