@@ -60,6 +60,8 @@ func newUserSignup(namespace, name string) *v1alpha1.UserSignup {
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			UserID: name,
+			Approved: true,
+			TargetCluster: "east",
 		},
 	}
 
@@ -68,6 +70,10 @@ func newUserSignup(namespace, name string) *v1alpha1.UserSignup {
 
 func verifyResources(t *testing.T, f *framework.Framework, namespace string, userSignup *v1alpha1.UserSignup) error {
 	if err := waitForUserSignup(t, f.Client.Client, userSignup.Name, namespace); err != nil {
+		return err
+	}
+
+	if err := waitForMasterUserRecord(t, f.Client.Client, userSignup.Name, namespace); err != nil {
 		return err
 	}
 
