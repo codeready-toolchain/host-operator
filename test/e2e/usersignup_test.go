@@ -79,18 +79,3 @@ func verifyResources(t *testing.T, f *framework.Framework, namespace string, use
 
 	return nil
 }
-
-func createUserSignup(t *testing.T, f *framework.Framework, ctx *framework.TestCtx, name string) *v1alpha1.UserSignup {
-	namespace, err := ctx.GetNamespace()
-	require.NoError(t, err)
-
-	userSignup := newUserSignup(namespace, name)
-	err = f.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout,
-		RetryInterval: cleanupRetryInterval })
-	require.NoError(t, err)
-
-	err = verifyResources(t, f, namespace, userSignup)
-	require.NoError(t, err)
-
-	return userSignup
-}
