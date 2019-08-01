@@ -26,7 +26,7 @@ const (
 	// Status condition reasons
 	noClustersAvailableReason = "NoClustersAvailable"
 	failedToReadUserApprovalPolicy = "FailedToReadUserApprovalPolicy"
-	failedToCreateMURReason = "FailedToCreateMUR"
+	unableToCreateMURReason = "UnableToCreateMUR"
 	provisioningReason = "Provisioning"
 )
 
@@ -268,7 +268,7 @@ func (r *ReconcileUserSignup) setStatusFailedToCreateMUR(userSignup *toolchainv1
 		toolchainv1alpha1.Condition{
 			Type: toolchainv1alpha1.UserSignupComplete,
 			Status: corev1.ConditionFalse,
-			Reason: failedToCreateMURReason,
+			Reason: unableToCreateMURReason,
 			Message: message,
 		})
 }
