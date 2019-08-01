@@ -171,6 +171,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 				{
 					TargetCluster: targetCluster,
+					Spec: toolchainv1alpha1.UserAccountSpec{
+						NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
+							Namespaces: []toolchainv1alpha1.Namespace{},
+						},
+					},
 				},
 			}
 
@@ -187,9 +192,10 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 			err = r.client.Create(context.TODO(), mur)
 			if err != nil {
+				reqLogger.Error(err, "Error creating MasterUserRecord", "UserID", instance.Spec.UserID)
 				err := r.setStatusFailedToCreateMUR(instance, "Failed to create MasterUserRecord")
 				if err != nil {
-					reqLogger.Error(err, "Error creating MasterUserRecord", "UserID", instance.Spec.UserID)
+					reqLogger.Error(err, "Error setting MUR failed status")
 					return reconcile.Result{}, err
 				}
 
@@ -234,6 +240,9 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig() (string, error) {
 	cm, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Get(config.ToolchainConfigMapName, metav1.GetOptions{})
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return config.UserApprovalPolicyManual, nil
+		}
 		return "", err
 	}
 
