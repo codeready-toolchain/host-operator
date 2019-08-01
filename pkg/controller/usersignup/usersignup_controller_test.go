@@ -134,6 +134,38 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 
 }
 
+func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: config.GetOperatorNamespace(),
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+			Approved: true,
+		},
+	}
+
+	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
+
+	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
+
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	mur := &v1alpha1.MasterUserRecord{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, mur)
+	require.NoError(t, err)
+
+	require.Equal(t, config.GetOperatorNamespace(), mur.Namespace)
+	require.Equal(t, userSignup.Name, mur.Name)
+	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
+	require.Len(t, mur.Spec.UserAccounts, 1)
+}
+
 func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
