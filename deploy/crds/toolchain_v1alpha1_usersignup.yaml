@@ -11,6 +11,17 @@ spec:
     kind: UserSignup
     plural: usersignups
   scope: Namespaced
+  additionalPrinterColumns:
+    - name: User ID
+      type: string
+      JSONPath: .spec.userID
+      priority: 1
+    - name: Complete
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Complete\")].status"
+    - name: Reason
+      type: string
+      JSONPath: ".status.conditions[?(@.type==\"Complete\")].reason"
   subresources:
     status: {}
   validation:
