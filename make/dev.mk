@@ -26,8 +26,6 @@ login-as-admin:
 create-namespace:
 	$(Q)-echo "Creating Namespace"
 	$(Q)-oc new-project $(LOCAL_TEST_NAMESPACE)
-	$(Q)-echo "Switching to the namespace $(LOCAL_TEST_NAMESPACE)"
-	$(Q)-oc project $(LOCAL_TEST_NAMESPACE)
 
 .PHONY: use-namespace
 ## Log in as system:admin and enter the test namespace
@@ -50,7 +48,7 @@ reset-namespace: login-as-admin clean-namespace create-namespace deploy-rbac
 deploy-rbac:
 	$(Q)-oc apply -f deploy/service_account.yaml
 	$(Q)-oc apply -f deploy/role.yaml
-	$(Q)-oc apply -f deploy/role_binding.yaml
+	$(Q)-sed -e 's|REPLACE_NAMESPACE|${LOCAL_TEST_NAMESPACE}|g' ./deploy/role_binding.yaml  | oc apply -f -
 
 .PHONY: deploy-crd
 ## Deploy CRD
@@ -58,6 +56,7 @@ deploy-crd:
 	$(Q)-oc apply -f deploy/crds/toolchain_v1alpha1_nstemplatetier.yaml
 	$(Q)-oc apply -f deploy/crds/toolchain_v1alpha1_masteruserrecord.yaml
 	$(Q)-oc apply -f deploy/crds/core_v1beta1_kubefedcluster.yaml
+	$(Q)-oc apply -f deploy/crds/toolchain_v1alpha1_usersignup.yaml
 
 .PHONY: add-member-to-host
 ## Run script add-cluster.sh member member-cluster
