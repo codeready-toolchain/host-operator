@@ -7,6 +7,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -72,15 +73,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 var _ reconcile.Reconciler = &ReconcileUserSignup{}
 
-func NewUserSignupError(msg string) UserSignupError {
-	return UserSignupError{message: msg}
+func NewSignupError(msg string) SignupError {
+	return SignupError{message: msg}
 }
 
-type UserSignupError struct {
+type SignupError struct {
 	message string
 }
 
-func (err UserSignupError) Error() string {
+func (err SignupError) Error() string {
 	return err.message
 }
 
@@ -154,7 +155,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 						return reconcile.Result{}, err
 					}
 
-					err = NewUserSignupError("No target clusters available")
+					err = NewSignupError("No target clusters available")
 					reqLogger.Error(err, "No member clusters found")
 					return reconcile.Result{}, err
 				}
@@ -168,71 +169,56 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 
 			// Provision the MasterUserRecord
-			userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
-				{
-					TargetCluster: targetCluster,
-					Spec: toolchainv1alpha1.UserAccountSpec{
-						NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
-							Namespaces: []toolchainv1alpha1.Namespace{},
-						},
-					},
-				},
-			}
-
-			mur := &toolchainv1alpha1.MasterUserRecord{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: instance.Spec.UserID,
-					Namespace: config.GetOperatorNamespace(),
-				},
-				Spec: toolchainv1alpha1.MasterUserRecordSpec{
-					UserID: instance.Spec.UserID,
-					UserAccounts: userAccounts,
-				},
-			}
-
-			err = r.client.Create(context.TODO(), mur)
+			err = r.provisionMasterUserRecord(instance, targetCluster, reqLogger)
 			if err != nil {
-				reqLogger.Error(err, "Error creating MasterUserRecord", "UserID", instance.Spec.UserID)
-				err := r.setStatusFailedToCreateMUR(instance, "Failed to create MasterUserRecord")
-				if err != nil {
-					reqLogger.Error(err, "Error setting MUR failed status")
-					return reconcile.Result{}, err
-				}
-
-				// Error creating the MasterUserRecord - requeue the request.
-				reqLogger.Error(err, "Error creating MasterUserRecord", "UserID", instance.Spec.UserID, "TargetCluster", targetCluster)
-				return reconcile.Result{}, err
-			}
-			reqLogger.Info("Created MasterUserRecord", "UserID", instance.Spec.UserID, "TargetCluster", targetCluster)
-
-			// Update the UserSignup status conditions: set PendingApproval to false, Provisioning to true
-			updatedConditions, updated := commonCondition.AddOrUpdateStatusConditions(instance.Status.Conditions, toolchainv1alpha1.Condition{
-				Type: toolchainv1alpha1.UserSignupPendingApproval,
-				Message: "",
-				Status: corev1.ConditionFalse,
-				Reason: "Approved",
-			},
-				toolchainv1alpha1.Condition{
-					Type: toolchainv1alpha1.UserSignupProvisioning,
-					Message: "",
-					Status: corev1.ConditionTrue,
-					Reason: "Provisioning",
-				})
-
-			// If the condition values were updated, post the changes
-			if updated {
-				instance.Status.Conditions = updatedConditions
-				err = r.client.Update(context.TODO(), instance)
-				if err != nil {
-					reqLogger.Error(err, "Error updating UserSignup Status conditions", "UserID", instance.Spec.UserID)
-					// Error updating the status - requeue the request.
-					return reconcile.Result{}, err
-				}
+				return reconcile.Result{}, nil
 			}
 		}
 	}
 
 	return reconcile.Result{}, nil
+}
+
+// provisionMasterUserRecord does the work of provisioning the MasterUserRecord
+func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string, logger logr.Logger) error {
+	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
+		{
+			TargetCluster: targetCluster,
+			Spec: toolchainv1alpha1.UserAccountSpec{
+				NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
+					Namespaces: []toolchainv1alpha1.Namespace{},
+				},
+			},
+		},
+	}
+
+	mur := &toolchainv1alpha1.MasterUserRecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: userSignup.Spec.UserID,
+			Namespace: config.GetOperatorNamespace(),
+		},
+		Spec: toolchainv1alpha1.MasterUserRecordSpec{
+			UserID: userSignup.Spec.UserID,
+			UserAccounts: userAccounts,
+		},
+	}
+
+	err := r.client.Create(context.TODO(), mur)
+	if err != nil {
+		logger.Error(err, "Error creating MasterUserRecord", "UserID", userSignup.Spec.UserID)
+		err := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord")
+		if err != nil {
+			logger.Error(err, "Error setting MUR failed status")
+			return err
+		}
+
+		// Log the error
+		logger.Error(err, "Error creating MasterUserRecord", "UserID", userSignup.Spec.UserID, "TargetCluster", targetCluster)
+		return err
+	}
+	logger.Info("Created MasterUserRecord", "UserID", userSignup.Spec.UserID, "TargetCluster", targetCluster)
+
+	return err
 }
 
 // ReadUserApprovalPolicyConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
