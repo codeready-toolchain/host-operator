@@ -205,6 +205,69 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	require.Equal(t, metav1.StatusReasonNotFound, err.(*errors.StatusError).ErrStatus.Reason)
 }
 
+func TestUserSignupWithExistingMURFails(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: config.GetOperatorNamespace(),
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+			Approved: false,
+		},
+	}
+
+	// Create a MUR with the same name
+	mur := &v1alpha1.MasterUserRecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: config.GetOperatorNamespace(),
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.MasterUserRecordSpec{
+			UserID: "foo",
+		},
+	}
+
+	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup, mur)
+
+	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
+
+	// Create a new ConfigMap and set the user approval policy to automatic
+	cmValues := make(map[string]string)
+	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
+	cm := &v1.ConfigMap{
+		Data: cmValues,
+	}
+	cm.Name = config.ToolchainConfigMapName
+	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	require.NoError(t, err)
+
+	_, err = r.Reconcile(req)
+	require.Error(t, err)
+
+	key := types.NamespacedName{
+		Namespace: config.GetOperatorNamespace(),
+		Name: "foo",
+	}
+	instance := &v1alpha1.UserSignup{}
+	err = r.client.Get(context.TODO(), key, instance)
+	require.NoError(t, err)
+
+	var cond *v1alpha1.Condition
+	for _, condition := range instance.Status.Conditions {
+		if condition.Type == v1alpha1.UserSignupComplete {
+			cond = &condition
+		}
+	}
+
+	require.NotNil(t, cond)
+	require.NotEqual(t, v1.ConditionTrue, cond.Status)
+	require.Equal(t, masterUserRecordAlreadyExistsReason, cond.Reason)
+}
+
 func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
