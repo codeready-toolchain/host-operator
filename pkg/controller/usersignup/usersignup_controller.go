@@ -213,12 +213,12 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 				logger.Error(err, "MasterUserRecord already exists")
 				return err
 			}
-		}
-
-		err := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord")
-		if err != nil {
-			logger.Error(err, "Error setting MUR failed status")
-			return err
+		} else {
+			err := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord")
+			if err != nil {
+				logger.Error(err, "Error setting MUR failed status")
+				return err
+			}
 		}
 
 		// Log the error
