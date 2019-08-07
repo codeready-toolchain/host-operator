@@ -29,6 +29,7 @@ const (
 	failedToReadUserApprovalPolicy = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason = "UnableToCreateMUR"
 	provisioningReason = "Provisioning"
+	masterUserRecordAlreadyExistsReason = "AlreadyExists"
 )
 
 var log = logf.Log.WithName("controller_usersignup")
@@ -195,7 +196,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: userSignup.Spec.UserID,
-			Namespace: config.GetOperatorNamespace(),
+			Namespace: userSignup.Namespace,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserID: userSignup.Spec.UserID,
@@ -206,6 +207,14 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	err := r.client.Create(context.TODO(), mur)
 	if err != nil {
 		logger.Error(err, "Error creating MasterUserRecord", "UserID", userSignup.Spec.UserID)
+		if errors.IsAlreadyExists(err) {
+			err := r.setStatusMURAlreadyExists(userSignup, "MasterUserRecord already exists")
+			if err != nil {
+				logger.Error(err, "MasterUserRecord already exists")
+				return err
+			}
+		}
+
 		err := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord")
 		if err != nil {
 			logger.Error(err, "Error setting MUR failed status")
@@ -264,6 +273,17 @@ func (r *ReconcileUserSignup) setStatusFailedToCreateMUR(userSignup *toolchainv1
 			Type: toolchainv1alpha1.UserSignupComplete,
 			Status: corev1.ConditionFalse,
 			Reason: unableToCreateMURReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusMURAlreadyExists(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type: toolchainv1alpha1.UserSignupComplete,
+			Status: corev1.ConditionFalse,
+			Reason: masterUserRecordAlreadyExistsReason,
 			Message: message,
 		})
 }
