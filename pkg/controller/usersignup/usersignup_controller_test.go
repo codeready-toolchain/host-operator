@@ -232,7 +232,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 
 	_, err = r.Reconcile(req)
 	require.Error(t, err)
-	require.IsType(t, UserSignupError{}, err)
+	require.IsType(t, SignupError{}, err)
 }
 
 func prepareReconcile(t *testing.T, userID string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request) {
