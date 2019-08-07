@@ -171,7 +171,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			// Provision the MasterUserRecord
 			err = r.provisionMasterUserRecord(instance, targetCluster, reqLogger)
 			if err != nil {
-				return reconcile.Result{}, nil
+				return reconcile.Result{}, err
 			}
 		}
 	}
