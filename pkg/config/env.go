@@ -1,11 +1,12 @@
 package config
 
 import (
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"os"
 )
 
 const (
-	DefaultOperatorNamespace = "toolchain-host"
+	DefaultOperatorNamespace = "toolchain-host-operator"
 )
 
 func GetOperatorNamespace() string {
@@ -14,7 +15,12 @@ func GetOperatorNamespace() string {
 		return ns
 	}
 
-	return DefaultOperatorNamespace
+	ns, err := k8sutil.GetOperatorNamespace()
+	if err != nil {
+		return DefaultOperatorNamespace
+	}
+
+	return ns
 }
 
 func GetIdP() string {
