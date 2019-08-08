@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"time"
 )
 
 const (
@@ -173,6 +174,13 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			// Provision the MasterUserRecord
 			err = r.provisionMasterUserRecord(instance, targetCluster, reqLogger)
 			if err != nil {
+				// If the error is because the MUR already exists, delay the next reconcile loop
+				if errors.IsAlreadyExists(err) {
+					return reconcile.Result{
+						RequeueAfter: 1 * time.Hour,
+					}, err
+				}
+
 				return reconcile.Result{}, err
 			}
 		}
@@ -193,6 +201,9 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			},
 		},
 	}
+
+	// TODO Update the MasterUserRecord with NSTemplateTier values
+	// SEE https://jira.coreos.com/browse/CRT-74
 
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
@@ -221,16 +232,16 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	if err != nil {
 		logger.Error(err, "Error creating MasterUserRecord", "UserID", userSignup.Spec.UserID)
 		if errors.IsAlreadyExists(err) {
-			err := r.setStatusMURAlreadyExists(userSignup, "MasterUserRecord already exists")
-			if err != nil {
-				logger.Error(err, "Error setting MUR failed status")
-				return err
+			error := r.setStatusMURAlreadyExists(userSignup, "MasterUserRecord already exists")
+			if error != nil {
+				logger.Error(error, "Error setting MUR failed status")
+				return error
 			}
 		} else {
-			err := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord")
-			if err != nil {
-				logger.Error(err, "Error setting MUR failed status")
-				return err
+			error := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord")
+			if error != nil {
+				logger.Error(error, "Error setting MUR failed status")
+				return error
 			}
 		}
 
