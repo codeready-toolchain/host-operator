@@ -29,6 +29,7 @@ var log = logf.Log.WithName("controller_masteruserrecord")
 const (
 	// Status condition reasons
 	unableToGetUserAccountReason = "UnableToGetUserAccount"
+	clusterNotReady              = "ClusterNotReady"
 	provisioningReason           = "Provisioning"
 )
 
@@ -41,9 +42,9 @@ func Add(mgr manager.Manager) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileMasterUserRecord{
-		client:           mgr.GetClient(),
-		scheme:           mgr.GetScheme(),
-		getMemberCluster: cluster.GetFedCluster}
+		client:                mgr.GetClient(),
+		scheme:                mgr.GetScheme(),
+		retrieveMemberCluster: cluster.GetFedCluster}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -72,9 +73,9 @@ var _ reconcile.Reconciler = &ReconcileMasterUserRecord{}
 type ReconcileMasterUserRecord struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client           client.Client
-	scheme           *runtime.Scheme
-	getMemberCluster func(name string) (*cluster.FedCluster, bool)
+	client                client.Client
+	scheme                *runtime.Scheme
+	retrieveMemberCluster func(name string) (*cluster.FedCluster, bool)
 }
 
 // Reconcile reads that state of the cluster for a MasterUserRecord object and makes changes based on the state read
@@ -113,18 +114,16 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 
 func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccount toolchainv1alpha1.UserAccountEmbedded, record *toolchainv1alpha1.MasterUserRecord) error {
 	// get & check fed cluster
-	fedCluster, ok := r.getMemberCluster(recAccount.TargetCluster)
-	if !ok {
-		return fmt.Errorf("the fedCluster %s not found in the registry", recAccount.TargetCluster)
-	}
-	if !util.IsClusterReady(fedCluster.ClusterStatus) {
-		return fmt.Errorf("the fedCluster %s is not ready", recAccount.TargetCluster)
+	fedCluster, err := r.getMemberCluster(log, recAccount, record)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(clusterNotReady), err,
+			"failed to get the member cluster '%s'", recAccount.TargetCluster)
 	}
 
 	// get UserAccount from member
 	nsdName := namespacedName(fedCluster.OperatorNamespace, record.Name)
 	userAccount := &toolchainv1alpha1.UserAccount{}
-	err := fedCluster.Client.Get(context.TODO(), nsdName, userAccount)
+	err = fedCluster.Client.Get(context.TODO(), nsdName, userAccount)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// does not exist - should create
@@ -137,12 +136,24 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 			}
 			return nil
 		}
-		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusUserAccountRetrievalFailed, err,
+		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(unableToGetUserAccountReason), err,
 			"failed to get userAccount '%s' from cluster '%s'", record.Name, recAccount.TargetCluster)
 	}
 
 	// TODO do the synchronization
 	return nil
+}
+
+func (r *ReconcileMasterUserRecord) getMemberCluster(log logr.Logger, recAccount toolchainv1alpha1.UserAccountEmbedded, record *toolchainv1alpha1.MasterUserRecord) (*cluster.FedCluster, error) {
+	// get & check fed cluster
+	fedCluster, ok := r.retrieveMemberCluster(recAccount.TargetCluster)
+	if !ok {
+		return nil, fmt.Errorf("the fedCluster %s not found in the registry", recAccount.TargetCluster)
+	}
+	if !util.IsClusterReady(fedCluster.ClusterStatus) {
+		return nil, fmt.Errorf("the fedCluster %s is not ready", recAccount.TargetCluster)
+	}
+	return fedCluster, nil
 }
 
 // wrapErrorWithStatusUpdate wraps the error and update the user account status. If the update failed then logs the error.
@@ -156,11 +167,13 @@ func (r *ReconcileMasterUserRecord) wrapErrorWithStatusUpdate(logger logr.Logger
 	return errs.Wrapf(err, format, args...)
 }
 
-func (r *ReconcileMasterUserRecord) setStatusUserAccountRetrievalFailed(record *toolchainv1alpha1.MasterUserRecord, message string) error {
-	return updateStatusConditions(
-		r.client,
-		record,
-		toBeNotReady(unableToGetUserAccountReason, message))
+func (r *ReconcileMasterUserRecord) setStatusFailed(reason string) func(record *toolchainv1alpha1.MasterUserRecord, message string) error {
+	return func(record *toolchainv1alpha1.MasterUserRecord, message string) error {
+		return updateStatusConditions(
+			r.client,
+			record,
+			toBeNotReady(reason, message))
+	}
 }
 
 func toBeNotReady(reason, msg string) toolchainv1alpha1.Condition {
