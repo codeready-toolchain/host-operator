@@ -136,7 +136,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 		if errors.IsNotFound(err) {
 			// does not exist - should create
 			userAccount = newUserAccount(nsdName, recAccount.Spec)
-			if err := r.setStatusProvisioning(record); err != nil {
+			if err := updateStatusConditions(r.client, record, toBeNotReady(provisioningReason, "")); err != nil {
 				return err
 			}
 			if err := fedCluster.Client.Create(context.TODO(), userAccount); err != nil {
@@ -174,13 +174,6 @@ func (r *ReconcileMasterUserRecord) wrapErrorWithStatusUpdate(logger logr.Logger
 		logger.Error(err, "status update failed")
 	}
 	return errs.Wrapf(err, format, args...)
-}
-
-func (r *ReconcileMasterUserRecord) setStatusProvisioning(record *toolchainv1alpha1.MasterUserRecord) error {
-	return updateStatusConditions(
-		r.client,
-		record,
-		toBeNotReady(provisioningReason, ""))
 }
 
 func (r *ReconcileMasterUserRecord) setStatusUserAccountRetrievalFailed(record *toolchainv1alpha1.MasterUserRecord, message string) error {
