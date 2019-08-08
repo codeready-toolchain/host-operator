@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -204,13 +205,25 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		},
 	}
 
-	err := r.client.Create(context.TODO(), mur)
+	err := controllerutil.SetControllerReference(mur, userSignup, r.scheme)
+	if err != nil {
+		logger.Error(err, "Error setting controller reference for MasterUserRecord %s", mur.Name)
+
+		err := r.setStatusFailedToCreateMUR(userSignup, "failed to set controller reference")
+		if err != nil {
+			logger.Error(err, "Error setting MUR failed status")
+			return err
+		}
+		return err
+	}
+
+	err = r.client.Create(context.TODO(), mur)
 	if err != nil {
 		logger.Error(err, "Error creating MasterUserRecord", "UserID", userSignup.Spec.UserID)
 		if errors.IsAlreadyExists(err) {
 			err := r.setStatusMURAlreadyExists(userSignup, "MasterUserRecord already exists")
 			if err != nil {
-				logger.Error(err, "MasterUserRecord already exists")
+				logger.Error(err, "Error setting MUR failed status")
 				return err
 			}
 		} else {
