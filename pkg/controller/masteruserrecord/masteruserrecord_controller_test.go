@@ -5,6 +5,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -48,6 +49,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	err = memberClient.Get(context.TODO(), namespacedName(memberOperatorNs, "john"), ua)
 	require.NoError(t, err)
 	assert.EqualValues(t, mur.Spec.UserAccounts[0].Spec, ua.Spec)
+	assertMurCondition(t, hostClient, toBeNotReady(provisioningReason, ""))
 }
 
 func TestCreateUserAccountFailed(t *testing.T) {
@@ -67,8 +69,10 @@ func TestCreateUserAccountFailed(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "the fedCluster member-cluster not found in the registry")
+		msg := "the fedCluster member-cluster not found in the registry"
+		assert.Contains(t, err.Error(), msg)
 		assertUaNotFound(t, memberClient)
+		assertMurCondition(t, hostClient, toBeNotReady(clusterNotReady, msg))
 	})
 
 	t.Run("when member cluster does not exist", func(t *testing.T) {
@@ -80,9 +84,18 @@ func TestCreateUserAccountFailed(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "the fedCluster member-cluster is not ready")
+		msg := "the fedCluster member-cluster is not ready"
+		assert.Contains(t, err.Error(), msg)
 		assertUaNotFound(t, memberClient)
+		assertMurCondition(t, hostClient, toBeNotReady(clusterNotReady, msg))
 	})
+}
+
+func assertMurCondition(t *testing.T, hostClient client.Client, expected toolchainv1alpha1.Condition) {
+	record := &toolchainv1alpha1.MasterUserRecord{}
+	err := hostClient.Get(context.TODO(), namespacedName(hostOperatorNs, "john"), record)
+	require.NoError(t, err)
+	test.AssertConditionsMatch(t, record.Status.Conditions, expected)
 }
 
 func assertUaNotFound(t *testing.T, memberClient client.Client) {
@@ -93,7 +106,7 @@ func assertUaNotFound(t *testing.T, memberClient client.Client) {
 }
 
 func newMasterUserRecord(userName string) *toolchainv1alpha1.MasterUserRecord {
-	userAcc := &toolchainv1alpha1.MasterUserRecord{
+	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userName,
 			Namespace: hostOperatorNs,
@@ -130,7 +143,7 @@ func newMasterUserRecord(userName string) *toolchainv1alpha1.MasterUserRecord {
 			}},
 		},
 	}
-	return userAcc
+	return mur
 }
 
 func newMurRequest(mur *toolchainv1alpha1.MasterUserRecord) reconcile.Request {
@@ -150,9 +163,9 @@ func newController(hostClient, memberClient client.Client, s *runtime.Scheme,
 	getMemberCluster getMemberCluster) ReconcileMasterUserRecord {
 
 	return ReconcileMasterUserRecord{
-		client:           hostClient,
-		scheme:           s,
-		getMemberCluster: getMemberCluster(memberClient),
+		client:                hostClient,
+		scheme:                s,
+		retrieveMemberCluster: getMemberCluster(memberClient),
 	}
 
 }
