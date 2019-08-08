@@ -30,14 +30,7 @@ const (
 	// Status condition reasons
 	unableToGetUserAccountReason = "UnableToGetUserAccount"
 	provisioningReason           = "Provisioning"
-	updatingReason               = "Updating"
-	provisionedReason            = "Provisioned"
 )
-
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
 
 // Add creates a new MasterUserRecord Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -93,7 +86,7 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling MasterUserRecord")
 
-	// Fetch the MasterUserRecord userRecord
+	// Fetch the MasterUserRecord instance
 	userRecord := &toolchainv1alpha1.MasterUserRecord{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, userRecord)
 	if err != nil {
@@ -148,20 +141,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 			"failed to get userAccount '%s' from cluster '%s'", record.Name, recAccount.TargetCluster)
 	}
 
-	sync := Synchronizer{
-		record:        record,
-		hostClient:    r.client,
-		memberClient:  fedCluster.Client,
-		memberUserAcc: userAccount,
-		recordUserAcc: recAccount,
-	}
-	if err := sync.synchronizeSpec(); err != nil {
-		return err
-	}
-	if err := sync.synchronizeStatus(); err != nil {
-		return err
-	}
-
+	// TODO do the synchronization
 	return nil
 }
 
@@ -181,14 +161,6 @@ func (r *ReconcileMasterUserRecord) setStatusUserAccountRetrievalFailed(record *
 		r.client,
 		record,
 		toBeNotReady(unableToGetUserAccountReason, message))
-}
-
-func toBeProvisioned() toolchainv1alpha1.Condition {
-	return toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.ConditionReady,
-		Status: corev1.ConditionTrue,
-		Reason: provisionedReason,
-	}
 }
 
 func toBeNotReady(reason, msg string) toolchainv1alpha1.Condition {
