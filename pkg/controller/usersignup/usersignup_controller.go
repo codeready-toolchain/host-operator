@@ -128,10 +128,10 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	if !provisioning && !completed {
 		userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig()
 		if err != nil {
-			err := r.setStatusFailedToReadUserApprovalPolicy(instance, "Failed to read ConfigMap value " + config.ToolchainConfigMapUserApprovalPolicy)
-			if err != nil {
-				reqLogger.Error(err, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
-				return reconcile.Result{}, err
+			statusError := r.setStatusFailedToReadUserApprovalPolicy(instance, err.Error())
+			if statusError != nil {
+				reqLogger.Error(statusError, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
+				return reconcile.Result{}, statusError
 			}
 
 			reqLogger.Error(err, "Error reading user approval policy")
@@ -152,10 +152,10 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				if len(members) > 0 {
 					targetCluster = members[0].Name
 				} else {
-					err := r.setStatusNoClustersAvailable(instance, "No member clusters found")
-					if err != nil {
-						reqLogger.Error(err, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
-						return reconcile.Result{}, err
+					statusError := r.setStatusNoClustersAvailable(instance, "No member clusters found")
+					if statusError != nil {
+						reqLogger.Error(statusError, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
+						return reconcile.Result{}, statusError
 					}
 
 					err = NewSignupError("No target clusters available")
@@ -165,10 +165,10 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 
 			// Set the "Provisioning" status condition
-			err := r.setStatusProvisioning(instance, "Provisioning User")
-			if err != nil {
-				reqLogger.Error(err, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
-				return reconcile.Result{}, err
+			statusError := r.setStatusProvisioning(instance, "Provisioning User")
+			if statusError != nil {
+				reqLogger.Error(statusError, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
+				return reconcile.Result{}, statusError
 			}
 
 			// Provision the MasterUserRecord
@@ -220,10 +220,10 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	if err != nil {
 		logger.Error(err, "Error setting controller reference for MasterUserRecord %s", mur.Name)
 
-		err := r.setStatusFailedToCreateMUR(userSignup, "failed to set controller reference")
-		if err != nil {
-			logger.Error(err, "Error setting MUR failed status")
-			return err
+		statusError := r.setStatusFailedToCreateMUR(userSignup, "failed to set controller reference")
+		if statusError != nil {
+			logger.Error(statusError, "Error setting MUR failed status")
+			return statusError
 		}
 		return err
 	}
@@ -232,16 +232,16 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	if err != nil {
 		logger.Error(err, "Error creating MasterUserRecord", "UserID", userSignup.Spec.UserID)
 		if errors.IsAlreadyExists(err) {
-			error := r.setStatusMURAlreadyExists(userSignup, "MasterUserRecord already exists")
-			if error != nil {
-				logger.Error(error, "Error setting MUR failed status")
-				return error
+			statusError := r.setStatusMURAlreadyExists(userSignup, "MasterUserRecord already exists")
+			if statusError != nil {
+				logger.Error(statusError, "Error setting MUR failed status")
+				return statusError
 			}
 		} else {
-			error := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord")
-			if error != nil {
-				logger.Error(error, "Error setting MUR failed status")
-				return error
+			statusError := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord")
+			if statusError != nil {
+				logger.Error(statusError, "Error setting MUR failed status")
+				return statusError
 			}
 		}
 
