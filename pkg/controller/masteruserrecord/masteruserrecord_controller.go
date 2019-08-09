@@ -35,11 +35,6 @@ const (
 	provisionedReason            = "Provisioned"
 )
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
 // Add creates a new MasterUserRecord Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -94,7 +89,7 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling MasterUserRecord")
 
-	// Fetch the MasterUserRecord userRecord
+	// Fetch the MasterUserRecord instance
 	userRecord := &toolchainv1alpha1.MasterUserRecord{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, userRecord)
 	if err != nil {
@@ -148,11 +143,11 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 	}
 
 	sync := Synchronizer{
-		record:        record,
-		hostClient:    r.client,
-		memberClient:  fedCluster.Client,
-		memberUserAcc: userAccount,
-		recordUserAcc: recAccount,
+		record:            record,
+		hostClient:        r.client,
+		memberClient:      fedCluster.Client,
+		memberUserAcc:     userAccount,
+		recordSpecUserAcc: recAccount,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
 		return err

@@ -1,16 +1,15 @@
 package masteruserrecord
 
 import (
-	"context"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/test"
+	"github.com/codeready-toolchain/host-operator/test/murtest"
+	uatest "github.com/codeready-toolchain/host-operator/test/useraccount"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,47 +21,43 @@ import (
 	"testing"
 )
 
-const (
-	hostClusterName   = "host-cluster"
-	memberOperatorNs  = "toolchain-member-operator"
-	memberClusterName = "member-cluster"
-	hostOperatorNs    = "toolchain-host-operator"
-)
-
-type getMemberCluster func(cl client.Client) func(name string) (*cluster.FedCluster, bool)
+type getMemberCluster func(clusters ...clientForCluster) func(name string) (*cluster.FedCluster, bool)
 
 func TestCreateUserAccountSuccessful(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
-	mur := newMasterUserRecord("john")
+	mur := murtest.NewMasterUserRecord("john")
 	memberClient := fake.NewFakeClientWithScheme(s)
 	hostClient := fake.NewFakeClientWithScheme(s, mur)
-	cntrl := newController(hostClient, memberClient, s, newGetMemberCluster(true, v1.ConditionTrue))
+	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+		clusterClient(test.MemberClusterName, memberClient))
 
 	// when
 	_, err := cntrl.Reconcile(newMurRequest(mur))
 
 	// then
 	require.NoError(t, err)
-	ua := &toolchainv1alpha1.UserAccount{}
-	err = memberClient.Get(context.TODO(), namespacedName(memberOperatorNs, "john"), ua)
-	require.NoError(t, err)
-	assert.EqualValues(t, mur.Spec.UserAccounts[0].Spec, ua.Spec)
-	assertMurCondition(t, hostClient, toBeNotReady(provisioningReason, ""))
+
+	uatest.AssertThatUserAccount(t, "john", memberClient).
+		Exists().
+		HasSpec(mur.Spec.UserAccounts[0].Spec)
+	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+		HasCondition(toBeNotReady(provisioningReason, ""))
 }
 
-func TestCreateUserAccountFailed(t *testing.T) {
+func TestReconcileMurFailedBecauseOfNotAvailableCluster(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
-	mur := newMasterUserRecord("john")
-	memberClient := fake.NewFakeClientWithScheme(s)
+	mur := murtest.NewMasterUserRecord("john")
 	hostClient := fake.NewFakeClientWithScheme(s, mur)
 
-	t.Run("when member cluster does not exist", func(t *testing.T) {
+	t.Run("when member cluster does not exist and UA hasn't been created yet", func(t *testing.T) {
 		// given
-		cntrl := newController(hostClient, memberClient, s, newGetMemberCluster(false, v1.ConditionTrue))
+		memberClient := fake.NewFakeClientWithScheme(s)
+		cntrl := newController(hostClient, s, newGetMemberCluster(false, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
 		_, err := cntrl.Reconcile(newMurRequest(mur))
@@ -71,13 +66,35 @@ func TestCreateUserAccountFailed(t *testing.T) {
 		require.Error(t, err)
 		msg := "the fedCluster member-cluster not found in the registry"
 		assert.Contains(t, err.Error(), msg)
-		assertUaNotFound(t, memberClient)
-		assertMurCondition(t, hostClient, toBeNotReady(clusterNotReady, msg))
+
+		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
+		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+			HasCondition(toBeNotReady(clusterNotReady, msg))
 	})
 
-	t.Run("when member cluster does not exist", func(t *testing.T) {
+	t.Run("when member cluster does not exist and UA was already created", func(t *testing.T) {
 		// given
-		cntrl := newController(hostClient, memberClient, s, newGetMemberCluster(true, v1.ConditionFalse))
+		memberClient := fake.NewFakeClientWithScheme(s, uatest.NewUserAccountFromMur(mur))
+		cntrl := newController(hostClient, s, newGetMemberCluster(false, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.Error(t, err)
+		msg := "the fedCluster member-cluster not found in the registry"
+		assert.Contains(t, err.Error(), msg)
+
+		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+			HasCondition(toBeNotReady(clusterNotReady, msg))
+	})
+
+	t.Run("when member cluster does not exist and UA hasn't been created yet", func(t *testing.T) {
+		// given
+		memberClient := fake.NewFakeClientWithScheme(s)
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionFalse),
+			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
 		_, err := cntrl.Reconcile(newMurRequest(mur))
@@ -86,64 +103,135 @@ func TestCreateUserAccountFailed(t *testing.T) {
 		require.Error(t, err)
 		msg := "the fedCluster member-cluster is not ready"
 		assert.Contains(t, err.Error(), msg)
-		assertUaNotFound(t, memberClient)
-		assertMurCondition(t, hostClient, toBeNotReady(clusterNotReady, msg))
+
+		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
+		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+			HasCondition(toBeNotReady(clusterNotReady, msg))
+	})
+
+	t.Run("when member cluster does not exist and UA was already created", func(t *testing.T) {
+		// given
+		memberClient := fake.NewFakeClientWithScheme(s, uatest.NewUserAccountFromMur(mur))
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionFalse),
+			clusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.Error(t, err)
+		msg := "the fedCluster member-cluster is not ready"
+		assert.Contains(t, err.Error(), msg)
+
+		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+			HasCondition(toBeNotReady(clusterNotReady, msg))
 	})
 }
 
-func assertMurCondition(t *testing.T, hostClient client.Client, expected toolchainv1alpha1.Condition) {
-	record := &toolchainv1alpha1.MasterUserRecord{}
-	err := hostClient.Get(context.TODO(), namespacedName(hostOperatorNs, "john"), record)
+func TestModifyUserAccounts(t *testing.T) {
+	// given
+	logf.SetLogger(logf.ZapLogger(true))
+	s := apiScheme(t)
+	mur := murtest.NewMasterUserRecord("john", murtest.StatusCondition(toBeProvisioned()),
+		murtest.AdditionalAccounts("member2-cluster", "member3-cluster"))
+
+	userAccount := uatest.NewUserAccountFromMur(mur)
+	userAccount2 := uatest.NewUserAccountFromMur(mur)
+	userAccount3 := uatest.NewUserAccountFromMur(mur)
+
+	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"), murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
+	murtest.ModifyUaInMur(mur, "member2-cluster", murtest.NsLimit("admin"), murtest.TierName("basic"))
+
+	memberClient := fake.NewFakeClientWithScheme(s, userAccount)
+	memberClient2 := fake.NewFakeClientWithScheme(s, userAccount2)
+	memberClient3 := fake.NewFakeClientWithScheme(s, userAccount3)
+	hostClient := fake.NewFakeClientWithScheme(s, mur)
+
+	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2),
+		clusterClient("member3-cluster", memberClient3))
+
+	// when
+	_, err := cntrl.Reconcile(newMurRequest(mur))
+
+	// then
 	require.NoError(t, err)
-	test.AssertConditionsMatch(t, record.Status.Conditions, expected)
+
+	uatest.AssertThatUserAccount(t, "john", memberClient).
+		Exists().
+		HasSpec(mur.Spec.UserAccounts[0].Spec)
+	uatest.AssertThatUserAccount(t, "john", memberClient2).
+		Exists().
+		HasSpec(mur.Spec.UserAccounts[1].Spec)
+	uatest.AssertThatUserAccount(t, "john", memberClient3).
+		Exists().
+		HasSpec(mur.Spec.UserAccounts[2].Spec)
+	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+		HasCondition(toBeNotReady(updatingReason, ""))
 }
 
-func assertUaNotFound(t *testing.T, memberClient client.Client) {
-	ua := &toolchainv1alpha1.UserAccount{}
-	err := memberClient.Get(context.TODO(), namespacedName(memberOperatorNs, "john"), ua)
-	require.Error(t, err)
-	assert.IsType(t, metav1.StatusReasonNotFound, errors.ReasonForError(err))
-}
+func TestSyncMurStatusWithUserAccountStatusesForTheFirstTime(t *testing.T) {
+	// given
+	logf.SetLogger(logf.ZapLogger(true))
+	s := apiScheme(t)
 
-func newMasterUserRecord(userName string) *toolchainv1alpha1.MasterUserRecord {
-	mur := &toolchainv1alpha1.MasterUserRecord{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      userName,
-			Namespace: hostOperatorNs,
-		},
-		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserID: "12345abcdef",
-			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{{
-				TargetCluster: memberClusterName,
-				SyncIndex:     "0",
-				Spec: toolchainv1alpha1.UserAccountSpec{
-					UserID:  "12345abcdef",
-					NSLimit: "basic",
-					NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
-						TierName: "basic",
-						Namespaces: []toolchainv1alpha1.Namespace{
-							{
-								Type:     "ide",
-								Revision: "123abc",
-								Template: "",
-							},
-							{
-								Type:     "ci/cd",
-								Revision: "123abc",
-								Template: "",
-							},
-							{
-								Type:     "staging",
-								Revision: "123abc",
-								Template: "",
-							},
-						},
-					},
-				},
-			}},
-		},
-	}
-	return mur
+	mur := murtest.NewMasterUserRecord("john",
+		murtest.StatusCondition(toBeNotReady(provisioningReason, "")),
+		murtest.AdditionalAccounts("member2-cluster", "member3-cluster"))
+
+	userAccount := uatest.NewUserAccountFromMur(mur,
+		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
+	mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{}
+
+	userAccount2 := uatest.NewUserAccountFromMur(mur,
+		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
+	mur.Status.UserAccounts = append(mur.Status.UserAccounts, toolchainv1alpha1.UserAccountStatusEmbedded{
+		SyncIndex:         "111aaa",
+		TargetCluster:     "member2-cluster",
+		UserAccountStatus: userAccount.Status,
+	})
+
+	userAccount3 := uatest.NewUserAccountFromMur(mur,
+		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
+	mur.Status.UserAccounts = append(mur.Status.UserAccounts, toolchainv1alpha1.UserAccountStatusEmbedded{
+		SyncIndex:         "123abc",
+		TargetCluster:     "member3-cluster",
+		UserAccountStatus: userAccount.Status,
+	})
+
+	memberClient := fake.NewFakeClientWithScheme(s, userAccount)
+	memberClient2 := fake.NewFakeClientWithScheme(s, userAccount2)
+	memberClient3 := fake.NewFakeClientWithScheme(s, userAccount3)
+
+	hostClient := fake.NewFakeClientWithScheme(s, mur)
+	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2),
+		clusterClient("member3-cluster", memberClient3))
+
+	// when
+	_, err := cntrl.Reconcile(newMurRequest(mur))
+
+	// then
+	require.NoError(t, err)
+
+	uatest.AssertThatUserAccount(t, "john", memberClient).
+		Exists().
+		HasSpec(mur.Spec.UserAccounts[0].Spec).
+		HasCondition(userAccount.Status.Conditions[0])
+	uatest.AssertThatUserAccount(t, "john", memberClient2).
+		Exists().
+		HasSpec(mur.Spec.UserAccounts[1].Spec).
+		HasCondition(userAccount2.Status.Conditions[0])
+	uatest.AssertThatUserAccount(t, "john", memberClient3).
+		Exists().
+		HasSpec(mur.Spec.UserAccounts[2].Spec).
+		HasCondition(userAccount3.Status.Conditions[0])
+
+	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+		HasCondition(toBeNotReady(provisioningReason, "")).
+		HasStatusUserAccounts(test.MemberClusterName, "member2-cluster", "member3-cluster").
+		HasStatusSyncIndex("123abc").
+		HasUserAccountCondition(userAccount.Status.Conditions[0])
 }
 
 func newMurRequest(mur *toolchainv1alpha1.MasterUserRecord) reconcile.Request {
@@ -159,35 +247,38 @@ func apiScheme(t *testing.T) *runtime.Scheme {
 	return s
 }
 
-func newController(hostClient, memberClient client.Client, s *runtime.Scheme,
-	getMemberCluster getMemberCluster) ReconcileMasterUserRecord {
-
+func newController(hostCl client.Client, s *runtime.Scheme, getMemberCluster getMemberCluster, memberCl ...clientForCluster) ReconcileMasterUserRecord {
 	return ReconcileMasterUserRecord{
-		client:                hostClient,
+		client:                hostCl,
 		scheme:                s,
-		retrieveMemberCluster: getMemberCluster(memberClient),
+		retrieveMemberCluster: getMemberCluster(memberCl...),
 	}
-
 }
 
 func newGetMemberCluster(ok bool, status v1.ConditionStatus) getMemberCluster {
 	if !ok {
-		return func(cl client.Client) func(name string) (*cluster.FedCluster, bool) {
+		return func(clusters ...clientForCluster) func(name string) (*cluster.FedCluster, bool) {
 			return func(name string) (*cluster.FedCluster, bool) {
 				return nil, false
 			}
 		}
 	}
-	return func(cl client.Client) func(name string) (*cluster.FedCluster, bool) {
+	return func(clusters ...clientForCluster) func(name string) (*cluster.FedCluster, bool) {
+		mapping := map[string]client.Client{}
+		for _, cluster := range clusters {
+			n, cl := cluster()
+			mapping[n] = cl
+		}
 		return func(name string) (*cluster.FedCluster, bool) {
-			if name != memberClusterName {
+			cl, ok := mapping[name]
+			if !ok {
 				return nil, false
 			}
 			return &cluster.FedCluster{
 				Client:            cl,
 				Type:              cluster.Host,
-				OperatorNamespace: memberOperatorNs,
-				OwnerClusterName:  hostClusterName,
+				OperatorNamespace: test.MemberOperatorNs,
+				OwnerClusterName:  test.HostClusterName,
 				ClusterStatus: &v1beta1.KubeFedClusterStatus{
 					Conditions: []v1beta1.ClusterCondition{{
 						Type:   common.ClusterReady,
@@ -196,5 +287,13 @@ func newGetMemberCluster(ok bool, status v1.ConditionStatus) getMemberCluster {
 				},
 			}, true
 		}
+	}
+}
+
+type clientForCluster func() (string, client.Client)
+
+func clusterClient(name string, cl client.Client) clientForCluster {
+	return func() (string, client.Client) {
+		return name, cl
 	}
 }

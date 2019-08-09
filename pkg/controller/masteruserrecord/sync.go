@@ -10,17 +10,17 @@ import (
 )
 
 type Synchronizer struct {
-	hostClient    client.Client
-	memberClient  client.Client
-	memberUserAcc *toolchainv1alpha1.UserAccount
-	recordUserAcc toolchainv1alpha1.UserAccountEmbedded
-	record        *toolchainv1alpha1.MasterUserRecord
+	hostClient        client.Client
+	memberClient      client.Client
+	memberUserAcc     *toolchainv1alpha1.UserAccount
+	recordSpecUserAcc toolchainv1alpha1.UserAccountEmbedded
+	record            *toolchainv1alpha1.MasterUserRecord
 }
 
 func (s *Synchronizer) synchronizeSpec() error {
-	if !reflect.DeepEqual(s.memberUserAcc.Spec, s.recordUserAcc.Spec) {
+	if !reflect.DeepEqual(s.memberUserAcc.Spec, s.recordSpecUserAcc.Spec) {
 		// when UserAccount spec in record is updated - is not same as in member
-		s.memberUserAcc.Spec = s.recordUserAcc.Spec
+		s.memberUserAcc.Spec = s.recordSpecUserAcc.Spec
 		if err := updateStatusConditions(s.hostClient, s.record, toBeNotReady(updatingReason, "")); err != nil {
 			return err
 		}
@@ -33,15 +33,15 @@ func (s *Synchronizer) synchronizeSpec() error {
 }
 
 func (s *Synchronizer) synchronizeStatus() error {
-	recAccStatus, index := getUserAccountStatus(s.recordUserAcc.TargetCluster, s.record)
-	if index < 0 || s.recordUserAcc.SyncIndex == recAccStatus.SyncIndex {
+	recStatusUserAccStatus, index := getUserAccountStatus(s.recordSpecUserAcc.TargetCluster, s.record)
+	if index < 0 || s.recordSpecUserAcc.SyncIndex != recStatusUserAccStatus.SyncIndex {
 		// when record should update status
-		recAccStatus.SyncIndex = s.recordUserAcc.SyncIndex
-		recAccStatus.UserAccountStatus = s.memberUserAcc.Status
+		recStatusUserAccStatus.SyncIndex = s.recordSpecUserAcc.SyncIndex
+		recStatusUserAccStatus.UserAccountStatus = s.memberUserAcc.Status
 		if index < 0 {
-			s.record.Status.UserAccounts = append(s.record.Status.UserAccounts, recAccStatus)
+			s.record.Status.UserAccounts = append(s.record.Status.UserAccounts, recStatusUserAccStatus)
 		} else {
-			s.record.Status.UserAccounts[index] = recAccStatus
+			s.record.Status.UserAccounts[index] = recStatusUserAccStatus
 		}
 
 		s.alignReadiness()
