@@ -75,7 +75,7 @@ func TestCreateUserAccountFailed(t *testing.T) {
 		assertMurCondition(t, hostClient, toBeNotReady(clusterNotReady, msg))
 	})
 
-	t.Run("when member cluster does not exist", func(t *testing.T) {
+	t.Run("when member cluster is not ready", func(t *testing.T) {
 		// given
 		cntrl := newController(hostClient, memberClient, s, newGetMemberCluster(true, v1.ConditionFalse))
 
