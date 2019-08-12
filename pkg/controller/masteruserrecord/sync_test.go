@@ -3,7 +3,7 @@ package masteruserrecord
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/test"
-	"github.com/codeready-toolchain/host-operator/test/murtest"
+	"github.com/codeready-toolchain/host-operator/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/host-operator/test/useraccount"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
