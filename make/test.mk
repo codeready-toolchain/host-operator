@@ -10,7 +10,7 @@ test:
 	@echo "running the tests without coverage and excluding E2E tests..."
 	$(Q)go test ${V_FLAG} -race $(shell go list ./... | grep -v /test/e2e) -failfast
 
-	
+
 ############################################################
 #
 # OpenShift CI Tests with Coverage
@@ -73,11 +73,7 @@ PULL_NUMBER := $(shell echo $$CLONEREFS_OPTIONS | jq '.refs[0].pulls[0].number')
 .PHONY: test-e2e
 test-e2e:  deploy-member e2e-setup setup-kubefed
 	sed -e 's|REPLACE_IMAGE|${IMAGE_NAME}|g' ./deploy/operator.yaml  | oc apply -f -
-	# This is hack to fix https://github.com/operator-framework/operator-sdk/issues/1657
-	echo "info: Running go mod vendor"
-	go mod vendor
-	operator-sdk test local ./test/e2e --no-setup --namespace $(TEST_NAMESPACE) --go-test-flags "-v -timeout=15m"
-	# remove me once verified
+	operator-sdk test local ./test/e2e --no-setup --namespace $(TEST_NAMESPACE) --verbose --go-test-flags "-timeout=15m"
 	oc get kubefedcluster -n $(TEST_NAMESPACE)
 	oc get kubefedcluster -n $(MEMBER_NS)
 
