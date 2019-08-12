@@ -22,8 +22,3 @@ func GetOperatorNamespace() string {
 
 	return ns
 }
-
-func GetIdP() string {
-	// TODO get from openshift
-	return "rhd"
-}
