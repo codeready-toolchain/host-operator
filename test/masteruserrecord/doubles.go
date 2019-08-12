@@ -61,6 +61,20 @@ func ModifyMur(mur *toolchainv1alpha1.MasterUserRecord, modifiers ...MurModifier
 	}
 }
 
+func Namespace(namespace string) MurModifier {
+	return func(mur *toolchainv1alpha1.MasterUserRecord) {
+		mur.Namespace = namespace
+	}
+}
+
+func TargetCluster(targetCluster string) MurModifier {
+	return func(mur *toolchainv1alpha1.MasterUserRecord) {
+		for i := range mur.Spec.UserAccounts {
+			mur.Spec.UserAccounts[i].TargetCluster = targetCluster
+		}
+	}
+}
+
 func AdditionalAccounts(clusters ...string) MurModifier {
 	return func(mur *toolchainv1alpha1.MasterUserRecord) {
 		for _, cluster := range clusters {

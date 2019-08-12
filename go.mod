@@ -4,7 +4,7 @@ require (
 	cloud.google.com/go v0.40.0 // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20190809061617-a61ddc3e9a1a
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20190814120500-ab1e2af882aa
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/gobuffalo/envy v1.7.0 // indirect
@@ -35,6 +35,8 @@ require (
 
 // Pinned to kubernetes-1.13.1
 replace (
+	github.com/codeready-toolchain/toolchain-common => ../toolchain-common
+
 	k8s.io/api => k8s.io/api v0.0.0-20181213150558-05914d821849
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20181213153335-0fe22c71c476
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
