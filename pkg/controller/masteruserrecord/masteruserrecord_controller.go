@@ -29,7 +29,7 @@ var log = logf.Log.WithName("controller_masteruserrecord")
 const (
 	// Status condition reasons
 	unableToGetUserAccountReason = "UnableToGetUserAccount"
-	clusterNotReady              = "ClusterNotReady"
+	targetClusterNotReady        = "TargetClusterNotReady"
 	provisioningReason           = "Provisioning"
 )
 
@@ -116,7 +116,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 	// get & check fed cluster
 	fedCluster, err := r.getMemberCluster(log, recAccount, record)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(clusterNotReady), err,
+		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(targetClusterNotReady), err,
 			"failed to get the member cluster '%s'", recAccount.TargetCluster)
 	}
 

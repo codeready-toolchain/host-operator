@@ -72,7 +72,7 @@ func TestCreateUserAccountFailed(t *testing.T) {
 		msg := "the fedCluster member-cluster not found in the registry"
 		assert.Contains(t, err.Error(), msg)
 		assertUaNotFound(t, memberClient)
-		assertMurCondition(t, hostClient, toBeNotReady(clusterNotReady, msg))
+		assertMurCondition(t, hostClient, toBeNotReady(targetClusterNotReady, msg))
 	})
 
 	t.Run("when member cluster is not ready", func(t *testing.T) {
@@ -87,7 +87,7 @@ func TestCreateUserAccountFailed(t *testing.T) {
 		msg := "the fedCluster member-cluster is not ready"
 		assert.Contains(t, err.Error(), msg)
 		assertUaNotFound(t, memberClient)
-		assertMurCondition(t, hostClient, toBeNotReady(clusterNotReady, msg))
+		assertMurCondition(t, hostClient, toBeNotReady(targetClusterNotReady, msg))
 	})
 }
 
