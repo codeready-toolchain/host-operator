@@ -2,6 +2,7 @@ package masteruserrecord
 
 import (
 	"context"
+	"fmt"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apierros "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -88,6 +90,22 @@ func TestCreateUserAccountFailed(t *testing.T) {
 		assert.Contains(t, err.Error(), msg)
 		assertUaNotFound(t, memberClient)
 		assertMurCondition(t, hostClient, toBeNotReady(targetClusterNotReady, msg))
+	})
+
+	t.Run("status update failed", func(t *testing.T) {
+		// given
+		cntrl := newController(hostClient, memberClient, s, newGetMemberCluster(true, v1.ConditionTrue))
+		statusUpdater := func(mur *toolchainv1alpha1.MasterUserRecord, message string) error {
+			return fmt.Errorf("unable to update status")
+		}
+
+		// when
+		err := cntrl.wrapErrorWithStatusUpdate(log, mur, statusUpdater,
+			apierros.NewBadRequest("oopsy woopsy"), "failed to create %s", "user bob")
+
+		// then
+		require.Error(t, err)
+		assert.Equal(t, "failed to create user bob: oopsy woopsy", err.Error())
 	})
 }
 
