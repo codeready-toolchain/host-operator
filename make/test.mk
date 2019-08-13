@@ -10,7 +10,7 @@ test:
 	@echo "running the tests without coverage and excluding E2E tests..."
 	$(Q)go test ${V_FLAG} -race $(shell go list ./... | grep -v /test/e2e) -failfast
 
-	
+
 ############################################################
 #
 # OpenShift CI Tests with Coverage
@@ -71,12 +71,11 @@ PULL_NUMBER := $(shell echo $$CLONEREFS_OPTIONS | jq '.refs[0].pulls[0].number')
 ###########################################################
 
 .PHONY: test-e2e
-test-e2e:  e2e-setup
+test-e2e:  deploy-member e2e-setup setup-kubefed
 	sed -e 's|REPLACE_IMAGE|${IMAGE_NAME}|g' ./deploy/operator.yaml  | oc apply -f -
-	# This is hack to fix https://github.com/operator-framework/operator-sdk/issues/1657
-	echo "info: Running go mod vendor"
-	go mod vendor
-	operator-sdk test local ./test/e2e --no-setup --namespace $(TEST_NAMESPACE) --go-test-flags "-v -timeout=15m"
+	operator-sdk test local ./test/e2e --no-setup --namespace $(TEST_NAMESPACE) --verbose --go-test-flags "-timeout=15m"
+	oc get kubefedcluster -n $(TEST_NAMESPACE)
+	oc get kubefedcluster -n $(MEMBER_NS)
 
 .PHONY: e2e-setup
 e2e-setup: get-test-namespace is-minishift
@@ -97,6 +96,11 @@ else
 	$(eval IMAGE_NAME := registry.svc.ci.openshift.org/${OPENSHIFT_BUILD_NAMESPACE}/stable:host-operator)
 endif
 
+.PHONY: setup-kubefed
+setup-kubefed:
+	curl -sSL https://raw.githubusercontent.com/codeready-toolchain/toolchain-common/master/scripts/add-cluster.sh | bash -s -- -t member -mn $(MEMBER_NS) -hn $(TEST_NAMESPACE) -s
+	curl -sSL https://raw.githubusercontent.com/codeready-toolchain/toolchain-common/master/scripts/add-cluster.sh | bash -s -- -t host -mn $(MEMBER_NS) -hn $(TEST_NAMESPACE) -s
+
 .PHONY: e2e-cleanup
 e2e-cleanup:
 	$(eval TEST_NAMESPACE := $(shell cat $(OUT_DIR)/test-namespace))
@@ -107,4 +111,23 @@ get-test-namespace: $(OUT_DIR)/test-namespace
 	$(eval TEST_NAMESPACE := $(shell cat $(OUT_DIR)/test-namespace))
 
 $(OUT_DIR)/test-namespace:
-	@echo -n "test-namespace-$(shell uuidgen | tr '[:upper:]' '[:lower:]')" > $(OUT_DIR)/test-namespace
+	@echo -n "host-operator-$(shell date +'%s')" > $(OUT_DIR)/test-namespace
+
+###########################################################
+#
+# Deploying Member Operator in Openshift CI Environment
+#
+###########################################################
+
+.PHONY: deploy-member
+deploy-member:
+	$(eval MEMBER_NS := $(shell echo -n "member-operator-$(shell date +'%s')"))
+	rm -rf /tmp/member-operator
+	# cloning here as don't want to maintain it for every single change in deploy directory of member-operator
+	git clone https://github.com/codeready-toolchain/member-operator.git --depth 1 /tmp/member-operator
+	oc new-project $(MEMBER_NS)
+	oc apply -f /tmp/member-operator/deploy/service_account.yaml
+	oc apply -f /tmp/member-operator/deploy/role.yaml
+	cat /tmp/member-operator/deploy/role_binding.yaml | sed s/\REPLACE_NAMESPACE/$(MEMBER_NS)/ | oc apply -f -
+	oc apply -f /tmp/member-operator/deploy/crds
+	sed -e 's|REPLACE_IMAGE|registry.svc.ci.openshift.org/codeready-toolchain/member-operator-v0.1:member-operator|g' /tmp/member-operator/deploy/operator.yaml  | oc apply -f -
