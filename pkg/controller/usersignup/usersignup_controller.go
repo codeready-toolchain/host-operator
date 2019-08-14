@@ -29,9 +29,9 @@ const (
 	noClustersAvailableReason = "NoClustersAvailable"
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason = "UnableToCreateMUR"
-	userSignupApprovedAutomaticallyReason = "ApprovedAutomatically"
-	userSignupApprovedByAdminReason = "ApprovedByAdmin"
-	userSignupPendingApprovalReason = "PendingApproval"
+	approvedAutomaticallyReason = "ApprovedAutomatically"
+	approvedByAdminReason = "ApprovedByAdmin"
+	pendingApprovalReason = "PendingApproval"
 )
 
 var log = logf.Log.WithName("controller_usersignup")
@@ -307,7 +307,7 @@ func (r *ReconcileUserSignup) setStatusApprovedAutomatically(userSignup *toolcha
 		toolchainv1alpha1.Condition{
 			Type: toolchainv1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
-			Reason: userSignupApprovedAutomaticallyReason,
+			Reason: approvedAutomaticallyReason,
 			Message: message,
 		})
 }
@@ -318,7 +318,7 @@ func (r *ReconcileUserSignup) setStatusApprovedByAdmin(userSignup *toolchainv1al
 		toolchainv1alpha1.Condition{
 			Type: toolchainv1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
-			Reason: userSignupApprovedByAdminReason,
+			Reason: approvedByAdminReason,
 			Message: message,
 		})
 }
@@ -329,13 +329,13 @@ func (r *ReconcileUserSignup) setStatusPendingApproval(userSignup *toolchainv1al
 		toolchainv1alpha1.Condition{
 			Type: toolchainv1alpha1.UserSignupApproved,
 			Status: corev1.ConditionFalse,
-			Reason: userSignupPendingApprovalReason,
+			Reason: pendingApprovalReason,
 			Message: message,
 		},
 		toolchainv1alpha1.Condition{
 			Type: toolchainv1alpha1.UserSignupComplete,
 			Status: corev1.ConditionFalse,
-			Reason: userSignupPendingApprovalReason,
+			Reason: pendingApprovalReason,
 			Message: message,
 		})
 
