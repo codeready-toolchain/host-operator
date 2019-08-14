@@ -3,17 +3,16 @@ package usersignup
 import (
 	"context"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/condition"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -30,8 +29,8 @@ const (
 	noClustersAvailableReason = "NoClustersAvailable"
 	failedToReadUserApprovalPolicy = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason = "UnableToCreateMUR"
-	provisioningReason = "Provisioning"
-	masterUserRecordAlreadyExistsReason = "AlreadyExists"
+	userSignupApprovedAutomatically = "ApprovedAutomatically"
+	userSignupApprovedByAdmin = "ApprovedByAdmin"
 )
 
 var log = logf.Log.WithName("controller_usersignup")
@@ -120,69 +119,94 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	// Read the status conditions and assign some variables
-	provisioning := condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupProvisioning)
-	completed := condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
-
-	// If the status is not yet provisioning or completed, check for automatic or manual approval
-	if !provisioning && !completed {
-		userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig()
-		if err != nil {
-			statusError := r.setStatusFailedToReadUserApprovalPolicy(instance, err.Error())
-			if statusError != nil {
-				reqLogger.Error(statusError, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
-				return reconcile.Result{}, statusError
-			}
-
-			reqLogger.Error(err, "Error reading user approval policy")
+	// Check if the MasterUserRecord already exists
+	mur := &toolchainv1alpha1.MasterUserRecord{}
+	// We can use the same NamespacedName from the request as the MasterUserRecord will have the same name as the
+	// UserSignup (i.e. the user's username)
+	err = r.client.Get(context.TODO(), request.NamespacedName, mur)
+	if err != nil {
+		// We generally EXPECT the MasterUserRecord to not be found here, so we only deal with other error types
+		if !errors.IsNotFound(err) {
+			// Error reading the MasterUserRecord, requeue the request
 			return reconcile.Result{}, err
 		}
+	} else {
+		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
+		// to Complete and return
+		statusError := r.setStatusComplete(instance, "")
+		if statusError != nil {
+			reqLogger.Error(statusError, "Error updating UserSignup Status to Complete", "Name", instance.Name)
+			return reconcile.Result{}, statusError
+		}
+		return reconcile.Result{}, nil
+	}
 
-		// If the signup has been explicitly approved (by an admin), or the user approval policy is set to automatic,
-		// then proceed with the signup
-		if instance.Spec.Approved || userApprovalPolicy == config.UserApprovalPolicyAutomatic {
-			var targetCluster string
+	// Check the user approval policy.
+	userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig()
+	if err != nil {
+		statusError := r.setStatusFailedToReadUserApprovalPolicy(instance, err.Error())
+		if statusError != nil {
+			reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
+			return reconcile.Result{}, statusError
+		}
 
-			// If a target cluster hasn't been selected, select one from the members
-			if instance.Spec.TargetCluster != "" {
-				targetCluster = instance.Spec.TargetCluster
-			} else {
-				// Automatic cluster selection
-				members := cluster.GetMemberClusters()
-				if len(members) > 0 {
-					targetCluster = members[0].Name
-				} else {
-					statusError := r.setStatusNoClustersAvailable(instance, "No member clusters found")
-					if statusError != nil {
-						reqLogger.Error(statusError, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
-						return reconcile.Result{}, statusError
-					}
+		reqLogger.Error(err, "Error reading user approval policy")
+		return reconcile.Result{}, err
+	}
 
-					err = NewSignupError("No target clusters available")
-					reqLogger.Error(err, "No member clusters found")
-					return reconcile.Result{}, err
-				}
-			}
-
-			// Set the "Provisioning" status condition
-			statusError := r.setStatusProvisioning(instance, "Provisioning User")
+	// If the signup has been explicitly approved (by an admin), or the user approval policy is set to automatic,
+	// then proceed with the signup
+	if instance.Spec.Approved || userApprovalPolicy == config.UserApprovalPolicyAutomatic {
+		if instance.Spec.Approved {
+			statusError := r.setStatusApprovedByAdmin(instance, "")
 			if statusError != nil {
-				reqLogger.Error(statusError, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
+				reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
 				return reconcile.Result{}, statusError
 			}
+		}
 
-			// Provision the MasterUserRecord
-			err = r.provisionMasterUserRecord(instance, targetCluster, reqLogger)
-			if err != nil {
-				// If the error is because the MUR already exists, delay the next reconcile loop
-				if errors.IsAlreadyExists(err) {
-					return reconcile.Result{
-						RequeueAfter: 1 * time.Hour,
-					}, err
+		if userApprovalPolicy == config.UserApprovalPolicyAutomatic {
+			statusError := r.setStatusApprovedAutomatically(instance, "")
+			if statusError != nil {
+				reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
+				return reconcile.Result{}, statusError
+			}
+		}
+
+		var targetCluster string
+
+		// If a target cluster hasn't been selected, select one from the members
+		if instance.Spec.TargetCluster != "" {
+			targetCluster = instance.Spec.TargetCluster
+		} else {
+			// Automatic cluster selection
+			members := cluster.GetMemberClusters()
+			if len(members) > 0 {
+				targetCluster = members[0].Name
+			} else {
+				statusError := r.setStatusNoClustersAvailable(instance, "No member clusters found")
+				if statusError != nil {
+					reqLogger.Error(statusError, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
+					return reconcile.Result{}, statusError
 				}
 
+				err = NewSignupError("No target clusters available")
+				reqLogger.Error(err, "No member clusters found")
 				return reconcile.Result{}, err
 			}
+		}
+
+		// Provision the MasterUserRecord
+		err = r.provisionMasterUserRecord(instance, targetCluster, reqLogger)
+		if err != nil {
+			// If the error is because the MUR already exists, delay the next reconcile loop
+			if errors.IsAlreadyExists(err) {
+				return reconcile.Result{
+					RequeueAfter: 1 * time.Hour,
+				}, err
+			}
+
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -230,28 +254,30 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 	err = r.client.Create(context.TODO(), mur)
 	if err != nil {
-		logger.Error(err, "Error creating MasterUserRecord", "UserID", userSignup.Spec.UserID)
+		// If the MasterUserRecord already exists (for whatever strange reason), we simply set the status to complete
 		if errors.IsAlreadyExists(err) {
-			statusError := r.setStatusMURAlreadyExists(userSignup, "MasterUserRecord already exists")
+			statusError := r.setStatusComplete(userSignup, "")
 			if statusError != nil {
 				logger.Error(statusError, "Error setting MUR failed status")
 				return statusError
 			}
+
+			return nil
+
 		} else {
+			logger.Error(err, "Error creating MasterUserRecord", "Name", userSignup.Name)
 			statusError := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord")
 			if statusError != nil {
 				logger.Error(statusError, "Error setting MUR failed status")
 				return statusError
 			}
+
+			return err
 		}
-
-		// Log the error
-		logger.Error(err, "Error creating MasterUserRecord", "UserID", userSignup.Spec.UserID, "TargetCluster", targetCluster)
-		return err
 	}
-	logger.Info("Created MasterUserRecord", "UserID", userSignup.Spec.UserID, "TargetCluster", targetCluster)
 
-	return err
+	logger.Info("Created MasterUserRecord", "Name", userSignup.Name, "TargetCluster", targetCluster)
+	return nil
 }
 
 // ReadUserApprovalPolicyConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
@@ -268,13 +294,24 @@ func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig() (string, error) {
 	return cm.Data[config.ToolchainConfigMapUserApprovalPolicy], nil
 }
 
-func (r *ReconcileUserSignup) setStatusProvisioning(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (r *ReconcileUserSignup) setStatusApprovedAutomatically(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return r.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type: toolchainv1alpha1.UserSignupProvisioning,
+			Type: toolchainv1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
-			Reason: provisioningReason,
+			Reason: userSignupApprovedAutomatically,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusApprovedByAdmin(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type: toolchainv1alpha1.UserSignupApproved,
+			Status: corev1.ConditionTrue,
+			Reason: userSignupApprovedByAdmin,
 			Message: message,
 		})
 }
@@ -301,17 +338,6 @@ func (r *ReconcileUserSignup) setStatusFailedToCreateMUR(userSignup *toolchainv1
 		})
 }
 
-func (r *ReconcileUserSignup) setStatusMURAlreadyExists(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type: toolchainv1alpha1.UserSignupComplete,
-			Status: corev1.ConditionFalse,
-			Reason: masterUserRecordAlreadyExistsReason,
-			Message: message,
-		})
-}
-
 func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return r.updateStatusConditions(
 		userSignup,
@@ -319,6 +345,17 @@ func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchain
 			Type: toolchainv1alpha1.UserSignupComplete,
 			Status: corev1.ConditionFalse,
 			Reason: noClustersAvailableReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusComplete(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type: toolchainv1alpha1.UserSignupComplete,
+			Status: corev1.ConditionTrue,
+			Reason: "",
 			Message: message,
 		})
 }

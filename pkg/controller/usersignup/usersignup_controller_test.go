@@ -205,7 +205,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	require.Equal(t, metav1.StatusReasonNotFound, err.(*errors.StatusError).ErrStatus.Reason)
 }
 
-func TestUserSignupWithExistingMURFails(t *testing.T) {
+func TestUserSignupWithExistingMUROK(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "foo",
@@ -246,7 +246,7 @@ func TestUserSignupWithExistingMURFails(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = r.Reconcile(req)
-	require.Error(t, err)
+	require.NoError(t, err)
 
 	key := types.NamespacedName{
 		Namespace: config.GetOperatorNamespace(),
@@ -264,8 +264,7 @@ func TestUserSignupWithExistingMURFails(t *testing.T) {
 	}
 
 	require.NotNil(t, cond)
-	require.NotEqual(t, v1.ConditionTrue, cond.Status)
-	require.Equal(t, masterUserRecordAlreadyExistsReason, cond.Reason)
+	require.Equal(t, v1.ConditionTrue, cond.Status)
 }
 
 func TestUserSignupNoMembersAvailableFails(t *testing.T) {
