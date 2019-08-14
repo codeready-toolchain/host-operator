@@ -60,14 +60,6 @@ rules:
 - apiGroups:
   - toolchain.dev.openshift.com
   resources:
-  - masteruserrecords
-  - nstemplatetiers
-  - usersignups
+  - '*'
   verbs:
   - '*'
-- apiGroups:
-  - toolchain.dev.openshift.com
-  resources:
-  - usersignups/status
-  verbs:
-  - update
