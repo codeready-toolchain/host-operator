@@ -93,7 +93,7 @@ func TestCreateUserAccountFailed(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		msg := "the fedCluster member-cluster not found in the registry"
+		msg := "the member cluster member-cluster not found in the registry"
 		assert.Contains(t, err.Error(), msg)
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
@@ -112,7 +112,7 @@ func TestCreateUserAccountFailed(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		msg := "the fedCluster member-cluster is not ready"
+		msg := "the member cluster member-cluster is not ready"
 		assert.Contains(t, err.Error(), msg)
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
