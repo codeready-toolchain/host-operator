@@ -114,7 +114,7 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 
 func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccount toolchainv1alpha1.UserAccountEmbedded, record *toolchainv1alpha1.MasterUserRecord) error {
 	// get & check fed cluster
-	fedCluster, err := r.getMemberCluster(log, recAccount, record)
+	fedCluster, err := r.getMemberCluster(recAccount)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(targetClusterNotReadyReason), err,
 			"failed to get the member cluster '%s'", recAccount.TargetCluster)
@@ -145,7 +145,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 	return nil
 }
 
-func (r *ReconcileMasterUserRecord) getMemberCluster(log logr.Logger, recAccount toolchainv1alpha1.UserAccountEmbedded, record *toolchainv1alpha1.MasterUserRecord) (*cluster.FedCluster, error) {
+func (r *ReconcileMasterUserRecord) getMemberCluster(recAccount toolchainv1alpha1.UserAccountEmbedded) (*cluster.FedCluster, error) {
 	// get & check fed cluster
 	fedCluster, ok := r.retrieveMemberCluster(recAccount.TargetCluster)
 	if !ok {
