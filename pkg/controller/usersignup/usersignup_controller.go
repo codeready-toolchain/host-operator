@@ -27,10 +27,11 @@ import (
 const (
 	// Status condition reasons
 	noClustersAvailableReason = "NoClustersAvailable"
-	failedToReadUserApprovalPolicy = "FailedToReadUserApprovalPolicy"
+	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason = "UnableToCreateMUR"
-	userSignupApprovedAutomatically = "ApprovedAutomatically"
-	userSignupApprovedByAdmin = "ApprovedByAdmin"
+	userSignupApprovedAutomaticallyReason = "ApprovedAutomatically"
+	userSignupApprovedByAdminReason = "ApprovedByAdmin"
+	userSignupPendingApprovalReason = "PendingApproval"
 )
 
 var log = logf.Log.WithName("controller_usersignup")
@@ -208,6 +209,12 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 			return reconcile.Result{}, err
 		}
+	} else {
+		statusError := r.setStatusPendingApproval(instance, "")
+		if statusError != nil {
+			reqLogger.Error(statusError, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
+			return reconcile.Result{}, statusError
+		}
 	}
 
 	return reconcile.Result{}, nil
@@ -300,7 +307,7 @@ func (r *ReconcileUserSignup) setStatusApprovedAutomatically(userSignup *toolcha
 		toolchainv1alpha1.Condition{
 			Type: toolchainv1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
-			Reason: userSignupApprovedAutomatically,
+			Reason: userSignupApprovedAutomaticallyReason,
 			Message: message,
 		})
 }
@@ -311,9 +318,27 @@ func (r *ReconcileUserSignup) setStatusApprovedByAdmin(userSignup *toolchainv1al
 		toolchainv1alpha1.Condition{
 			Type: toolchainv1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
-			Reason: userSignupApprovedByAdmin,
+			Reason: userSignupApprovedByAdminReason,
 			Message: message,
 		})
+}
+
+func (r *ReconcileUserSignup) setStatusPendingApproval(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type: toolchainv1alpha1.UserSignupApproved,
+			Status: corev1.ConditionFalse,
+			Reason: userSignupPendingApprovalReason,
+			Message: message,
+		},
+		toolchainv1alpha1.Condition{
+			Type: toolchainv1alpha1.UserSignupComplete,
+			Status: corev1.ConditionFalse,
+			Reason: userSignupPendingApprovalReason,
+			Message: message,
+		})
+
 }
 
 func (r *ReconcileUserSignup) setStatusFailedToReadUserApprovalPolicy(userSignup *toolchainv1alpha1.UserSignup, message string) error {
@@ -322,7 +347,7 @@ func (r *ReconcileUserSignup) setStatusFailedToReadUserApprovalPolicy(userSignup
 		toolchainv1alpha1.Condition{
 			Type: toolchainv1alpha1.UserSignupComplete,
 			Status: corev1.ConditionFalse,
-			Reason: failedToReadUserApprovalPolicy,
+			Reason: failedToReadUserApprovalPolicyReason,
 			Message: message,
 		})
 }
