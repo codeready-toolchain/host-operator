@@ -142,7 +142,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	// Check the user approval policy.
-	userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig()
+	userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig(request.Namespace)
 	if err != nil {
 		reqLogger.Error(err, "Error reading user approval policy")
 		statusError := r.setStatusFailedToReadUserApprovalPolicy(instance, err.Error())
@@ -280,8 +280,8 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 // ReadUserApprovalPolicyConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
 // the config map value for the user approval policy (which will either be "manual" or "automatic")
-func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig() (string, error) {
-	cm, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Get(config.ToolchainConfigMapName, metav1.GetOptions{})
+func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig(namespace string) (string, error) {
+	cm, err := r.clientset.CoreV1().ConfigMaps(namespace).Get(config.ToolchainConfigMapName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return config.UserApprovalPolicyManual, nil

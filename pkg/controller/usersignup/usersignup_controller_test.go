@@ -28,6 +28,7 @@ import (
 
 const (
 	nameMember = "east"
+	operatorNamespace = "toolchain-host-operator"
 )
 
 func TestReadUserApprovalPolicy(t *testing.T) {
@@ -41,10 +42,10 @@ func TestReadUserApprovalPolicy(t *testing.T) {
 	}
 	cm.Name = config.ToolchainConfigMapName
 
-	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
 	require.NoError(t, err)
 
-	policy, err := r.ReadUserApprovalPolicyConfig()
+	policy, err := r.ReadUserApprovalPolicyConfig(operatorNamespace)
 	require.NoError(t, err)
 	require.Equal(t, config.UserApprovalPolicyAutomatic, policy)
 }
@@ -53,7 +54,7 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "foo",
-			Namespace: config.GetOperatorNamespace(),
+			Namespace: operatorNamespace,
 			UID: types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -74,7 +75,7 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 		Data: cmValues,
 	}
 	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
 	require.NoError(t, err)
 
 	res, err := r.Reconcile(req)
@@ -85,7 +86,7 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, mur)
 	require.NoError(t, err)
 
-	require.Equal(t, config.GetOperatorNamespace(), mur.Namespace)
+	require.Equal(t, operatorNamespace, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Name)
 	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
@@ -95,7 +96,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "foo",
-			Namespace: config.GetOperatorNamespace(),
+			Namespace: operatorNamespace,
 			UID: types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -116,7 +117,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		Data: cmValues,
 	}
 	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
 	require.NoError(t, err)
 
 	res, err := r.Reconcile(req)
@@ -127,7 +128,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, mur)
 	require.NoError(t, err)
 
-	require.Equal(t, config.GetOperatorNamespace(), mur.Namespace)
+	require.Equal(t, operatorNamespace, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Name)
 	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
@@ -138,7 +139,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "foo",
-			Namespace: config.GetOperatorNamespace(),
+			Namespace: operatorNamespace,
 			UID: types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -160,7 +161,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, mur)
 	require.NoError(t, err)
 
-	require.Equal(t, config.GetOperatorNamespace(), mur.Namespace)
+	require.Equal(t, operatorNamespace, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Name)
 	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
@@ -170,7 +171,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "foo",
-			Namespace: config.GetOperatorNamespace(),
+			Namespace: operatorNamespace,
 			UID: types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -191,7 +192,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		Data: cmValues,
 	}
 	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
 	require.NoError(t, err)
 
 	res, err := r.Reconcile(req)
@@ -209,7 +210,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "foo",
-			Namespace: config.GetOperatorNamespace(),
+			Namespace: operatorNamespace,
 			UID: types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -222,7 +223,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "foo",
-			Namespace: config.GetOperatorNamespace(),
+			Namespace: operatorNamespace,
 			UID: types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.MasterUserRecordSpec{
@@ -242,14 +243,14 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		Data: cmValues,
 	}
 	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
 	require.NoError(t, err)
 
 	_, err = r.Reconcile(req)
 	require.NoError(t, err)
 
 	key := types.NamespacedName{
-		Namespace: config.GetOperatorNamespace(),
+		Namespace: operatorNamespace,
 		Name: "foo",
 	}
 	instance := &v1alpha1.UserSignup{}
@@ -271,7 +272,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "foo",
-			Namespace: config.GetOperatorNamespace(),
+			Namespace: operatorNamespace,
 			UID: types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -289,7 +290,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 		Data: cmValues,
 	}
 	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(config.GetOperatorNamespace()).Create(cm)
+	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
 	require.NoError(t, err)
 
 	_, err = r.Reconcile(req)
@@ -329,7 +330,7 @@ func newReconcileRequest(name string) reconcile.Request {
 	return reconcile.Request{
 		NamespacedName: types.NamespacedName{
 			Name: name,
-			Namespace: config.GetOperatorNamespace(),
+			Namespace: operatorNamespace,
 		},
 	}
 }
