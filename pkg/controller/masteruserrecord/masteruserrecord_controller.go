@@ -132,7 +132,8 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 				return err
 			}
 			if err := fedCluster.Client.Create(context.TODO(), userAccount); err != nil {
-				return err
+				return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(targetClusterNotReady), err,
+					"failed to create UserAccount in the member cluster '%s'", recAccount.TargetCluster)
 			}
 			return nil
 		}
