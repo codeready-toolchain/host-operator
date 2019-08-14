@@ -98,7 +98,7 @@ func TestCreateUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(targetClusterNotReady, msg))
+			HasCondition(toBeNotReady(targetClusterNotReadyReason, msg))
 	})
 
 	t.Run("when member cluster is not ready", func(t *testing.T) {
@@ -117,7 +117,7 @@ func TestCreateUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(targetClusterNotReady, msg))
+			HasCondition(toBeNotReady(targetClusterNotReadyReason, msg))
 	})
 
 	t.Run("status update failed", func(t *testing.T) {
