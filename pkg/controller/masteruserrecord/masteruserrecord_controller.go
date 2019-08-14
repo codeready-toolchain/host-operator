@@ -113,17 +113,17 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 }
 
 func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccount toolchainv1alpha1.UserAccountEmbedded, record *toolchainv1alpha1.MasterUserRecord) error {
-	// get & check fed cluster
-	fedCluster, err := r.getMemberCluster(recAccount)
+	// get & check member cluster
+	memberCluster, err := r.getMemberCluster(recAccount)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(targetClusterNotReadyReason), err,
 			"failed to get the member cluster '%s'", recAccount.TargetCluster)
 	}
 
 	// get UserAccount from member
-	nsdName := namespacedName(fedCluster.OperatorNamespace, record.Name)
+	nsdName := namespacedName(memberCluster.OperatorNamespace, record.Name)
 	userAccount := &toolchainv1alpha1.UserAccount{}
-	err = fedCluster.Client.Get(context.TODO(), nsdName, userAccount)
+	err = memberCluster.Client.Get(context.TODO(), nsdName, userAccount)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// does not exist - should create
@@ -131,7 +131,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 			if err := updateStatusConditions(r.client, record, toBeNotReady(provisioningReason, "")); err != nil {
 				return err
 			}
-			if err := fedCluster.Client.Create(context.TODO(), userAccount); err != nil {
+			if err := memberCluster.Client.Create(context.TODO(), userAccount); err != nil {
 				return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(targetClusterNotReadyReason), err,
 					"failed to create UserAccount in the member cluster '%s'", recAccount.TargetCluster)
 			}
@@ -149,10 +149,10 @@ func (r *ReconcileMasterUserRecord) getMemberCluster(recAccount toolchainv1alpha
 	// get & check fed cluster
 	fedCluster, ok := r.retrieveMemberCluster(recAccount.TargetCluster)
 	if !ok {
-		return nil, fmt.Errorf("the fedCluster %s not found in the registry", recAccount.TargetCluster)
+		return nil, fmt.Errorf("the member cluster %s not found in the registry", recAccount.TargetCluster)
 	}
 	if !util.IsClusterReady(fedCluster.ClusterStatus) {
-		return nil, fmt.Errorf("the fedCluster %s is not ready", recAccount.TargetCluster)
+		return nil, fmt.Errorf("the member cluster %s is not ready", recAccount.TargetCluster)
 	}
 	return fedCluster, nil
 }
