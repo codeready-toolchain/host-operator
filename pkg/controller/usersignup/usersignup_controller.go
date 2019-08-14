@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"time"
 )
 
 const (
@@ -145,13 +144,13 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// Check the user approval policy.
 	userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig()
 	if err != nil {
+		reqLogger.Error(err, "Error reading user approval policy")
 		statusError := r.setStatusFailedToReadUserApprovalPolicy(instance, err.Error())
 		if statusError != nil {
 			reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
 			return reconcile.Result{}, statusError
 		}
 
-		reqLogger.Error(err, "Error reading user approval policy")
 		return reconcile.Result{}, err
 	}
 
@@ -164,9 +163,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
 				return reconcile.Result{}, statusError
 			}
-		}
-
-		if userApprovalPolicy == config.UserApprovalPolicyAutomatic {
+		} else {
 			statusError := r.setStatusApprovedAutomatically(instance, "")
 			if statusError != nil {
 				reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
@@ -185,6 +182,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			if len(members) > 0 {
 				targetCluster = members[0].Name
 			} else {
+				reqLogger.Error(err, "No member clusters found")
 				statusError := r.setStatusNoClustersAvailable(instance, "No member clusters found")
 				if statusError != nil {
 					reqLogger.Error(statusError, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
@@ -192,7 +190,6 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				}
 
 				err = NewSignupError("No target clusters available")
-				reqLogger.Error(err, "No member clusters found")
 				return reconcile.Result{}, err
 			}
 		}
@@ -200,13 +197,6 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		// Provision the MasterUserRecord
 		err = r.provisionMasterUserRecord(instance, targetCluster, reqLogger)
 		if err != nil {
-			// If the error is because the MUR already exists, delay the next reconcile loop
-			if errors.IsAlreadyExists(err) {
-				return reconcile.Result{
-					RequeueAfter: 1 * time.Hour,
-				}, err
-			}
-
 			return reconcile.Result{}, err
 		}
 	} else {
@@ -251,7 +241,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	if err != nil {
 		logger.Error(err, "Error setting controller reference for MasterUserRecord %s", mur.Name)
 
-		statusError := r.setStatusFailedToCreateMUR(userSignup, "failed to set controller reference")
+		statusError := r.setStatusFailedToCreateMUR(userSignup, "failed to set controller reference: " + err.Error())
 		if statusError != nil {
 			logger.Error(statusError, "Error setting MUR failed status")
 			return statusError
@@ -263,6 +253,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	if err != nil {
 		// If the MasterUserRecord already exists (for whatever strange reason), we simply set the status to complete
 		if errors.IsAlreadyExists(err) {
+			logger.Info("MasterUserRecord already exists, setting status to Complete")
 			statusError := r.setStatusComplete(userSignup, "")
 			if statusError != nil {
 				logger.Error(statusError, "Error setting MUR failed status")
@@ -273,7 +264,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 		} else {
 			logger.Error(err, "Error creating MasterUserRecord", "Name", userSignup.Name)
-			statusError := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord")
+			statusError := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord: " + err.Error())
 			if statusError != nil {
 				logger.Error(statusError, "Error setting MUR failed status")
 				return statusError
