@@ -4,6 +4,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	uuid "github.com/satori/go.uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,7 +31,7 @@ func newEmbeddedUa(targetCluster string) toolchainv1alpha1.UserAccountEmbedded {
 		TargetCluster: targetCluster,
 		SyncIndex:     "123abc",
 		Spec: toolchainv1alpha1.UserAccountSpec{
-			UserID:  "12345abcdef",
+			UserID:  uuid.NewV4().String(),
 			NSLimit: "basic",
 			NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
 				TierName: "basic",
@@ -71,6 +72,20 @@ func ModifyUaInMur(mur *toolchainv1alpha1.MasterUserRecord, targetCluster string
 func StatusCondition(con toolchainv1alpha1.Condition) MurModifier {
 	return func(mur *toolchainv1alpha1.MasterUserRecord) {
 		mur.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(mur.Status.Conditions, con)
+	}
+}
+
+func MetaNamespace(namespace string) MurModifier {
+	return func(mur *toolchainv1alpha1.MasterUserRecord) {
+		mur.Namespace = namespace
+	}
+}
+
+func TargetCluster(targetCluster string) MurModifier {
+	return func(mur *toolchainv1alpha1.MasterUserRecord) {
+		for i := range mur.Spec.UserAccounts {
+			mur.Spec.UserAccounts[i].TargetCluster = targetCluster
+		}
 	}
 }
 

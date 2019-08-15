@@ -9,7 +9,7 @@ ENV LANG=en_US.utf8 \
     PATH=$PATH:$GOPATH/bin \
     GIT_COMMITTER_NAME=devtools \
     GIT_COMMITTER_EMAIL=devtools@redhat.com \
-    OPERATOR_SDK_VERSION=v0.8.1
+    OPERATOR_SDK_VERSION=v0.10.0
 
 ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 

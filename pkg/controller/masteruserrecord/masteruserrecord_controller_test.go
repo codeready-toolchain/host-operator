@@ -1,15 +1,17 @@
 package masteruserrecord
 
 import (
+	"fmt"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/test"
-	"github.com/codeready-toolchain/host-operator/test/masteruserrecord"
+	murtest "github.com/codeready-toolchain/host-operator/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/host-operator/test/useraccount"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
+	apierros "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +48,33 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		HasCondition(toBeNotReady(provisioningReason, ""))
 }
 
+func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
+	// given
+	logf.SetLogger(logf.ZapLogger(true))
+	s := apiScheme(t)
+	mur := murtest.NewMasterUserRecord("john", murtest.AdditionalAccounts("member2-cluster"))
+	memberClient := fake.NewFakeClientWithScheme(s)
+	memberClient2 := fake.NewFakeClientWithScheme(s)
+	hostClient := fake.NewFakeClientWithScheme(s, mur)
+	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2))
+
+	// when
+	_, err := cntrl.Reconcile(newMurRequest(mur))
+
+	// then
+	require.NoError(t, err)
+
+	uatest.AssertThatUserAccount(t, "john", memberClient).
+		Exists().
+		HasSpec(mur.Spec.UserAccounts[0].Spec)
+	uatest.AssertThatUserAccount(t, "john", memberClient2).
+		Exists().
+		HasSpec(mur.Spec.UserAccounts[0].Spec)
+	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+		HasCondition(toBeNotReady(provisioningReason, ""))
+}
+
 func TestReconcileMurFailedBecauseOfNotAvailableCluster(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
@@ -64,12 +93,12 @@ func TestReconcileMurFailedBecauseOfNotAvailableCluster(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		msg := "the fedCluster member-cluster not found in the registry"
+		msg := "the member cluster member-cluster not found in the registry"
 		assert.Contains(t, err.Error(), msg)
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(clusterNotReady, msg))
+			HasCondition(toBeNotReady(targetClusterNotReadyReason, msg))
 	})
 
 	t.Run("when member cluster does not exist and UA was already created", func(t *testing.T) {
@@ -83,14 +112,14 @@ func TestReconcileMurFailedBecauseOfNotAvailableCluster(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		msg := "the fedCluster member-cluster not found in the registry"
+		msg := "the member cluster member-cluster not found in the registry"
 		assert.Contains(t, err.Error(), msg)
 
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(clusterNotReady, msg))
+			HasCondition(toBeNotReady(targetClusterNotReadyReason, msg))
 	})
 
-	t.Run("when member cluster does not exist and UA hasn't been created yet", func(t *testing.T) {
+	t.Run("when member cluster is not ready and UA hasn't been created yet", func(t *testing.T) {
 		// given
 		memberClient := fake.NewFakeClientWithScheme(s)
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionFalse),
@@ -101,15 +130,15 @@ func TestReconcileMurFailedBecauseOfNotAvailableCluster(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		msg := "the fedCluster member-cluster is not ready"
+		msg := "the member cluster member-cluster is not ready"
 		assert.Contains(t, err.Error(), msg)
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(clusterNotReady, msg))
+			HasCondition(toBeNotReady(targetClusterNotReadyReason, msg))
 	})
 
-	t.Run("when member cluster does not exist and UA was already created", func(t *testing.T) {
+	t.Run("when member cluster is not ready and UA was already created", func(t *testing.T) {
 		// given
 		memberClient := fake.NewFakeClientWithScheme(s, uatest.NewUserAccountFromMur(mur))
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionFalse),
@@ -120,11 +149,29 @@ func TestReconcileMurFailedBecauseOfNotAvailableCluster(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		msg := "the fedCluster member-cluster is not ready"
+		msg := "the member cluster member-cluster is not ready"
 		assert.Contains(t, err.Error(), msg)
 
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(clusterNotReady, msg))
+			HasCondition(toBeNotReady(targetClusterNotReadyReason, msg))
+	})
+
+	t.Run("status update failed", func(t *testing.T) {
+		// given
+		memberClient := fake.NewFakeClientWithScheme(s)
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient))
+		statusUpdater := func(mur *toolchainv1alpha1.MasterUserRecord, message string) error {
+			return fmt.Errorf("unable to update status")
+		}
+
+		// when
+		err := cntrl.wrapErrorWithStatusUpdate(log, mur, statusUpdater,
+			apierros.NewBadRequest("oopsy woopsy"), "failed to create %s", "user bob")
+
+		// then
+		require.Error(t, err)
+		assert.Equal(t, "failed to create user bob: oopsy woopsy", err.Error())
 	})
 }
 
@@ -170,7 +217,7 @@ func TestModifyUserAccounts(t *testing.T) {
 		HasCondition(toBeNotReady(updatingReason, ""))
 }
 
-func TestSyncMurStatusWithUserAccountStatusesForTheFirstTime(t *testing.T) {
+func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
