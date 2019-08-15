@@ -73,7 +73,7 @@ PULL_NUMBER := $(shell echo $$CLONEREFS_OPTIONS | jq '.refs[0].pulls[0].number')
 .PHONY: test-e2e
 test-e2e:  deploy-member e2e-setup setup-kubefed
 	sed -e 's|REPLACE_IMAGE|${IMAGE_NAME}|g' ./deploy/operator.yaml  | oc apply -f -
-	operator-sdk test local ./test/e2e --no-setup --namespace $(TEST_NAMESPACE) --verbose --go-test-flags "-timeout=15m"
+	MEMBER_NS=${MEMBER_NS} operator-sdk test local ./test/e2e --no-setup --namespace $(TEST_NAMESPACE) --verbose --go-test-flags "-timeout=15m"
 	oc get kubefedcluster -n $(TEST_NAMESPACE)
 	oc get kubefedcluster -n $(MEMBER_NS)
 
