@@ -275,6 +275,14 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	}
 
 	logger.Info("Created MasterUserRecord", "Name", userSignup.Name, "TargetCluster", targetCluster)
+
+	// If the MasterUserRecord was created without error, update the status to set Complete to true
+	statusError := r.setStatusComplete(userSignup, "")
+	if statusError != nil {
+		logger.Error(statusError, "Error setting MUR status")
+		return statusError
+	}
+
 	return nil
 }
 
