@@ -155,6 +155,29 @@ func TestUserSignupWithNoApprovalConfig(t *testing.T) {
 		},
 	})
 
+	// TODO fix this - we somehow need to wait for the reconcile cycle to complete???
+	// Now update the same userSignup setting approved to true
+	/*userSignup.Spec.Approved = true
+	err = f.Client.Update(context.TODO(), userSignup)
+	require.NoError(t, err)
+
+	// Lookup the reconciled UserSignup
+	err = f.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
+	require.NoError(t, err)
+
+	// Check the updated conditions
+	checkUserSignupConditions(t, userSignup.Status.Conditions, []v1alpha1.Condition{
+		{
+			Type: v1alpha1.UserSignupApproved,
+			Status: corev1.ConditionTrue,
+			Reason: "ApprovedByAdmin",
+		},
+		{
+			Type: v1alpha1.UserSignupComplete,
+			Status: corev1.ConditionTrue,
+		},
+	})*/
+
 	// Create user signup - approval set to true
 	t.Logf("Creating UserSignup with namespace %s", namespace)
 	userSignup = newUserSignup(namespace, "harold")
