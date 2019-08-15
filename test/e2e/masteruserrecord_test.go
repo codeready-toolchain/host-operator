@@ -29,7 +29,7 @@ func TestMasterUserRecord(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	t.Logf("user account '%s' created", mur.Name)
+	t.Logf("MasterUserRecord '%s' created", mur.Name)
 
 	err = verifyResources(awaitility, mur)
 	assert.NoError(t, err)
@@ -63,11 +63,11 @@ func toBeNotReady(reason, msg string) toolchainv1alpha1.Condition {
 }
 
 func createMasterUserRecord(awaitility *e2e.Awaitility, ctx *framework.TestCtx, name string) *toolchainv1alpha1.MasterUserRecord {
-	fedCluster, ok, err := awaitility.Host().GetKubeFedCluster(awaitility.MemberNs, cluster.Member, e2e.ReadyKubeFedCluster)
+	memberCluster, ok, err := awaitility.Host().GetKubeFedCluster(awaitility.MemberNs, cluster.Member, e2e.ReadyKubeFedCluster)
 	require.NoError(awaitility.T, err)
 	require.True(awaitility.T, ok, "KubeFedCluster should exist")
 	mur := murtest.NewMasterUserRecord(name,
-		murtest.Namespace(awaitility.HostNs), murtest.TargetCluster(fedCluster.Name))
+		murtest.Namespace(awaitility.HostNs), murtest.TargetCluster(memberCluster.Name))
 
 	err = awaitility.Client.Create(context.TODO(), mur, e2e.CleanupOptions(ctx))
 	require.NoError(awaitility.T, err)
