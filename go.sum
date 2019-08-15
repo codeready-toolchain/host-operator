@@ -54,13 +54,12 @@ github.com/census-instrumentation/opencensus-proto v0.2.0 h1:LzQXZOgg4CQfE6bFvXG
 github.com/census-instrumentation/opencensus-proto v0.2.0/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1/go.mod h1:/iP1qXHoty45bqomnu2LM+VVyAEdWN+vtSHGlQgyxbw=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/codeready-toolchain/api v0.0.0-20190709160753-31636807b6f1/go.mod h1:THipEIgxvhBvngWP2bmD5TXoCuQ1v2cz0IwAwQaaoPE=
 github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28 h1:+ndo0pFuFuy10St4EDltsITtrj4iOLArBvLXwj2Z4Fo=
 github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28/go.mod h1:jHr8IvmLGTxmgD+jc1bBbucP4bSbT2JHnM+HdAw6N2g=
 github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38 h1:wHuHNqZl2NxOQDuOsGe1OYE/uIYQmbfq/OW4/Doh5ls=
 github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38/go.mod h1:jHr8IvmLGTxmgD+jc1bBbucP4bSbT2JHnM+HdAw6N2g=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20190809061617-a61ddc3e9a1a h1:mjPcY9T+0IDDTPpnxnV0KvYd1Lu170z7PMOMXlqG9t4=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20190809061617-a61ddc3e9a1a/go.mod h1:xkXiBqyba2FZhIBeBioVvS4ZaiqKMV1JGLiLyj82yYI=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20190814120500-ab1e2af882aa h1:x2qV019EM24J7OW8oW8rfYoVfiaUOIw7TjwrNLxGzAA=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20190814120500-ab1e2af882aa/go.mod h1:ATdn3CpRa2qvS9AKWMdNEkEFPwbY9aBtCY6FLswrXHo=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.3/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.9+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=

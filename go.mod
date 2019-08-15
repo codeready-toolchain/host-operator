@@ -4,7 +4,7 @@ require (
 	cloud.google.com/go v0.40.0 // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20190809061617-a61ddc3e9a1a
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20190814120500-ab1e2af882aa
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/gobuffalo/envy v1.7.0 // indirect
