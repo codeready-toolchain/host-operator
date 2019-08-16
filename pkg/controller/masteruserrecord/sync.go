@@ -51,17 +51,17 @@ func (s *Synchronizer) synchronizeStatus() error {
 	return nil
 }
 
-// alignReadiness checks if all embedded SAs if they are ready
+// alignReadiness checks if all embedded SAs are ready
 func (s *Synchronizer) alignReadiness() {
 	for _, uaStatus := range s.record.Status.UserAccounts {
-		if !IsReady(uaStatus.Conditions) {
+		if !isReady(uaStatus.Conditions) {
 			return
 		}
 	}
 	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
 }
 
-func IsReady(conditions []toolchainv1alpha1.Condition) bool {
+func isReady(conditions []toolchainv1alpha1.Condition) bool {
 	for _, con := range conditions {
 		if con.Type == toolchainv1alpha1.ConditionReady {
 			return con.Status == corev1.ConditionTrue
