@@ -70,12 +70,17 @@ PULL_NUMBER := $(shell echo $$CLONEREFS_OPTIONS | jq '.refs[0].pulls[0].number')
 #
 ###########################################################
 
+.PHONY: test-e2e-keep-namespaces
+test-e2e-keep-namespaces: deploy-member e2e-setup setup-kubefed e2e-run
+
 .PHONY: test-e2e
-test-e2e:  deploy-member e2e-setup setup-kubefed
-	sed -e 's|REPLACE_IMAGE|${IMAGE_NAME}|g' ./deploy/operator.yaml  | oc apply -f -
-	MEMBER_NS=${MEMBER_NS} operator-sdk test local ./test/e2e --no-setup --namespace $(TEST_NAMESPACE) --verbose --go-test-flags "-timeout=15m"
+test-e2e: test-e2e-keep-namespaces e2e-cleanup
+
+.PHONY: e2e-run
+e2e-run:
 	oc get kubefedcluster -n $(TEST_NAMESPACE)
 	oc get kubefedcluster -n $(MEMBER_NS)
+	MEMBER_NS=${MEMBER_NS} operator-sdk test local ./test/e2e --no-setup --namespace $(TEST_NAMESPACE) --verbose --go-test-flags "-timeout=15m"
 
 .PHONY: e2e-setup
 e2e-setup: get-test-namespace is-minishift
@@ -84,6 +89,7 @@ e2e-setup: get-test-namespace is-minishift
 	oc apply -f ./deploy/role.yaml
 	cat ./deploy/role_binding.yaml | sed s/\REPLACE_NAMESPACE/$(TEST_NAMESPACE)/ | oc apply -f -
 	oc apply -f deploy/crds
+	sed -e 's|REPLACE_IMAGE|${IMAGE_NAME}|g' ./deploy/operator.yaml  | oc apply -f -
 
 .PHONY: is-minishift
 is-minishift:
@@ -103,8 +109,11 @@ setup-kubefed:
 
 .PHONY: e2e-cleanup
 e2e-cleanup:
-	$(eval TEST_NAMESPACE := $(shell cat $(OUT_DIR)/test-namespace))
-	$(Q)-oc delete project $(TEST_NAMESPACE) --timeout=10s --wait
+	oc delete project ${MEMBER_NS} ${TEST_NAMESPACE} --wait=false || true
+
+.PHONY: clean-e2e-namespaces
+clean-e2e-namespaces:
+	$(Q)-oc get projects --output=name | grep -E "(member|host)\-operator\-[0-9]+" | xargs oc delete
 
 .PHONY: get-test-namespace
 get-test-namespace: $(OUT_DIR)/test-namespace
