@@ -66,6 +66,7 @@ github.com/codeready-toolchain/api v0.0.0-20190703014038-8e94f17ab71f h1:r5HaqJ2
 github.com/codeready-toolchain/api v0.0.0-20190703014038-8e94f17ab71f/go.mod h1:THipEIgxvhBvngWP2bmD5TXoCuQ1v2cz0IwAwQaaoPE=
 github.com/codeready-toolchain/api v0.0.0-20190703153909-5b2c0d42be1b h1:n/a0Kw0jjggJMVeUzeX1RfwYQYxpVgcvrdh0PpzNf3U=
 github.com/codeready-toolchain/api v0.0.0-20190703153909-5b2c0d42be1b/go.mod h1:THipEIgxvhBvngWP2bmD5TXoCuQ1v2cz0IwAwQaaoPE=
+github.com/codeready-toolchain/api v0.0.0-20190709160753-31636807b6f1/go.mod h1:THipEIgxvhBvngWP2bmD5TXoCuQ1v2cz0IwAwQaaoPE=
 github.com/codeready-toolchain/api v0.0.0-20190712171113-7038210b9ba5 h1:bTmnva6ifSFde4whh3taRt83Ev6197G5IE0C4ywTlAs=
 github.com/codeready-toolchain/api v0.0.0-20190712171113-7038210b9ba5/go.mod h1:THipEIgxvhBvngWP2bmD5TXoCuQ1v2cz0IwAwQaaoPE=
 github.com/codeready-toolchain/api v0.0.0-20190730071751-421041795a07 h1:cKBgFJvHhAwc7EC4xMqNFcTF+HbUZbM7JLuKF7dl8nU=
@@ -74,6 +75,8 @@ github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28 h1:+ndo0pF
 github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28/go.mod h1:jHr8IvmLGTxmgD+jc1bBbucP4bSbT2JHnM+HdAw6N2g=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190626080028-fea973f4a1e4 h1:jjrX0mqG2gYlZJzwCI4lagz8aS9uGZvaXadOS92DJwg=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190626080028-fea973f4a1e4/go.mod h1:lrW2V5UFR39oJLeIlMzeZ359KzNZ8a8KeMy4q6cHdow=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20190809061617-a61ddc3e9a1a h1:mjPcY9T+0IDDTPpnxnV0KvYd1Lu170z7PMOMXlqG9t4=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20190809061617-a61ddc3e9a1a/go.mod h1:xkXiBqyba2FZhIBeBioVvS4ZaiqKMV1JGLiLyj82yYI=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190814120500-ab1e2af882aa h1:x2qV019EM24J7OW8oW8rfYoVfiaUOIw7TjwrNLxGzAA=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190814120500-ab1e2af882aa/go.mod h1:ATdn3CpRa2qvS9AKWMdNEkEFPwbY9aBtCY6FLswrXHo=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
@@ -303,6 +306,7 @@ github.com/imdario/mergo v0.3.6 h1:xTNEAn+kxVO7dTZGu0CegyqKZmoWFI0rF8UxjlB2d28=
 github.com/imdario/mergo v0.3.6/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
 github.com/imdario/mergo v0.3.7 h1:Y+UAYTZ7gDEuOfhxKWy+dvb5dRQ6rJjFSdX2HZY1/gI=
 github.com/imdario/mergo v0.3.7/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
+github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NHg9XEKhtSvM=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/jellevandenhooff/dkim v0.0.0-20150330215556-f50fe3d243e1/go.mod h1:E0B/fFc00Y+Rasa88328GlI/XbtyysCtTHZS8h7IrBU=
 github.com/joho/godotenv v1.3.0 h1:Zjp+RcGpHhGlrMbJzXTrZZPrWj+1vfm90La1wgB6Bhc=
@@ -324,6 +328,7 @@ github.com/klauspost/cpuid v0.0.0-20180405133222-e7e905edc00e/go.mod h1:Pj4uuM52
 github.com/klauspost/cpuid v1.2.0/go.mod h1:Pj4uuM528wm8OyEC2QMXAi2YiTZ96dNQPGgoMS4s3ek=
 github.com/konsorten/go-windows-terminal-sequences v0.0.0-20180402223658-b729f2633dfe/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
+github.com/konsorten/go-windows-terminal-sequences v1.0.2 h1:DB17ag19krx9CFsz4o3enTrPXyIXCl+2iCXH/aMAp9s=
 github.com/konsorten/go-windows-terminal-sequences v1.0.2/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515/go.mod h1:+0opPa2QZZtGFBFZlji/RkVcI2GknAs/DXo4wKdlNEc=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
