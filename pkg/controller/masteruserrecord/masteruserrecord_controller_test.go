@@ -70,7 +70,7 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 		HasSpec(mur.Spec.UserAccounts[0].Spec)
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
-		HasSpec(mur.Spec.UserAccounts[0].Spec)
+		HasSpec(mur.Spec.UserAccounts[1].Spec)
 	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
 		HasCondition(toBeNotReady(provisioningReason, ""))
 }
@@ -275,10 +275,10 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		HasCondition(userAccount3.Status.Conditions[0])
 
 	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-		HasCondition(toBeNotReady(provisioningReason, "")).
+		HasCondition(toBeNotReady(updatingReason, "")).
 		HasStatusUserAccounts(test.MemberClusterName, "member2-cluster", "member3-cluster").
-		HasStatusSyncIndex("123abc").
-		HasUserAccountCondition(userAccount.Status.Conditions[0])
+		HasAllStatusSyncIndex("123abc").
+		HasAllUserAccountCondition(userAccount.Status.Conditions[0])
 }
 
 func newMurRequest(mur *toolchainv1alpha1.MasterUserRecord) reconcile.Request {

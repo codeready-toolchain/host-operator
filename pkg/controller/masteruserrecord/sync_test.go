@@ -136,6 +136,6 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, s *runtime.Scheme,
 	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
 		HasCondition(expMurCon).
 		HasStatusUserAccounts(test.MemberClusterName).
-		HasStatusSyncIndex("123abc").
-		HasUserAccountCondition(condition)
+		HasAllStatusSyncIndex("123abc").
+		HasAllUserAccountCondition(condition)
 }

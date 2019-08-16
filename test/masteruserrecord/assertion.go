@@ -65,23 +65,20 @@ func (a *MurAssertion) hasUserAccount(targetCluster string) *toolchainv1alpha1.U
 	return nil
 }
 
-func (a *MurAssertion) HasStatusSyncIndex(syncIndex string) *MurAssertion {
+func (a *MurAssertion) HasAllStatusSyncIndex(syncIndex string) *MurAssertion {
 	err := a.loadUaAssertion()
 	require.NoError(a.t, err)
-	ua := a.hasUserAccount(test.MemberClusterName)
-	if ua != nil {
+	for _, ua := range a.masterUserRecord.Status.UserAccounts {
 		assert.Equal(a.t, syncIndex, ua.SyncIndex)
 	}
-
 	return a
 }
 
-func (a *MurAssertion) HasUserAccountCondition(expected toolchainv1alpha1.Condition) *MurAssertion {
+func (a *MurAssertion) HasAllUserAccountCondition(expected toolchainv1alpha1.Condition) *MurAssertion {
 	err := a.loadUaAssertion()
 	require.NoError(a.t, err)
-	ua := a.hasUserAccount(test.MemberClusterName)
-	if ua != nil {
-		commonttest.AssertConditionsMatch(a.t, a.masterUserRecord.Status.Conditions, expected)
+	for _, ua := range a.masterUserRecord.Status.UserAccounts {
+		commonttest.AssertConditionsMatch(a.t, ua.Conditions, expected)
 	}
 	return a
 }
