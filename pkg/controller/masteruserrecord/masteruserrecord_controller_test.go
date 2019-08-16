@@ -75,7 +75,7 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 		HasCondition(toBeNotReady(provisioningReason, ""))
 }
 
-func TestReconcileMurFailedBecauseOfNotAvailableCluster(t *testing.T) {
+func TestCreateUserAccountFailed(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
