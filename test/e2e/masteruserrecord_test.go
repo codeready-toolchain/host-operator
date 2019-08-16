@@ -122,11 +122,11 @@ func toBeProvisioned() toolchainv1alpha1.Condition {
 }
 
 func createMasterUserRecord(awaitility *e2e.Awaitility, ctx *framework.TestCtx, name string) *toolchainv1alpha1.MasterUserRecord {
-	fedCluster, ok, err := awaitility.Host().GetKubeFedCluster(awaitility.MemberNs, cluster.Member, e2e.ReadyKubeFedCluster)
+	memberCluster, ok, err := awaitility.Host().GetKubeFedCluster(awaitility.MemberNs, cluster.Member, e2e.ReadyKubeFedCluster)
 	require.NoError(awaitility.T, err)
 	require.True(awaitility.T, ok, "KubeFedCluster should exist")
 	mur := murtest.NewMasterUserRecord(name,
-		murtest.MetaNamespace(awaitility.HostNs), murtest.TargetCluster(fedCluster.Name))
+		murtest.MetaNamespace(awaitility.HostNs), murtest.TargetCluster(memberCluster.Name))
 
 	err = awaitility.Client.Create(context.TODO(), mur, e2e.CleanupOptions(ctx))
 	require.NoError(awaitility.T, err)
