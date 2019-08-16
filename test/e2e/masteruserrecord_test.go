@@ -32,11 +32,8 @@ func TestMasterUserRecord(t *testing.T) {
 	require.NoError(t, err)
 	t.Logf("MasterUserRecord '%s' created", mur.Name)
 
-	err = verifyResources(awaitility, mur, toBeProvisioned())
-	assert.NoError(t, err)
-
-	err = verifyResources(awaitility, extraMur, toBeProvisioned())
-	assert.NoError(t, err)
+	verifyResources(awaitility, mur, toBeProvisioned())
+	verifyResources(awaitility, extraMur, toBeProvisioned())
 
 	t.Run("update UserAccount spec when MasterUserRecord spec is modified", func(t *testing.T) {
 		// given
@@ -49,13 +46,10 @@ func TestMasterUserRecord(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-
 		t.Logf("MasterUserRecord '%s' updated", mur.Name)
 
-		err = verifyResources(awaitility, toBeModifiedMur, toBeProvisioned())
-		assert.NoError(t, err)
-		err = verifyResources(awaitility, mur, toBeProvisioned())
-		assert.NoError(t, err)
+		verifyResources(awaitility, toBeModifiedMur, toBeProvisioned())
+		verifyResources(awaitility, mur, toBeProvisioned())
 	})
 
 	t.Run("update MasterUserRecord status when UserAccount status is modified", func(t *testing.T) {
@@ -70,38 +64,35 @@ func TestMasterUserRecord(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-
 		t.Logf("MasterUserRecord '%s' updated", mur.Name)
 
-		err = verifyResources(awaitility, currentMur, toBeProvisioned(), coolStatus())
-		assert.NoError(t, err)
+		verifyResources(awaitility, currentMur, toBeProvisioned(), coolStatus())
+
 		extraMur = NewHostAwaitility(awaitility).GetMasterUserRecord(extraMur.Name)
-		err = verifyResources(awaitility, extraMur, toBeProvisioned())
-		assert.NoError(t, err)
+		verifyResources(awaitility, extraMur, toBeProvisioned())
 	})
 }
 
-func verifyResources(awaitility *e2e.Awaitility, mur *toolchainv1alpha1.MasterUserRecord, uaStatusConds ...toolchainv1alpha1.Condition) error {
+func verifyResources(awaitility *e2e.Awaitility, mur *toolchainv1alpha1.MasterUserRecord, uaStatusConds ...toolchainv1alpha1.Condition) {
 	hostAwait := NewHostAwaitility(awaitility)
 	memberAwait := NewMemberAwaitility(awaitility)
-	if err := hostAwait.WaitForMasterUserRecord(mur.Name); err != nil {
-		return err
-	}
+	err := hostAwait.WaitForMasterUserRecord(mur.Name)
+	assert.NoError(awaitility.T, err)
+
 	murUserAccount := mur.Spec.UserAccounts[0]
-	if err := memberAwait.WaitForUserAccount(mur.Name, murUserAccount.Spec, uaStatusConds...); err != nil {
-		return err
-	}
+	err = memberAwait.WaitForUserAccount(mur.Name, murUserAccount.Spec, uaStatusConds...)
+	assert.NoError(awaitility.T, err)
+
 	userAccount := memberAwait.GetUserAccount(mur.Name)
 	uaStatus := toolchainv1alpha1.UserAccountStatusEmbedded{
 		TargetCluster:     murUserAccount.TargetCluster,
 		UserAccountStatus: userAccount.Status,
 	}
-	if err := hostAwait.WaitForMurConditions(mur.Name,
+
+	err = hostAwait.WaitForMurConditions(mur.Name,
 		UntilHasStatusCondition(toBeProvisioned()),
-		UntilHasUserAccountStatus(uaStatus)); err != nil {
-		return err
-	}
-	return nil
+		UntilHasUserAccountStatus(uaStatus))
+	assert.NoError(awaitility.T, err)
 }
 
 func coolStatus() toolchainv1alpha1.Condition {
@@ -131,8 +122,7 @@ func createMasterUserRecord(awaitility *e2e.Awaitility, ctx *framework.TestCtx, 
 	err = awaitility.Client.Create(context.TODO(), mur, e2e.CleanupOptions(ctx))
 	require.NoError(awaitility.T, err)
 
-	err = verifyResources(awaitility, mur, toBeProvisioned())
-	assert.NoError(awaitility.T, err)
+	verifyResources(awaitility, mur, toBeProvisioned())
 
 	return mur
 }
