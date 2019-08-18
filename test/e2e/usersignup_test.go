@@ -316,9 +316,13 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	err = waitForUserSignup(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
 	require.NoError(s.T(), err)
 
+	// Confirm the MasterUserRecord was created
+	//err = waitForMasterUserRecord(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	//require.NoError(s.T(), err)
+
 	// Confirm that:
 	// 1) the Approved condition is set to true
-	// 2) the Approved reason is set to ApprovedByAdmin
+	// 2) the Approved reason is set to ApprovedAutomatically
 	// 3) the Complete condition is (eventually) set to true
 	err = waitForUserSignupStatusConditions(s.T(), s.framework.Client.Client, userSignup.Namespace, userSignup.Name,
 		v1alpha1.Condition{
@@ -446,6 +450,7 @@ func setApprovalPolicyConfig(clientSet kubernetes.Interface, namespace, policy s
 		},
 	}
 
+	// Try to delete the config map just in case it already exists
 	err := clientSet.CoreV1().ConfigMaps(namespace).Delete(cm.Name, nil)
 	if err != nil {
 		if !errors.IsNotFound(err) {
