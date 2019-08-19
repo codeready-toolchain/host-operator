@@ -202,13 +202,12 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 
 func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	// Set the user approval policy to manual
-	err := setApprovalPolicyConfig(s.framework.KubeClient, s.namespace, config.UserApprovalPolicyManual)
-	require.NoError(s.T(), err)
+	s.setApprovalPolicyConfig(config.UserApprovalPolicyManual)
 
 	// Create user signup - no approval set
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup := newUserSignup(s.namespace, "johnsmith")
-	err = s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err := s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
@@ -301,13 +300,12 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 
 func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	// Set the user approval policy to automatic
-	err := setApprovalPolicyConfig(s.framework.KubeClient, s.namespace, config.UserApprovalPolicyAutomatic)
-	require.NoError(s.T(), err)
+	s.setApprovalPolicyConfig(config.UserApprovalPolicyAutomatic)
 
 	// Create user signup - no approval set
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup := newUserSignup(s.namespace, "charles")
-	err = s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err := s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
@@ -442,7 +440,7 @@ func newUserSignup(namespace, name string) *v1alpha1.UserSignup {
 	return userSignup
 }
 
-func setApprovalPolicyConfig(clientSet kubernetes.Interface, namespace, policy string) error {
+func (s *userSignupIntegrationTest) setApprovalPolicyConfig(policy string) {
 	// Create a new ConfigMap
 	cm := &corev1.ConfigMap{
 		ObjectMeta: v1.ObjectMeta{
@@ -450,19 +448,20 @@ func setApprovalPolicyConfig(clientSet kubernetes.Interface, namespace, policy s
 		},
 	}
 
-	// Try to delete the config map just in case it already exists
-	err := clientSet.CoreV1().ConfigMaps(namespace).Delete(cm.Name, nil)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			return err
-		}
-	}
+	// Clear the current approval policy
+	err := clearApprovalPolicyConfig(s.framework.KubeClient, s.namespace)
+	require.NoError(s.T(), err)
 
 	cmValues := make(map[string]string)
 	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = policy
 	cm.Data = cmValues
-	_, err = clientSet.CoreV1().ConfigMaps(namespace).Create(cm)
-	return err
+	_, err = s.framework.KubeClient.CoreV1().ConfigMaps(s.namespace).Create(cm)
+	require.NoError(s.T(), err)
+
+	// Confirm it was updated
+	cm, err = s.framework.KubeClient.CoreV1().ConfigMaps(s.namespace).Get(config.ToolchainConfigMapName, v1.GetOptions{})
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), policy, cm.Data[config.ToolchainConfigMapUserApprovalPolicy])
 }
 
 func clearApprovalPolicyConfig(clientSet kubernetes.Interface, namespace string) error {

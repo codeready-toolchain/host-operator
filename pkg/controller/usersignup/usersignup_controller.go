@@ -133,6 +133,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	} else {
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
+		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
 		statusError := r.setStatusComplete(instance, "")
 		if statusError != nil {
 			reqLogger.Error(statusError, "Error updating UserSignup Status to Complete", "Name", instance.Name)
@@ -185,7 +186,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				reqLogger.Error(err, "No member clusters found")
 				statusError := r.setStatusNoClustersAvailable(instance, "No member clusters found")
 				if statusError != nil {
-					reqLogger.Error(statusError, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
+					reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
 					return reconcile.Result{}, statusError
 				}
 
@@ -202,7 +203,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	} else {
 		statusError := r.setStatusPendingApproval(instance, "")
 		if statusError != nil {
-			reqLogger.Error(statusError, "Error updating UserSignup Status", "UserID", instance.Spec.UserID)
+			reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
 			return reconcile.Result{}, statusError
 		}
 	}

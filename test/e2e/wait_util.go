@@ -84,10 +84,11 @@ func waitForUserSignupStatusConditions(t *testing.T, client client.Client, names
 			return false, err
 		}
 		mismatchErr = ConditionsMatch(userSignup.Status.Conditions, conditions...)
-		if mismatchErr != nil {
+		if mismatchErr == nil {
 			t.Log("conditions match")
 			return true, nil
 		}
+		t.Logf("waiting for [%d] conditions to match...", len(conditions))
 		return false, nil
 	})
 
