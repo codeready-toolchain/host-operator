@@ -90,8 +90,8 @@ func verifyResources(awaitility *e2e.Awaitility, mur *toolchainv1alpha1.MasterUs
 	}
 
 	err = hostAwait.WaitForMurConditions(mur.Name,
-		UntilHasStatusCondition(toBeProvisioned()),
-		UntilHasUserAccountStatus(uaStatus))
+		UntilHasUserAccountStatus(uaStatus),
+		UntilHasStatusCondition(toBeProvisioned()))
 	assert.NoError(awaitility.T, err)
 }
 

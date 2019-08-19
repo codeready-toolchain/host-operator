@@ -33,15 +33,15 @@ func (s *Synchronizer) synchronizeSpec() error {
 }
 
 func (s *Synchronizer) synchronizeStatus() error {
-	recStatusUserAccStatus, index := getUserAccountStatus(s.recordSpecUserAcc.TargetCluster, s.record)
-	if index < 0 || s.recordSpecUserAcc.SyncIndex != recStatusUserAccStatus.SyncIndex {
+	recordStatusUserAcc, index := getUserAccountStatus(s.recordSpecUserAcc.TargetCluster, s.record)
+	if index < 0 || s.recordSpecUserAcc.SyncIndex != recordStatusUserAcc.SyncIndex {
 		// when record should update status
-		recStatusUserAccStatus.SyncIndex = s.recordSpecUserAcc.SyncIndex
-		recStatusUserAccStatus.UserAccountStatus = s.memberUserAcc.Status
+		recordStatusUserAcc.SyncIndex = s.recordSpecUserAcc.SyncIndex
+		recordStatusUserAcc.UserAccountStatus = s.memberUserAcc.Status
 		if index < 0 {
-			s.record.Status.UserAccounts = append(s.record.Status.UserAccounts, recStatusUserAccStatus)
+			s.record.Status.UserAccounts = append(s.record.Status.UserAccounts, recordStatusUserAcc)
 		} else {
-			s.record.Status.UserAccounts[index] = recStatusUserAccStatus
+			s.record.Status.UserAccounts[index] = recordStatusUserAcc
 		}
 
 		s.alignReadiness()
