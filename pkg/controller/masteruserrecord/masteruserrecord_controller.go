@@ -151,10 +151,10 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 		recordSpecUserAcc: recAccount,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
-		return err
+		return errs.Wrapf(err, "update of the UserAccount.spec in the cluster '%s' failed", recAccount.TargetCluster)
 	}
 	if err := sync.synchronizeStatus(); err != nil {
-		return err
+		return errs.Wrapf(err, "update of the UserAccount.status in the cluster '%s' failed", recAccount.TargetCluster)
 	}
 	return nil
 }
