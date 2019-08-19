@@ -355,8 +355,8 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
 		HasCondition(toBeNotReady(updatingReason, "")).
 		HasStatusUserAccounts(test.MemberClusterName, "member2-cluster", "member3-cluster").
-		HasAllStatusSyncIndex("123abc").
-		HasAllUserAccountCondition(userAccount.Status.Conditions[0])
+		AllUserAccountsHaveStatusSyncIndex("123abc").
+		AllUserAccountsHaveCondition(userAccount.Status.Conditions[0])
 }
 
 func newMurRequest(mur *toolchainv1alpha1.MasterUserRecord) reconcile.Request {

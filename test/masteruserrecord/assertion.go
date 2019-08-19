@@ -65,7 +65,7 @@ func (a *MurAssertion) hasUserAccount(targetCluster string) *toolchainv1alpha1.U
 	return nil
 }
 
-func (a *MurAssertion) HasAllStatusSyncIndex(syncIndex string) *MurAssertion {
+func (a *MurAssertion) AllUserAccountsHaveStatusSyncIndex(syncIndex string) *MurAssertion {
 	err := a.loadUaAssertion()
 	require.NoError(a.t, err)
 	for _, ua := range a.masterUserRecord.Status.UserAccounts {
@@ -74,7 +74,7 @@ func (a *MurAssertion) HasAllStatusSyncIndex(syncIndex string) *MurAssertion {
 	return a
 }
 
-func (a *MurAssertion) HasAllUserAccountCondition(expected toolchainv1alpha1.Condition) *MurAssertion {
+func (a *MurAssertion) AllUserAccountsHaveCondition(expected toolchainv1alpha1.Condition) *MurAssertion {
 	err := a.loadUaAssertion()
 	require.NoError(a.t, err)
 	for _, ua := range a.masterUserRecord.Status.UserAccounts {
