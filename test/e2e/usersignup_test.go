@@ -3,8 +3,8 @@ package e2e
 import (
 	"context"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -14,49 +14,35 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"testing"
+	"time"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/e2e"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
+)
+
+const (
+	cleanupTimeout = time.Second * 5
+	cleanupRetryInterval = time.Second * 1
 )
 
 type userSignupIntegrationTest struct {
 	suite.Suite
 	namespace string
 	testCtx *framework.TestCtx
-	framework *framework.Framework
+	awaitility *e2e.Awaitility
+	hostAwait *HostAwaitility
 }
 
 func TestRunUserSignupIntegrationTest(t *testing.T) {
 	suite.Run(t, &userSignupIntegrationTest{})
 }
 
-func (s *userSignupIntegrationTest) SetupTest() {
-	// Test Setup
+func (s *userSignupIntegrationTest) SetupSuite() {
 	userSignupList := &v1alpha1.UserSignupList{}
-
-	err := framework.AddToFrameworkScheme(apis.AddToScheme, userSignupList)
-	require.NoError(s.T(), err, "failed to add custom resource scheme to framework")
-
-	s.testCtx = framework.NewTestCtx(s.T())
-	defer s.testCtx.Cleanup()
-
-	err = s.testCtx.InitializeClusterResources(&framework.CleanupOptions{TestContext: s.testCtx, Timeout: cleanupTimeout,
-		RetryInterval: cleanupRetryInterval})
-	require.NoError(s.T(), err, "failed to initialize cluster resources")
-	s.T().Log("Initialized cluster resources")
-
-	s.namespace, err = s.testCtx.GetNamespace()
-	require.NoError(s.T(), err, "failed to get namespace where operator needs to run")
-
-	s.framework = framework.Global
-
-	err = e2eutil.WaitForDeployment(s.T(), s.framework.KubeClient, s.namespace, "host-operator", 1,
-		operatorRetryInterval, operatorTimeout)
-	require.NoError(s.T(), err, "failed while waiting for host operator deployment")
-
-	s.T().Log("host-operator is ready and in a running state")
+	s.testCtx, s.awaitility = e2e.InitializeOperators(s.T(), userSignupList, cluster.Host)
+	s.hostAwait = NewHostAwaitility(s.awaitility)
 }
 
 func (s *userSignupIntegrationTest) TestUserSignupCreated() {
@@ -64,39 +50,39 @@ func (s *userSignupIntegrationTest) TestUserSignupCreated() {
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup := newUserSignup(s.namespace, "foo")
 
-	err := s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
 
 	// Confirm the UserSignup was created
-	err = waitForUserSignup(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that a MasterUserRecord wasn't created
-	err = waitForMasterUserRecord(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
 	require.Error(s.T(), err)
 
 	// Delete the User Signup
-	err = s.framework.Client.Delete(context.TODO(), userSignup)
+	err = s.awaitility.Client.Delete(context.TODO(), userSignup)
 	require.NoError(s.T(), err)
 }
 
 func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 	// Clear the user approval policy
-	err := clearApprovalPolicyConfig(s.framework.KubeClient, s.namespace)
+	err := clearApprovalPolicyConfig(s.awaitility.KubeClient, s.namespace)
 	require.NoError(s.T(), err)
 
 	// Create user signup - no approval set
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup := newUserSignup(s.namespace, "francis")
-	err = s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
 
 	// Confirm the UserSignup was created
-	err = waitForUserSignup(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that:
@@ -104,7 +90,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 	// 2) the Approved reason is set to PendingApproval
 	// 3) the Complete condition is set to false
 	// 4) the Complete reason is set to PendingApproval
-	err = waitForUserSignupStatusConditions(s.T(), s.framework.Client.Client, userSignup.Namespace, userSignup.Name,
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
 			Type: v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionFalse,
@@ -121,17 +107,17 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup = newUserSignup(s.namespace, "gretel")
 	userSignup.Spec.Approved = false
-	err = s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
 
 	// Confirm the UserSignup was created
-	err = waitForUserSignup(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that the conditions are the same as if no approval value was set
-	err = waitForUserSignupStatusConditions(s.T(), s.framework.Client.Client, userSignup.Namespace, userSignup.Name,
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
 			Type: v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionFalse,
@@ -145,16 +131,16 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 	require.NoError(s.T(), err)
 
 	// Lookup the reconciled UserSignup
-	err = s.framework.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
+	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
 	require.NoError(s.T(), err)
 
 	// Now update the same userSignup setting approved to true
 	userSignup.Spec.Approved = true
-	err = s.framework.Client.Update(context.TODO(), userSignup)
+	err = s.awaitility.Client.Update(context.TODO(), userSignup)
 	require.NoError(s.T(), err)
 
 	// Check the updated conditions
-	err = waitForUserSignupStatusConditions(s.T(), s.framework.Client.Client, userSignup.Namespace, userSignup.Name,
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
 			Type: v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
@@ -170,24 +156,24 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup = newUserSignup(s.namespace, "harold")
 	userSignup.Spec.Approved = true
-	err = s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
 
 	// Confirm the UserSignup was created
-	err = waitForUserSignup(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Lookup the reconciled UserSignup
-	err = s.framework.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
+	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
 	require.NoError(s.T(), err)
 
 	// Confirm that:
 	// 1) the Approved condition is set to true
 	// 2) the Approved reason is set to ApprovedByAdmin
 	// 3) the Complete condition is set to true
-	err = waitForUserSignupStatusConditions(s.T(), s.framework.Client.Client, userSignup.Namespace, userSignup.Name,
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
 			Type: v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
@@ -207,13 +193,13 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	// Create user signup - no approval set
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup := newUserSignup(s.namespace, "johnsmith")
-	err := s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
 
 	// Confirm the UserSignup was created
-	err = waitForUserSignup(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that:
@@ -221,7 +207,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	// 2) the Approved reason is set to PendingApproval
 	// 3) the Complete condition is set to false
 	// 4) the Complete reason is set to PendingApproval
-	err = s.framework.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
+	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
 	require.NoError(s.T(), err)
 
 	checkUserSignupConditions(s.T(), userSignup.Status.Conditions, []v1alpha1.Condition{
@@ -241,17 +227,17 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup = newUserSignup(s.namespace, "janedoe")
 	userSignup.Spec.Approved = false
-	err = s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
 
 	// Confirm the UserSignup was created
-	err = waitForUserSignup(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Lookup the reconciled UserSignup
-	err = s.framework.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
+	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
 	require.NoError(s.T(), err)
 
 	// Confirm that the conditions are the same as if no approval value was set
@@ -272,20 +258,20 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup = newUserSignup(s.namespace, "robertjones")
 	userSignup.Spec.Approved = true
-	err = s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
 
 	// Confirm the UserSignup was created
-	err = waitForUserSignup(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that:
 	// 1) the Approved condition is set to true
 	// 2) the Approved reason is set to ApprovedByAdmin
 	// 3) the Complete condition is set to true
-	err = waitForUserSignupStatusConditions(s.T(), s.framework.Client.Client, userSignup.Namespace, userSignup.Name,
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
 			Type: v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
@@ -305,13 +291,13 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	// Create user signup - no approval set
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup := newUserSignup(s.namespace, "charles")
-	err := s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
 
 	// Confirm the UserSignup was created
-	err = waitForUserSignup(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm the MasterUserRecord was created
@@ -322,7 +308,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	// 1) the Approved condition is set to true
 	// 2) the Approved reason is set to ApprovedAutomatically
 	// 3) the Complete condition is (eventually) set to true
-	err = waitForUserSignupStatusConditions(s.T(), s.framework.Client.Client, userSignup.Namespace, userSignup.Name,
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
 			Type: v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
@@ -338,17 +324,17 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup = newUserSignup(s.namespace, "dorothy")
 	userSignup.Spec.Approved = false
-	err = s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
 
 	// Confirm the UserSignup was created
-	err = waitForUserSignup(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Lookup the reconciled UserSignup
-	err = s.framework.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
+	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
 	require.NoError(s.T(), err)
 
 	// Confirm that the conditions are as expected
@@ -368,17 +354,17 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup = newUserSignup(s.namespace, "edith")
 	userSignup.Spec.Approved = true
-	err = s.framework.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
 
 	// Confirm the UserSignup was created
-	err = waitForUserSignup(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Lookup the reconciled UserSignup
-	err = s.framework.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
+	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
 	require.NoError(s.T(), err)
 
 	// Confirm that:
@@ -392,7 +378,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	)
 
 	// Confirm that the Complete condition is (eventually) set to true
-	err = waitForUserSignupStatusConditions(s.T(), s.framework.Client.Client, userSignup.Namespace, userSignup.Name, v1alpha1.Condition{
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name, v1alpha1.Condition{
 		Type:   v1alpha1.UserSignupComplete,
 		Status: corev1.ConditionTrue,
 	})
@@ -449,17 +435,17 @@ func (s *userSignupIntegrationTest) setApprovalPolicyConfig(policy string) {
 	}
 
 	// Clear the current approval policy
-	err := clearApprovalPolicyConfig(s.framework.KubeClient, s.namespace)
+	err := clearApprovalPolicyConfig(s.awaitility.KubeClient, s.namespace)
 	require.NoError(s.T(), err)
 
 	cmValues := make(map[string]string)
 	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = policy
 	cm.Data = cmValues
-	_, err = s.framework.KubeClient.CoreV1().ConfigMaps(s.namespace).Create(cm)
+	_, err = s.awaitility.KubeClient.CoreV1().ConfigMaps(s.namespace).Create(cm)
 	require.NoError(s.T(), err)
 
 	// Confirm it was updated
-	cm, err = s.framework.KubeClient.CoreV1().ConfigMaps(s.namespace).Get(config.ToolchainConfigMapName, v1.GetOptions{})
+	cm, err = s.awaitility.KubeClient.CoreV1().ConfigMaps(s.namespace).Get(config.ToolchainConfigMapName, v1.GetOptions{})
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), policy, cm.Data[config.ToolchainConfigMapUserApprovalPolicy])
 }

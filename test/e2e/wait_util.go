@@ -44,6 +44,21 @@ func NewMemberAwaitility(awaitility *e2e.Awaitility) *MemberAwaitility {
 	return &MemberAwaitility{SingleAwaitility: awaitility.Member()}
 }
 
+func (a *HostAwaitility) waitForUserSignup(name string) error {
+	return wait.Poll(e2e.RetryInterval, e2e.Timeout, func() (done bool, err error) {
+		userSignup := &toolchainv1alpha1.UserSignup{}
+		if err := a.Client.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: a.Ns}, userSignup); err != nil {
+			if errors.IsNotFound(err) {
+				a.T.Logf("waiting for availability of UserSignup '%s'", name)
+				return false, nil
+			}
+			return false, err
+		}
+		a.T.Logf("found UserSignup '%s'", name)
+		return true, nil
+	})
+}
+
 func (a *HostAwaitility) waitForMasterUserRecord(name string) error {
 	return wait.Poll(e2e.RetryInterval, e2e.Timeout, func() (done bool, err error) {
 		mur := &toolchainv1alpha1.MasterUserRecord{}
@@ -96,14 +111,14 @@ func (a *MemberAwaitility) waitForUserAccount(name string, expSpec toolchainv1al
 	})
 }
 
-func waitForUserSignupStatusConditions(t *testing.T, client client.Client, namespace, name string, conditions ...toolchainv1alpha1.Condition) error {
+func (a *HostAwaitility) waitForUserSignupStatusConditions(name string, conditions ...toolchainv1alpha1.Condition) error {
 	var mismatchErr error
 	err := wait.Poll(e2e.RetryInterval, e2e.Timeout, func() (done bool, err error) {
 		mismatchErr = nil
 		userSignup := &toolchainv1alpha1.UserSignup{}
-		if err := client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: name}, userSignup); err != nil {
+		if err := a.Client.Get(context.TODO(), types.NamespacedName{Namespace: a.Ns, Name: name}, userSignup); err != nil {
 			if errors.IsNotFound(err) {
-				t.Logf("waiting for availability of UserSignup '%s'", name)
+				a.T.Logf("waiting for availability of UserSignup '%s'", name)
 				return false, nil
 			}
 			return false, err
@@ -111,10 +126,10 @@ func waitForUserSignupStatusConditions(t *testing.T, client client.Client, names
 
 		mismatchErr = ConditionsMatch(userSignup.Status.Conditions, conditions...)
 		if mismatchErr == nil {
-			t.Log("conditions match")
+			a.T.Log("conditions match")
 			return true, nil
 		}
-		t.Logf("waiting for [%d] conditions to match...", len(conditions))
+		a.T.Logf("waiting for [%d] conditions to match...", len(conditions))
 		return false, nil
 	})
 
