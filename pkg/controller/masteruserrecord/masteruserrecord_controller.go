@@ -29,6 +29,7 @@ var log = logf.Log.WithName("controller_masteruserrecord")
 const (
 	// Status condition reasons
 	unableToGetUserAccountReason             = "UnableToGetUserAccount"
+	unableToCreateUserAccountReason          = "UnableToCreateUserAccount"
 	unableToSynchronizeUserAccountSpecReason = "unableToSynchronizeUserAccountSpecAccount"
 	targetClusterNotReadyReason              = "TargetClusterNotReady"
 	provisioningReason                       = "Provisioning"
@@ -135,7 +136,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 				return err
 			}
 			if err := memberCluster.Client.Create(context.TODO(), userAccount); err != nil {
-				return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(targetClusterNotReadyReason), err,
+				return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(unableToCreateUserAccountReason), err,
 					"failed to create UserAccount in the member cluster '%s'", recAccount.TargetCluster)
 			}
 			return nil

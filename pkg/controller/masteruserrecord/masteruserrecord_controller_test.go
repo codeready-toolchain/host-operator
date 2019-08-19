@@ -8,6 +8,7 @@ import (
 	murtest "github.com/codeready-toolchain/host-operator/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/host-operator/test/useraccount"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -75,7 +76,7 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 		HasCondition(toBeNotReady(provisioningReason, ""))
 }
 
-func TestCreateUserAccountFailed(t *testing.T) {
+func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
@@ -156,7 +157,7 @@ func TestCreateUserAccountFailed(t *testing.T) {
 			HasCondition(toBeNotReady(targetClusterNotReadyReason, msg))
 	})
 
-	t.Run("status update failed", func(t *testing.T) {
+	t.Run("status update of the MasterUserRecord failed", func(t *testing.T) {
 		// given
 		memberClient := fake.NewFakeClientWithScheme(s)
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
@@ -172,6 +173,83 @@ func TestCreateUserAccountFailed(t *testing.T) {
 		// then
 		require.Error(t, err)
 		assert.Equal(t, "failed to create user bob: oopsy woopsy", err.Error())
+	})
+
+	t.Run("creation of the UserAccount failed", func(t *testing.T) {
+		// given
+		memberClient := commontest.NewFakeClient(t)
+		memberClient.MockCreate = func(obj runtime.Object) error {
+			return fmt.Errorf("unable to create user account %s", mur.Name)
+		}
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.Error(t, err)
+		msg := "failed to create UserAccount in the member cluster 'member-cluster'"
+		assert.Contains(t, err.Error(), msg)
+
+		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
+		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+			HasCondition(toBeNotReady(unableToCreateUserAccountReason, "unable to create user account john"))
+	})
+
+	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
+		// given
+		userAcc := uatest.NewUserAccountFromMur(mur)
+		memberClient := commontest.NewFakeClient(t, userAcc)
+		memberClient.MockUpdate = func(obj runtime.Object) error {
+			return fmt.Errorf("unable to update user account %s", mur.Name)
+		}
+		modifiedMur := murtest.NewMasterUserRecord("john")
+		murtest.ModifyUaInMur(modifiedMur, test.MemberClusterName, murtest.TierName("admin"))
+		hostClient := fake.NewFakeClientWithScheme(s, modifiedMur)
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(modifiedMur))
+
+		// then
+		require.Error(t, err)
+		msg := "update of the UserAccount.spec in the cluster 'member-cluster' failed"
+		assert.Contains(t, err.Error(), msg)
+
+		uatest.AssertThatUserAccount(t, "john", memberClient).
+			Exists().
+			HasSpec(userAcc.Spec)
+		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+			HasCondition(toBeNotReady(unableToSynchronizeUserAccountSpecReason, "unable to update user account john"))
+	})
+
+	t.Run("status synchronization of the UserAccount & MasterUserRecord failed", func(t *testing.T) {
+		// given
+		provisionedMur := murtest.NewMasterUserRecord("john",
+			murtest.StatusCondition(toBeProvisioned()))
+		memberClient := commontest.NewFakeClient(t, uatest.NewUserAccountFromMur(provisionedMur,
+			uatest.StatusCondition(toBeNotReady("somethingFailed", ""))))
+		hostClient := commontest.NewFakeClient(t, provisionedMur)
+		hostClient.MockStatusUpdate = func(obj runtime.Object) error {
+			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
+		}
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(provisionedMur))
+
+		// then
+		require.Error(t, err)
+		msg := "update of the UserAccount.status in the cluster 'member-cluster' failed"
+		assert.Contains(t, err.Error(), msg)
+
+		uatest.AssertThatUserAccount(t, "john", memberClient).Exists()
+		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+			HasCondition(toBeProvisioned()).
+			HasStatusUserAccounts()
 	})
 }
 
