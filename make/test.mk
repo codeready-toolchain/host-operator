@@ -84,7 +84,7 @@ e2e-run:
 	oc get kubefedcluster -n $(HOST_NS)
 	oc get kubefedcluster -n $(MEMBER_NS)
 	MEMBER_NS=${MEMBER_NS} operator-sdk test local ./test/e2e --no-setup --namespace $(HOST_NS) --verbose --go-test-flags "-timeout=15m" || \
-	$(MAKE) print-logs HOST_NS=${HOST_NS} MEMBER_NS=${MEMBER_NS} && exit 1
+	($(MAKE) print-logs HOST_NS=${HOST_NS} MEMBER_NS=${MEMBER_NS} && exit 1)
 
 .PHONY: print-logs
 print-logs:
