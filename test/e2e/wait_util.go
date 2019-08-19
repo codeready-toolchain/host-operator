@@ -3,16 +3,16 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/e2e"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 )
-
 
 type ConditionMismatchError struct {
 	message string
@@ -96,14 +96,11 @@ func (a *MemberAwaitility) waitForUserAccount(name string, expSpec toolchainv1al
 	})
 }
 
-
-
-
-func waitForUserSignupStatusConditions(t *testing.T, client client.Client, namespace, name string, conditions ...v1alpha1.Condition) error {
+func waitForUserSignupStatusConditions(t *testing.T, client client.Client, namespace, name string, conditions ...toolchainv1alpha1.Condition) error {
 	var mismatchErr error
-	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
+	err := wait.Poll(e2e.RetryInterval, e2e.Timeout, func() (done bool, err error) {
 		mismatchErr = nil
-		userSignup := &v1alpha1.UserSignup{}
+		userSignup := &toolchainv1alpha1.UserSignup{}
 		if err := client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: name}, userSignup); err != nil {
 			if errors.IsNotFound(err) {
 				t.Logf("waiting for availability of UserSignup '%s'", name)
@@ -127,7 +124,7 @@ func waitForUserSignupStatusConditions(t *testing.T, client client.Client, names
 	return err
 }
 
-func ConditionsMatch(actual []v1alpha1.Condition, expected ...v1alpha1.Condition) error {
+func ConditionsMatch(actual []toolchainv1alpha1.Condition, expected ...toolchainv1alpha1.Condition) error {
 	if len(expected) != len(actual) {
 		return NewConditionMismatchError(fmt.Sprintf("Conditions length [%d] does not match expected length [%d]",
 			len(actual), len(expected)))
@@ -145,7 +142,7 @@ func ConditionsMatch(actual []v1alpha1.Condition, expected ...v1alpha1.Condition
 	return nil
 }
 
-func ContainsCondition(conditions []v1alpha1.Condition, contains v1alpha1.Condition) bool {
+func ContainsCondition(conditions []toolchainv1alpha1.Condition, contains toolchainv1alpha1.Condition) bool {
 	for _, c := range conditions {
 		if c.Type == contains.Type {
 			return contains.Status == c.Status && contains.Reason == c.Reason && contains.Message == c.Message
