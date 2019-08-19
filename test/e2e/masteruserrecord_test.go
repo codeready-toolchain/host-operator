@@ -48,7 +48,8 @@ func TestMasterUserRecord(t *testing.T) {
 		require.NoError(t, err)
 		t.Logf("MasterUserRecord '%s' updated", mur.Name)
 
-		verifyResources(awaitility, toBeModifiedMur, toBeProvisioned())
+		// TODO: verify expected condition when the member operator has a logic that updates NsTemplateSet and its status
+		verifyResources(awaitility, toBeModifiedMur)
 		verifyResources(awaitility, mur, toBeProvisioned())
 	})
 
@@ -69,7 +70,8 @@ func TestMasterUserRecord(t *testing.T) {
 		verifyResources(awaitility, currentMur, toBeProvisioned(), coolStatus())
 
 		extraMur = NewHostAwaitility(awaitility).GetMasterUserRecord(extraMur.Name)
-		verifyResources(awaitility, extraMur, toBeProvisioned())
+		// TODO: verify expected condition when the member operator has a logic that updates NsTemplateSet and its status
+		verifyResources(awaitility, extraMur)
 	})
 }
 
