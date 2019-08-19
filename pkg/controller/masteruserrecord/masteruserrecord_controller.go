@@ -28,11 +28,12 @@ var log = logf.Log.WithName("controller_masteruserrecord")
 
 const (
 	// Status condition reasons
-	unableToGetUserAccountReason = "UnableToGetUserAccount"
-	targetClusterNotReadyReason  = "TargetClusterNotReady"
-	provisioningReason           = "Provisioning"
-	updatingReason               = "Updating"
-	provisionedReason            = "Provisioned"
+	unableToGetUserAccountReason             = "UnableToGetUserAccount"
+	unableToSynchronizeUserAccountSpecReason = "unableToSynchronizeUserAccountSpecAccount"
+	targetClusterNotReadyReason              = "TargetClusterNotReady"
+	provisioningReason                       = "Provisioning"
+	updatingReason                           = "Updating"
+	provisionedReason                        = "Provisioned"
 )
 
 // Add creates a new MasterUserRecord Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -151,7 +152,8 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 		recordSpecUserAcc: recAccount,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
-		return errs.Wrapf(err, "update of the UserAccount.spec in the cluster '%s' failed", recAccount.TargetCluster)
+		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(unableToSynchronizeUserAccountSpecReason), err,
+			"update of the UserAccount.spec in the cluster '%s' failed", recAccount.TargetCluster)
 	}
 	if err := sync.synchronizeStatus(); err != nil {
 		return errs.Wrapf(err, "update of the UserAccount.status in the cluster '%s' failed", recAccount.TargetCluster)
