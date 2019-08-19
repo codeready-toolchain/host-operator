@@ -55,6 +55,8 @@ github.com/census-instrumentation/opencensus-proto v0.2.0/go.mod h1:f6KPmirojxKA
 github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1/go.mod h1:/iP1qXHoty45bqomnu2LM+VVyAEdWN+vtSHGlQgyxbw=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28 h1:+ndo0pFuFuy10St4EDltsITtrj4iOLArBvLXwj2Z4Fo=
+github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28 h1:+ndo0pFuFuy10St4EDltsITtrj4iOLArBvLXwj2Z4Fo=
+github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28/go.mod h1:jHr8IvmLGTxmgD+jc1bBbucP4bSbT2JHnM+HdAw6N2g=
 github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28/go.mod h1:jHr8IvmLGTxmgD+jc1bBbucP4bSbT2JHnM+HdAw6N2g=
 github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38 h1:wHuHNqZl2NxOQDuOsGe1OYE/uIYQmbfq/OW4/Doh5ls=
 github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38/go.mod h1:jHr8IvmLGTxmgD+jc1bBbucP4bSbT2JHnM+HdAw6N2g=
