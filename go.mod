@@ -14,6 +14,7 @@ require (
 	github.com/operator-framework/operator-sdk v0.10.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.6.0 // indirect
+	github.com/redhat-cop/operator-utils v0.0.0-20190530184149-66ee667a40b2
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/pflag v1.0.3
 	github.com/stretchr/testify v1.3.0
