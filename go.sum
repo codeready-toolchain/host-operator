@@ -16,6 +16,16 @@ github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78/go.mod h1:LmzpDX
 github.com/Azure/go-autorest v11.1.0+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=
 github.com/Azure/go-autorest v11.7.0+incompatible h1:gzma19dc9ejB75D90E5S+/wXouzpZyA+CV+/MJPSD/k=
 github.com/Azure/go-autorest v11.7.0+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=
+github.com/Azure/go-autorest/autorest v0.9.0/go.mod h1:xyHB1BMZT0cuDHU7I0+g046+BFDTQ8rEZB0s4Yfa6bI=
+github.com/Azure/go-autorest/autorest/adal v0.5.0/go.mod h1:8Z9fGy2MpX0PvDjB1pEgQTmVqjGhiHBW7RJJEciWzS0=
+github.com/Azure/go-autorest/autorest/adal v0.6.0/go.mod h1:Z6vX6WXXuyieHAXwMj0S6HY6e6wcHn37qQMBQlvY3lc=
+github.com/Azure/go-autorest/autorest/date v0.1.0/go.mod h1:plvfp3oPSKwf2DNjlBjWF/7vwR+cUD/ELuzDCXwHUVA=
+github.com/Azure/go-autorest/autorest/date v0.2.0/go.mod h1:vcORJHLJEh643/Ioh9+vPmf1Ij9AEBM5FuBIXLmIy0g=
+github.com/Azure/go-autorest/autorest/mocks v0.1.0/go.mod h1:OTyCOPRA2IgIlWxVYxBee2F5Gr4kF2zd2J5cFRaIDN0=
+github.com/Azure/go-autorest/autorest/mocks v0.2.0/go.mod h1:OTyCOPRA2IgIlWxVYxBee2F5Gr4kF2zd2J5cFRaIDN0=
+github.com/Azure/go-autorest/autorest/mocks v0.3.0/go.mod h1:a8FDP3DYzQ4RYfVAxAN3SVSiiO77gL2j2ronKKP0syM=
+github.com/Azure/go-autorest/logger v0.1.0/go.mod h1:oExouG+K6PryycPJfVSxi/koC6LSNgds39diKLz7Vrc=
+github.com/Azure/go-autorest/tracing v0.5.0/go.mod h1:r/s2XiOKccPW3HrqB+W0TQzfbtp2fGCgRFtBroKn4Dk=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e/go.mod h1:64YHyfSL2R96J44Nlwm39UHepQbyR5q10x7iYa1ks2E=
@@ -60,10 +70,10 @@ github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28/go.mod h1:
 github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28/go.mod h1:jHr8IvmLGTxmgD+jc1bBbucP4bSbT2JHnM+HdAw6N2g=
 github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38 h1:wHuHNqZl2NxOQDuOsGe1OYE/uIYQmbfq/OW4/Doh5ls=
 github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38/go.mod h1:jHr8IvmLGTxmgD+jc1bBbucP4bSbT2JHnM+HdAw6N2g=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20190814120500-ab1e2af882aa h1:x2qV019EM24J7OW8oW8rfYoVfiaUOIw7TjwrNLxGzAA=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20190814120500-ab1e2af882aa/go.mod h1:ATdn3CpRa2qvS9AKWMdNEkEFPwbY9aBtCY6FLswrXHo=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190819084459-ba40462e7938 h1:SHhUVIm6LnZm7KaVci2FV3lWl+CQ08KQPXlRhpqweJM=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190819084459-ba40462e7938/go.mod h1:ATdn3CpRa2qvS9AKWMdNEkEFPwbY9aBtCY6FLswrXHo=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20190819234157-766ff21fe384 h1:xdzU11DqTcv9tn+p+xYMp4QMwUYL6M/xPblPEgflVbY=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20190819234157-766ff21fe384/go.mod h1:T/a1aW1kqIKrRxbpUxDp3l3wz97jtQBI68AFl+j+I9Q=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.3/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.9+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -251,6 +261,7 @@ github.com/googleapis/gnostic v0.3.0/go.mod h1:sJBsCZ4ayReDTBIg8b9dl28c5xFWyhBTV
 github.com/gophercloud/gophercloud v0.0.0-20180330165814-781450b3c4fc/go.mod h1:3WdhXV3rUYy9p6AUW8d94kr+HS62Y4VL9mBnFxsD8q4=
 github.com/gophercloud/gophercloud v0.0.0-20190408160324-6c7ac67f8855 h1:3dfUujjROkkXcwIpsh9z6bjOhPFooLpxejc7qgX13/g=
 github.com/gophercloud/gophercloud v0.0.0-20190408160324-6c7ac67f8855/go.mod h1:vxM41WHh5uqHVBMZHzuwNOHh8XEoIEcSTewFxm1c5g8=
+github.com/gophercloud/gophercloud v0.3.0/go.mod h1:vxM41WHh5uqHVBMZHzuwNOHh8XEoIEcSTewFxm1c5g8=
 github.com/gorilla/context v1.1.1/go.mod h1:kBGZzfjB9CEq2AlWe17Uuf7NDRt0dE0s8S51q0aT7Yg=
 github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
