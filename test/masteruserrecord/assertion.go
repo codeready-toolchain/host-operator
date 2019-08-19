@@ -38,10 +38,10 @@ func AssertThatMasterUserAccount(t *testing.T, name string, client client.Client
 	}
 }
 
-func (a *MurAssertion) HasCondition(expected toolchainv1alpha1.Condition) *MurAssertion {
+func (a *MurAssertion) HasConditions(expected ...toolchainv1alpha1.Condition) *MurAssertion {
 	err := a.loadUaAssertion()
 	require.NoError(a.t, err)
-	commonttest.AssertConditionsMatch(a.t, a.masterUserRecord.Status.Conditions, expected)
+	commonttest.AssertConditionsMatch(a.t, a.masterUserRecord.Status.Conditions, expected...)
 	return a
 }
 

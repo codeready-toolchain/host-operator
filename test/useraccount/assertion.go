@@ -59,9 +59,9 @@ func (a *UaAssertion) HasSpec(spec toolchainv1alpha1.UserAccountSpec) *UaAsserti
 	return a
 }
 
-func (a *UaAssertion) HasCondition(expected toolchainv1alpha1.Condition) *UaAssertion {
+func (a *UaAssertion) HasConditions(expected ...toolchainv1alpha1.Condition) *UaAssertion {
 	err := a.loadUaAssertion()
 	require.NoError(a.t, err)
-	commonttest.AssertConditionsMatch(a.t, a.userAccount.Status.Conditions, expected)
+	commonttest.AssertConditionsMatch(a.t, a.userAccount.Status.Conditions, expected...)
 	return a
 }

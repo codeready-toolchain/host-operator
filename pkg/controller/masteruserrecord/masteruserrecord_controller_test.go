@@ -46,7 +46,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		Exists().
 		HasSpec(mur.Spec.UserAccounts[0].Spec)
 	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-		HasCondition(toBeNotReady(provisioningReason, ""))
+		HasConditions(toBeNotReady(provisioningReason, ""))
 }
 
 func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
@@ -73,7 +73,7 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 		Exists().
 		HasSpec(mur.Spec.UserAccounts[1].Spec)
 	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-		HasCondition(toBeNotReady(provisioningReason, ""))
+		HasConditions(toBeNotReady(provisioningReason, ""))
 }
 
 func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
@@ -99,7 +99,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(targetClusterNotReadyReason, msg))
+			HasConditions(toBeNotReady(targetClusterNotReadyReason, msg))
 	})
 
 	t.Run("when member cluster does not exist and UA was already created", func(t *testing.T) {
@@ -117,7 +117,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 		assert.Contains(t, err.Error(), msg)
 
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(targetClusterNotReadyReason, msg))
+			HasConditions(toBeNotReady(targetClusterNotReadyReason, msg))
 	})
 
 	t.Run("when member cluster is not ready and UA hasn't been created yet", func(t *testing.T) {
@@ -136,7 +136,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(targetClusterNotReadyReason, msg))
+			HasConditions(toBeNotReady(targetClusterNotReadyReason, msg))
 	})
 
 	t.Run("when member cluster is not ready and UA was already created", func(t *testing.T) {
@@ -154,7 +154,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 		assert.Contains(t, err.Error(), msg)
 
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(targetClusterNotReadyReason, msg))
+			HasConditions(toBeNotReady(targetClusterNotReadyReason, msg))
 	})
 
 	t.Run("status update of the MasterUserRecord failed", func(t *testing.T) {
@@ -194,7 +194,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(unableToCreateUserAccountReason, "unable to create user account john"))
+			HasConditions(toBeNotReady(unableToCreateUserAccountReason, "unable to create user account john"))
 	})
 
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
@@ -222,7 +222,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 			Exists().
 			HasSpec(userAcc.Spec)
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeNotReady(unableToSynchronizeUserAccountSpecReason, "unable to update user account john"))
+			HasConditions(toBeNotReady(unableToSynchronizeUserAccountSpecReason, "unable to update user account john"))
 	})
 
 	t.Run("status synchronization of the UserAccount & MasterUserRecord failed", func(t *testing.T) {
@@ -248,7 +248,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).Exists()
 		murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-			HasCondition(toBeProvisioned()).
+			HasConditions(toBeProvisioned()).
 			HasStatusUserAccounts()
 	})
 }
@@ -292,7 +292,7 @@ func TestModifyUserAccounts(t *testing.T) {
 		Exists().
 		HasSpec(mur.Spec.UserAccounts[2].Spec)
 	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-		HasCondition(toBeNotReady(updatingReason, ""))
+		HasConditions(toBeNotReady(updatingReason, ""))
 }
 
 func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
@@ -342,18 +342,18 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		HasSpec(mur.Spec.UserAccounts[0].Spec).
-		HasCondition(userAccount.Status.Conditions[0])
+		HasConditions(userAccount.Status.Conditions...)
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
 		HasSpec(mur.Spec.UserAccounts[1].Spec).
-		HasCondition(userAccount2.Status.Conditions[0])
+		HasConditions(userAccount2.Status.Conditions...)
 	uatest.AssertThatUserAccount(t, "john", memberClient3).
 		Exists().
 		HasSpec(mur.Spec.UserAccounts[2].Spec).
-		HasCondition(userAccount3.Status.Conditions[0])
+		HasConditions(userAccount3.Status.Conditions...)
 
 	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
-		HasCondition(toBeNotReady(updatingReason, "")).
+		HasConditions(toBeNotReady(updatingReason, "")).
 		HasStatusUserAccounts(test.MemberClusterName, "member2-cluster", "member3-cluster").
 		AllUserAccountsHaveStatusSyncIndex("123abc").
 		AllUserAccountsHaveCondition(userAccount.Status.Conditions[0])
