@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"testing"
 )
@@ -18,7 +17,6 @@ import (
 func TestSynchronizeSpec(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
-	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord("john", murtest.StatusCondition(toBeProvisioned()))
 
 	userAccount := uatest.NewUserAccountFromMur(mur)
@@ -26,8 +24,8 @@ func TestSynchronizeSpec(t *testing.T) {
 	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"),
 		murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
 
-	memberClient := fake.NewFakeClientWithScheme(s, userAccount)
-	hostClient := fake.NewFakeClientWithScheme(s, mur)
+	memberClient := commontest.NewFakeClient(t, userAccount)
+	hostClient := commontest.NewFakeClient(t, mur)
 
 	sync := Synchronizer{
 		record:            mur,
@@ -115,7 +113,6 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 func TestSynchronizeUserAccountFailed(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
-	s := apiScheme(t)
 
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
 		// given
@@ -126,7 +123,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
 		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.TierName("admin"))
-		hostClient := fake.NewFakeClientWithScheme(s, mur)
+		hostClient := commontest.NewFakeClient(t, mur)
 
 		sync := Synchronizer{
 			record:            mur,
@@ -176,8 +173,8 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, s *runtime.Scheme,
 	userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon toolchainv1alpha1.Condition) {
 
 	condition := userAccount.Status.Conditions[0]
-	memberClient := fake.NewFakeClientWithScheme(s, userAccount)
-	hostClient := fake.NewFakeClientWithScheme(s, mur)
+	memberClient := commontest.NewFakeClient(t, userAccount)
+	hostClient := commontest.NewFakeClient(t, mur)
 	sync := Synchronizer{
 		record:            mur,
 		hostClient:        hostClient,

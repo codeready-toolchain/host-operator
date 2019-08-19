@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/kubefed/pkg/apis/core/common"
@@ -31,8 +30,8 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord("john")
-	memberClient := fake.NewFakeClientWithScheme(s)
-	hostClient := fake.NewFakeClientWithScheme(s, mur)
+	memberClient := commontest.NewFakeClient(t)
+	hostClient := commontest.NewFakeClient(t, mur)
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient))
 
@@ -54,9 +53,9 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord("john", murtest.AdditionalAccounts("member2-cluster"))
-	memberClient := fake.NewFakeClientWithScheme(s)
-	memberClient2 := fake.NewFakeClientWithScheme(s)
-	hostClient := fake.NewFakeClientWithScheme(s, mur)
+	memberClient := commontest.NewFakeClient(t)
+	memberClient2 := commontest.NewFakeClient(t)
+	hostClient := commontest.NewFakeClient(t, mur)
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2))
 
@@ -81,11 +80,11 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord("john")
-	hostClient := fake.NewFakeClientWithScheme(s, mur)
+	hostClient := commontest.NewFakeClient(t, mur)
 
 	t.Run("when member cluster does not exist and UA hasn't been created yet", func(t *testing.T) {
 		// given
-		memberClient := fake.NewFakeClientWithScheme(s)
+		memberClient := commontest.NewFakeClient(t)
 		cntrl := newController(hostClient, s, newGetMemberCluster(false, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
@@ -104,7 +103,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 
 	t.Run("when member cluster does not exist and UA was already created", func(t *testing.T) {
 		// given
-		memberClient := fake.NewFakeClientWithScheme(s, uatest.NewUserAccountFromMur(mur))
+		memberClient := commontest.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
 		cntrl := newController(hostClient, s, newGetMemberCluster(false, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
@@ -122,7 +121,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 
 	t.Run("when member cluster is not ready and UA hasn't been created yet", func(t *testing.T) {
 		// given
-		memberClient := fake.NewFakeClientWithScheme(s)
+		memberClient := commontest.NewFakeClient(t)
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionFalse),
 			clusterClient(test.MemberClusterName, memberClient))
 
@@ -141,7 +140,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 
 	t.Run("when member cluster is not ready and UA was already created", func(t *testing.T) {
 		// given
-		memberClient := fake.NewFakeClientWithScheme(s, uatest.NewUserAccountFromMur(mur))
+		memberClient := commontest.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionFalse),
 			clusterClient(test.MemberClusterName, memberClient))
 
@@ -159,7 +158,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 
 	t.Run("status update of the MasterUserRecord failed", func(t *testing.T) {
 		// given
-		memberClient := fake.NewFakeClientWithScheme(s)
+		memberClient := commontest.NewFakeClient(t)
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 		statusUpdater := func(mur *toolchainv1alpha1.MasterUserRecord, message string) error {
@@ -206,7 +205,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 		}
 		modifiedMur := murtest.NewMasterUserRecord("john")
 		murtest.ModifyUaInMur(modifiedMur, test.MemberClusterName, murtest.TierName("admin"))
-		hostClient := fake.NewFakeClientWithScheme(s, modifiedMur)
+		hostClient := commontest.NewFakeClient(t, modifiedMur)
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
@@ -267,10 +266,10 @@ func TestModifyUserAccounts(t *testing.T) {
 	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"), murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
 	murtest.ModifyUaInMur(mur, "member2-cluster", murtest.NsLimit("admin"), murtest.TierName("basic"))
 
-	memberClient := fake.NewFakeClientWithScheme(s, userAccount)
-	memberClient2 := fake.NewFakeClientWithScheme(s, userAccount2)
-	memberClient3 := fake.NewFakeClientWithScheme(s, userAccount3)
-	hostClient := fake.NewFakeClientWithScheme(s, mur)
+	memberClient := commontest.NewFakeClient(t, userAccount)
+	memberClient2 := commontest.NewFakeClient(t, userAccount2)
+	memberClient3 := commontest.NewFakeClient(t, userAccount3)
+	hostClient := commontest.NewFakeClient(t, mur)
 
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2),
@@ -324,11 +323,11 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		UserAccountStatus: userAccount.Status,
 	})
 
-	memberClient := fake.NewFakeClientWithScheme(s, userAccount)
-	memberClient2 := fake.NewFakeClientWithScheme(s, userAccount2)
-	memberClient3 := fake.NewFakeClientWithScheme(s, userAccount3)
+	memberClient := commontest.NewFakeClient(t, userAccount)
+	memberClient2 := commontest.NewFakeClient(t, userAccount2)
+	memberClient3 := commontest.NewFakeClient(t, userAccount3)
 
-	hostClient := fake.NewFakeClientWithScheme(s, mur)
+	hostClient := commontest.NewFakeClient(t, mur)
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2),
 		clusterClient("member3-cluster", memberClient3))
