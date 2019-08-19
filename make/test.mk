@@ -64,6 +64,9 @@ BASE_COMMIT := $(shell echo $$CLONEREFS_OPTIONS | jq '.refs[0].base_sha')
 PR_COMMIT := $(shell echo $$CLONEREFS_OPTIONS | jq '.refs[0].pulls[0].sha')
 PULL_NUMBER := $(shell echo $$CLONEREFS_OPTIONS | jq '.refs[0].pulls[0].number')
 
+MEMBER_NS := member-operator-$(shell date +'%s')
+HOST_NS := host-operator-$(shell date +'%s')
+
 ###########################################################
 #
 # End-to-end Tests
@@ -78,16 +81,29 @@ test-e2e: test-e2e-keep-namespaces e2e-cleanup
 
 .PHONY: e2e-run
 e2e-run:
-	oc get kubefedcluster -n $(TEST_NAMESPACE)
+	oc get kubefedcluster -n $(HOST_NS)
 	oc get kubefedcluster -n $(MEMBER_NS)
-	MEMBER_NS=${MEMBER_NS} operator-sdk test local ./test/e2e --no-setup --namespace $(TEST_NAMESPACE) --verbose --go-test-flags "-timeout=15m"
+	MEMBER_NS=${MEMBER_NS} operator-sdk test local ./test/e2e --no-setup --namespace $(HOST_NS) --verbose --go-test-flags "-timeout=15m" || \
+	$(MAKE) print-logs HOST_NS=${HOST_NS} MEMBER_NS=${MEMBER_NS} && exit 1
+
+.PHONY: print-logs
+print-logs:
+	@echo "=====================================================================================" &
+	@echo "================================ Host cluster logs =================================="
+	@echo "====================================================================================="
+	@oc logs deployment.apps/host-operator --namespace $(HOST_NS)
+	@echo "====================================================================================="
+	@echo "================================ Member cluster logs ================================"
+	@echo "====================================================================================="
+	@oc logs deployment.apps/member-operator --namespace $(MEMBER_NS)
+	@echo "====================================================================================="
 
 .PHONY: e2e-setup
-e2e-setup: get-test-namespace is-minishift
-	oc new-project $(TEST_NAMESPACE) --display-name e2e-tests
+e2e-setup: is-minishift
+	oc new-project $(HOST_NS) --display-name e2e-tests
 	oc apply -f ./deploy/service_account.yaml
 	oc apply -f ./deploy/role.yaml
-	cat ./deploy/role_binding.yaml | sed s/\REPLACE_NAMESPACE/$(TEST_NAMESPACE)/ | oc apply -f -
+	cat ./deploy/role_binding.yaml | sed s/\REPLACE_NAMESPACE/$(HOST_NS)/ | oc apply -f -
 	oc apply -f deploy/crds
 	sed -e 's|REPLACE_IMAGE|${IMAGE_NAME}|g' ./deploy/operator.yaml  | oc apply -f -
 
@@ -104,23 +120,16 @@ endif
 
 .PHONY: setup-kubefed
 setup-kubefed:
-	curl -sSL https://raw.githubusercontent.com/codeready-toolchain/toolchain-common/master/scripts/add-cluster.sh | bash -s -- -t member -mn $(MEMBER_NS) -hn $(TEST_NAMESPACE) -s
-	curl -sSL https://raw.githubusercontent.com/codeready-toolchain/toolchain-common/master/scripts/add-cluster.sh | bash -s -- -t host -mn $(MEMBER_NS) -hn $(TEST_NAMESPACE) -s
+	curl -sSL https://raw.githubusercontent.com/codeready-toolchain/toolchain-common/master/scripts/add-cluster.sh | bash -s -- -t member -mn $(MEMBER_NS) -hn $(HOST_NS) -s
+	curl -sSL https://raw.githubusercontent.com/codeready-toolchain/toolchain-common/master/scripts/add-cluster.sh | bash -s -- -t host -mn $(MEMBER_NS) -hn $(HOST_NS) -s
 
 .PHONY: e2e-cleanup
 e2e-cleanup:
-	oc delete project ${MEMBER_NS} ${TEST_NAMESPACE} --wait=false || true
+	oc delete project ${MEMBER_NS} ${HOST_NS} --wait=false || true
 
 .PHONY: clean-e2e-namespaces
 clean-e2e-namespaces:
 	$(Q)-oc get projects --output=name | grep -E "(member|host)\-operator\-[0-9]+" | xargs oc delete
-
-.PHONY: get-test-namespace
-get-test-namespace: $(OUT_DIR)/test-namespace
-	$(eval TEST_NAMESPACE := $(shell cat $(OUT_DIR)/test-namespace))
-
-$(OUT_DIR)/test-namespace:
-	@echo -n "host-operator-$(shell date +'%s')" > $(OUT_DIR)/test-namespace
 
 ###########################################################
 #
@@ -130,7 +139,6 @@ $(OUT_DIR)/test-namespace:
 
 .PHONY: deploy-member
 deploy-member:
-	$(eval MEMBER_NS := $(shell echo -n "member-operator-$(shell date +'%s')"))
 	rm -rf /tmp/member-operator
 	# cloning here as don't want to maintain it for every single change in deploy directory of member-operator
 	git clone https://github.com/codeready-toolchain/member-operator.git --depth 1 /tmp/member-operator
