@@ -1,10 +1,13 @@
 package masteruserrecord
 
 import (
+	"fmt"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/test"
-	"github.com/codeready-toolchain/host-operator/test/masteruserrecord"
+	murtest "github.com/codeready-toolchain/host-operator/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/host-operator/test/useraccount"
+	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -107,6 +110,66 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 	// when and then
 	testSyncMurStatusWithUserAccountStatus(t, s, userAccount, mur, toBeProvisioned())
+}
+
+func TestSynchronizeUserAccountFailed(t *testing.T) {
+	// given
+	logf.SetLogger(logf.ZapLogger(true))
+	s := apiScheme(t)
+
+	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord("john")
+		userAcc := uatest.NewUserAccountFromMur(mur)
+		memberClient := commontest.NewFakeClient(t, userAcc)
+		memberClient.MockUpdate = func(obj runtime.Object) error {
+			return fmt.Errorf("unable to update user account %s", mur.Name)
+		}
+		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.TierName("admin"))
+		hostClient := fake.NewFakeClientWithScheme(s, mur)
+
+		sync := Synchronizer{
+			record:            mur,
+			hostClient:        hostClient,
+			memberClient:      memberClient,
+			memberUserAcc:     userAcc,
+			recordSpecUserAcc: mur.Spec.UserAccounts[0],
+		}
+
+		// when
+		err := sync.synchronizeSpec()
+
+		// then
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unable to update user account john")
+	})
+
+	t.Run("status synchronization of the UserAccount & MasterUserRecord failed", func(t *testing.T) {
+		// given
+		provisionedMur := murtest.NewMasterUserRecord("john",
+			murtest.StatusCondition(toBeProvisioned()))
+		userAcc := uatest.NewUserAccountFromMur(provisionedMur,
+			uatest.StatusCondition(toBeNotReady("somethingFailed", "")))
+		memberClient := commontest.NewFakeClient(t, userAcc)
+		hostClient := commontest.NewFakeClient(t, provisionedMur)
+		hostClient.MockStatusUpdate = func(obj runtime.Object) error {
+			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
+		}
+		sync := Synchronizer{
+			record:            provisionedMur,
+			hostClient:        hostClient,
+			memberClient:      memberClient,
+			memberUserAcc:     userAcc,
+			recordSpecUserAcc: provisionedMur.Spec.UserAccounts[0],
+		}
+
+		// when
+		err := sync.synchronizeStatus()
+
+		// then
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unable to update MUR john")
+	})
 }
 
 func testSyncMurStatusWithUserAccountStatus(t *testing.T, s *runtime.Scheme,
