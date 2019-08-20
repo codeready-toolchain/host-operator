@@ -9,6 +9,7 @@ spec:
       syncIndex: '135540409'
       spec:
         nsLimit: admin
+        userID: 1a03ecac-7c0b-44fc-b66d-12dd7fb21c40
         nsTemplateSet:
           tierName: basic
           namespaces:
