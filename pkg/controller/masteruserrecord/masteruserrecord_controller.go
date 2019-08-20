@@ -157,7 +157,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 			"update of the UserAccount.spec in the cluster '%s' failed", recAccount.TargetCluster)
 	}
 	if err := sync.synchronizeStatus(); err != nil {
-		return errs.Wrapf(err, "update of the UserAccount.status in the cluster '%s' failed", recAccount.TargetCluster)
+		return errs.Wrapf(err, "update of the MasterUserRecord failed while synchronizing with UserAccount status from the cluster '%s'", recAccount.TargetCluster)
 	}
 	return nil
 }
