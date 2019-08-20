@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	"testing"
 	"time"
 
@@ -48,11 +47,15 @@ func (s *userSignupIntegrationTest) SetupSuite() {
 }
 
 func (s *userSignupIntegrationTest) TestUserSignupCreated() {
+	// Clear the user approval policy
+	err := s.clearApprovalPolicyConfig()
+	require.NoError(s.T(), err)
+
 	// Create user signup
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup := s.newUserSignup("foo")
 
-	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
@@ -72,7 +75,7 @@ func (s *userSignupIntegrationTest) TestUserSignupCreated() {
 
 func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 	// Clear the user approval policy
-	err := clearApprovalPolicyConfig(s.awaitility.KubeClient, s.namespace)
+	err := s.clearApprovalPolicyConfig()
 	require.NoError(s.T(), err)
 
 	// Create user signup - no approval set
@@ -283,6 +286,85 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	require.NoError(s.T(), err)
 }
 
+func (s *userSignupIntegrationTest) TestTargetClusterSelectedAutomatically() {
+	// Set the user approval policy to automatic
+	s.setApprovalPolicyConfig(config.UserApprovalPolicyAutomatic)
+
+	// Create user signup - no approval set
+	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
+	userSignup := s.newUserSignup("reginald")
+	// Remove the specified target cluster
+	userSignup.Spec.TargetCluster = ""
+	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
+	require.NoError(s.T(), err)
+	s.T().Logf("user signup '%s' created", userSignup.Name)
+
+	// Confirm the UserSignup was created
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
+	require.NoError(s.T(), err)
+
+	// Confirm the MasterUserRecord was created
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	require.NoError(s.T(), err)
+
+	// Confirm that:
+	// 1) the Approved condition is set to true
+	// 2) the Approved reason is set to ApprovedAutomatically
+	// 3) the Complete condition is (eventually) set to true
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: corev1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: corev1.ConditionTrue,
+		})
+	require.NoError(s.T(), err)
+
+	// Lookup the MUR
+	mur := &v1alpha1.MasterUserRecord{}
+	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: s.namespace, Name: userSignup.Name}, mur)
+	require.NoError(s.T(), err)
+
+	require.Len(s.T(), mur.Spec.UserAccounts, 1)
+	require.NotEmpty(s.T(), mur.Spec.UserAccounts[0].TargetCluster)
+
+	// Lookup the member cluster name
+	memberCluster, ok, err := s.awaitility.Host().GetKubeFedCluster(s.awaitility.MemberNs, cluster.Member, e2e.ReadyKubeFedCluster)
+	require.NoError(s.awaitility.T, err)
+	require.True(s.awaitility.T, ok, "KubeFedCluster should exist")
+
+	require.Equal(s.T(), memberCluster.Name, mur.Spec.UserAccounts[0].TargetCluster)
+}
+
+func (s *userSignupIntegrationTest) TestDeletedUserSignupIsGarbageCollected() {
+	// Set the user approval policy to automatic
+	s.setApprovalPolicyConfig(config.UserApprovalPolicyAutomatic)
+
+	// Create user signup - no approval set
+	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
+	userSignup := s.newUserSignup("oliver")
+	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
+	require.NoError(s.T(), err)
+	s.T().Logf("user signup '%s' created", userSignup.Name)
+
+	// Confirm the UserSignup was created
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
+	require.NoError(s.T(), err)
+
+	// Confirm the MasterUserRecord was created
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	require.NoError(s.T(), err)
+
+	// Delete the UserSignup
+	err = s.awaitility.Client.Delete(context.TODO(), userSignup)
+	require.NoError(s.T(), err)
+}
+
 func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	// Set the user approval policy to automatic
 	s.setApprovalPolicyConfig(config.UserApprovalPolicyAutomatic)
@@ -300,8 +382,8 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	require.NoError(s.T(), err)
 
 	// Confirm the MasterUserRecord was created
-	//err = waitForMasterUserRecord(s.T(), s.framework.Client.Client, s.namespace, userSignup.Name)
-	//require.NoError(s.T(), err)
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	require.NoError(s.T(), err)
 
 	// Confirm that:
 	// 1) the Approved condition is set to true
@@ -411,7 +493,7 @@ func (s *userSignupIntegrationTest) setApprovalPolicyConfig(policy string) {
 	}
 
 	// Clear the current approval policy
-	err := clearApprovalPolicyConfig(s.awaitility.KubeClient, s.namespace)
+	err := s.clearApprovalPolicyConfig()
 	require.NoError(s.T(), err)
 
 	cmValues := make(map[string]string)
@@ -426,14 +508,14 @@ func (s *userSignupIntegrationTest) setApprovalPolicyConfig(policy string) {
 	require.Equal(s.T(), policy, cm.Data[config.ToolchainConfigMapUserApprovalPolicy])
 }
 
-func clearApprovalPolicyConfig(clientSet kubernetes.Interface, namespace string) error {
+func (s *userSignupIntegrationTest) clearApprovalPolicyConfig() error {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: v1.ObjectMeta{
 			Name: config.ToolchainConfigMapName,
 		},
 	}
 
-	err := clientSet.CoreV1().ConfigMaps(namespace).Delete(cm.Name, nil)
+	err := s.awaitility.KubeClient.CoreV1().ConfigMaps(s.namespace).Delete(cm.Name, nil)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return err
