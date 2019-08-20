@@ -30,7 +30,7 @@ const (
 	// Status condition reasons
 	unableToGetUserAccountReason             = "UnableToGetUserAccount"
 	unableToCreateUserAccountReason          = "UnableToCreateUserAccount"
-	unableToSynchronizeUserAccountSpecReason = "unableToSynchronizeUserAccountSpecAccount"
+	unableToSynchronizeUserAccountSpecReason = "UnableToSynchronizeUserAccountSpecAccount"
 	targetClusterNotReadyReason              = "TargetClusterNotReady"
 	provisioningReason                       = "Provisioning"
 	updatingReason                           = "Updating"
