@@ -226,12 +226,16 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 
 	t.Run("status synchronization of the UserAccount & MasterUserRecord failed", func(t *testing.T) {
 		// given
+		updatingCond := toBeNotReady("updating", "")
 		provisionedMur := murtest.NewMasterUserRecord("john",
-			murtest.StatusCondition(toBeProvisioned()))
+			murtest.StatusCondition(updatingCond))
 		memberClient := commontest.NewFakeClient(t, uatest.NewUserAccountFromMur(provisionedMur,
 			uatest.StatusCondition(toBeNotReady("somethingFailed", ""))))
+
 		hostClient := commontest.NewFakeClient(t, provisionedMur)
+		// mock only once
 		hostClient.MockStatusUpdate = func(obj runtime.Object) error {
+			hostClient.MockStatusUpdate = nil
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
@@ -246,8 +250,9 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 		assert.Contains(t, err.Error(), msg)
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).Exists()
+		updatingCond.Message = msg + ": unable to update MUR john"
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeProvisioned()).
+			HasConditions(updatingCond).
 			HasStatusUserAccounts()
 	})
 }

@@ -38,15 +38,25 @@ func (s *Synchronizer) synchronizeStatus() error {
 		// when record should update status
 		recordStatusUserAcc.SyncIndex = s.recordSpecUserAcc.SyncIndex
 		recordStatusUserAcc.UserAccountStatus = s.memberUserAcc.Status
+		var originalStatusUserAcc toolchainv1alpha1.UserAccountStatusEmbedded
 		if index < 0 {
 			s.record.Status.UserAccounts = append(s.record.Status.UserAccounts, recordStatusUserAcc)
 		} else {
+			originalStatusUserAcc = s.record.Status.UserAccounts[index]
 			s.record.Status.UserAccounts[index] = recordStatusUserAcc
 		}
 
 		s.alignReadiness()
 
-		return s.hostClient.Status().Update(context.TODO(), s.record)
+		err := s.hostClient.Status().Update(context.TODO(), s.record)
+		if err != nil {
+			if index < 0 {
+				s.record.Status.UserAccounts = s.record.Status.UserAccounts[:len(s.record.Status.UserAccounts)-1]
+			} else {
+				s.record.Status.UserAccounts[index] = originalStatusUserAcc
+			}
+			return err
+		}
 	}
 	return nil
 }

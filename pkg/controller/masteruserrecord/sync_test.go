@@ -160,12 +160,50 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			recordSpecUserAcc: provisionedMur.Spec.UserAccounts[0],
 		}
 
-		// when
-		err := sync.synchronizeStatus()
+		t.Run("with empty set of UserAccounts statuses", func(t *testing.T) {
+			// when
+			err := sync.synchronizeStatus()
 
-		// then
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unable to update MUR john")
+			// then
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unable to update MUR john")
+			assert.Len(t, provisionedMur.Status.UserAccounts, 0)
+		})
+
+		t.Run("when the UserAccount was added", func(t *testing.T) {
+			//given
+			additionalUserAcc := toolchainv1alpha1.UserAccountStatusEmbedded{
+				TargetCluster: "some-other",
+			}
+			provisionedMur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{additionalUserAcc}
+
+			// when
+			err := sync.synchronizeStatus()
+
+			// then
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unable to update MUR john")
+			assert.Len(t, provisionedMur.Status.UserAccounts, 1)
+			assert.Contains(t, provisionedMur.Status.UserAccounts, additionalUserAcc)
+		})
+
+		t.Run("when the UserAccount was modified", func(t *testing.T) {
+			//given
+			toBeModified := toolchainv1alpha1.UserAccountStatusEmbedded{
+				TargetCluster: test.MemberClusterName,
+				SyncIndex:     "somethingCrazy",
+			}
+			provisionedMur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{toBeModified}
+
+			// when
+			err := sync.synchronizeStatus()
+
+			// then
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unable to update MUR john")
+			assert.Len(t, provisionedMur.Status.UserAccounts, 1)
+			assert.Contains(t, provisionedMur.Status.UserAccounts, toBeModified)
+		})
 	})
 }
 
