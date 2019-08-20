@@ -20,7 +20,7 @@ To run this operator locally you need to have at least one Minishift profile sta
 $ minishift start --profile host
 ```
 
-Then you can run the operator locally with the help of `operator-sdk`:
+Then you can run the operator locally with the help of `operator-sdk` (you need version v0.10.0 or higher):
 
 ```bash
 $ make up-local
@@ -55,7 +55,7 @@ The `make test-e2e` will take care of creating a namespace/project with a random
 the operator-sdk.
 
 
- NOTE: you can specify the namepace you want to use for running the end-to-end tests by writing its name in the `./build/_output/test-namespace` file. Otherwise, the file will be generated on the fly with a namespace in the form of `test-<UUID>`.
+ NOTE: you can override the default namepace names where the end-to-end tests are going to be executed - eg.: `make test-e2e HOST_NS=my-host MEMBER_NS=my-member` file.
 
 === Verifying the OpenShift CI configuration
 
