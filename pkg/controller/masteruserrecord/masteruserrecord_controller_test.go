@@ -242,7 +242,7 @@ func TestCreateOrSynchronizeUserAccountFailed(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		msg := "update of the UserAccount.status in the cluster 'member-cluster' failed"
+		msg := "update of the MasterUserRecord failed while synchronizing with UserAccount status from the cluster 'member-cluster'"
 		assert.Contains(t, err.Error(), msg)
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).Exists()
