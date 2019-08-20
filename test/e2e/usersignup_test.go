@@ -43,12 +43,15 @@ func (s *userSignupIntegrationTest) SetupSuite() {
 	userSignupList := &v1alpha1.UserSignupList{}
 	s.testCtx, s.awaitility = e2e.InitializeOperators(s.T(), userSignupList, cluster.Host)
 	s.hostAwait = NewHostAwaitility(s.awaitility)
+	ns, err := s.testCtx.GetNamespace()
+	require.NoError(s.T(), err)
+	s.namespace = ns
 }
 
 func (s *userSignupIntegrationTest) TestUserSignupCreated() {
 	// Create user signup
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup := newUserSignup(s.namespace, "foo")
+	userSignup := s.newUserSignup("foo")
 
 	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
@@ -75,7 +78,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 
 	// Create user signup - no approval set
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup := newUserSignup(s.namespace, "francis")
+	userSignup := s.newUserSignup("francis")
 	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
@@ -105,7 +108,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 
 	// Create user signup - approval set to false
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup = newUserSignup(s.namespace, "gretel")
+	userSignup = s.newUserSignup("gretel")
 	userSignup.Spec.Approved = false
 	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
@@ -154,7 +157,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 
 	// Create user signup - approval set to true
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup = newUserSignup(s.namespace, "harold")
+	userSignup = s.newUserSignup("harold")
 	userSignup.Spec.Approved = true
 	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
@@ -192,7 +195,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 
 	// Create user signup - no approval set
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup := newUserSignup(s.namespace, "johnsmith")
+	userSignup := s.newUserSignup("johnsmith")
 	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
@@ -225,7 +228,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 
 	// Create user signup - approval set to false
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup = newUserSignup(s.namespace, "janedoe")
+	userSignup = s.newUserSignup("janedoe")
 	userSignup.Spec.Approved = false
 	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
@@ -256,7 +259,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 
 	// Create user signup - approval set to true
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup = newUserSignup(s.namespace, "robertjones")
+	userSignup = s.newUserSignup("robertjones")
 	userSignup.Spec.Approved = true
 	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
@@ -290,7 +293,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 
 	// Create user signup - no approval set
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup := newUserSignup(s.namespace, "charles")
+	userSignup := s.newUserSignup("charles")
 	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
@@ -322,7 +325,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 
 	// Create user signup - approval set to false
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup = newUserSignup(s.namespace, "dorothy")
+	userSignup = s.newUserSignup("dorothy")
 	userSignup.Spec.Approved = false
 	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
@@ -352,7 +355,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 
 	// Create user signup - approval set to true
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup = newUserSignup(s.namespace, "edith")
+	userSignup = s.newUserSignup("edith")
 	userSignup.Spec.Approved = true
 	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
@@ -408,17 +411,21 @@ func checkUserSignupConditions(t *testing.T, conditions, expectedConditions []v1
 	}
 }
 
-func newUserSignup(namespace, name string) *v1alpha1.UserSignup {
+func (s *userSignupIntegrationTest) newUserSignup(name string) *v1alpha1.UserSignup {
+
+	memberCluster, ok, err := s.awaitility.Host().GetKubeFedCluster(s.awaitility.MemberNs, cluster.Member, e2e.ReadyKubeFedCluster)
+	require.NoError(s.awaitility.T, err)
+	require.True(s.awaitility.T, ok, "KubeFedCluster should exist")
 
 	spec := v1alpha1.UserSignupSpec{
 		UserID: uuid.NewV4().String(),
-		TargetCluster: "east",
+		TargetCluster: memberCluster.Name,
 	}
 
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: v1.ObjectMeta{
 			Name: name,
-			Namespace: namespace,
+			Namespace: s.namespace,
 		},
 		Spec: spec,
 	}

@@ -217,6 +217,8 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		{
 			TargetCluster: targetCluster,
 			Spec: toolchainv1alpha1.UserAccountSpec{
+				UserID: userSignup.Spec.UserID,
+				NSLimit: "default",
 				NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
 					Namespaces: []toolchainv1alpha1.Namespace{},
 				},
@@ -229,7 +231,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: userSignup.Spec.UserID,
+			Name: userSignup.Name,
 			Namespace: userSignup.Namespace,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
@@ -238,7 +240,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		},
 	}
 
-	err := controllerutil.SetControllerReference(mur, userSignup, r.scheme)
+	err := controllerutil.SetControllerReference(userSignup, mur, r.scheme)
 	if err != nil {
 		logger.Error(err, "Error setting controller reference for MasterUserRecord %s", mur.Name)
 
