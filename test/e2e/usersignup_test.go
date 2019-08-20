@@ -238,10 +238,6 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	err = s.hostAwait.waitForUserSignup(userSignup.Name)
 	require.NoError(s.T(), err)
 
-	// Lookup the reconciled UserSignup
-	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
-	require.NoError(s.T(), err)
-
 	// Confirm that the conditions are the same as if no approval value was set
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
@@ -253,6 +249,28 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: corev1.ConditionFalse,
 			Reason: "PendingApproval",
+		})
+	require.NoError(s.T(), err)
+
+	// Now, reload the userSignup, manually approve it (setting Approved to true) and update the resource
+	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
+	require.NoError(s.T(), err)
+
+	userSignup.Spec.Approved = true
+
+	err = s.awaitility.Client.Update(context.TODO(), userSignup)
+	require.NoError(s.T(), err)
+
+	// Confirm that the conditions are updated to reflect that the userSignup was approved
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: corev1.ConditionTrue,
+			Reason: "ApprovedByAdmin",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: corev1.ConditionTrue,
 		})
 	require.NoError(s.T(), err)
 
@@ -363,6 +381,14 @@ func (s *userSignupIntegrationTest) TestDeletedUserSignupIsGarbageCollected() {
 	// Delete the UserSignup
 	err = s.awaitility.Client.Delete(context.TODO(), userSignup)
 	require.NoError(s.T(), err)
+
+	// Confirm the UserSignup was deleted
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
+	require.Error(s.T(), err)
+
+	// Confirm the MasterUserRecord was deleted
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	require.Error(s.T(), err)
 }
 
 func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
