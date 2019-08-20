@@ -78,7 +78,7 @@ func UntilHasStatusCondition(conditions ...toolchainv1alpha1.Condition) MurWaitC
 			a.T.Logf("status conditions match in MasterUserRecord '%s`", mur.Name)
 			return true
 		}
-		a.T.Logf("waiting for correct status condition of MasterUserRecord '%s`", mur.Name)
+		a.T.Logf("waiting for correct status condition of MasterUserRecord '%s`, %+v", mur.Name, mur.Status.Conditions)
 		return false
 	}
 }
