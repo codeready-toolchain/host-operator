@@ -45,7 +45,7 @@ func TestSynchronizeSpec(t *testing.T) {
 		Exists().
 		HasSpec(mur.Spec.UserAccounts[0].Spec)
 
-	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(updatingReason, ""))
 }
 
@@ -193,7 +193,7 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, s *runtime.Scheme,
 		Exists().
 		HasSpec(mur.Spec.UserAccounts[0].Spec).
 		HasConditions(condition)
-	murtest.AssertThatMasterUserAccount(t, "john", hostClient).
+	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(expMurCon).
 		HasStatusUserAccounts(test.MemberClusterName).
 		AllUserAccountsHaveStatusSyncIndex("123abc").

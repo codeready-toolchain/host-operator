@@ -30,7 +30,7 @@ func (a *MurAssertion) loadUaAssertion() error {
 	return err
 }
 
-func AssertThatMasterUserAccount(t *testing.T, name string, client client.Client) *MurAssertion {
+func AssertThatMasterUserRecord(t *testing.T, name string, client client.Client) *MurAssertion {
 	return &MurAssertion{
 		client:         client,
 		namespacedName: test.NamespacedName(test.HostOperatorNs, name),
