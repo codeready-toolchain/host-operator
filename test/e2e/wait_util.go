@@ -10,8 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"reflect"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 type ConditionMismatchError struct {
