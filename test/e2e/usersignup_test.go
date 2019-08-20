@@ -348,14 +348,9 @@ func (s *userSignupIntegrationTest) TestTargetClusterSelectedAutomatically() {
 	require.NoError(s.T(), err)
 
 	require.Len(s.T(), mur.Spec.UserAccounts, 1)
+
+	// Confirm the target cluster was set
 	require.NotEmpty(s.T(), mur.Spec.UserAccounts[0].TargetCluster)
-
-	// Lookup the member cluster name
-	memberCluster, ok, err := s.awaitility.Host().GetKubeFedCluster(s.awaitility.MemberNs, cluster.Member, e2e.ReadyKubeFedCluster)
-	require.NoError(s.awaitility.T, err)
-	require.True(s.awaitility.T, ok, "KubeFedCluster should exist")
-
-	require.Equal(s.T(), memberCluster.Name, mur.Spec.UserAccounts[0].TargetCluster)
 }
 
 func (s *userSignupIntegrationTest) TestDeletedUserSignupIsGarbageCollected() {
