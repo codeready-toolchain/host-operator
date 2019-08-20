@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -195,7 +194,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 
 	// Create user signup - no approval set
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup := s.newUserSignup("johnsmith")
+	userSignup := s.newUserSignup("mariecurie")
 	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
@@ -210,21 +209,18 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	// 2) the Approved reason is set to PendingApproval
 	// 3) the Complete condition is set to false
 	// 4) the Complete reason is set to PendingApproval
-	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
-	require.NoError(s.T(), err)
-
-	checkUserSignupConditions(s.T(), userSignup.Status.Conditions, []v1alpha1.Condition{
-		{
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
+		v1alpha1.Condition{
 			Type: v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
-		{
-			Type: v1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
 			Status: corev1.ConditionFalse,
 			Reason: "PendingApproval",
-		},
-	})
+		})
+	require.NoError(s.T(), err)
 
 	// Create user signup - approval set to false
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
@@ -244,18 +240,18 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	require.NoError(s.T(), err)
 
 	// Confirm that the conditions are the same as if no approval value was set
-	checkUserSignupConditions(s.T(), userSignup.Status.Conditions, []v1alpha1.Condition{
-		{
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
+		v1alpha1.Condition{
 			Type: v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
-		{
-			Type: v1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
 			Status: corev1.ConditionFalse,
 			Reason: "PendingApproval",
-		},
-	})
+		})
+	require.NoError(s.T(), err)
 
 	// Create user signup - approval set to true
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
@@ -341,17 +337,17 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	require.NoError(s.T(), err)
 
 	// Confirm that the conditions are as expected
-	checkUserSignupConditions(s.T(), userSignup.Status.Conditions, []v1alpha1.Condition{
-		{
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
+		v1alpha1.Condition{
 			Type: v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		},
-		{
-			Type: v1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
 			Status: corev1.ConditionTrue,
-		},
-	})
+		})
+	require.NoError(s.T(), err)
 
 	// Create user signup - approval set to true
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
@@ -370,45 +366,18 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
 	require.NoError(s.T(), err)
 
-	// Confirm that:
-	// 1) the Approved condition is set to true
-	// 2) the Approved reason is set to ApprovedByAdmin
-	test.AssertConditionsMatch(s.T(), userSignup.Status.Conditions, v1alpha1.Condition{
+	// Confirm the conditions
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
+		v1alpha1.Condition{
 			Type: v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
-	)
-
-	// Confirm that the Complete condition is (eventually) set to true
-	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name, v1alpha1.Condition{
-		Type:   v1alpha1.UserSignupComplete,
-		Status: corev1.ConditionTrue,
-	})
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: corev1.ConditionTrue,
+		})
 	require.NoError(s.T(), err)
-}
-
-func checkUserSignupConditions(t *testing.T, conditions, expectedConditions []v1alpha1.Condition) {
-	for _, expected := range expectedConditions {
-		found := false
-
-		for _, condition := range conditions {
-			if condition.Type == expected.Type {
-				found = true
-
-				// Check the expected status is correct
-				require.Equal(t, expected.Status, condition.Status, "Expected condition status not set",
-					expected.Type, expected.Status)
-
-				// If a reason was supplied, confirm it is equal
-				if expected.Reason != "" {
-					require.Equal(t, expected.Reason, condition.Reason)
-				}
-			}
-		}
-
-		require.True(t, found, "Expected condition not found", expected.Type)
-	}
 }
 
 func (s *userSignupIntegrationTest) newUserSignup(name string) *v1alpha1.UserSignup {
