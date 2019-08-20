@@ -6,6 +6,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
@@ -90,6 +91,37 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 	require.Equal(t, userSignup.Name, mur.Name)
 	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
+
+	// Lookup the userSignup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		})
+
+	// Reconcile again
+	res, err = r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the userSignup one more and check the conditions are updated
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+		})
 }
 
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
@@ -133,6 +165,37 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
+	// Lookup the userSignup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedByAdmin",
+		})
+
+	// Reconcile again
+	res, err = r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the userSignup one more time and check the conditions are updated
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedByAdmin",
+		},
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+		})
+
 }
 
 func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
@@ -165,17 +228,48 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	require.Equal(t, userSignup.Name, mur.Name)
 	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
+
+	// Lookup the userSignup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedByAdmin",
+		})
+
+	// Reconcile again
+	res, err = r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the userSignup one more and check the conditions are updated
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedByAdmin",
+		},
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+		})
 }
 
 func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:   "foo",
 			Approved: false,
 		},
 	}
@@ -204,6 +298,22 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, err, &errors.StatusError{})
 	require.Equal(t, metav1.StatusReasonNotFound, err.(*errors.StatusError).ErrStatus.Reason)
+
+	// Lookup the userSignup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: v1.ConditionFalse,
+			Reason: "PendingApproval",
+		},
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "PendingApproval",
+		},)
 }
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {

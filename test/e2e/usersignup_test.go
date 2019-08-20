@@ -351,6 +351,8 @@ func (s *userSignupIntegrationTest) TestTargetClusterSelectedAutomatically() {
 
 	// Confirm the target cluster was set
 	require.NotEmpty(s.T(), mur.Spec.UserAccounts[0].TargetCluster)
+
+	// Confirm that the target cluster exists in the member cluster registry
 }
 
 func (s *userSignupIntegrationTest) TestDeletedUserSignupIsGarbageCollected() {
@@ -481,6 +483,44 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 			Status: corev1.ConditionTrue,
 		})
 	require.NoError(s.T(), err)
+
+	// Create a MUR
+	s.T().Logf("Creating MasterUserRecord with namespace %s", s.namespace)
+	userID := uuid.NewV4().String()
+	mur := s.newMasterUserRecord("paul", userID)
+	err = s.awaitility.Client.Create(context.TODO(), mur, &framework.CleanupOptions{TestContext: s.testCtx,
+		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
+	require.NoError(s.T(), err)
+	s.T().Logf("MasterUserRecord '%s' created", userSignup.Name)
+
+	// Confirm the MasterUserRecord was created
+	err = s.hostAwait.waitForMasterUserRecord(mur.Name)
+	require.NoError(s.T(), err)
+
+	// Create user signup with the same name and UserID as the MUR
+	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
+	userSignup = s.newUserSignup("paul")
+	userSignup.Spec.UserID = userID
+	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
+	require.NoError(s.T(), err)
+	s.T().Logf("user signup '%s' created", userSignup.Name)
+
+	// Confirm the UserSignup was created
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
+	require.NoError(s.T(), err)
+
+	// Confirm that:
+	// 1) the Approved condition is set to true
+	// 2) the Approved reason is set to ApprovedAutomatically
+	// 3) the Complete condition is (eventually) set to true
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: corev1.ConditionTrue,
+		})
+	require.NoError(s.T(), err)
+
 }
 
 func (s *userSignupIntegrationTest) newUserSignup(name string) *v1alpha1.UserSignup {
@@ -504,6 +544,39 @@ func (s *userSignupIntegrationTest) newUserSignup(name string) *v1alpha1.UserSig
 
 	return userSignup
 }
+
+func (s *userSignupIntegrationTest) newMasterUserRecord(name string, userID string) *v1alpha1.MasterUserRecord {
+	memberCluster, ok, err := s.awaitility.Host().GetKubeFedCluster(s.awaitility.MemberNs, cluster.Member, e2e.ReadyKubeFedCluster)
+	require.NoError(s.awaitility.T, err)
+	require.True(s.awaitility.T, ok, "KubeFedCluster should exist")
+
+	userAccounts := []v1alpha1.UserAccountEmbedded{
+		{
+			TargetCluster: memberCluster.Name,
+			Spec: v1alpha1.UserAccountSpec{
+				UserID: userID,
+				NSLimit: "default",
+				NSTemplateSet: v1alpha1.NSTemplateSetSpec{
+					Namespaces: []v1alpha1.Namespace{},
+				},
+			},
+		},
+	}
+
+	mur := &v1alpha1.MasterUserRecord{
+		ObjectMeta: v1.ObjectMeta{
+			Name: name,
+			Namespace: s.namespace,
+		},
+		Spec: v1alpha1.MasterUserRecordSpec{
+			UserID: userID,
+			UserAccounts: userAccounts,
+		},
+	}
+
+	return mur
+}
+
 
 func (s *userSignupIntegrationTest) setApprovalPolicyConfig(policy string) {
 	// Create a new ConfigMap
