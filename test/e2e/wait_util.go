@@ -67,7 +67,7 @@ func (a *HostAwaitility) waitForMasterUserRecord(name string) error {
 			}
 			return false, err
 		}
-		a.T.Logf("found MasterUserAccount '%s'", name)
+		a.T.Logf("found MasterUserRecord '%s'", name)
 		return true, nil
 	})
 }

@@ -590,7 +590,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalWhenMURAlready
 	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
-	s.T().Logf("user signup '%s' created", userSignup.Name)
+	s.T().Logf("UserSignup '%s' created", userSignup.Name)
 
 	// Confirm the UserSignup was created
 	err = s.hostAwait.waitForUserSignup(userSignup.Name)

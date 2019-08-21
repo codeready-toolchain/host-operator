@@ -7,6 +7,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
+	errs "github.com/pkg/errors"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -134,40 +135,24 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
 		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
-		statusError := r.setStatusComplete(instance, "")
-		if statusError != nil {
-			reqLogger.Error(statusError, "Error updating UserSignup Status to Complete", "Name", instance.Name)
-			return reconcile.Result{}, statusError
-		}
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusComplete, "")
 	}
 
 	// Check the user approval policy.
 	userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig(request.Namespace)
 	if err != nil {
-		reqLogger.Error(err, "Error reading user approval policy")
-		statusError := r.setStatusFailedToReadUserApprovalPolicy(instance, err.Error())
-		if statusError != nil {
-			reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
-			return reconcile.Result{}, statusError
-		}
-
-		return reconcile.Result{}, err
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToReadUserApprovalPolicy, err, "")
 	}
 
 	// If the signup has been explicitly approved (by an admin), or the user approval policy is set to automatic,
 	// then proceed with the signup
 	if instance.Spec.Approved || userApprovalPolicy == config.UserApprovalPolicyAutomatic {
 		if instance.Spec.Approved {
-			statusError := r.setStatusApprovedByAdmin(instance, "")
-			if statusError != nil {
-				reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
+			if statusError := r.updateStatus(reqLogger, instance, r.setStatusApprovedByAdmin, ""); statusError != nil {
 				return reconcile.Result{}, statusError
 			}
 		} else {
-			statusError := r.setStatusApprovedAutomatically(instance, "")
-			if statusError != nil {
-				reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
+			if statusError := r.updateStatus(reqLogger, instance, r.setStatusApprovedAutomatically, ""); statusError != nil {
 				return reconcile.Result{}, statusError
 			}
 		}
@@ -184,9 +169,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				targetCluster = members[0].Name
 			} else {
 				reqLogger.Error(err, "No member clusters found")
-				statusError := r.setStatusNoClustersAvailable(instance, "No member clusters found")
-				if statusError != nil {
-					reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
+				if statusError := r.updateStatus(reqLogger, instance, r.setStatusNoClustersAvailable, ""); statusError != nil {
 					return reconcile.Result{}, statusError
 				}
 
@@ -201,11 +184,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			return reconcile.Result{}, err
 		}
 	} else {
-		statusError := r.setStatusPendingApproval(instance, "")
-		if statusError != nil {
-			reqLogger.Error(statusError, "Error updating UserSignup Status", "Name", instance.Name)
-			return reconcile.Result{}, statusError
-		}
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusPendingApproval, "")
 	}
 
 	return reconcile.Result{}, nil
@@ -242,14 +221,8 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 	err := controllerutil.SetControllerReference(userSignup, mur, r.scheme)
 	if err != nil {
-		logger.Error(err, "Error setting controller reference for MasterUserRecord %s", mur.Name)
-
-		statusError := r.setStatusFailedToCreateMUR(userSignup, "failed to set controller reference: " + err.Error())
-		if statusError != nil {
-			logger.Error(statusError, "Error setting MUR failed status")
-			return statusError
-		}
-		return err
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
+			"Error setting controller reference for MasterUserRecord %s", mur.Name)
 	}
 
 	err = r.client.Create(context.TODO(), mur)
@@ -257,23 +230,11 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		// If the MasterUserRecord already exists (for whatever strange reason), we simply set the status to complete
 		if errors.IsAlreadyExists(err) {
 			logger.Info("MasterUserRecord already exists, setting status to Complete")
-			statusError := r.setStatusComplete(userSignup, "")
-			if statusError != nil {
-				logger.Error(statusError, "Error setting MUR failed status")
-				return statusError
-			}
-
-			return nil
+			return r.updateStatus(logger, userSignup, r.setStatusComplete, "")
 
 		} else {
-			logger.Error(err, "Error creating MasterUserRecord", "Name", userSignup.Name)
-			statusError := r.setStatusFailedToCreateMUR(userSignup, "Failed to create MasterUserRecord: " + err.Error())
-			if statusError != nil {
-				logger.Error(statusError, "Error setting MUR failed status")
-				return statusError
-			}
-
-			return err
+			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
+				"Error creating MasterUserRecord", "Name", userSignup.Name)
 		}
 	}
 
@@ -332,7 +293,6 @@ func (r *ReconcileUserSignup) setStatusPendingApproval(userSignup *toolchainv1al
 			Reason: pendingApprovalReason,
 			Message: message,
 		})
-
 }
 
 func (r *ReconcileUserSignup) setStatusFailedToReadUserApprovalPolicy(userSignup *toolchainv1alpha1.UserSignup, message string) error {
@@ -377,6 +337,29 @@ func (r *ReconcileUserSignup) setStatusComplete(userSignup *toolchainv1alpha1.Us
 			Reason: "",
 			Message: message,
 		})
+}
+
+func (r *ReconcileUserSignup) updateStatus(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error, message string) error {
+
+	if err := statusUpdater(userSignup, message); err != nil {
+		logger.Error(err, "status update failed")
+		return err
+	}
+
+	return nil
+}
+
+// wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
+func (r *ReconcileUserSignup) wrapErrorWithStatusUpdate(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error, err error, format string, args ...interface{}) error {
+	if err == nil {
+		return nil
+	}
+	if err := statusUpdater(userSignup, err.Error()); err != nil {
+		logger.Error(err, "Error updating UserSignup status", "Name", userSignup.Name)
+	}
+	return errs.Wrapf(err, format, args...)
 }
 
 func (r *ReconcileUserSignup) updateStatusConditions(userSignup *toolchainv1alpha1.UserSignup, newConditions ...toolchainv1alpha1.Condition) error {
