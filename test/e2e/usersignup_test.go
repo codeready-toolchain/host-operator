@@ -225,6 +225,10 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 		})
 	require.NoError(s.T(), err)
 
+	// Confirm the MUR was NOT created
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	require.Error(s.T(), err)
+
 	// Create user signup - approval set to false
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
 	userSignup = s.newUserSignup("janedoe")
@@ -252,6 +256,10 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 		})
 	require.NoError(s.T(), err)
 
+	// Confirm the MUR was NOT created yet
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	require.Error(s.T(), err)
+
 	// Now, reload the userSignup, manually approve it (setting Approved to true) and update the resource
 	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
 	require.NoError(s.T(), err)
@@ -259,6 +267,10 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	userSignup.Spec.Approved = true
 
 	err = s.awaitility.Client.Update(context.TODO(), userSignup)
+	require.NoError(s.T(), err)
+
+	// Confirm the MUR was created
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that the conditions are updated to reflect that the userSignup was approved
@@ -285,6 +297,10 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 
 	// Confirm the UserSignup was created
 	err = s.hostAwait.waitForUserSignup(userSignup.Name)
+	require.NoError(s.T(), err)
+
+	// Confirm the MUR was created
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that:
@@ -351,8 +367,6 @@ func (s *userSignupIntegrationTest) TestTargetClusterSelectedAutomatically() {
 
 	// Confirm the target cluster was set
 	require.NotEmpty(s.T(), mur.Spec.UserAccounts[0].TargetCluster)
-
-	// Confirm that the target cluster exists in the member cluster registry
 }
 
 func (s *userSignupIntegrationTest) TestDeletedUserSignupIsGarbageCollected() {
@@ -388,7 +402,7 @@ func (s *userSignupIntegrationTest) TestDeletedUserSignupIsGarbageCollected() {
 	require.Error(s.T(), err)
 }
 
-func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
+func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalNoApprovalSet() {
 	// Set the user approval policy to automatic
 	s.setApprovalPolicyConfig(config.UserApprovalPolicyAutomatic)
 
@@ -414,7 +428,45 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	// 3) the Complete condition is (eventually) set to true
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
+			Status: corev1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: corev1.ConditionTrue,
+		})
+	require.NoError(s.T(), err)
+}
+
+
+func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalMURValuesOK() {
+	// Set the user approval policy to automatic
+	s.setApprovalPolicyConfig(config.UserApprovalPolicyAutomatic)
+
+	// Create user signup - no approval set
+	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
+	userSignup := s.newUserSignup("theodore")
+	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
+	require.NoError(s.T(), err)
+	s.T().Logf("user signup '%s' created", userSignup.Name)
+
+	// Confirm the UserSignup was created
+	err = s.hostAwait.waitForUserSignup(userSignup.Name)
+	require.NoError(s.T(), err)
+
+	// Confirm the MasterUserRecord was created
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	require.NoError(s.T(), err)
+
+	// Confirm that:
+	// 1) the Approved condition is set to true
+	// 2) the Approved reason is set to ApprovedAutomatically
+	// 3) the Complete condition is (eventually) set to true
+	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		},
@@ -424,11 +476,27 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 		})
 	require.NoError(s.T(), err)
 
+	// Lookup the MasterUserRecord
+	mur := &v1alpha1.MasterUserRecord{}
+	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: s.namespace}, mur)
+	require.NoError(s.T(), err)
+
+	require.Equal(s.T(), userSignup.Spec.UserID, mur.Spec.UserID)
+	require.Len(s.T(), mur.Spec.UserAccounts, 1)
+	require.Equal(s.T(), userSignup.Spec.UserID, mur.Spec.UserAccounts[0].Spec.UserID)
+	require.Equal(s.T(), "default", mur.Spec.UserAccounts[0].Spec.NSLimit)
+	require.NotNil(s.T(), mur.Spec.UserAccounts[0].Spec.NSTemplateSet)
+}
+
+func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalAndApprovalSetToFalse() {
+	// Set the user approval policy to automatic
+	s.setApprovalPolicyConfig(config.UserApprovalPolicyAutomatic)
+
 	// Create user signup - approval set to false
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup = s.newUserSignup("dorothy")
+	userSignup := s.newUserSignup("dorothy")
 	userSignup.Spec.Approved = false
-	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
@@ -439,12 +507,16 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 
 	// Lookup the reconciled UserSignup
 	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
+	require.NoError(s.T(), err)
+
+	// Confirm the MUR was created
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that the conditions are as expected
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		},
@@ -453,12 +525,17 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 			Status: corev1.ConditionTrue,
 		})
 	require.NoError(s.T(), err)
+}
+
+func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalAndApprovalSetToTrue() {
+	// Set the user approval policy to automatic
+	s.setApprovalPolicyConfig(config.UserApprovalPolicyAutomatic)
 
 	// Create user signup - approval set to true
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup = s.newUserSignup("edith")
+	userSignup := s.newUserSignup("edith")
 	userSignup.Spec.Approved = true
-	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
+	err := s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
 	s.T().Logf("user signup '%s' created", userSignup.Name)
@@ -471,10 +548,14 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 	err = s.awaitility.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Name}, userSignup)
 	require.NoError(s.T(), err)
 
+	// Confirm the MUR was created
+	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	require.NoError(s.T(), err)
+
 	// Confirm the conditions
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
@@ -483,15 +564,20 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 			Status: corev1.ConditionTrue,
 		})
 	require.NoError(s.T(), err)
+}
+
+func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalWhenMURAlreadyExists() {
+	// Set the user approval policy to automatic
+	s.setApprovalPolicyConfig(config.UserApprovalPolicyAutomatic)
 
 	// Create a MUR
 	s.T().Logf("Creating MasterUserRecord with namespace %s", s.namespace)
 	userID := uuid.NewV4().String()
 	mur := s.newMasterUserRecord("paul", userID)
-	err = s.awaitility.Client.Create(context.TODO(), mur, &framework.CleanupOptions{TestContext: s.testCtx,
+	err := s.awaitility.Client.Create(context.TODO(), mur, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
 	require.NoError(s.T(), err)
-	s.T().Logf("MasterUserRecord '%s' created", userSignup.Name)
+	s.T().Logf("MasterUserRecord '%s' created", mur.Name)
 
 	// Confirm the MasterUserRecord was created
 	err = s.hostAwait.waitForMasterUserRecord(mur.Name)
@@ -499,7 +585,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApproval() {
 
 	// Create user signup with the same name and UserID as the MUR
 	s.T().Logf("Creating UserSignup with namespace %s", s.namespace)
-	userSignup = s.newUserSignup("paul")
+	userSignup := s.newUserSignup("paul")
 	userSignup.Spec.UserID = userID
 	err = s.awaitility.Client.Create(context.TODO(), userSignup, &framework.CleanupOptions{TestContext: s.testCtx,
 		Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})

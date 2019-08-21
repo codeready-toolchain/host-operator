@@ -143,24 +143,15 @@ func ConditionsMatch(actual []toolchainv1alpha1.Condition, expected ...toolchain
 			len(actual), len(expected)))
 	}
 	for _, c := range expected {
-		if !ContainsCondition(actual, c) {
+		if !test.ContainsCondition(actual, c) {
 			return NewConditionMismatchError(fmt.Sprintf("Conditions do not contain expected condition [%s]", c.Type))
 		}
 	}
 	for _, c := range actual {
-		if !ContainsCondition(expected, c) {
+		if !test.ContainsCondition(expected, c) {
 			return NewConditionMismatchError(fmt.Sprintf("Expected condition [%s] not found in conditions", c.Type))
 		}
 	}
 	return nil
-}
-
-func ContainsCondition(conditions []toolchainv1alpha1.Condition, contains toolchainv1alpha1.Condition) bool {
-	for _, c := range conditions {
-		if c.Type == contains.Type {
-			return contains.Status == c.Status && contains.Reason == c.Reason && contains.Message == c.Message
-		}
-	}
-	return false
 }
 
