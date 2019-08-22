@@ -256,7 +256,7 @@ func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig(namespace string) (st
 	}
 
 	val, ok := cm.Data[config.ToolchainConfigMapUserApprovalPolicy]
-	if  !ok {
+	if !ok {
 		return "", nil
 	} else {
 		return val, nil

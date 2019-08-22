@@ -21,16 +21,16 @@ import (
 )
 
 const (
-	cleanupTimeout = time.Second * 5
+	cleanupTimeout       = time.Second * 5
 	cleanupRetryInterval = time.Second * 1
 )
 
 type userSignupIntegrationTest struct {
 	suite.Suite
-	namespace string
-	testCtx *framework.TestCtx
+	namespace  string
+	testCtx    *framework.TestCtx
 	awaitility *e2e.Awaitility
-	hostAwait *HostAwaitility
+	hostAwait  *HostAwaitility
 }
 
 func TestRunUserSignupIntegrationTest(t *testing.T) {
@@ -97,7 +97,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 	// 4) the Complete reason is set to PendingApproval
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
@@ -124,7 +124,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 	// Confirm that the conditions are the same as if no approval value was set
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
@@ -147,7 +147,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 	// Check the updated conditions
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
@@ -180,7 +180,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithNoApprovalConfig() {
 	// 3) the Complete condition is set to true
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
@@ -214,7 +214,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	// 4) the Complete reason is set to PendingApproval
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
@@ -245,7 +245,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	// Confirm that the conditions are the same as if no approval value was set
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
@@ -276,7 +276,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	// Confirm that the conditions are updated to reflect that the userSignup was approved
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
@@ -309,7 +309,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	// 3) the Complete condition is set to true
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
@@ -348,7 +348,7 @@ func (s *userSignupIntegrationTest) TestTargetClusterSelectedAutomatically() {
 	// 3) the Complete condition is (eventually) set to true
 	err = s.hostAwait.waitForUserSignupStatusConditions(userSignup.Name,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: corev1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		},
@@ -438,7 +438,6 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalNoApprovalSet(
 		})
 	require.NoError(s.T(), err)
 }
-
 
 func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalMURValuesOK() {
 	// Set the user approval policy to automatic
@@ -616,13 +615,13 @@ func (s *userSignupIntegrationTest) newUserSignup(name string) *v1alpha1.UserSig
 	require.True(s.awaitility.T, ok, "KubeFedCluster should exist")
 
 	spec := v1alpha1.UserSignupSpec{
-		UserID: uuid.NewV4().String(),
+		UserID:        uuid.NewV4().String(),
 		TargetCluster: memberCluster.Name,
 	}
 
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: v1.ObjectMeta{
-			Name: name,
+			Name:      name,
 			Namespace: s.namespace,
 		},
 		Spec: spec,
@@ -640,7 +639,7 @@ func (s *userSignupIntegrationTest) newMasterUserRecord(name string, userID stri
 		{
 			TargetCluster: memberCluster.Name,
 			Spec: v1alpha1.UserAccountSpec{
-				UserID: userID,
+				UserID:  userID,
 				NSLimit: "default",
 				NSTemplateSet: v1alpha1.NSTemplateSetSpec{
 					Namespaces: []v1alpha1.Namespace{},
@@ -651,18 +650,17 @@ func (s *userSignupIntegrationTest) newMasterUserRecord(name string, userID stri
 
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: v1.ObjectMeta{
-			Name: name,
+			Name:      name,
 			Namespace: s.namespace,
 		},
 		Spec: v1alpha1.MasterUserRecordSpec{
-			UserID: userID,
+			UserID:       userID,
 			UserAccounts: userAccounts,
 		},
 	}
 
 	return mur
 }
-
 
 func (s *userSignupIntegrationTest) setApprovalPolicyConfig(policy string) {
 	// Create a new ConfigMap

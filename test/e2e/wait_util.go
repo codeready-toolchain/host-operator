@@ -5,12 +5,12 @@ import (
 	"fmt"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/stretchr/testify/require"
-	"reflect"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/e2e"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"reflect"
 )
 
 type ConditionMismatchError struct {

@@ -7,6 +7,6 @@ const (
 
 	ToolchainConfigMapUserApprovalPolicy = "user-approval-policy"
 
-	UserApprovalPolicyManual = "manual"
+	UserApprovalPolicyManual    = "manual"
 	UserApprovalPolicyAutomatic = "automatic"
 )

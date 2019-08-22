@@ -14,21 +14,21 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/controller"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
+	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-	"github.com/operator-framework/operator-sdk/pkg/kube-metrics"
-	"github.com/operator-framework/operator-sdk/pkg/metrics"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"k8s.io/client-go/rest"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -144,7 +144,6 @@ func main() {
 		}
 	}
 
-
 	stopChannel := signals.SetupSignalHandler()
 
 	log.Info("Starting KubeFedCluster controllers.")
@@ -161,9 +160,7 @@ func main() {
 		os.Exit(1)
 	}
 
-
 }
-
 
 // serveCRMetrics gets the Operator/CustomResource GVKs and generates metrics based on those types.
 // It serves those metrics on "http://metricsHost:operatorMetricsPort".
