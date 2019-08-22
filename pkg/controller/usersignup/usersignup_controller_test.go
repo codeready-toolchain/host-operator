@@ -509,6 +509,45 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 }
 
+func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: operatorNamespace,
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+		},
+	}
+
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
+
+	// Create a new ConfigMap and set the user approval policy to automatic
+	cmValues := make(map[string]string)
+	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
+	cm := &v1.ConfigMap{
+		Data: cmValues,
+	}
+	cm.Name = config.ToolchainConfigMapName
+	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
+	require.NoError(t, err)
+
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
+		switch obj.(type) {
+		case *v1alpha1.UserSignup:
+			return errors.New("failed to update UserSignup status")
+		default:
+			//return client.Create(CTX??, obj)
+			return nil
+		}
+	}
+
+	res, err := r.Reconcile(req)
+	require.Error(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+}
+
 func TestUserSignupWithExistingMUROK(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
