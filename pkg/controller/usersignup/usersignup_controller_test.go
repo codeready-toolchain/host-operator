@@ -3,11 +3,14 @@ package usersignup
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
@@ -17,34 +20,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	fakeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/kubefed/pkg/apis/core/common"
 	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
-	"testing"
 )
 
 const (
-	nameMember = "east"
+	nameMember        = "east"
 	operatorNamespace = "toolchain-host-operator"
 )
 
 func TestReadUserApprovalPolicy(t *testing.T) {
-	r, _, _ := prepareReconcile(t, "test")
-
-	// Create a new ConfigMap
-	cmValues := make(map[string]string)
-	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
-	cm := &v1.ConfigMap{
-		Data: cmValues,
-	}
-	cm.Name = config.ToolchainConfigMapName
-
-	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
-	require.NoError(t, err)
+	r, _, _ := prepareReconcile(t, "test", configMap(config.UserApprovalPolicyAutomatic))
 
 	policy, err := r.ReadUserApprovalPolicyConfig(operatorNamespace)
 	require.NoError(t, err)
@@ -54,30 +44,20 @@ func TestReadUserApprovalPolicy(t *testing.T) {
 func TestUserSignupWithAutoApproval(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:   "foo",
 			Approved: false,
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
-
-	// Create a new ConfigMap and set the user approval policy to automatic
-	cmValues := make(map[string]string)
-	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
-	cm := &v1.ConfigMap{
-		Data: cmValues,
-	}
-	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
-	require.NoError(t, err)
 
 	res, err := r.Reconcile(req)
 	require.NoError(t, err)
@@ -98,7 +78,7 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		})
@@ -114,12 +94,12 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		},
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupComplete,
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionTrue,
 		})
 }
@@ -127,30 +107,20 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:   "foo",
 			Approved: true,
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyManual))
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
-
-	// Create a new ConfigMap and set the user approval policy to manual
-	cmValues := make(map[string]string)
-	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyManual
-	cm := &v1.ConfigMap{
-		Data: cmValues,
-	}
-	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
-	require.NoError(t, err)
 
 	res, err := r.Reconcile(req)
 	require.NoError(t, err)
@@ -171,7 +141,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		})
@@ -187,12 +157,12 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupComplete,
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionTrue,
 		})
 
@@ -201,12 +171,12 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:   "foo",
 			Approved: true,
 		},
 	}
@@ -235,7 +205,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		})
@@ -251,12 +221,12 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupComplete,
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionTrue,
 		})
 }
@@ -274,20 +244,10 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyManual))
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
-
-	// Create a new ConfigMap and set the user approval policy to manual
-	cmValues := make(map[string]string)
-	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyManual
-	cm := &v1.ConfigMap{
-		Data: cmValues,
-	}
-	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
-	require.NoError(t, err)
 
 	res, err := r.Reconcile(req)
 	require.NoError(t, err)
@@ -305,45 +265,35 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupComplete,
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
-		},)
+		})
 }
 
 func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
-			Approved: false,
+			UserID:        "foo",
+			Approved:      false,
 			TargetCluster: "east",
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
-
-	// Create a new ConfigMap and set the user approval policy to automatic
-	cmValues := make(map[string]string)
-	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
-	cm := &v1.ConfigMap{
-		Data: cmValues,
-	}
-	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
-	require.NoError(t, err)
 
 	res, err := r.Reconcile(req)
 	require.NoError(t, err)
@@ -364,7 +314,7 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		})
@@ -380,12 +330,12 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		},
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupComplete,
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionTrue,
 		})
 }
@@ -393,12 +343,12 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 func TestUserSignupMURCreateFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:   "foo",
 			Approved: true,
 		},
 	}
@@ -426,12 +376,12 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:   "foo",
 			Approved: true,
 		},
 	}
@@ -460,26 +410,26 @@ func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupApproved,
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
 		v1alpha1.Condition{
-			Type: v1alpha1.UserSignupComplete,
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionTrue,
 			Reason: "",
-		},)
+		})
 }
 
 func TestUserSignupMURReadFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:   "foo",
 			Approved: true,
 		},
 	}
@@ -507,12 +457,12 @@ func TestUserSignupMURReadFails(t *testing.T) {
 func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:   "foo",
 			Approved: true,
 		},
 	}
@@ -540,26 +490,16 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			UserID: "foo",
 		},
 	}
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
-
-	// Create a new ConfigMap and set the user approval policy to automatic
-	cmValues := make(map[string]string)
-	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
-	cm := &v1.ConfigMap{
-		Data: cmValues,
-	}
-	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
-	require.NoError(t, err)
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 
 	// Add some member clusters
 	createMemberCluster(r.client)
@@ -582,26 +522,16 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			UserID: "foo",
 		},
 	}
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
-
-	// Create a new ConfigMap and set the user approval policy to automatic
-	cmValues := make(map[string]string)
-	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
-	cm := &v1.ConfigMap{
-		Data: cmValues,
-	}
-	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
-	require.NoError(t, err)
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
 		switch obj.(type) {
@@ -625,12 +555,12 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 func TestUserSignupWithExistingMUROK(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:   "foo",
 			Approved: false,
 		},
 	}
@@ -638,36 +568,26 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// Create a MUR with the same name
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.MasterUserRecordSpec{
 			UserID: "foo",
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic))
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
 
-	// Create a new ConfigMap and set the user approval policy to automatic
-	cmValues := make(map[string]string)
-	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
-	cm := &v1.ConfigMap{
-		Data: cmValues,
-	}
-	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
-	require.NoError(t, err)
-
-	_, err = r.Reconcile(req)
+	_, err := r.Reconcile(req)
 	require.NoError(t, err)
 
 	key := types.NamespacedName{
 		Namespace: operatorNamespace,
-		Name: "foo",
+		Name:      "foo",
 	}
 	instance := &v1alpha1.UserSignup{}
 	err = r.client.Get(context.TODO(), key, instance)
@@ -687,29 +607,19 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
+			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID: types.UID(uuid.NewV4().String()),
+			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:   "foo",
 			Approved: true,
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 
-	// Create a new ConfigMap and set the user approval policy to automatic
-	cmValues := make(map[string]string)
-	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
-	cm := &v1.ConfigMap{
-		Data: cmValues,
-	}
-	cm.Name = config.ToolchainConfigMapName
-	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
-	require.NoError(t, err)
-
-	_, err = r.Reconcile(req)
+	_, err := r.Reconcile(req)
 	require.Error(t, err)
 	require.IsType(t, SignupError{}, err)
 }
@@ -737,7 +647,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 	r := &ReconcileUserSignup{
 		client: client,
 		scheme: s,
-		clientset: fakeclientset.NewSimpleClientset(),
 	}
 	return r, newReconcileRequest(name), client
 }
@@ -745,7 +654,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 func newReconcileRequest(name string) reconcile.Request {
 	return reconcile.Request{
 		NamespacedName: types.NamespacedName{
-			Name: name,
+			Name:      name,
 			Namespace: operatorNamespace,
 		},
 	}
@@ -764,10 +673,10 @@ func clearMemberClusters(client client.Client) {
 	service := cluster.KubeFedClusterService{Log: logf.Log, Client: client}
 	clusters := cluster.GetMemberClusters()
 
-	for _, cluster := range(clusters) {
+	for _, cluster := range clusters {
 		service.DeleteKubeFedCluster(&v1beta1.KubeFedCluster{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      cluster.Name,
+				Name: cluster.Name,
 			},
 		})
 	}
@@ -794,7 +703,7 @@ func labels(clType cluster.Type, ns, ownerClusterName string) map[string]string 
 	return labels
 }
 
-func newKubeFedCluster(name, secName string, status v1beta1.KubeFedClusterStatus, labels map[string]string) (*v1beta1.KubeFedCluster) {
+func newKubeFedCluster(name, secName string, status v1beta1.KubeFedClusterStatus, labels map[string]string) *v1beta1.KubeFedCluster {
 	logf.SetLogger(zap.Logger())
 	gock.New("http://cluster.com").
 		Get("api").
@@ -817,4 +726,16 @@ func newKubeFedCluster(name, secName string, status v1beta1.KubeFedClusterStatus
 		},
 		Status: status,
 	}
+}
+
+func configMap(approvalPolicy string) *v1.ConfigMap {
+	// Create a new ConfigMap
+	cmValues := make(map[string]string)
+	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = approvalPolicy
+	cm := &v1.ConfigMap{
+		Data: cmValues,
+	}
+	cm.Name = config.ToolchainConfigMapName
+	cm.ObjectMeta.Namespace = operatorNamespace
+	return cm
 }

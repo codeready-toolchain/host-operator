@@ -2,18 +2,20 @@ package usersignup
 
 import (
 	"context"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/go-logr/logr"
-	errs "github.com/pkg/errors"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
+	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -26,12 +28,12 @@ import (
 
 const (
 	// Status condition reasons
-	noClustersAvailableReason = "NoClustersAvailable"
+	noClustersAvailableReason            = "NoClustersAvailable"
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
-	unableToCreateMURReason = "UnableToCreateMUR"
-	approvedAutomaticallyReason = "ApprovedAutomatically"
-	approvedByAdminReason = "ApprovedByAdmin"
-	pendingApprovalReason = "PendingApproval"
+	unableToCreateMURReason              = "UnableToCreateMUR"
+	approvedAutomaticallyReason          = "ApprovedAutomatically"
+	approvedByAdminReason                = "ApprovedByAdmin"
+	pendingApprovalReason                = "PendingApproval"
 )
 
 var log = logf.Log.WithName("controller_usersignup")
@@ -44,7 +46,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileUserSignup{client: mgr.GetClient(), scheme: mgr.GetScheme(), clientset: kubernetes.NewForConfigOrDie(mgr.GetConfig())}
+	return &ReconcileUserSignup{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -94,7 +96,6 @@ type ReconcileUserSignup struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
-	clientset kubernetes.Interface
 }
 
 // Reconcile reads that state of the cluster for a UserSignup object and makes changes based on the state read
@@ -196,7 +197,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		{
 			TargetCluster: targetCluster,
 			Spec: toolchainv1alpha1.UserAccountSpec{
-				UserID: userSignup.Spec.UserID,
+				UserID:  userSignup.Spec.UserID,
 				NSLimit: "default",
 				NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
 					Namespaces: []toolchainv1alpha1.Namespace{},
@@ -210,11 +211,11 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: userSignup.Name,
+			Name:      userSignup.Name,
 			Namespace: userSignup.Namespace,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserID: userSignup.Spec.UserID,
+			UserID:       userSignup.Spec.UserID,
 			UserAccounts: userAccounts,
 		},
 	}
@@ -245,7 +246,8 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 // ReadUserApprovalPolicyConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
 // the config map value for the user approval policy (which will either be "manual" or "automatic")
 func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig(namespace string) (string, error) {
-	cm, err := r.clientset.CoreV1().ConfigMaps(namespace).Get(config.ToolchainConfigMapName, metav1.GetOptions{})
+	cm := &corev1.ConfigMap{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: config.ToolchainConfigMapName}, cm)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return config.UserApprovalPolicyManual, nil
@@ -260,9 +262,9 @@ func (r *ReconcileUserSignup) setStatusApprovedAutomatically(userSignup *toolcha
 	return r.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type: toolchainv1alpha1.UserSignupApproved,
-			Status: corev1.ConditionTrue,
-			Reason: approvedAutomaticallyReason,
+			Type:    toolchainv1alpha1.UserSignupApproved,
+			Status:  corev1.ConditionTrue,
+			Reason:  approvedAutomaticallyReason,
 			Message: message,
 		})
 }
@@ -271,9 +273,9 @@ func (r *ReconcileUserSignup) setStatusApprovedByAdmin(userSignup *toolchainv1al
 	return r.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type: toolchainv1alpha1.UserSignupApproved,
-			Status: corev1.ConditionTrue,
-			Reason: approvedByAdminReason,
+			Type:    toolchainv1alpha1.UserSignupApproved,
+			Status:  corev1.ConditionTrue,
+			Reason:  approvedByAdminReason,
 			Message: message,
 		})
 }
@@ -282,15 +284,15 @@ func (r *ReconcileUserSignup) setStatusPendingApproval(userSignup *toolchainv1al
 	return r.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type: toolchainv1alpha1.UserSignupApproved,
-			Status: corev1.ConditionFalse,
-			Reason: pendingApprovalReason,
+			Type:    toolchainv1alpha1.UserSignupApproved,
+			Status:  corev1.ConditionFalse,
+			Reason:  pendingApprovalReason,
 			Message: message,
 		},
 		toolchainv1alpha1.Condition{
-			Type: toolchainv1alpha1.UserSignupComplete,
-			Status: corev1.ConditionFalse,
-			Reason: pendingApprovalReason,
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  pendingApprovalReason,
 			Message: message,
 		})
 }
@@ -299,9 +301,9 @@ func (r *ReconcileUserSignup) setStatusFailedToReadUserApprovalPolicy(userSignup
 	return r.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type: toolchainv1alpha1.UserSignupComplete,
-			Status: corev1.ConditionFalse,
-			Reason: failedToReadUserApprovalPolicyReason,
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  failedToReadUserApprovalPolicyReason,
 			Message: message,
 		})
 }
@@ -310,9 +312,9 @@ func (r *ReconcileUserSignup) setStatusFailedToCreateMUR(userSignup *toolchainv1
 	return r.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type: toolchainv1alpha1.UserSignupComplete,
-			Status: corev1.ConditionFalse,
-			Reason: unableToCreateMURReason,
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  unableToCreateMURReason,
 			Message: message,
 		})
 }
@@ -321,9 +323,9 @@ func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchain
 	return r.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type: toolchainv1alpha1.UserSignupComplete,
-			Status: corev1.ConditionFalse,
-			Reason: noClustersAvailableReason,
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  noClustersAvailableReason,
 			Message: message,
 		})
 }
@@ -332,9 +334,9 @@ func (r *ReconcileUserSignup) setStatusComplete(userSignup *toolchainv1alpha1.Us
 	return r.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type: toolchainv1alpha1.UserSignupComplete,
-			Status: corev1.ConditionTrue,
-			Reason: "",
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionTrue,
+			Reason:  "",
 			Message: message,
 		})
 }
