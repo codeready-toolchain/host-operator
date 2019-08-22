@@ -335,13 +335,12 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
 
-	client.MockCreate = func(obj runtime.Object) error {
+	client.MockCreate = func(ctx context.Context, obj runtime.Object) error {
 		switch obj.(type) {
 		case *v1alpha1.MasterUserRecord:
 			return errors.New("unable to create mur")
 		default:
-			//return client.Create(CTX??, obj)
-			return nil
+			return client.Create(ctx, obj)
 		}
 	}
 
@@ -369,7 +368,7 @@ func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
 
-	client.MockCreate = func(obj runtime.Object) error {
+	client.MockCreate = func(ctx context.Context, obj runtime.Object) error {
 		switch obj.(type) {
 		case *v1alpha1.MasterUserRecord:
 			return errs.NewAlreadyExists(v1.Resource("masteruserrecords"), obj.(*v1alpha1.MasterUserRecord).Name)
@@ -397,6 +396,117 @@ func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
 			Status: v1.ConditionTrue,
 			Reason: "",
 		},)
+}
+
+func TestUserSignupMURReadFails(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: operatorNamespace,
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+			Approved: true,
+		},
+	}
+
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
+
+	// Add some member clusters
+	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
+
+	fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+		switch obj.(type) {
+		case *v1alpha1.MasterUserRecord:
+			return errors.New("failed to lookup MUR")
+		default:
+			//return client.Create(CTX??, obj)
+			return nil
+		}
+	}
+
+	res, err := r.Reconcile(req)
+	require.Error(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+}
+
+func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: operatorNamespace,
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+			Approved: true,
+		},
+	}
+
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
+
+	// Add some member clusters
+	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
+
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
+		switch obj.(type) {
+		case *v1alpha1.UserSignup:
+			return errors.New("failed to update UserSignup status")
+		default:
+			//return client.Create(CTX??, obj)
+			return nil
+		}
+	}
+
+	res, err := r.Reconcile(req)
+	require.Error(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+}
+
+func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: operatorNamespace,
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+		},
+	}
+
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
+
+	// Create a new ConfigMap and set the user approval policy to automatic
+	cmValues := make(map[string]string)
+	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
+	cm := &v1.ConfigMap{
+		Data: cmValues,
+	}
+	cm.Name = config.ToolchainConfigMapName
+	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
+	require.NoError(t, err)
+
+	// Add some member clusters
+	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
+
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
+		switch obj.(type) {
+		case *v1alpha1.UserSignup:
+			return errors.New("failed to update UserSignup status")
+		default:
+			//return client.Create(CTX??, obj)
+			return nil
+		}
+	}
+
+	res, err := r.Reconcile(req)
+	require.Error(t, err)
+	require.Equal(t, reconcile.Result{}, res)
 }
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {
