@@ -340,6 +340,43 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 		})
 }
 
+func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "bar",
+			Namespace: operatorNamespace,
+			UID:       types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID:        "bar",
+			Approved:      false,
+			TargetCluster: "east",
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, emptyConfigMap())
+
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the userSignup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionFalse,
+			Reason: "PendingApproval",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "PendingApproval",
+		})
+}
+
 func TestUserSignupMURCreateFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -732,6 +769,17 @@ func configMap(approvalPolicy string) *v1.ConfigMap {
 	// Create a new ConfigMap
 	cmValues := make(map[string]string)
 	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = approvalPolicy
+	cm := &v1.ConfigMap{
+		Data: cmValues,
+	}
+	cm.Name = config.ToolchainConfigMapName
+	cm.ObjectMeta.Namespace = operatorNamespace
+	return cm
+}
+
+func emptyConfigMap() *v1.ConfigMap {
+	// Create a new ConfigMap
+	cmValues := make(map[string]string)
 	cm := &v1.ConfigMap{
 		Data: cmValues,
 	}
