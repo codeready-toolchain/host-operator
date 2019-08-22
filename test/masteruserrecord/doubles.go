@@ -4,8 +4,10 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	uuid "github.com/satori/go.uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 type MurModifier func(mur *toolchainv1alpha1.MasterUserRecord)
@@ -131,5 +133,12 @@ func Namespace(nsType, revision string) UaInMurModifier {
 				return
 			}
 		}
+	}
+}
+
+func ToBeDeleted() MurModifier {
+	return func(mur *toolchainv1alpha1.MasterUserRecord) {
+		util.AddFinalizer(mur, "finalizer.toolchain.dev.openshift.com")
+		mur.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 	}
 }

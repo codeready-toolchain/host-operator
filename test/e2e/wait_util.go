@@ -73,6 +73,21 @@ func (a *HostAwaitility) WaitForMasterUserRecord(name string) error {
 	})
 }
 
+func (a *HostAwaitility) WaitForDeletedMasterUserRecord(name string) error {
+	return wait.Poll(e2e.RetryInterval, e2e.Timeout, func() (done bool, err error) {
+		mur := &toolchainv1alpha1.MasterUserRecord{}
+		if err := a.Client.Get(context.TODO(), types.NamespacedName{Namespace: a.Ns, Name: name}, mur); err != nil {
+			if errors.IsNotFound(err) {
+				a.T.Logf("MasterUserAccount is checked as deleted '%s'", name)
+				return true, nil
+			}
+			return false, err
+		}
+		a.T.Logf("waiting until MasterUserAccount is deleted '%s'", name)
+		return false, nil
+	})
+}
+
 func (a *HostAwaitility) GetMasterUserRecord(name string) *toolchainv1alpha1.MasterUserRecord {
 	mur := &toolchainv1alpha1.MasterUserRecord{}
 	err := a.Client.Get(context.TODO(), types.NamespacedName{Namespace: a.Ns, Name: name}, mur)
@@ -213,6 +228,21 @@ func ConditionsMatch(actual []toolchainv1alpha1.Condition, expected ...toolchain
 		}
 	}
 	return nil
+}
+
+func (a *MemberAwaitility) WaitForDeletedUserAccount(name string) error {
+	return wait.Poll(e2e.RetryInterval, e2e.Timeout, func() (done bool, err error) {
+		ua := &toolchainv1alpha1.UserAccount{}
+		if err := a.Client.Get(context.TODO(), types.NamespacedName{Namespace: a.Ns, Name: name}, ua); err != nil {
+			if errors.IsNotFound(err) {
+				a.T.Logf("UserAccount is checked as deleted '%s'", name)
+				return true, nil
+			}
+			return false, err
+		}
+		a.T.Logf("waiting until UserAccount is deleted '%s'", name)
+		return false, nil
+	})
 }
 
 func (a *MemberAwaitility) GetUserAccount(name string) *toolchainv1alpha1.UserAccount {

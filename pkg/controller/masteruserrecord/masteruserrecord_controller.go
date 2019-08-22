@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
 	errs "github.com/pkg/errors"
+	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +36,11 @@ const (
 	provisioningReason                       = "Provisioning"
 	updatingReason                           = "Updating"
 	provisionedReason                        = "Provisioned"
+	unableToAddFinalizerReason               = "UnableToAddFinalizer"
+	unableToDeleteUserAccountsReason         = "UnableToDeleteUserAccounts"
+	unableToRemoveFinalizerReason            = "UnableToRemoveFinalizer"
+	// Finalizers
+	murFinalizerName = "finalizer.toolchain.dev.openshift.com"
 )
 
 // Add creates a new MasterUserRecord Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -92,8 +98,8 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 	reqLogger.Info("Reconciling MasterUserRecord")
 
 	// Fetch the MasterUserRecord instance
-	userRecord := &toolchainv1alpha1.MasterUserRecord{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, userRecord)
+	mur := &toolchainv1alpha1.MasterUserRecord{}
+	err := r.client.Get(context.TODO(), request.NamespacedName, mur)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -102,23 +108,50 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
+		reqLogger.Error(err, "unable to get MasterUserRecord")
 		return reconcile.Result{}, err
 	}
 
-	for _, account := range userRecord.Spec.UserAccounts {
-		err = r.ensureUserAccount(reqLogger, account, userRecord)
-		if err != nil {
-			reqLogger.Error(err, "unable to synchronize with member UserAccount")
+	// If the UserAccount is not being deleted, create or synchronize UserAccounts.
+	if !coputil.IsBeingDeleted(mur) {
+		// Add the finalizer if it is not present
+		if err := r.addFinalizer(mur, murFinalizerName); err != nil {
+			reqLogger.Error(err, "unable to add finalizer to MasterUserRecord")
+			return reconcile.Result{}, err
+		}
+		for _, account := range mur.Spec.UserAccounts {
+			err = r.ensureUserAccount(reqLogger, account, mur)
+			if err != nil {
+				reqLogger.Error(err, "unable to synchronize with member UserAccount")
+				return reconcile.Result{}, err
+			}
+		}
+
+		// If the UserAccount is being deleted, delete the UserAccounts in members.
+	} else if coputil.HasFinalizer(mur, murFinalizerName) {
+		if err = r.manageCleanUp(reqLogger, mur); err != nil {
+			reqLogger.Error(err, "unable to clean up MasterUserRecord as part of deletion")
 			return reconcile.Result{}, err
 		}
 	}
-
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileMasterUserRecord) addFinalizer(mur *toolchainv1alpha1.MasterUserRecord, finalizer string) error {
+	// Add the finalizer if it is not present
+	if !coputil.HasFinalizer(mur, murFinalizerName) {
+		coputil.AddFinalizer(mur, murFinalizerName)
+		if err := r.client.Update(context.TODO(), mur); err != nil {
+			return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(unableToAddFinalizerReason), err,
+				"failed while updating with added finalizer")
+		}
+	}
+	return nil
 }
 
 func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccount toolchainv1alpha1.UserAccountEmbedded, record *toolchainv1alpha1.MasterUserRecord) error {
 	// get & check member cluster
-	memberCluster, err := r.getMemberCluster(recAccount)
+	memberCluster, err := r.getMemberCluster(recAccount.TargetCluster)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(targetClusterNotReadyReason), err,
 			"failed to get the member cluster '%s'", recAccount.TargetCluster)
@@ -163,14 +196,14 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 	return nil
 }
 
-func (r *ReconcileMasterUserRecord) getMemberCluster(recAccount toolchainv1alpha1.UserAccountEmbedded) (*cluster.FedCluster, error) {
+func (r *ReconcileMasterUserRecord) getMemberCluster(targetCluster string) (*cluster.FedCluster, error) {
 	// get & check fed cluster
-	fedCluster, ok := r.retrieveMemberCluster(recAccount.TargetCluster)
+	fedCluster, ok := r.retrieveMemberCluster(targetCluster)
 	if !ok {
-		return nil, fmt.Errorf("the member cluster %s not found in the registry", recAccount.TargetCluster)
+		return nil, fmt.Errorf("the member cluster %s not found in the registry", targetCluster)
 	}
 	if !util.IsClusterReady(fedCluster.ClusterStatus) {
-		return nil, fmt.Errorf("the member cluster %s is not ready", recAccount.TargetCluster)
+		return nil, fmt.Errorf("the member cluster %s is not ready", targetCluster)
 	}
 	return fedCluster, nil
 }
@@ -210,6 +243,44 @@ func (r *ReconcileMasterUserRecord) useExistingConditionOfType(condType toolchai
 		cond.Message = message
 		return updateStatusConditions(r.client, mur, cond)
 	}
+}
+
+func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) error {
+	for _, ua := range mur.Spec.UserAccounts {
+		if err := r.deleteUserAccount(log, ua.TargetCluster, mur.Name); err != nil {
+			return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(unableToDeleteUserAccountsReason), err,
+				"failed to delete UserAccount in the member cluster '%s'", ua.TargetCluster)
+		}
+	}
+	// Remove finalizer from MasterUserRecord
+	coputil.RemoveFinalizer(mur, murFinalizerName)
+	if err := r.client.Update(context.Background(), mur); err != nil {
+		return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(unableToRemoveFinalizerReason), err,
+			"failed to update MasterUserRecord while deleting finalizer")
+	}
+	return nil
+}
+
+func (r *ReconcileMasterUserRecord) deleteUserAccount(logger logr.Logger, targetCluster, name string) error {
+	// get & check member cluster
+	memberCluster, err := r.getMemberCluster(targetCluster)
+	if err != nil {
+		return err
+	}
+	// Get the User associated with the UserAccount
+	userAcc := &toolchainv1alpha1.UserAccount{}
+	namespacedName := types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: name}
+	err = memberCluster.Client.Get(context.TODO(), namespacedName, userAcc)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if err := memberCluster.Client.Delete(context.TODO(), userAcc); err != nil {
+		return err
+	}
+	return nil
 }
 
 func toBeProvisioned() toolchainv1alpha1.Condition {
