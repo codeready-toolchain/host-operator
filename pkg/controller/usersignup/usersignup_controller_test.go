@@ -316,6 +316,80 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		},)
 }
 
+func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: operatorNamespace,
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+			Approved: false,
+			TargetCluster: "east",
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+
+	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
+
+	// Create a new ConfigMap and set the user approval policy to automatic
+	cmValues := make(map[string]string)
+	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = config.UserApprovalPolicyAutomatic
+	cm := &v1.ConfigMap{
+		Data: cmValues,
+	}
+	cm.Name = config.ToolchainConfigMapName
+	_, err := r.clientset.CoreV1().ConfigMaps(operatorNamespace).Create(cm)
+	require.NoError(t, err)
+
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	mur := &v1alpha1.MasterUserRecord{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, mur)
+	require.NoError(t, err)
+
+	require.Equal(t, operatorNamespace, mur.Namespace)
+	require.Equal(t, userSignup.Name, mur.Name)
+	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
+	require.Len(t, mur.Spec.UserAccounts, 1)
+
+	// Lookup the userSignup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		})
+
+	// Reconcile again
+	res, err = r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the userSignup one more and check the conditions are updated
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+		})
+}
+
 func TestUserSignupMURCreateFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -362,19 +436,18 @@ func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
 		},
 	}
 
-	r, req, client := prepareReconcile(t, userSignup.Name, userSignup)
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
 
 	// Add some member clusters
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
 
-	client.MockCreate = func(ctx context.Context, obj runtime.Object) error {
+	fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object) error {
 		switch obj.(type) {
 		case *v1alpha1.MasterUserRecord:
 			return errs.NewAlreadyExists(v1.Resource("masteruserrecords"), obj.(*v1alpha1.MasterUserRecord).Name)
 		default:
-			//return client.Create(CTX??, obj)
-			return nil
+			return fakeClient.Client.Create(ctx, obj)
 		}
 	}
 
@@ -422,8 +495,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 		case *v1alpha1.MasterUserRecord:
 			return errors.New("failed to lookup MUR")
 		default:
-			//return client.Create(CTX??, obj)
-			return nil
+			return fakeClient.Client.Get(ctx, key, obj)
 		}
 	}
 
@@ -456,8 +528,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 		case *v1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
 		default:
-			//return client.Create(CTX??, obj)
-			return nil
+			return fakeClient.Client.Update(ctx, obj)
 		}
 	}
 
@@ -499,8 +570,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 		case *v1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
 		default:
-			//return client.Create(CTX??, obj)
-			return nil
+			return fakeClient.Client.Update(ctx, obj)
 		}
 	}
 
@@ -536,10 +606,14 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
 		switch obj.(type) {
 		case *v1alpha1.UserSignup:
-			return errors.New("failed to update UserSignup status")
+			for _, cond := range obj.(*v1alpha1.UserSignup).Status.Conditions {
+				if cond.Reason == "NoClustersAvailable" {
+					return errors.New("failed to update UserSignup status")
+				}
+			}
+			return fakeClient.Client.Update(ctx, obj)
 		default:
-			//return client.Create(CTX??, obj)
-			return nil
+			return fakeClient.Client.Update(ctx, obj)
 		}
 	}
 
