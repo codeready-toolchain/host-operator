@@ -253,7 +253,12 @@ func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig(namespace string) (st
 		return "", err
 	}
 
-	return cm.Data[config.ToolchainConfigMapUserApprovalPolicy], nil
+	val, ok := cm.Data[config.ToolchainConfigMapUserApprovalPolicy]
+	if  !ok {
+		return "", nil
+	} else {
+		return val, nil
+	}
 }
 
 func (r *ReconcileUserSignup) setStatusApprovedAutomatically(userSignup *toolchainv1alpha1.UserSignup, message string) error {
