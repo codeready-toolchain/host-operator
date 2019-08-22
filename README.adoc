@@ -20,7 +20,7 @@ To run this operator locally you need to have at least one Minishift profile sta
 $ minishift start --profile host
 ```
 
-Then you can run the operator locally with the help of `operator-sdk`:
+Then you can run the operator locally with the help of `operator-sdk` (you need version v0.10.0 or higher):
 
 ```bash
 $ make up-local
