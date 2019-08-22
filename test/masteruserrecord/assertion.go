@@ -45,6 +45,21 @@ func (a *MurAssertion) HasConditions(expected ...toolchainv1alpha1.Condition) *M
 	return a
 }
 
+func (a *MurAssertion) HasFinalizer() *MurAssertion {
+	err := a.loadUaAssertion()
+	require.NoError(a.t, err)
+	assert.Len(a.t, a.masterUserRecord.Finalizers, 1)
+	assert.Contains(a.t, a.masterUserRecord.Finalizers, "finalizer.toolchain.dev.openshift.com")
+	return a
+}
+
+func (a *MurAssertion) DoesNotHaveFinalizer() *MurAssertion {
+	err := a.loadUaAssertion()
+	require.NoError(a.t, err)
+	assert.Len(a.t, a.masterUserRecord.Finalizers, 0)
+	return a
+}
+
 func (a *MurAssertion) HasStatusUserAccounts(targetClusters ...string) *MurAssertion {
 	err := a.loadUaAssertion()
 	require.NoError(a.t, err)
