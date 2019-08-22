@@ -1,9 +1,9 @@
 codecov:
-  max_report_age: "off" # see https://docs.codecov.io/docs/codecov-yaml#section-expired-reports
+  max_report_age: "off"  # see https://docs.codecov.io/docs/codecov-yaml#section-expired-reports
 
 # See http://docs.codecov.io/docs/coverage-configuration
 coverage:
-  precision: 2 # 2 = xx.xx%, 0 = xx%
+  precision: 2  # 2 = xx.xx%, 0 = xx%
   round: down
   # For example: 20...60 would result in any coverage less than 20%
   # would have a red background. The color would gradually change to
