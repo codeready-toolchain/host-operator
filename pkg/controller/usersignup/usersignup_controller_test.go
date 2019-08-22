@@ -2,6 +2,7 @@ package usersignup
 
 import (
 	"context"
+	"errors"
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
@@ -12,14 +13,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	errs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	fakeclientset "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/kubefed/pkg/apis/core/common"
@@ -33,7 +33,7 @@ const (
 )
 
 func TestReadUserApprovalPolicy(t *testing.T) {
-	r, _ := prepareReconcile(t, "test")
+	r, _, _ := prepareReconcile(t, "test")
 
 	// Create a new ConfigMap
 	cmValues := make(map[string]string)
@@ -64,7 +64,7 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 		},
 	}
 
-	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -137,7 +137,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		},
 	}
 
-	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -211,7 +211,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		},
 	}
 
-	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -274,7 +274,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		},
 	}
 
-	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -296,8 +296,8 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	mur := &v1alpha1.MasterUserRecord{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, mur)
 	require.Error(t, err)
-	require.IsType(t, err, &errors.StatusError{})
-	require.Equal(t, metav1.StatusReasonNotFound, err.(*errors.StatusError).ErrStatus.Reason)
+	require.IsType(t, err, &errs.StatusError{})
+	require.Equal(t, metav1.StatusReasonNotFound, err.(*errs.StatusError).ErrStatus.Reason)
 
 	// Lookup the userSignup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -313,6 +313,89 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 			Type: v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
+		},)
+}
+
+func TestUserSignupMURCreateFails(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: operatorNamespace,
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+			Approved: true,
+		},
+	}
+
+	r, req, client := prepareReconcile(t, userSignup.Name, userSignup)
+
+	// Add some member clusters
+	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
+
+	client.MockCreate = func(obj runtime.Object) error {
+		switch obj.(type) {
+		case *v1alpha1.MasterUserRecord:
+			return errors.New("unable to create mur")
+		default:
+			//return client.Create(CTX??, obj)
+			return nil
+		}
+	}
+
+	res, err := r.Reconcile(req)
+	require.Error(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+}
+
+func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+			Namespace: operatorNamespace,
+			UID: types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			UserID: "foo",
+			Approved: true,
+		},
+	}
+
+	r, req, client := prepareReconcile(t, userSignup.Name, userSignup)
+
+	// Add some member clusters
+	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
+
+	client.MockCreate = func(obj runtime.Object) error {
+		switch obj.(type) {
+		case *v1alpha1.MasterUserRecord:
+			return errs.NewAlreadyExists(v1.Resource("masteruserrecords"), obj.(*v1alpha1.MasterUserRecord).Name)
+		default:
+			//return client.Create(CTX??, obj)
+			return nil
+		}
+	}
+
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: operatorNamespace, Name: userSignup.Name}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedByAdmin",
+		},
+		v1alpha1.Condition{
+			Type: v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+			Reason: "",
 		},)
 }
 
@@ -341,7 +424,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		},
 	}
 
-	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup, mur)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur)
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -391,7 +474,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 		},
 	}
 
-	r, req := prepareReconcile(t, userSignup.Spec.UserID, userSignup)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
 	// Create a new ConfigMap and set the user approval policy to automatic
 	cmValues := make(map[string]string)
@@ -408,7 +491,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	require.IsType(t, SignupError{}, err)
 }
 
-func prepareReconcile(t *testing.T, userID string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request) {
+func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -426,14 +509,14 @@ func prepareReconcile(t *testing.T, userID string, initObjs ...runtime.Object) (
 
 	initObjs = append(initObjs, secret)
 
-	client := fake.NewFakeClientWithScheme(s, initObjs...)
+	client := test.NewFakeClient(t, initObjs...)
 
 	r := &ReconcileUserSignup{
 		client: client,
 		scheme: s,
 		clientset: fakeclientset.NewSimpleClientset(),
 	}
-	return r, newReconcileRequest(userID)
+	return r, newReconcileRequest(name), client
 }
 
 func newReconcileRequest(name string) reconcile.Request {

@@ -234,7 +234,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 		} else {
 			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
-				"Error creating MasterUserRecord", "Name", userSignup.Name)
+				"Error creating MasterUserRecord")
 		}
 	}
 
@@ -357,7 +357,7 @@ func (r *ReconcileUserSignup) wrapErrorWithStatusUpdate(logger logr.Logger, user
 		return nil
 	}
 	if err := statusUpdater(userSignup, err.Error()); err != nil {
-		logger.Error(err, "Error updating UserSignup status", "Name", userSignup.Name)
+		logger.Error(err, "Error updating UserSignup status")
 	}
 	return errs.Wrapf(err, format, args...)
 }
