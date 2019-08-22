@@ -65,7 +65,7 @@ func (s *userSignupIntegrationTest) TestUserSignupCreated() {
 	require.NoError(s.T(), err)
 
 	// Confirm that a MasterUserRecord wasn't created
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.Error(s.T(), err)
 
 	// Delete the User Signup
@@ -226,7 +226,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	require.NoError(s.T(), err)
 
 	// Confirm the MUR was NOT created
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.Error(s.T(), err)
 
 	// Create user signup - approval set to false
@@ -257,7 +257,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	require.NoError(s.T(), err)
 
 	// Confirm the MUR was NOT created yet
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.Error(s.T(), err)
 
 	// Now, reload the userSignup, manually approve it (setting Approved to true) and update the resource
@@ -270,7 +270,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	require.NoError(s.T(), err)
 
 	// Confirm the MUR was created
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that the conditions are updated to reflect that the userSignup was approved
@@ -300,7 +300,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithManualApproval() {
 	require.NoError(s.T(), err)
 
 	// Confirm the MUR was created
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that:
@@ -339,7 +339,7 @@ func (s *userSignupIntegrationTest) TestTargetClusterSelectedAutomatically() {
 	require.NoError(s.T(), err)
 
 	// Confirm the MasterUserRecord was created
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that:
@@ -386,7 +386,7 @@ func (s *userSignupIntegrationTest) TestDeletedUserSignupIsGarbageCollected() {
 	require.NoError(s.T(), err)
 
 	// Confirm the MasterUserRecord was created
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Delete the UserSignup
@@ -398,7 +398,7 @@ func (s *userSignupIntegrationTest) TestDeletedUserSignupIsGarbageCollected() {
 	require.Error(s.T(), err)
 
 	// Confirm the MasterUserRecord was deleted
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.Error(s.T(), err)
 }
 
@@ -419,7 +419,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalNoApprovalSet(
 	require.NoError(s.T(), err)
 
 	// Confirm the MasterUserRecord was created
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that:
@@ -457,7 +457,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalMURValuesOK() 
 	require.NoError(s.T(), err)
 
 	// Confirm the MasterUserRecord was created
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that:
@@ -510,7 +510,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalAndApprovalSet
 	require.NoError(s.T(), err)
 
 	// Confirm the MUR was created
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm that the conditions are as expected
@@ -549,7 +549,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalAndApprovalSet
 	require.NoError(s.T(), err)
 
 	// Confirm the MUR was created
-	err = s.hostAwait.waitForMasterUserRecord(userSignup.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(userSignup.Name)
 	require.NoError(s.T(), err)
 
 	// Confirm the conditions
@@ -580,7 +580,7 @@ func (s *userSignupIntegrationTest) TestUserSignupWithAutoApprovalWhenMURAlready
 	s.T().Logf("MasterUserRecord '%s' created", mur.Name)
 
 	// Confirm the MasterUserRecord was created
-	err = s.hostAwait.waitForMasterUserRecord(mur.Name)
+	err = s.hostAwait.WaitForMasterUserRecord(mur.Name)
 	require.NoError(s.T(), err)
 
 	// Create user signup with the same name and UserID as the MUR

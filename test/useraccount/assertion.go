@@ -4,6 +4,7 @@ import (
 	"context"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/test"
+	commonttest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -55,5 +56,12 @@ func (a *UaAssertion) HasSpec(spec toolchainv1alpha1.UserAccountSpec) *UaAsserti
 	err := a.loadUaAssertion()
 	require.NoError(a.t, err)
 	assert.EqualValues(a.t, spec, a.userAccount.Spec)
+	return a
+}
+
+func (a *UaAssertion) HasConditions(expected ...toolchainv1alpha1.Condition) *UaAssertion {
+	err := a.loadUaAssertion()
+	require.NoError(a.t, err)
+	commonttest.AssertConditionsMatch(a.t, a.userAccount.Status.Conditions, expected...)
 	return a
 }

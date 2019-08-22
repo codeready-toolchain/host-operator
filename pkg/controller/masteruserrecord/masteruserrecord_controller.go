@@ -28,9 +28,13 @@ var log = logf.Log.WithName("controller_masteruserrecord")
 
 const (
 	// Status condition reasons
-	unableToGetUserAccountReason = "UnableToGetUserAccount"
-	targetClusterNotReadyReason  = "TargetClusterNotReady"
-	provisioningReason           = "Provisioning"
+	unableToGetUserAccountReason             = "UnableToGetUserAccount"
+	unableToCreateUserAccountReason          = "UnableToCreateUserAccount"
+	unableToSynchronizeUserAccountSpecReason = "UnableToSynchronizeUserAccountSpecAccount"
+	targetClusterNotReadyReason              = "TargetClusterNotReady"
+	provisioningReason                       = "Provisioning"
+	updatingReason                           = "Updating"
+	provisionedReason                        = "Provisioned"
 )
 
 // Add creates a new MasterUserRecord Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -132,7 +136,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 				return err
 			}
 			if err := memberCluster.Client.Create(context.TODO(), userAccount); err != nil {
-				return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(targetClusterNotReadyReason), err,
+				return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(unableToCreateUserAccountReason), err,
 					"failed to create UserAccount in the member cluster '%s'", recAccount.TargetCluster)
 			}
 			return nil
@@ -141,7 +145,21 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 			"failed to get userAccount '%s' from cluster '%s'", record.Name, recAccount.TargetCluster)
 	}
 
-	// TODO do the synchronization
+	sync := Synchronizer{
+		record:            record,
+		hostClient:        r.client,
+		memberClient:      memberCluster.Client,
+		memberUserAcc:     userAccount,
+		recordSpecUserAcc: recAccount,
+	}
+	if err := sync.synchronizeSpec(); err != nil {
+		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(unableToSynchronizeUserAccountSpecReason), err,
+			"update of the UserAccount.spec in the cluster '%s' failed", recAccount.TargetCluster)
+	}
+	if err := sync.synchronizeStatus(); err != nil {
+		err = errs.Wrapf(err, "update of the MasterUserRecord failed while synchronizing with UserAccount status from the cluster '%s'", recAccount.TargetCluster)
+		return r.wrapErrorWithStatusUpdate(log, record, r.useExistingConditionOfType(toolchainv1alpha1.ConditionReady), err, "")
+	}
 	return nil
 }
 
@@ -165,7 +183,10 @@ func (r *ReconcileMasterUserRecord) wrapErrorWithStatusUpdate(logger logr.Logger
 	if err := statusUpdater(record, err.Error()); err != nil {
 		logger.Error(err, "status update failed")
 	}
-	return errs.Wrapf(err, format, args...)
+	if format != "" {
+		return errs.Wrapf(err, format, args...)
+	}
+	return err
 }
 
 func (r *ReconcileMasterUserRecord) setStatusFailed(reason string) func(record *toolchainv1alpha1.MasterUserRecord, message string) error {
@@ -174,6 +195,28 @@ func (r *ReconcileMasterUserRecord) setStatusFailed(reason string) func(record *
 			r.client,
 			record,
 			toBeNotReady(reason, message))
+	}
+}
+
+func (r *ReconcileMasterUserRecord) useExistingConditionOfType(condType toolchainv1alpha1.ConditionType) func(record *toolchainv1alpha1.MasterUserRecord, message string) error {
+	return func(mur *toolchainv1alpha1.MasterUserRecord, message string) error {
+		cond := toolchainv1alpha1.Condition{Type: condType}
+		for _, con := range mur.Status.Conditions {
+			if con.Type == condType {
+				cond = con
+				break
+			}
+		}
+		cond.Message = message
+		return updateStatusConditions(r.client, mur, cond)
+	}
+}
+
+func toBeProvisioned() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: corev1.ConditionTrue,
+		Reason: provisionedReason,
 	}
 }
 
