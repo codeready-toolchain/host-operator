@@ -1,6 +1,7 @@
 package masteruserrecord
 
 import (
+	"context"
 	"fmt"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -182,7 +183,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("creation of the UserAccount failed", func(t *testing.T) {
 		// given
 		memberClient := commontest.NewFakeClient(t)
-		memberClient.MockCreate = func(obj runtime.Object) error {
+		memberClient.MockCreate = func(ctx context.Context, obj runtime.Object) error {
 			return fmt.Errorf("unable to create user account %s", mur.Name)
 		}
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
@@ -205,7 +206,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		// given
 		userAcc := uatest.NewUserAccountFromMur(mur)
 		memberClient := commontest.NewFakeClient(t, userAcc)
-		memberClient.MockUpdate = func(obj runtime.Object) error {
+		memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
 		modifiedMur := murtest.NewMasterUserRecord("john")
@@ -239,7 +240,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		hostClient := commontest.NewFakeClient(t, provisionedMur)
 		// mock only once
-		hostClient.MockStatusUpdate = func(obj runtime.Object) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
 			hostClient.MockStatusUpdate = nil
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
@@ -265,7 +266,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		// given
 		hostClient := commontest.NewFakeClient(t, mur)
 		memberClient := commontest.NewFakeClient(t)
-		hostClient.MockUpdate = func(obj runtime.Object) error {
+		hostClient.MockUpdate = func(ctx context.Context, obj runtime.Object) error {
 			return fmt.Errorf("unable to add finalizer to MUR %s", mur.Name)
 		}
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
@@ -290,7 +291,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		hostClient := commontest.NewFakeClient(t, mur)
 		memberClient := commontest.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
-		hostClient.MockUpdate = func(obj runtime.Object) error {
+		hostClient.MockUpdate = func(ctx context.Context, obj runtime.Object) error {
 			return fmt.Errorf("unable to remove finalizer from MUR %s", mur.Name)
 		}
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
@@ -315,7 +316,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		hostClient := commontest.NewFakeClient(t, mur)
 
 		memberClient := commontest.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
-		memberClient.MockDelete = func(obj runtime.Object, opts ...client.DeleteOptionFunc) error {
+		memberClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
 			return fmt.Errorf("unable to delete user account %s", mur.Name)
 		}
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),

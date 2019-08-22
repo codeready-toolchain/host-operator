@@ -2,14 +2,14 @@ module github.com/codeready-toolchain/host-operator
 
 require (
 	cloud.google.com/go v0.40.0 // indirect
+	github.com/Azure/go-autorest v13.0.0+incompatible // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20190819084459-ba40462e7938
+	github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20190822023853-ee967b4125e7
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/gobuffalo/envy v1.7.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.9.2 // indirect
 	github.com/mailru/easyjson v0.0.0-20190620125010-da37f6c1e481 // indirect
 	github.com/operator-framework/operator-sdk v0.10.0
 	github.com/pkg/errors v0.8.1
@@ -18,10 +18,8 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/pflag v1.0.3
 	github.com/stretchr/testify v1.3.0
-	go.opencensus.io v0.22.0 // indirect
 	golang.org/x/tools v0.0.0-20190620191750-1fa568393b23 // indirect
-	google.golang.org/genproto v0.0.0-20190620144150-6af8c5fc6601 // indirect
-	google.golang.org/grpc v1.21.1 // indirect
+	gopkg.in/h2non/gock.v1 v1.0.14
 	k8s.io/api v0.0.0-20190620073856-dcce3486da33
 	k8s.io/apimachinery v0.0.0-20190620073744-d16981aedf33
 	k8s.io/apiserver v0.0.0-20190111033246-d50e9ac5404f // indirect

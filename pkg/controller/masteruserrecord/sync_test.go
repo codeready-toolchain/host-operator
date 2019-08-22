@@ -1,6 +1,7 @@
 package masteruserrecord
 
 import (
+	"context"
 	"fmt"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/test"
@@ -119,7 +120,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		mur := murtest.NewMasterUserRecord("john")
 		userAcc := uatest.NewUserAccountFromMur(mur)
 		memberClient := commontest.NewFakeClient(t, userAcc)
-		memberClient.MockUpdate = func(obj runtime.Object) error {
+		memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
 		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.TierName("admin"))
@@ -149,7 +150,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			uatest.StatusCondition(toBeNotReady("somethingFailed", "")))
 		memberClient := commontest.NewFakeClient(t, userAcc)
 		hostClient := commontest.NewFakeClient(t, provisionedMur)
-		hostClient.MockStatusUpdate = func(obj runtime.Object) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
 		sync := Synchronizer{

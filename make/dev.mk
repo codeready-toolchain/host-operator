@@ -54,9 +54,9 @@ deploy-rbac:
 ## Deploy CRD
 deploy-crd:
 	$(Q)-oc apply -f deploy/crds/toolchain_v1alpha1_nstemplatetier.yaml
+	$(Q)-oc apply -f deploy/crds/toolchain_v1alpha1_usersignup.yaml
 	$(Q)-oc apply -f deploy/crds/toolchain_v1alpha1_masteruserrecord.yaml
 	$(Q)-oc apply -f deploy/crds/core_v1beta1_kubefedcluster.yaml
-	$(Q)-oc apply -f deploy/crds/toolchain_v1alpha1_usersignup.yaml
 
 .PHONY: add-member-to-host
 ## Run script add-cluster.sh member member-cluster
