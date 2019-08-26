@@ -1,17 +1,13 @@
 package controller
 
 import (
-	"fmt"
 	"github.com/codeready-toolchain/toolchain-common/pkg/controller"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/klog"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/kubefed/pkg/controller/kubefedcluster"
 	"sigs.k8s.io/kubefed/pkg/controller/util"
 )
-
-const varOperatorNamespace = "OPERATOR_NAMESPACE"
 
 func StartKubeFedClusterControllers(mgr manager.Manager, stopChan <-chan struct{}) error {
 	if err := startHealthCheckController(mgr, stopChan); err != nil {
@@ -28,16 +24,16 @@ func StartKubeFedClusterControllers(mgr manager.Manager, stopChan <-chan struct{
 }
 
 func startHealthCheckController(mgr manager.Manager, stopChan <-chan struct{}) error {
-	ns, found := os.LookupEnv(varOperatorNamespace)
-	if !found {
-		return fmt.Errorf("%s must be set", varOperatorNamespace)
+	namespace, err := k8sutil.GetWatchNamespace()
+	if err != nil {
+		return err
 	}
 	controllerConfig := &util.ControllerConfig{
 		KubeConfig:              mgr.GetConfig(),
 		ClusterAvailableDelay:   util.DefaultClusterAvailableDelay,
 		ClusterUnavailableDelay: util.DefaultClusterUnavailableDelay,
 		KubeFedNamespaces: util.KubeFedNamespaces{
-			KubeFedNamespace: ns,
+			KubeFedNamespace: namespace,
 		},
 	}
 	clusterHealthCheckConfig := &util.ClusterHealthCheckConfig{
