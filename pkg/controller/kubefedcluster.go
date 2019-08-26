@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"github.com/codeready-toolchain/toolchain-common/pkg/controller"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/klog"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -16,7 +17,11 @@ func StartKubeFedClusterControllers(mgr manager.Manager, stopChan <-chan struct{
 	if err := startHealthCheckController(mgr, stopChan); err != nil {
 		return err
 	}
-	if err := controller.StartCachingController(mgr, stopChan); err != nil {
+	namespace, err := k8sutil.GetWatchNamespace()
+	if err != nil {
+		return err
+	}
+	if err := controller.StartCachingController(mgr, namespace, stopChan); err != nil {
 		return err
 	}
 	return nil

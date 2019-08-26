@@ -48,7 +48,9 @@ reset-namespace: login-as-admin clean-namespace create-namespace deploy-rbac
 deploy-rbac:
 	$(Q)-oc apply -f deploy/service_account.yaml
 	$(Q)-oc apply -f deploy/role.yaml
-	$(Q)-sed -e 's|REPLACE_NAMESPACE|${LOCAL_TEST_NAMESPACE}|g' ./deploy/role_binding.yaml  | oc apply -f -
+	$(Q)-oc apply -f deploy/role_binding.yaml
+	$(Q)-oc apply -f deploy/cluster_role.yaml
+	$(Q)-sed -e 's|REPLACE_NAMESPACE|${LOCAL_TEST_NAMESPACE}|g' ./deploy/cluster_role_binding.yaml  | oc apply -f -
 
 .PHONY: deploy-crd
 ## Deploy CRD
