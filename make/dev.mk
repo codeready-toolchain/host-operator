@@ -5,7 +5,7 @@ TIMESTAMP:=$(shell date +%s)
 TAG?=$(GIT_COMMIT_ID_SHORT)-$(TIMESTAMP)
 
 # to watch all namespaces, keep namespace empty
-APP_NAMESPACE ?= ""
+APP_NAMESPACE ?= $(LOCAL_TEST_NAMESPACE)
 LOCAL_TEST_NAMESPACE ?= "toolchain-host-operator"
 ADD_CLUSTER_SCRIPT_PATH?=../toolchain-common/scripts/add-cluster.sh
 
@@ -13,7 +13,7 @@ ADD_CLUSTER_SCRIPT_PATH?=../toolchain-common/scripts/add-cluster.sh
 ## Run Operator locally
 up-local: login-as-admin create-namespace deploy-rbac build deploy-crd
 	$(Q)-oc new-project $(LOCAL_TEST_NAMESPACE) || true
-	$(Q)OPERATOR_NAMESPACE=$(LOCAL_TEST_NAMESPACE) operator-sdk up local --namespace=$(APP_NAMESPACE) --verbose
+	$(Q)operator-sdk up local --namespace=$(APP_NAMESPACE) --verbose
 
 .PHONY: login-as-admin
 ## Log in as system:admin
@@ -48,7 +48,9 @@ reset-namespace: login-as-admin clean-namespace create-namespace deploy-rbac
 deploy-rbac:
 	$(Q)-oc apply -f deploy/service_account.yaml
 	$(Q)-oc apply -f deploy/role.yaml
-	$(Q)-sed -e 's|REPLACE_NAMESPACE|${LOCAL_TEST_NAMESPACE}|g' ./deploy/role_binding.yaml  | oc apply -f -
+	$(Q)-oc apply -f deploy/role_binding.yaml
+	$(Q)-oc apply -f deploy/cluster_role.yaml
+	$(Q)-sed -e 's|REPLACE_NAMESPACE|${LOCAL_TEST_NAMESPACE}|g' ./deploy/cluster_role_binding.yaml  | oc apply -f -
 
 .PHONY: deploy-crd
 ## Deploy CRD
