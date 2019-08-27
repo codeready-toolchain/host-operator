@@ -5,7 +5,7 @@ TIMESTAMP:=$(shell date +%s)
 TAG?=$(GIT_COMMIT_ID_SHORT)-$(TIMESTAMP)
 
 # to watch all namespaces, keep namespace empty
-APP_NAMESPACE ?= ""
+APP_NAMESPACE ?= $(LOCAL_TEST_NAMESPACE)
 LOCAL_TEST_NAMESPACE ?= "toolchain-host-operator"
 ADD_CLUSTER_SCRIPT_PATH?=../toolchain-common/scripts/add-cluster.sh
 
@@ -13,7 +13,7 @@ ADD_CLUSTER_SCRIPT_PATH?=../toolchain-common/scripts/add-cluster.sh
 ## Run Operator locally
 up-local: login-as-admin create-namespace deploy-rbac build deploy-crd
 	$(Q)-oc new-project $(LOCAL_TEST_NAMESPACE) || true
-	$(Q)OPERATOR_NAMESPACE=$(LOCAL_TEST_NAMESPACE) operator-sdk up local --namespace=$(APP_NAMESPACE) --verbose
+	$(Q)operator-sdk up local --namespace=$(APP_NAMESPACE) --verbose
 
 .PHONY: login-as-admin
 ## Log in as system:admin
