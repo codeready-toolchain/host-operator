@@ -11,7 +11,7 @@ spec:
     kind: MasterUserRecord
     plural: masteruserrecords
     shortNames:
-      - mur
+    - mur
   scope: Namespaced
   subresources:
     status: {}
