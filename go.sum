@@ -40,11 +40,6 @@ github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e/go.mod h1:64YH
 github.com/Masterminds/goutils v1.1.0/go.mod h1:8cTjp+g8YejhMuvIA5y2vz3BpJxksy863GQaJW2MFNU=
 github.com/Masterminds/semver v1.4.2/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Masterminds/sprig v0.0.0-20190301161902-9f8fceff796f/go.mod h1:y6hNFY5UBTIWBxnzTeuNhlNS5hqE0NB0E6fgfo2Br3o=
-github.com/MatousJobanek/toolchain-common v0.0.0-20190828142044-9f26d5997e93 h1:Hh2FNMhMGRLNI7yMjsFAbHGTp2eRphf9tDYkV6d5j/s=
-github.com/MatousJobanek/toolchain-common v0.0.0-20190828142044-9f26d5997e93/go.mod h1:eXZuRBLItZWOQGICqmsA9ZhT6fjt+5i1BV0TMTE5DPs=
-github.com/MatousJobanek/toolchain-common v0.0.0-20190829111508-af489ff019ae/go.mod h1:a0prNI70PmcWfvUPCYovUOq82D70zOAioaaSmzZIZEw=
-github.com/MatousJobanek/toolchain-common v0.0.0-20190830085756-63785f9b66b5 h1:iAM/pqtdh90YRiX9VDtAFYP9c8+wk2/Dsi8guqcZEUY=
-github.com/MatousJobanek/toolchain-common v0.0.0-20190830085756-63785f9b66b5/go.mod h1:a0prNI70PmcWfvUPCYovUOq82D70zOAioaaSmzZIZEw=
 github.com/NYTimes/gziphandler v1.0.1/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/PuerkitoBio/purell v1.1.0 h1:rmGxhojJlM0tuKtfdvliR84CFHljx9ag64t2xmVkjK4=
@@ -81,10 +76,6 @@ github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28/go.mod h1:
 github.com/codeready-toolchain/api v0.0.0-20190812113906-bd1f09d19c28/go.mod h1:jHr8IvmLGTxmgD+jc1bBbucP4bSbT2JHnM+HdAw6N2g=
 github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38 h1:wHuHNqZl2NxOQDuOsGe1OYE/uIYQmbfq/OW4/Doh5ls=
 github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38/go.mod h1:jHr8IvmLGTxmgD+jc1bBbucP4bSbT2JHnM+HdAw6N2g=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20190822023853-ee967b4125e7 h1:BMxUbc0leFMb5wLGfXjA/atAB5lzwwmCXh85iVGZECw=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20190822023853-ee967b4125e7/go.mod h1:T/a1aW1kqIKrRxbpUxDp3l3wz97jtQBI68AFl+j+I9Q=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20190827045201-35e4f49da4c9 h1:o2fX6Qv4goQbPw2IV2PcFE8CY4NalYMiSseSNeMrGQs=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20190827045201-35e4f49da4c9/go.mod h1:T/a1aW1kqIKrRxbpUxDp3l3wz97jtQBI68AFl+j+I9Q=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190830131634-231d1bd08d5f h1:VHbKnso6ca8ub6nCnjp4sboBI/g7ZqfQxQnzRhXn2XU=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20190830131634-231d1bd08d5f/go.mod h1:a0prNI70PmcWfvUPCYovUOq82D70zOAioaaSmzZIZEw=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
@@ -399,8 +390,6 @@ github.com/prometheus/procfs v0.0.0-20190403104016-ea9eea638872/go.mod h1:TjEm7z
 github.com/prometheus/procfs v0.0.2 h1:6LJUbpNm42llc4HRCuvApCSWB/WfhuNo9K98Q9sNGfs=
 github.com/prometheus/procfs v0.0.2/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
-github.com/redhat-cop/operator-utils v0.0.0-20190530184149-66ee667a40b2 h1:RGAwRHq6sD6ik/1SoYp2+js2sRywHUBNDw97+5jcaGE=
-github.com/redhat-cop/operator-utils v0.0.0-20190530184149-66ee667a40b2/go.mod h1:K9f0vBA2bBiDyg9bsGDUojdwdhwUvHKX5QW0B+brWgo=
 github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776 h1:b4BUvzMzkoRJvEbs1J3GaewlHzjxYYxVfuy8/DOU9zo=
 github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776/go.mod h1:K9f0vBA2bBiDyg9bsGDUojdwdhwUvHKX5QW0B+brWgo=
 github.com/robfig/cron v0.0.0-20170526150127-736158dc09e1/go.mod h1:JGuDeoQd7Z6yL4zQhZ3OPEVHB7fL6Ka6skscFHfmt2k=
