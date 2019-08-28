@@ -360,7 +360,7 @@ func (r *ReconcileUserSignup) updateStatus(logger logr.Logger, userSignup *toolc
 // wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
 func (r *ReconcileUserSignup) wrapErrorWithStatusUpdate(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error, err error, format string, args ...interface{}) error {
-	if err == nil {
+	if err == nil    {
 		return nil
 	}
 	if err := statusUpdater(userSignup, err.Error()); err != nil {
