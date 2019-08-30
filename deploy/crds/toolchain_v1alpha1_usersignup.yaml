@@ -15,17 +15,17 @@ spec:
     name: TargetCluster
     priority: 1
     type: string
-  - JSONPath: .status.conditions[?(@.type==\"Complete\")].status
+  - JSONPath: .status.conditions[?(@.type=="Complete")].status
     name: Complete
     type: string
-  - JSONPath: .status.conditions[?(@.type==\"Complete\")].reason
+  - JSONPath: .status.conditions[?(@.type=="Complete")].reason
     name: Reason
     type: string
-  - JSONPath: .status.conditions[?(@.type==\"Approved\")].status
+  - JSONPath: .status.conditions[?(@.type=="Approved")].status
     name: Approved
     priority: 1
     type: string
-  - JSONPath: .status.conditions[?(@.type==\"Approved\")].reason
+  - JSONPath: .status.conditions[?(@.type=="Approved")].reason
     name: ApprovedBy
     priority: 1
     type: string
