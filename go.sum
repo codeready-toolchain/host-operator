@@ -43,6 +43,8 @@ github.com/Masterminds/sprig v0.0.0-20190301161902-9f8fceff796f/go.mod h1:y6hNFY
 github.com/MatousJobanek/toolchain-common v0.0.0-20190828142044-9f26d5997e93 h1:Hh2FNMhMGRLNI7yMjsFAbHGTp2eRphf9tDYkV6d5j/s=
 github.com/MatousJobanek/toolchain-common v0.0.0-20190828142044-9f26d5997e93/go.mod h1:eXZuRBLItZWOQGICqmsA9ZhT6fjt+5i1BV0TMTE5DPs=
 github.com/MatousJobanek/toolchain-common v0.0.0-20190829111508-af489ff019ae/go.mod h1:a0prNI70PmcWfvUPCYovUOq82D70zOAioaaSmzZIZEw=
+github.com/MatousJobanek/toolchain-common v0.0.0-20190830085756-63785f9b66b5 h1:iAM/pqtdh90YRiX9VDtAFYP9c8+wk2/Dsi8guqcZEUY=
+github.com/MatousJobanek/toolchain-common v0.0.0-20190830085756-63785f9b66b5/go.mod h1:a0prNI70PmcWfvUPCYovUOq82D70zOAioaaSmzZIZEw=
 github.com/NYTimes/gziphandler v1.0.1/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/PuerkitoBio/purell v1.1.0 h1:rmGxhojJlM0tuKtfdvliR84CFHljx9ag64t2xmVkjK4=

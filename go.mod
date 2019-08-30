@@ -33,7 +33,7 @@ require (
 	sigs.k8s.io/kubefed v0.1.0-rc2
 )
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/MatousJobanek/toolchain-common v0.0.0-20190829111508-af489ff019ae
+replace github.com/codeready-toolchain/toolchain-common => github.com/MatousJobanek/toolchain-common v0.0.0-20190830085756-63785f9b66b5
 
 replace (
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0

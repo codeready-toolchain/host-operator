@@ -81,7 +81,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 		UserAccountStatus: userAccount.Status,
 	}}
 
-	uatest.ModifyUa(userAccount, uatest.StatusCondition(toBeNotReady("Updating", "")))
+	uatest.Modify(userAccount, uatest.StatusCondition(toBeNotReady("Updating", "")))
 
 	// when and then
 	testSyncMurStatusWithUserAccountStatus(t, s, userAccount, mur, toBeNotReady(updatingReason, ""))
@@ -104,7 +104,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		UserAccountStatus: userAccount.Status,
 	}}
 
-	uatest.ModifyUa(userAccount, uatest.StatusCondition(toBeProvisioned()))
+	uatest.Modify(userAccount, uatest.StatusCondition(toBeProvisioned()))
 
 	// when and then
 	testSyncMurStatusWithUserAccountStatus(t, s, userAccount, mur, toBeProvisioned())
