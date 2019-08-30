@@ -5,7 +5,7 @@ require (
 	github.com/Azure/go-autorest v13.0.0+incompatible // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20190827045201-35e4f49da4c9
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20190830131634-231d1bd08d5f
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/gobuffalo/envy v1.7.0 // indirect
@@ -32,8 +32,6 @@ require (
 	sigs.k8s.io/controller-tools v0.1.12
 	sigs.k8s.io/kubefed v0.1.0-rc2
 )
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/MatousJobanek/toolchain-common v0.0.0-20190830085756-63785f9b66b5
 
 replace (
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0
