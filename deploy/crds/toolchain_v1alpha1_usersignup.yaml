@@ -71,8 +71,11 @@ spec:
                 (“sub” claim)
               type: string
             username:
-              description: Username is the original, unaltered username for the
-                user's RHD account.
+              description: The username.  This may differ from the UserSignup's metadata.name,
+                which is restricted by the limited character set available for naming
+                (see RFC1123).  If the username contains characters which are disqualified
+                from the resource name, the username is transformed into an acceptable
+                resource name instead. For example, johnsmith@redhat.com -> johnsmith-at-redhat-com
               type: string
           required:
           - userID
