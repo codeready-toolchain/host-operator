@@ -11,6 +11,10 @@ spec:
     name: User ID
     priority: 1
     type: string
+  - JSONPath: .spec.username
+    name: Username
+    priority: 1
+    type: string
   - JSONPath: .spec.targetCluster
     name: TargetCluster
     priority: 1
@@ -66,8 +70,13 @@ spec:
               description: UserID is the user ID from RHD Identity Provider token
                 (“sub” claim)
               type: string
+            username:
+              description: Username is the original, unaltered username for the
+                user's RHD account.
+              type: string
           required:
           - userID
+          - username
           type: object
         status:
           properties:
