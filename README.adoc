@@ -92,7 +92,7 @@ If you are still confused by the e2e location, execution and branch pairing, see
 ** *Need to test your code using e2e tests located in `../toolchain-e2e` repo:*
 *** `make test-e2e-local`
 
-* *Working on a PR:*
+* *Creating a PR:*
 ** *Your PR doesn't need any changes in https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo:*
 *** 1. check the name of a branch you are going to create a PR for
 *** 2. make sure that your fork of https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo doesn't contain branch with the same name
