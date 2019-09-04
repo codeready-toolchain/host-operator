@@ -106,13 +106,13 @@ ifeq ($(E2E_REPO_PATH),"")
 		@echo "branch ref of the user's fork: \"${REMOTE_E2E_BRANCH}\" - if empty then not found"
 		# check if the branch with the same name exists, if so then merge it with master and use the merge branch, if not then use master
 		if [[ -n "${REMOTE_E2E_BRANCH}" ]]; then \
-			# retrieve the branch name; \
+			# retrieve the branch name \
 			BRANCH_NAME=`echo ${BRANCH_REF} | awk -F'/' '{print $$3}'`; \
-			# add the user's fork as remote repo; \
+			# add the user's fork as remote repo \
 			git --git-dir=${E2E_REPO_PATH}/.git --work-tree=${E2E_REPO_PATH} remote add external ${AUTHOR_LINK}/toolchain-e2e.git; \
-			# fetch the branch; \
+			# fetch the branch \
 			git --git-dir=${E2E_REPO_PATH}/.git --work-tree=${E2E_REPO_PATH} fetch external ${BRANCH_REF}; \
-			# merge the branch with master; \
+			# merge the branch with master \
 			git --git-dir=${E2E_REPO_PATH}/.git --work-tree=${E2E_REPO_PATH} merge FETCH_HEAD --allow-unrelated-histories; \
 		fi;
     endif
