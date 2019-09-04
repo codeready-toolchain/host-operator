@@ -113,7 +113,7 @@ ifeq ($(E2E_REPO_PATH),"")
 			# fetch the branch \
 			git --git-dir=${E2E_REPO_PATH}/.git --work-tree=${E2E_REPO_PATH} fetch external ${BRANCH_REF}; \
 			# merge the branch with master \
-			git --git-dir=${E2E_REPO_PATH}/.git --work-tree=${E2E_REPO_PATH} merge FETCH_HEAD --allow-unrelated-histories; \
+			git --git-dir=${E2E_REPO_PATH}/.git --work-tree=${E2E_REPO_PATH} merge FETCH_HEAD; \
 		fi;
     endif
 endif
