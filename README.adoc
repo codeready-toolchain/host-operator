@@ -56,7 +56,9 @@ If there is, then the logic:
 1. clones latest changes from https://github.com/codeready-toolchain/toolchain-e2e[codeready-toolchain/toolchain-e2e]
 2. fetches the `fix-reconcile` branch from `cooljohn/toolchain-e2e` fork
 3. merges `master` branch with the changes from `fix-reconcile` branch
-4. runs e2e tests for both operators from this merged branch. As deployment for `host-operator` it uses the code from the PR.
+4. clones latest changes from https://github.com/codeready-toolchain/member-operator[member-operator] repo and builds & deploys the `member-operator` image out of it
+5. builds & deploys the `host-operator` image from the code that is in the PR
+6. runs e2e tests against both operators from the merged branch of the `toolchain-e2e` repo
 
 If the branch with the same name does not exist, then it only clones the latest changes from https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] and runs e2e tests from the `master`.
 
