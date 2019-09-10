@@ -32,9 +32,6 @@ require (
 	sigs.k8s.io/kubefed v0.1.0-rc2
 )
 
-// fix for unavailable git.apache.org https://status.apache.org/incidents/63030p4241xj
-replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
-
 replace (
 	git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
