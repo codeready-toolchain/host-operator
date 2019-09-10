@@ -1,11 +1,15 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
+	cloud.google.com/go v0.40.0 // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20190906003527-443e8ceac134
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20190904115454-79e74322be0a
-	github.com/codeready-toolchain/toolchain-e2e v0.0.0-20190904123258-c90f69f65a94 // indirect
 	github.com/go-logr/logr v0.1.0
+	github.com/go-openapi/spec v0.19.2 // indirect
+	github.com/gobuffalo/envy v1.7.0 // indirect
+	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
+	github.com/mailru/easyjson v0.0.0-20190620125010-da37f6c1e481 // indirect
 	github.com/operator-framework/operator-sdk v0.10.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/common v0.6.0 // indirect
@@ -13,6 +17,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/pflag v1.0.3
 	github.com/stretchr/testify v1.3.0
+	golang.org/x/tools v0.0.0-20190620191750-1fa568393b23 // indirect
 	gopkg.in/h2non/gock.v1 v1.0.14
 	k8s.io/api v0.0.0-20190620073856-dcce3486da33
 	k8s.io/apimachinery v0.0.0-20190620073744-d16981aedf33
