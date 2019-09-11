@@ -64,9 +64,6 @@ BASE_COMMIT := $(shell echo $$CLONEREFS_OPTIONS | jq '.refs[0].base_sha')
 PR_COMMIT := $(shell echo $$CLONEREFS_OPTIONS | jq '.refs[0].pulls[0].sha')
 PULL_NUMBER := $(shell echo $$CLONEREFS_OPTIONS | jq '.refs[0].pulls[0].number')
 
-MEMBER_NS := member-operator-$(shell date +'%s')
-HOST_NS := host-operator-$(shell date +'%s')
-
 ###########################################################
 #
 # End-to-end Tests
