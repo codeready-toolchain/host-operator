@@ -43,6 +43,27 @@ There are a few more targets that you can find useful:
 
 === End-to-End tests
 
+==== Background & pairing
+
+E2E tests are not located in this repository - all e2e tests are in https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo, however, it's still possible to run them locally from this repo - see <<Running End-to-End Tests>>.
+
+When there is a change introduced in this repository that should be either covered by e2e tests or requires changes in the already existing tests, then all needed changes should go into the https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo.
+The logic that executes tests in openshift-ci automatically tries to pair PR opened for this (host-operator) repository with a branch that potentially exists in the developer's fork of the https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo. This pairing is based on a branch name.
+
+For example, if a developer with GH account `cooljohn` opens a PR (for host-operator repo) from a branch `fix-reconcile`, then the logic checks if there is a branch `fix-reconcile` also in the `cooljohn/toolchain-e2e` fork.
+If there is, then the logic:
+
+1. clones latest changes from https://github.com/codeready-toolchain/toolchain-e2e[codeready-toolchain/toolchain-e2e]
+2. fetches the `fix-reconcile` branch from `cooljohn/toolchain-e2e` fork
+3. merges `master` branch with the changes from `fix-reconcile` branch
+4. clones latest changes from https://github.com/codeready-toolchain/member-operator[member-operator] repo and builds & deploys the `member-operator` image out of it
+5. builds & deploys the `host-operator` image from the code that is in the PR
+6. runs e2e tests against both operators from the merged branch of the `toolchain-e2e` repo
+
+If the branch with the same name does not exist, then it only clones the latest changes from https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] and runs e2e tests from the `master`.
+
+If you still don't know what to do with e2e tests in some use-cases, go to <<What to do>> section where all use-cases are covered.
+
 ==== Prerequisites if running locally on minishift
 If you are running this tests locally on minishift, make sure that you have exposed minishift's docker-env, so that deployment can use locally built image. You can expose it by running following command.
 `eval $(minishift docker-env)`
@@ -51,11 +72,39 @@ If you are running this tests locally on minishift, make sure that you have expo
 NOTE: This is not required for openshift-ci environment
 
 ==== Running End-to-End Tests
-The `make test-e2e` will take care of creating a namespace/project with a random name (or see below for enforcing the namespace). It will also create all required CRDs, role and role binding for the service account, build the Docker image for the operator and push it to the OpenShift container registry. Finally, it will deploy the operator and run the tests using
-the operator-sdk.
 
+Although the e2e tests are in the separated repository, it's still possible to run them from this repo (host-operator) and also against the current code that is at HEAD.
+There are two Makefile targets that will execute the e2e tests:
 
- NOTE: you can override the default namepace names where the end-to-end tests are going to be executed - eg.: `make test-e2e HOST_NS=my-host MEMBER_NS=my-member` file.
+* `make test-e2e` - this target clones latest changes from https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] and runs e2e tests for both operators from the master. As deployment for `host-operator` it uses the current code that is at HEAD.
+* `make test-e2e-local` - this target doesn't clone anything, but it runs run e2e tests for both operators from the directory `../toolchain-e2e`. As deployment for `host-operator` it uses the current code that is at HEAD.
+
+The tests executed within https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo will take care of creating all needed namespaces with random names (or see below for enforcing some specific namespace names).
+It will also create all required CRDs, role and role bindings for the service accounts, build the Docker images for both operators and push them to the OpenShift container registry. Finally, it will deploy the operators and run the tests using the operator-sdk.
+
+ NOTE: you can override the default namespace names where the end-to-end tests are going to be executed - eg.: `make test-e2e HOST_NS=my-host MEMBER_NS=my-member` file.
+
+===== What to do
+
+If you are still confused by the e2e location, execution and branch pairing, see the following cases and needed steps:
+
+* *Working locally:*
+** *Need to test your code using the latest version of e2e tests from https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo:*
+*** execute `make test-e2e`
+** *Need to test your code using e2e tests located in `../toolchain-e2e` repo:*
+*** `make test-e2e-local`
+
+* *Creating a PR:*
+** *Your PR doesn't need any changes in https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo:*
+*** 1. check the name of a branch you are going to create a PR for
+*** 2. make sure that your fork of https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo doesn't contain branch with the same name
+*** 3. create a PR
+** *Your PR requires changes in https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo:*
+*** 1. check the name of a branch you are going to create a PR for
+*** 2. create a branch with the same name within your fork of https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] repo and put all necessary changes there
+*** 3. push all changes into both forks of the repositories https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] and https://github.com/codeready-toolchain/host-operator[host-operator]
+*** 4. create a PR for https://github.com/codeready-toolchain/host-operator[host-operator]
+*** 5. create a PR for https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e]
 
 === Verifying the OpenShift CI configuration
 
