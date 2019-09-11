@@ -2,10 +2,9 @@ module github.com/codeready-toolchain/host-operator
 
 require (
 	cloud.google.com/go v0.40.0 // indirect
-	github.com/Azure/go-autorest v13.0.0+incompatible // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20190813211537-c2a9a838ce38
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20190830131634-231d1bd08d5f
+	github.com/codeready-toolchain/api v0.0.0-20190906003527-443e8ceac134
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20190904115454-79e74322be0a
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/gobuffalo/envy v1.7.0 // indirect
@@ -33,10 +32,9 @@ require (
 	sigs.k8s.io/kubefed v0.1.0-rc2
 )
 
-// fix for unavailable git.apache.org https://status.apache.org/incidents/63030p4241xj
-replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
-
 replace (
+	git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
+	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.1.10
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.1.11-0.20190411181648-9d55346c2bde

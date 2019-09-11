@@ -1,8 +1,9 @@
 apiVersion: toolchain.dev.openshift.com/v1alpha1
 kind: UserSignup
 metadata:
-  name: johnsmith #username
+  name: johnsmith-at-redhat-com
 spec:
   userID: 1a03ecac-7c0b-44fc-b66d-12dd7fb21c40
+  username: johnsmith@redhat.com
   targetCluster: east-2a
   approved: true
