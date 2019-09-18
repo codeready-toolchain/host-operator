@@ -3,6 +3,7 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -129,7 +130,7 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 
 		// If the UserAccount is being deleted, delete the UserAccounts in members.
 	} else if coputil.HasFinalizer(mur, murFinalizerName) {
-		if err = r.manageCleanUp(reqLogger, mur); err != nil {
+		if err = r.manageCleanUp(mur); err != nil {
 			reqLogger.Error(err, "unable to clean up MasterUserRecord as part of deletion")
 			return reconcile.Result{}, err
 		}
@@ -139,8 +140,8 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 
 func (r *ReconcileMasterUserRecord) addFinalizer(mur *toolchainv1alpha1.MasterUserRecord, finalizer string) error {
 	// Add the finalizer if it is not present
-	if !coputil.HasFinalizer(mur, murFinalizerName) {
-		coputil.AddFinalizer(mur, murFinalizerName)
+	if !coputil.HasFinalizer(mur, finalizer) {
+		coputil.AddFinalizer(mur, finalizer)
 		if err := r.client.Update(context.TODO(), mur); err != nil {
 			return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(unableToAddFinalizerReason), err,
 				"failed while updating with added finalizer")
@@ -245,9 +246,9 @@ func (r *ReconcileMasterUserRecord) useExistingConditionOfType(condType toolchai
 	}
 }
 
-func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) error {
+func (r *ReconcileMasterUserRecord) manageCleanUp(mur *toolchainv1alpha1.MasterUserRecord) error {
 	for _, ua := range mur.Spec.UserAccounts {
-		if err := r.deleteUserAccount(log, ua.TargetCluster, mur.Name); err != nil {
+		if err := r.deleteUserAccount(ua.TargetCluster, mur.Name); err != nil {
 			return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(unableToDeleteUserAccountsReason), err,
 				"failed to delete UserAccount in the member cluster '%s'", ua.TargetCluster)
 		}
@@ -261,7 +262,7 @@ func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolc
 	return nil
 }
 
-func (r *ReconcileMasterUserRecord) deleteUserAccount(logger logr.Logger, targetCluster, name string) error {
+func (r *ReconcileMasterUserRecord) deleteUserAccount(targetCluster, name string) error {
 	// get & check member cluster
 	memberCluster, err := r.getMemberCluster(targetCluster)
 	if err != nil {

@@ -3,6 +3,8 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -20,7 +22,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/kubefed/pkg/apis/core/common"
 	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
-	"testing"
 )
 
 type getMemberCluster func(clusters ...clientForCluster) func(name string) (*cluster.FedCluster, bool)
