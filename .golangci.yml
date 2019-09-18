@@ -1,3 +1,14 @@
 linters:
   enable:
     - gofmt
+    - unparam
+
+# all available settings of specific linters
+linters-settings:
+  unparam:
+    # Inspect exported functions, default is false. Set to true if no external program/library imports your code.
+    # XXX: if you enable this setting, unparam will report a lot of false-positives in text editors:
+    # if it's called for subdir of a project it can't find external interfaces. All text editor integrations
+    # with golangci-lint call it on a directory with the changed file.
+    check-exported: true
+ 

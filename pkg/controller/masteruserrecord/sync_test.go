@@ -3,6 +3,8 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -11,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"testing"
 )
 
 func TestSynchronizeSpec(t *testing.T) {
@@ -52,7 +53,7 @@ func TestSynchronizeSpec(t *testing.T) {
 func TestSynchronizeStatus(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
-	s := apiScheme(t)
+	apiScheme(t)
 
 	mur := murtest.NewMasterUserRecord("john",
 		murtest.StatusCondition(toBeNotReady(provisioningReason, "")))
@@ -61,13 +62,13 @@ func TestSynchronizeStatus(t *testing.T) {
 		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
 
 	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, s, userAccount, mur, toBeNotReady(provisioningReason, ""))
+	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, toBeNotReady(provisioningReason, ""))
 }
 
 func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
-	s := apiScheme(t)
+	apiScheme(t)
 
 	mur := murtest.NewMasterUserRecord("john",
 		murtest.StatusCondition(toBeNotReady(updatingReason, "")))
@@ -84,13 +85,13 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	uatest.Modify(userAccount, uatest.StatusCondition(toBeNotReady("Updating", "")))
 
 	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, s, userAccount, mur, toBeNotReady(updatingReason, ""))
+	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, toBeNotReady(updatingReason, ""))
 }
 
 func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
-	s := apiScheme(t)
+	apiScheme(t)
 
 	mur := murtest.NewMasterUserRecord("john",
 		murtest.StatusCondition(toBeNotReady(provisioningReason, "")))
@@ -107,7 +108,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	uatest.Modify(userAccount, uatest.StatusCondition(toBeProvisioned()))
 
 	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, s, userAccount, mur, toBeProvisioned())
+	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, toBeProvisioned())
 }
 
 func TestSynchronizeUserAccountFailed(t *testing.T) {
@@ -207,8 +208,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 	})
 }
 
-func testSyncMurStatusWithUserAccountStatus(t *testing.T, s *runtime.Scheme,
-	userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon toolchainv1alpha1.Condition) {
+func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon toolchainv1alpha1.Condition) {
 
 	condition := userAccount.Status.Conditions[0]
 	memberClient := test.NewFakeClient(t, userAccount)
