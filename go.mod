@@ -5,6 +5,7 @@ require (
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20190906003527-443e8ceac134
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20190904115454-79e74322be0a
+	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/gobuffalo/envy v1.7.0 // indirect
@@ -53,3 +54,5 @@ replace (
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d
 	k8s.io/kubernetes => k8s.io/kubernetes v1.14.6
 )
+
+go 1.13
