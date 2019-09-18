@@ -6,7 +6,6 @@ LABEL author "Devtools <devtools@redhat.com>"
 ENV LANG=en_US.utf8 \
     GOPATH=/tmp/go \
     GOCACHE=/tmp/.cache \
-    PATH=$PATH:$GOPATH/bin \
     GIT_COMMITTER_NAME=devtools \
     GIT_COMMITTER_EMAIL=devtools@redhat.com \
     OPERATOR_SDK_VERSION=v0.10.0
@@ -52,6 +51,10 @@ RUN curl -L -s https://github.com/operator-framework/operator-sdk/releases/downl
 
 RUN mkdir -p ${GOPATH}/src/${GO_PACKAGE_PATH}/
 
+RUN go get -u github.com/go-bindata/go-bindata/...
+
+ENV PATH=$PATH:$GOPATH/bin
+    
 WORKDIR ${GOPATH}/src/${GO_PACKAGE_PATH}
 
 ENTRYPOINT [ "/bin/bash" ]
