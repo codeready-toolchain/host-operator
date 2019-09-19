@@ -51,10 +51,6 @@ RUN curl -L -s https://github.com/operator-framework/operator-sdk/releases/downl
 
 RUN mkdir -p ${GOPATH}/src/${GO_PACKAGE_PATH}/
 
-RUN go get -u github.com/go-bindata/go-bindata/...
-
-ENV PATH=$PATH:$GOPATH/bin
-    
 WORKDIR ${GOPATH}/src/${GO_PACKAGE_PATH}
 
 ENTRYPOINT [ "/bin/bash" ]
