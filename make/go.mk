@@ -24,5 +24,5 @@ vendor:
 .PHONY: generate
 generate:
 	@echo "generating templates bindata..."
-	@go get github.com/go-bindata/go-bindata/...
-	@go-bindata -pkg templates -o ./templates/templates_bindata.go -nocompress -prefix templates templates
+	@go install github.com/go-bindata/go-bindata/...
+	@$(GOPATH)/bin/go-bindata -pkg templates -o ./templates/templates_bindata.go -nocompress -prefix templates templates
