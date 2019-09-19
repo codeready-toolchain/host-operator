@@ -1,0 +1,24 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  labels:
+    provider: codeready-toolchain
+    version: ${REVISION}
+  name: basic-dev
+objects:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    annotations:
+      openshift.io/description: ${USERNAME}-dev
+      openshift.io/display-name: ${USERNAME}-dev
+      openshift.io/requester: ${USERNAME}
+    labels:
+      provider: codeready-toolchain
+      version: ${REVISION}
+    name: ${USERNAME}
+parameters:
+- name: USERNAME
+  required: true
+- name: REVISION
+  required: true
