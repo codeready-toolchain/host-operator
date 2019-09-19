@@ -3,8 +3,7 @@ kind: Template
 metadata:
   labels:
     provider: codeready-toolchain
-    version: ${REVISION}
-  name: basic-dev
+      name: basic-dev
 objects:
 - apiVersion: v1
   kind: Namespace
@@ -15,10 +14,7 @@ objects:
       openshift.io/requester: ${USERNAME}
     labels:
       provider: codeready-toolchain
-      version: ${REVISION}
-    name: ${USERNAME}
+          name: ${USERNAME}
 parameters:
 - name: USERNAME
-  required: true
-- name: REVISION
   required: true
