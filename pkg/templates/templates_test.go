@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 func TestTemplates(t *testing.T) {
@@ -26,4 +27,22 @@ func TestTemplates(t *testing.T) {
 			})
 		}
 	}
+
+	t.Run("git commits", func(t *testing.T) {
+		// verifies that the metadata file exists and
+		// that there is an entry for each namespace above
+		// we could check the value, but it's subject to change
+		asset, err := templates.Asset("metadata.yaml")
+		require.NoError(t, err)
+		metadata := make(map[string]interface{})
+		err = yaml.Unmarshal(asset, &metadata)
+		require.NoError(t, err)
+
+		// when/then
+		for _, tier := range tiers {
+			for _, nsType := range nsTypes {
+				assert.Contains(t, metadata, fmt.Sprintf("%s-%s", tier, nsType))
+			}
+		}
+	})
 }

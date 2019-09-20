@@ -20,6 +20,7 @@ require (
 	github.com/spf13/pflag v1.0.3
 	github.com/stretchr/testify v1.3.0
 	gopkg.in/h2non/gock.v1 v1.0.14
+	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190620073856-dcce3486da33
 	k8s.io/apimachinery v0.0.0-20190620073744-d16981aedf33
 	k8s.io/apiserver v0.0.0-20190111033246-d50e9ac5404f // indirect

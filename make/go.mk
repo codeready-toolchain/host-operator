@@ -21,8 +21,21 @@ $(OUT_DIR)/operator:
 vendor:
 	$(Q)go mod vendor
 
+NSTEMPLATES_DIR=deploy/nstemplatetiers
+YAML_TEMPLATES := $(wildcard $(NSTEMPLATES_DIR)/*-*.yaml)
+
 .PHONY: generate
-generate:
+generate: generate-metadata
 	@echo "generating templates bindata..."
 	@go install github.com/go-bindata/go-bindata/...
-	@$(GOPATH)/bin/go-bindata -pkg templates -o ./pkg/templates/template_contents.go -nocompress -prefix deploy/nstemplatetiers deploy/nstemplatetiers
+	@$(GOPATH)/bin/go-bindata -pkg templates -o ./pkg/templates/templates.go -nocompress -prefix $(NSTEMPLATES_DIR) $(NSTEMPLATES_DIR)
+
+.PHONY: generate-metadata
+generate-metadata:
+	@echo "generating namespace templates metadata in $(YAML_TEMPLATES)" 
+	@-rm $(NSTEMPLATES_DIR)/metadata.yaml
+	@$(foreach tmpl,$(YAML_TEMPLATES),$(call git_commit,$(tmpl),$(NSTEMPLATES_DIR)/metadata.yaml);)
+
+define git_commit
+	echo "$(patsubst $(NSTEMPLATES_DIR)/%.yaml,%,$(1)):" `git log -1 --format=%h $(1)` >> $(2)
+endef
