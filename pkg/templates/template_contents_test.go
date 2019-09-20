@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/codeready-toolchain/host-operator/templates"
+	"github.com/codeready-toolchain/host-operator/pkg/templates"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

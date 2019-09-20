@@ -25,4 +25,4 @@ vendor:
 generate:
 	@echo "generating templates bindata..."
 	@go install github.com/go-bindata/go-bindata/...
-	@$(GOPATH)/bin/go-bindata -pkg templates -o ./pkg/templates/template_contents.go -nocompress -prefix templates deploy/nstemplatetiers
+	@$(GOPATH)/bin/go-bindata -pkg templates -o ./pkg/templates/template_contents.go -nocompress -prefix deploy/nstemplatetiers deploy/nstemplatetiers
