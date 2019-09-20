@@ -14,7 +14,7 @@ objects:
       openshift.io/requester: ${USERNAME}
     labels:
       provider: codeready-toolchain
-          name: ${USERNAME}
+    name: ${USERNAME}-dev
 parameters:
 - name: USERNAME
   required: true
