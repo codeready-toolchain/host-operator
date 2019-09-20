@@ -18,4 +18,3 @@ objects:
 parameters:
 - name: USERNAME
   required: true
-

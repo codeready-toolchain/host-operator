@@ -10,6 +10,6 @@ lint-yaml: ${YAML_FILES}
 
 .PHONY: lint-go-code
 ## Checks the code with golangci-lint
-lint-go-code:
+lint-go-code: generate
 	$(Q)go get github.com/golangci/golangci-lint/cmd/golangci-lint
 	$(Q)${GOPATH}/bin/golangci-lint ${V_FLAG} run --deadline=10m

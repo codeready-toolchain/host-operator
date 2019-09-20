@@ -3,7 +3,7 @@ kind: Template
 metadata:
   labels:
     provider: codeready-toolchain
-      name: basic-code
+  name: basic-code
 objects:
 - apiVersion: v1
   kind: Namespace
