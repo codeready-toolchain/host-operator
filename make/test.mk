@@ -6,7 +6,7 @@
 
 .PHONY: test
 ## runs the tests without coverage and excluding E2E tests
-test:
+test: generate
 	@echo "running the tests without coverage and excluding E2E tests..."
 	$(Q)go test ${V_FLAG} -race $(shell go list ./... | grep -v /test/e2e) -failfast
 
@@ -22,7 +22,7 @@ COV_DIR = $(OUT_DIR)/coverage
 
 .PHONY: test-with-coverage
 ## runs the tests with coverage
-test-with-coverage:
+test-with-coverage: generate
 	@echo "running the tests with coverage..."
 	@-mkdir -p $(COV_DIR)
 	@-rm $(COV_DIR)/coverage.txt
@@ -75,11 +75,11 @@ PULL_SHA := $(shell jq -r '.refs[0].pulls[0].sha' <<< $${CLONEREFS_OPTIONS} | tr
 E2E_REPO_PATH := ""
 
 .PHONY: test-e2e-local
-test-e2e-local:
+test-e2e-local: generate
 	$(MAKE) test-e2e E2E_REPO_PATH=../toolchain-e2e
 
 .PHONY: test-e2e
-test-e2e: get-e2e-repo
+test-e2e: generate get-e2e-repo 
 	# run the e2e test via toolchain-e2e repo
 	$(MAKE) -C ${E2E_REPO_PATH} test-e2e HOST_REPO_PATH=${PWD}
 

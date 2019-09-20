@@ -6,7 +6,6 @@ LABEL author "Devtools <devtools@redhat.com>"
 ENV LANG=en_US.utf8 \
     GOPATH=/tmp/go \
     GOCACHE=/tmp/.cache \
-    PATH=$PATH:$GOPATH/bin \
     GIT_COMMITTER_NAME=devtools \
     GIT_COMMITTER_EMAIL=devtools@redhat.com \
     OPERATOR_SDK_VERSION=v0.10.0
