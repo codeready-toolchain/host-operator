@@ -19,7 +19,7 @@ func TestTemplates(t *testing.T) {
 		for _, nsType := range nsTypes {
 			t.Run(fmt.Sprintf("%s-%s", tier, nsType), func(t *testing.T) {
 				// when
-				asset, err := templates.Asset(fmt.Sprintf("%s-%s.yml", tier, nsType))
+				asset, err := templates.Asset(fmt.Sprintf("%s-%s.yaml", tier, nsType))
 				// then
 				require.NoError(t, err)
 				assert.NotEmpty(t, asset)
