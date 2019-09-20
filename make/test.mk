@@ -81,7 +81,11 @@ test-e2e-local: generate
 .PHONY: test-e2e
 test-e2e: generate get-e2e-repo 
 	# run the e2e test via toolchain-e2e repo
+ifeq ($(OPENSHIFT_BUILD_NAMESPACE),)
 	$(MAKE) -C ${E2E_REPO_PATH} test-e2e HOST_REPO_PATH=${PWD}
+else
+	$(MAKE) -C ${E2E_REPO_PATH} test-e2e HOST_REPO_PATH=${PWD} HOST_IMAGE_NAME=registry.svc.ci.openshift.org/${OPENSHIFT_BUILD_NAMESPACE}/stable:host-operator
+endif
 
 .PHONY: get-e2e-repo
 get-e2e-repo:
