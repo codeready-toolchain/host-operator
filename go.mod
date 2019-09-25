@@ -9,7 +9,6 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/gobuffalo/envy v1.7.0 // indirect
-	github.com/golangci/golangci-lint v1.18.0 // indirect
 	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/mailru/easyjson v0.0.0-20190620125010-da37f6c1e481 // indirect
@@ -19,11 +18,9 @@ require (
 	github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/pflag v1.0.3
-	github.com/src-d/go-git v4.7.0+incompatible
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7 // indirect
 	golang.org/x/net v0.0.0-20190918130420-a8b05e9114ab // indirect
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20190919044723-0c1ff786ef13 // indirect
 	golang.org/x/tools v0.0.0-20190920130846-1081e67f6b77 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect

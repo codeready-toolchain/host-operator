@@ -28,7 +28,7 @@ YAML_TEMPLATES := $(wildcard $(NSTEMPLATES_DIR)/*-*.yaml)
 generate: generate-metadata
 	@echo "generating templates bindata..."
 	@go install github.com/go-bindata/go-bindata/...
-	@$(GOPATH)/bin/go-bindata -pkg templates -o ./pkg/templates/templates.go -nocompress -prefix $(NSTEMPLATES_DIR) $(NSTEMPLATES_DIR)
+	@$(GOPATH)/bin/go-bindata -pkg templates -o ./pkg/templates/template_contents.go -nocompress -prefix $(NSTEMPLATES_DIR) $(NSTEMPLATES_DIR)
 
 .PHONY: generate-metadata
 generate-metadata:
