@@ -1,0 +1,149 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"MasterUserRecord","metadata":{"name":"johnsmith"},"spec":{"userAccounts":[{"spec":{"nsLimit":"admin","nsTemplateSet":{"namespaces":[{"revision":"abcdef","type":"ide"},{"revision":"1d2f3q","type":"cicd"},{"revision":"a34r57","type":"stage"},{"revision":"ra24qw","type":"default"}],"tierName":"basic"},"userID":"1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"},"syncIndex":"135540409","targetCluster":"east-2a"}],"userID":"1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"}},{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"NSTemplateTier","metadata":{"name":"basic"},"spec":{"namespaces":[{"revision":"abcdef","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"ide-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-ide\"}}}\n","type":"ide"},{"revision":"1d2f3q","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"cicd-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-cicd\"}}}\n","type":"cicd"},{"revision":"a34r57","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"stage-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-stage\"}}}\n","type":"stage"},{"revision":"ra24qw","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"default-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME\"}}}\n","type":"default"}]}},{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"UserSignup","metadata":{"name":"johnsmith-at-redhat-com"},"spec":{"approved":true,"targetCluster":"east-2a","userID":"1a03ecac-7c0b-44fc-b66d-12dd7fb21c40","username":"johnsmith@redhat.com"}}]'
+    capabilities: Basic Install
+  name: host-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - name: masteruserrecords.toolchain.dev.openshift.com
+      kind: MasterUserRecord
+      description: MasterUserRecord keeps all information about user, user accounts and namespaces provisioned in CodeReady Toolchain SaaS system
+      displayName: MasterUserRecord
+      version: v1alpha1
+    - name: nstemplatetiers.toolchain.dev.openshift.com
+      kind: NSTemplateTier
+      description: NSTemplateTier configures user environment via templates used for namespaces the user has access to
+      displayName: NSTemplateTier
+      version: v1alpha1
+    - name: usersignups.toolchain.dev.openshift.com
+      kind: UserSignup
+      description: UserSignup registres a user in the CodeReady Toolchain SaaS system
+      displayName: UserSignup
+      version: v1alpha1
+    resources:
+    - kind: KubeFedCluster
+      name: kubefedclusters.core.kubefed.io
+      version: v1beta1
+      description: KubeFedCluster configures kubefed to be aware of a Kubernetes
+        cluster and encapsulates the details necessary to communicate with the cluster..
+      displayName: KubeFedCluster
+  description: Placeholder description
+  displayName: Host Operator
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - get
+          - create
+        - apiGroups:
+          - ""
+          resources:
+          - nodes
+          verbs:
+          - list
+        - apiGroups:
+          - core.kubefed.k8s.io
+          resources:
+          - kubefedclusters
+          verbs:
+          - '*'
+        serviceAccountName: host-operator
+      deployments:
+      - name: host-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: host-operator
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                name: host-operator
+            spec:
+              containers:
+              - command:
+                - host-operator
+                env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: OPERATOR_NAME
+                  value: host-operator
+                image: REPLACE_IMAGE
+                imagePullPolicy: IfNotPresent
+                name: host-operator
+                resources: {}
+              serviceAccountName: host-operator
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - services
+          - endpoints
+          - persistentvolumeclaims
+          - events
+          - configmaps
+          - secrets
+          verbs:
+          - '*'
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - daemonsets
+          - replicasets
+          - statefulsets
+          verbs:
+          - '*'
+        - apiGroups:
+          - apps
+          resourceNames:
+          - host-operator
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - core.kubefed.k8s.io
+          resources:
+          - kubefedclusters/status
+          verbs:
+          - update
+        - apiGroups:
+          - toolchain.dev.openshift.com
+          resources:
+          - '*'
+          verbs:
+          - '*'
+        serviceAccountName: host-operator
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  maturity: alpha
+  provider: {}
+  version: 0.0.0

@@ -1,0 +1,22 @@
+  customresourcedefinitions:
+    owned:
+    - description: KubeFedCluster configures kubefed to be aware of a Kubernetes cluster and encapsulates the details necessary to communicate with the cluster.
+      displayName: KubeFedCluster
+      kind: KubeFedCluster
+      name: kubefedclusters.core.kubefed.io
+      version: v1beta1
+    - description: MasterUserRecord keeps information about user and his namespaces and use accounts provisioned in CodeReady Toolchain SaaS system
+      displayName: MasterUserRecord
+      kind: MasterUserRecord
+      name: masteruserrecords.toolchain.dev.openshift.com
+      version: v1alpha1
+    - description: NSTemplateTier configures user's environment consisting from set of namespaces via templates used for the namespace provisioning
+      displayName: NSTemplateTier
+      kind: NSTemplateTier
+      name: nstemplatetiers.toolchain.dev.openshift.com
+      version: v1alpha1
+    - description: UserSignup registers a user in CodeReady Toolchain SaaS system
+      displayName: UserSignup
+      kind: UserSignup
+      name: usersignups.toolchain.dev.openshift.com
+      version: v1alpha1

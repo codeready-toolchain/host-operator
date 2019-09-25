@@ -1,0 +1,22 @@
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: host-operator
+  namespace: REPLACE_NAMESPACE
+spec:
+  targetNamespaces:
+  - REPLACE_NAMESPACE
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: host-operator
+  namespace: REPLACE_NAMESPACE
+spec:
+  channel: alpha
+  installPlanApproval: Automatic
+  name: host-operator
+  source: codeready-toolchain-saas-host
+  sourceNamespace: openshift-marketplace
+  startingCSV: host-operator.v0.0.1

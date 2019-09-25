@@ -1,0 +1,207 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: masteruserrecords.toolchain.dev.openshift.com
+spec:
+  group: toolchain.dev.openshift.com
+  names:
+    kind: MasterUserRecord
+    plural: masteruserrecords
+    shortNames:
+    - mur
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            deprovisioned:
+              description: If set to true then the corresponding UserAccount should
+                be deleted "false" is assumed by default
+              type: boolean
+            disabled:
+              description: If set to true then the corresponding user should not be
+                able to login (but the underlying UserAccounts still exists) "false"
+                is assumed by default
+              type: boolean
+            userAccounts:
+              description: The list of user accounts in the member clusters which
+                belong to this MasterUserRecord
+              items:
+                properties:
+                  spec:
+                    description: The spec of the corresponding UserAccount
+                    properties:
+                      disabled:
+                        description: If set to true then the corresponding user should
+                          not be able to login "false" is assumed by default
+                        type: boolean
+                      nsLimit:
+                        description: The namespace limit name
+                        type: string
+                      nsTemplateSet:
+                        description: Namespace template set
+                        properties:
+                          namespaces:
+                            description: The namespace templates
+                            items:
+                              properties:
+                                revision:
+                                  description: The revision of the corresponding template
+                                  type: string
+                                template:
+                                  description: Optional field. Used to specify a custom
+                                    template
+                                  type: string
+                                type:
+                                  description: 'The type of the namespace. For example:
+                                    ide|cicd|stage|default'
+                                  type: string
+                              required:
+                              - type
+                              - revision
+                              type: object
+                            type: array
+                          tierName:
+                            description: The name of the tier represented by this
+                              template set
+                            type: string
+                        required:
+                        - tierName
+                        - namespaces
+                        type: object
+                      userID:
+                        description: UserID is the user ID from RHD Identity Provider
+                          token (“sub” claim) Is to be used to create Identity and
+                          UserIdentityMapping resources
+                        type: string
+                    required:
+                    - userID
+                    - nsLimit
+                    - nsTemplateSet
+                    type: object
+                  syncIndex:
+                    description: SyncIndex is to be updated by UserAccount Controller
+                      when the member needs to trigger MasterUserRecord <-> UserAccount
+                      synchronization
+                    type: string
+                  targetCluster:
+                    description: The cluster in which the user exists
+                    type: string
+                required:
+                - targetCluster
+                - syncIndex
+                - spec
+                type: object
+              type: array
+            userID:
+              description: UserID is the user ID from RHD Identity Provider token
+                (“sub” claim)
+              type: string
+          required:
+          - userID
+          type: object
+        status:
+          properties:
+            conditions:
+              description: 'Conditions is an array of current Master User Record conditions
+                Supported condition types: Provisioning, UserAccountNotReady and Ready
+                +patchMergeKey=type +patchStrategy=merge'
+              items:
+                properties:
+                  lastTransitionTime:
+                    description: Last time the condition transit from one status to
+                      another.
+                    format: date-time
+                    type: string
+                  message:
+                    description: Human readable message indicating details about last
+                      transition.
+                    type: string
+                  reason:
+                    description: (brief) reason for the condition's last transition.
+                    type: string
+                  status:
+                    description: Status of the condition, one of True, False, Unknown.
+                    type: string
+                  type:
+                    description: Type of condition
+                    type: string
+                required:
+                - type
+                - status
+                type: object
+              type: array
+            userAccounts:
+              description: The status of user accounts in the member clusters which
+                belong to this MasterUserRecord
+              items:
+                properties:
+                  conditions:
+                    description: 'Conditions is an array of current User Account conditions
+                      Supported condition types: ConditionReady +patchMergeKey=type
+                      +patchStrategy=merge'
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          description: Last time the condition transit from one status
+                            to another.
+                          format: date-time
+                          type: string
+                        message:
+                          description: Human readable message indicating details about
+                            last transition.
+                          type: string
+                        reason:
+                          description: (brief) reason for the condition's last transition.
+                          type: string
+                        status:
+                          description: Status of the condition, one of True, False,
+                            Unknown.
+                          type: string
+                        type:
+                          description: Type of condition
+                          type: string
+                      required:
+                      - type
+                      - status
+                      type: object
+                    type: array
+                  syncIndex:
+                    description: SyncIndex is used for checking if there is needed
+                      some MasterUserRecord <-> UserAccount synchronization for this
+                      specific UserAccount in the specific member cluster
+                    type: string
+                  targetCluster:
+                    description: The cluster in which the user exists
+                    type: string
+                required:
+                - targetCluster
+                - syncIndex
+                type: object
+              type: array
+          type: object
+  version: v1alpha1
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

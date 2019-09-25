@@ -4,19 +4,39 @@ metadata:
   creationTimestamp: null
   labels:
     controller-tools.k8s.io: "1.0"
-  name: kubefedclusters.core.kubefed.k8s.io
+  name: usersignups.toolchain.dev.openshift.com
 spec:
   additionalPrinterColumns:
-  - JSONPath: .status.conditions[?(@.type=='Ready')].status
-    name: ready
+  - JSONPath: .spec.userID
+    name: User ID
+    priority: 1
     type: string
-  - JSONPath: .metadata.creationTimestamp
-    name: age
-    type: date
-  group: core.kubefed.k8s.io
+  - JSONPath: .spec.username
+    name: Username
+    priority: 1
+    type: string
+  - JSONPath: .spec.targetCluster
+    name: TargetCluster
+    priority: 1
+    type: string
+  - JSONPath: .status.conditions[?(@.type=="Complete")].status
+    name: Complete
+    type: string
+  - JSONPath: .status.conditions[?(@.type=="Complete")].reason
+    name: Reason
+    type: string
+  - JSONPath: .status.conditions[?(@.type=="Approved")].status
+    name: Approved
+    priority: 1
+    type: string
+  - JSONPath: .status.conditions[?(@.type=="Approved")].reason
+    name: ApprovedBy
+    priority: 1
+    type: string
+  group: toolchain.dev.openshift.com
   names:
-    kind: KubeFedCluster
-    plural: kubefedclusters
+    kind: UserSignup
+    plural: usersignups
   scope: Namespaced
   subresources:
     status: {}
@@ -37,39 +57,38 @@ spec:
           type: object
         spec:
           properties:
-            apiEndpoint:
-              description: The API endpoint of the member cluster. This can be a hostname,
-                hostname:port, IP or IP:port.
+            approved:
+              description: If Approved set to 'true' then the user has been manually
+                approved If not set then the user is subject of auto-approval (if
+                enabled)
+              type: boolean
+            targetCluster:
+              description: The cluster in which the user is provisioned in If not
+                set then the target cluster will be picked automatically
               type: string
-            caBundle:
-              description: CABundle contains the certificate authority information.
-              format: byte
+            userID:
+              description: UserID is the user ID from RHD Identity Provider token
+                (“sub” claim)
               type: string
-            secretRef:
-              description: Name of the secret containing the token required to access
-                the member cluster. The secret needs to exist in the same namespace
-                as the control plane and should have a "token" key.
-              properties:
-                name:
-                  description: Name of a secret within the enclosing namespace
-                  type: string
-              required:
-              - name
-              type: object
+            username:
+              description: The username.  This may differ from the UserSignup's metadata.name,
+                which is restricted by the limited character set available for naming
+                (see RFC1123).  If the username contains characters which are disqualified
+                from the resource name, the username is transformed into an acceptable
+                resource name instead. For example, johnsmith@redhat.com -> johnsmith-at-redhat-com
+              type: string
           required:
-          - apiEndpoint
-          - secretRef
+          - userID
+          - username
           type: object
         status:
           properties:
             conditions:
-              description: Conditions is an array of current cluster conditions.
+              description: 'Conditions is an array of current UserSignup conditions
+                Supported condition types: PendingApproval, Provisioning, Complete
+                +patchMergeKey=type +patchStrategy=merge'
               items:
                 properties:
-                  lastProbeTime:
-                    description: Last time the condition was checked.
-                    format: date-time
-                    type: string
                   lastTransitionTime:
                     description: Last time the condition transit from one status to
                       another.
@@ -86,28 +105,15 @@ spec:
                     description: Status of the condition, one of True, False, Unknown.
                     type: string
                   type:
-                    description: Type of cluster condition, Ready or Offline.
+                    description: Type of condition
                     type: string
                 required:
                 - type
                 - status
-                - lastProbeTime
                 type: object
               type: array
-            region:
-              description: Region is the name of the region in which all of the nodes
-                in the cluster exist.  e.g. 'us-east1'.
-              type: string
-            zones:
-              description: Zones are the names of availability zones in which the
-                nodes of the cluster exist, e.g. 'us-east1-a'.
-              items:
-                type: string
-              type: array
-          required:
-          - conditions
           type: object
-  version: v1beta1
+  version: v1alpha1
 status:
   acceptedNames:
     kind: ""
