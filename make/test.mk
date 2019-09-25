@@ -95,7 +95,7 @@ ifeq ($(E2E_REPO_PATH),"")
 	# delete to have clear environment
 	rm -rf ${E2E_REPO_PATH}
 	# clone
-	git clone https://github.com/codeready-toolchain/toolchain-e2e.git --depth 1 ${E2E_REPO_PATH}
+	git clone https://github.com/codeready-toolchain/toolchain-e2e.git ${E2E_REPO_PATH}
     ifneq ($(CLONEREFS_OPTIONS),)
 		@echo "using author link ${AUTHOR_LINK}"
 		@echo "using pull sha ${PULL_SHA}"
