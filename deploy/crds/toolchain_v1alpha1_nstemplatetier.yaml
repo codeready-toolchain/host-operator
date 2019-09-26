@@ -38,7 +38,8 @@ spec:
                     description: The revision of the corresponding template
                     type: string
                   template:
-                    description: Used to specify a custom template
+                    description: Template contains an OpenShift Template to be used
+                      for namespace provisioning
                     properties:
                       apiVersion:
                         description: 'APIVersion defines the versioned schema of this
