@@ -13,12 +13,12 @@ import (
 )
 
 var nstemplatetierTmpl *texttemplate.Template
+var initErr error
 
 var log = logf.Log.WithName("templates")
 
 func init() {
-	var err error
-	nstemplatetierTmpl, err = texttemplate.New("NSTemplateTier").
+	nstemplatetierTmpl, initErr = texttemplate.New("NSTemplateTier").
 		Funcs(texttemplate.FuncMap{
 			"indent": indent,
 		}).
@@ -31,8 +31,8 @@ spec:
     revision: {{ .Revision }}
     template: >
 {{ .Template }}{{ end }}`)
-	if err != nil {
-		log.Error(err, "failed to initialize NSTemplateTier template")
+	if initErr != nil {
+		log.Error(initErr, "failed to initialize NSTemplateTier template")
 	}
 
 }
@@ -64,7 +64,7 @@ spec:
 // ------
 func GenerateNSTemplateTierManifest(tier string) ([]byte, error) {
 	if nstemplatetierTmpl == nil {
-		return nil, errors.Errorf("Cannot generate the '%s' NSTemplateTier manifest", tier)
+		return nil, errors.Wrapf(initErr, "Cannot generate the '%s' NSTemplateTier manifest", tier)
 	}
 	revisions, err := getRevisions(tier)
 	if err != nil {
@@ -104,7 +104,7 @@ func GenerateNSTemplateTierManifest(tier string) ([]byte, error) {
 	return result.Bytes(), err
 }
 
-// GetRevisions return a map of revisions indexed by their associated template kind
+// GetRevisions returns a map of revisions indexed by their associated template kind
 // (eg: {"code":"123456", "dev":"abcdef", "stage":"cafe01"})
 func getRevisions(tier string) (map[string]string, error) {
 	metadata, err := Asset("metadata.yaml")
@@ -114,7 +114,7 @@ func getRevisions(tier string) (map[string]string, error) {
 	return parseRevisions(metadata, tier)
 }
 
-// GetRevisions return a map of revisions indexed by their associated template kind
+// parseRevisions returns a map of revisions indexed by their associated template kind
 // (eg: {"code":"123456", "dev":"abcdef", "stage":"cafe01"})
 func parseRevisions(metadata []byte, tier string) (map[string]string, error) {
 	revisions := make(map[string]interface{})
