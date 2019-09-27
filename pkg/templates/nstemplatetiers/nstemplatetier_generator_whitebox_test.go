@@ -30,6 +30,18 @@ basic-stage: 22222c`)
 	assert.Equal(t, "22222c", revisions["basic"]["stage"])
 }
 
+func TestNSTemplateTierGenerator(t *testing.T) {
+	// when initializing the generator with the production Asset
+	g, err := NewNSTemplateTierGenerator(Asset)
+	// then
+	require.NoError(t, err)
+	// verify that there are tiers with revisions (whatever their values)
+	require.NotEmpty(t, g.revisions)
+	for tier := range g.revisions {
+		assert.NotEmpty(t, g.revisions[tier])
+	}
+}
+
 func TestIndent(t *testing.T) {
 
 	// given
