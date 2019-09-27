@@ -23,21 +23,79 @@ func init() {
 			"indent": indent,
 		}).
 		Parse(`kind: NSTemplateTier
+apiVersion: toolchain.dev.openshift.com/v1alpha1
 metadata:
   name: {{ .Name }}
 spec:
   namespaces:{{ range $index, $ns := .Namespaces }}
   - type: {{ .Type }}
     revision: {{ .Revision }}
-    template: >
+    template:
 {{ .Template }}{{ end }}`)
 	if initErr != nil {
 		log.Error(initErr, "failed to initialize NSTemplateTier template")
 	}
-
 }
 
-// GenerateNSTemplateTierManifest generates a full NSTemplateTier manifest
+// NSTemplateTierGenerator the NSTemplateTier manifest generator
+type NSTemplateTierGenerator struct {
+	asset     func(name string) ([]byte, error) // the func which gives access to the
+	revisions map[string]map[string]string
+}
+
+// NewNSTemplateTierGenerator return a new NSTemplateTierGenerator
+func NewNSTemplateTierGenerator(asset func(name string) ([]byte, error)) (*NSTemplateTierGenerator, error) {
+	metadata, err := Asset("metadata.yaml")
+	if err != nil {
+		return nil, errors.Wrapf(err, "unable to initialize the NSTemplateTierGenerator")
+	}
+	revisions, err := parseAllRevisions(metadata)
+	if err != nil {
+		return nil, errors.Wrapf(err, "unable to initialize the NSTemplateTierGenerator")
+	}
+	return &NSTemplateTierGenerator{
+		asset:     asset,
+		revisions: revisions,
+	}, nil
+}
+
+// parseRevisions returns a "supermap" in which:
+// - each key is a tier kind (eg: "basic", "advanced", etc.)
+// - each value is a map of revisions indexed by their associated template kind
+//   (eg: {"code":"123456", "dev":"abcdef", "stage":"cafe01"})
+func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
+	data := make(map[string]interface{})
+	err := yaml.Unmarshal([]byte(metadata), &data)
+	if err != nil {
+		return nil, err
+	}
+	// reads all entries in the YAML, splitting the keys
+	// as we expect the following format: '<tier_kind>-<namespace_kind>' (eg: 'advanced-code')
+	revisions := make(map[string]map[string]string)
+	for filename, revision := range data {
+		data := strings.Split(filename, "-")
+		if len(data) != 2 {
+			log.Info("invalid namespace template filename. Expected format: '<tier_kind>-<namespace_kind>'", "filename", filename)
+			continue
+		}
+		tierKind := data[0]
+		nsKind := data[1]
+		// create a new entry if needed
+		if _, ok := revisions[tierKind]; !ok {
+			revisions[tierKind] = make(map[string]string, 3) // expect 3 entries: 'code', 'dev' and 'stage'
+		}
+		revision, ok := revision.(string)
+		if !ok {
+			log.Info("invalid namespace template filename revision. Expected a string", "filename", filename, "revision", revision)
+			continue
+		}
+		revisions[tierKind][nsKind] = revision
+	}
+	log.Info("templates revisions loaded", "revisions", revisions)
+	return revisions, nil
+}
+
+// GenerateManifest generates a full NSTemplateTier manifest
 // by embedding the `<tier>-code.yml`, `<tier>-dev.yml` and `<tier>-stage.yml`
 // file along with each one's git (short) commit as the revision associated with
 // the template.
@@ -62,24 +120,23 @@ spec:
 //       template: >
 //         <yaml-ns-template>
 // ------
-func GenerateNSTemplateTierManifest(tier string) ([]byte, error) {
+func (g NSTemplateTierGenerator) GenerateManifest(tier string) ([]byte, error) {
 	if nstemplatetierTmpl == nil {
 		return nil, errors.Wrapf(initErr, "Cannot generate the '%s' NSTemplateTier manifest", tier)
 	}
-	revisions, err := getRevisions(tier)
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
+	revisions, ok := g.revisions[tier]
+	if !ok {
+		return nil, errors.Errorf("tier '%s' does not exist", tier)
 	}
 	type namespace struct {
 		Type     string
 		Revision string
 		Template string
 	}
-	namespaces := make([]namespace, 3)
-
-	for i, kind := range []string{"code", "dev", "stage"} {
+	namespaces := make([]namespace, 0, len(revisions))
+	for nsType := range revisions {
 		// get the content of the `-<t>.yaml` file
-		tmpl, err := Asset(fmt.Sprintf("%s-%s.yaml", tier, kind))
+		tmpl, err := Asset(fmt.Sprintf("%s-%s.yaml", tier, nsType))
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
 		}
@@ -87,14 +144,14 @@ func GenerateNSTemplateTierManifest(tier string) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
 		}
-		namespaces[i] = namespace{
-			Type:     kind,
-			Revision: revisions[kind],
+		namespaces = append(namespaces, namespace{
+			Type:     nsType,
+			Revision: revisions[nsType],
 			Template: string(tmpl),
-		}
+		})
 	}
 	result := bytes.NewBuffer(nil)
-	err = nstemplatetierTmpl.Execute(result, struct {
+	err := nstemplatetierTmpl.Execute(result, struct {
 		Name       string
 		Namespaces []namespace
 	}{
@@ -102,35 +159,6 @@ func GenerateNSTemplateTierManifest(tier string) ([]byte, error) {
 		Namespaces: namespaces,
 	})
 	return result.Bytes(), err
-}
-
-// GetRevisions returns a map of revisions indexed by their associated template kind
-// (eg: {"code":"123456", "dev":"abcdef", "stage":"cafe01"})
-func getRevisions(tier string) (map[string]string, error) {
-	metadata, err := Asset("metadata.yaml")
-	if err != nil {
-		return nil, err
-	}
-	return parseRevisions(metadata, tier)
-}
-
-// parseRevisions returns a map of revisions indexed by their associated template kind
-// (eg: {"code":"123456", "dev":"abcdef", "stage":"cafe01"})
-func parseRevisions(metadata []byte, tier string) (map[string]string, error) {
-	revisions := make(map[string]interface{})
-	err := yaml.Unmarshal([]byte(metadata), &revisions)
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[string]string, len(revisions))
-	for tierkind, revision := range revisions {
-		if strings.HasPrefix(tierkind, tier+"-") {
-			if revision, ok := revision.(string); ok {
-				result[tierkind[len(tier)+1:]] = revision
-			}
-		}
-	}
-	return result, nil
 }
 
 func indent(template []byte, indent int) ([]byte, error) {

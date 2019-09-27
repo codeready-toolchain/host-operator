@@ -17,35 +17,17 @@ basic-code: 22222a
 basic-dev: 22222b
 basic-stage: 22222c`)
 
-	t.Run("advanced", func(t *testing.T) {
-		// when
-		revisions, err := parseRevisions(metadata, "advanced")
-		// then
-		require.NoError(t, err)
-		require.Len(t, revisions, 3)
-		assert.Equal(t, "11111a", revisions["code"])
-		assert.Equal(t, "11111b", revisions["dev"])
-		assert.Equal(t, "11111c", revisions["stage"])
-	})
-
-	t.Run("basic", func(t *testing.T) {
-		// when
-		revisions, err := parseRevisions(metadata, "basic")
-		// then
-		require.NoError(t, err)
-		require.Len(t, revisions, 3)
-		assert.Equal(t, "22222a", revisions["code"])
-		assert.Equal(t, "22222b", revisions["dev"])
-		assert.Equal(t, "22222c", revisions["stage"])
-	})
-
-	t.Run("unknown", func(t *testing.T) {
-		// when
-		revisions, err := parseRevisions(metadata, "unknown")
-		// then
-		require.NoError(t, err)
-		require.Empty(t, revisions)
-	})
+	// when
+	revisions, err := parseAllRevisions(metadata)
+	// then
+	require.NoError(t, err)
+	require.Len(t, revisions, 2)
+	assert.Equal(t, "11111a", revisions["advanced"]["code"])
+	assert.Equal(t, "11111b", revisions["advanced"]["dev"])
+	assert.Equal(t, "11111c", revisions["advanced"]["stage"])
+	assert.Equal(t, "22222a", revisions["basic"]["code"])
+	assert.Equal(t, "22222b", revisions["basic"]["dev"])
+	assert.Equal(t, "22222c", revisions["basic"]["stage"])
 }
 
 func TestIndent(t *testing.T) {
