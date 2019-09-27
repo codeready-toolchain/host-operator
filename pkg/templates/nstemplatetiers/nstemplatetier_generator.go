@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"sort"
 	"strings"
 	texttemplate "text/template"
 
@@ -134,7 +135,14 @@ func (g NSTemplateTierGenerator) GenerateManifest(tier string) ([]byte, error) {
 		Template string
 	}
 	namespaces := make([]namespace, 0, len(revisions))
+	// retrieve the namespace types and order them, so we can order them, and compare
+	// with the expected templates during the tests
+	nsTypes := make([]string, 0, len(revisions))
 	for nsType := range revisions {
+		nsTypes = append(nsTypes, nsType)
+	}
+	sort.Strings(nsTypes)
+	for _, nsType := range nsTypes {
 		// get the content of the `-<t>.yaml` file
 		tmpl, err := Asset(fmt.Sprintf("%s-%s.yaml", tier, nsType))
 		if err != nil {
