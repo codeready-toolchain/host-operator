@@ -1,4 +1,4 @@
-package templates
+package nstemplatetiers
 
 import (
 	"testing"

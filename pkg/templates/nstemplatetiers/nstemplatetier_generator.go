@@ -1,4 +1,4 @@
-package templates
+package nstemplatetiers
 
 import (
 	"bufio"
@@ -43,9 +43,9 @@ type NSTemplateTierGenerator struct {
 	revisions map[string]map[string]string
 }
 
-// NewNSTemplateTierGenerator return a new NSTemplateTierGenerator
+// NewNSTemplateTierGenerator returns a new NSTemplateTierGenerator
 func NewNSTemplateTierGenerator(asset func(name string) ([]byte, error)) (*NSTemplateTierGenerator, error) {
-	metadata, err := Asset("metadata.yaml")
+	metadata, err := asset("metadata.yaml")
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to initialize the NSTemplateTierGenerator")
 	}

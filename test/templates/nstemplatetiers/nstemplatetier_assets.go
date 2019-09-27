@@ -1,13 +1,14 @@
-// Code generated for package templates_test by go-bindata DO NOT EDIT. (@generated)
+// Code generated for package nstemplatetiers_test by go-bindata DO NOT EDIT. (@generated)
 // sources:
-// deploy/nstemplatetiers/advanced-code.yaml
-// deploy/nstemplatetiers/advanced-dev.yaml
-// deploy/nstemplatetiers/advanced-stage.yaml
-// deploy/nstemplatetiers/basic-code.yaml
-// deploy/nstemplatetiers/basic-dev.yaml
-// deploy/nstemplatetiers/basic-stage.yaml
-// deploy/nstemplatetiers/metadata.yaml
-package templates_test
+// test/templates/nstemplatetiers/README.adoc
+// test/templates/nstemplatetiers/advanced-code.yaml
+// test/templates/nstemplatetiers/advanced-dev.yaml
+// test/templates/nstemplatetiers/advanced-stage.yaml
+// test/templates/nstemplatetiers/basic-code.yaml
+// test/templates/nstemplatetiers/basic-dev.yaml
+// test/templates/nstemplatetiers/basic-stage.yaml
+// test/templates/nstemplatetiers/metadata.yaml
+package nstemplatetiers_test
 
 import (
 	"fmt"
@@ -59,6 +60,28 @@ func (fi bindataFileInfo) Sys() interface{} {
 	return nil
 }
 
+var _readmeAdoc = []byte(`= Testing the NSTemplateTier manifest geneator
+
+This package contains yaml files which are used by the link:../pkg/templates/nstemplatetier_generate_test.go[NSTemplateTier generator tests].
+These YAML files may defer from the actual templates that will be used in production, but having a separate source for testing will avoid us 
+having to maintain the tests as the YAML files evolve.
+`)
+
+func readmeAdocBytes() ([]byte, error) {
+	return _readmeAdoc, nil
+}
+
+func readmeAdoc() (*asset, error) {
+	bytes, err := readmeAdocBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "README.adoc", size: 387, mode: os.FileMode(420), modTime: time.Unix(1569565158, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _advancedCodeYaml = []byte(`apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
@@ -90,7 +113,7 @@ func advancedCodeYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "advanced-code.yaml", size: 462, mode: os.FileMode(420), modTime: time.Unix(1568993327, 0)}
+	info := bindataFileInfo{name: "advanced-code.yaml", size: 462, mode: os.FileMode(420), modTime: time.Unix(1569564294, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -126,7 +149,7 @@ func advancedDevYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "advanced-dev.yaml", size: 458, mode: os.FileMode(420), modTime: time.Unix(1568993327, 0)}
+	info := bindataFileInfo{name: "advanced-dev.yaml", size: 458, mode: os.FileMode(420), modTime: time.Unix(1569564294, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -162,7 +185,7 @@ func advancedStageYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "advanced-stage.yaml", size: 466, mode: os.FileMode(420), modTime: time.Unix(1568993327, 0)}
+	info := bindataFileInfo{name: "advanced-stage.yaml", size: 466, mode: os.FileMode(420), modTime: time.Unix(1569564294, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -198,7 +221,7 @@ func basicCodeYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "basic-code.yaml", size: 459, mode: os.FileMode(420), modTime: time.Unix(1568993327, 0)}
+	info := bindataFileInfo{name: "basic-code.yaml", size: 459, mode: os.FileMode(420), modTime: time.Unix(1569564294, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -234,7 +257,7 @@ func basicDevYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "basic-dev.yaml", size: 455, mode: os.FileMode(420), modTime: time.Unix(1568993327, 0)}
+	info := bindataFileInfo{name: "basic-dev.yaml", size: 455, mode: os.FileMode(420), modTime: time.Unix(1569564294, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -270,17 +293,17 @@ func basicStageYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "basic-stage.yaml", size: 463, mode: os.FileMode(420), modTime: time.Unix(1568993327, 0)}
+	info := bindataFileInfo{name: "basic-stage.yaml", size: 463, mode: os.FileMode(420), modTime: time.Unix(1569564294, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
-var _metadataYaml = []byte(`advanced-code: 139f5cf
-advanced-dev: 139f5cf
-advanced-stage: 139f5cf
-basic-code: 139f5cf
-basic-dev: 139f5cf
-basic-stage: 139f5cf
+var _metadataYaml = []byte(`advanced-code: 123456a
+advanced-dev: 123456b
+advanced-stage: 123456c
+basic-code: 123456d
+basic-dev: 123456e
+basic-stage: 123456f
 `)
 
 func metadataYamlBytes() ([]byte, error) {
@@ -293,7 +316,7 @@ func metadataYaml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "metadata.yaml", size: 129, mode: os.FileMode(420), modTime: time.Unix(1569568894, 0)}
+	info := bindataFileInfo{name: "metadata.yaml", size: 129, mode: os.FileMode(420), modTime: time.Unix(1569589083, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -350,6 +373,7 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() (*asset, error){
+	"README.adoc":         readmeAdoc,
 	"advanced-code.yaml":  advancedCodeYaml,
 	"advanced-dev.yaml":   advancedDevYaml,
 	"advanced-stage.yaml": advancedStageYaml,
@@ -400,6 +424,7 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
+	"README.adoc":         &bintree{readmeAdoc, map[string]*bintree{}},
 	"advanced-code.yaml":  &bintree{advancedCodeYaml, map[string]*bintree{}},
 	"advanced-dev.yaml":   &bintree{advancedDevYaml, map[string]*bintree{}},
 	"advanced-stage.yaml": &bintree{advancedStageYaml, map[string]*bintree{}},

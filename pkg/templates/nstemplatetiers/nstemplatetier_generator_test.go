@@ -1,11 +1,12 @@
-package templates_test
+package nstemplatetiers_test
 
 import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/templates"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
+	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,7 +17,7 @@ import (
 func TestNSTemplateTierGenerator(t *testing.T) {
 
 	// uses the `Asset` func generated in `pkg/templates/template_contents_test.go` here
-	g, err := templates.NewNSTemplateTierGenerator(Asset)
+	g, err := nstemplatetiers.NewNSTemplateTierGenerator(testnstemplatetiers.Asset)
 	require.NoError(t, err)
 
 	t.Run("basic", func(t *testing.T) {
@@ -33,7 +34,7 @@ metadata:
 spec:
   namespaces:
   - type: code
-    revision: 139f5cf
+    revision: 123456d
     template:
       apiVersion: template.openshift.io/v1
       kind: Template
@@ -56,7 +57,7 @@ spec:
       - name: USERNAME
         required: true
   - type: dev
-    revision: 139f5cf
+    revision: 123456e
     template:
       apiVersion: template.openshift.io/v1
       kind: Template
@@ -79,7 +80,7 @@ spec:
       - name: USERNAME
         required: true
   - type: stage
-    revision: 139f5cf
+    revision: 123456f
     template:
       apiVersion: template.openshift.io/v1
       kind: Template
