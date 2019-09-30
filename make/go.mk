@@ -31,13 +31,13 @@ generate: generate-metadata
 	@go install github.com/go-bindata/go-bindata/...
 	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nocompress -prefix $(NSTEMPLATES_DIR) $(NSTEMPLATES_DIR)
 	@echo "generating test templates bindata..."
-	@-rm ./test/templates/nstemplatetiers/nstemplatetier_assets.go
+	@-rm ./test/templates/nstemplatetiers/nstemplatetier_assets.go > /dev/null
 	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers_test -o ./test/templates/nstemplatetiers/nstemplatetier_assets.go -nocompress -prefix $(NSTEMPLATES_TEST_DIR) $(NSTEMPLATES_TEST_DIR)
 
 .PHONY: generate-metadata
 generate-metadata:
 	@echo "generating namespace templates metadata for manifests in $(NSTEMPLATES_DIR)" 
-	@-rm $(NSTEMPLATES_DIR)/metadata.yaml
+	@-rm $(NSTEMPLATES_DIR)/metadata.yaml > /dev/null
 	@$(foreach tmpl,$(YAML_TEMPLATES),$(call git_commit,$(tmpl),$(NSTEMPLATES_DIR)/metadata.yaml);)
 
 define git_commit
