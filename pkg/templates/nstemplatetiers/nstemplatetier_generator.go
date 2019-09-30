@@ -40,7 +40,6 @@ spec:
 
 // NSTemplateTierGenerator the NSTemplateTier manifest generator
 type NSTemplateTierGenerator struct {
-	asset     func(name string) ([]byte, error) // the func which gives access to the
 	revisions map[string]map[string]string
 }
 
@@ -55,7 +54,6 @@ func NewNSTemplateTierGenerator(asset func(name string) ([]byte, error)) (*NSTem
 		return nil, errors.Wrapf(err, "unable to initialize the NSTemplateTierGenerator")
 	}
 	return &NSTemplateTierGenerator{
-		asset:     asset,
 		revisions: revisions,
 	}, nil
 }
