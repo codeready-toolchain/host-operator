@@ -96,6 +96,28 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 	return revisions, nil
 }
 
+// GenerateAllManifests generates all manifests, indexed by their associated tier kind and by their namespace kind
+// eg:
+// - advanced:
+//   - code: <[]byte>
+//   - dev: <[]byte>
+//   - stage: <[]byte>
+// - basic:
+//   - code: <[]byte>
+//   - dev: <[]byte>
+//   - stage: <[]byte>
+func (g NSTemplateTierGenerator) GenerateAllManifests() (map[string][]byte, error) {
+	manifests := make(map[string][]byte, len(g.revisions))
+	for tierKind := range g.revisions {
+		var err error
+		manifests[tierKind], err = g.GenerateManifest(tierKind)
+		if err != nil {
+			return nil, errors.Wrapf(err, "unable to generate all NSTemplateTier manifests")
+		}
+	}
+	return manifests, nil
+}
+
 // GenerateManifest generates a full NSTemplateTier manifest
 // by embedding the `<tier>-code.yml`, `<tier>-dev.yml` and `<tier>-stage.yml`
 // file along with each one's git (short) commit as the revision associated with

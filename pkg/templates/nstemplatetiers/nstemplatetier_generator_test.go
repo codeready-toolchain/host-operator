@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-func TestNSTemplateTierGenerator(t *testing.T) {
+func TestGenerateManifest(t *testing.T) {
 
 	// uses the `Asset` func generated in `pkg/templates/template_contents_test.go` here
 	g, err := nstemplatetiers.NewNSTemplateTierGenerator(testnstemplatetiers.Asset)
@@ -117,6 +117,24 @@ spec:
 		require.Len(t, basicTier.Spec.Namespaces, 3)
 		codeNS := basicTier.Spec.Namespaces[0]
 		assert.Len(t, codeNS.Template.Objects, 1)
+	})
+
+}
+
+func TestGenerateAllManifests(t *testing.T) {
+
+	// uses the `Asset` func generated in `pkg/templates/template_contents_test.go` here
+	g, err := nstemplatetiers.NewNSTemplateTierGenerator(testnstemplatetiers.Asset)
+	require.NoError(t, err)
+
+	t.Run("ok", func(t *testing.T) {
+		// when
+		manifests, err := g.GenerateAllManifests()
+		// then
+		require.NoError(t, err)
+		require.Len(t, manifests, 2)
+		assert.Contains(t, manifests, "advanced")
+		assert.Contains(t, manifests, "basic")
 	})
 
 }
