@@ -37,7 +37,7 @@ generate: generate-metadata
 .PHONY: generate-metadata
 generate-metadata:
 	@echo "generating namespace templates metadata for manifests in $(NSTEMPLATES_DIR)" 
-	@-rm $(NSTEMPLATES_DIR)/metadata.yaml
+	@rm $(NSTEMPLATES_DIR)/metadata.yaml 2>/dev/null || true
 	@$(foreach tmpl,$(YAML_TEMPLATES),$(call git_commit,$(tmpl),$(NSTEMPLATES_DIR)/metadata.yaml);)
 
 define git_commit
