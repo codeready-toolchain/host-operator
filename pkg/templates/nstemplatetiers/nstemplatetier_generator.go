@@ -60,7 +60,7 @@ func NewNSTemplateTierGenerator(asset func(name string) ([]byte, error)) (*NSTem
 	}, nil
 }
 
-// parseRevisions returns a "supermap" in which:
+// parseAllRevisions returns a "supermap" in which:
 // - each key is a tier kind (eg: "basic", "advanced", etc.)
 // - each value is a map of revisions indexed by their associated template kind
 //   (eg: {"code":"123456", "dev":"abcdef", "stage":"cafe01"})
