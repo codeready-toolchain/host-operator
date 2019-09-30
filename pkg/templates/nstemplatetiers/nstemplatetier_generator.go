@@ -40,6 +40,7 @@ spec:
 
 // NSTemplateTierGenerator the NSTemplateTier manifest generator
 type NSTemplateTierGenerator struct {
+	asset     func(name string) ([]byte, error) // the func which gives access to the
 	revisions map[string]map[string]string
 }
 
@@ -54,11 +55,12 @@ func NewNSTemplateTierGenerator(asset func(name string) ([]byte, error)) (*NSTem
 		return nil, errors.Wrapf(err, "unable to initialize the NSTemplateTierGenerator")
 	}
 	return &NSTemplateTierGenerator{
+		asset:     asset,
 		revisions: revisions,
 	}, nil
 }
 
-// parseAllRevisions returns a "supermap" in which:
+// parseRevisions returns a "supermap" in which:
 // - each key is a tier kind (eg: "basic", "advanced", etc.)
 // - each value is a map of revisions indexed by their associated template kind
 //   (eg: {"code":"123456", "dev":"abcdef", "stage":"cafe01"})
@@ -142,7 +144,7 @@ func (g NSTemplateTierGenerator) GenerateManifest(tier string) ([]byte, error) {
 	sort.Strings(nsTypes)
 	for _, nsType := range nsTypes {
 		// get the content of the `-<t>.yaml` file
-		tmpl, err := Asset(fmt.Sprintf("%s-%s.yaml", tier, nsType))
+		tmpl, err := g.asset(fmt.Sprintf("%s-%s.yaml", tier, nsType))
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
 		}
