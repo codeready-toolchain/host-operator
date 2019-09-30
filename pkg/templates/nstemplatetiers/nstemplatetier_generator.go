@@ -14,12 +14,12 @@ import (
 )
 
 var nstemplatetierTmpl *texttemplate.Template
-var initErr error
+var initTmplErr error
 
 var log = logf.Log.WithName("templates")
 
 func init() {
-	nstemplatetierTmpl, initErr = texttemplate.New("NSTemplateTier").
+	nstemplatetierTmpl, initTmplErr = texttemplate.New("NSTemplateTier").
 		Funcs(texttemplate.FuncMap{
 			"indent": indent,
 		}).
@@ -33,8 +33,8 @@ spec:
     revision: {{ .Revision }}
     template:
 {{ .Template }}{{ end }}`)
-	if initErr != nil {
-		log.Error(initErr, "failed to initialize NSTemplateTier template")
+	if initTmplErr != nil {
+		log.Error(initTmplErr, "failed to initialize NSTemplateTier template")
 	}
 }
 
@@ -68,7 +68,7 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 	data := make(map[string]interface{})
 	err := yaml.Unmarshal([]byte(metadata), &data)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "unable to parse all template revisions")
 	}
 	// reads all entries in the YAML, splitting the keys
 	// as we expect the following format: '<tier_kind>-<namespace_kind>' (eg: 'advanced-code')
@@ -82,13 +82,13 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 		tierKind := data[0]
 		nsKind := data[1]
 		// create a new entry if needed
-		if _, ok := revisions[tierKind]; !ok {
-			revisions[tierKind] = make(map[string]string, 3) // expect 3 entries: 'code', 'dev' and 'stage'
-		}
 		revision, ok := revision.(string)
 		if !ok {
 			log.Info("invalid namespace template filename revision. Expected a string", "filename", filename, "revision", revision)
 			continue
+		}
+		if _, ok := revisions[tierKind]; !ok {
+			revisions[tierKind] = make(map[string]string, 3) // expect 3 entries: 'code', 'dev' and 'stage'
 		}
 		revisions[tierKind][nsKind] = revision
 	}
@@ -145,7 +145,7 @@ func (g NSTemplateTierGenerator) GenerateAllManifests() (map[string][]byte, erro
 // ------
 func (g NSTemplateTierGenerator) GenerateManifest(tier string) ([]byte, error) {
 	if nstemplatetierTmpl == nil {
-		return nil, errors.Wrapf(initErr, "Cannot generate the '%s' NSTemplateTier manifest", tier)
+		return nil, errors.Wrapf(initTmplErr, "Cannot generate the '%s' NSTemplateTier manifest", tier)
 	}
 	revisions, ok := g.revisions[tier]
 	if !ok {

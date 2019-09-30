@@ -1,49 +1,92 @@
 package nstemplatetiers
 
 import (
+	"errors"
 	"testing"
+
+	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetRevisions(t *testing.T) {
+func TestParseAllRevisions(t *testing.T) {
 
-	// assuming that `metadata.yaml` contains:
-	metadata := []byte(`advanced-code: 11111a
-advanced-dev: 11111b
-advanced-stage: 11111c
-basic-code: 22222a
-basic-dev: 22222b
-basic-stage: 22222c`)
+	t.Run("ok", func(t *testing.T) {
+		// using the `metadata.yaml` test asset
+		metadata, err := testnstemplatetiers.Asset("metadata.yaml")
+		require.NoError(t, err)
+		// when
+		revisions, err := parseAllRevisions(metadata)
+		// then
+		require.NoError(t, err)
+		require.Len(t, revisions, 2)
+		require.NotContains(t, "foo", revisions) // make sure that the `foo: bar` entry was ignored
+		assert.Equal(t, "123456a", revisions["advanced"]["code"])
+		assert.Equal(t, "123456b", revisions["advanced"]["dev"])
+		assert.Equal(t, "123456c", revisions["advanced"]["stage"])
+		assert.Equal(t, "123456d", revisions["basic"]["code"])
+		assert.Equal(t, "123456e", revisions["basic"]["dev"])
+		assert.Equal(t, "123456f", revisions["basic"]["stage"])
+	})
 
-	// when
-	revisions, err := parseAllRevisions(metadata)
-	// then
-	require.NoError(t, err)
-	require.Len(t, revisions, 2)
-	assert.Equal(t, "11111a", revisions["advanced"]["code"])
-	assert.Equal(t, "11111b", revisions["advanced"]["dev"])
-	assert.Equal(t, "11111c", revisions["advanced"]["stage"])
-	assert.Equal(t, "22222a", revisions["basic"]["code"])
-	assert.Equal(t, "22222b", revisions["basic"]["dev"])
-	assert.Equal(t, "22222c", revisions["basic"]["stage"])
+	t.Run("failures", func(t *testing.T) {
+
+		t.Run("unparseable content", func(t *testing.T) {
+			// given
+			// when initializing the generator with the production Asset
+			_, err := parseAllRevisions([]byte("foo::bar"))
+			// then
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unable to parse all template revisions: yaml: unmarshal errors")
+		})
+	})
+
 }
 
-func TestNSTemplateTierGenerator(t *testing.T) {
-	// when initializing the generator with the production Asset
-	g, err := NewNSTemplateTierGenerator(Asset)
-	// then
-	require.NoError(t, err)
-	// verify that there are tiers with revisions (whatever their values)
-	require.NotEmpty(t, g.revisions)
-	for tier := range g.revisions {
-		assert.NotEmpty(t, g.revisions[tier])
-	}
+func TestNewNSTemplateTierGenerator(t *testing.T) {
+
+	t.Run("ok", func(t *testing.T) {
+		// when initializing the generator with the production Asset
+		g, err := NewNSTemplateTierGenerator(Asset)
+		// then
+		require.NoError(t, err)
+		// verify that there are tiers with revisions (whatever their values)
+		require.NotEmpty(t, g.revisions)
+		for tier := range g.revisions {
+			assert.NotEmpty(t, g.revisions[tier])
+		}
+	})
+
+	t.Run("failures", func(t *testing.T) {
+
+		t.Run("asset error", func(t *testing.T) {
+			// given
+			asset := func(name string) ([]byte, error) {
+				return nil, errors.New("test")
+			}
+			// when initializing the generator with the production Asset
+			_, err := NewNSTemplateTierGenerator(asset)
+			// then
+			require.Error(t, err)
+			assert.Equal(t, "unable to initialize the NSTemplateTierGenerator: test", err.Error())
+		})
+
+		t.Run("unparseable content", func(t *testing.T) {
+			// given
+			asset := func(name string) ([]byte, error) {
+				return []byte("foo::bar"), nil
+			}
+			// when initializing the generator with the production Asset
+			_, err := NewNSTemplateTierGenerator(asset)
+			// then
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unable to initialize the NSTemplateTierGenerator: unable to parse all template revisions: yaml: unmarshal errors")
+		})
+	})
 }
 
 func TestIndent(t *testing.T) {
-
 	// given
 	source := []byte(`apiVersion: template.openshift.io/v1
 kind: Template
