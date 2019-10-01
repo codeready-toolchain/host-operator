@@ -10,6 +10,12 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
+    - description: KubeFedCluster configures kubefed to be aware of a Kubernetes cluster
+        and encapsulates the details necessary to communicate with the cluster.
+      displayName: KubeFedCluster
+      kind: KubeFedCluster
+      name: kubefedclusters.core.kubefed.k8s.io
+      version: v1beta1
     - description: MasterUserRecord keeps all information about user, user accounts
         and namespaces provisioned in CodeReady Toolchain SaaS system
       displayName: MasterUserRecord
@@ -90,7 +96,7 @@ spec:
                 - name: OPERATOR_NAME
                   value: host-operator
                 image: REPLACE_IMAGE
-                imagePullPolicy: Always
+                imagePullPolicy: IfNotPresent
                 name: host-operator
                 resources: {}
               serviceAccountName: host-operator

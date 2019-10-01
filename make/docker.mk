@@ -8,4 +8,4 @@ docker-image: build
 .PHONY: docker-push
 ## Push the docker image to the repository
 docker-push: docker-image
-	$(Q)docker build -f build/Dockerfile -t ${IMAGE} .
+	$(Q)docker push ${IMAGE}
