@@ -22,7 +22,7 @@ vendor:
 	$(Q)go mod vendor
 
 NSTEMPLATES_DIR=deploy/templates/nstemplatetiers
-YAML_TEMPLATES := $(wildcard $(NSTEMPLATES_DIR)/*-*.yaml)
+YAML_TEMPLATES := $(wildcard $(NSTEMPLATES_DIR)/*.yaml)
 NSTEMPLATES_TEST_DIR=test/templates/nstemplatetiers
 
 .PHONY: generate

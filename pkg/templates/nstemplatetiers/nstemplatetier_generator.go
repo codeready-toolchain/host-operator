@@ -1,51 +1,32 @@
 package nstemplatetiers
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"sort"
 	"strings"
-	texttemplate "text/template"
 
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+
+	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-var nstemplatetierTmpl *texttemplate.Template
-var initTmplErr error
-
 var log = logf.Log.WithName("templates")
-
-func init() {
-	nstemplatetierTmpl, initTmplErr = texttemplate.New("NSTemplateTier").
-		Funcs(texttemplate.FuncMap{
-			"indent": indent,
-		}).
-		Parse(`kind: NSTemplateTier
-apiVersion: toolchain.dev.openshift.com/v1alpha1
-metadata:
-  name: {{ .Name }}
-spec:
-  namespaces:{{ range $index, $ns := .Namespaces }}
-  - type: {{ .Type }}
-    revision: {{ .Revision }}
-    template:
-{{ .Template }}{{ end }}`)
-	if initTmplErr != nil {
-		log.Error(initTmplErr, "failed to initialize NSTemplateTier template")
-	}
-}
 
 // NSTemplateTierGenerator the NSTemplateTier manifest generator
 type NSTemplateTierGenerator struct {
 	asset     func(name string) ([]byte, error) // the func which gives access to the
 	revisions map[string]map[string]string
+	decoder   runtime.Decoder
 }
 
 // NewNSTemplateTierGenerator returns a new NSTemplateTierGenerator
-func NewNSTemplateTierGenerator(asset func(name string) ([]byte, error)) (*NSTemplateTierGenerator, error) {
+func NewNSTemplateTierGenerator(s *runtime.Scheme, asset func(name string) ([]byte, error)) (*NSTemplateTierGenerator, error) {
 	metadata, err := asset("metadata.yaml")
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to initialize the NSTemplateTierGenerator")
@@ -57,6 +38,7 @@ func NewNSTemplateTierGenerator(asset func(name string) ([]byte, error)) (*NSTem
 	return &NSTemplateTierGenerator{
 		asset:     asset,
 		revisions: revisions,
+		decoder:   serializer.NewCodecFactory(s).UniversalDeserializer(),
 	}, nil
 }
 
@@ -106,19 +88,26 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 //   - code: <[]byte>
 //   - dev: <[]byte>
 //   - stage: <[]byte>
-func (g NSTemplateTierGenerator) GenerateAllManifests() (map[string][]byte, error) {
-	manifests := make(map[string][]byte, len(g.revisions))
-	for tierKind := range g.revisions {
-		var err error
-		manifests[tierKind], err = g.GenerateManifest(tierKind)
+func (g NSTemplateTierGenerator) GenerateAllManifests(namespace string) ([]toolchainv1alpha1.NSTemplateTier, error) {
+	objects := make([]toolchainv1alpha1.NSTemplateTier, 0, len(g.revisions))
+	// retrieve the tier names and order them, so we can order them, and compare
+	// with the expected templates during the tests
+	tiers := make([]string, 0, len(g.revisions))
+	for tier := range g.revisions {
+		tiers = append(tiers, tier)
+	}
+	sort.Strings(tiers)
+	for _, tier := range tiers {
+		obj, err := g.GenerateManifest(tier, namespace)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate all NSTemplateTier manifests")
 		}
+		objects = append(objects, obj)
 	}
-	return manifests, nil
+	return objects, nil
 }
 
-// GenerateManifest generates a full NSTemplateTier manifest
+// GenerateManifest generates a full NSTemplateTier object
 // by embedding the `<tier>-code.yml`, `<tier>-dev.yml` and `<tier>-stage.yml`
 // file along with each one's git (short) commit as the revision associated with
 // the template.
@@ -143,20 +132,22 @@ func (g NSTemplateTierGenerator) GenerateAllManifests() (map[string][]byte, erro
 //       template: >
 //         <yaml-ns-template>
 // ------
-func (g NSTemplateTierGenerator) GenerateManifest(tier string) ([]byte, error) {
-	if nstemplatetierTmpl == nil {
-		return nil, errors.Wrapf(initTmplErr, "Cannot generate the '%s' NSTemplateTier manifest", tier)
-	}
+func (g NSTemplateTierGenerator) GenerateManifest(tier, namespace string) (toolchainv1alpha1.NSTemplateTier, error) {
 	revisions, ok := g.revisions[tier]
 	if !ok {
-		return nil, errors.Errorf("tier '%s' does not exist", tier)
+		return toolchainv1alpha1.NSTemplateTier{}, errors.Errorf("tier '%s' does not exist", tier)
 	}
-	type namespace struct {
-		Type     string
-		Revision string
-		Template string
+	obj := toolchainv1alpha1.NSTemplateTier{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "toolchain.dev.openshift.com/v1alpha1",
+			Kind:       "NSTemplateTier",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      tier,
+			Namespace: namespace,
+		},
+		Spec: toolchainv1alpha1.NSTemplateTierSpec{},
 	}
-	namespaces := make([]namespace, 0, len(revisions))
 	// retrieve the namespace types and order them, so we can order them, and compare
 	// with the expected templates during the tests
 	nsTypes := make([]string, 0, len(revisions))
@@ -168,42 +159,28 @@ func (g NSTemplateTierGenerator) GenerateManifest(tier string) ([]byte, error) {
 		// get the content of the `-<t>.yaml` file
 		tmpl, err := g.asset(fmt.Sprintf("%s-%s.yaml", tier, nsType))
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
+			return toolchainv1alpha1.NSTemplateTier{}, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
 		}
-		tmpl, err = indent(tmpl, 6)
+		// parse the content as
+		tmplObj, err := decodeTemplate(g.decoder, tmpl)
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
+			return toolchainv1alpha1.NSTemplateTier{}, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
 		}
-		namespaces = append(namespaces, namespace{
+		// add it to the NSTemplateTier obj
+		obj.Spec.Namespaces = append(obj.Spec.Namespaces, toolchainv1alpha1.NSTemplateTierNamespace{
 			Type:     nsType,
 			Revision: revisions[nsType],
-			Template: string(tmpl),
+			Template: *tmplObj,
 		})
 	}
-	result := bytes.NewBuffer(nil)
-	err := nstemplatetierTmpl.Execute(result, struct {
-		Name       string
-		Namespaces []namespace
-	}{
-		Name:       tier,
-		Namespaces: namespaces,
-	})
-	return result.Bytes(), err
+	return obj, nil
 }
 
-func indent(template []byte, indent int) ([]byte, error) {
-	result := bytes.NewBuffer(nil)
-	scanner := bufio.NewScanner(bytes.NewReader(template))
-	for scanner.Scan() {
-		if result.Len() > 0 {
-			// if previous line(s) were written, insert a line feed, first
-			result.WriteRune('\n')
-		}
-		result.WriteString(strings.Repeat(" ", indent))
-		result.Write(scanner.Bytes())
+func decodeTemplate(decoder runtime.Decoder, tmplContent []byte) (*templatev1.Template, error) {
+	tmpl := &templatev1.Template{}
+	_, _, err := decoder.Decode(tmplContent, nil, tmpl)
+	if err != nil {
+		return nil, errors.Wrapf(err, "unable to decode template")
 	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return result.Bytes(), nil
+	return tmpl, nil
 }

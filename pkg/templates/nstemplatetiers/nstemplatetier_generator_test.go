@@ -1,15 +1,19 @@
 package nstemplatetiers_test
 
 import (
+	"bytes"
 	"testing"
+	texttemplate "text/template"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -17,124 +21,120 @@ import (
 func TestGenerateManifest(t *testing.T) {
 
 	// uses the `Asset` func generated in `pkg/templates/template_contents_test.go` here
-	g, err := nstemplatetiers.NewNSTemplateTierGenerator(testnstemplatetiers.Asset)
+	s := scheme.Scheme
+	err := apis.AddToScheme(s)
 	require.NoError(t, err)
+	g, err := nstemplatetiers.NewNSTemplateTierGenerator(s, testnstemplatetiers.Asset)
+	require.NoError(t, err)
+	namespace := "host-operator" + uuid.NewV4().String()[:7]
 
-	t.Run("basic", func(t *testing.T) {
-		// given
-		tier := "basic"
-		// when
-		result, err := g.GenerateManifest(tier)
-		// then
-		require.NoError(t, err)
-		expected := `kind: NSTemplateTier
-apiVersion: toolchain.dev.openshift.com/v1alpha1
-metadata:
-  name: basic
-spec:
-  namespaces:
-  - type: code
-    revision: 123456d
-    template:
-      apiVersion: template.openshift.io/v1
-      kind: Template
-      metadata:
-        labels:
-          provider: codeready-toolchain
-        name: basic-code
-      objects:
-      - apiVersion: v1
-        kind: Namespace
-        metadata:
-          annotations:
-            openshift.io/description: ${USERNAME}-code
-            openshift.io/display-name: ${USERNAME}-code
-            openshift.io/requester: ${USERNAME}
-          labels:
-            provider: codeready-toolchain
-          name: ${USERNAME}-code
-      parameters:
-      - name: USERNAME
-        required: true
-  - type: dev
-    revision: 123456e
-    template:
-      apiVersion: template.openshift.io/v1
-      kind: Template
-      metadata:
-        labels:
-          provider: codeready-toolchain
-        name: basic-dev
-      objects:
-      - apiVersion: v1
-        kind: Namespace
-        metadata:
-          annotations:
-            openshift.io/description: ${USERNAME}-dev
-            openshift.io/display-name: ${USERNAME}-dev
-            openshift.io/requester: ${USERNAME}
-          labels:
-            provider: codeready-toolchain
-          name: ${USERNAME}-dev
-      parameters:
-      - name: USERNAME
-        required: true
-  - type: stage
-    revision: 123456f
-    template:
-      apiVersion: template.openshift.io/v1
-      kind: Template
-      metadata:
-        labels:
-          provider: codeready-toolchain
-        name: basic-stage
-      objects:
-      - apiVersion: v1
-        kind: Namespace
-        metadata:
-          annotations:
-            openshift.io/description: ${USERNAME}-stage
-            openshift.io/display-name: ${USERNAME}-stage
-            openshift.io/requester: ${USERNAME}
-          labels:
-            provider: codeready-toolchain
-          name: ${USERNAME}-stage
-      parameters:
-      - name: USERNAME
-        required: true`
-		assert.Equal(t, expected, string(result))
-		// verify that the YAML is valid by converting it to an `NSTemplateTier` object
-		err = apis.AddToScheme(scheme.Scheme)
-		require.NoError(t, err)
-		s := scheme.Scheme
-		codecFactory := serializer.NewCodecFactory(s)
-		unstructuredTier, _, err := codecFactory.UniversalDeserializer().Decode(result, nil, nil)
-		require.NoError(t, err)
-		basicTier := toolchainv1alpha1.NSTemplateTier{}
-		err = s.Convert(unstructuredTier, &basicTier, nil)
-		require.NoError(t, err)
-		// quickly verify that the templates in each NSTemplateTier.Spec.Namespaces has some objects
-		require.Len(t, basicTier.Spec.Namespaces, 3)
-		codeNS := basicTier.Spec.Namespaces[0]
-		assert.Len(t, codeNS.Template.Objects, 1)
-	})
-
+	data := map[string]map[string]string{
+		"advanced": map[string]string{
+			"code":  "123456a",
+			"dev":   "123456b",
+			"stage": "123456c",
+		},
+		"basic": map[string]string{
+			"code":  "123456d",
+			"dev":   "123456e",
+			"stage": "123456f",
+		},
+	}
+	for tier, revisions := range data {
+		t.Run(tier, func(t *testing.T) {
+			// when
+			actual, err := g.GenerateManifest(tier, namespace)
+			// then
+			require.NoError(t, err)
+			expected, expectedStr, err := newNSTemplateTierFromYAML(s, tier, namespace, revisions)
+			require.NoError(t, err)
+			t.Logf("expected NSTemplateTier (yaml):\n%s", expectedStr)
+			assert.Equal(t, expected, actual)
+		})
+	}
 }
 
 func TestGenerateAllManifests(t *testing.T) {
-
-	// uses the `Asset` func generated in `pkg/templates/template_contents_test.go` here
-	g, err := nstemplatetiers.NewNSTemplateTierGenerator(testnstemplatetiers.Asset)
+	// given
+	s := scheme.Scheme
+	err := apis.AddToScheme(s)
 	require.NoError(t, err)
+	// uses the `Asset` func generated in `pkg/templates/template_contents_test.go` here
+	g, err := nstemplatetiers.NewNSTemplateTierGenerator(s, testnstemplatetiers.Asset)
+	require.NoError(t, err)
+	namespace := "host-operator" + uuid.NewV4().String()[:7]
 
 	t.Run("ok", func(t *testing.T) {
 		// when
-		manifests, err := g.GenerateAllManifests()
+		manifests, err := g.GenerateAllManifests(namespace)
 		// then
 		require.NoError(t, err)
 		require.Len(t, manifests, 2)
-		assert.Contains(t, manifests, "advanced")
-		assert.Contains(t, manifests, "basic")
+		// sort by name
+		assert.Equal(t, "advanced", manifests[0].ObjectMeta.Name)
+		assert.Equal(t, namespace, manifests[0].ObjectMeta.Namespace)
+		assert.Equal(t, "basic", manifests[1].ObjectMeta.Name)
+		assert.Equal(t, namespace, manifests[1].ObjectMeta.Namespace)
 	})
+}
 
+// generates uses a golang template which is execute and whose output is decoded into an toolchainv1alpha1.NSTemplateTier.
+func newNSTemplateTierFromYAML(s *runtime.Scheme, tier, namespace string, revisions map[string]string) (toolchainv1alpha1.NSTemplateTier, string, error) {
+	expectedTmpl, err := texttemplate.New("template").Parse(`kind: NSTemplateTier
+apiVersion: toolchain.dev.openshift.com/v1alpha1
+metadata:
+  namespace: {{ .Namespace }}
+  name: {{ .Tier }}
+spec:
+  namespaces: 
+{{ $tier := .Tier }}{{ range $kind, $revision := .Revisions }}  - type: {{ $kind }}
+    revision: {{ $revision }}
+    template:
+      apiVersion: template.openshift.io/v1
+      kind: Template
+      metadata:
+        labels:
+          provider: codeready-toolchain
+        name: {{ $tier }}-{{ $kind }}
+      objects:
+      - apiVersion: v1
+        kind: Namespace
+        metadata:
+          annotations:
+            openshift.io/description: ${USERNAME}-{{ $kind }}
+            openshift.io/display-name: ${USERNAME}-{{ $kind }}
+            openshift.io/requester: ${USERNAME}
+          labels:
+            provider: codeready-toolchain
+          name: ${USERNAME}-{{ $kind }}
+      parameters:
+      - name: USERNAME
+        required: true
+{{ end }}
+      parameters:
+      - name: USERNAME
+        required: true`)
+	if err != nil {
+		return toolchainv1alpha1.NSTemplateTier{}, "", err
+	}
+	expected := bytes.NewBuffer(nil)
+	err = expectedTmpl.Execute(expected, struct {
+		Tier      string
+		Namespace string
+		Revisions map[string]string
+	}{
+		Tier:      tier,
+		Namespace: namespace,
+		Revisions: revisions,
+	})
+	if err != nil {
+		return toolchainv1alpha1.NSTemplateTier{}, "", err
+	}
+	result := &toolchainv1alpha1.NSTemplateTier{}
+	codecFactory := serializer.NewCodecFactory(s)
+	_, _, err = codecFactory.UniversalDeserializer().Decode(expected.Bytes(), nil, result)
+	if err != nil {
+		return toolchainv1alpha1.NSTemplateTier{}, "", err
+	}
+	return *result, expected.String(), err
 }

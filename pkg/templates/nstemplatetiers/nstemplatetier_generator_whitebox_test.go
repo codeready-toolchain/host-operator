@@ -4,7 +4,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,10 +47,13 @@ func TestParseAllRevisions(t *testing.T) {
 }
 
 func TestNewNSTemplateTierGenerator(t *testing.T) {
+	s := scheme.Scheme
+	err := apis.AddToScheme(s)
+	require.NoError(t, err)
 
 	t.Run("ok", func(t *testing.T) {
 		// when initializing the generator with the production Asset
-		g, err := NewNSTemplateTierGenerator(Asset)
+		g, err := NewNSTemplateTierGenerator(s, Asset)
 		// then
 		require.NoError(t, err)
 		// verify that there are tiers with revisions (whatever their values)
@@ -66,7 +71,7 @@ func TestNewNSTemplateTierGenerator(t *testing.T) {
 				return nil, errors.New("test")
 			}
 			// when initializing the generator with the production Asset
-			_, err := NewNSTemplateTierGenerator(asset)
+			_, err := NewNSTemplateTierGenerator(s, asset)
 			// then
 			require.Error(t, err)
 			assert.Equal(t, "unable to initialize the NSTemplateTierGenerator: test", err.Error())
@@ -78,63 +83,10 @@ func TestNewNSTemplateTierGenerator(t *testing.T) {
 				return []byte("foo::bar"), nil
 			}
 			// when initializing the generator with the production Asset
-			_, err := NewNSTemplateTierGenerator(asset)
+			_, err := NewNSTemplateTierGenerator(s, asset)
 			// then
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "unable to initialize the NSTemplateTierGenerator: unable to parse all template revisions: yaml: unmarshal errors")
 		})
 	})
-}
-
-func TestIndent(t *testing.T) {
-	// given
-	source := []byte(`apiVersion: template.openshift.io/v1
-kind: Template
-metadata:
-  labels:
-    provider: codeready-toolchain
-  name: advanced-code
-objects:
-- apiVersion: v1
-  kind: Namespace
-  metadata:
-    annotations:
-      openshift.io/description: ${USERNAME}-code
-      openshift.io/display-name: ${USERNAME}-code
-      openshift.io/requester: ${USERNAME}
-    labels:
-      provider: codeready-toolchain
-    name: ${USERNAME}-code
-parameters:
-- name: USERNAME
-  required: true`)
-
-	expected := []byte(`  apiVersion: template.openshift.io/v1
-  kind: Template
-  metadata:
-    labels:
-      provider: codeready-toolchain
-    name: advanced-code
-  objects:
-  - apiVersion: v1
-    kind: Namespace
-    metadata:
-      annotations:
-        openshift.io/description: ${USERNAME}-code
-        openshift.io/display-name: ${USERNAME}-code
-        openshift.io/requester: ${USERNAME}
-      labels:
-        provider: codeready-toolchain
-      name: ${USERNAME}-code
-  parameters:
-  - name: USERNAME
-    required: true`)
-
-	// when
-	actual, err := indent(source, 2)
-	// then
-	require.NoError(t, err)
-	t.Logf("actual:\n%s", string(actual))
-	t.Logf("expected:\n%s", string(expected))
-	assert.Equal(t, expected, actual)
 }
