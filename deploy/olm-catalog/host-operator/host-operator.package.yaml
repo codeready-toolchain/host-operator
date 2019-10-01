@@ -1,0 +1,5 @@
+channels:
+- currentCSV: host-operator.v0.0.1
+  name: alpha
+defaultChannel: alpha
+packageName: host-operator
