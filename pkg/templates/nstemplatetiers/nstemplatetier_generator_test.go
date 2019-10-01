@@ -29,12 +29,12 @@ func TestGenerateManifest(t *testing.T) {
 	namespace := "host-operator" + uuid.NewV4().String()[:7]
 
 	data := map[string]map[string]string{
-		"advanced": map[string]string{
+		"advanced": {
 			"code":  "123456a",
 			"dev":   "123456b",
 			"stage": "123456c",
 		},
-		"basic": map[string]string{
+		"basic": {
 			"code":  "123456d",
 			"dev":   "123456e",
 			"stage": "123456f",
