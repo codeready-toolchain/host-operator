@@ -677,15 +677,6 @@ data:
                 - kubefedclusters
                 verbs:
                 - '*'
-              - apiGroups:
-                - apiextensions.k8s.io
-                resources:
-                - customresourcedefinitions
-                verbs:
-                - get
-                - create
-                - list
-                - watch
               serviceAccountName: host-operator
             deployments:
             - name: host-operator
