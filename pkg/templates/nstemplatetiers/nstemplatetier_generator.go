@@ -51,7 +51,7 @@ type NSTemplateTierGenerator struct {
 func NewNSTemplateTierGenerator(s *runtime.Scheme, asset func(name string) ([]byte, error)) (*NSTemplateTierGenerator, error) {
 	metadata, err := asset("metadata.yaml")
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to initialize the NSTemplateTierGenerator")
+		return nil, errors.Wrapf(err, "unable to get the metadata.yaml asset while initializing NSTemplateTierGenerator")
 	}
 	revisions, err := parseAllRevisions(metadata)
 	if err != nil {
