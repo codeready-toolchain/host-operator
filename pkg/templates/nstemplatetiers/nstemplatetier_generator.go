@@ -90,7 +90,7 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 //   - stage: <[]byte>
 func (g NSTemplateTierGenerator) GenerateAllManifests(namespace string) ([]toolchainv1alpha1.NSTemplateTier, error) {
 	objects := make([]toolchainv1alpha1.NSTemplateTier, 0, len(g.revisions))
-	// retrieve the tier names and order them, so we can order them, and compare
+	// retrieve the tier names and order them, so we compare them
 	// with the expected templates during the tests
 	tiers := make([]string, 0, len(g.revisions))
 	for tier := range g.revisions {
