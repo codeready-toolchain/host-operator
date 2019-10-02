@@ -12,7 +12,6 @@ import (
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -24,7 +23,6 @@ type NSTemplateTierGenerator struct {
 	asset     func(name string) ([]byte, error) // the func which gives access to the
 	revisions map[string]map[string]string
 	decoder   runtime.Decoder
-	gvk       schema.GroupVersionKind
 }
 
 // NewNSTemplateTierGenerator returns a new NSTemplateTierGenerator
@@ -37,18 +35,10 @@ func NewNSTemplateTierGenerator(s *runtime.Scheme, asset func(name string) ([]by
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to initialize the NSTemplateTierGenerator")
 	}
-	gvks, unversioned, err := s.ObjectKinds(&toolchainv1alpha1.NSTemplateTier{})
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to initialize the NSTemplateTierGenerator")
-	}
-	if unversioned || len(gvks) == 0 {
-		return nil, errors.Errorf("unable to initialize the NSTemplateTierGenerator: type NSTemplateTier is unversioned")
-	}
 	return &NSTemplateTierGenerator{
 		asset:     asset,
 		revisions: revisions,
 		decoder:   serializer.NewCodecFactory(s).UniversalDeserializer(),
-		gvk:       gvks[0],
 	}, nil
 }
 
@@ -147,11 +137,10 @@ func (g NSTemplateTierGenerator) GenerateManifest(tier, namespace string) (toolc
 	if !ok {
 		return toolchainv1alpha1.NSTemplateTier{}, errors.Errorf("tier '%s' does not exist", tier)
 	}
-
 	obj := toolchainv1alpha1.NSTemplateTier{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: g.gvk.GroupVersion().String(), // eg: "toolchain.dev.openshift.com/v1alpha1"
-			Kind:       g.gvk.Kind,                    // eg: "NSTemplateTier"
+			APIVersion: "toolchain.dev.openshift.com/v1alpha1",
+			Kind:       "NSTemplateTier",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tier,
