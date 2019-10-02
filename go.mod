@@ -1,50 +1,41 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	cloud.google.com/go v0.40.0 // indirect
+	cloud.google.com/go v0.46.3 // indirect
+	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20190906003527-443e8ceac134
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20190904115454-79e74322be0a
+	github.com/codeready-toolchain/api v0.0.0-20190926105251-44ed4423e3bf
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20190926125002-408e9c1b28de
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
-	github.com/go-openapi/spec v0.19.2 // indirect
-	github.com/gobuffalo/envy v1.7.0 // indirect
-	github.com/golangci/golangci-lint v1.18.0 // indirect
-	github.com/google/go-cmp v0.3.1 // indirect
+	github.com/gobuffalo/envy v1.7.1 // indirect
+	github.com/gophercloud/gophercloud v0.3.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
-	github.com/mailru/easyjson v0.0.0-20190620125010-da37f6c1e481 // indirect
 	github.com/operator-framework/operator-sdk v0.10.0
 	github.com/pkg/errors v0.8.1
-	github.com/prometheus/common v0.6.0 // indirect
 	github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776
+	github.com/rogpeppe/go-internal v1.4.0 // indirect
 	github.com/satori/go.uuid v1.2.0
-	github.com/spf13/pflag v1.0.3
-	github.com/src-d/go-git v4.7.0+incompatible
+	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7 // indirect
-	golang.org/x/net v0.0.0-20190918130420-a8b05e9114ab // indirect
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
-	golang.org/x/sys v0.0.0-20190919044723-0c1ff786ef13 // indirect
-	golang.org/x/tools v0.0.0-20190920130846-1081e67f6b77 // indirect
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+	golang.org/x/tools v0.0.0-20190925230517-ea99b82c7b93 // indirect
 	gopkg.in/h2non/gock.v1 v1.0.14
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.2.2
-	k8s.io/api v0.0.0-20190620073856-dcce3486da33
-	k8s.io/apimachinery v0.0.0-20190620073744-d16981aedf33
+	k8s.io/api v0.0.0-20190925180651-d58b53da08f5
+	k8s.io/apimachinery v0.0.0-20190925235427-62598f38f24e
 	k8s.io/apiserver v0.0.0-20190111033246-d50e9ac5404f // indirect
 	k8s.io/client-go v11.0.0+incompatible
-	k8s.io/code-generator v0.0.0-20190620073620-d55040311883
-	k8s.io/gengo v0.0.0-20190327210449-e17681d19d3a
-	k8s.io/klog v0.3.3
-	k8s.io/kube-openapi v0.0.0-20190603182131-db7b694dc208
-	sigs.k8s.io/controller-runtime v0.1.12
-	sigs.k8s.io/controller-tools v0.1.12
+	k8s.io/code-generator v0.0.0-20190925195306-32dfb485ddce
+	k8s.io/gengo v0.0.0-20190907103519-ebc107f98eab
+	k8s.io/klog v1.0.0
+	k8s.io/kube-openapi v0.0.0-20190918143330-0270cf2f1c1d
+	sigs.k8s.io/controller-runtime v0.2.2
+	sigs.k8s.io/controller-tools v0.2.1
 	sigs.k8s.io/kubefed v0.1.0-rc2
 )
 
 replace (
-	git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.1.10
@@ -64,3 +55,5 @@ replace (
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d
 	k8s.io/kubernetes => k8s.io/kubernetes v1.14.6
 )
+
+go 1.13

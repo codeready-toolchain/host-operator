@@ -202,7 +202,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 				UserID:  userSignup.Spec.UserID,
 				NSLimit: "default",
 				NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
-					Namespaces: []toolchainv1alpha1.Namespace{},
+					Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{},
 				},
 			},
 		},
