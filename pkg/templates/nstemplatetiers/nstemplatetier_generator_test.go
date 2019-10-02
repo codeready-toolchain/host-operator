@@ -28,30 +28,45 @@ func TestGenerateManifest(t *testing.T) {
 	require.NoError(t, err)
 	namespace := "host-operator" + uuid.NewV4().String()[:7]
 
-	data := map[string]map[string]string{
-		"advanced": {
-			"code":  "123456a",
-			"dev":   "123456b",
-			"stage": "123456c",
-		},
-		"basic": {
-			"code":  "123456d",
-			"dev":   "123456e",
-			"stage": "123456f",
-		},
-	}
-	for tier, revisions := range data {
-		t.Run(tier, func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		// given
+		data := map[string]map[string]string{
+			"advanced": {
+				"code":  "123456a",
+				"dev":   "123456b",
+				"stage": "123456c",
+			},
+			"basic": {
+				"code":  "123456d",
+				"dev":   "123456e",
+				"stage": "123456f",
+			},
+		}
+		for tier, revisions := range data {
+			t.Run(tier, func(t *testing.T) {
+				// when
+				actual, err := g.GenerateManifest(tier, namespace)
+				// then
+				require.NoError(t, err)
+				expected, expectedStr, err := newNSTemplateTierFromYAML(s, tier, namespace, revisions)
+				require.NoError(t, err)
+				t.Logf("expected NSTemplateTier (yaml):\n%s", expectedStr)
+				assert.Equal(t, expected, actual)
+			})
+		}
+	})
+
+	t.Run("failures", func(t *testing.T) {
+
+		t.Run("unknown tier", func(t *testing.T) {
 			// when
-			actual, err := g.GenerateManifest(tier, namespace)
+			_, err := g.GenerateManifest("foo", namespace)
 			// then
-			require.NoError(t, err)
-			expected, expectedStr, err := newNSTemplateTierFromYAML(s, tier, namespace, revisions)
-			require.NoError(t, err)
-			t.Logf("expected NSTemplateTier (yaml):\n%s", expectedStr)
-			assert.Equal(t, expected, actual)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "tier 'foo' does not exist")
 		})
-	}
+	})
+
 }
 
 func TestGenerateAllManifests(t *testing.T) {
