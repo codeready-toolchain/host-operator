@@ -110,23 +110,16 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 //   - code: <[]byte>
 //   - dev: <[]byte>
 //   - stage: <[]byte>
-func (g NSTemplateTierGenerator) NewNSTemplateTiers(namespace string) ([]*toolchainv1alpha1.NSTemplateTier, error) {
-	objects := make([]*toolchainv1alpha1.NSTemplateTier, 0, len(g.revisions))
-	// retrieve the tier names and order them, so we compare them
-	// with the expected templates during the tests
-	tiers := make([]string, 0, len(g.revisions))
+func (g NSTemplateTierGenerator) NewNSTemplateTiers(namespace string) (map[string]*toolchainv1alpha1.NSTemplateTier, error) {
+	tiers := make(map[string]*toolchainv1alpha1.NSTemplateTier, len(g.revisions))
 	for tier := range g.revisions {
-		tiers = append(tiers, tier)
-	}
-	sort.Strings(tiers)
-	for _, tier := range tiers {
-		obj, err := g.NewNSTemplateTier(tier, namespace)
+		tmpl, err := g.NewNSTemplateTier(tier, namespace)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate all NSTemplateTier manifests")
 		}
-		objects = append(objects, obj)
+		tiers[tier] = tmpl
 	}
-	return objects, nil
+	return tiers, nil
 }
 
 // NewNSTemplateTier initializes a complete NSTemplateTier object

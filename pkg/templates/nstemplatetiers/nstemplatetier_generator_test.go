@@ -9,14 +9,42 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
-	uuid "github.com/satori/go.uuid"
 
+	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
 )
+
+func TestNewNSTemplateTierGenerator(t *testing.T) {
+
+	t.Run("unknown metadata.yaml", func(t *testing.T) {
+		// given
+		asset := func(name string) ([]byte, error) {
+			return nil, errors.Errorf("Asset %s not found", name)
+		}
+
+		// when
+		_, err := nstemplatetiers.NewNSTemplateTierGenerator(scheme.Scheme, asset)
+		// then
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unable to initialize the NSTemplateTierGenerator: Asset metadata.yaml not found")
+	})
+}
+
+func TestAsset(t *testing.T) {
+
+	t.Run("unknown asset", func(t *testing.T) {
+		// when
+		_, err := testnstemplatetiers.Asset("unknown")
+		// then
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "Asset unknown not found")
+	})
+}
 
 func TestNewNSTemplateTier(t *testing.T) {
 
@@ -89,11 +117,14 @@ func TestNewNSTemplateTiers(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		require.Len(t, tiers, 2)
-		// sort by name
-		assert.Equal(t, "advanced", tiers[0].ObjectMeta.Name)
-		assert.Equal(t, namespace, tiers[0].ObjectMeta.Namespace)
-		assert.Equal(t, "basic", tiers[1].ObjectMeta.Name)
-		assert.Equal(t, namespace, tiers[1].ObjectMeta.Namespace)
+		advancedTier, found := tiers["advanced"]
+		require.True(t, found)
+		assert.Equal(t, "advanced", advancedTier.ObjectMeta.Name)
+		assert.Equal(t, namespace, advancedTier.ObjectMeta.Namespace)
+		basic, found := tiers["basic"]
+		require.True(t, found)
+		assert.Equal(t, "basic", basic.ObjectMeta.Name)
+		assert.Equal(t, namespace, basic.ObjectMeta.Namespace)
 	})
 }
 

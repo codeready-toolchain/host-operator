@@ -8,6 +8,7 @@ require (
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20190926125002-408e9c1b28de
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
+	github.com/go-openapi/errors v0.17.0
 	github.com/gobuffalo/envy v1.7.1 // indirect
 	github.com/gophercloud/gophercloud v0.3.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
