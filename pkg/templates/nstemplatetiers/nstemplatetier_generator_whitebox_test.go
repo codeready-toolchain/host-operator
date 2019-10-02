@@ -36,12 +36,34 @@ func TestParseAllRevisions(t *testing.T) {
 
 		t.Run("unparseable content", func(t *testing.T) {
 			// given
+			asset := []byte("foo::bar")
 			// when initializing the generator with the production Asset
-			_, err := parseAllRevisions([]byte("foo::bar"))
+			_, err := parseAllRevisions(asset)
 			// then
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "unable to parse all template revisions: yaml: unmarshal errors")
 		})
+
+		t.Run("invalid key format", func(t *testing.T) {
+			// given
+			asset := []byte("foo: bar")
+			// when initializing the generator with the production Asset
+			_, err := parseAllRevisions(asset)
+			// then
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid namespace template filename. Expected format: '<tier_kind>-<namespace_kind>', got foo")
+		})
+
+		t.Run("invalid value format", func(t *testing.T) {
+			// given
+			asset := []byte("foo-bar: true")
+			// when initializing the generator with the production Asset
+			_, err := parseAllRevisions(asset)
+			// then
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid namespace template filename revision for 'foo-bar'. Expected a string, got a bool ('true')")
+		})
+
 	})
 
 }

@@ -80,21 +80,19 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 	for filename, revision := range data {
 		data := strings.Split(filename, "-")
 		if len(data) != 2 {
-			log.Info("invalid namespace template filename. Expected format: '<tier_kind>-<namespace_kind>'", "filename", filename)
-			continue
+			return nil, errors.Errorf("invalid namespace template filename. Expected format: '<tier_kind>-<namespace_kind>', got %s", filename)
 		}
 		tierKind := data[0]
 		nsKind := data[1]
 		// create a new entry if needed
-		revision, ok := revision.(string)
+		r, ok := revision.(string)
 		if !ok {
-			log.Info("invalid namespace template filename revision. Expected a string", "filename", filename, "revision", revision)
-			continue
+			return nil, errors.Errorf("invalid namespace template filename revision for '%[1]s'. Expected a string, got a %[2]T ('%[2]v')", filename, revision)
 		}
 		if _, ok := revisions[tierKind]; !ok {
 			revisions[tierKind] = make(map[string]string, 3) // expect 3 entries: 'code', 'dev' and 'stage'
 		}
-		revisions[tierKind][nsKind] = revision
+		revisions[tierKind][nsKind] = r
 	}
 	log.Info("templates revisions loaded", "revisions", revisions)
 	return revisions, nil

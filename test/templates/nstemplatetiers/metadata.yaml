@@ -4,5 +4,3 @@ advanced-stage: 123456c
 basic-code: 123456d
 basic-dev: 123456e
 basic-stage: 123456f
-foo: bar # make sure this value is ignored
-foo-bar: true # make sure this value is also ignored
