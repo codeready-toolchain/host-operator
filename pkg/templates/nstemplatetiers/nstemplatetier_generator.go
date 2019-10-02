@@ -32,7 +32,10 @@ func CreateOrUpdateResources(mgr manager.Manager, namespace string, asset func(n
 		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
 	}
 	for _, tier := range tiers {
-		mgr.GetClient().Create(context.TODO(), tier)
+		err := mgr.GetClient().Create(context.TODO(), tier)
+		if err != nil {
+			return errors.Wrapf(err, "unable to create NSTemplateTier %s", tier.Name)
+		}
 	}
 	return nil
 }
