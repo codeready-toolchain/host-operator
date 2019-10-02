@@ -1,6 +1,7 @@
 package nstemplatetiers
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -13,10 +14,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var log = logf.Log.WithName("templates")
+
+// CreateOrUpdateResources generates the NSTemplateTier resources from the namespace templates,
+// then uses the manager's client to create or update the resources on the cluster.
+func CreateOrUpdateResources(mgr manager.Manager, namespace string, asset func(name string) ([]byte, error)) error {
+	g, err := NewNSTemplateTierGenerator(mgr.GetScheme(), asset)
+	if err != nil {
+		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
+	}
+	tiers, err := g.NewNSTemplateTiers(namespace)
+	if err != nil {
+		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
+	}
+	for _, tier := range tiers {
+		mgr.GetClient().Create(context.TODO(), tier)
+	}
+	return nil
+}
 
 // NSTemplateTierGenerator the NSTemplateTier manifest generator
 type NSTemplateTierGenerator struct {
@@ -78,7 +97,7 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 	return revisions, nil
 }
 
-// GenerateAllManifests generates all manifests, indexed by their associated tier kind and by their namespace kind
+// NewNSTemplateTiers generates all manifests, indexed by their associated tier kind and by their namespace kind
 // eg:
 // - advanced:
 //   - code: <[]byte>
@@ -88,8 +107,8 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 //   - code: <[]byte>
 //   - dev: <[]byte>
 //   - stage: <[]byte>
-func (g NSTemplateTierGenerator) GenerateAllManifests(namespace string) ([]toolchainv1alpha1.NSTemplateTier, error) {
-	objects := make([]toolchainv1alpha1.NSTemplateTier, 0, len(g.revisions))
+func (g NSTemplateTierGenerator) NewNSTemplateTiers(namespace string) ([]*toolchainv1alpha1.NSTemplateTier, error) {
+	objects := make([]*toolchainv1alpha1.NSTemplateTier, 0, len(g.revisions))
 	// retrieve the tier names and order them, so we compare them
 	// with the expected templates during the tests
 	tiers := make([]string, 0, len(g.revisions))
@@ -98,7 +117,7 @@ func (g NSTemplateTierGenerator) GenerateAllManifests(namespace string) ([]toolc
 	}
 	sort.Strings(tiers)
 	for _, tier := range tiers {
-		obj, err := g.GenerateManifest(tier, namespace)
+		obj, err := g.NewNSTemplateTier(tier, namespace)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate all NSTemplateTier manifests")
 		}
@@ -107,7 +126,7 @@ func (g NSTemplateTierGenerator) GenerateAllManifests(namespace string) ([]toolc
 	return objects, nil
 }
 
-// GenerateManifest generates a full NSTemplateTier object
+// NewNSTemplateTier initializes a complete NSTemplateTier object
 // by embedding the `<tier>-code.yml`, `<tier>-dev.yml` and `<tier>-stage.yml`
 // file along with each one's git (short) commit as the revision associated with
 // the template.
@@ -132,12 +151,12 @@ func (g NSTemplateTierGenerator) GenerateAllManifests(namespace string) ([]toolc
 //       template: >
 //         <yaml-ns-template>
 // ------
-func (g NSTemplateTierGenerator) GenerateManifest(tier, namespace string) (toolchainv1alpha1.NSTemplateTier, error) {
+func (g NSTemplateTierGenerator) NewNSTemplateTier(tier, namespace string) (*toolchainv1alpha1.NSTemplateTier, error) {
 	revisions, ok := g.revisions[tier]
 	if !ok {
-		return toolchainv1alpha1.NSTemplateTier{}, errors.Errorf("tier '%s' does not exist", tier)
+		return nil, errors.Errorf("tier '%s' does not exist", tier)
 	}
-	obj := toolchainv1alpha1.NSTemplateTier{
+	obj := &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tier,
 			Namespace: namespace,
@@ -155,12 +174,12 @@ func (g NSTemplateTierGenerator) GenerateManifest(tier, namespace string) (toolc
 		// get the content of the `-<t>.yaml` file
 		tmpl, err := g.asset(fmt.Sprintf("%s-%s.yaml", tier, nsType))
 		if err != nil {
-			return toolchainv1alpha1.NSTemplateTier{}, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
+			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
 		}
 		// parse the content as
 		tmplObj, err := decodeTemplate(g.decoder, tmpl)
 		if err != nil {
-			return toolchainv1alpha1.NSTemplateTier{}, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
+			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
 		}
 		// add it to the NSTemplateTier obj
 		obj.Spec.Namespaces = append(obj.Spec.Namespaces, toolchainv1alpha1.NSTemplateTierNamespace{

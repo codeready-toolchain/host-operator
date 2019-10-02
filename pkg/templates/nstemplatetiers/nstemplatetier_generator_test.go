@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-func TestGenerateManifest(t *testing.T) {
+func TestNewNSTemplateTier(t *testing.T) {
 
 	// uses the `Asset` func generated in `pkg/templates/template_contents_test.go` here
 	s := scheme.Scheme
@@ -45,7 +45,7 @@ func TestGenerateManifest(t *testing.T) {
 		for tier, revisions := range data {
 			t.Run(tier, func(t *testing.T) {
 				// when
-				actual, err := g.GenerateManifest(tier, namespace)
+				actual, err := g.NewNSTemplateTier(tier, namespace)
 				// then
 				require.NoError(t, err)
 				expected, expectedStr, err := newNSTemplateTierFromYAML(s, tier, namespace, revisions)
@@ -64,7 +64,7 @@ func TestGenerateManifest(t *testing.T) {
 
 		t.Run("unknown tier", func(t *testing.T) {
 			// when
-			_, err := g.GenerateManifest("foo", namespace)
+			_, err := g.NewNSTemplateTier("foo", namespace)
 			// then
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "tier 'foo' does not exist")
@@ -73,7 +73,7 @@ func TestGenerateManifest(t *testing.T) {
 
 }
 
-func TestGenerateAllManifests(t *testing.T) {
+func TestNewNSTemplateTiers(t *testing.T) {
 	// given
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
@@ -85,15 +85,15 @@ func TestGenerateAllManifests(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		// when
-		manifests, err := g.GenerateAllManifests(namespace)
+		tiers, err := g.NewNSTemplateTiers(namespace)
 		// then
 		require.NoError(t, err)
-		require.Len(t, manifests, 2)
+		require.Len(t, tiers, 2)
 		// sort by name
-		assert.Equal(t, "advanced", manifests[0].ObjectMeta.Name)
-		assert.Equal(t, namespace, manifests[0].ObjectMeta.Namespace)
-		assert.Equal(t, "basic", manifests[1].ObjectMeta.Name)
-		assert.Equal(t, namespace, manifests[1].ObjectMeta.Namespace)
+		assert.Equal(t, "advanced", tiers[0].ObjectMeta.Name)
+		assert.Equal(t, namespace, tiers[0].ObjectMeta.Namespace)
+		assert.Equal(t, "basic", tiers[1].ObjectMeta.Name)
+		assert.Equal(t, namespace, tiers[1].ObjectMeta.Namespace)
 	})
 }
 
