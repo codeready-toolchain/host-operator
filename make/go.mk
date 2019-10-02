@@ -43,7 +43,7 @@ generate-metadata: clean-metadata
 	@$(foreach tmpl,$(wildcard $(NSTEMPLATES_DIR)/*.yaml),$(call git_commit,$(tmpl),$(NSTEMPLATES_DIR)/metadata.yaml);)
 
 clean-metadata:
-	rm $(NSTEMPLATES_DIR)/metadata.yaml 
+	@rm $(NSTEMPLATES_DIR)/metadata.yaml 2>/dev/null || true
 
 define git_commit
 	echo "processing $(1)"
