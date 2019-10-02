@@ -78,7 +78,7 @@ func TestGenerateAllManifests(t *testing.T) {
 	})
 }
 
-// generates uses a golang template which is execute and whose output is decoded into an toolchainv1alpha1.NSTemplateTier.
+// newNSTemplateTierFromYAML generates toolchainv1alpha1.NSTemplateTier using a golang template which is applied to the given tier.
 func newNSTemplateTierFromYAML(s *runtime.Scheme, tier, namespace string, revisions map[string]string) (toolchainv1alpha1.NSTemplateTier, string, error) {
 	expectedTmpl, err := texttemplate.New("template").Parse(`kind: NSTemplateTier
 apiVersion: toolchain.dev.openshift.com/v1alpha1
