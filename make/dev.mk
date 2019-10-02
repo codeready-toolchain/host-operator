@@ -71,11 +71,11 @@ add-host-to-member:
 	@${ADD_CLUSTER_SCRIPT_PATH} host host-cluster
 
 .PHONY: deploy-csv
-## Create the test namespace
+## Creates ServiceCatalog with a ConfigMap that contains operator CSV and all CRDs
 deploy-csv: docker-push
 	sed -e 's|REPLACE_IMAGE|${IMAGE}|g' hack/deploy_csv.yaml | oc apply -f -
 
 .PHONY: install-operator
-## Create the test namespace
-install-operator: create-namespace
+## Creates OperatorGroup and Subscription that installs host operator in a test namespace
+install-operator: deploy-csv create-namespace
 	sed -e 's|REPLACE_NAMESPACE|${LOCAL_TEST_NAMESPACE}|g' hack/install_operator.yaml | oc apply -f -
