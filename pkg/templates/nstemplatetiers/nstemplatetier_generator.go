@@ -138,10 +138,6 @@ func (g NSTemplateTierGenerator) GenerateManifest(tier, namespace string) (toolc
 		return toolchainv1alpha1.NSTemplateTier{}, errors.Errorf("tier '%s' does not exist", tier)
 	}
 	obj := toolchainv1alpha1.NSTemplateTier{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "toolchain.dev.openshift.com/v1alpha1",
-			Kind:       "NSTemplateTier",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tier,
 			Namespace: namespace,
