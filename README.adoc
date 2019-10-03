@@ -40,6 +40,44 @@ There are a few more targets that you can find useful:
 * to remove the local test namespace: `$ make clean-namespace`
 * to remove & create the local test namespace, and create ClusterRole/ClusterRoleBinding and ServiceAccount inside of the namespace: `$ make reset-namespace`
 
+== Installing operator
+
+To install the host operator via OperatorHub you need to have OpenShift 4.2+ running and access to a docker registry.
+Since the operator is no available in OperatorHub nor in any registry by default, you need to deploy the image to the docker registry, create `CatalogSource` and `ClusterServiceVersion` in the `openshift-marketplace` namespace and then create `OperatorGroup` and `Subscription` in the namespace you want to install the operator to.
+Before running any make target, make sure that you have `QUAY_NAMESPACE` variable set to your quay username (or set to any namespace you want to push the image to).
+
+```bash
+$ export QUAY_NAMESPACE=<quay-username>
+```
+
+Then, to install the operator run:
+```bash
+$ make install-operator
+```
+
+That Makefile target takes care of several steps that can be executed separately:
+
+* build the image: `$ make docker-image`
+* push the image to registry: `$ make docker-push`
+* create `CatalogSource` and `ConfigMap` with `ClusterServiceVersion` and all CRDs in the `openshift-marketplace`: `$ make deploy-csv`
+* and as the last step the actual installation via creating `OperatorGroup` and `Subscription` in the test namespace.
+
+=== OpenShift internal docker registry
+
+In case you want to use the OpenShift internal docker registry instead of quay, you can achieve the same thing via running:
+```bash
+$ make install-operator-using-os-registry
+```
+In case you have issues with the certificate while logging/pushing to the OpenShift internal docker registry, please follow these instructions:
+```bash
+TO_REGISTRY=$(oc get images.config.openshift.io/cluster  -o jsonpath={.status.externalRegistryHostnames[0]})
+oc get secret router-certs-default -n openshift-ingress -o json |jq -r '.data["tls.crt"]' | base64 -d >ca.crt
+sudo cp ca.crt /etc/pki/ca-trust/source/anchors/${TO_REGISTRY}.crt
+sudo update-ca-trust enable
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+docker login -u kubeadmin -p $(oc whoami -t) ${TO_REGISTRY}
+```
 
 === End-to-End tests
 

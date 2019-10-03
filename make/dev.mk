@@ -71,7 +71,7 @@ add-host-to-member:
 	@${ADD_CLUSTER_SCRIPT_PATH} host host-cluster
 
 .PHONY: deploy-csv
-## Creates ServiceCatalog with a ConfigMap that contains operator CSV and all CRDs
+## Creates ServiceCatalog with a ConfigMap that contains operator CSV and all CRDs and image location set to quay.io
 deploy-csv: docker-push
 	sed -e 's|REPLACE_IMAGE|${IMAGE}|g' hack/deploy_csv.yaml | oc apply -f -
 
@@ -79,3 +79,11 @@ deploy-csv: docker-push
 ## Creates OperatorGroup and Subscription that installs host operator in a test namespace
 install-operator: deploy-csv create-namespace
 	sed -e 's|REPLACE_NAMESPACE|${LOCAL_TEST_NAMESPACE}|g' hack/install_operator.yaml | oc apply -f -
+
+.PHONY: deploy-csv-using-os-registry
+## Creates ServiceCatalog with a ConfigMap that contains operator CSV and all CRDs and image location set to current OS registry
+deploy-csv-using-os-registry: set-os-registry deploy-csv
+
+.PHONY: install-operator-using-os-registry
+## Creates OperatorGroup and Subscription that installs host operator in a test namespace
+install-operator-using-os-registry: set-os-registry install-operator
