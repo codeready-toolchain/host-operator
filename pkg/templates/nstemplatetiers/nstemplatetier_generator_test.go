@@ -48,7 +48,7 @@ func TestAsset(t *testing.T) {
 
 func TestNewNSTemplateTier(t *testing.T) {
 
-	// uses the `Asset` func generated in `pkg/templates/template_contents_test.go` here
+	// uses the `Asset` func generated in `test/templates/nstemplatetiers/nstemplatetier_assets.go` here
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
