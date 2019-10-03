@@ -12,7 +12,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
 	v1 "k8s.io/api/core/v1"
@@ -430,9 +430,9 @@ func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
 	defer clearMemberClusters(r.client)
 
 	fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object) error {
-		switch obj.(type) {
+		switch obj := obj.(type) {
 		case *v1alpha1.MasterUserRecord:
-			return errs.NewAlreadyExists(v1.Resource("masteruserrecords"), obj.(*v1alpha1.MasterUserRecord).Name)
+			return errs.NewAlreadyExists(v1.Resource("masteruserrecords"), obj.Name)
 		default:
 			return fakeClient.Client.Create(ctx, obj)
 		}
@@ -571,9 +571,9 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
-		switch obj.(type) {
+		switch obj := obj.(type) {
 		case *v1alpha1.UserSignup:
-			for _, cond := range obj.(*v1alpha1.UserSignup).Status.Conditions {
+			for _, cond := range obj.Status.Conditions {
 				if cond.Reason == "NoClustersAvailable" {
 					return errors.New("failed to update UserSignup status")
 				}
