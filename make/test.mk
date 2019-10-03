@@ -103,7 +103,7 @@ ifeq ($(E2E_REPO_PATH),"")
 		$(eval BRANCH_REF := $(shell curl ${AUTHOR_LINK}/host-operator.git/info/refs?service=git-upload-pack --output - /dev/null 2>&1 | grep -a ${PULL_SHA} | awk '{print $$2}'))
 		@echo "detected branch ref ${BRANCH_REF}"
 		# check if a branch with the same ref exists in the user's fork of toolchain-e2e repo
-		$(eval REMOTE_E2E_BRANCH := $(shell curl ${AUTHOR_LINK}/toolchain-e2e.git/info/refs?service=git-upload-pack --output - /dev/null 2>&1 | grep -a ${BRANCH_REF} | awk '{print $$2}'))
+		$(eval REMOTE_E2E_BRANCH := $(shell curl ${AUTHOR_LINK}/toolchain-e2e.git/info/refs?service=git-upload-pack --output - /dev/null 2>&1 | grep -a "${BRANCH_REF}$" | awk '{print $$2}'))
 		@echo "branch ref of the user's fork: \"${REMOTE_E2E_BRANCH}\" - if empty then not found"
 		# check if the branch with the same name exists, if so then merge it with master and use the merge branch, if not then use master
 		if [[ -n "${REMOTE_E2E_BRANCH}" ]]; then \
