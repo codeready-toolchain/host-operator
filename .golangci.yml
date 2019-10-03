@@ -1,3 +1,8 @@
+service:
+  project-path: github.com/codeready-toolchain/host-operator
+  prepare: # see https://github.com/golangci/golangci/wiki/Configuration#config-directives
+    - make generate
+
 linters:
   enable:
     - gofmt
