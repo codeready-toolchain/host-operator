@@ -13,9 +13,10 @@ ENV LANG=en_US.utf8 \
 ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 
 RUN yum install epel-release -y \
+    && yum install  https://centos7.iuscommunity.org/ius-release.rpm -y \
     && yum install --enablerepo=centosplus install -y --quiet \
     findutils \
-    git \
+    git2u-all \
     golang \
     make \
     procps-ng \
