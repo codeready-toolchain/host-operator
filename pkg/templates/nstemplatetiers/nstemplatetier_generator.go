@@ -18,24 +18,24 @@ import (
 
 var log = logf.Log.WithName("templates")
 
-// NSTemplateTierGenerator the NSTemplateTier manifest generator
-type NSTemplateTierGenerator struct {
+// nstemplatetierGenerator the NSTemplateTier object generator
+type nstemplatetierGenerator struct {
 	asset     func(name string) ([]byte, error) // the func which gives access to the
 	revisions map[string]map[string]string
 	decoder   runtime.Decoder
 }
 
-// NewNSTemplateTierGenerator returns a new NSTemplateTierGenerator
-func NewNSTemplateTierGenerator(s *runtime.Scheme, asset func(name string) ([]byte, error)) (*NSTemplateTierGenerator, error) {
+// newNSTemplateTierGenerator returns a new nstemplatetierGenerator
+func newNSTemplateTierGenerator(s *runtime.Scheme, asset func(name string) ([]byte, error)) (*nstemplatetierGenerator, error) {
 	metadata, err := asset("metadata.yaml")
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to initialize the NSTemplateTierGenerator")
+		return nil, errors.Wrapf(err, "unable to initialize the nstemplatetierGenerator")
 	}
 	revisions, err := parseAllRevisions(metadata)
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to initialize the NSTemplateTierGenerator")
+		return nil, errors.Wrapf(err, "unable to initialize the nstemplatetierGenerator")
 	}
-	return &NSTemplateTierGenerator{
+	return &nstemplatetierGenerator{
 		asset:     asset,
 		revisions: revisions,
 		decoder:   serializer.NewCodecFactory(s).UniversalDeserializer(),
@@ -86,10 +86,10 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 //   - code: <[]byte>
 //   - dev: <[]byte>
 //   - stage: <[]byte>
-func (g NSTemplateTierGenerator) NewNSTemplateTiers(namespace string) (map[string]*toolchainv1alpha1.NSTemplateTier, error) {
+func (g nstemplatetierGenerator) newNSTemplateTiers(namespace string) (map[string]*toolchainv1alpha1.NSTemplateTier, error) {
 	tiers := make(map[string]*toolchainv1alpha1.NSTemplateTier, len(g.revisions))
 	for tier := range g.revisions {
-		tmpl, err := g.NewNSTemplateTier(tier, namespace)
+		tmpl, err := g.newNSTemplateTier(tier, namespace)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate all NSTemplateTier manifests")
 		}
@@ -123,7 +123,7 @@ func (g NSTemplateTierGenerator) NewNSTemplateTiers(namespace string) (map[strin
 //       template: >
 //         <yaml-ns-template>
 // ------
-func (g NSTemplateTierGenerator) NewNSTemplateTier(tier, namespace string) (*toolchainv1alpha1.NSTemplateTier, error) {
+func (g nstemplatetierGenerator) newNSTemplateTier(tier, namespace string) (*toolchainv1alpha1.NSTemplateTier, error) {
 	revisions, ok := g.revisions[tier]
 	if !ok {
 		return nil, errors.Errorf("tier '%s' does not exist", tier)
@@ -148,8 +148,9 @@ func (g NSTemplateTierGenerator) NewNSTemplateTier(tier, namespace string) (*too
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
 		}
-		// parse the content as
-		tmplObj, err := decodeTemplate(g.decoder, tmpl)
+		// convert the content into a templatev1.Template
+		tmplObj := &templatev1.Template{}
+		_, _, err = g.decoder.Decode(tmpl, nil, tmplObj)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
 		}
@@ -161,13 +162,4 @@ func (g NSTemplateTierGenerator) NewNSTemplateTier(tier, namespace string) (*too
 		})
 	}
 	return obj, nil
-}
-
-func decodeTemplate(decoder runtime.Decoder, tmplContent []byte) (*templatev1.Template, error) {
-	tmpl := &templatev1.Template{}
-	_, _, err := decoder.Decode(tmplContent, nil, tmpl)
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to decode template")
-	}
-	return tmpl, nil
 }
