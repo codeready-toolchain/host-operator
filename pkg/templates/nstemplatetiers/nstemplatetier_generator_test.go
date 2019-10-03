@@ -2,6 +2,7 @@ package nstemplatetiers_test
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 	texttemplate "text/template"
 
@@ -52,40 +53,76 @@ func TestNewNSTemplateTier(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	g, err := nstemplatetiers.NewNSTemplateTierGenerator(s, testnstemplatetiers.Asset)
-	require.NoError(t, err)
-	namespace := "host-operator" + uuid.NewV4().String()[:7]
-
+	
 	t.Run("ok", func(t *testing.T) {
-		// given
-		data := map[string]map[string]string{
-			"advanced": {
-				"code":  "123456a",
-				"dev":   "123456b",
-				"stage": "123456c",
-			},
-			"basic": {
-				"code":  "123456d",
-				"dev":   "123456e",
-				"stage": "123456f",
-			},
-		}
-		for tier, revisions := range data {
-			t.Run(tier, func(t *testing.T) {
-				// when
-				actual, err := g.NewNSTemplateTier(tier, namespace)
-				// then
-				require.NoError(t, err)
-				expected, expectedStr, err := newNSTemplateTierFromYAML(s, tier, namespace, revisions)
-				require.NoError(t, err)
-				t.Logf("expected NSTemplateTier (yaml):\n%s", expectedStr)
-				// here we don't compare whoe objects because the generated NSTemplateTier
-				// has no specific values for the `TypeMeta`: the `APIVersion: toolchain.dev.openshift.com/v1alpha1`
-				// and `Kind: NSTemplateTier` should be set by the client using the registered GVK
-				assert.Equal(t, expected.ObjectMeta, actual.ObjectMeta)
-				assert.Equal(t, expected.Spec, actual.Spec)
-			})
-		}
+		
+		t.Run("with test assets", func(t *testing.T) {
+			// given
+			g, err := nstemplatetiers.NewNSTemplateTierGenerator(s, testnstemplatetiers.Asset)
+			require.NoError(t, err)
+			namespace := "host-operator" + uuid.NewV4().String()[:7]
+			data := map[string]map[string]string{
+				"advanced": {
+					"code":  "123456a",
+					"dev":   "123456b",
+					"stage": "123456c",
+				},
+				"basic": {
+					"code":  "123456d",
+					"dev":   "123456e",
+					"stage": "123456f",
+				},
+			}
+			for tier, revisions := range data {
+				t.Run(tier, func(t *testing.T) {
+					// when
+					actual, err := g.NewNSTemplateTier(tier, namespace)
+					// then
+					require.NoError(t, err)
+					expected, expectedStr, err := newNSTemplateTierFromYAML(s, tier, namespace, revisions)
+					require.NoError(t, err)
+					t.Logf("expected NSTemplateTier (yaml):\n%s", expectedStr)
+					// here we don't compare whoe objects because the generated NSTemplateTier
+					// has no specific values for the `TypeMeta`: the `APIVersion: toolchain.dev.openshift.com/v1alpha1`
+					// and `Kind: NSTemplateTier` should be set by the client using the registered GVK
+					assert.Equal(t, expected.ObjectMeta, actual.ObjectMeta)
+					assert.Equal(t, expected.Spec, actual.Spec)
+				})
+			}
+		})
+
+		t.Run("with prod assets", func(t *testing.T) {
+			// given
+			g, err := nstemplatetiers.NewNSTemplateTierGenerator(s, nstemplatetiers.Asset)
+			require.NoError(t, err)
+			namespace := "host-operator" + uuid.NewV4().String()[:7]
+			// when
+			tiers, err := g.NewNSTemplateTiers(namespace)
+			// then
+			require.NoError(t, err)
+			require.NotEmpty(t, tiers)
+			for _, actual := range tiers {
+				tierName := actual.Name
+				assert.Equal(t, namespace, actual.Namespace)
+				require.Len(t, g.revisions[tierName], len(actual.Spec.Namespaces))
+				for nsType, rev := range g.revisions[tierName] {
+					found := false
+					for _, ns := range actual.Spec.Namespaces {
+						if ns.Type == nsType {
+							found = true
+							assert.Equal(t, rev, ns.Revision)
+							asset, err := Asset(fmt.Sprintf("%s-%s.yaml", tierName, nsType))
+							require.NoError(t, err)
+							template, err := decodeTemplate(serializer.NewCodecFactory(s).UniversalDeserializer(), asset)
+							require.NoError(t, err)
+							assert.Equal(t, *template, ns.Template)
+							break
+						}
+					}
+					assert.True(t, found, "the namespace with the type wasn't found", "ns-type", nsType)
+				}
+			}
+		})
 	})
 
 	t.Run("failures", func(t *testing.T) {
@@ -111,21 +148,19 @@ func TestNewNSTemplateTiers(t *testing.T) {
 	require.NoError(t, err)
 	namespace := "host-operator" + uuid.NewV4().String()[:7]
 
-	t.Run("ok", func(t *testing.T) {
-		// when
-		tiers, err := g.NewNSTemplateTiers(namespace)
-		// then
-		require.NoError(t, err)
-		require.Len(t, tiers, 2)
-		advancedTier, found := tiers["advanced"]
-		require.True(t, found)
-		assert.Equal(t, "advanced", advancedTier.ObjectMeta.Name)
-		assert.Equal(t, namespace, advancedTier.ObjectMeta.Namespace)
-		basic, found := tiers["basic"]
-		require.True(t, found)
-		assert.Equal(t, "basic", basic.ObjectMeta.Name)
-		assert.Equal(t, namespace, basic.ObjectMeta.Namespace)
-	})
+	// when
+	tiers, err := g.NewNSTemplateTiers(namespace)
+	// then
+	require.NoError(t, err)
+	require.Len(t, tiers, 2)
+	advancedTier, found := tiers["advanced"]
+	require.True(t, found)
+	assert.Equal(t, "advanced", advancedTier.ObjectMeta.Name)
+	assert.Equal(t, namespace, advancedTier.ObjectMeta.Namespace)
+	basic, found := tiers["basic"]
+	require.True(t, found)
+	assert.Equal(t, "basic", basic.ObjectMeta.Name)
+	assert.Equal(t, namespace, basic.ObjectMeta.Namespace)
 }
 
 // newNSTemplateTierFromYAML generates toolchainv1alpha1.NSTemplateTier using a golang template which is applied to the given tier.
