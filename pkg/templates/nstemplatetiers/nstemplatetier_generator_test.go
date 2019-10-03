@@ -106,7 +106,7 @@ func TestNewNSTemplateTiers(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	// uses the `Asset` func generated in `pkg/templates/template_contents_test.go` here
+	// uses the `Asset` func generated in `test/templates/nstemplatetiers/nstemplatetier_assets.go` here
 	g, err := nstemplatetiers.NewNSTemplateTierGenerator(s, testnstemplatetiers.Asset)
 	require.NoError(t, err)
 	namespace := "host-operator" + uuid.NewV4().String()[:7]
