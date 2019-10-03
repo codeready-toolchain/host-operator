@@ -1,7 +1,6 @@
 package nstemplatetiers
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -14,31 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var log = logf.Log.WithName("templates")
-
-// CreateOrUpdateResources generates the NSTemplateTier resources from the namespace templates,
-// then uses the manager's client to create or update the resources on the cluster.
-func CreateOrUpdateResources(mgr manager.Manager, namespace string, asset func(name string) ([]byte, error)) error {
-	g, err := NewNSTemplateTierGenerator(mgr.GetScheme(), asset)
-	if err != nil {
-		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
-	}
-	tiers, err := g.NewNSTemplateTiers(namespace)
-	if err != nil {
-		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
-	}
-	for _, tier := range tiers {
-		err := mgr.GetClient().Create(context.TODO(), tier)
-		if err != nil {
-			return errors.Wrapf(err, "unable to create NSTemplateTier %s", tier.Name)
-		}
-	}
-	return nil
-}
 
 // NSTemplateTierGenerator the NSTemplateTier manifest generator
 type NSTemplateTierGenerator struct {
