@@ -53,7 +53,7 @@ $ export QUAY_NAMESPACE=<quay-username>
 Prerequisites:
 
 * Make sure the target OpenShift 4.2+ cluster is accessible via `oc` command.
-* Log in to target OpenShift cluster with cluster admin privileges
+* Log in to the target OpenShift cluster with cluster admin privileges
 * Set the `QUAY_NAMESPACE` variable properly - see above
 * Login to quay.io via `docker login quay.io` (in case you want to use quay as the docker registry)
 
@@ -111,12 +111,20 @@ If the branch with the same name does not exist, then it only clones the latest 
 
 If you still don't know what to do with e2e tests in some use-cases, go to <<What to do>> section where all use-cases are covered.
 
-==== Prerequisites if running locally on minishift
+==== Prerequisites if running locally
+
+===== Minishift
 If you are running this tests locally on minishift, make sure that you have exposed minishift's docker-env, so that deployment can use locally built image. You can expose it by running following command.
 `eval $(minishift docker-env)`
 
 
 NOTE: This is not required for openshift-ci environment
+
+===== OpenShift 4.2+
+
+* Make sure you have set the `QUAY_NAMESPACE` variable: `export QUAY_NAMESPACE=<quay-username>`
+* Log in to the target OpenShift cluster with cluster admin privileges
+* The visibility of `host-operator` repository in quay is set to public (https://quay.io/repository/<your-username>/host-operator?tab=settings)
 
 ==== Running End-to-End Tests
 
