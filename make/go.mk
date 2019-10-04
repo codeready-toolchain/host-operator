@@ -21,21 +21,31 @@ $(OUT_DIR)/operator:
 vendor:
 	$(Q)go mod vendor
 
-NSTEMPLATES_DIR=deploy/nstemplatetiers
-YAML_TEMPLATES := $(wildcard $(NSTEMPLATES_DIR)/*-*.yaml)
+NSTEMPLATES_DIR=deploy/templates/nstemplatetiers
+NSTEMPLATES_TEST_DIR=test/templates/nstemplatetiers
 
 .PHONY: generate
-generate: generate-metadata
+generate: generate-metadata generate-assets 
+
+.PHONY: generate-assets
+generate-assets:
 	@echo "generating templates bindata..."
 	@go install github.com/go-bindata/go-bindata/...
-	@$(GOPATH)/bin/go-bindata -pkg templates -o ./pkg/templates/templates.go -nocompress -prefix $(NSTEMPLATES_DIR) $(NSTEMPLATES_DIR)
+	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nocompress -prefix $(NSTEMPLATES_DIR) $(NSTEMPLATES_DIR)
+	@echo "generating test templates bindata..."
+	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers_test -o ./test/templates/nstemplatetiers/nstemplatetier_assets.go -nocompress -prefix $(NSTEMPLATES_TEST_DIR) $(NSTEMPLATES_TEST_DIR)
 
 .PHONY: generate-metadata
-generate-metadata:
-	@echo "generating namespace templates metadata in $(YAML_TEMPLATES)" 
-	@-rm $(NSTEMPLATES_DIR)/metadata.yaml
-	@$(foreach tmpl,$(YAML_TEMPLATES),$(call git_commit,$(tmpl),$(NSTEMPLATES_DIR)/metadata.yaml);)
+generate-metadata: clean-metadata
+	@echo "generating namespace templates metadata for manifests in $(NSTEMPLATES_DIR)" 
+	@echo "yaml files: $(shell ls $(NSTEMPLATES_DIR)/*.yaml)"
+	@echo "yaml files: $(wildcard $(NSTEMPLATES_DIR)/*.yaml)"
+	@$(foreach tmpl,$(wildcard $(NSTEMPLATES_DIR)/*.yaml),$(call git_commit,$(tmpl),$(NSTEMPLATES_DIR)/metadata.yaml);)
+
+clean-metadata:
+	@rm $(NSTEMPLATES_DIR)/metadata.yaml 2>/dev/null || true
 
 define git_commit
+	echo "processing $(1)"
 	echo "$(patsubst $(NSTEMPLATES_DIR)/%.yaml,%,$(1)):" `git log -1 --format=%h $(1)` >> $(2)
 endef
