@@ -91,6 +91,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			}
 			assets, revisions := generateRevisions("123456")
 			err := nstemplatetiers.CreateOrUpdateResources(s, client, namespace, assets)
+			require.NoError(t, err)
 			// verify that 2 NStemplateTier CRs were created: "advanced" and "basic"
 			for _, tierName := range []string{"advanced", "basic"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
