@@ -7,28 +7,27 @@ import (
 	"os"
 	"runtime"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/controller"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	"github.com/operator-framework/operator-sdk/pkg/kube-metrics"
+	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
-
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/rest"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -154,6 +153,14 @@ func main() {
 
 	log.Info("Starting the Cmd.")
 
+	go func() {
+		mgr.GetCache().WaitForCacheSync(stopChannel)
+		// create or update all NSTemplateTiers on the cluster at startup
+		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetiers.Asset); err != nil {
+			log.Error(err, "")
+			os.Exit(1)
+		}
+	}()
 	// Start the Cmd
 	if err := mgr.Start(stopChannel); err != nil {
 		log.Error(err, "Manager exited non-zero")

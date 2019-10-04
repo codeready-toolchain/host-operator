@@ -1,6 +1,7 @@
 package nstemplatetiers
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -10,15 +11,57 @@ import (
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var log = logf.Log.WithName("templates")
 
-// nstemplatetierGenerator the NSTemplateTier object generator
+// CreateOrUpdateResources generates the NSTemplateTier resources from the namespace templates,
+// then uses the manager's client to create or update the resources on the cluster.
+func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, asset func(name string) ([]byte, error)) error {
+	g, err := newNSTemplateTierGenerator(s, asset)
+	if err != nil {
+		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
+	}
+	tiers, err := g.newNSTemplateTiers(namespace)
+	if err != nil {
+		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
+	}
+	for _, tier := range tiers {
+		log.Info("creating or updating NSTemplateTier", "namespace", tier.Namespace, "name", tier.Name)
+		if err := client.Create(context.TODO(), tier); err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				return errors.Wrapf(err, "unable to create the NSTemplateTiers '%s' in namespace '%s'", tier.Name, tier.Namespace)
+			}
+			log.Info("NSTemplateTier resource already exists", "namespace", tier.Namespace, "name", tier.Name)
+			// get the existing NSTemplateTier
+			existing := &toolchainv1alpha1.NSTemplateTier{}
+			err = client.Get(context.TODO(), types.NamespacedName{
+				Namespace: tier.Namespace,
+				Name:      tier.Name,
+			}, existing)
+			if err != nil {
+				return errors.Wrapf(err, "unable to get the NSTemplateTiers '%s' in namespace '%s'", tier.Name, tier.Namespace)
+			}
+			// retrieve the current 'resourceVersion' before updating the resource
+			tier.ObjectMeta.ResourceVersion = existing.ObjectMeta.ResourceVersion
+			if err := client.Update(context.TODO(), tier); err != nil {
+				return errors.Wrapf(err, "unable to update the NSTemplateTiers '%s' in namespace '%s'", tier.Name, tier.Namespace)
+			}
+			log.Info("NSTemplateTier resource updated", "namespace", tier.Namespace, "name", tier.Name)
+		}
+		log.Info("NSTemplateTier resource created", "namespace", tier.Namespace, "name", tier.Name)
+	}
+	return nil
+}
+
+// nstemplatetierGenerator the NSTemplateTier manifest generator
 type nstemplatetierGenerator struct {
 	asset     func(name string) ([]byte, error) // the func which gives access to the
 	revisions map[string]map[string]string
