@@ -66,13 +66,3 @@ add-member-to-host:
 ## Run script add-cluster.sh host host-cluster
 add-host-to-member:
 	@${ADD_CLUSTER_SCRIPT_PATH} host host-cluster
-
-.PHONY: deploy-csv
-## Create the test namespace
-deploy-csv: docker-push
-	sed -e 's|REPLACE_IMAGE|${IMAGE}|g' hack/deploy_csv.yaml | oc apply -f -
-
-.PHONY: install-operator
-## Create the test namespace
-install-operator: create-namespace
-	sed -e 's|REPLACE_NAMESPACE|${LOCAL_TEST_NAMESPACE}|g' hack/install_operator.yaml | oc apply -f -
