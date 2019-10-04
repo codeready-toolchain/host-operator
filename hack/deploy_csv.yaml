@@ -24,6 +24,122 @@ data:
         creationTimestamp: null
         labels:
           controller-tools.k8s.io: "1.0"
+        name: kubefedclusters.core.kubefed.k8s.io
+      spec:
+        additionalPrinterColumns:
+        - JSONPath: .status.conditions[?(@.type=='Ready')].status
+          name: ready
+          type: string
+        - JSONPath: .metadata.creationTimestamp
+          name: age
+          type: date
+        group: core.kubefed.k8s.io
+        names:
+          kind: KubeFedCluster
+          plural: kubefedclusters
+        scope: Namespaced
+        subresources:
+          status: {}
+        validation:
+          openAPIV3Schema:
+            properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource this
+                  object represents. Servers may infer this from the endpoint the client
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                type: string
+              metadata:
+                type: object
+              spec:
+                properties:
+                  apiEndpoint:
+                    description: The API endpoint of the member cluster. This can be a hostname,
+                      hostname:port, IP or IP:port.
+                    type: string
+                  caBundle:
+                    description: CABundle contains the certificate authority information.
+                    format: byte
+                    type: string
+                  secretRef:
+                    description: Name of the secret containing the token required to access
+                      the member cluster. The secret needs to exist in the same namespace
+                      as the control plane and should have a "token" key.
+                    properties:
+                      name:
+                        description: Name of a secret within the enclosing namespace
+                        type: string
+                    required:
+                    - name
+                    type: object
+                required:
+                - apiEndpoint
+                - secretRef
+                type: object
+              status:
+                properties:
+                  conditions:
+                    description: Conditions is an array of current cluster conditions.
+                    items:
+                      properties:
+                        lastProbeTime:
+                          description: Last time the condition was checked.
+                          format: date-time
+                          type: string
+                        lastTransitionTime:
+                          description: Last time the condition transit from one status to
+                            another.
+                          format: date-time
+                          type: string
+                        message:
+                          description: Human readable message indicating details about last
+                            transition.
+                          type: string
+                        reason:
+                          description: (brief) reason for the condition's last transition.
+                          type: string
+                        status:
+                          description: Status of the condition, one of True, False, Unknown.
+                          type: string
+                        type:
+                          description: Type of cluster condition, Ready or Offline.
+                          type: string
+                      required:
+                      - type
+                      - status
+                      - lastProbeTime
+                      type: object
+                    type: array
+                  region:
+                    description: Region is the name of the region in which all of the nodes
+                      in the cluster exist.  e.g. 'us-east1'.
+                    type: string
+                  zones:
+                    description: Zones are the names of availability zones in which the
+                      nodes of the cluster exist, e.g. 'us-east1-a'.
+                    items:
+                      type: string
+                    type: array
+                required:
+                - conditions
+                type: object
+        version: v1beta1
+      status:
+        acceptedNames:
+          kind: ""
+          plural: ""
+        conditions: []
+        storedVersions: []
+    - apiVersion: apiextensions.k8s.io/v1beta1
+      kind: CustomResourceDefinition
+      metadata:
+        creationTimestamp: null
+        labels:
+          controller-tools.k8s.io: "1.0"
         name: masteruserrecords.toolchain.dev.openshift.com
       spec:
         group: toolchain.dev.openshift.com
@@ -505,7 +621,7 @@ data:
       kind: ClusterServiceVersion
       metadata:
         annotations:
-          alm-examples: '[{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"MasterUserRecord","metadata":{"name":"johnsmith"},"spec":{"userAccounts":[{"spec":{"nsLimit":"admin","nsTemplateSet":{"namespaces":[{"revision":"abcdef","type":"ide"},{"revision":"1d2f3q","type":"cicd"},{"revision":"a34r57","type":"stage"},{"revision":"ra24qw","type":"default"}],"tierName":"basic"},"userID":"1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"},"syncIndex":"135540409","targetCluster":"east-2a"}],"userID":"1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"}},{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"NSTemplateTier","metadata":{"name":"basic"},"spec":{"namespaces":[{"revision":"abcdef","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"ide-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-ide\"}}}\n","type":"ide"},{"revision":"1d2f3q","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"cicd-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-cicd\"}}}\n","type":"cicd"},{"revision":"a34r57","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"stage-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-stage\"}}}\n","type":"stage"},{"revision":"ra24qw","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"default-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME\"}}}\n","type":"default"}]}},{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"UserSignup","metadata":{"name":"johnsmith-at-redhat-com"},"spec":{"approved":true,"targetCluster":"east-2a","userID":"1a03ecac-7c0b-44fc-b66d-12dd7fb21c40","username":"johnsmith@redhat.com"}}]'
+          alm-examples: '[{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"NSTemplateTier","metadata":{"name":"basic"},"spec":{"namespaces":[{"revision":"abcdef","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"ide-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-ide\"}}}\n","type":"ide"},{"revision":"1d2f3q","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"cicd-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-cicd\"}}}\n","type":"cicd"},{"revision":"a34r57","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"stage-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-stage\"}}}\n","type":"stage"},{"revision":"ra24qw","template":"{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"default-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME\"}}}\n","type":"default"}]}},{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"UserSignup","metadata":{"name":"johnsmith-at-redhat-com"},"spec":{"approved":true,"targetCluster":"east-2a","userID":"1a03ecac-7c0b-44fc-b66d-12dd7fb21c40","username":"johnsmith@redhat.com"}},{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"MasterUserRecord","metadata":{"name":"johnsmith"},"spec":{"userAccounts":[{"spec":{"nsLimit":"admin","nsTemplateSet":{"namespaces":[{"revision":"abcdef","type":"ide"},{"revision":"1d2f3q","type":"cicd"},{"revision":"a34r57","type":"stage"},{"revision":"ra24qw","type":"default"}],"tierName":"basic"},"userID":"1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"},"syncIndex":"135540409","targetCluster":"east-2a"}],"userID":"1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"}}]'
           capabilities: Basic Install
         name: host-operator.v0.0.1
         namespace: placeholder
@@ -513,6 +629,12 @@ data:
         apiservicedefinitions: {}
         customresourcedefinitions:
           owned:
+          - description: KubeFedCluster configures kubefed to be aware of a Kubernetes cluster
+              and encapsulates the details necessary to communicate with the cluster.
+            displayName: KubeFedCluster
+            kind: KubeFedCluster
+            name: kubefedclusters.core.kubefed.k8s.io
+            version: v1beta1
           - description: MasterUserRecord keeps all information about user, user accounts
               and namespaces provisioned in CodeReady Toolchain SaaS system
             displayName: MasterUserRecord
@@ -555,15 +677,6 @@ data:
                 - kubefedclusters
                 verbs:
                 - '*'
-              - apiGroups:
-                - apiextensions.k8s.io
-                resources:
-                - customresourcedefinitions
-                verbs:
-                - get
-                - create
-                - list
-                - watch
               serviceAccountName: host-operator
             deployments:
             - name: host-operator
@@ -593,7 +706,7 @@ data:
                       - name: OPERATOR_NAME
                         value: host-operator
                       image: REPLACE_IMAGE
-                      imagePullPolicy: Always
+                      imagePullPolicy: IfNotPresent
                       name: host-operator
                       resources: {}
                     serviceAccountName: host-operator

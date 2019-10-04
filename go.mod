@@ -9,9 +9,11 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
+	github.com/go-openapi/errors v0.17.0
 	github.com/gobuffalo/envy v1.7.1 // indirect
 	github.com/gophercloud/gophercloud v0.3.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
+	github.com/openshift/api v3.9.1-0.20190730142803-0922aa5a655b+incompatible
 	github.com/operator-framework/operator-sdk v0.10.0
 	github.com/pkg/errors v0.8.1
 	github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776
@@ -21,7 +23,6 @@ require (
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/tools v0.0.0-20190925230517-ea99b82c7b93 // indirect
 	gopkg.in/h2non/gock.v1 v1.0.14
-	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190925180651-d58b53da08f5
 	k8s.io/apiextensions-apiserver v0.0.0-20190926001031-c01ad8f0b402
@@ -38,7 +39,6 @@ require (
 )
 
 replace (
-	git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.1.10
@@ -58,3 +58,5 @@ replace (
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d
 	k8s.io/kubernetes => k8s.io/kubernetes v1.14.6
 )
+
+go 1.13
