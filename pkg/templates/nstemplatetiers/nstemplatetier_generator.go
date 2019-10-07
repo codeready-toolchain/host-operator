@@ -55,8 +55,9 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 				return errors.Wrapf(err, "unable to update the NSTemplateTiers '%s' in namespace '%s'", tier.Name, tier.Namespace)
 			}
 			log.Info("NSTemplateTier resource updated", "namespace", tier.Namespace, "name", tier.Name)
+		} else {
+			log.Info("NSTemplateTier resource created", "namespace", tier.Namespace, "name", tier.Name)
 		}
-		log.Info("NSTemplateTier resource created", "namespace", tier.Namespace, "name", tier.Name)
 	}
 	return nil
 }
