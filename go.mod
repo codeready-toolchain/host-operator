@@ -38,6 +38,10 @@ require (
 	sigs.k8s.io/kubefed v0.1.0-rc2
 )
 
+replace github.com/codeready-toolchain/api => ../api
+
+replace github.com/codeready-toolchain/toolchain-common => ../toolchain-common
+
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0
