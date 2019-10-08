@@ -155,16 +155,20 @@ func main() {
 	log.Info("Starting the Cmd.")
 
 	go func() {
+		log.Info("Creating/updating the NSTemplateTier resources once cache is sync'd")
 		if !mgr.GetCache().WaitForCacheSync(stopChannel) {
 			log.Error(errors.New("timed out waiting for caches to sync"), "")
 			os.Exit(1)
 		}
 		// create or update all NSTemplateTiers on the cluster at startup
+		log.Info("Creating/updating the NSTemplateTier resources")
 		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetiers.Asset); err != nil {
 			log.Error(err, "")
 			os.Exit(1)
 		}
+		log.Info("Created/updated the NSTemplateTier resources")
 	}()
+
 	// Start the Cmd
 	if err := mgr.Start(stopChannel); err != nil {
 		log.Error(err, "Manager exited non-zero")
