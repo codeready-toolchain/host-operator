@@ -38,9 +38,9 @@ require (
 	sigs.k8s.io/kubefed v0.1.0-rc2
 )
 
-replace github.com/codeready-toolchain/api => ../api
+replace github.com/codeready-toolchain/api => github.com/MatousJobanek/api v0.0.0-20191008135136-1338bbea618f
 
-replace github.com/codeready-toolchain/toolchain-common => ../toolchain-common
+replace github.com/codeready-toolchain/toolchain-common => github.com/MatousJobanek/toolchain-common v0.0.0-20191008140617-66eaba2d7197
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible

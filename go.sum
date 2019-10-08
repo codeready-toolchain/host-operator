@@ -46,6 +46,10 @@ github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e/go.mod h1:64YH
 github.com/Masterminds/goutils v1.1.0/go.mod h1:8cTjp+g8YejhMuvIA5y2vz3BpJxksy863GQaJW2MFNU=
 github.com/Masterminds/semver v1.4.2/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Masterminds/sprig v0.0.0-20190301161902-9f8fceff796f/go.mod h1:y6hNFY5UBTIWBxnzTeuNhlNS5hqE0NB0E6fgfo2Br3o=
+github.com/MatousJobanek/api v0.0.0-20191008135136-1338bbea618f h1:H06CSIL/t13A+JFl7j+sK6LC2dIPgviS+9EeWvmXclo=
+github.com/MatousJobanek/api v0.0.0-20191008135136-1338bbea618f/go.mod h1:/Is7p+crldTqYG0f8LQL7OqmdQRnMJ7u//N82tQdf28=
+github.com/MatousJobanek/toolchain-common v0.0.0-20191008140617-66eaba2d7197 h1:J9D87vF+2taLCPAVILnadDnopmkDn7fRUjHROxzvdvg=
+github.com/MatousJobanek/toolchain-common v0.0.0-20191008140617-66eaba2d7197/go.mod h1:nCOcq3lAyVk9XjWei07rt/MEqvQjrMHnOr8mxspI3mk=
 github.com/NYTimes/gziphandler v1.0.1/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/PuerkitoBio/purell v1.1.0 h1:rmGxhojJlM0tuKtfdvliR84CFHljx9ag64t2xmVkjK4=
 github.com/PuerkitoBio/purell v1.1.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=

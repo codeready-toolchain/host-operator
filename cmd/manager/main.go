@@ -143,6 +143,7 @@ func main() {
 			log.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
 		}
 	}
+
 	stopChannel := signals.SetupSignalHandler()
 
 	log.Info("Starting KubeFedCluster controllers.")
