@@ -237,6 +237,8 @@ data:
         names:
           kind: NSTemplateTier
           plural: nstemplatetiers
+          shortNames:
+          - tier
         scope: Namespaced
         subresources:
           status: {}
