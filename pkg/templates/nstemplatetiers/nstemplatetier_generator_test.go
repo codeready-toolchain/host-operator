@@ -11,6 +11,7 @@ import (
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
 	testsupport "github.com/codeready-toolchain/toolchain-common/pkg/test"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.Error(t, err)
-				assert.Equal(t, fmt.Sprintf("nstemplatetiers.toolchain.dev.openshift.com \"%s\" not found", tierName), err.Error())
+				assert.IsType(t, metav1.StatusReasonNotFound, apierrors.ReasonForError(err))
 			}
 
 			// when
