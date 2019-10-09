@@ -4,7 +4,7 @@ require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20190926105251-44ed4423e3bf
+	github.com/codeready-toolchain/api v0.0.0-20191009081803-8f4e395353de
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20190926125002-408e9c1b28de
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -38,9 +38,7 @@ require (
 	sigs.k8s.io/kubefed v0.1.0-rc2
 )
 
-replace github.com/codeready-toolchain/api => github.com/MatousJobanek/api v0.0.0-20191008135136-1338bbea618f
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/MatousJobanek/toolchain-common v0.0.0-20191008140617-66eaba2d7197
+replace github.com/codeready-toolchain/toolchain-common => github.com/MatousJobanek/toolchain-common v0.0.0-20191009091227-b631ea4cbdc3
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible

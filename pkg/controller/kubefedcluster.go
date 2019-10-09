@@ -3,7 +3,6 @@ package controller
 import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/controller"
-	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -11,8 +10,10 @@ import (
 	"sigs.k8s.io/kubefed/pkg/controller/util"
 )
 
-func StartKubeFedClusterControllers(log logr.Logger, mgr manager.Manager, stopChan <-chan struct{}) error {
-	cluster.EnsureKubeFedClusterCrd(log, mgr, stopChan)
+func StartKubeFedClusterControllers(mgr manager.Manager, stopChan <-chan struct{}) error {
+	if err := cluster.EnsureKubeFedClusterCrd(mgr.GetScheme(), mgr.GetClient()); err != nil {
+		return err
+	}
 
 	if err := startHealthCheckController(mgr, stopChan); err != nil {
 		return err
