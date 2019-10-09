@@ -11,11 +11,11 @@ import (
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
 	testsupport "github.com/codeready-toolchain/toolchain-common/pkg/test"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,13 +34,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.NewV4().String()[:7]
 			client := testsupport.NewFakeClient(t)
-			// set the 'resourceVersion' when creating the object
+			// set the 'generation' when creating the object
 			client.MockCreate = func(ctx context.Context, obj runtime.Object) error {
 				if obj, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-					if obj.ObjectMeta.ResourceVersion != "" {
-						return errors.Errorf("'resourceVersion' field must be specified by the server during object creation")
+					if obj.ObjectMeta.Generation != 0 {
+						return errors.Errorf("'generation' field will be specified by the server during object creation: %v", obj.ObjectMeta.Generation)
 					}
-					obj.ObjectMeta.ResourceVersion = "foo-" + obj.ObjectMeta.Name
+					obj.ObjectMeta.Generation = obj.ObjectMeta.Generation + 1
 				}
 				return client.Client.Create(ctx, obj)
 			}
@@ -62,7 +62,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
-				assert.Equal(t, "foo-"+tier.ObjectMeta.Name, tier.ObjectMeta.ResourceVersion)
+				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
 			}
 		})
 
@@ -70,23 +70,20 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.NewV4().String()[:7]
 			client := testsupport.NewFakeClient(t)
-			// set the 'resourceVersion' when creating the object
+			// set the 'generation' when creating the object
 			client.MockCreate = func(ctx context.Context, obj runtime.Object) error {
 				if obj, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-					if obj.ObjectMeta.ResourceVersion != "" {
-						return errors.Errorf("'resourceVersion' field must be specified by the server during object creation")
+					if obj.ObjectMeta.Generation != 0 {
+						return errors.Errorf("'generation' field will be specified by the server during object creation: %v", obj.ObjectMeta.Generation)
 					}
-					obj.ObjectMeta.ResourceVersion = "foo-" + obj.ObjectMeta.Name
+					obj.ObjectMeta.Generation = obj.ObjectMeta.Generation + 1
 				}
 				return client.Client.Create(ctx, obj)
 			}
-			// check the 'resourceVersion' when updating the object, and change its value
+			// check the 'generation' when updating the object, and increment its value
 			client.MockUpdate = func(ctx context.Context, obj runtime.Object) error {
 				if obj, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-					if obj.ObjectMeta.ResourceVersion != "foo-"+obj.ObjectMeta.Name {
-						return errors.Errorf("a matching 'resourceVersion' field must be returned by the client during object update")
-					}
-					obj.ObjectMeta.ResourceVersion = "bar-" + obj.ObjectMeta.Name
+					obj.ObjectMeta.Generation = obj.ObjectMeta.Generation + 1
 				}
 				return client.Client.Update(ctx, obj)
 			}
@@ -98,8 +95,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
-				// verify that the resourceVersion was set
-				assert.Equal(t, "foo-"+tier.ObjectMeta.Name, tier.ObjectMeta.ResourceVersion)
+				// verify that the generation was set to 1
+				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
 				// verify their namespace revisions
 				for _, ns := range tier.Spec.Namespaces {
 					assert.Equal(t, revisions[tierName][ns.Type], ns.Revision)
@@ -118,8 +115,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
-				// verify that the resourceVersion was changed
-				assert.Equal(t, "bar-"+tier.ObjectMeta.Name, tier.ObjectMeta.ResourceVersion)
+				// verify that the generation was increased
+				assert.Equal(t, int64(2), tier.ObjectMeta.Generation)
 				// verify their new namespace revisions
 				for _, ns := range tier.Spec.Namespaces {
 					assert.Equal(t, revisions[tierName][ns.Type], ns.Revision)
