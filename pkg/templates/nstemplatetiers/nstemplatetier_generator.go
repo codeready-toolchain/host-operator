@@ -49,12 +49,14 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 			if err != nil {
 				return errors.Wrapf(err, "unable to get the NSTemplateTiers '%s' in namespace '%s'", tier.Name, tier.Namespace)
 			}
-			// retrieve the current 'resourceVersion' before updating the resource
+			// retrieve the current 'resourceVersion' to set it in the resource passed to the `client.Update()`
+			// otherwise we would get an error with the following message:
+			// "nstemplatetiers.toolchain.dev.openshift.com \"basic\" is invalid: metadata.resourceVersion: Invalid value: 0x0: must be specified for an update"
 			tier.ObjectMeta.ResourceVersion = existing.ObjectMeta.ResourceVersion
 			if err := client.Update(context.TODO(), tier); err != nil {
 				return errors.Wrapf(err, "unable to update the NSTemplateTiers '%s' in namespace '%s'", tier.Name, tier.Namespace)
 			}
-			log.Info("NSTemplateTier resource updated", "namespace", tier.Namespace, "name", tier.Name)
+			log.Info("NSTemplateTier resource updated", "namespace", tier.Namespace, "name", tier.Name, "ResourceVersion", tier.ResourceVersion)
 		} else {
 			log.Info("NSTemplateTier resource created", "namespace", tier.Namespace, "name", tier.Name)
 		}

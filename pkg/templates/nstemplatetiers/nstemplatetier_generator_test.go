@@ -72,18 +72,31 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			client := testsupport.NewFakeClient(t)
 			// set the 'generation' when creating the object
 			client.MockCreate = func(ctx context.Context, obj runtime.Object) error {
-				if obj, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-					if obj.ObjectMeta.Generation != 0 {
-						return errors.Errorf("'generation' field will be specified by the server during object creation: %v", obj.ObjectMeta.Generation)
+				if tier, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
+					if tier.ObjectMeta.Generation != 0 {
+						return errors.Errorf("'generation' field will be specified by the server during object creation: %v", tier.ObjectMeta.Generation)
 					}
-					obj.ObjectMeta.Generation = obj.ObjectMeta.Generation + 1
+					tier.ObjectMeta.Generation = tier.ObjectMeta.Generation + 1
+					tier.ObjectMeta.ResourceVersion = "foo" // set by the server
+					err := client.Client.Create(ctx, obj)
+					if err != nil && apierrors.IsAlreadyExists(err) {
+						// prevent the fake client to return the actual ResourceVersion,
+						// as it seems like the real client/server don't not do it in the e2e tests
+						// see client.MockUpdate just underneath for the use-case
+						tier.ResourceVersion = ""
+					}
+					return err
 				}
-				return client.Client.Create(ctx, obj)
+				return errors.Errorf("did not expect to create a resource of type %T", obj)
 			}
 			// check the 'generation' when updating the object, and increment its value
 			client.MockUpdate = func(ctx context.Context, obj runtime.Object) error {
 				if obj, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					obj.ObjectMeta.Generation = obj.ObjectMeta.Generation + 1
+					if obj.ObjectMeta.ResourceVersion != "foo" {
+						// here, we expect that the caller will have set the ResourceVersion based on the existing object
+						return errors.Errorf("'ResourceVersion ' field must be specified during object update")
+					}
 				}
 				return client.Client.Update(ctx, obj)
 			}
@@ -95,6 +108,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
+				// verify that the ResourceVersion was set by the server
+				assert.Equal(t, "foo", tier.ObjectMeta.ResourceVersion)
 				// verify that the generation was set to 1
 				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
 				// verify their namespace revisions
