@@ -7,7 +7,7 @@ metadata:
   namespace: openshift-marketplace
 spec:
   configMap: codeready-toolchain-saas-host-operator
-  displayName: Codeready Toolchain Saas Host Operator
+  displayName: codeready toolchain saas host operator
   publisher: Red Hat
   sourceType: internal
 ---
@@ -179,7 +179,7 @@ data:
                     type: boolean
                   userAccounts:
                     description: The list of user accounts in the member clusters which
-                      belong to this MasterUserRecord
+                      belong to this MasterUserRecord +listType
                     items:
                       properties:
                         spec:
@@ -196,7 +196,7 @@ data:
                               description: Namespace template set
                               properties:
                                 namespaces:
-                                  description: The namespace templates
+                                  description: The namespace templates +listType
                                   items:
                                     properties:
                                       revision:
@@ -259,7 +259,7 @@ data:
                   conditions:
                     description: 'Conditions is an array of current Master User Record conditions
                       Supported condition types: Provisioning, UserAccountNotReady and Ready
-                      +patchMergeKey=type +patchStrategy=merge'
+                      +patchMergeKey=type +patchStrategy=merge +listType'
                     items:
                       properties:
                         lastTransitionTime:
@@ -287,13 +287,13 @@ data:
                     type: array
                   userAccounts:
                     description: The status of user accounts in the member clusters which
-                      belong to this MasterUserRecord
+                      belong to this MasterUserRecord +listType
                     items:
                       properties:
                         conditions:
                           description: 'Conditions is an array of current User Account conditions
                             Supported condition types: ConditionReady +patchMergeKey=type
-                            +patchStrategy=merge'
+                            +patchStrategy=merge +listType'
                           items:
                             properties:
                               lastTransitionTime:
@@ -376,7 +376,7 @@ data:
               spec:
                 properties:
                   namespaces:
-                    description: The namespace templates
+                    description: The namespace templates +listType
                     items:
                       properties:
                         revision:
@@ -584,7 +584,7 @@ data:
                   conditions:
                     description: 'Conditions is an array of current UserSignup conditions
                       Supported condition types: PendingApproval, Provisioning, Complete
-                      +patchMergeKey=type +patchStrategy=merge'
+                      +patchMergeKey=type +patchStrategy=merge +listType'
                     items:
                       properties:
                         lastTransitionTime:
