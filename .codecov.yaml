@@ -28,6 +28,7 @@ coverage:
     - "build/*"
     - "example/*"
     - "openshift-ci/*"
+    - "cmd/*"
 
 # See http://docs.codecov.io/docs/pull-request-comments-1
 comment:
