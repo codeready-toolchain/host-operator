@@ -23,8 +23,6 @@ github.com/Azure/go-autorest v13.0.0+incompatible h1:56c11ykhsFSPNNQuS73Ri8h/ezq
 github.com/Azure/go-autorest v13.0.0+incompatible/go.mod h1:r+4oMnoxhatjLLJ6zxSWATqVooLgysK6ZNox3g/xq24=
 github.com/Azure/go-autorest/autorest v0.9.0 h1:MRvx8gncNaXJqOoLmhNjUAKh33JJF8LyxPhomEtOsjs=
 github.com/Azure/go-autorest/autorest v0.9.0/go.mod h1:xyHB1BMZT0cuDHU7I0+g046+BFDTQ8rEZB0s4Yfa6bI=
-github.com/Azure/go-autorest/autorest v0.9.1 h1:JB7Mqhna/7J8gZfVHjxDSTLSD6ciz2YgSMb/4qLXTtY=
-github.com/Azure/go-autorest/autorest v0.9.1/go.mod h1:xyHB1BMZT0cuDHU7I0+g046+BFDTQ8rEZB0s4Yfa6bI=
 github.com/Azure/go-autorest/autorest/adal v0.5.0/go.mod h1:8Z9fGy2MpX0PvDjB1pEgQTmVqjGhiHBW7RJJEciWzS0=
 github.com/Azure/go-autorest/autorest/adal v0.6.0 h1:UCTq22yE3RPgbU/8u4scfnnzuCW6pwQ9n+uBtV78ouo=
 github.com/Azure/go-autorest/autorest/adal v0.6.0/go.mod h1:Z6vX6WXXuyieHAXwMj0S6HY6e6wcHn37qQMBQlvY3lc=
@@ -46,12 +44,6 @@ github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e/go.mod h1:64YH
 github.com/Masterminds/goutils v1.1.0/go.mod h1:8cTjp+g8YejhMuvIA5y2vz3BpJxksy863GQaJW2MFNU=
 github.com/Masterminds/semver v1.4.2/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Masterminds/sprig v0.0.0-20190301161902-9f8fceff796f/go.mod h1:y6hNFY5UBTIWBxnzTeuNhlNS5hqE0NB0E6fgfo2Br3o=
-github.com/MatousJobanek/api v0.0.0-20191008135136-1338bbea618f h1:H06CSIL/t13A+JFl7j+sK6LC2dIPgviS+9EeWvmXclo=
-github.com/MatousJobanek/api v0.0.0-20191008135136-1338bbea618f/go.mod h1:/Is7p+crldTqYG0f8LQL7OqmdQRnMJ7u//N82tQdf28=
-github.com/MatousJobanek/toolchain-common v0.0.0-20191008140617-66eaba2d7197 h1:J9D87vF+2taLCPAVILnadDnopmkDn7fRUjHROxzvdvg=
-github.com/MatousJobanek/toolchain-common v0.0.0-20191008140617-66eaba2d7197/go.mod h1:nCOcq3lAyVk9XjWei07rt/MEqvQjrMHnOr8mxspI3mk=
-github.com/MatousJobanek/toolchain-common v0.0.0-20191009091227-b631ea4cbdc3 h1:0RwhVfNH6mb2I+/8fFN5C3C5bGhc3z9CPfm75cVoLLg=
-github.com/MatousJobanek/toolchain-common v0.0.0-20191009091227-b631ea4cbdc3/go.mod h1:wCq0OGfTD+HN+d/qX6UKkE+v1q+crZVYEGXNDu0RDHI=
 github.com/NYTimes/gziphandler v1.0.1/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/PuerkitoBio/purell v1.1.0 h1:rmGxhojJlM0tuKtfdvliR84CFHljx9ag64t2xmVkjK4=
 github.com/PuerkitoBio/purell v1.1.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
@@ -86,12 +78,10 @@ github.com/census-instrumentation/opencensus-proto v0.2.0 h1:LzQXZOgg4CQfE6bFvXG
 github.com/census-instrumentation/opencensus-proto v0.2.0/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1/go.mod h1:/iP1qXHoty45bqomnu2LM+VVyAEdWN+vtSHGlQgyxbw=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/codeready-toolchain/api v0.0.0-20190926105251-44ed4423e3bf h1:u3S03Z+Pml8mrjHZImkYvu9xW/vBBoFkPXNT9Thn67Q=
-github.com/codeready-toolchain/api v0.0.0-20190926105251-44ed4423e3bf/go.mod h1:WUIVRXEFZKLtqLWHuUkFc4k/Ep0uX949vYUKsnJpFgQ=
 github.com/codeready-toolchain/api v0.0.0-20191009081803-8f4e395353de h1:bExhq0ri3+O/3rHHBtJIfJkEev9a9yDQgjD7XhMDln0=
 github.com/codeready-toolchain/api v0.0.0-20191009081803-8f4e395353de/go.mod h1:/Is7p+crldTqYG0f8LQL7OqmdQRnMJ7u//N82tQdf28=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20190926125002-408e9c1b28de h1:5fIEtlQ7mCgGR76VN1JjghM2kElJGB6KzhNoAl5Glmw=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20190926125002-408e9c1b28de/go.mod h1:5/V7HkhPVogTFfE6P+S+0QogvjCsRCLbKs7xrzNrKg0=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20191010043304-822e291d04cb h1:2Al5qMR1lSVpIbD10GIDyDg7OaX1KM4kggivVlg7fbc=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20191010043304-822e291d04cb/go.mod h1:dyqWm9EXBYMXzdfaHqipJSujNiK5BvZ3YjukErym4BE=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.3/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.9+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=

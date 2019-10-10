@@ -5,11 +5,9 @@ require (
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
 	github.com/appscode/jsonpatch v0.0.0-20190625103638-320dcdd0e1f7 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20191009081803-8f4e395353de
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20190926125002-408e9c1b28de
-	github.com/ghodss/yaml v1.0.0
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20191010043304-822e291d04cb
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
-	github.com/go-openapi/errors v0.17.0
 	github.com/gobuffalo/envy v1.7.1 // indirect
 	github.com/gophercloud/gophercloud v0.3.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
@@ -25,7 +23,6 @@ require (
 	gopkg.in/h2non/gock.v1 v1.0.14
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190925180651-d58b53da08f5
-	k8s.io/apiextensions-apiserver v0.0.0-20190926001031-c01ad8f0b402
 	k8s.io/apimachinery v0.0.0-20190925235427-62598f38f24e
 	k8s.io/apiserver v0.0.0-20190111033246-d50e9ac5404f // indirect
 	k8s.io/client-go v11.0.0+incompatible
@@ -37,8 +34,6 @@ require (
 	sigs.k8s.io/controller-tools v0.2.1
 	sigs.k8s.io/kubefed v0.1.0-rc2
 )
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/MatousJobanek/toolchain-common v0.0.0-20191009091227-b631ea4cbdc3
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
