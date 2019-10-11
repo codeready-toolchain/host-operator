@@ -94,12 +94,12 @@ func main() {
 	// Become the leader before proceeding
 	err = leader.Become(ctx, "host-operator-lock")
 	if err != nil {
-		log.Error(err, "Unable to ensure the existence of the KubeFedCluster CRD")
+		log.Error(err, "")
 		os.Exit(1)
 	}
 
 	if err := ensureKubeFedClusterCrd(cfg); err != nil {
-		log.Error(err, "")
+		log.Error(err, "Unable to ensure the existence of the KubeFedCluster CRD")
 		os.Exit(1)
 	}
 
