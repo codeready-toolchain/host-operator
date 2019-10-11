@@ -202,9 +202,8 @@ func TestNewNSTemplateTier(t *testing.T) {
 					actual, err := g.newNSTemplateTier(tier, namespace)
 					// then
 					require.NoError(t, err)
-					expected, expectedStr, err := newNSTemplateTierFromYAML(s, tier, namespace, revisions)
+					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, revisions)
 					require.NoError(t, err)
-					t.Logf("expected NSTemplateTier (yaml):\n%s", expectedStr)
 					// here we don't compare whoe objects because the generated NSTemplateTier
 					// has no specific values for the `TypeMeta`: the `APIVersion: toolchain.dev.openshift.com/v1alpha1`
 					// and `Kind: NSTemplateTier` should be set by the client using the registered GVK
