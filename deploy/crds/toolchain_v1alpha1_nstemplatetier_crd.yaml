@@ -33,7 +33,7 @@ spec:
         spec:
           properties:
             namespaces:
-              description: The namespace templates
+              description: The namespace templates +listType
               items:
                 properties:
                   revision:
