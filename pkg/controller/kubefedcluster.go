@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/controller"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/klog"
@@ -10,6 +11,10 @@ import (
 )
 
 func StartKubeFedClusterControllers(mgr manager.Manager, stopChan <-chan struct{}) error {
+	if err := cluster.EnsureKubeFedClusterCrd(mgr.GetScheme(), mgr.GetClient()); err != nil {
+		return err
+	}
+
 	if err := startHealthCheckController(mgr, stopChan); err != nil {
 		return err
 	}
