@@ -71,11 +71,7 @@ spec:
                 (“sub” claim)
               type: string
             username:
-              description: The username.  This may differ from the UserSignup's metadata.name,
-                which is restricted by the limited character set available for naming
-                (see RFC1123).  If the username contains characters which are disqualified
-                from the resource name, the username is transformed into an acceptable
-                resource name instead. For example, johnsmith@redhat.com -> johnsmith-at-redhat-com
+              description: The user's username, obtained from the identity provider.
               type: string
           required:
           - userID
