@@ -594,6 +594,7 @@ data:
                 },
                 "spec": {
                   "approved": true,
+                  "compliantUsername": "johnsmith-at-redhat-com",
                   "targetCluster": "east-2a",
                   "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40",
                   "username": "johnsmith@redhat.com"
