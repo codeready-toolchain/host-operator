@@ -10,11 +10,6 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - name: kubefedclusters.core.kubefed.k8s.io
-      kind: KubeFedCluster
-      description: KubeFedCluster configures kubefed to be aware of a Kubernetes cluster and encapsulates the details necessary to communicate with the cluster.
-      displayName: KubeFedCluster
-      version: v1beta1
     - name: masteruserrecords.toolchain.dev.openshift.com
       kind: MasterUserRecord
       description: MasterUserRecord keeps all information about user, user accounts and namespaces provisioned in CodeReady Toolchain SaaS system
@@ -30,13 +25,6 @@ spec:
       description: UserSignup registres a user in the CodeReady Toolchain SaaS system
       displayName: UserSignup
       version: v1alpha1
-    resources:
-    - kind: KubeFedCluster
-      name: kubefedclusters.core.kubefed.io
-      version: v1beta1
-      description: KubeFedCluster configures kubefed to be aware of a Kubernetes
-        cluster and encapsulates the details necessary to communicate with the cluster..
-      displayName: KubeFedCluster
   description: Placeholder description
   displayName: Host Operator
   install:
