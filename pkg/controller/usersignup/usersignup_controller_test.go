@@ -49,8 +49,9 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "foo",
-			Approved: false,
+			UserID:            "foo",
+			CompliantUsername: "foo",
+			Approved:          false,
 		},
 	}
 
@@ -112,8 +113,9 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "foo",
-			Approved: true,
+			UserID:            "foo",
+			CompliantUsername: "foo",
+			Approved:          true,
 		},
 	}
 
@@ -176,8 +178,9 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "foo",
-			Approved: true,
+			UserID:            "foo",
+			CompliantUsername: "foo",
+			Approved:          true,
 		},
 	}
 
@@ -239,8 +242,9 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "foo",
-			Approved: false,
+			UserID:            "foo",
+			CompliantUsername: "foo",
+			Approved:          false,
 		},
 	}
 
@@ -284,9 +288,10 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:        "foo",
-			Approved:      false,
-			TargetCluster: "east",
+			UserID:            "foo",
+			CompliantUsername: "foo",
+			Approved:          false,
+			TargetCluster:     "east",
 		},
 	}
 
@@ -348,9 +353,10 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:        "bar",
-			Approved:      false,
-			TargetCluster: "east",
+			UserID:            "bar",
+			CompliantUsername: "bar",
+			Approved:          false,
+			TargetCluster:     "east",
 		},
 	}
 
@@ -385,8 +391,9 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "foo",
-			Approved: true,
+			UserID:            "foo",
+			CompliantUsername: "foo",
+			Approved:          true,
 		},
 	}
 
@@ -418,8 +425,9 @@ func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "foo",
-			Approved: true,
+			UserID:            "foo",
+			CompliantUsername: "foo",
+			Approved:          true,
 		},
 	}
 
@@ -466,8 +474,9 @@ func TestUserSignupMURReadFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "foo",
-			Approved: true,
+			UserID:            "foo",
+			CompliantUsername: "foo",
+			Approved:          true,
 		},
 	}
 
@@ -499,8 +508,9 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "foo",
-			Approved: true,
+			UserID:            "foo",
+			CompliantUsername: "foo",
+			Approved:          true,
 		},
 	}
 
@@ -532,7 +542,8 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:            "foo",
+			CompliantUsername: "foo",
 		},
 	}
 
@@ -564,7 +575,8 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID: "foo",
+			UserID:            "foo",
+			CompliantUsername: "foo",
 		},
 	}
 
@@ -597,8 +609,9 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "foo",
-			Approved: false,
+			UserID:            "foo",
+			CompliantUsername: "foo",
+			Approved:          false,
 		},
 	}
 
@@ -649,8 +662,9 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "foo",
-			Approved: true,
+			UserID:            "foo",
+			CompliantUsername: "foo",
+			Approved:          true,
 		},
 	}
 
