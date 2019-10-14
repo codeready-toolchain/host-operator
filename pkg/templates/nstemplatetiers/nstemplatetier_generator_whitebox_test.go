@@ -96,7 +96,7 @@ func TestParseAllRevisions(t *testing.T) {
 		assert.Equal(t, "123456c", revisions["advanced"]["stage"])
 		assert.Equal(t, "123456d", revisions["basic"]["code"])
 		assert.Equal(t, "123456e", revisions["basic"]["dev"])
-		assert.Equal(t, "123456f", revisions["basic"]["stage"])
+		assert.Equal(t, "1234567", revisions["basic"]["stage"])
 	})
 
 	t.Run("failures", func(t *testing.T) {
@@ -128,7 +128,7 @@ func TestParseAllRevisions(t *testing.T) {
 			_, err := parseAllRevisions(asset)
 			// then
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), "invalid namespace template filename revision for 'foo-bar'. Expected a string, got a bool ('true')")
+			assert.Contains(t, err.Error(), "invalid namespace template filename revision for 'foo-bar'. Expected a string or int, got a bool ('true')")
 		})
 
 	})
@@ -193,7 +193,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 				"basic": {
 					"code":  "123456d",
 					"dev":   "123456e",
-					"stage": "123456f",
+					"stage": "1234567",
 				},
 			}
 			for tier, revisions := range data {
@@ -291,7 +291,7 @@ metadata:
 spec:
   namespaces: 
 {{ $tier := .Tier }}{{ range $kind, $revision := .Revisions }}  - type: {{ $kind }}
-    revision: {{ $revision }}
+    revision: "{{ $revision }}"
     template:
       apiVersion: template.openshift.io/v1
       kind: Template

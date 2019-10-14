@@ -3,4 +3,4 @@ advanced-dev: 123456b
 advanced-stage: 123456c
 basic-code: 123456d
 basic-dev: 123456e
-basic-stage: 123456f
+basic-stage: 1234567 # here, a number

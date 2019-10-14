@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -109,14 +110,19 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 		tierKind := data[0]
 		nsKind := data[1]
 		// create a new entry if needed
-		r, ok := revision.(string)
-		if !ok {
-			return nil, errors.Errorf("invalid namespace template filename revision for '%[1]s'. Expected a string, got a %[2]T ('%[2]v')", filename, revision)
+		var rev string
+		switch r := revision.(type) {
+		case string:
+			rev = r
+		case int:
+			rev = strconv.Itoa(r)
+		default:
+			return nil, errors.Errorf("invalid namespace template filename revision for '%[1]s'. Expected a string or int, got a %[2]T ('%[2]v')", filename, revision)
 		}
 		if _, ok := revisions[tierKind]; !ok {
 			revisions[tierKind] = make(map[string]string, 3) // expect 3 entries: 'code', 'dev' and 'stage'
 		}
-		revisions[tierKind][nsKind] = r
+		revisions[tierKind][nsKind] = rev
 	}
 	log.Info("templates revisions loaded", "revisions", revisions)
 	return revisions, nil
@@ -157,15 +163,15 @@ func (g nstemplatetierGenerator) newNSTemplateTiers(namespace string) (map[strin
 //   spec:
 //     namespaces:
 //     - type: code
-//       revision: y8f907f6
+//       revision: "y8f907f6"
 //       template: >
 //         <yaml-ns-template>
 //     - type: dev
-//       revision: f8q907f4
+//       revision: "f8q907f4"
 //       template: >
 //         <yaml-ns-template>
 //     - type: stage
-//       revision: 907fy8f6
+//       revision: "907fy8f6"
 //       template: >
 //         <yaml-ns-template>
 // ------
