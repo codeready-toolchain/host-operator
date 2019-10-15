@@ -16,6 +16,17 @@ rules:
   verbs:
   - "*"
 - apiGroups:
+  - ""
+  resources:
+  - podtemplates
+  - namespaces
+  - componentstatuses
+  - nodes
+  - resourcequotas
+  verbs:
+  - get
+  - list
+- apiGroups:
   - apps
   resources:
   - deployments
