@@ -120,17 +120,6 @@ func TestParseAllRevisions(t *testing.T) {
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "invalid namespace template filename. Expected format: '<tier_kind>-<namespace_kind>', got foo")
 		})
-
-		t.Run("invalid value format", func(t *testing.T) {
-			// given
-			asset := []byte("foo-bar: true")
-			// when initializing the generator with the production Asset
-			_, err := parseAllRevisions(asset)
-			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "invalid namespace template filename revision for 'foo-bar'. Expected a string or int, got a bool ('true')")
-		})
-
 	})
 
 }

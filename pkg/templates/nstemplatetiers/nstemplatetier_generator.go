@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -94,7 +93,7 @@ func newNSTemplateTierGenerator(s *runtime.Scheme, asset func(name string) ([]by
 // - each value is a map of revisions indexed by their associated template kind
 //   (eg: {"code":"123456", "dev":"abcdef", "stage":"cafe01"})
 func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
-	data := make(map[string]interface{})
+	data := make(map[string]string)
 	err := yaml.Unmarshal([]byte(metadata), &data)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to parse all template revisions")
@@ -109,20 +108,10 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 		}
 		tierKind := data[0]
 		nsKind := data[1]
-		// create a new entry if needed
-		var rev string
-		switch r := revision.(type) {
-		case string:
-			rev = r
-		case int:
-			rev = strconv.Itoa(r)
-		default:
-			return nil, errors.Errorf("invalid namespace template filename revision for '%[1]s'. Expected a string or int, got a %[2]T ('%[2]v')", filename, revision)
-		}
 		if _, ok := revisions[tierKind]; !ok {
 			revisions[tierKind] = make(map[string]string, 3) // expect 3 entries: 'code', 'dev' and 'stage'
 		}
-		revisions[tierKind][nsKind] = rev
+		revisions[tierKind][nsKind] = revision
 	}
 	log.Info("templates revisions loaded", "revisions", revisions)
 	return revisions, nil
