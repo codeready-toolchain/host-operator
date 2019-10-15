@@ -11,9 +11,10 @@ export GO111MODULE
 build: generate $(OUT_DIR)/operator
 
 $(OUT_DIR)/operator:
+	@echo "building host-operator in ${GO_PACKAGE_PATH}"
 	$(Q)CGO_ENABLED=0 GOARCH=amd64 GOOS=linux \
 		go build ${V_FLAG} \
-		-ldflags "-X ${GO_PACKAGE_PATH}/cmd/manager.Commit=${GIT_COMMIT_ID} -X ${GO_PACKAGE_PATH}/cmd/manager.BuildTime=${BUILD_TIME}" \
+		-ldflags "-X ${GO_PACKAGE_PATH}/version.Commit=${GIT_COMMIT_ID} -X ${GO_PACKAGE_PATH}/version.BuildTime=${BUILD_TIME}" \
 		-o $(OUT_DIR)/bin/host-operator \
 		cmd/manager/main.go
 
