@@ -12,4 +12,4 @@ lint-yaml: ${YAML_FILES}
 ## Checks the code with golangci-lint
 lint-go-code: generate
 	$(Q)go get github.com/golangci/golangci-lint/cmd/golangci-lint
-	$(Q)${GOPATH}/bin/golangci-lint ${V_FLAG} run --deadline=10m
+	$(Q)${GOPATH}/bin/golangci-lint ${V_FLAG} run
