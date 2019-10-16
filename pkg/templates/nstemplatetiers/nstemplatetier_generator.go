@@ -93,7 +93,7 @@ func newNSTemplateTierGenerator(s *runtime.Scheme, asset func(name string) ([]by
 // - each value is a map of revisions indexed by their associated template kind
 //   (eg: {"code":"123456", "dev":"abcdef", "stage":"cafe01"})
 func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
-	data := make(map[string]interface{})
+	data := make(map[string]string)
 	err := yaml.Unmarshal([]byte(metadata), &data)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to parse all template revisions")
@@ -108,15 +108,10 @@ func parseAllRevisions(metadata []byte) (map[string]map[string]string, error) {
 		}
 		tierKind := data[0]
 		nsKind := data[1]
-		// create a new entry if needed
-		r, ok := revision.(string)
-		if !ok {
-			return nil, errors.Errorf("invalid namespace template filename revision for '%[1]s'. Expected a string, got a %[2]T ('%[2]v')", filename, revision)
-		}
 		if _, ok := revisions[tierKind]; !ok {
 			revisions[tierKind] = make(map[string]string, 3) // expect 3 entries: 'code', 'dev' and 'stage'
 		}
-		revisions[tierKind][nsKind] = r
+		revisions[tierKind][nsKind] = revision
 	}
 	log.Info("templates revisions loaded", "revisions", revisions)
 	return revisions, nil
@@ -157,15 +152,15 @@ func (g nstemplatetierGenerator) newNSTemplateTiers(namespace string) (map[strin
 //   spec:
 //     namespaces:
 //     - type: code
-//       revision: y8f907f6
+//       revision: "y8f907f6"
 //       template: >
 //         <yaml-ns-template>
 //     - type: dev
-//       revision: f8q907f4
+//       revision: "f8q907f4"
 //       template: >
 //         <yaml-ns-template>
 //     - type: stage
-//       revision: 907fy8f6
+//       revision: "907fy8f6"
 //       template: >
 //         <yaml-ns-template>
 // ------

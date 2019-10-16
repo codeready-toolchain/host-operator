@@ -48,5 +48,5 @@ clean-metadata:
 
 define git_commit
 	echo "processing $(1)"
-	echo "$(patsubst $(NSTEMPLATES_DIR)/%.yaml,%,$(1)):" `git log -1 --format=%h $(1)` >> $(2)
+	echo "$(patsubst $(NSTEMPLATES_DIR)/%.yaml,%,$(1)): \""`git log -1 --format=%h $(1)`"\"">> $(2) # surround the commit hash with quotes to force the value as a string, even if it's a number
 endef
