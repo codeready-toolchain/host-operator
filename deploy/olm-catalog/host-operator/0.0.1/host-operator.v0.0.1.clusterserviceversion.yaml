@@ -116,6 +116,10 @@ spec:
           - componentstatuses
           - nodes
           - resourcequotas
+          - serviceaccounts
+          - processedtemplates
+          - replicationcontrollers
+          - limitranges
           verbs:
           - get
           - list
