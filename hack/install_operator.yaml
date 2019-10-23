@@ -3,7 +3,7 @@
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
-  name: codeready-toolchain-saas-host-operator
+  name: codeready-toolchain-saas-toolchain-host-operator
   namespace: REPLACE_NAMESPACE
 spec:
   targetNamespaces:
@@ -12,12 +12,12 @@ spec:
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: codeready-toolchain-saas-host-operator
+  name: codeready-toolchain-saas-toolchain-host-operator
   namespace: REPLACE_NAMESPACE
 spec:
   channel: alpha
   installPlanApproval: Automatic
-  name: host-operator
-  source: codeready-toolchain-saas-host-operator
+  name: toolchain-host-operator
+  source: codeready-toolchain-saas-toolchain-host-operator
   sourceNamespace: openshift-marketplace
-  startingCSV: host-operator.v0.0.1
+  startingCSV: toolchain-host-operator.v0.0.1
