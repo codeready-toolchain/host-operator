@@ -49,7 +49,7 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 			Approved:          false,
 		},
@@ -70,7 +70,7 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Name)
-	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
+	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	// Lookup the userSignup again
@@ -113,7 +113,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 			Approved:          true,
 		},
@@ -133,8 +133,8 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Name)
-	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
+	require.Equal(t, userSignup.Spec.CompliantUsername, mur.Name)
+	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	// Lookup the userSignup again
@@ -178,7 +178,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 			Approved:          true,
 		},
@@ -198,8 +198,8 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Name)
-	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
+	require.Equal(t, userSignup.Spec.CompliantUsername, mur.Name)
+	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	// Lookup the userSignup again
@@ -242,7 +242,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 			Approved:          false,
 		},
@@ -288,7 +288,7 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 			Approved:          false,
 			TargetCluster:     "east",
@@ -309,8 +309,8 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Name)
-	require.Equal(t, userSignup.Spec.UserID, mur.Spec.UserID)
+	require.Equal(t, userSignup.Spec.CompliantUsername, mur.Name)
+	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	// Lookup the userSignup again
@@ -353,7 +353,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "bar",
+			Username:          "bar",
 			CompliantUsername: "bar",
 			Approved:          false,
 			TargetCluster:     "east",
@@ -391,7 +391,7 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 			Approved:          true,
 		},
@@ -425,7 +425,7 @@ func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 			Approved:          true,
 		},
@@ -474,7 +474,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 			Approved:          true,
 		},
@@ -508,7 +508,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 			Approved:          true,
 		},
@@ -542,7 +542,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 		},
 	}
@@ -575,7 +575,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 		},
 	}
@@ -609,7 +609,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 			Approved:          false,
 		},
@@ -662,7 +662,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:            "foo",
+			Username:          "foo",
 			CompliantUsername: "foo",
 			Approved:          true,
 		},

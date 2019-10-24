@@ -199,7 +199,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		{
 			TargetCluster: targetCluster,
 			Spec: toolchainv1alpha1.UserAccountSpec{
-				UserID:  userSignup.Spec.UserID,
+				UserID:  userSignup.Name,
 				NSLimit: "default",
 				NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
 					Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{},
@@ -213,11 +213,11 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignup.Name,
+			Name:      userSignup.Spec.CompliantUsername,
 			Namespace: userSignup.Namespace,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserID:       userSignup.Spec.UserID,
+			UserID:       userSignup.Name,
 			UserAccounts: userAccounts,
 		},
 	}
