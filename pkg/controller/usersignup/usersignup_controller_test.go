@@ -604,7 +604,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 func TestUserSignupWithExistingMUROK(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
+			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
 			UID:       types.UID(uuid.NewV4().String()),
 		},
@@ -618,12 +618,12 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// Create a MUR with the same name
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
+			Name:      userSignup.Spec.CompliantUsername,
 			Namespace: operatorNamespace,
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.MasterUserRecordSpec{
-			UserID: "foo",
+			UserID: userSignup.Name,
 		},
 	}
 
@@ -637,7 +637,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 
 	key := types.NamespacedName{
 		Namespace: operatorNamespace,
-		Name:      "foo",
+		Name:      userSignup.Name,
 	}
 	instance := &v1alpha1.UserSignup{}
 	err = r.client.Get(context.TODO(), key, instance)
