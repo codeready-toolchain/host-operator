@@ -444,14 +444,6 @@ data:
                       approved If not set then the user is subject of auto-approval (if
                       enabled)
                     type: boolean
-                  compliantUsername:
-                    description: The DNS-1123-compliant username.  This username is generated
-                      by the registration app and may differ from the Username, as a limited
-                      character set is available for naming (see RFC1123).  If the username
-                      contains characters which are disqualified, the username is transformed
-                      into a compliant name instead. For example, johnsmith@redhat.com ->
-                      johnsmith-at-redhat-com
-                    type: string
                   targetCluster:
                     description: The cluster in which the user is provisioned in If not
                       set then the target cluster will be picked automatically
@@ -461,7 +453,6 @@ data:
                     type: string
                 required:
                 - username
-                - compliantUsername
                 type: object
               status:
                 properties:
@@ -585,13 +576,12 @@ data:
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "UserSignup",
                 "metadata": {
-                  "name": "johnsmith-at-redhat-com"
+                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
                 },
                 "spec": {
                   "approved": true,
                   "compliantUsername": "johnsmith-at-redhat-com",
                   "targetCluster": "east-2a",
-                  "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40",
                   "username": "johnsmith@redhat.com"
                 }
               }
