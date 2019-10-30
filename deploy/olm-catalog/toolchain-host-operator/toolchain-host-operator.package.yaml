@@ -1,0 +1,5 @@
+channels:
+- currentCSV: toolchain-host-operator.v0.0.1
+  name: alpha
+defaultChannel: alpha
+packageName: toolchain-host-operator
