@@ -456,7 +456,7 @@ data:
                 type: object
               status:
                 properties:
-                  compliantUSername:
+                  compliantUsername:
                     description: CompliantUsername is used to store the transformed, DNS-1123
                       compliant username
                     type: string
