@@ -34,3 +34,7 @@ docker-push-to-os: set-os-registry docker-image docker-push
 ## Sets TARGET_REGISTRY:=$(shell oc get images.config.openshift.io/cluster  -o jsonpath={.status.externalRegistryHostnames[0]})
 set-os-registry:
 	$(eval TARGET_REGISTRY:=$(shell oc get images.config.openshift.io/cluster  -o jsonpath={.status.externalRegistryHostnames[0]}))
+
+.PHONY: docker-login
+docker-login:
+	@echo "${DOCKER_PASSWORD}" | docker login quay.io -u "${QUAY_NAMESPACE}" --password-stdin
