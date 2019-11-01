@@ -22,21 +22,22 @@ data:
       kind: CustomResourceDefinition
       metadata:
         creationTimestamp: null
-        labels:
-          controller-tools.k8s.io: "1.0"
         name: masteruserrecords.toolchain.dev.openshift.com
       spec:
         group: toolchain.dev.openshift.com
         names:
           kind: MasterUserRecord
+          listKind: MasterUserRecordList
           plural: masteruserrecords
           shortNames:
           - mur
+          singular: masteruserrecord
         scope: Namespaced
         subresources:
           status: {}
         validation:
           openAPIV3Schema:
+            description: MasterUserRecord is the Schema for the masteruserrecords API
             properties:
               apiVersion:
                 description: 'APIVersion defines the versioned schema of this representation
@@ -51,6 +52,7 @@ data:
               metadata:
                 type: object
               spec:
+                description: MasterUserRecordSpec defines the desired state of MasterUserRecord
                 properties:
                   deprovisioned:
                     description: If set to true then the corresponding UserAccount should
@@ -63,7 +65,7 @@ data:
                     type: boolean
                   userAccounts:
                     description: The list of user accounts in the member clusters which
-                      belong to this MasterUserRecord +listType
+                      belong to this MasterUserRecord
                     items:
                       properties:
                         spec:
@@ -80,8 +82,10 @@ data:
                               description: Namespace template set
                               properties:
                                 namespaces:
-                                  description: The namespace templates +listType
+                                  description: The namespace templates
                                   items:
+                                    description: NSTemplateSetNamespace the namespace definition
+                                      in an NSTemplateSet resource
                                     properties:
                                       revision:
                                         description: The revision of the corresponding template
@@ -95,8 +99,8 @@ data:
                                           ide|cicd|stage|default'
                                         type: string
                                     required:
-                                    - type
                                     - revision
+                                    - type
                                     type: object
                                   type: array
                                 tierName:
@@ -104,8 +108,8 @@ data:
                                     template set
                                   type: string
                               required:
-                              - tierName
                               - namespaces
+                              - tierName
                               type: object
                             userID:
                               description: UserID is the user ID from RHD Identity Provider
@@ -113,9 +117,9 @@ data:
                                 UserIdentityMapping resources
                               type: string
                           required:
-                          - userID
                           - nsLimit
                           - nsTemplateSet
+                          - userID
                           type: object
                         syncIndex:
                           description: SyncIndex is to be updated by UserAccount Controller
@@ -126,9 +130,9 @@ data:
                           description: The cluster in which the user exists
                           type: string
                       required:
-                      - targetCluster
-                      - syncIndex
                       - spec
+                      - syncIndex
+                      - targetCluster
                       type: object
                     type: array
                   userID:
@@ -139,11 +143,11 @@ data:
                 - userID
                 type: object
               status:
+                description: MasterUserRecordStatus defines the observed state of MasterUserRecord
                 properties:
                   conditions:
                     description: 'Conditions is an array of current Master User Record conditions
-                      Supported condition types: Provisioning, UserAccountNotReady and Ready
-                      +patchMergeKey=type +patchStrategy=merge +listType'
+                      Supported condition types: Provisioning, UserAccountNotReady and Ready'
                     items:
                       properties:
                         lastTransitionTime:
@@ -165,19 +169,18 @@ data:
                           description: Type of condition
                           type: string
                       required:
-                      - type
                       - status
+                      - type
                       type: object
                     type: array
                   userAccounts:
                     description: The status of user accounts in the member clusters which
-                      belong to this MasterUserRecord +listType
+                      belong to this MasterUserRecord
                     items:
                       properties:
                         conditions:
                           description: 'Conditions is an array of current User Account conditions
-                            Supported condition types: ConditionReady +patchMergeKey=type
-                            +patchStrategy=merge +listType'
+                            Supported condition types: ConditionReady'
                           items:
                             properties:
                               lastTransitionTime:
@@ -200,8 +203,8 @@ data:
                                 description: Type of condition
                                 type: string
                             required:
-                            - type
                             - status
+                            - type
                             type: object
                           type: array
                         syncIndex:
@@ -213,12 +216,16 @@ data:
                           description: The cluster in which the user exists
                           type: string
                       required:
-                      - targetCluster
                       - syncIndex
+                      - targetCluster
                       type: object
                     type: array
                 type: object
         version: v1alpha1
+        versions:
+        - name: v1alpha1
+          served: true
+          storage: true
       status:
         acceptedNames:
           kind: ""
@@ -229,21 +236,22 @@ data:
       kind: CustomResourceDefinition
       metadata:
         creationTimestamp: null
-        labels:
-          controller-tools.k8s.io: "1.0"
         name: nstemplatetiers.toolchain.dev.openshift.com
       spec:
         group: toolchain.dev.openshift.com
         names:
           kind: NSTemplateTier
+          listKind: NSTemplateTierList
           plural: nstemplatetiers
           shortNames:
           - tier
+          singular: nstemplatetier
         scope: Namespaced
         subresources:
           status: {}
         validation:
           openAPIV3Schema:
+            description: NSTemplateTier is the Schema for the nstemplatetiers API
             properties:
               apiVersion:
                 description: 'APIVersion defines the versioned schema of this representation
@@ -258,10 +266,13 @@ data:
               metadata:
                 type: object
               spec:
+                description: NSTemplateTierSpec defines the desired state of NSTemplateTier
                 properties:
                   namespaces:
-                    description: The namespace templates +listType
+                    description: The namespace templates
                     items:
+                      description: NSTemplateTierNamespace the namespace definition in an
+                        NSTemplateTier resource
                       properties:
                         revision:
                           description: The revision of the corresponding template
@@ -283,6 +294,8 @@ data:
                                 be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
                               type: string
                             labels:
+                              additionalProperties:
+                                type: string
                               description: labels is a optional set of labels that are applied
                                 to every object during the Template to Config transformation.
                               type: object
@@ -312,6 +325,8 @@ data:
                               description: parameters is an optional array of Parameters
                                 used during the Template to Config transformation.
                               items:
+                                description: Parameter defines a name/value variable that
+                                  is to be processed during the Template to Config transformation.
                                 properties:
                                   description:
                                     description: Description of a parameter. Optional.
@@ -325,18 +340,19 @@ data:
                                       Optional.
                                     type: string
                                   generate:
-                                    description: 'generate specifies the generator to be
+                                    description: "generate specifies the generator to be
                                       used to generate random string from an input value
                                       specified by From field. The result string is stored
                                       into Value field. If empty, no generator is being
-                                      used, leaving the result Value untouched. Optional.  The
-                                      only supported generator is "expression", which accepts
-                                      a "from" value in the form of a simple regular expression
-                                      containing the range expression "[a-zA-Z0-9]", and
-                                      the length expression "a{length}".  Examples:  from             |
-                                      value ----------------------------- "test[0-9]{1}x"  |
-                                      "test7x" "[0-1]{8}"       | "01001100" "0x[A-F0-9]{4}"  |
-                                      "0xB3AF" "[a-zA-Z0-9]{8}" | "hW4yQU5i"'
+                                      used, leaving the result Value untouched. Optional.
+                                      \n The only supported generator is \"expression\",
+                                      which accepts a \"from\" value in the form of a simple
+                                      regular expression containing the range expression
+                                      \"[a-zA-Z0-9]\", and the length expression \"a{length}\".
+                                      \n Examples: \n from             | value -----------------------------
+                                      \"test[0-9]{1}x\"  | \"test7x\" \"[0-1]{8}\"       |
+                                      \"01001100\" \"0x[A-F0-9]{4}\"  | \"0xB3AF\" \"[a-zA-Z0-9]{8}\"
+                                      | \"hW4yQU5i\""
                                     type: string
                                   name:
                                     description: Name must be set and it can be referenced
@@ -363,17 +379,22 @@ data:
                           description: 'The type of the namespace. For example: ide|cicd|stage|default'
                           type: string
                       required:
-                      - type
                       - revision
                       - template
+                      - type
                       type: object
                     type: array
                 required:
                 - namespaces
                 type: object
               status:
+                description: NSTemplateTierStatus defines the observed state of NSTemplateTier
                 type: object
         version: v1alpha1
+        versions:
+        - name: v1alpha1
+          served: true
+          storage: true
       status:
         acceptedNames:
           kind: ""
@@ -384,8 +405,6 @@ data:
       kind: CustomResourceDefinition
       metadata:
         creationTimestamp: null
-        labels:
-          controller-tools.k8s.io: "1.0"
         name: usersignups.toolchain.dev.openshift.com
       spec:
         additionalPrinterColumns:
@@ -418,12 +437,15 @@ data:
         group: toolchain.dev.openshift.com
         names:
           kind: UserSignup
+          listKind: UserSignupList
           plural: usersignups
+          singular: usersignup
         scope: Namespaced
         subresources:
           status: {}
         validation:
           openAPIV3Schema:
+            description: UserSignup is the Schema for the usersignup API
             properties:
               apiVersion:
                 description: 'APIVersion defines the versioned schema of this representation
@@ -438,6 +460,7 @@ data:
               metadata:
                 type: object
               spec:
+                description: UserSignupSpec defines the desired state of UserSignup
                 properties:
                   approved:
                     description: If Approved set to 'true' then the user has been manually
@@ -460,15 +483,15 @@ data:
                     description: The user's username, obtained from the identity provider.
                     type: string
                 required:
-                - username
                 - compliantUsername
+                - username
                 type: object
               status:
+                description: UserSignupStatus defines the observed state of UserSignup
                 properties:
                   conditions:
                     description: 'Conditions is an array of current UserSignup conditions
-                      Supported condition types: PendingApproval, Provisioning, Complete
-                      +patchMergeKey=type +patchStrategy=merge +listType'
+                      Supported condition types: PendingApproval, Provisioning, Complete'
                     items:
                       properties:
                         lastTransitionTime:
@@ -490,12 +513,16 @@ data:
                           description: Type of condition
                           type: string
                       required:
-                      - type
                       - status
+                      - type
                       type: object
                     type: array
                 type: object
         version: v1alpha1
+        versions:
+        - name: v1alpha1
+          served: true
+          storage: true
       status:
         acceptedNames:
           kind: ""
@@ -509,19 +536,6 @@ data:
         annotations:
           alm-examples: |-
             [
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "UserSignup",
-                "metadata": {
-                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                },
-                "spec": {
-                  "approved": true,
-                  "compliantUsername": "johnsmith-at-redhat-com",
-                  "targetCluster": "east-2a",
-                  "username": "johnsmith@redhat.com"
-                }
-              },
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "MasterUserRecord",
@@ -592,6 +606,19 @@ data:
                       "type": "default"
                     }
                   ]
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "UserSignup",
+                "metadata": {
+                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                },
+                "spec": {
+                  "approved": true,
+                  "compliantUsername": "johnsmith-at-redhat-com",
+                  "targetCluster": "east-2a",
+                  "username": "johnsmith@redhat.com"
                 }
               }
             ]
