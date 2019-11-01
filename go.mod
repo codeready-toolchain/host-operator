@@ -37,7 +37,7 @@ require (
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
-	github.com/codeready-toolchain/api => github.com/sbryzak/api v0.0.0-20191101002546-cde97a700fa8
+	github.com/codeready-toolchain/api => github.com/sbryzak/api v0.0.0-20191101214508-cf5d4d46f1cd
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.1.10
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.1.11-0.20190411181648-9d55346c2bde
