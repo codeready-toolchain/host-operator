@@ -2,8 +2,6 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   creationTimestamp: null
-  labels:
-    controller-tools.k8s.io: "1.0"
   name: masteruserrecords.toolchain.dev.openshift.com
 spec:
   additionalPrinterColumns:
@@ -16,14 +14,17 @@ spec:
   group: toolchain.dev.openshift.com
   names:
     kind: MasterUserRecord
+    listKind: MasterUserRecordList
     plural: masteruserrecords
     shortNames:
     - mur
+    singular: masteruserrecord
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
+      description: MasterUserRecord is the Schema for the masteruserrecords API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -38,6 +39,7 @@ spec:
         metadata:
           type: object
         spec:
+          description: MasterUserRecordSpec defines the desired state of MasterUserRecord
           properties:
             deprovisioned:
               description: If set to true then the corresponding UserAccount should
@@ -50,7 +52,7 @@ spec:
               type: boolean
             userAccounts:
               description: The list of user accounts in the member clusters which
-                belong to this MasterUserRecord +listType
+                belong to this MasterUserRecord
               items:
                 properties:
                   spec:
@@ -67,8 +69,10 @@ spec:
                         description: Namespace template set
                         properties:
                           namespaces:
-                            description: The namespace templates +listType
+                            description: The namespace templates
                             items:
+                              description: NSTemplateSetNamespace the namespace definition
+                                in an NSTemplateSet resource
                               properties:
                                 revision:
                                   description: The revision of the corresponding template
@@ -82,8 +86,8 @@ spec:
                                     ide|cicd|stage|default'
                                   type: string
                               required:
-                              - type
                               - revision
+                              - type
                               type: object
                             type: array
                           tierName:
@@ -91,8 +95,8 @@ spec:
                               template set
                             type: string
                         required:
-                        - tierName
                         - namespaces
+                        - tierName
                         type: object
                       userID:
                         description: UserID is the user ID from RHD Identity Provider
@@ -100,9 +104,9 @@ spec:
                           UserIdentityMapping resources
                         type: string
                     required:
-                    - userID
                     - nsLimit
                     - nsTemplateSet
+                    - userID
                     type: object
                   syncIndex:
                     description: SyncIndex is to be updated by UserAccount Controller
@@ -113,9 +117,9 @@ spec:
                     description: The cluster in which the user exists
                     type: string
                 required:
-                - targetCluster
-                - syncIndex
                 - spec
+                - syncIndex
+                - targetCluster
                 type: object
               type: array
             userID:
@@ -126,11 +130,11 @@ spec:
           - userID
           type: object
         status:
+          description: MasterUserRecordStatus defines the observed state of MasterUserRecord
           properties:
             conditions:
               description: 'Conditions is an array of current Master User Record conditions
-                Supported condition types: Provisioning, UserAccountNotReady and Ready
-                +patchMergeKey=type +patchStrategy=merge +listType'
+                Supported condition types: Provisioning, UserAccountNotReady and Ready'
               items:
                 properties:
                   lastTransitionTime:
@@ -152,19 +156,18 @@ spec:
                     description: Type of condition
                     type: string
                 required:
-                - type
                 - status
+                - type
                 type: object
               type: array
             userAccounts:
               description: The status of user accounts in the member clusters which
-                belong to this MasterUserRecord +listType
+                belong to this MasterUserRecord
               items:
                 properties:
                   conditions:
                     description: 'Conditions is an array of current User Account conditions
-                      Supported condition types: ConditionReady +patchMergeKey=type
-                      +patchStrategy=merge +listType'
+                      Supported condition types: ConditionReady'
                     items:
                       properties:
                         lastTransitionTime:
@@ -187,8 +190,8 @@ spec:
                           description: Type of condition
                           type: string
                       required:
-                      - type
                       - status
+                      - type
                       type: object
                     type: array
                   syncIndex:
@@ -200,12 +203,16 @@ spec:
                     description: The cluster in which the user exists
                     type: string
                 required:
-                - targetCluster
                 - syncIndex
+                - targetCluster
                 type: object
               type: array
           type: object
   version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
 status:
   acceptedNames:
     kind: ""
