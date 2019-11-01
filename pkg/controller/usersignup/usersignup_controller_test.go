@@ -49,9 +49,11 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+			Approved: false,
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
-			Approved:          false,
 		},
 	}
 
@@ -65,11 +67,11 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	mur := &v1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Spec.CompliantUsername, Namespace: req.Namespace}, mur)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername, Namespace: req.Namespace}, mur)
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Spec.CompliantUsername, mur.Name)
+	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
@@ -113,9 +115,11 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+			Approved: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
-			Approved:          true,
 		},
 	}
 
@@ -129,11 +133,11 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	mur := &v1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Spec.CompliantUsername, Namespace: req.Namespace}, mur)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername, Namespace: req.Namespace}, mur)
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Spec.CompliantUsername, mur.Name)
+	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
@@ -178,9 +182,11 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+			Approved: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
-			Approved:          true,
 		},
 	}
 
@@ -194,11 +200,11 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	mur := &v1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Spec.CompliantUsername, Namespace: req.Namespace}, mur)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername, Namespace: req.Namespace}, mur)
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Spec.CompliantUsername, mur.Name)
+	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
@@ -242,9 +248,11 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+			Approved: false,
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
-			Approved:          false,
 		},
 	}
 
@@ -288,10 +296,12 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username:      "foo@redhat.com",
+			Approved:      false,
+			TargetCluster: "east",
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
-			Approved:          false,
-			TargetCluster:     "east",
 		},
 	}
 
@@ -305,11 +315,11 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	mur := &v1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Spec.CompliantUsername, Namespace: req.Namespace}, mur)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername, Namespace: req.Namespace}, mur)
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Spec.CompliantUsername, mur.Name)
+	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
@@ -353,10 +363,12 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "bar@redhat.com",
+			Username:      "bar@redhat.com",
+			Approved:      false,
+			TargetCluster: "east",
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "bar-at-redhat-com",
-			Approved:          false,
-			TargetCluster:     "east",
 		},
 	}
 
@@ -391,9 +403,11 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+			Approved: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
-			Approved:          true,
 		},
 	}
 
@@ -425,9 +439,11 @@ func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+			Approved: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
-			Approved:          true,
 		},
 	}
 
@@ -474,9 +490,11 @@ func TestUserSignupMURReadFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+			Approved: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
-			Approved:          true,
 		},
 	}
 
@@ -508,9 +526,11 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+			Approved: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
-			Approved:          true,
 		},
 	}
 
@@ -542,7 +562,9 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
 		},
 	}
@@ -575,7 +597,9 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
 		},
 	}
@@ -609,16 +633,19 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+
+			Approved: false,
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
-			Approved:          false,
 		},
 	}
 
 	// Create a MUR with the same name
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignup.Spec.CompliantUsername,
+			Name:      userSignup.Status.CompliantUsername,
 			Namespace: operatorNamespace,
 			UID:       types.UID(uuid.NewV4().String()),
 		},
@@ -662,9 +689,12 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username:          "foo@redhat.com",
+			Username: "foo@redhat.com",
+
+			Approved: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "foo-at-redhat-com",
-			Approved:          true,
 		},
 	}
 

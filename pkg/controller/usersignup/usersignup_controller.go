@@ -126,7 +126,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// Check if the MasterUserRecord already exists
 	mur := &toolchainv1alpha1.MasterUserRecord{}
 	// Lookup the MasterUserRecord with the CompliantUsername value from the UserSignup resource, in the same namespace
-	namespacedMurName := types.NamespacedName{Namespace: request.Namespace, Name: instance.Spec.CompliantUsername}
+	namespacedMurName := types.NamespacedName{Namespace: request.Namespace, Name: instance.Status.CompliantUsername}
 	err = r.client.Get(context.TODO(), namespacedMurName, mur)
 	if err != nil {
 		// We generally EXPECT the MasterUserRecord to not be found here, so we only deal with other error types
@@ -213,7 +213,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignup.Spec.CompliantUsername,
+			Name:      userSignup.Status.CompliantUsername,
 			Namespace: userSignup.Namespace,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
