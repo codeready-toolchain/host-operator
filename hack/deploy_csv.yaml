@@ -484,7 +484,6 @@ data:
                   username:
                     description: The user's username, obtained from the identity provider.
                     type: string
-                required:
                 - username
                 type: object
               status:
