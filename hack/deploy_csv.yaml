@@ -33,202 +33,200 @@ data:
           - mur
           singular: masteruserrecord
         scope: Namespaced
+        subresources:
+          status: {}
+        validation:
+          openAPIV3Schema:
+            description: MasterUserRecord is the Schema for the masteruserrecords API
+            properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource this
+                  object represents. Servers may infer this from the endpoint the client
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                type: string
+              metadata:
+                type: object
+              spec:
+                description: MasterUserRecordSpec defines the desired state of MasterUserRecord
+                properties:
+                  deprovisioned:
+                    description: If set to true then the corresponding UserAccount should
+                      be deleted "false" is assumed by default
+                    type: boolean
+                  disabled:
+                    description: If set to true then the corresponding user should not be
+                      able to login (but the underlying UserAccounts still exists) "false"
+                      is assumed by default
+                    type: boolean
+                  userAccounts:
+                    description: The list of user accounts in the member clusters which
+                      belong to this MasterUserRecord
+                    items:
+                      properties:
+                        spec:
+                          description: The spec of the corresponding UserAccount
+                          properties:
+                            disabled:
+                              description: If set to true then the corresponding user should
+                                not be able to login "false" is assumed by default
+                              type: boolean
+                            nsLimit:
+                              description: The namespace limit name
+                              type: string
+                            nsTemplateSet:
+                              description: Namespace template set
+                              properties:
+                                namespaces:
+                                  description: The namespace templates
+                                  items:
+                                    description: NSTemplateSetNamespace the namespace definition
+                                      in an NSTemplateSet resource
+                                    properties:
+                                      revision:
+                                        description: The revision of the corresponding template
+                                        type: string
+                                      template:
+                                        description: Optional field. Used to specify a custom
+                                          template
+                                        type: string
+                                      type:
+                                        description: 'The type of the namespace. For example:
+                                          ide|cicd|stage|default'
+                                        type: string
+                                    required:
+                                    - revision
+                                    - type
+                                    type: object
+                                  type: array
+                                tierName:
+                                  description: The name of the tier represented by this
+                                    template set
+                                  type: string
+                              required:
+                              - namespaces
+                              - tierName
+                              type: object
+                            userID:
+                              description: UserID is the user ID from RHD Identity Provider
+                                token (“sub” claim) Is to be used to create Identity and
+                                UserIdentityMapping resources
+                              type: string
+                          required:
+                          - nsLimit
+                          - nsTemplateSet
+                          - userID
+                          type: object
+                        syncIndex:
+                          description: SyncIndex is to be updated by UserAccount Controller
+                            when the member needs to trigger MasterUserRecord <-> UserAccount
+                            synchronization
+                          type: string
+                        targetCluster:
+                          description: The cluster in which the user exists
+                          type: string
+                      required:
+                      - spec
+                      - syncIndex
+                      - targetCluster
+                      type: object
+                    type: array
+                  userID:
+                    description: UserID is the user ID from RHD Identity Provider token
+                      (“sub” claim)
+                    type: string
+                required:
+                - userID
+                type: object
+              status:
+                description: MasterUserRecordStatus defines the observed state of MasterUserRecord
+                properties:
+                  conditions:
+                    description: 'Conditions is an array of current Master User Record conditions
+                      Supported condition types: Provisioning, UserAccountNotReady and Ready'
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          description: Last time the condition transit from one status to
+                            another.
+                          format: date-time
+                          type: string
+                        message:
+                          description: Human readable message indicating details about last
+                            transition.
+                          type: string
+                        reason:
+                          description: (brief) reason for the condition's last transition.
+                          type: string
+                        status:
+                          description: Status of the condition, one of True, False, Unknown.
+                          type: string
+                        type:
+                          description: Type of condition
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    type: array
+                  userAccounts:
+                    description: The status of user accounts in the member clusters which
+                      belong to this MasterUserRecord
+                    items:
+                      properties:
+                        conditions:
+                          description: 'Conditions is an array of current User Account conditions
+                            Supported condition types: ConditionReady'
+                          items:
+                            properties:
+                              lastTransitionTime:
+                                description: Last time the condition transit from one status
+                                  to another.
+                                format: date-time
+                                type: string
+                              message:
+                                description: Human readable message indicating details about
+                                  last transition.
+                                type: string
+                              reason:
+                                description: (brief) reason for the condition's last transition.
+                                type: string
+                              status:
+                                description: Status of the condition, one of True, False,
+                                  Unknown.
+                                type: string
+                              type:
+                                description: Type of condition
+                                type: string
+                            required:
+                            - status
+                            - type
+                            type: object
+                          type: array
+                        syncIndex:
+                          description: SyncIndex is used for checking if there is needed
+                            some MasterUserRecord <-> UserAccount synchronization for this
+                            specific UserAccount in the specific member cluster
+                          type: string
+                        targetCluster:
+                          description: The cluster in which the user exists
+                          type: string
+                      required:
+                      - syncIndex
+                      - targetCluster
+                      type: object
+                    type: array
+                type: object
+            type: object
         version: v1alpha1
         versions:
         - name: v1alpha1
-          schema:
-            openAPIV3Schema:
-              description: MasterUserRecord is the Schema for the masteruserrecords API
-              properties:
-                apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation
-                    of an object. Servers should convert recognized schemas to the latest
-                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
-                  type: string
-                kind:
-                  description: 'Kind is a string value representing the REST resource this
-                    object represents. Servers may infer this from the endpoint the client
-                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
-                  type: string
-                metadata:
-                  type: object
-                spec:
-                  description: MasterUserRecordSpec defines the desired state of MasterUserRecord
-                  properties:
-                    deprovisioned:
-                      description: If set to true then the corresponding UserAccount should
-                        be deleted "false" is assumed by default
-                      type: boolean
-                    disabled:
-                      description: If set to true then the corresponding user should not
-                        be able to login (but the underlying UserAccounts still exists)
-                        "false" is assumed by default
-                      type: boolean
-                    userAccounts:
-                      description: The list of user accounts in the member clusters which
-                        belong to this MasterUserRecord
-                      items:
-                        properties:
-                          spec:
-                            description: The spec of the corresponding UserAccount
-                            properties:
-                              disabled:
-                                description: If set to true then the corresponding user
-                                  should not be able to login "false" is assumed by default
-                                type: boolean
-                              nsLimit:
-                                description: The namespace limit name
-                                type: string
-                              nsTemplateSet:
-                                description: Namespace template set
-                                properties:
-                                  namespaces:
-                                    description: The namespace templates
-                                    items:
-                                      description: NSTemplateSetNamespace the namespace
-                                        definition in an NSTemplateSet resource
-                                      properties:
-                                        revision:
-                                          description: The revision of the corresponding
-                                            template
-                                          type: string
-                                        template:
-                                          description: Optional field. Used to specify a
-                                            custom template
-                                          type: string
-                                        type:
-                                          description: 'The type of the namespace. For example:
-                                            ide|cicd|stage|default'
-                                          type: string
-                                      required:
-                                      - revision
-                                      - type
-                                      type: object
-                                    type: array
-                                  tierName:
-                                    description: The name of the tier represented by this
-                                      template set
-                                    type: string
-                                required:
-                                - namespaces
-                                - tierName
-                                type: object
-                              userID:
-                                description: UserID is the user ID from RHD Identity Provider
-                                  token (“sub” claim) Is to be used to create Identity and
-                                  UserIdentityMapping resources
-                                type: string
-                            required:
-                            - nsLimit
-                            - nsTemplateSet
-                            - userID
-                            type: object
-                          syncIndex:
-                            description: SyncIndex is to be updated by UserAccount Controller
-                              when the member needs to trigger MasterUserRecord <-> UserAccount
-                              synchronization
-                            type: string
-                          targetCluster:
-                            description: The cluster in which the user exists
-                            type: string
-                        required:
-                        - spec
-                        - syncIndex
-                        - targetCluster
-                        type: object
-                      type: array
-                    userID:
-                      description: UserID is the user ID from RHD Identity Provider token
-                        (“sub” claim)
-                      type: string
-                  required:
-                  - userID
-                  type: object
-                status:
-                  description: MasterUserRecordStatus defines the observed state of MasterUserRecord
-                  properties:
-                    conditions:
-                      description: 'Conditions is an array of current Master User Record
-                        conditions Supported condition types: Provisioning, UserAccountNotReady
-                        and Ready'
-                      items:
-                        properties:
-                          lastTransitionTime:
-                            description: Last time the condition transit from one status
-                              to another.
-                            format: date-time
-                            type: string
-                          message:
-                            description: Human readable message indicating details about
-                              last transition.
-                            type: string
-                          reason:
-                            description: (brief) reason for the condition's last transition.
-                            type: string
-                          status:
-                            description: Status of the condition, one of True, False, Unknown.
-                            type: string
-                          type:
-                            description: Type of condition
-                            type: string
-                        required:
-                        - status
-                        - type
-                        type: object
-                      type: array
-                    userAccounts:
-                      description: The status of user accounts in the member clusters which
-                        belong to this MasterUserRecord
-                      items:
-                        properties:
-                          conditions:
-                            description: 'Conditions is an array of current User Account
-                              conditions Supported condition types: ConditionReady'
-                            items:
-                              properties:
-                                lastTransitionTime:
-                                  description: Last time the condition transit from one
-                                    status to another.
-                                  format: date-time
-                                  type: string
-                                message:
-                                  description: Human readable message indicating details
-                                    about last transition.
-                                  type: string
-                                reason:
-                                  description: (brief) reason for the condition's last transition.
-                                  type: string
-                                status:
-                                  description: Status of the condition, one of True, False,
-                                    Unknown.
-                                  type: string
-                                type:
-                                  description: Type of condition
-                                  type: string
-                              required:
-                              - status
-                              - type
-                              type: object
-                            type: array
-                          syncIndex:
-                            description: SyncIndex is used for checking if there is needed
-                              some MasterUserRecord <-> UserAccount synchronization for
-                              this specific UserAccount in the specific member cluster
-                            type: string
-                          targetCluster:
-                            description: The cluster in which the user exists
-                            type: string
-                        required:
-                        - syncIndex
-                        - targetCluster
-                        type: object
-                      type: array
-                  type: object
-              type: object
           served: true
           storage: true
-          subresources:
-            status: {}
       status:
         acceptedNames:
           kind: ""
@@ -250,156 +248,155 @@ data:
           - tier
           singular: nstemplatetier
         scope: Namespaced
+        subresources:
+          status: {}
+        validation:
+          openAPIV3Schema:
+            description: NSTemplateTier is the Schema for the nstemplatetiers API
+            properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource this
+                  object represents. Servers may infer this from the endpoint the client
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                type: string
+              metadata:
+                type: object
+              spec:
+                description: NSTemplateTierSpec defines the desired state of NSTemplateTier
+                properties:
+                  namespaces:
+                    description: The namespace templates
+                    items:
+                      description: NSTemplateTierNamespace the namespace definition in an
+                        NSTemplateTier resource
+                      properties:
+                        revision:
+                          description: The revision of the corresponding template
+                          type: string
+                        template:
+                          description: Template contains an OpenShift Template to be used
+                            for namespace provisioning
+                          properties:
+                            apiVersion:
+                              description: 'APIVersion defines the versioned schema of this
+                                representation of an object. Servers should convert recognized
+                                schemas to the latest internal value, and may reject unrecognized
+                                values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                              type: string
+                            kind:
+                              description: 'Kind is a string value representing the REST
+                                resource this object represents. Servers may infer this
+                                from the endpoint the client submits requests to. Cannot
+                                be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                              type: string
+                            labels:
+                              additionalProperties:
+                                type: string
+                              description: labels is a optional set of labels that are applied
+                                to every object during the Template to Config transformation.
+                              type: object
+                            message:
+                              description: message is an optional instructional message
+                                that will be displayed when this template is instantiated.
+                                This field should inform the user how to utilize the newly
+                                created resources. Parameter substitution will be performed
+                                on the message before being displayed so that generated
+                                credentials and other parameters can be included in the
+                                output.
+                              type: string
+                            metadata:
+                              description: Standard object's metadata.
+                              type: object
+                            objects:
+                              description: objects is an array of resources to include in
+                                this template. If a namespace value is hardcoded in the
+                                object, it will be removed during template instantiation,
+                                however if the namespace value is, or contains, a ${PARAMETER_REFERENCE},
+                                the resolved value after parameter substitution will be
+                                respected and the object will be created in that namespace.
+                              items:
+                                type: object
+                              type: array
+                            parameters:
+                              description: parameters is an optional array of Parameters
+                                used during the Template to Config transformation.
+                              items:
+                                description: Parameter defines a name/value variable that
+                                  is to be processed during the Template to Config transformation.
+                                properties:
+                                  description:
+                                    description: Description of a parameter. Optional.
+                                    type: string
+                                  displayName:
+                                    description: 'Optional: The name that will show in UI
+                                      instead of parameter ''Name'''
+                                    type: string
+                                  from:
+                                    description: From is an input value for the generator.
+                                      Optional.
+                                    type: string
+                                  generate:
+                                    description: "generate specifies the generator to be
+                                      used to generate random string from an input value
+                                      specified by From field. The result string is stored
+                                      into Value field. If empty, no generator is being
+                                      used, leaving the result Value untouched. Optional.
+                                      \n The only supported generator is \"expression\",
+                                      which accepts a \"from\" value in the form of a simple
+                                      regular expression containing the range expression
+                                      \"[a-zA-Z0-9]\", and the length expression \"a{length}\".
+                                      \n Examples: \n from             | value -----------------------------
+                                      \"test[0-9]{1}x\"  | \"test7x\" \"[0-1]{8}\"       |
+                                      \"01001100\" \"0x[A-F0-9]{4}\"  | \"0xB3AF\" \"[a-zA-Z0-9]{8}\"
+                                      | \"hW4yQU5i\""
+                                    type: string
+                                  name:
+                                    description: Name must be set and it can be referenced
+                                      in Template Items using ${PARAMETER_NAME}. Required.
+                                    type: string
+                                  required:
+                                    description: 'Optional: Indicates the parameter must
+                                      have a value.  Defaults to false.'
+                                    type: boolean
+                                  value:
+                                    description: Value holds the Parameter data. If specified,
+                                      the generator will be ignored. The value replaces
+                                      all occurrences of the Parameter ${Name} expression
+                                      during the Template to Config transformation. Optional.
+                                    type: string
+                                required:
+                                - name
+                                type: object
+                              type: array
+                          required:
+                          - objects
+                          type: object
+                        type:
+                          description: 'The type of the namespace. For example: ide|cicd|stage|default'
+                          type: string
+                      required:
+                      - revision
+                      - template
+                      - type
+                      type: object
+                    type: array
+                required:
+                - namespaces
+                type: object
+              status:
+                description: NSTemplateTierStatus defines the observed state of NSTemplateTier
+                type: object
+            type: object
         version: v1alpha1
         versions:
         - name: v1alpha1
-          schema:
-            openAPIV3Schema:
-              description: NSTemplateTier is the Schema for the nstemplatetiers API
-              properties:
-                apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation
-                    of an object. Servers should convert recognized schemas to the latest
-                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
-                  type: string
-                kind:
-                  description: 'Kind is a string value representing the REST resource this
-                    object represents. Servers may infer this from the endpoint the client
-                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
-                  type: string
-                metadata:
-                  type: object
-                spec:
-                  description: NSTemplateTierSpec defines the desired state of NSTemplateTier
-                  properties:
-                    namespaces:
-                      description: The namespace templates
-                      items:
-                        description: NSTemplateTierNamespace the namespace definition in
-                          an NSTemplateTier resource
-                        properties:
-                          revision:
-                            description: The revision of the corresponding template
-                            type: string
-                          template:
-                            description: Template contains an OpenShift Template to be used
-                              for namespace provisioning
-                            properties:
-                              apiVersion:
-                                description: 'APIVersion defines the versioned schema of
-                                  this representation of an object. Servers should convert
-                                  recognized schemas to the latest internal value, and may
-                                  reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
-                                type: string
-                              kind:
-                                description: 'Kind is a string value representing the REST
-                                  resource this object represents. Servers may infer this
-                                  from the endpoint the client submits requests to. Cannot
-                                  be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
-                                type: string
-                              labels:
-                                additionalProperties:
-                                  type: string
-                                description: labels is a optional set of labels that are
-                                  applied to every object during the Template to Config
-                                  transformation.
-                                type: object
-                              message:
-                                description: message is an optional instructional message
-                                  that will be displayed when this template is instantiated.
-                                  This field should inform the user how to utilize the newly
-                                  created resources. Parameter substitution will be performed
-                                  on the message before being displayed so that generated
-                                  credentials and other parameters can be included in the
-                                  output.
-                                type: string
-                              metadata:
-                                description: Standard object's metadata.
-                                type: object
-                              objects:
-                                description: objects is an array of resources to include
-                                  in this template. If a namespace value is hardcoded in
-                                  the object, it will be removed during template instantiation,
-                                  however if the namespace value is, or contains, a ${PARAMETER_REFERENCE},
-                                  the resolved value after parameter substitution will be
-                                  respected and the object will be created in that namespace.
-                                items:
-                                  type: object
-                                type: array
-                              parameters:
-                                description: parameters is an optional array of Parameters
-                                  used during the Template to Config transformation.
-                                items:
-                                  description: Parameter defines a name/value variable that
-                                    is to be processed during the Template to Config transformation.
-                                  properties:
-                                    description:
-                                      description: Description of a parameter. Optional.
-                                      type: string
-                                    displayName:
-                                      description: 'Optional: The name that will show in
-                                        UI instead of parameter ''Name'''
-                                      type: string
-                                    from:
-                                      description: From is an input value for the generator.
-                                        Optional.
-                                      type: string
-                                    generate:
-                                      description: "generate specifies the generator to
-                                        be used to generate random string from an input
-                                        value specified by From field. The result string
-                                        is stored into Value field. If empty, no generator
-                                        is being used, leaving the result Value untouched.
-                                        Optional. \n The only supported generator is \"expression\",
-                                        which accepts a \"from\" value in the form of a
-                                        simple regular expression containing the range expression
-                                        \"[a-zA-Z0-9]\", and the length expression \"a{length}\".
-                                        \n Examples: \n from             | value -----------------------------
-                                        \"test[0-9]{1}x\"  | \"test7x\" \"[0-1]{8}\"       |
-                                        \"01001100\" \"0x[A-F0-9]{4}\"  | \"0xB3AF\" \"[a-zA-Z0-9]{8}\"
-                                        | \"hW4yQU5i\""
-                                      type: string
-                                    name:
-                                      description: Name must be set and it can be referenced
-                                        in Template Items using ${PARAMETER_NAME}. Required.
-                                      type: string
-                                    required:
-                                      description: 'Optional: Indicates the parameter must
-                                        have a value.  Defaults to false.'
-                                      type: boolean
-                                    value:
-                                      description: Value holds the Parameter data. If specified,
-                                        the generator will be ignored. The value replaces
-                                        all occurrences of the Parameter ${Name} expression
-                                        during the Template to Config transformation. Optional.
-                                      type: string
-                                  required:
-                                  - name
-                                  type: object
-                                type: array
-                            required:
-                            - objects
-                            type: object
-                          type:
-                            description: 'The type of the namespace. For example: ide|cicd|stage|default'
-                            type: string
-                        required:
-                        - revision
-                        - template
-                        - type
-                        type: object
-                      type: array
-                  required:
-                  - namespaces
-                  type: object
-                status:
-                  description: NSTemplateTierStatus defines the observed state of NSTemplateTier
-                  type: object
-              type: object
           served: true
           storage: true
-          subresources:
-            status: {}
       status:
         acceptedNames:
           kind: ""
@@ -412,6 +409,33 @@ data:
         creationTimestamp: null
         name: usersignups.toolchain.dev.openshift.com
       spec:
+        additionalPrinterColumns:
+        - JSONPath: .spec.userID
+          name: User ID
+          priority: 1
+          type: string
+        - JSONPath: .spec.username
+          name: Username
+          priority: 1
+          type: string
+        - JSONPath: .spec.targetCluster
+          name: TargetCluster
+          priority: 1
+          type: string
+        - JSONPath: .status.conditions[?(@.type=="Complete")].status
+          name: Complete
+          type: string
+        - JSONPath: .status.conditions[?(@.type=="Complete")].reason
+          name: Reason
+          type: string
+        - JSONPath: .status.conditions[?(@.type=="Approved")].status
+          name: Approved
+          priority: 1
+          type: string
+        - JSONPath: .status.conditions[?(@.type=="Approved")].reason
+          name: ApprovedBy
+          priority: 1
+          type: string
         group: toolchain.dev.openshift.com
         names:
           kind: UserSignup
@@ -419,116 +443,89 @@ data:
           plural: usersignups
           singular: usersignup
         scope: Namespaced
+        subresources:
+          status: {}
+        validation:
+          openAPIV3Schema:
+            description: UserSignup is the Schema for the usersignup API
+            properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource this
+                  object represents. Servers may infer this from the endpoint the client
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                type: string
+              metadata:
+                type: object
+              spec:
+                description: UserSignupSpec defines the desired state of UserSignup
+                properties:
+                  approved:
+                    description: If Approved set to 'true' then the user has been manually
+                      approved If not set then the user is subject of auto-approval (if
+                      enabled)
+                    type: boolean
+                  compliantUsername:
+                    description: The DNS-1123-compliant username.  This username is generated
+                      by the registration app and may differ from the Username, as a limited
+                      character set is available for naming (see RFC1123).  If the username
+                      contains characters which are disqualified, the username is transformed
+                      into a compliant name instead. For example, johnsmith@redhat.com ->
+                      johnsmith-at-redhat-com
+                    type: string
+                  targetCluster:
+                    description: The cluster in which the user is provisioned in If not
+                      set then the target cluster will be picked automatically
+                    type: string
+                  username:
+                    description: The user's username, obtained from the identity provider.
+                    type: string
+                required:
+                - compliantUsername
+                - username
+                type: object
+              status:
+                description: UserSignupStatus defines the observed state of UserSignup
+                properties:
+                  conditions:
+                    description: 'Conditions is an array of current UserSignup conditions
+                      Supported condition types: PendingApproval, Provisioning, Complete'
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          description: Last time the condition transit from one status to
+                            another.
+                          format: date-time
+                          type: string
+                        message:
+                          description: Human readable message indicating details about last
+                            transition.
+                          type: string
+                        reason:
+                          description: (brief) reason for the condition's last transition.
+                          type: string
+                        status:
+                          description: Status of the condition, one of True, False, Unknown.
+                          type: string
+                        type:
+                          description: Type of condition
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    type: array
+                type: object
+            type: object
         version: v1alpha1
         versions:
-        - additionalPrinterColumns:
-          - JSONPath: .spec.userID
-            name: User ID
-            priority: 1
-            type: string
-          - JSONPath: .spec.username
-            name: Username
-            priority: 1
-            type: string
-          - JSONPath: .spec.targetCluster
-            name: TargetCluster
-            priority: 1
-            type: string
-          - JSONPath: .status.conditions[?(@.type=="Complete")].status
-            name: Complete
-            type: string
-          - JSONPath: .status.conditions[?(@.type=="Complete")].reason
-            name: Reason
-            type: string
-          - JSONPath: .status.conditions[?(@.type=="Approved")].status
-            name: Approved
-            priority: 1
-            type: string
-          - JSONPath: .status.conditions[?(@.type=="Approved")].reason
-            name: ApprovedBy
-            priority: 1
-            type: string
-          name: v1alpha1
-          schema:
-            openAPIV3Schema:
-              description: UserSignup is the Schema for the usersignup API
-              properties:
-                apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation
-                    of an object. Servers should convert recognized schemas to the latest
-                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
-                  type: string
-                kind:
-                  description: 'Kind is a string value representing the REST resource this
-                    object represents. Servers may infer this from the endpoint the client
-                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
-                  type: string
-                metadata:
-                  type: object
-                spec:
-                  description: UserSignupSpec defines the desired state of UserSignup
-                  properties:
-                    approved:
-                      description: If Approved set to 'true' then the user has been manually
-                        approved If not set then the user is subject of auto-approval (if
-                        enabled)
-                      type: boolean
-                    compliantUsername:
-                      description: The DNS-1123-compliant username.  This username is generated
-                        by the registration app and may differ from the Username, as a limited
-                        character set is available for naming (see RFC1123).  If the username
-                        contains characters which are disqualified, the username is transformed
-                        into a compliant name instead. For example, johnsmith@redhat.com
-                        -> johnsmith-at-redhat-com
-                      type: string
-                    targetCluster:
-                      description: The cluster in which the user is provisioned in If not
-                        set then the target cluster will be picked automatically
-                      type: string
-                    username:
-                      description: The user's username, obtained from the identity provider.
-                      type: string
-                  required:
-                  - compliantUsername
-                  - username
-                  type: object
-                status:
-                  description: UserSignupStatus defines the observed state of UserSignup
-                  properties:
-                    conditions:
-                      description: 'Conditions is an array of current UserSignup conditions
-                        Supported condition types: PendingApproval, Provisioning, Complete'
-                      items:
-                        properties:
-                          lastTransitionTime:
-                            description: Last time the condition transit from one status
-                              to another.
-                            format: date-time
-                            type: string
-                          message:
-                            description: Human readable message indicating details about
-                              last transition.
-                            type: string
-                          reason:
-                            description: (brief) reason for the condition's last transition.
-                            type: string
-                          status:
-                            description: Status of the condition, one of True, False, Unknown.
-                            type: string
-                          type:
-                            description: Type of condition
-                            type: string
-                        required:
-                        - status
-                        - type
-                        type: object
-                      type: array
-                  type: object
-              type: object
+        - name: v1alpha1
           served: true
           storage: true
-          subresources:
-            status: {}
       status:
         acceptedNames:
           kind: ""
