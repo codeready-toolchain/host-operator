@@ -33,6 +33,9 @@ spec:
     name: ApprovedBy
     priority: 1
     type: string
+  - JSONPath: .status.compliantUsername
+    name: CompliantUsername
+    type: string
   group: toolchain.dev.openshift.com
   names:
     kind: UserSignup

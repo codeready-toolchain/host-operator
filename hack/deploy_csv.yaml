@@ -26,6 +26,13 @@ data:
           controller-tools.k8s.io: "1.0"
         name: masteruserrecords.toolchain.dev.openshift.com
       spec:
+        additionalPrinterColumns:
+        - JSONPath: .status.conditions[?(@.type=="Ready")].status
+          name: Ready
+          type: string
+        - JSONPath: .status.conditions[?(@.type=="Ready")].reason
+          name: Reason
+          type: string
         group: toolchain.dev.openshift.com
         names:
           kind: MasterUserRecord
@@ -414,6 +421,9 @@ data:
         - JSONPath: .status.conditions[?(@.type=="Approved")].reason
           name: ApprovedBy
           priority: 1
+          type: string
+        - JSONPath: .status.compliantUsername
+          name: CompliantUsername
           type: string
         group: toolchain.dev.openshift.com
         names:
