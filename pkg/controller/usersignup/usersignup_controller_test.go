@@ -403,7 +403,7 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
 
-	client.MockCreate = func(ctx context.Context, obj runtime.Object) error {
+	client.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 		switch obj.(type) {
 		case *v1alpha1.MasterUserRecord:
 			return errors.New("unable to create mur")

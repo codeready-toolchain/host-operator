@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -120,7 +121,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		mur := murtest.NewMasterUserRecord("john")
 		userAcc := uatest.NewUserAccountFromMur(mur)
 		memberClient := test.NewFakeClient(t, userAcc)
-		memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object) error {
+		memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
 		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.TierName("admin"))
@@ -150,7 +151,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			uatest.StatusCondition(toBeNotReady("somethingFailed", "")))
 		memberClient := test.NewFakeClient(t, userAcc)
 		hostClient := test.NewFakeClient(t, provisionedMur)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
 		sync := Synchronizer{
