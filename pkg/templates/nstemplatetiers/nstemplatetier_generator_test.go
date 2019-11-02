@@ -10,6 +10,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
 	testsupport "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
@@ -33,34 +34,34 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		t.Run("create only", func(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.NewV4().String()[:7]
-			client := testsupport.NewFakeClient(t)
+			clt := testsupport.NewFakeClient(t)
 			// set the 'generation' when creating the object
-			client.MockCreate = func(ctx context.Context, obj runtime.Object) error {
+			clt.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 				if obj, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					if obj.ObjectMeta.Generation != 0 {
 						return errors.Errorf("'generation' field will be specified by the server during object creation: %v", obj.ObjectMeta.Generation)
 					}
 					obj.ObjectMeta.Generation = obj.ObjectMeta.Generation + 1
 				}
-				return client.Client.Create(ctx, obj)
+				return clt.Client.Create(ctx, obj)
 			}
 			// verify that no "advanced" nor "basic" NSTemplateTier resources exist prior to creation
 			for _, tierName := range []string{"advanced", "basic"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
-				err = client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
+				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.Error(t, err)
 				assert.IsType(t, metav1.StatusReasonNotFound, apierrors.ReasonForError(err))
 			}
 
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(s, client, namespace, testnstemplatetiers.Asset)
+			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testnstemplatetiers.Asset)
 
 			// then
 			require.NoError(t, err)
 			// verify that 2 NStemplateTier CRs were created: "advanced" and "basic"
 			for _, tierName := range []string{"advanced", "basic"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
-				err = client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
+				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
 				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
 			}
@@ -69,16 +70,16 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		t.Run("create and update", func(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.NewV4().String()[:7]
-			client := testsupport.NewFakeClient(t)
+			clt := testsupport.NewFakeClient(t)
 			// set the 'generation' when creating the object
-			client.MockCreate = func(ctx context.Context, obj runtime.Object) error {
+			clt.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 				if tier, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					if tier.ObjectMeta.Generation != 0 {
 						return errors.Errorf("'generation' field will be specified by the server during object creation: %v", tier.ObjectMeta.Generation)
 					}
 					tier.ObjectMeta.Generation = tier.ObjectMeta.Generation + 1
 					tier.ObjectMeta.ResourceVersion = "foo" // set by the server
-					err := client.Client.Create(ctx, obj)
+					err := clt.Client.Create(ctx, obj)
 					if err != nil && apierrors.IsAlreadyExists(err) {
 						// prevent the fake client to return the actual ResourceVersion,
 						// as it seems like the real client/server don't not do it in the e2e tests
@@ -90,7 +91,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				return errors.Errorf("did not expect to create a resource of type %T", obj)
 			}
 			// check the 'generation' when updating the object, and increment its value
-			client.MockUpdate = func(ctx context.Context, obj runtime.Object) error {
+			clt.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				if obj, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					obj.ObjectMeta.Generation = obj.ObjectMeta.Generation + 1
 					if obj.ObjectMeta.ResourceVersion != "foo" {
@@ -98,15 +99,15 @@ func TestCreateOrUpdateResources(t *testing.T) {
 						return errors.Errorf("'ResourceVersion ' field must be specified during object update")
 					}
 				}
-				return client.Client.Update(ctx, obj)
+				return clt.Client.Update(ctx, obj)
 			}
 			assets, revisions := generateRevisions("123456")
-			err := nstemplatetiers.CreateOrUpdateResources(s, client, namespace, assets)
+			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 			require.NoError(t, err)
 			// verify that 2 NStemplateTier CRs were created: "advanced" and "basic"
 			for _, tierName := range []string{"advanced", "basic"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
-				err = client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
+				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
 				// verify that the ResourceVersion was set by the server
 				assert.Equal(t, "foo", tier.ObjectMeta.ResourceVersion)
@@ -121,14 +122,14 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			assets, revisions = generateRevisions("654321")
 
 			// when calling CreateOrUpdateResources a second time
-			err = nstemplatetiers.CreateOrUpdateResources(s, client, namespace, assets)
+			err = nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 
 			// then
 			require.NoError(t, err)
 			// verify that the 2 NStemplateTier CRs were updated
 			for _, tierName := range []string{"advanced", "basic"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
-				err = client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
+				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
 				// verify that the generation was increased
 				assert.Equal(t, int64(2), tier.ObjectMeta.Generation)
@@ -143,7 +144,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	t.Run("failures", func(t *testing.T) {
 
 		namespace := "host-operator" + uuid.NewV4().String()[:7]
-		client := testsupport.NewFakeClient(t)
+		clt := testsupport.NewFakeClient(t)
 
 		t.Run("failed to initialize generator", func(t *testing.T) {
 			// given
@@ -151,7 +152,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				return nil, errors.Errorf("test")
 			}
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(s, client, namespace, assets)
+			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 			// then
 			require.Error(t, err)
 			assert.Equal(t, "unable to create or update NSTemplateTiers: unable to initialize the nstemplatetierGenerator: test", err.Error())
@@ -166,7 +167,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				return nil, errors.Errorf("test")
 			}
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(s, client, namespace, assets)
+			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 			// then
 			require.Error(t, err)
 			assert.Equal(t, "unable to create or update NSTemplateTiers: unable to generate all NSTemplateTier manifests: unable to generate 'advanced' NSTemplateTier manifest: test", err.Error())
@@ -180,12 +181,12 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				}
 				return testnstemplatetiers.Asset(name)
 			}
-			client := testsupport.NewFakeClient(t)
-			client.MockCreate = func(ctx context.Context, obj runtime.Object) error {
+			clt := testsupport.NewFakeClient(t)
+			clt.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 				return errors.Errorf("test")
 			}
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(s, client, namespace, assets)
+			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 			// then
 			require.Error(t, err)
 			assert.Equal(t, fmt.Sprintf("unable to create the NSTemplateTiers 'advanced' in namespace '%s': test", namespace), err.Error())
@@ -201,18 +202,18 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				return testnstemplatetiers.Asset(name)
 			}
 			// initialize the client with an existing `advanced` NSTemplatetier, matching the data above
-			client := testsupport.NewFakeClient(t, &toolchainv1alpha1.NSTemplateTier{
+			clt := testsupport.NewFakeClient(t, &toolchainv1alpha1.NSTemplateTier{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
 					Name:      "advanced",
 				},
 			})
-			client.MockUpdate = func(ctx context.Context, obj runtime.Object) error {
+			clt.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				// trigger an error when trying to update the existing `advanced` NSTemplatetier
 				return errors.Errorf("test")
 			}
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(s, client, namespace, assets)
+			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 			// then
 			require.Error(t, err)
 			assert.Equal(t, fmt.Sprintf("unable to update the NSTemplateTiers 'advanced' in namespace '%s': test", namespace), err.Error())

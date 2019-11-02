@@ -397,18 +397,18 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 		},
 	}
 
-	r, req, client := prepareReconcile(t, userSignup.Name, userSignup)
+	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup)
 
 	// Add some member clusters
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
 
-	client.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+	clt.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 		switch obj.(type) {
 		case *v1alpha1.MasterUserRecord:
 			return errors.New("unable to create mur")
 		default:
-			return client.Create(ctx, obj)
+			return clt.Create(ctx, obj)
 		}
 	}
 
@@ -437,7 +437,7 @@ func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
 
-	fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object) error {
+	fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 		switch obj := obj.(type) {
 		case *v1alpha1.MasterUserRecord:
 			return errs.NewAlreadyExists(v1.Resource("masteruserrecords"), obj.Name)
@@ -520,7 +520,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj.(type) {
 		case *v1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
@@ -553,7 +553,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj.(type) {
 		case *v1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
@@ -582,7 +582,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj := obj.(type) {
 		case *v1alpha1.UserSignup:
 			for _, cond := range obj.Status.Conditions {

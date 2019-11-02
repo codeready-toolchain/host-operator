@@ -316,7 +316,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		hostClient := test.NewFakeClient(t, mur)
 
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
-		memberClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOptionFunc) error {
+		memberClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("unable to delete user account %s", mur.Name)
 		}
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
