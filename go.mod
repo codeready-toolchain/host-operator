@@ -44,7 +44,6 @@ replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
 	github.com/codeready-toolchain/toolchain-common => github.com/alexeykazakov/toolchain-common v0.0.0-20191102012635-0f430d8af797
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0
-	github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.11.0
 )
 
 go 1.13
