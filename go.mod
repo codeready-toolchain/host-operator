@@ -9,7 +9,7 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/gophercloud/gophercloud v0.3.0 // indirect
 	github.com/openshift/api v3.9.1-0.20190730142803-0922aa5a655b+incompatible
-	github.com/operator-framework/operator-sdk v0.11.0
+	github.com/operator-framework/operator-sdk v0.12.0
 	github.com/pkg/errors v0.8.1
 	github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776
 	github.com/satori/go.uuid v1.2.0
@@ -19,11 +19,9 @@ require (
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
-	k8s.io/apiserver v0.0.0-20190111033246-d50e9ac5404f // indirect
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/klog v1.0.0
-	k8s.io/kube-openapi v0.0.0-20190918143330-0270cf2f1c1d // indirect
-	sigs.k8s.io/controller-runtime v0.2.2
+	sigs.k8s.io/controller-runtime v0.3.0
 	sigs.k8s.io/kubefed v0.1.0-rc6.0.20191023070212-24d45e9f4f15
 )
 
@@ -46,6 +44,7 @@ replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
 	github.com/codeready-toolchain/toolchain-common => github.com/alexeykazakov/toolchain-common v0.0.0-20191102012635-0f430d8af797
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0
+	github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.11.0
 )
 
 go 1.13
