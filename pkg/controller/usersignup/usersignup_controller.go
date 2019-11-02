@@ -2,6 +2,9 @@ package usersignup
 
 import (
 	"context"
+	"fmt"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
@@ -123,10 +126,23 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
+	// Flag that we set to true if a compliantUsername is set
+	compliantUsername := instance.Status.CompliantUsername
+
+	// If Status.CompliantUsername is not set, then generate a compliant Username
+	if compliantUsername == "" {
+		compliantUsername, err = r.generateCompliantUsername(instance)
+		if err != nil {
+			// Some error occurred - requeue the request
+			reqLogger.Error(err, "Error generating compliant username", instance.Spec.Username)
+			return reconcile.Result{}, err
+		}
+	}
+
 	// Check if the MasterUserRecord already exists
 	mur := &toolchainv1alpha1.MasterUserRecord{}
 	// Lookup the MasterUserRecord with the CompliantUsername value from the UserSignup resource, in the same namespace
-	namespacedMurName := types.NamespacedName{Namespace: request.Namespace, Name: instance.Status.CompliantUsername}
+	namespacedMurName := types.NamespacedName{Namespace: request.Namespace, Name: compliantUsername}
 	err = r.client.Get(context.TODO(), namespacedMurName, mur)
 	if err != nil {
 		// We generally EXPECT the MasterUserRecord to not be found here, so we only deal with other error types
@@ -138,6 +154,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
 		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
+		instance.Status.CompliantUsername = compliantUsername
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusComplete)
 	}
 
@@ -193,6 +210,37 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	return reconcile.Result{}, nil
 }
 
+func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
+	replaced := strings.ReplaceAll(strings.ReplaceAll(instance.Spec.Username, "@", "-at-"), ".", "-")
+
+	errs := validation.IsQualifiedName(replaced)
+	if len(errs) > 0 {
+		return "", NewSignupError(fmt.Sprintf("transformed username [%s] is invalid", replaced))
+	}
+
+	transformed := replaced
+
+	for i := 1; i < 1001; i++ { // No more than 1000 attempts to find a vacant name
+		mur := &toolchainv1alpha1.MasterUserRecord{}
+		// Check if a MasterUserRecord exists with the same transformed name
+		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: transformed}
+		err := r.client.Get(context.TODO(), namespacedMurName, mur)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return "", err
+			}
+			// If there was a NotFound error looking up the mur, it means we found an available name
+			return transformed, nil
+		} else if mur.Spec.UserID == instance.Name { // If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR
+			return transformed, nil
+		}
+
+		transformed = fmt.Sprintf("%s-%d", replaced, i)
+	}
+
+	return "", NewSignupError(fmt.Sprintf("unable to transform username [%s] even after 1000 attempts", instance.Spec.Username))
+}
+
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
 func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string, logger logr.Logger) error {
 	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
@@ -240,8 +288,8 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			"Error creating MasterUserRecord")
 	}
 
-	logger.Info("#### Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
-	return nil
+	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
+	return r.updateStatusCompliantUsername(userSignup)
 }
 
 // ReadUserApprovalPolicyConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
@@ -376,5 +424,9 @@ func (r *ReconcileUserSignup) updateStatusConditions(userSignup *toolchainv1alph
 		// Nothing changed
 		return nil
 	}
+	return r.client.Status().Update(context.TODO(), userSignup)
+}
+
+func (r *ReconcileUserSignup) updateStatusCompliantUsername(userSignup *toolchainv1alpha1.UserSignup) error {
 	return r.client.Status().Update(context.TODO(), userSignup)
 }
