@@ -134,7 +134,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		compliantUsername, err = r.generateCompliantUsername(instance)
 		if err != nil {
 			// Some error occurred - requeue the request
-			reqLogger.Error(err, "Error generating compliant username", instance.Spec.Username)
+			reqLogger.Error(err, "error generating compliant username", "username", instance.Spec.Username)
 			return reconcile.Result{}, err
 		}
 	}
@@ -220,7 +220,7 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 
 	transformed := replaced
 
-	for i := 1; i < 1001; i++ { // No more than 1000 attempts to find a vacant name
+	for i := 1; i < 101; i++ { // No more than 1000 attempts to find a vacant name
 		mur := &toolchainv1alpha1.MasterUserRecord{}
 		// Check if a MasterUserRecord exists with the same transformed name
 		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: transformed}
