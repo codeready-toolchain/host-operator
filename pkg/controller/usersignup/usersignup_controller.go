@@ -198,7 +198,8 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 		}
 
-		// Provision the MasterUserRecord
+		// Provision the MasterUserRecord - first set the CompliantUsername on the UserSignup instance
+		instance.Status.CompliantUsername = compliantUsername
 		err = r.provisionMasterUserRecord(instance, targetCluster, reqLogger)
 		if err != nil {
 			return reconcile.Result{}, err
