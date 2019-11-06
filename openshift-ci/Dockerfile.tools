@@ -17,7 +17,6 @@ RUN yum install epel-release -y \
     && yum install --enablerepo=centosplus install -y --quiet \
     findutils \
     git2u-all \
-    golang \
     make \
     procps-ng \
     tar \
@@ -28,10 +27,22 @@ RUN yum install epel-release -y \
     yamllint \
     python36-virtualenv \
     jq \
+    gcc \
     && yum clean all
 
-# download, verify and install openshift client tools (oc and kubectl)
 WORKDIR /tmp
+
+# download, verify and install golang
+ENV PATH=$PATH:/usr/local/go/bin
+RUN curl -Lo go1.13.4.linux-amd64.tar.gz https://dl.google.com/go/go1.13.4.linux-amd64.tar.gz \
+    && echo "692d17071736f74be04a72a06dab9cac1cd759377bd85316e52b2227604c004c go1.13.4.linux-amd64.tar.gz" > go1.13.4.linux-amd64.sha256 \
+    && sha256sum -c go1.13.4.linux-amd64.sha256 \
+    && tar xzf go1.13.4.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.13.4.linux-amd64.tar.gz \
+    && rm -f go1.13.4.linux-amd64.tar.gz \
+    && go version
+
+# download, verify and install openshift client tools (oc and kubectl)
 RUN curl -L -s https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz -o openshift-origin-client-tools.tar.gz \
     && echo "4b0f07428ba854174c58d2e38287e5402964c9a9355f6c359d1242efd0990da3 openshift-origin-client-tools.tar.gz" > openshift-origin-client-tools.sha256 \
     && sha256sum -c openshift-origin-client-tools.sha256 \
