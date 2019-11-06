@@ -33,7 +33,7 @@ rules:
   verbs:
   - "update"
 - apiGroups:
-  - core.kubefed.k8s.io
+  - core.kubefed.io
   resources:
   - kubefedclusters/status
   verbs:
