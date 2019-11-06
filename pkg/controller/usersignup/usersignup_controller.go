@@ -129,6 +129,8 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// Flag that we set to true if a compliantUsername is set
 	compliantUsername := instance.Status.CompliantUsername
 
+	reqLogger.Info("Current CompliantUsername", "compliantUsername", compliantUsername)
+
 	// If Status.CompliantUsername is not set, then generate a compliant Username
 	if compliantUsername == "" {
 		compliantUsername, err = r.generateCompliantUsername(instance)
@@ -221,7 +223,7 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 
 	transformed := replaced
 
-	for i := 1; i < 101; i++ { // No more than 1000 attempts to find a vacant name
+	for i := 1; i < 101; i++ { // No more than 100 attempts to find a vacant name
 		mur := &toolchainv1alpha1.MasterUserRecord{}
 		// Check if a MasterUserRecord exists with the same transformed name
 		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: transformed}
@@ -239,7 +241,7 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 		transformed = fmt.Sprintf("%s-%d", replaced, i)
 	}
 
-	return "", NewSignupError(fmt.Sprintf("unable to transform username [%s] even after 1000 attempts", instance.Spec.Username))
+	return "", NewSignupError(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
