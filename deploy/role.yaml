@@ -57,13 +57,13 @@ rules:
   - "get"
   - "create"
 - apiGroups:
-  - core.kubefed.k8s.io
+  - core.kubefed.io
   resources:
   - kubefedclusters
   verbs:
   - "*"
 - apiGroups:
-  - core.kubefed.k8s.io
+  - core.kubefed.io
   resources:
   - kubefedclusters/status
   verbs:
