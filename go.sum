@@ -58,8 +58,6 @@ github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuy
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
-github.com/alexeykazakov/toolchain-common v0.0.0-20191106045741-41482fd42031 h1:94d4aUcBHSRriU542S4MT3SlnQAly302wYUh2l7mRIM=
-github.com/alexeykazakov/toolchain-common v0.0.0-20191106045741-41482fd42031/go.mod h1:IcsMKLIqk9tjrI7aUqe/JPYdRY877SodsuZQoplQCN8=
 github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 h1:kFOfPq6dUM1hTo4JG6LR5AXSUEsOjtdm0kw0FtQtMJA=
 github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239/go.mod h1:2FmKhYUyUczH0OGQWaF5ceTx0UBShxjsH6f8oGKYe2c=
 github.com/apache/thrift v0.12.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=
@@ -80,8 +78,10 @@ github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1/go.mod h1:/iP1
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/codeready-toolchain/api v0.0.0-20191106003206-a7c89ec224a0 h1:vdO45IE7ReB31/1hxVmiZn02NO8YUGkTtRpsoaplNUg=
 github.com/codeready-toolchain/api v0.0.0-20191106003206-a7c89ec224a0/go.mod h1:CH0alaeNSnaaLRWFZv3AOfPwFagc2Zybxql4aMuWPNQ=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20191107090247-4a50057c1ed0 h1:/ja+imO1Q98GkqPs9oHbydupI50LcLLMFiTNTvCz8LY=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20191107090247-4a50057c1ed0/go.mod h1:1ftat2nukcwlnM2RWAaYG/0j/n5wQB6fyAjm1RX/dsc=
+github.com/codeready-toolchain/api v0.0.0-20191107090146-e29aacb17012 h1:MY1sp8qsPZxeer2+aKO5is7+YaLf//qYWqBVQ9yBbQs=
+github.com/codeready-toolchain/api v0.0.0-20191107090146-e29aacb17012/go.mod h1:K2iSNSOwpQf+Wo3LdmrGaPlha2BLwuywwWrnbuiy8Pg=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20191107144135-e8ba3faab2c8 h1:d8FORzGEA+CEZ12rKyHsLNuwbj0J8uDEbS+ZC0/W054=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20191107144135-e8ba3faab2c8/go.mod h1:1ftat2nukcwlnM2RWAaYG/0j/n5wQB6fyAjm1RX/dsc=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.3 h1:n6AiVyVRKQFNb6mJlwESEvvLoDyiTzXX7ORAUlkeBdY=
 github.com/coreos/bbolt v1.3.3/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
