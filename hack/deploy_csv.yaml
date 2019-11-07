@@ -481,6 +481,10 @@ data:
                     description: The cluster in which the user is provisioned in If not
                       set then the target cluster will be picked automatically
                     type: string
+                  userID:
+                    description: UserID is the user ID from RHD Identity Provider token
+                      (“sub” claim)
+                    type: string
                   username:
                     description: The user's username, obtained from the identity provider.
                     type: string
@@ -543,47 +547,6 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "MasterUserRecord",
-                "metadata": {
-                  "name": "johnsmith"
-                },
-                "spec": {
-                  "userAccounts": [
-                    {
-                      "spec": {
-                        "nsLimit": "admin",
-                        "nsTemplateSet": {
-                          "namespaces": [
-                            {
-                              "revision": "abcdef",
-                              "type": "ide"
-                            },
-                            {
-                              "revision": "1d2f3q",
-                              "type": "cicd"
-                            },
-                            {
-                              "revision": "a34r57",
-                              "type": "stage"
-                            },
-                            {
-                              "revision": "ra24qw",
-                              "type": "default"
-                            }
-                          ],
-                          "tierName": "basic"
-                        },
-                        "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                      },
-                      "syncIndex": "135540409",
-                      "targetCluster": "east-2a"
-                    }
-                  ],
-                  "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "NSTemplateTier",
                 "metadata": {
                   "name": "basic"
@@ -625,6 +588,47 @@ data:
                   "targetCluster": "east-2a",
                   "username": "johnsmith@redhat.com"
                 }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "MasterUserRecord",
+                "metadata": {
+                  "name": "johnsmith"
+                },
+                "spec": {
+                  "userAccounts": [
+                    {
+                      "spec": {
+                        "nsLimit": "admin",
+                        "nsTemplateSet": {
+                          "namespaces": [
+                            {
+                              "revision": "abcdef",
+                              "type": "ide"
+                            },
+                            {
+                              "revision": "1d2f3q",
+                              "type": "cicd"
+                            },
+                            {
+                              "revision": "a34r57",
+                              "type": "stage"
+                            },
+                            {
+                              "revision": "ra24qw",
+                              "type": "default"
+                            }
+                          ],
+                          "tierName": "basic"
+                        },
+                        "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                      },
+                      "syncIndex": "135540409",
+                      "targetCluster": "east-2a"
+                    }
+                  ],
+                  "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                }
               }
             ]
           capabilities: Basic Install
@@ -658,24 +662,14 @@ data:
             clusterPermissions:
             - rules:
               - apiGroups:
-                - monitoring.coreos.com
-                resources:
-                - servicemonitors
-                verbs:
-                - get
-                - create
-              - apiGroups:
                 - ""
                 resources:
                 - nodes
+                - namespaces
+                - componentstatuses
                 verbs:
+                - get
                 - list
-              - apiGroups:
-                - core.kubefed.k8s.io
-                resources:
-                - kubefedclusters
-                verbs:
-                - '*'
               - apiGroups:
                 - apiextensions.k8s.io
                 resources:
@@ -733,6 +727,17 @@ data:
                 verbs:
                 - '*'
               - apiGroups:
+                - ""
+                resources:
+                - podtemplates
+                - resourcequotas
+                - serviceaccounts
+                - replicationcontrollers
+                - limitranges
+                verbs:
+                - get
+                - list
+              - apiGroups:
                 - apps
                 resources:
                 - deployments
@@ -749,6 +754,25 @@ data:
                 - deployments/finalizers
                 verbs:
                 - update
+              - apiGroups:
+                - template.openshift.io
+                resources:
+                - processedtemplates
+                verbs:
+                - list
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - get
+                - create
+              - apiGroups:
+                - core.kubefed.k8s.io
+                resources:
+                - kubefedclusters
+                verbs:
+                - '*'
               - apiGroups:
                 - core.kubefed.k8s.io
                 resources:

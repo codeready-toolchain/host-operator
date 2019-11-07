@@ -71,6 +71,10 @@ spec:
               description: The cluster in which the user is provisioned in If not
                 set then the target cluster will be picked automatically
               type: string
+            userID:
+              description: UserID is the user ID from RHD Identity Provider token
+                (“sub” claim)
+              type: string
             username:
               description: The user's username, obtained from the identity provider.
               type: string
