@@ -16,6 +16,17 @@ rules:
   verbs:
   - "*"
 - apiGroups:
+  - ""
+  resources:
+  - podtemplates
+  - resourcequotas
+  - serviceaccounts
+  - replicationcontrollers
+  - limitranges
+  verbs:
+  - get
+  - list
+- apiGroups:
   - apps
   resources:
   - deployments
@@ -32,6 +43,25 @@ rules:
   - host-operator
   verbs:
   - "update"
+- apiGroups:
+  - template.openshift.io
+  resources:
+  - processedtemplates
+  verbs:
+  - "list"
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - "get"
+  - "create"
+- apiGroups:
+  - core.kubefed.k8s.io
+  resources:
+  - kubefedclusters
+  verbs:
+  - "*"
 - apiGroups:
   - core.kubefed.k8s.io
   resources:
