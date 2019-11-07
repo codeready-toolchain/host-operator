@@ -132,7 +132,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: instance.Name}
 	opts := client.MatchingLabels(labels)
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
-	if err = r.client.List(context.TODO(), opts, murList); err != nil {
+	if err = r.client.List(context.TODO(), murList, opts); err != nil {
 		return reconcile.Result{}, err
 	}
 

@@ -560,6 +560,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 			Name:      "foo-at-redhat-com",
 			Namespace: operatorNamespace,
 			UID:       types.UID(uuid.NewV4().String()),
+			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
 		},
 		Spec: v1alpha1.MasterUserRecordSpec{
 			UserID: userSignup.Name,
