@@ -34,6 +34,8 @@ const (
 	noClustersAvailableReason            = "NoClustersAvailable"
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason              = "UnableToCreateMUR"
+	invalidStateMultipleMURReason        = "InvalidStateMultipleMURFound"
+	invalidMURUserIDReason               = "InvalidMURUserID"
 	approvedAutomaticallyReason          = "ApprovedAutomatically"
 	approvedByAdminReason                = "ApprovedByAdmin"
 	pendingApprovalReason                = "PendingApproval"
@@ -126,37 +128,27 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	// Flag that we set to true if a compliantUsername is set
-	compliantUsername := instance.Status.CompliantUsername
-
-	reqLogger.Info("Current CompliantUsername", "compliantUsername", compliantUsername)
-
-	// If Status.CompliantUsername is not set, then generate a compliant Username
-	if compliantUsername == "" {
-		compliantUsername, err = r.generateCompliantUsername(instance)
-		if err != nil {
-			// Some error occurred - requeue the request
-			reqLogger.Error(err, "error generating compliant username", "username", instance.Spec.Username)
-			return reconcile.Result{}, err
-		}
+	// List all MasterUserRecord resources that have a UserID label equal to the UserSignup.Name
+	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: instance.Name}
+	opts := client.MatchingLabels(labels)
+	murList := &toolchainv1alpha1.MasterUserRecordList{}
+	if err = r.client.List(context.TODO(), opts, murList); err != nil {
+		return reconcile.Result{}, err
 	}
 
-	// Check if the MasterUserRecord already exists
-	mur := &toolchainv1alpha1.MasterUserRecord{}
-	// Lookup the MasterUserRecord with the CompliantUsername value from the UserSignup resource, in the same namespace
-	namespacedMurName := types.NamespacedName{Namespace: request.Namespace, Name: compliantUsername}
-	err = r.client.Get(context.TODO(), namespacedMurName, mur)
-	if err != nil {
-		// We generally EXPECT the MasterUserRecord to not be found here, so we only deal with other error types
-		if !errors.IsNotFound(err) {
-			// Error reading the MasterUserRecord, requeue the request
-			return reconcile.Result{}, err
+	murs := murList.Items
+	// If we found more than one MasterUserRecord, then die
+	if len(murs) > 1 {
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidStateMultipleMURFound, err, "")
+	} else if len(murs) == 1 {
+		mur := murs[0]
+		if mur.Spec.UserID != instance.Name {
+			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMURUserID)
 		}
-	} else {
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
 		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
-		instance.Status.CompliantUsername = compliantUsername
+		instance.Status.CompliantUsername = mur.Name
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusComplete)
 	}
 
@@ -200,8 +192,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 		}
 
-		// Provision the MasterUserRecord - first set the CompliantUsername on the UserSignup instance
-		instance.Status.CompliantUsername = compliantUsername
+		// Provision the MasterUserRecord
 		err = r.provisionMasterUserRecord(instance, targetCluster, reqLogger)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -262,10 +253,19 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	// TODO Update the MasterUserRecord with NSTemplateTier values
 	// SEE https://jira.coreos.com/browse/CRT-74
 
+	compliantUsername, err := r.generateCompliantUsername(userSignup)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
+			"Error generating compliant username for %s", userSignup.Spec.Username)
+	}
+
+	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignup.Status.CompliantUsername,
+			Name:      compliantUsername,
 			Namespace: userSignup.Namespace,
+			Labels:    labels,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserID:       userSignup.Name,
@@ -273,7 +273,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		},
 	}
 
-	err := controllerutil.SetControllerReference(userSignup, mur, r.scheme)
+	err = controllerutil.SetControllerReference(userSignup, mur, r.scheme)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error setting controller reference for MasterUserRecord %s", mur.Name)
@@ -281,17 +281,12 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 	err = r.client.Create(context.TODO(), mur)
 	if err != nil {
-		// If the MasterUserRecord already exists (for whatever strange reason), we simply set the status to complete
-		if errors.IsAlreadyExists(err) {
-			logger.Info("MasterUserRecord already exists, setting status to Complete")
-			return r.updateStatus(logger, userSignup, r.setStatusComplete)
-
-		}
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord")
 	}
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
+	userSignup.Status.CompliantUsername = compliantUsername
 	return r.updateStatusCompliantUsername(userSignup)
 }
 
@@ -360,6 +355,28 @@ func (r *ReconcileUserSignup) setStatusFailedToReadUserApprovalPolicy(userSignup
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  failedToReadUserApprovalPolicyReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusInvalidStateMultipleMURFound(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  invalidStateMultipleMURReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusInvalidMURUserID(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  invalidMURUserIDReason,
 			Message: message,
 		})
 }

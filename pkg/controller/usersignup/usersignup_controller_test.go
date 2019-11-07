@@ -410,54 +410,6 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 }
 
-func TestUserSignupMURCreateAlreadyExists(t *testing.T) {
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
-		},
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: true,
-		},
-	}
-
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
-
-	// Add some member clusters
-	createMemberCluster(r.client)
-	defer clearMemberClusters(r.client)
-
-	fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object) error {
-		switch obj := obj.(type) {
-		case *v1alpha1.MasterUserRecord:
-			return errs.NewAlreadyExists(v1.Resource("masteruserrecords"), obj.Name)
-		default:
-			return fakeClient.Client.Create(ctx, obj)
-		}
-	}
-
-	res, err := r.Reconcile(req)
-	require.NoError(t, err)
-	require.Equal(t, reconcile.Result{}, res)
-
-	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: operatorNamespace, Name: userSignup.Name}, userSignup)
-	require.NoError(t, err)
-
-	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedByAdmin",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupComplete,
-			Status: v1.ConditionTrue,
-			Reason: "",
-		})
-}
-
 func TestUserSignupMURReadFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
