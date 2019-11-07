@@ -653,24 +653,14 @@ data:
             clusterPermissions:
             - rules:
               - apiGroups:
-                - monitoring.coreos.com
-                resources:
-                - servicemonitors
-                verbs:
-                - get
-                - create
-              - apiGroups:
                 - ""
                 resources:
                 - nodes
+                - namespaces
+                - componentstatuses
                 verbs:
+                - get
                 - list
-              - apiGroups:
-                - core.kubefed.io
-                resources:
-                - kubefedclusters
-                verbs:
-                - '*'
               - apiGroups:
                 - apiextensions.k8s.io
                 resources:
@@ -728,6 +718,17 @@ data:
                 verbs:
                 - '*'
               - apiGroups:
+                - ""
+                resources:
+                - podtemplates
+                - resourcequotas
+                - serviceaccounts
+                - replicationcontrollers
+                - limitranges
+                verbs:
+                - get
+                - list
+              - apiGroups:
                 - apps
                 resources:
                 - deployments
@@ -744,6 +745,25 @@ data:
                 - deployments/finalizers
                 verbs:
                 - update
+              - apiGroups:
+                - template.openshift.io
+                resources:
+                - processedtemplates
+                verbs:
+                - list
+              - apiGroups:
+                - monitoring.coreos.com
+                resources:
+                - servicemonitors
+                verbs:
+                - get
+                - create
+              - apiGroups:
+                - core.kubefed.io
+                resources:
+                - kubefedclusters
+                verbs:
+                - '*'
               - apiGroups:
                 - core.kubefed.io
                 resources:
