@@ -190,3 +190,4 @@ There are two Makefile targets available in this repository that execute the scr
 *  `$ make add-host-to-member` that executes `../toolchain-common/scripts/add-cluster.sh host host-cluster`
 
 NOTE: In order to run them, you need to have the link:https://github.com/codeready-toolchain/toolchain-common[toolchain-common] repository cloned to the same parent directory as this repository exists in.
+
