@@ -2,8 +2,6 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   creationTimestamp: null
-  labels:
-    controller-tools.k8s.io: "1.0"
   name: usersignups.toolchain.dev.openshift.com
 spec:
   additionalPrinterColumns:
@@ -36,12 +34,15 @@ spec:
   group: toolchain.dev.openshift.com
   names:
     kind: UserSignup
+    listKind: UserSignupList
     plural: usersignups
+    singular: usersignup
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
+      description: UserSignup is the Schema for the usersignup API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -56,6 +57,7 @@ spec:
         metadata:
           type: object
         spec:
+          description: UserSignupSpec defines the desired state of UserSignup
           properties:
             approved:
               description: If Approved set to 'true' then the user has been manually
@@ -82,16 +84,15 @@ spec:
               description: The user's username, obtained from the identity provider.
               type: string
           required:
-          - userID
-          - username
           - compliantUsername
+          - username
           type: object
         status:
+          description: UserSignupStatus defines the observed state of UserSignup
           properties:
             conditions:
               description: 'Conditions is an array of current UserSignup conditions
-                Supported condition types: PendingApproval, Provisioning, Complete
-                +patchMergeKey=type +patchStrategy=merge +listType'
+                Supported condition types: PendingApproval, Provisioning, Complete'
               items:
                 properties:
                   lastTransitionTime:
@@ -113,12 +114,16 @@ spec:
                     description: Type of condition
                     type: string
                 required:
-                - type
                 - status
+                - type
                 type: object
               type: array
           type: object
   version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
 status:
   acceptedNames:
     kind: ""

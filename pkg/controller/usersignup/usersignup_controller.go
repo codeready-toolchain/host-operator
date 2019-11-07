@@ -125,9 +125,9 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 	// Check if the MasterUserRecord already exists
 	mur := &toolchainv1alpha1.MasterUserRecord{}
-	// We can use the same NamespacedName from the request as the MasterUserRecord will have the same name as the
-	// UserSignup (i.e. the user's username)
-	err = r.client.Get(context.TODO(), request.NamespacedName, mur)
+	// Lookup the MasterUserRecord with the CompliantUsername value from the UserSignup resource, in the same namespace
+	namespacedMurName := types.NamespacedName{Namespace: request.Namespace, Name: instance.Spec.CompliantUsername}
+	err = r.client.Get(context.TODO(), namespacedMurName, mur)
 	if err != nil {
 		// We generally EXPECT the MasterUserRecord to not be found here, so we only deal with other error types
 		if !errors.IsNotFound(err) {
@@ -199,7 +199,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		{
 			TargetCluster: targetCluster,
 			Spec: toolchainv1alpha1.UserAccountSpec{
-				UserID:  userSignup.Spec.UserID,
+				UserID:  userSignup.Name,
 				NSLimit: "default",
 				NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
 					Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{},
@@ -213,11 +213,11 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignup.Name,
+			Name:      userSignup.Spec.CompliantUsername,
 			Namespace: userSignup.Namespace,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserID:       userSignup.Spec.UserID,
+			UserID:       userSignup.Name,
 			UserAccounts: userAccounts,
 		},
 	}
@@ -240,7 +240,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			"Error creating MasterUserRecord")
 	}
 
-	logger.Info("Created MasterUserRecord", "Name", userSignup.Name, "TargetCluster", targetCluster)
+	logger.Info("#### Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
 }
 
