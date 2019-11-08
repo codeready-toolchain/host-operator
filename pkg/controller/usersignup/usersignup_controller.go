@@ -142,7 +142,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidStateMultipleMURFound, err, "")
 	} else if len(murs) == 1 {
 		mur := murs[0]
-		if mur.Spec.UserID != instance.Name {
+		if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] != instance.Name {
 			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMURUserID)
 		}
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
@@ -225,7 +225,8 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 			}
 			// If there was a NotFound error looking up the mur, it means we found an available name
 			return transformed, nil
-		} else if mur.Spec.UserID == instance.Name { // If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR
+		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] == instance.Name {
+			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR
 			return transformed, nil
 		}
 
@@ -268,7 +269,6 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			Labels:    labels,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserID:       userSignup.Name,
 			UserAccounts: userAccounts,
 		},
 	}

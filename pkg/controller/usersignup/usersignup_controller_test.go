@@ -74,7 +74,7 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Spec.UserID)
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	// Lookup the user signup again
@@ -141,7 +141,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Spec.UserID)
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -205,7 +205,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Spec.UserID)
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -314,7 +314,7 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Spec.UserID)
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -567,9 +567,6 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 			Namespace: operatorNamespace,
 			UID:       types.UID(uuid.NewV4().String()),
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
-		},
-		Spec: v1alpha1.MasterUserRecordSpec{
-			UserID: userSignup.Name,
 		},
 	}
 
