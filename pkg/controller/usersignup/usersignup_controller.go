@@ -36,6 +36,7 @@ const (
 	unableToCreateMURReason              = "UnableToCreateMUR"
 	invalidStateMultipleMURReason        = "InvalidStateMultipleMURFound"
 	invalidMURUserIDReason               = "InvalidMURUserID"
+	failedToListMUR                      = "FailedToListMUR"
 	approvedAutomaticallyReason          = "ApprovedAutomatically"
 	approvedByAdminReason                = "ApprovedByAdmin"
 	pendingApprovalReason                = "PendingApproval"
@@ -133,7 +134,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	opts := client.MatchingLabels(labels)
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
 	if err = r.client.List(context.TODO(), murList, opts); err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToListMUR, err, "")
 	}
 
 	murs := murList.Items
@@ -365,6 +366,17 @@ func (r *ReconcileUserSignup) setStatusInvalidStateMultipleMURFound(userSignup *
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  invalidStateMultipleMURReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusFailedToListMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  failedToListMUR,
 			Message: message,
 		})
 }
