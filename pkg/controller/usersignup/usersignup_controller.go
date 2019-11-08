@@ -286,8 +286,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	}
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
-	userSignup.Status.CompliantUsername = compliantUsername
-	return r.updateStatusCompliantUsername(userSignup)
+	return nil
 }
 
 // ReadUserApprovalPolicyConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
@@ -444,9 +443,5 @@ func (r *ReconcileUserSignup) updateStatusConditions(userSignup *toolchainv1alph
 		// Nothing changed
 		return nil
 	}
-	return r.client.Status().Update(context.TODO(), userSignup)
-}
-
-func (r *ReconcileUserSignup) updateStatusCompliantUsername(userSignup *toolchainv1alpha1.UserSignup) error {
 	return r.client.Status().Update(context.TODO(), userSignup)
 }

@@ -42,9 +42,11 @@ func TestReadUserApprovalPolicy(t *testing.T) {
 }
 
 func TestUserSignupWithAutoApproval(t *testing.T) {
+	userID := uuid.NewV4()
+
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
+			Name:      userID.String(),
 			Namespace: operatorNamespace,
 			UID:       types.UID(uuid.NewV4().String()),
 		},
@@ -72,9 +74,12 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
+
+	// Lookup the user signup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
@@ -91,6 +96,7 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 	// Lookup the userSignup one more and check the conditions are updated
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
+	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
@@ -135,7 +141,6 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
@@ -154,6 +159,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	// Lookup the userSignup one more time and check the conditions are updated
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
+	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
@@ -199,7 +205,6 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
@@ -218,6 +223,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	// Lookup the userSignup one more and check the conditions are updated
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
+	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
@@ -308,7 +314,6 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
-	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 	require.Equal(t, userSignup.Name, mur.Spec.UserID)
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
@@ -327,6 +332,7 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 	// Lookup the userSignup one more and check the conditions are updated
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
+	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
