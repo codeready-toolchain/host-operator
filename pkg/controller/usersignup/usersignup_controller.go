@@ -34,9 +34,7 @@ const (
 	noClustersAvailableReason            = "NoClustersAvailable"
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason              = "UnableToCreateMUR"
-	invalidStateMultipleMURReason        = "InvalidStateMultipleMURFound"
-	invalidMURUserIDReason               = "InvalidMURUserID"
-	failedToListMUR                      = "FailedToListMUR"
+	invalidMURState                      = "InvalidMURState"
 	approvedAutomaticallyReason          = "ApprovedAutomatically"
 	approvedByAdminReason                = "ApprovedByAdmin"
 	pendingApprovalReason                = "PendingApproval"
@@ -134,17 +132,17 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	opts := client.MatchingLabels(labels)
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
 	if err = r.client.List(context.TODO(), murList, opts); err != nil {
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToListMUR, err, "")
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Failed to list MUR")
 	}
 
 	murs := murList.Items
 	// If we found more than one MasterUserRecord, then die
 	if len(murs) > 1 {
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidStateMultipleMURFound, err, "")
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Multiple MUR found")
 	} else if len(murs) == 1 {
 		mur := murs[0]
 		if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] != instance.Name {
-			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMURUserID)
+			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMURState)
 		}
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
@@ -359,35 +357,13 @@ func (r *ReconcileUserSignup) setStatusFailedToReadUserApprovalPolicy(userSignup
 		})
 }
 
-func (r *ReconcileUserSignup) setStatusInvalidStateMultipleMURFound(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (r *ReconcileUserSignup) setStatusInvalidMURState(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return r.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  invalidStateMultipleMURReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusFailedToListMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  failedToListMUR,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusInvalidMURUserID(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  invalidMURUserIDReason,
+			Reason:  invalidMURState,
 			Message: message,
 		})
 }
