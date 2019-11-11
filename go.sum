@@ -414,8 +414,8 @@ github.com/rubenv/sql-migrate v0.0.0-20190618074426-f4d34eae5a5c/go.mod h1:WS0rl
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
 github.com/satori/go.uuid v1.2.0 h1:0uYX9dsZ2yD7q2RtLRtPSdGDWzjeM3TbMJP9utgA0ww=
 github.com/satori/go.uuid v1.2.0/go.mod h1:dA0hQrYB0VpLJoorglMZABFdXlWrHn1NEOzdhQKdks0=
-github.com/sbryzak/api v0.0.0-20191107071612-89a5280b082a h1:X+5zR/I8MwjAzCEJePqonoI7r669HIKmgiXi1hwSeZo=
-github.com/sbryzak/api v0.0.0-20191107071612-89a5280b082a/go.mod h1:lGbrD0uax8k3WL74XMxw0Bk/ukZNTQm/Kg0i95qcsEg=
+github.com/sbryzak/api v0.0.0-20191108031415-fabe524427b3 h1:s5wyxkKTzhlM+VZCpVftj6gAYCGOjy77L31T1K02U0g=
+github.com/sbryzak/api v0.0.0-20191108031415-fabe524427b3/go.mod h1:lGbrD0uax8k3WL74XMxw0Bk/ukZNTQm/Kg0i95qcsEg=
 github.com/sclevine/spec v1.0.0/go.mod h1:W4J29eT/Kzv7/b9IWLB055Z+qvVC9vt0Arko24q7p+U=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/sirupsen/logrus v1.1.1/go.mod h1:zrgwTnHtNr00buQ1vSptGe8m1f/BbgsPukg8qsT7A+A=

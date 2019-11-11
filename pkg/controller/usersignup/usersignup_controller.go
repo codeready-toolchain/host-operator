@@ -138,6 +138,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	murs := murList.Items
 	// If we found more than one MasterUserRecord, then die
 	if len(murs) > 1 {
+		err = NewSignupError("multiple matching MUR resources found")
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Multiple MUR found")
 	} else if len(murs) == 1 {
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
@@ -183,7 +184,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 					return reconcile.Result{}, statusError
 				}
 
-				err = NewSignupError("No target clusters available")
+				err = NewSignupError("no target clusters available")
 				return reconcile.Result{}, err
 			}
 		}
