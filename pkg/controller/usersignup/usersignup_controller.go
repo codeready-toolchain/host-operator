@@ -140,12 +140,9 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	if len(murs) > 1 {
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Multiple MUR found")
 	} else if len(murs) == 1 {
-		mur := murs[0]
-		if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] != instance.Name {
-			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMURState)
-		}
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
+		mur := murs[0]
 		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
 		instance.Status.CompliantUsername = mur.Name
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusComplete)
