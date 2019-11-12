@@ -2,21 +2,22 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   creationTimestamp: null
-  labels:
-    controller-tools.k8s.io: "1.0"
   name: nstemplatetiers.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
   names:
     kind: NSTemplateTier
+    listKind: NSTemplateTierList
     plural: nstemplatetiers
     shortNames:
     - tier
+    singular: nstemplatetier
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
+      description: NSTemplateTier is the Schema for the nstemplatetiers API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -31,10 +32,13 @@ spec:
         metadata:
           type: object
         spec:
+          description: NSTemplateTierSpec defines the desired state of NSTemplateTier
           properties:
             namespaces:
-              description: The namespace templates +listType
+              description: The namespace templates
               items:
+                description: NSTemplateTierNamespace the namespace definition in an
+                  NSTemplateTier resource
                 properties:
                   revision:
                     description: The revision of the corresponding template
@@ -56,6 +60,8 @@ spec:
                           be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
                         type: string
                       labels:
+                        additionalProperties:
+                          type: string
                         description: labels is a optional set of labels that are applied
                           to every object during the Template to Config transformation.
                         type: object
@@ -85,6 +91,8 @@ spec:
                         description: parameters is an optional array of Parameters
                           used during the Template to Config transformation.
                         items:
+                          description: Parameter defines a name/value variable that
+                            is to be processed during the Template to Config transformation.
                           properties:
                             description:
                               description: Description of a parameter. Optional.
@@ -98,18 +106,19 @@ spec:
                                 Optional.
                               type: string
                             generate:
-                              description: 'generate specifies the generator to be
+                              description: "generate specifies the generator to be
                                 used to generate random string from an input value
                                 specified by From field. The result string is stored
                                 into Value field. If empty, no generator is being
-                                used, leaving the result Value untouched. Optional.  The
-                                only supported generator is "expression", which accepts
-                                a "from" value in the form of a simple regular expression
-                                containing the range expression "[a-zA-Z0-9]", and
-                                the length expression "a{length}".  Examples:  from             |
-                                value ----------------------------- "test[0-9]{1}x"  |
-                                "test7x" "[0-1]{8}"       | "01001100" "0x[A-F0-9]{4}"  |
-                                "0xB3AF" "[a-zA-Z0-9]{8}" | "hW4yQU5i"'
+                                used, leaving the result Value untouched. Optional.
+                                \n The only supported generator is \"expression\",
+                                which accepts a \"from\" value in the form of a simple
+                                regular expression containing the range expression
+                                \"[a-zA-Z0-9]\", and the length expression \"a{length}\".
+                                \n Examples: \n from             | value -----------------------------
+                                \"test[0-9]{1}x\"  | \"test7x\" \"[0-1]{8}\"       |
+                                \"01001100\" \"0x[A-F0-9]{4}\"  | \"0xB3AF\" \"[a-zA-Z0-9]{8}\"
+                                | \"hW4yQU5i\""
                               type: string
                             name:
                               description: Name must be set and it can be referenced
@@ -136,17 +145,22 @@ spec:
                     description: 'The type of the namespace. For example: ide|cicd|stage|default'
                     type: string
                 required:
-                - type
                 - revision
                 - template
+                - type
                 type: object
               type: array
           required:
           - namespaces
           type: object
         status:
+          description: NSTemplateTierStatus defines the observed state of NSTemplateTier
           type: object
   version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
 status:
   acceptedNames:
     kind: ""

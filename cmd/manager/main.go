@@ -96,7 +96,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := ensureKubeFedClusterCrd(cfg); err != nil {
+	if err := ensureKubeFedClusterCRD(cfg); err != nil {
 		log.Error(err, "Unable to ensure the existence of the KubeFedCluster CRD")
 		os.Exit(1)
 	}
@@ -187,9 +187,9 @@ func main() {
 
 }
 
-// ensureKubeFedClusterCrd ensure that KubeFedCluster CRD exists in the cluster.
+// ensureKubeFedClusterCRD ensure that KubeFedCluster CRD exists in the cluster.
 // This function has to be created before creating/starting cache, the client and controllers
-func ensureKubeFedClusterCrd(config *rest.Config) error {
+func ensureKubeFedClusterCRD(config *rest.Config) error {
 	// setup Scheme for KubeFedCluster CRD creator
 	s := scheme.Scheme
 	if err := apis.AddToScheme(s); err != nil {
@@ -203,7 +203,7 @@ func ensureKubeFedClusterCrd(config *rest.Config) error {
 	}
 
 	// create the KubeFedCluster CRD
-	if err := cluster.EnsureKubeFedClusterCrd(s, cl); err != nil {
+	if err := cluster.EnsureKubeFedClusterCRD(s, cl); err != nil {
 		return err
 	}
 
