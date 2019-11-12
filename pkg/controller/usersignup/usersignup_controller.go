@@ -187,7 +187,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			Name:      "basic",
 		}, &nstemplateTier)
 		if err != nil {
-			reqLogger.Error(err, "No 'basic' NSTemplateTier found. Requeing...")
+			reqLogger.Error(err, "No 'basic' NSTemplateTier found.")
 			return reconcile.Result{Requeue: true}, err // let's requeue until the NSTemplateTier resource is available
 		}
 		// Provision the MasterUserRecord
