@@ -223,8 +223,9 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 			// If there was a NotFound error looking up the mur, it means we found an available name
 			return transformed, nil
 		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] == instance.Name {
-			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR
-			return transformed, nil
+			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
+			// Return an error here and allow the reconcile() function to pick it up on the next loop
+			return "", NewSignupError(fmt.Sprintf("could not generate compliant username as MUR [%s] already exists", mur.Name))
 		}
 
 		transformed = fmt.Sprintf("%s-%d", replaced, i)
