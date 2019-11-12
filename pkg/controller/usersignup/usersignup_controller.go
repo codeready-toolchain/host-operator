@@ -226,9 +226,6 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		},
 	}
 
-	// TODO Update the MasterUserRecord with NSTemplateTier values
-	// SEE https://jira.coreos.com/browse/CRT-74
-
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userSignup.Spec.CompliantUsername,
