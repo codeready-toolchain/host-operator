@@ -162,6 +162,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 }
 
 func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
+	// given
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
@@ -174,15 +175,29 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 			Approved:          false,
 		},
 	}
-
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic)) // basicNSTemplateTier does not exist
-
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
-
+	// when
 	res, err := r.Reconcile(req)
-	require.Error(t, err)
-	require.Equal(t, reconcile.Result{Requeue: true}, res)
+	// then
+	// no error reported, but request is requeued and userSignup status was updated
+	require.NoError(t, err)
+	assert.Equal(t, reconcile.Result{Requeue: true}, res)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	t.Logf("usersignup status: %+v", userSignup.Status)
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "NoTemplateTierAvailable",
+		})
 }
 
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
@@ -479,7 +494,7 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 		},
 	}
 
-	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup)
+	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier)
 
 	// Add some member clusters
 	createMemberCluster(r.client)

@@ -29,6 +29,7 @@ import (
 const (
 	// Status condition reasons
 	noClustersAvailableReason            = "NoClustersAvailable"
+	noTemplateTierAvailableReason        = "NoTemplateTierAvailable"
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason              = "UnableToCreateMUR"
 	approvedAutomaticallyReason          = "ApprovedAutomatically"
@@ -188,7 +189,8 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}, &nstemplateTier)
 		if err != nil {
 			reqLogger.Error(err, "No 'basic' NSTemplateTier found.")
-			return reconcile.Result{Requeue: true}, err // let's requeue until the NSTemplateTier resource is available
+			// let's requeue until the NSTemplateTier resource is available
+			return reconcile.Result{Requeue: true}, r.updateStatus(reqLogger, instance, r.setStatusNoTemplateTierAvailable)
 		}
 		// Provision the MasterUserRecord
 		err = r.provisionMasterUserRecord(instance, targetCluster, nstemplateTier, reqLogger)
@@ -346,6 +348,17 @@ func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchain
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  noClustersAvailableReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusNoTemplateTierAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  noTemplateTierAvailableReason,
 			Message: message,
 		})
 }
