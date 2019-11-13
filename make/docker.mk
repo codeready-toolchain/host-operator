@@ -1,6 +1,7 @@
 QUAY_NAMESPACE ?= ${GO_PACKAGE_ORG_NAME}
 TARGET_REGISTRY := quay.io
 IMAGE ?= ${TARGET_REGISTRY}/${QUAY_NAMESPACE}/${GO_PACKAGE_REPO_NAME}:${GIT_COMMIT_ID_SHORT}
+QUAY_USERNAME ?= ${QUAY_NAMESPACE}
 
 .PHONY: docker-image
 ## Build the docker image locally that can be deployed (only contains bare operator)
@@ -37,4 +38,4 @@ set-os-registry:
 
 .PHONY: docker-login
 docker-login:
-	@echo "${DOCKER_PASSWORD}" | docker login quay.io -u "${QUAY_NAMESPACE}" --password-stdin
+	@echo "${DOCKER_PASSWORD}" | docker login quay.io -u "${QUAY_USERNAME}" --password-stdin
