@@ -2,7 +2,9 @@ package masteruserrecord
 
 import (
 	"context"
+	"fmt"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	corev1 "k8s.io/api/core/v1"
 	"reflect"
@@ -15,6 +17,7 @@ type Synchronizer struct {
 	memberUserAcc     *toolchainv1alpha1.UserAccount
 	recordSpecUserAcc toolchainv1alpha1.UserAccountEmbedded
 	record            *toolchainv1alpha1.MasterUserRecord
+	retrieveCluster   func(name string) (*cluster.FedCluster, bool)
 }
 
 func (s *Synchronizer) synchronizeSpec() error {
@@ -38,6 +41,10 @@ func (s *Synchronizer) synchronizeStatus() error {
 		// when record should update status
 		recordStatusUserAcc.SyncIndex = s.recordSpecUserAcc.SyncIndex
 		recordStatusUserAcc.UserAccountStatus = s.memberUserAcc.Status
+		err := s.setClusterDetails(recordStatusUserAcc)
+		if err != nil {
+			return err
+		}
 		var originalStatusUserAcc toolchainv1alpha1.UserAccountStatusEmbedded
 		if index < 0 {
 			s.record.Status.UserAccounts = append(s.record.Status.UserAccounts, recordStatusUserAcc)
@@ -48,7 +55,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 
 		s.alignReadiness()
 
-		err := s.hostClient.Status().Update(context.TODO(), s.record)
+		err = s.hostClient.Status().Update(context.TODO(), s.record)
 		if err != nil {
 			if index < 0 {
 				s.record.Status.UserAccounts = s.record.Status.UserAccounts[:len(s.record.Status.UserAccounts)-1]
@@ -57,6 +64,19 @@ func (s *Synchronizer) synchronizeStatus() error {
 			}
 			return err
 		}
+	}
+	return nil
+}
+
+// setClusterDetails sets additional information about the target cluster such as API endpoint and Console URL
+// if not set yet
+func (s *Synchronizer) setClusterDetails(status toolchainv1alpha1.UserAccountStatusEmbedded) error {
+	if status.Cluster.Name != "" && (status.Cluster.APIEndpoint == "" || status.Cluster.ConsoleURL == "") {
+		fedCluster, ok := s.retrieveCluster(status.Cluster.Name)
+		if !ok {
+			return fmt.Errorf("the cluster %s not found in the registry", status.Cluster.Name)
+		}
+		fedCluster
 	}
 	return nil
 }
@@ -82,11 +102,13 @@ func isReady(conditions []toolchainv1alpha1.Condition) bool {
 
 func getUserAccountStatus(clusterName string, record *toolchainv1alpha1.MasterUserRecord) (toolchainv1alpha1.UserAccountStatusEmbedded, int) {
 	for i, account := range record.Status.UserAccounts {
-		if account.TargetCluster == clusterName {
+		if account.Cluster.Name == clusterName {
 			return account, i
 		}
 	}
 	return toolchainv1alpha1.UserAccountStatusEmbedded{
-		TargetCluster: clusterName,
+		Cluster: toolchainv1alpha1.Cluster{
+			Name: clusterName,
+		},
 	}, -1
 }

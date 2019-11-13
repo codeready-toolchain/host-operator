@@ -58,6 +58,10 @@ github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuy
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
+github.com/alexeykazakov/api v0.0.0-20190528214443-02be78d3c12e/go.mod h1:QiqKypVT4yJj7Bi0nOTV/paaELdhoLg8h0IPUWBm8Pw=
+github.com/alexeykazakov/api v0.0.0-20191107090146-e29aacb17012/go.mod h1:K2iSNSOwpQf+Wo3LdmrGaPlha2BLwuywwWrnbuiy8Pg=
+github.com/alexeykazakov/api v0.0.0-20191113204433-8b9004dd7972 h1:0Y6qV/YbC7kGSguujjD/9aGB0kq8fY7VOzqrk876e1c=
+github.com/alexeykazakov/api v0.0.0-20191113204433-8b9004dd7972/go.mod h1:K2iSNSOwpQf+Wo3LdmrGaPlha2BLwuywwWrnbuiy8Pg=
 github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 h1:kFOfPq6dUM1hTo4JG6LR5AXSUEsOjtdm0kw0FtQtMJA=
 github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239/go.mod h1:2FmKhYUyUczH0OGQWaF5ceTx0UBShxjsH6f8oGKYe2c=
 github.com/apache/thrift v0.12.0/go.mod h1:cp2SuWMxlEZw2r+iP2GNCdIi4C1qmUzdZFSVb+bacwQ=
@@ -488,6 +492,7 @@ github.com/rubenv/sql-migrate v0.0.0-20190618074426-f4d34eae5a5c/go.mod h1:WS0rl
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
 github.com/satori/go.uuid v1.2.0 h1:0uYX9dsZ2yD7q2RtLRtPSdGDWzjeM3TbMJP9utgA0ww=
 github.com/satori/go.uuid v1.2.0/go.mod h1:dA0hQrYB0VpLJoorglMZABFdXlWrHn1NEOzdhQKdks0=
+github.com/sbryzak/api v0.0.0-20191108031415-fabe524427b3/go.mod h1:lGbrD0uax8k3WL74XMxw0Bk/ukZNTQm/Kg0i95qcsEg=
 github.com/sclevine/spec v1.0.0/go.mod h1:W4J29eT/Kzv7/b9IWLB055Z+qvVC9vt0Arko24q7p+U=
 github.com/sergi/go-diff v1.0.0 h1:Kpca3qRNrduNnOQeazBd0ysaKrUJiIuISHxogkT9RPQ=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
@@ -839,6 +844,7 @@ sigs.k8s.io/controller-runtime v0.3.0/go.mod h1:Cw6PkEg0Sa7dAYovGT4R0tRkGhHXpYij
 sigs.k8s.io/controller-tools v0.2.0/go.mod h1:8t/X+FVWvk6TaBcsa+UKUBbn7GMtvyBKX30SGl4em6Y=
 sigs.k8s.io/controller-tools v0.2.1 h1:HoCik83vXOpPi7KSJWdPRmiGntyOzK0v0BTV4U+pl8o=
 sigs.k8s.io/controller-tools v0.2.1/go.mod h1:cenyhL7t2e7izk/Zy7ZxDqQ9YEj0niU5VDL1PWMgZ5s=
+sigs.k8s.io/kubefed v0.1.0-rc2/go.mod h1:V1YuAhi6d/zPg61MydwJWsV2z04K749Mvm3g2tx1M7E=
 sigs.k8s.io/kubefed v0.1.0-rc6.0.20191023070212-24d45e9f4f15 h1:TMKJm5RTvOyoj/JC+8j3quRqj5ONP7Y9rahsJN4vSV4=
 sigs.k8s.io/kubefed v0.1.0-rc6.0.20191023070212-24d45e9f4f15/go.mod h1:V1YuAhi6d/zPg61MydwJWsV2z04K749Mvm3g2tx1M7E=
 sigs.k8s.io/kustomize v2.0.3+incompatible/go.mod h1:MkjgH3RdOWrievjo6c9T245dYlB5QeXV4WCbnt/PEpU=
