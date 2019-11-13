@@ -692,9 +692,10 @@ func TestDeathBy100Signups(t *testing.T) {
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionFalse,
-			Reason: "UnableToCreateMUR",
+			Type:    v1alpha1.UserSignupComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "UnableToCreateMUR",
+			Message: "unable to transform username [foo@redhat.com] even after 100 attempts",
 		},
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupApproved,
