@@ -186,7 +186,8 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 		memberClient:      memberCluster.Client,
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: recAccount,
-		retrieveCluster:   r.retrieveMemberCluster,
+		retrieveCluster:   r.getMemberCluster,
+		log:               log,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
 		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(unableToSynchronizeUserAccountSpecReason), err,

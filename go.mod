@@ -43,6 +43,7 @@ replace (
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
 	github.com/codeready-toolchain/api => github.com/alexeykazakov/api v0.0.0-20191113204433-8b9004dd7972
+	github.com/codeready-toolchain/toolchain-common => github.com/alexeykazakov/toolchain-common v0.0.0-20191113234356-ecdcff2d0242
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0
 )
 
