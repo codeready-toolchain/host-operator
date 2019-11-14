@@ -132,14 +132,14 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	opts := client.MatchingLabels(labels)
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
 	if err = r.client.List(context.TODO(), murList, opts); err != nil {
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Failed to list MUR")
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Failed to list MasterUserRecords")
 	}
 
 	murs := murList.Items
 	// If we found more than one MasterUserRecord, then die
 	if len(murs) > 1 {
-		err = NewSignupError("multiple matching MUR resources found")
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Multiple MUR found")
+		err = NewSignupError("multiple matching MasterUserRecord resources found")
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Multiple MasterUserRecords found")
 	} else if len(murs) == 1 {
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
@@ -225,7 +225,7 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] == instance.Name {
 			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
-			return "", NewSignupError(fmt.Sprintf("could not generate compliant username as MUR [%s] already exists", mur.Name))
+			return "", NewSignupError(fmt.Sprintf("could not generate compliant username as MasterUserRecord [%s] already exists", mur.Name))
 		}
 
 		transformed = fmt.Sprintf("%s-%d", replaced, i)

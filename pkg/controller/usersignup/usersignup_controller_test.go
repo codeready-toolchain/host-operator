@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
 	v1 "k8s.io/api/core/v1"
-	errs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -62,6 +61,7 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
 
+	// The first reconcile creates the MasterUserRecord
 	res, err := r.Reconcile(req)
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
@@ -70,10 +70,12 @@ func TestUserSignupWithAutoApproval(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 
-	mur := &v1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername, Namespace: req.Namespace}, mur)
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
+	require.Len(t, murs.Items, 1)
 
+	mur := murs.Items[0]
 	require.Equal(t, operatorNamespace, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
@@ -137,9 +139,12 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 
-	mur := &v1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername, Namespace: req.Namespace}, mur)
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
+	require.Len(t, murs.Items, 1)
+
+	mur := murs.Items[0]
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
@@ -201,9 +206,12 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 
-	mur := &v1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername, Namespace: req.Namespace}, mur)
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
+	require.Len(t, murs.Items, 1)
+
+	mur := murs.Items[0]
 
 	require.Equal(t, operatorNamespace, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
@@ -264,11 +272,11 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 
-	mur := &v1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, mur)
-	require.Error(t, err)
-	require.IsType(t, err, &errs.StatusError{})
-	require.Equal(t, metav1.StatusReasonNotFound, err.(*errs.StatusError).ErrStatus.Reason)
+	// There should be no MasterUserRecords
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 0)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
@@ -310,10 +318,12 @@ func TestUserSignupWithAutoApprovalClusterSet(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 
-	mur := &v1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername, Namespace: req.Namespace}, mur)
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
+	require.Len(t, murs.Items, 1)
 
+	mur := murs.Items[0]
 	require.Equal(t, operatorNamespace, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
@@ -594,6 +604,77 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		}
 	}
 
+	require.Equal(t, mur.Name, instance.Status.CompliantUsername)
+	require.NotNil(t, cond)
+	require.Equal(t, v1.ConditionTrue, cond.Status)
+}
+
+func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+			UID:       types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+			Approved: true,
+		},
+	}
+
+	// Create a MUR with the same UserID
+	mur := &v1alpha1.MasterUserRecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "foo-at-redhat-com",
+			Namespace: operatorNamespace,
+			UID:       types.UID(uuid.NewV4().String()),
+			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic))
+
+	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
+
+	// First reconcile loop
+	_, err := r.Reconcile(req)
+	require.NoError(t, err)
+
+	// We should now have 2 MURs
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 2)
+
+	// Second reconcile loop
+	_, err = r.Reconcile(req)
+	require.NoError(t, err)
+
+	key := types.NamespacedName{
+		Namespace: operatorNamespace,
+		Name:      userSignup.Name,
+	}
+	instance := &v1alpha1.UserSignup{}
+	err = r.client.Get(context.TODO(), key, instance)
+	require.NoError(t, err)
+
+	require.NotEmpty(t, instance.Status.CompliantUsername)
+
+	// Confirm that the mur exists
+	mur = &v1alpha1.MasterUserRecord{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: operatorNamespace, Name: instance.Status.CompliantUsername}, mur)
+	require.NoError(t, err)
+	require.Equal(t, instance.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+
+	var cond *v1alpha1.Condition
+	for _, condition := range instance.Status.Conditions {
+		if condition.Type == v1alpha1.UserSignupComplete {
+			cond = &condition
+		}
+	}
+
+	require.Equal(t, mur.Name, instance.Status.CompliantUsername)
 	require.NotNil(t, cond)
 	require.Equal(t, v1.ConditionTrue, cond.Status)
 }
