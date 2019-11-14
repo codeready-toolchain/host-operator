@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -693,8 +694,7 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 	defer clearMemberClusters(r.client)
 
 	_, err := r.Reconcile(req)
-	require.Equal(t, "Error generating compliant username for foo#bar@redhat.com: transformed username [foo#bar-at-redhat-com] is invalid", err.Error())
-	require.Error(t, err)
+	assert.EqualError(t, err, "Error generating compliant username for foo#bar@redhat.com: transformed username [foo#bar-at-redhat-com] is invalid")
 
 	key := types.NamespacedName{
 		Namespace: operatorNamespace,
@@ -765,7 +765,7 @@ func TestDeathBy100Signups(t *testing.T) {
 
 	res, err := r.Reconcile(req)
 	require.Error(t, err)
-	require.Equal(t, "Error generating compliant username for foo@redhat.com: unable to transform username [foo@redhat.com] even after 100 attempts", err.Error())
+	assert.EqualError(t, err, "Error generating compliant username for foo@redhat.com: unable to transform username [foo@redhat.com] even after 100 attempts")
 	require.Equal(t, reconcile.Result{}, res)
 
 	// Lookup the user signup again
@@ -826,8 +826,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	defer clearMemberClusters(r.client)
 
 	_, err := r.Reconcile(req)
-	require.Error(t, err)
-	require.Equal(t, "Multiple MasterUserRecords found: multiple matching MasterUserRecord resources found", err.Error())
+	assert.EqualError(t, err, "Multiple MasterUserRecords found: multiple matching MasterUserRecord resources found")
 
 	key := types.NamespacedName{
 		Namespace: operatorNamespace,
