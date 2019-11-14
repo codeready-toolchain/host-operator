@@ -597,16 +597,11 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	err = r.client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
 
-	var cond *v1alpha1.Condition
-	for _, condition := range instance.Status.Conditions {
-		if condition.Type == v1alpha1.UserSignupComplete {
-			cond = &condition
-		}
-	}
-
 	require.Equal(t, mur.Name, instance.Status.CompliantUsername)
-	require.NotNil(t, cond)
-	require.Equal(t, v1.ConditionTrue, cond.Status)
+	test.AssertContainsCondition(t, instance.Status.Conditions, v1alpha1.Condition{
+		Type:   v1alpha1.UserSignupComplete,
+		Status: v1.ConditionTrue,
+	})
 }
 
 func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
@@ -622,7 +617,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		},
 	}
 
-	// Create a MUR with the same UserID
+	// Create a MUR with a different UserID
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo-at-redhat-com",
