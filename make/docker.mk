@@ -1,6 +1,7 @@
 QUAY_NAMESPACE ?= ${GO_PACKAGE_ORG_NAME}
 TARGET_REGISTRY := quay.io
 IMAGE ?= ${TARGET_REGISTRY}/${QUAY_NAMESPACE}/${GO_PACKAGE_REPO_NAME}:${GIT_COMMIT_ID_SHORT}
+QUAY_USERNAME ?= ${QUAY_NAMESPACE}
 
 .PHONY: docker-image
 ## Build the docker image locally that can be deployed (only contains bare operator)
@@ -34,3 +35,7 @@ docker-push-to-os: set-os-registry docker-image docker-push
 ## Sets TARGET_REGISTRY:=$(shell oc get images.config.openshift.io/cluster  -o jsonpath={.status.externalRegistryHostnames[0]})
 set-os-registry:
 	$(eval TARGET_REGISTRY:=$(shell oc get images.config.openshift.io/cluster  -o jsonpath={.status.externalRegistryHostnames[0]}))
+
+.PHONY: docker-login
+docker-login:
+	@echo "${DOCKER_PASSWORD}" | docker login quay.io -u "${QUAY_USERNAME}" --password-stdin
