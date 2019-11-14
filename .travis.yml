@@ -1,0 +1,36 @@
+dist: "trusty"
+
+language: go
+
+env:
+- GO111MODULE=on
+
+python:
+- "3.6.3"
+
+git:
+  depth: false
+
+branches:
+  only:
+  - master
+
+go:
+- 1.13.x
+
+before_install:
+- pyenv shell 3.6.3
+- OPERATOR_SDK_VERSION=v0.11.0
+
+install:
+- curl -L -s https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu -o operator-sdk
+- curl -L -s https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu.asc -o operator-sdk.asc
+- gpg --keyserver keyserver.ubuntu.com --recv-key 78086003
+- gpg --verify operator-sdk.asc
+- chmod +x operator-sdk
+- cp operator-sdk /home/travis/bin/operator-sdk
+- rm operator-sdk
+- pip3 install operator-courier
+
+script:
+- make build && make docker-login && make docker-push && curl -sSL https://raw.githubusercontent.com/codeready-toolchain/api/master/scripts/push-to-quay-nightly.sh | bash -s -- -pr ../host-operator/
