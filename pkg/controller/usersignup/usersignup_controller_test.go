@@ -181,8 +181,8 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	// when
 	res, err := r.Reconcile(req)
 	// then
-	// no error reported, but request is requeued and userSignup status was updated
-	require.NoError(t, err)
+	// error reported, and request is requeued and userSignup status was updated
+	require.Error(t, err)
 	assert.Equal(t, reconcile.Result{Requeue: true}, res)
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -194,9 +194,10 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 			Reason: "ApprovedAutomatically",
 		},
 		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupComplete,
-			Status: v1.ConditionFalse,
-			Reason: "NoTemplateTierAvailable",
+			Type:    v1alpha1.UserSignupComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "NoTemplateTierAvailable",
+			Message: "nstemplatetiers.toolchain.dev.openshift.com \"basic\" not found",
 		})
 }
 
