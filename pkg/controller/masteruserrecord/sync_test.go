@@ -18,7 +18,8 @@ import (
 
 func TestSynchronizeSpec(t *testing.T) {
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
+	l := logf.ZapLogger(true)
+	logf.SetLogger(l)
 	mur := murtest.NewMasterUserRecord("john", murtest.StatusCondition(toBeProvisioned()))
 
 	userAccount := uatest.NewUserAccountFromMur(mur)
@@ -35,6 +36,7 @@ func TestSynchronizeSpec(t *testing.T) {
 		memberClient:      memberClient,
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: mur.Spec.UserAccounts[0],
+		log:               l,
 	}
 
 	// when
@@ -114,7 +116,8 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 func TestSynchronizeUserAccountFailed(t *testing.T) {
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
+	l := logf.ZapLogger(true)
+	logf.SetLogger(l)
 
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
 		// given
@@ -133,6 +136,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			memberClient:      memberClient,
 			memberUserAcc:     userAcc,
 			recordSpecUserAcc: mur.Spec.UserAccounts[0],
+			log:               l,
 		}
 
 		// when
@@ -160,6 +164,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			memberClient:      memberClient,
 			memberUserAcc:     userAcc,
 			recordSpecUserAcc: provisionedMur.Spec.UserAccounts[0],
+			log:               l,
 		}
 
 		t.Run("with empty set of UserAccounts statuses", func(t *testing.T) {
@@ -210,7 +215,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 }
 
 func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon toolchainv1alpha1.Condition) {
-
+	l := logf.ZapLogger(true)
 	condition := userAccount.Status.Conditions[0]
 	memberClient := test.NewFakeClient(t, userAccount)
 	hostClient := test.NewFakeClient(t, mur)
@@ -220,6 +225,7 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchain
 		memberClient:      memberClient,
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: mur.Spec.UserAccounts[0],
+		log:               l,
 	}
 
 	// when
