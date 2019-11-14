@@ -654,7 +654,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	err = r.client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
 
-	require.NotEmpty(t, instance.Status.CompliantUsername)
+	require.Equal(t, "foo-at-redhat-com-1", instance.Status.CompliantUsername)
 
 	// Confirm that the mur exists
 	mur = &v1alpha1.MasterUserRecord{}
@@ -693,6 +693,7 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 	defer clearMemberClusters(r.client)
 
 	_, err := r.Reconcile(req)
+	require.Equal(t, "Error generating compliant username for foo#bar@redhat.com: transformed username [foo#bar-at-redhat-com] is invalid", err.Error())
 	require.Error(t, err)
 
 	key := types.NamespacedName{
@@ -703,15 +704,19 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 	err = r.client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
 
-	var cond *v1alpha1.Condition
-	for _, condition := range instance.Status.Conditions {
-		if condition.Type == v1alpha1.UserSignupComplete {
-			cond = &condition
-		}
-	}
-
-	require.NotNil(t, cond)
-	require.Equal(t, v1.ConditionFalse, cond.Status)
+	test.AssertConditionsMatch(t, instance.Status.Conditions,
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "UnableToCreateMUR",
+			Message: "transformed username [foo#bar-at-redhat-com] is invalid",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+	)
 }
 
 func TestDeathBy100Signups(t *testing.T) {
@@ -760,6 +765,7 @@ func TestDeathBy100Signups(t *testing.T) {
 
 	res, err := r.Reconcile(req)
 	require.Error(t, err)
+	require.Equal(t, "Error generating compliant username for foo@redhat.com: unable to transform username [foo@redhat.com] even after 100 attempts", err.Error())
 	require.Equal(t, reconcile.Result{}, res)
 
 	// Lookup the user signup again
@@ -821,6 +827,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 
 	_, err := r.Reconcile(req)
 	require.Error(t, err)
+	require.Equal(t, "Multiple MasterUserRecords found: multiple matching MasterUserRecord resources found", err.Error())
 
 	key := types.NamespacedName{
 		Namespace: operatorNamespace,
@@ -830,15 +837,14 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	err = r.client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
 
-	var cond *v1alpha1.Condition
-	for _, condition := range instance.Status.Conditions {
-		if condition.Type == v1alpha1.UserSignupComplete {
-			cond = &condition
-		}
-	}
-
-	require.NotNil(t, cond)
-	require.Equal(t, v1.ConditionFalse, cond.Status)
+	test.AssertConditionsMatch(t, instance.Status.Conditions,
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "InvalidMURState",
+			Message: "multiple matching MasterUserRecord resources found",
+		},
+	)
 }
 
 func TestUserSignupNoMembersAvailableFails(t *testing.T) {
