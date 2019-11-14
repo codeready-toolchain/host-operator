@@ -32,6 +32,7 @@ import (
 const (
 	// Status condition reasons
 	noClustersAvailableReason            = "NoClustersAvailable"
+	noTemplateTierAvailableReason        = "NoTemplateTierAvailable"
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason              = "UnableToCreateMUR"
 	invalidMURState                      = "InvalidMURState"
@@ -188,9 +189,18 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				return reconcile.Result{}, err
 			}
 		}
-
+		// look-up the `basic` NSTemplateTier to get the NS templates
+		var nstemplateTier toolchainv1alpha1.NSTemplateTier
+		err := r.client.Get(context.TODO(), types.NamespacedName{
+			Namespace: request.Namespace, // assume that NSTemplateTier were created in the same NS as Usersignups
+			Name:      "basic",
+		}, &nstemplateTier)
+		if err != nil {
+			// let's requeue until the NSTemplateTier resource is available
+			return reconcile.Result{Requeue: true}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusNoTemplateTierAvailable, err, "")
+		}
 		// Provision the MasterUserRecord
-		err = r.provisionMasterUserRecord(instance, targetCluster, reqLogger)
+		err = r.provisionMasterUserRecord(instance, targetCluster, nstemplateTier, reqLogger)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -235,7 +245,15 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
-func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string, logger logr.Logger) error {
+func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string, nstemplateTier toolchainv1alpha1.NSTemplateTier, logger logr.Logger) error {
+	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nstemplateTier.Spec.Namespaces))
+	for i, ns := range nstemplateTier.Spec.Namespaces {
+		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
+			Type:     ns.Type,
+			Revision: ns.Revision,
+		}
+	}
+
 	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 		{
 			TargetCluster: targetCluster,
@@ -243,7 +261,8 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 				UserID:  userSignup.Name,
 				NSLimit: "default",
 				NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
-					Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{},
+					TierName:   nstemplateTier.Name,
+					Namespaces: namespaces,
 				},
 			},
 		},
@@ -385,6 +404,17 @@ func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchain
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  noClustersAvailableReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusNoTemplateTierAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  noTemplateTierAvailableReason,
 			Message: message,
 		})
 }
