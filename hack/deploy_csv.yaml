@@ -31,6 +31,9 @@ data:
         - JSONPath: .status.conditions[?(@.type=="Ready")].reason
           name: Reason
           type: string
+        - JSONPath: .spec.userAccounts[].targetCluster
+          name: Cluster
+          type: string
         group: toolchain.dev.openshift.com
         names:
           kind: MasterUserRecord
@@ -185,6 +188,24 @@ data:
                       belong to this MasterUserRecord
                     items:
                       properties:
+                        cluster:
+                          description: Cluster is the cluster in which the user exists
+                          properties:
+                            apiEndpoint:
+                              description: APIEndpoint is the API Endpoint of the cluster
+                              type: string
+                            consoleURL:
+                              description: ConsoleURL is the web console URL of the cluster
+                              type: string
+                            name:
+                              description: Name is the name of the corresponding KubeFedCluster
+                                resource
+                              type: string
+                          required:
+                          - apiEndpoint
+                          - consoleURL
+                          - name
+                          type: object
                         conditions:
                           description: 'Conditions is an array of current User Account conditions
                             Supported condition types: ConditionReady'
@@ -220,11 +241,12 @@ data:
                             specific UserAccount in the specific member cluster
                           type: string
                         targetCluster:
-                          description: The cluster in which the user exists
+                          description: Deprecated! Use Cluster instead The cluster in which
+                            the user exists
                           type: string
                       required:
+                      - cluster
                       - syncIndex
-                      - targetCluster
                       type: object
                     type: array
                 type: object
@@ -543,6 +565,19 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "UserSignup",
+                "metadata": {
+                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                },
+                "spec": {
+                  "approved": true,
+                  "compliantUsername": "johnsmith-at-redhat-com",
+                  "targetCluster": "east-2a",
+                  "username": "johnsmith@redhat.com"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "MasterUserRecord",
                 "metadata": {
                   "name": "johnsmith"
@@ -611,19 +646,6 @@ data:
                       "type": "default"
                     }
                   ]
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "UserSignup",
-                "metadata": {
-                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                },
-                "spec": {
-                  "approved": true,
-                  "compliantUsername": "johnsmith-at-redhat-com",
-                  "targetCluster": "east-2a",
-                  "username": "johnsmith@redhat.com"
                 }
               }
             ]
