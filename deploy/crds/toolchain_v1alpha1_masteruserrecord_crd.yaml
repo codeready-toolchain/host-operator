@@ -225,7 +225,6 @@ spec:
                       the user exists
                     type: string
                 required:
-                - cluster
                 - syncIndex
                 type: object
               type: array

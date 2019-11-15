@@ -245,7 +245,6 @@ data:
                             the user exists
                           type: string
                       required:
-                      - cluster
                       - syncIndex
                       type: object
                     type: array
@@ -565,6 +564,37 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "NSTemplateTier",
+                "metadata": {
+                  "name": "basic"
+                },
+                "spec": {
+                  "namespaces": [
+                    {
+                      "revision": "abcdef",
+                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"ide-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-ide\"}}}\n",
+                      "type": "ide"
+                    },
+                    {
+                      "revision": "1d2f3q",
+                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"cicd-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-cicd\"}}}\n",
+                      "type": "cicd"
+                    },
+                    {
+                      "revision": "a34r57",
+                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"stage-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-stage\"}}}\n",
+                      "type": "stage"
+                    },
+                    {
+                      "revision": "ra24qw",
+                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"default-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME\"}}}\n",
+                      "type": "default"
+                    }
+                  ]
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "UserSignup",
                 "metadata": {
                   "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
@@ -615,37 +645,6 @@ data:
                     }
                   ],
                   "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "NSTemplateTier",
-                "metadata": {
-                  "name": "basic"
-                },
-                "spec": {
-                  "namespaces": [
-                    {
-                      "revision": "abcdef",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"ide-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-ide\"}}}\n",
-                      "type": "ide"
-                    },
-                    {
-                      "revision": "1d2f3q",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"cicd-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-cicd\"}}}\n",
-                      "type": "cicd"
-                    },
-                    {
-                      "revision": "a34r57",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"stage-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-stage\"}}}\n",
-                      "type": "stage"
-                    },
-                    {
-                      "revision": "ra24qw",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"default-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME\"}}}\n",
-                      "type": "default"
-                    }
-                  ]
                 }
               }
             ]
