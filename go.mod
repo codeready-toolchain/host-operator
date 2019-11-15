@@ -3,8 +3,8 @@ module github.com/codeready-toolchain/host-operator
 require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20191114122815-90cbe655d306
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20191107144135-e8ba3faab2c8
+	github.com/codeready-toolchain/api v0.0.0-20191115062940-693a0063cf16
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20191114180605-3e42596bbf38
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gophercloud/gophercloud v0.3.0 // indirect
@@ -43,8 +43,6 @@ replace (
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible
-	github.com/codeready-toolchain/api => github.com/alexeykazakov/api v0.0.0-20191113204433-8b9004dd7972
-	github.com/codeready-toolchain/toolchain-common => github.com/alexeykazakov/toolchain-common v0.0.0-20191113234356-ecdcff2d0242
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0
 )
 
