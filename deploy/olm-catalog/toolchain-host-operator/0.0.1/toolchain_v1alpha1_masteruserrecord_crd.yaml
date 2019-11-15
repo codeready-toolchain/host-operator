@@ -4,6 +4,16 @@ metadata:
   creationTimestamp: null
   name: masteruserrecords.toolchain.dev.openshift.com
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.conditions[?(@.type=="Ready")].status
+    name: Ready
+    type: string
+  - JSONPath: .status.conditions[?(@.type=="Ready")].reason
+    name: Reason
+    type: string
+  - JSONPath: .spec.userAccounts[].targetCluster
+    name: Cluster
+    type: string
   group: toolchain.dev.openshift.com
   names:
     kind: MasterUserRecord
@@ -158,6 +168,24 @@ spec:
                 belong to this MasterUserRecord
               items:
                 properties:
+                  cluster:
+                    description: Cluster is the cluster in which the user exists
+                    properties:
+                      apiEndpoint:
+                        description: APIEndpoint is the API Endpoint of the cluster
+                        type: string
+                      consoleURL:
+                        description: ConsoleURL is the web console URL of the cluster
+                        type: string
+                      name:
+                        description: Name is the name of the corresponding KubeFedCluster
+                          resource
+                        type: string
+                    required:
+                    - apiEndpoint
+                    - consoleURL
+                    - name
+                    type: object
                   conditions:
                     description: 'Conditions is an array of current User Account conditions
                       Supported condition types: ConditionReady'
@@ -193,11 +221,11 @@ spec:
                       specific UserAccount in the specific member cluster
                     type: string
                   targetCluster:
-                    description: The cluster in which the user exists
+                    description: Deprecated! Use Cluster instead The cluster in which
+                      the user exists
                     type: string
                 required:
                 - syncIndex
-                - targetCluster
                 type: object
               type: array
           type: object

@@ -2,6 +2,9 @@ package usersignup
 
 import (
 	"context"
+	"fmt"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/config"
@@ -29,8 +32,10 @@ import (
 const (
 	// Status condition reasons
 	noClustersAvailableReason            = "NoClustersAvailable"
+	noTemplateTierAvailableReason        = "NoTemplateTierAvailable"
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason              = "UnableToCreateMUR"
+	invalidMURState                      = "InvalidMURState"
 	approvedAutomaticallyReason          = "ApprovedAutomatically"
 	approvedByAdminReason                = "ApprovedByAdmin"
 	pendingApprovalReason                = "PendingApproval"
@@ -123,21 +128,25 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	// Check if the MasterUserRecord already exists
-	mur := &toolchainv1alpha1.MasterUserRecord{}
-	// Lookup the MasterUserRecord with the CompliantUsername value from the UserSignup resource, in the same namespace
-	namespacedMurName := types.NamespacedName{Namespace: request.Namespace, Name: instance.Spec.CompliantUsername}
-	err = r.client.Get(context.TODO(), namespacedMurName, mur)
-	if err != nil {
-		// We generally EXPECT the MasterUserRecord to not be found here, so we only deal with other error types
-		if !errors.IsNotFound(err) {
-			// Error reading the MasterUserRecord, requeue the request
-			return reconcile.Result{}, err
-		}
-	} else {
+	// List all MasterUserRecord resources that have a UserID label equal to the UserSignup.Name
+	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: instance.Name}
+	opts := client.MatchingLabels(labels)
+	murList := &toolchainv1alpha1.MasterUserRecordList{}
+	if err = r.client.List(context.TODO(), murList, opts); err != nil {
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Failed to list MasterUserRecords")
+	}
+
+	murs := murList.Items
+	// If we found more than one MasterUserRecord, then die
+	if len(murs) > 1 {
+		err = NewSignupError("multiple matching MasterUserRecord resources found")
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Multiple MasterUserRecords found")
+	} else if len(murs) == 1 {
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
+		mur := murs[0]
 		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
+		instance.Status.CompliantUsername = mur.Name
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusComplete)
 	}
 
@@ -176,13 +185,22 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 					return reconcile.Result{}, statusError
 				}
 
-				err = NewSignupError("No target clusters available")
+				err = NewSignupError("no target clusters available")
 				return reconcile.Result{}, err
 			}
 		}
-
+		// look-up the `basic` NSTemplateTier to get the NS templates
+		var nstemplateTier toolchainv1alpha1.NSTemplateTier
+		err := r.client.Get(context.TODO(), types.NamespacedName{
+			Namespace: request.Namespace, // assume that NSTemplateTier were created in the same NS as Usersignups
+			Name:      "basic",
+		}, &nstemplateTier)
+		if err != nil {
+			// let's requeue until the NSTemplateTier resource is available
+			return reconcile.Result{Requeue: true}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusNoTemplateTierAvailable, err, "")
+		}
 		// Provision the MasterUserRecord
-		err = r.provisionMasterUserRecord(instance, targetCluster, reqLogger)
+		err = r.provisionMasterUserRecord(instance, targetCluster, nstemplateTier, reqLogger)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -193,8 +211,49 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	return reconcile.Result{}, nil
 }
 
+func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
+	replaced := strings.ReplaceAll(strings.ReplaceAll(instance.Spec.Username, "@", "-at-"), ".", "-")
+
+	errs := validation.IsQualifiedName(replaced)
+	if len(errs) > 0 {
+		return "", NewSignupError(fmt.Sprintf("transformed username [%s] is invalid", replaced))
+	}
+
+	transformed := replaced
+
+	for i := 1; i < 101; i++ { // No more than 100 attempts to find a vacant name
+		mur := &toolchainv1alpha1.MasterUserRecord{}
+		// Check if a MasterUserRecord exists with the same transformed name
+		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: transformed}
+		err := r.client.Get(context.TODO(), namespacedMurName, mur)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return "", err
+			}
+			// If there was a NotFound error looking up the mur, it means we found an available name
+			return transformed, nil
+		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] == instance.Name {
+			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
+			// Return an error here and allow the reconcile() function to pick it up on the next loop
+			return "", NewSignupError(fmt.Sprintf("could not generate compliant username as MasterUserRecord [%s] already exists", mur.Name))
+		}
+
+		transformed = fmt.Sprintf("%s-%d", replaced, i)
+	}
+
+	return "", NewSignupError(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
+}
+
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
-func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string, logger logr.Logger) error {
+func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string, nstemplateTier toolchainv1alpha1.NSTemplateTier, logger logr.Logger) error {
+	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nstemplateTier.Spec.Namespaces))
+	for i, ns := range nstemplateTier.Spec.Namespaces {
+		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
+			Type:     ns.Type,
+			Revision: ns.Revision,
+		}
+	}
+
 	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 		{
 			TargetCluster: targetCluster,
@@ -202,7 +261,8 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 				UserID:  userSignup.Name,
 				NSLimit: "default",
 				NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
-					Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{},
+					TierName:   nstemplateTier.Name,
+					Namespaces: namespaces,
 				},
 			},
 		},
@@ -211,18 +271,26 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	// TODO Update the MasterUserRecord with NSTemplateTier values
 	// SEE https://jira.coreos.com/browse/CRT-74
 
+	compliantUsername, err := r.generateCompliantUsername(userSignup)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
+			"Error generating compliant username for %s", userSignup.Spec.Username)
+	}
+
+	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      userSignup.Spec.CompliantUsername,
+			Name:      compliantUsername,
 			Namespace: userSignup.Namespace,
+			Labels:    labels,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserID:       userSignup.Name,
 			UserAccounts: userAccounts,
 		},
 	}
 
-	err := controllerutil.SetControllerReference(userSignup, mur, r.scheme)
+	err = controllerutil.SetControllerReference(userSignup, mur, r.scheme)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error setting controller reference for MasterUserRecord %s", mur.Name)
@@ -230,17 +298,11 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 	err = r.client.Create(context.TODO(), mur)
 	if err != nil {
-		// If the MasterUserRecord already exists (for whatever strange reason), we simply set the status to complete
-		if errors.IsAlreadyExists(err) {
-			logger.Info("MasterUserRecord already exists, setting status to Complete")
-			return r.updateStatus(logger, userSignup, r.setStatusComplete)
-
-		}
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord")
 	}
 
-	logger.Info("#### Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
+	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
 }
 
@@ -313,6 +375,17 @@ func (r *ReconcileUserSignup) setStatusFailedToReadUserApprovalPolicy(userSignup
 		})
 }
 
+func (r *ReconcileUserSignup) setStatusInvalidMURState(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  invalidMURState,
+			Message: message,
+		})
+}
+
 func (r *ReconcileUserSignup) setStatusFailedToCreateMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return r.updateStatusConditions(
 		userSignup,
@@ -331,6 +404,17 @@ func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchain
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  noClustersAvailableReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusNoTemplateTierAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  noTemplateTierAvailableReason,
 			Message: message,
 		})
 }
