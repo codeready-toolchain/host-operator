@@ -17,6 +17,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -93,16 +94,19 @@ func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountSt
 		err = fedCluster.Client.Get(context.TODO(), namespacedName, route)
 		if err != nil {
 			s.log.Error(err, "unable to get console route")
-			// It can happen if running in old OpenShift version like 3.x (minishift) in dev environment
-			// TODO do this only if run in dev environment
-			consoleURL, consoleErr := s.openShift3XConsoleURL(fedCluster.APIEndpoint)
-			if consoleErr != nil {
-				// Log the openShift3XConsoleURL() error but return the original missing route error
-				s.log.Error(err, "OpenShit 3.x web console unreachable", "url", consoleURL)
-				return status, errors.Wrapf(err, "unable to get web console route for cluster %s", fedCluster.Name)
+			if kuberrors.IsNotFound(err) {
+				// It can happen if running in old OpenShift version like 3.x (minishift) in dev environment
+				// TODO do this only if run in dev environment
+				consoleURL, consoleErr := s.openShift3XConsoleURL(fedCluster.APIEndpoint)
+				if consoleErr != nil {
+					// Log the openShift3XConsoleURL() error but return the original missing route error
+					s.log.Error(err, "OpenShit 3.x web console unreachable", "url", consoleURL)
+					return status, errors.Wrapf(err, "unable to get web console route for cluster %s", fedCluster.Name)
+				}
+				status.Cluster.ConsoleURL = consoleURL
+				return status, nil
 			}
-			status.Cluster.ConsoleURL = consoleURL
-			return status, nil
+			return status, err
 		}
 
 		status.Cluster.ConsoleURL = fmt.Sprintf("https://%s/%s", route.Spec.Host, route.Spec.Path)
@@ -123,6 +127,9 @@ func (s *Synchronizer) openShift3XConsoleURL(apiEndpoint string) (string, error)
 	resp, err := cl.Get(url)
 	if err != nil {
 		return url, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return url, errors.Errorf("status is not 200 OK: %s", resp.Status)
 	}
 	defer func() {
 		_, err = ioutil.ReadAll(resp.Body)
