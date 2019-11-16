@@ -22,7 +22,7 @@ rules:
   - "list"
   - "watch"
 - apiGroups:
-  - openshift.io
+  - route.openshift.io
   resources:
    - routes
   verbs:
