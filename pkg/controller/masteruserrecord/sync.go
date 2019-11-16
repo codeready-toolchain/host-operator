@@ -17,7 +17,6 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -53,7 +52,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 		// when record should update status
 		recordStatusUserAcc.SyncIndex = s.recordSpecUserAcc.SyncIndex
 		recordStatusUserAcc.UserAccountStatus = s.memberUserAcc.Status
-		err := s.setClusterDetails(recordStatusUserAcc)
+		recordStatusUserAcc, err := s.withClusterDetails(recordStatusUserAcc)
 		if err != nil {
 			return err
 		}
@@ -80,37 +79,34 @@ func (s *Synchronizer) synchronizeStatus() error {
 	return nil
 }
 
-// setClusterDetails sets additional information about the target cluster such as API endpoint and Console URL
-// if not set yet
-func (s *Synchronizer) setClusterDetails(status toolchainv1alpha1.UserAccountStatusEmbedded) error {
+// withClusterDetails returns the given user account status with additional information about
+// the target cluster such as API endpoint and Console URL if not set yet
+func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
 	if status.Cluster.Name != "" && (status.Cluster.APIEndpoint == "" || status.Cluster.ConsoleURL == "") {
 		fedCluster, err := s.retrieveCluster(status.Cluster.Name)
 		if err != nil {
-			return err
+			return status, err
 		}
 		status.Cluster.APIEndpoint = fedCluster.APIEndpoint
 		route := &routev1.Route{}
 		namespacedName := types.NamespacedName{Namespace: "openshift-console", Name: "console"}
 		err = fedCluster.Client.Get(context.TODO(), namespacedName, route)
 		if err != nil {
-			if kuberrors.IsNotFound(err) {
-				// It can happen if running in old OpenShift version like 3.x (minishift) in dev environment
-				// TODO do this only if run in dev environment
-				consoleURL, consoleErr := s.openShift3XConsoleURL(fedCluster.APIEndpoint)
-				if consoleErr != nil {
-					// Log the openShift3XConsoleURL() error but return the original missing route error
-					s.log.Error(err, "OpenShit 3.x web console unreachable", "url", consoleURL)
-					return errors.Wrapf(err, "unable to get web console route for cluster %s", fedCluster.Name)
-				}
-				status.Cluster.ConsoleURL = consoleURL
-				return nil
+			// It can happen if running in old OpenShift version like 3.x (minishift) in dev environment
+			// TODO do this only if run in dev environment
+			consoleURL, consoleErr := s.openShift3XConsoleURL(fedCluster.APIEndpoint)
+			if consoleErr != nil {
+				// Log the openShift3XConsoleURL() error but return the original missing route error
+				s.log.Error(err, "OpenShit 3.x web console unreachable", "url", consoleURL)
+				return status, errors.Wrapf(err, "unable to get web console route for cluster %s", fedCluster.Name)
 			}
-			return errors.Wrapf(err, "unable to get web console route for cluster %s", fedCluster.Name)
+			status.Cluster.ConsoleURL = consoleURL
+			return status, nil
 		}
 
 		status.Cluster.ConsoleURL = fmt.Sprintf("https://%s/%s", route.Spec.Host, route.Spec.Path)
 	}
-	return nil
+	return status, nil
 }
 
 // openShift3XConsoleURL checks if <apiEndpoint>/console URL is reachable.
