@@ -92,6 +92,7 @@ func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountSt
 		namespacedName := types.NamespacedName{Namespace: "openshift-console", Name: "console"}
 		err = fedCluster.Client.Get(context.TODO(), namespacedName, route)
 		if err != nil {
+			s.log.Error(err, "unable to get console route")
 			// It can happen if running in old OpenShift version like 3.x (minishift) in dev environment
 			// TODO do this only if run in dev environment
 			consoleURL, consoleErr := s.openShift3XConsoleURL(fedCluster.APIEndpoint)

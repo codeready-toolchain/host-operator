@@ -21,3 +21,10 @@ rules:
   - "create"
   - "list"
   - "watch"
+- apiGroups:
+  - openshift.io
+  resources:
+   - routes
+  verbs:
+  - "get"
+  - "list"
