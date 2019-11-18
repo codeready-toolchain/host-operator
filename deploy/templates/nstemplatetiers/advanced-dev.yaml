@@ -20,10 +20,10 @@ objects:
   metadata:
     labels:
       provider: codeready-toolchain
-    name: code-edit
+    name: toolchain-dev
     namespace: ${USERNAME}-dev
   roleRef:
-    name: edit
+    name: admin
   subjects:
   - kind: User
     name: ${USERNAME}

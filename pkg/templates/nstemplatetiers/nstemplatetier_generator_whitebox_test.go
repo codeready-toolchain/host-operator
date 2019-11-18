@@ -160,6 +160,10 @@ func TestNewNSTemplateTier(t *testing.T) {
 							_, _, err = decoder.Decode(asset, nil, tmplObj)
 							require.NoError(t, err)
 							assert.Equal(t, *tmplObj, ns.Template)
+
+							// Assert expected objects in the template
+							// Each template should have one Namespace and one RoleBinding object
+							require.Len(t, ns.Template.Objects, 2)
 							break
 						}
 					}
