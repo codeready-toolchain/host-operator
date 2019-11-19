@@ -6,14 +6,21 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
+
+	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"sigs.k8s.io/kubefed/pkg/apis/core/common"
+	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 )
 
 func TestSynchronizeSpec(t *testing.T) {
@@ -27,13 +34,13 @@ func TestSynchronizeSpec(t *testing.T) {
 	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"),
 		murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
 
-	memberClient := test.NewFakeClient(t, userAccount)
+	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
 	hostClient := test.NewFakeClient(t, mur)
 
 	sync := Synchronizer{
 		record:            mur,
 		hostClient:        hostClient,
-		memberClient:      memberClient,
+		memberCluster:     newMemberCluster(memberClient),
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: mur.Spec.UserAccounts[0],
 		log:               l,
@@ -123,7 +130,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord("john")
 		userAcc := uatest.NewUserAccountFromMur(mur)
-		memberClient := test.NewFakeClient(t, userAcc)
+		memberClient := test.NewFakeClient(t, userAcc, consoleRoute())
 		memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
@@ -133,7 +140,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		sync := Synchronizer{
 			record:            mur,
 			hostClient:        hostClient,
-			memberClient:      memberClient,
+			memberCluster:     newMemberCluster(memberClient),
 			memberUserAcc:     userAcc,
 			recordSpecUserAcc: mur.Spec.UserAccounts[0],
 			log:               l,
@@ -153,7 +160,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			murtest.StatusCondition(toBeProvisioned()))
 		userAcc := uatest.NewUserAccountFromMur(provisionedMur,
 			uatest.StatusCondition(toBeNotReady("somethingFailed", "")))
-		memberClient := test.NewFakeClient(t, userAcc)
+		memberClient := test.NewFakeClient(t, userAcc, consoleRoute())
 		hostClient := test.NewFakeClient(t, provisionedMur)
 		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
@@ -161,7 +168,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		sync := Synchronizer{
 			record:            provisionedMur,
 			hostClient:        hostClient,
-			memberClient:      memberClient,
+			memberCluster:     newMemberCluster(memberClient),
 			memberUserAcc:     userAcc,
 			recordSpecUserAcc: provisionedMur.Spec.UserAccounts[0],
 			log:               l,
@@ -217,12 +224,13 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon toolchainv1alpha1.Condition) {
 	l := logf.ZapLogger(true)
 	condition := userAccount.Status.Conditions[0]
-	memberClient := test.NewFakeClient(t, userAccount)
+
+	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
 	hostClient := test.NewFakeClient(t, mur)
 	sync := Synchronizer{
 		record:            mur,
 		hostClient:        hostClient,
-		memberClient:      memberClient,
+		memberCluster:     newMemberCluster(memberClient),
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: mur.Spec.UserAccounts[0],
 		log:               l,
@@ -243,4 +251,31 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchain
 		HasStatusUserAccounts(test.MemberClusterName).
 		AllUserAccountsHaveStatusSyncIndex("123abc").
 		AllUserAccountsHaveCondition(condition)
+}
+
+func newMemberCluster(cl client.Client) *cluster.FedCluster {
+	return &cluster.FedCluster{
+		Name:              test.MemberClusterName,
+		APIEndpoint:       fmt.Sprintf("https://api.%s:6433", test.MemberClusterName),
+		Client:            cl,
+		Type:              cluster.Member,
+		OperatorNamespace: test.HostOperatorNs,
+		OwnerClusterName:  test.HostClusterName,
+		ClusterStatus: &v1beta1.KubeFedClusterStatus{
+			Conditions: []v1beta1.ClusterCondition{{
+				Type:   common.ClusterReady,
+				Status: v1.ConditionTrue,
+			}},
+		},
+	}
+}
+
+func consoleRoute() *routev1.Route {
+	return &routev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "console",
+			Namespace: "openshift-console",
+		},
+		Spec: routev1.RouteSpec{Host: fmt.Sprintf("console.%s", test.MemberClusterName)},
+	}
 }

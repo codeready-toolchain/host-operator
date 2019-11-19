@@ -183,10 +183,9 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 	sync := Synchronizer{
 		record:            record,
 		hostClient:        r.client,
-		memberClient:      memberCluster.Client,
+		memberCluster:     memberCluster,
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: recAccount,
-		retrieveCluster:   r.getMemberCluster,
 		log:               log,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
