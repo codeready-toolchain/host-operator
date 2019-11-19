@@ -20,9 +20,11 @@ objects:
   metadata:
     labels:
       provider: codeready-toolchain
-    name: codeready-toolchain-dev
+    name: user-edit
     namespace: ${USERNAME}-dev
   roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
     name: edit
   subjects:
   - kind: User
