@@ -20,7 +20,7 @@ objects:
   metadata:
     labels:
       provider: codeready-toolchain
-    name: toolchain-code
+    name: codeready-toolchain-code
     namespace: ${USERNAME}-code
   roleRef:
     name: admin

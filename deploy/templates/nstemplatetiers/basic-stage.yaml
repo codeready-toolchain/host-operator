@@ -20,7 +20,7 @@ objects:
   metadata:
     labels:
       provider: codeready-toolchain
-    name: toolchain-stage
+    name: codeready-toolchain-stage
     namespace: ${USERNAME}-stage
   roleRef:
     name: edit
