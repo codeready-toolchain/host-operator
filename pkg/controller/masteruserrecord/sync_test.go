@@ -10,11 +10,13 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
+	"github.com/pkg/errors"
 
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	gock "gopkg.in/h2non/gock.v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -226,6 +228,106 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			assert.Len(t, provisionedMur.Status.UserAccounts, 1)
 			assert.Contains(t, provisionedMur.Status.UserAccounts, toBeModified)
 		})
+
+		t.Run("when unable to get console route", func(t *testing.T) {
+			prepareSync := func() (Synchronizer, *test.FakeClient) {
+				mur := murtest.NewMasterUserRecord("john",
+					murtest.StatusCondition(toBeNotReady(provisioningReason, "")))
+
+				userAccount := uatest.NewUserAccountFromMur(mur,
+					uatest.StatusCondition(toBeNotReady(provisioningReason, "")), uatest.ResourceVersion("123abc"))
+
+				mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{{
+					SyncIndex: "111aaa",
+					Cluster: toolchainv1alpha1.Cluster{
+						Name: test.MemberClusterName,
+					},
+					UserAccountStatus: userAccount.Status,
+				}}
+
+				uatest.Modify(userAccount, uatest.StatusCondition(toBeProvisioned()))
+
+				memberClient := test.NewFakeClient(t, userAccount)
+				hostClient := test.NewFakeClient(t, mur)
+				return Synchronizer{
+					record:            mur,
+					hostClient:        hostClient,
+					memberCluster:     newMemberCluster(memberClient),
+					memberUserAcc:     userAccount,
+					recordSpecUserAcc: mur.Spec.UserAccounts[0],
+					log:               l,
+				}, memberClient
+			}
+
+			t.Run("no OpenShift 3.11 console available", func(t *testing.T) {
+				// given
+				sync, _ := prepareSync()
+
+				// when
+				err := sync.synchronizeStatus()
+
+				// then
+				assert.EqualError(t, err, `unable to get web console route for cluster member-cluster: routes.route.openshift.io "console" not found`)
+			})
+
+			t.Run("OpenShift 3.11 console available", func(t *testing.T) {
+				// given
+				sync, _ := prepareSync()
+				defer gock.OffAll()
+				gock.InterceptClient(consoleClient)
+				gock.
+					New(fmt.Sprintf("https://api.%s:6433", test.MemberClusterName)).
+					Get("console").
+					Reply(200)
+
+				// when
+				err := sync.synchronizeStatus()
+				require.NoError(t, err)
+
+				// then
+				require.Len(t, sync.record.Status.UserAccounts, 1)
+				murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+					AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
+						Name:        test.MemberClusterName,
+						APIEndpoint: "https://api.member-cluster:6433",
+						ConsoleURL:  "https://api.member-cluster:6433/console",
+					})
+			})
+
+			t.Run("OpenShift 3.11 console returns status other than 200", func(t *testing.T) {
+				// given
+				sync, _ := prepareSync()
+				defer gock.OffAll()
+				gock.InterceptClient(consoleClient)
+				gock.
+					New(fmt.Sprintf("https://api.%s:6433", test.MemberClusterName)).
+					Get("console").
+					Reply(404)
+
+				// when
+				err := sync.synchronizeStatus()
+
+				// then
+				assert.EqualError(t, err, `unable to get web console route for cluster member-cluster: routes.route.openshift.io "console" not found`)
+			})
+
+			t.Run("get route fails with error other than 404", func(t *testing.T) {
+				// given
+				sync, memberClient := prepareSync()
+				memberClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					if key.Name == "console" {
+						return errors.New("something went wrong")
+					}
+					return memberClient.Client.Get(ctx, key, obj)
+				}
+
+				// when
+				err := sync.synchronizeStatus()
+
+				// then
+				assert.EqualError(t, err, "something went wrong")
+			})
+		})
 	})
 }
 
@@ -258,6 +360,11 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchain
 		HasConditions(expMurCon).
 		HasStatusUserAccounts(test.MemberClusterName).
 		AllUserAccountsHaveStatusSyncIndex("123abc").
+		AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
+			Name:        test.MemberClusterName,
+			APIEndpoint: "https://api.member-cluster:6433",
+			ConsoleURL:  "https://console.member-cluster/",
+		}).
 		AllUserAccountsHaveCondition(condition)
 }
 

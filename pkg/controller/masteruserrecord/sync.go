@@ -22,6 +22,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// consoleClient to be used to test connection to a public Web Console
+var consoleClient = &http.Client{
+	Timeout: time.Duration(1 * time.Second),
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	},
+}
+
 type Synchronizer struct {
 	hostClient        client.Client
 	memberCluster     *cluster.FedCluster
@@ -112,14 +120,8 @@ func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountSt
 // openShift3XConsoleURL checks if <apiEndpoint>/console URL is reachable.
 // This URL is used by web console in OpenShift 3.x
 func (s *Synchronizer) openShift3XConsoleURL(apiEndpoint string) (string, error) {
-	cl := http.Client{
-		Timeout: time.Duration(1 * time.Second),
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
 	url := fmt.Sprintf("%s/console", apiEndpoint)
-	resp, err := cl.Get(url)
+	resp, err := consoleClient.Get(url)
 	if err != nil {
 		return url, err
 	}
