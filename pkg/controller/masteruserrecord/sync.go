@@ -129,14 +129,8 @@ func (s *Synchronizer) openShift3XConsoleURL(apiEndpoint string) (string, error)
 		return url, errors.Errorf("status is not 200 OK: %s", resp.Status)
 	}
 	defer func() {
-		_, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			s.log.Error(err, "unable read the body", "url", url)
-		}
-		err = resp.Body.Close()
-		if err != nil {
-			s.log.Error(err, "unable close the body", "url", url)
-		}
+		_, _ = ioutil.ReadAll(resp.Body)
+		_ = resp.Body.Close()
 	}()
 	return url, nil
 }
