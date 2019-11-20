@@ -15,6 +15,20 @@ objects:
     labels:
       provider: codeready-toolchain
     name: ${USERNAME}-stage
+- apiVersion: v1
+  kind: RoleBinding
+  metadata:
+    labels:
+      provider: codeready-toolchain
+    name: user-edit
+    namespace: ${USERNAME}-stage
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: edit
+  subjects:
+  - kind: User
+    name: ${USERNAME}
 parameters:
 - name: USERNAME
   required: true
