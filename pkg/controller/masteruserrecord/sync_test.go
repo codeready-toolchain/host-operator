@@ -87,8 +87,10 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 		uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
 
 	mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{{
-		SyncIndex:         "111aaa",
-		TargetCluster:     test.MemberClusterName,
+		SyncIndex: "111aaa",
+		Cluster: toolchainv1alpha1.Cluster{
+			Name: test.MemberClusterName,
+		},
 		UserAccountStatus: userAccount.Status,
 	}}
 
@@ -110,8 +112,10 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		uatest.StatusCondition(toBeNotReady(provisioningReason, "")), uatest.ResourceVersion("123abc"))
 
 	mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{{
-		SyncIndex:         "111aaa",
-		TargetCluster:     test.MemberClusterName,
+		SyncIndex: "111aaa",
+		Cluster: toolchainv1alpha1.Cluster{
+			Name: test.MemberClusterName,
+		},
 		UserAccountStatus: userAccount.Status,
 	}}
 
@@ -187,7 +191,9 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		t.Run("when the UserAccount was added", func(t *testing.T) {
 			//given
 			additionalUserAcc := toolchainv1alpha1.UserAccountStatusEmbedded{
-				TargetCluster: "some-other",
+				Cluster: toolchainv1alpha1.Cluster{
+					Name: "some-other",
+				},
 			}
 			provisionedMur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{additionalUserAcc}
 
@@ -204,8 +210,10 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		t.Run("when the UserAccount was modified", func(t *testing.T) {
 			//given
 			toBeModified := toolchainv1alpha1.UserAccountStatusEmbedded{
-				TargetCluster: test.MemberClusterName,
-				SyncIndex:     "somethingCrazy",
+				Cluster: toolchainv1alpha1.Cluster{
+					Name: test.MemberClusterName,
+				},
+				SyncIndex: "somethingCrazy",
 			}
 			provisionedMur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{toBeModified}
 

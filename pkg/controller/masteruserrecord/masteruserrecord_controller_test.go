@@ -236,7 +236,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		provisionedMur := murtest.NewMasterUserRecord("john",
 			murtest.StatusCondition(updatingCond))
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(provisionedMur,
-			uatest.StatusCondition(toBeNotReady("somethingFailed", ""))))
+			uatest.StatusCondition(toBeNotReady("somethingFailed", ""))), consoleRoute())
 
 		hostClient := test.NewFakeClient(t, provisionedMur)
 		// mock only once
@@ -351,9 +351,9 @@ func TestModifyUserAccounts(t *testing.T) {
 	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"), murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
 	murtest.ModifyUaInMur(mur, "member2-cluster", murtest.NsLimit("admin"), murtest.TierName("basic"))
 
-	memberClient := test.NewFakeClient(t, userAccount)
-	memberClient2 := test.NewFakeClient(t, userAccount2)
-	memberClient3 := test.NewFakeClient(t, userAccount3)
+	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
+	memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
+	memberClient3 := test.NewFakeClient(t, userAccount3, consoleRoute())
 	hostClient := test.NewFakeClient(t, mur)
 
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
@@ -395,22 +395,26 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 	userAccount2 := uatest.NewUserAccountFromMur(mur,
 		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
 	mur.Status.UserAccounts = append(mur.Status.UserAccounts, toolchainv1alpha1.UserAccountStatusEmbedded{
-		SyncIndex:         "111aaa",
-		TargetCluster:     "member2-cluster",
+		SyncIndex: "111aaa",
+		Cluster: toolchainv1alpha1.Cluster{
+			Name: "member2-cluster",
+		},
 		UserAccountStatus: userAccount.Status,
 	})
 
 	userAccount3 := uatest.NewUserAccountFromMur(mur,
 		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
 	mur.Status.UserAccounts = append(mur.Status.UserAccounts, toolchainv1alpha1.UserAccountStatusEmbedded{
-		SyncIndex:         "123abc",
-		TargetCluster:     "member3-cluster",
+		SyncIndex: "123abc",
+		Cluster: toolchainv1alpha1.Cluster{
+			Name: "member3-cluster",
+		},
 		UserAccountStatus: userAccount.Status,
 	})
 
-	memberClient := test.NewFakeClient(t, userAccount)
-	memberClient2 := test.NewFakeClient(t, userAccount2)
-	memberClient3 := test.NewFakeClient(t, userAccount3)
+	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
+	memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
+	memberClient3 := test.NewFakeClient(t, userAccount3, consoleRoute())
 
 	hostClient := test.NewFakeClient(t, mur)
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
