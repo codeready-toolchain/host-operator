@@ -696,6 +696,12 @@ data:
                 - create
                 - list
                 - watch
+              - apiGroups:
+                - template.openshift.io
+                resources:
+                - brokertemplateinstances
+                verbs:
+                - list
               serviceAccountName: host-operator
             deployments:
             - name: host-operator
@@ -771,12 +777,6 @@ data:
                 - deployments/finalizers
                 verbs:
                 - update
-              - apiGroups:
-                - template.openshift.io
-                resources:
-                - processedtemplates
-                verbs:
-                - list
               - apiGroups:
                 - monitoring.coreos.com
                 resources:
