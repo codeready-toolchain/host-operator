@@ -15,18 +15,6 @@ objects:
     labels:
       provider: codeready-toolchain
     name: ${USERNAME}-dev
-- apiVersion: v1
-  kind: RoleBinding
-  metadata:
-    labels:
-      provider: codeready-toolchain
-    name: code-edit
-    namespace: ${USERNAME}-dev
-  roleRef:
-    name: edit
-  subjects:
-  - kind: User
-    name: ${USERNAME}
 parameters:
 - name: USERNAME
   required: true
