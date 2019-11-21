@@ -3,16 +3,17 @@ package nstemplatetiers
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 	texttemplate "text/template"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
-	"github.com/pkg/errors"
 
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	templatev1 "github.com/openshift/api/template/v1"
-	uuid "github.com/satori/go.uuid"
+	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -160,6 +161,19 @@ func TestNewNSTemplateTier(t *testing.T) {
 							_, _, err = decoder.Decode(asset, nil, tmplObj)
 							require.NoError(t, err)
 							assert.Equal(t, *tmplObj, ns.Template)
+
+							// Assert expected objects in the template
+							// Each template should have one Namespace and one RoleBinding object
+							require.Len(t, ns.Template.Objects, 2)
+							rbFound := false
+							for _, object := range ns.Template.Objects {
+								if strings.Contains(string(object.Raw), `"kind":"RoleBinding","metadata":{"labels":{"provider":"codeready-toolchain"},"name":"user-edit"`) {
+									rbFound = true
+									break
+								}
+							}
+							assert.True(t, rbFound, "the user-edit RoleBinding wasn't found in the namespace of the type", "ns-type", nsType)
+
 							break
 						}
 					}

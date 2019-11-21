@@ -44,12 +44,6 @@ rules:
   verbs:
   - "update"
 - apiGroups:
-  - template.openshift.io
-  resources:
-  - processedtemplates
-  verbs:
-  - "list"
-- apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors

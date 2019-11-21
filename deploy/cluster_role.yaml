@@ -21,3 +21,9 @@ rules:
   - "create"
   - "list"
   - "watch"
+- apiGroups:
+  - template.openshift.io
+  resources:
+  - brokertemplateinstances
+  verbs:
+  - "list"
