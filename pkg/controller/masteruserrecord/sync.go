@@ -106,6 +106,7 @@ func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountSt
 					s.log.Error(err, "OpenShit 3.x web console unreachable", "url", consoleURL)
 					return status, errors.Wrapf(err, "unable to get web console route for cluster %s", s.memberCluster.Name)
 				}
+				s.log.Info("OpenShit 3.x web console URL used", "url", consoleURL)
 				status.Cluster.ConsoleURL = consoleURL
 				return status, nil
 			}
