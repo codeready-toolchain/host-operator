@@ -55,7 +55,8 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileMasterUserRecord{
 		client:                mgr.GetClient(),
 		scheme:                mgr.GetScheme(),
-		retrieveMemberCluster: cluster.GetFedCluster}
+		retrieveMemberCluster: cluster.GetFedCluster,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -182,9 +183,10 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 	sync := Synchronizer{
 		record:            record,
 		hostClient:        r.client,
-		memberClient:      memberCluster.Client,
+		memberCluster:     memberCluster,
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: recAccount,
+		log:               log,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
 		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(unableToSynchronizeUserAccountSpecReason), err,

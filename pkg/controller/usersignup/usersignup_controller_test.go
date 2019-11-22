@@ -18,7 +18,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/h2non/gock.v1"
+	gock "gopkg.in/h2non/gock.v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -1004,12 +1004,12 @@ func createMemberCluster(client client.Client) {
 
 	kubeFedCluster := newKubeFedCluster("east", "secret", status, labels(cluster.Member, "", nameMember))
 
-	service := cluster.KubeFedClusterService{Log: logf.Log, Client: client}
+	service := cluster.NewKubeFedClusterService(client, logf.Log, operatorNamespace)
 	service.AddKubeFedCluster(kubeFedCluster)
 }
 
 func clearMemberClusters(client client.Client) {
-	service := cluster.KubeFedClusterService{Log: logf.Log, Client: client}
+	service := cluster.NewKubeFedClusterService(client, logf.Log, operatorNamespace)
 	clusters := cluster.GetMemberClusters()
 
 	for _, cluster := range clusters {
