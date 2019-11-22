@@ -71,8 +71,8 @@ github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1/go.mod h1:/iP1
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/codeready-toolchain/api v0.0.0-20191115062940-693a0063cf16 h1:ZNcDBuHef21y96zaiPKOlq0SW6GT+cxl9I0U/zcKmgc=
 github.com/codeready-toolchain/api v0.0.0-20191115062940-693a0063cf16/go.mod h1:K2iSNSOwpQf+Wo3LdmrGaPlha2BLwuywwWrnbuiy8Pg=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20191120161215-6904ad4e5c84 h1:qSPPgOhRjFYKKjTHKxA22J4tevZ68hdvNS4p7E/bzVw=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20191120161215-6904ad4e5c84/go.mod h1:Hu7D45LXLGOkZF0Z6A34eDGtti6O1Rc2Ejxn8c0rHOA=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20191121080604-19eb69496fd9 h1:NOwojCb0JGVaWFzkhd/R1h9c3N5Hacq5B4hn52w5QPQ=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20191121080604-19eb69496fd9/go.mod h1:Hu7D45LXLGOkZF0Z6A34eDGtti6O1Rc2Ejxn8c0rHOA=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.3/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.9+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
