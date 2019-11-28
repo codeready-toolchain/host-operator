@@ -5,6 +5,12 @@ metadata:
   name: registrationservices.toolchain.dev.openshift.com
 spec:
   additionalPrinterColumns:
+  - JSONPath: .spec.image
+    name: Image
+    type: string
+  - JSONPath: .spec.environment
+    name: Environment
+    type: string
   - JSONPath: .status.conditions[?(@.type=="Ready")].status
     name: Ready
     type: string
@@ -55,6 +61,10 @@ spec:
                 publicKeysUrl:
                   description: The PublicKeysUrl identifies the public keys location
                   type: string
+              required:
+              - config
+              - libraryUrl
+              - publicKeysUrl
               type: object
             environment:
               description: The environment identifies which mode the registration
