@@ -435,11 +435,20 @@ data:
         creationTimestamp: null
         name: registrationservices.toolchain.dev.openshift.com
       spec:
+        additionalPrinterColumns:
+        - JSONPath: .status.conditions[?(@.type=="Ready")].status
+          name: Ready
+          type: string
+        - JSONPath: .status.conditions[?(@.type=="Ready")].reason
+          name: Reason
+          type: string
         group: toolchain.dev.openshift.com
         names:
           kind: RegistrationService
           listKind: RegistrationServiceList
           plural: registrationservices
+          shortNames:
+          - rs
           singular: registrationservice
         scope: Namespaced
         subresources:
@@ -482,22 +491,23 @@ data:
                     description: The environment identifies which mode the registration
                       service should be running in - prod, stage, e2e-tests, dev, etc.
                     type: string
-                  replicas:
-                    description: The number of replicas of the deployed registration service
-                    type: integer
-                  version:
+                  image:
                     description: The image identifies which image of the registration service
                       should be used for a deployment
                     type: string
+                  replicas:
+                    description: The number of replicas of the deployed registration service
+                    type: integer
                 required:
-                - version
+                - image
                 type: object
               status:
                 description: RegistrationServiceStatus defines the observed state of RegistrationService
                 properties:
                   conditions:
                     description: 'Conditions is an array of current Registration Service
-                      deployment conditions Supported condition types: Deploying, and Deployed'
+                      deployment conditions Supported condition reasons: Deploying, and
+                      Deployed'
                     items:
                       properties:
                         lastTransitionTime:
@@ -670,6 +680,35 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "RegistrationService",
+                "metadata": {
+                  "labels": {
+                    "provider": "codeready-toolchain"
+                  },
+                  "name": "reg-service",
+                  "namespace": "toolchain-host-operator"
+                },
+                "spec": {
+                  "environment": "dev",
+                  "image": "quay.io/codeready-toolchain/registration-service:1574697457",
+                  "replicas": 4
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "UserSignup",
+                "metadata": {
+                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                },
+                "spec": {
+                  "approved": true,
+                  "compliantUsername": "johnsmith-at-redhat-com",
+                  "targetCluster": "east-2a",
+                  "username": "johnsmith@redhat.com"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "MasterUserRecord",
                 "metadata": {
                   "name": "johnsmith"
@@ -738,35 +777,6 @@ data:
                       "type": "default"
                     }
                   ]
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "RegistrationService",
-                "metadata": {
-                  "labels": {
-                    "provider": "codeready-toolchain"
-                  },
-                  "name": "reg-service",
-                  "namespace": "toolchain-host-operator"
-                },
-                "spec": {
-                  "environment": "dev",
-                  "image": "quay.io/codeready-toolchain/registration-service:1574697457",
-                  "replicas": 4
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "UserSignup",
-                "metadata": {
-                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                },
-                "spec": {
-                  "approved": true,
-                  "compliantUsername": "johnsmith-at-redhat-com",
-                  "targetCluster": "east-2a",
-                  "username": "johnsmith@redhat.com"
                 }
               }
             ]

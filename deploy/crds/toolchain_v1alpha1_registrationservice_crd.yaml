@@ -4,11 +4,20 @@ metadata:
   creationTimestamp: null
   name: registrationservices.toolchain.dev.openshift.com
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.conditions[?(@.type=="Ready")].status
+    name: Ready
+    type: string
+  - JSONPath: .status.conditions[?(@.type=="Ready")].reason
+    name: Reason
+    type: string
   group: toolchain.dev.openshift.com
   names:
     kind: RegistrationService
     listKind: RegistrationServiceList
     plural: registrationservices
+    shortNames:
+    - rs
     singular: registrationservice
   scope: Namespaced
   subresources:
@@ -51,22 +60,23 @@ spec:
               description: The environment identifies which mode the registration
                 service should be running in - prod, stage, e2e-tests, dev, etc.
               type: string
-            replicas:
-              description: The number of replicas of the deployed registration service
-              type: integer
-            version:
+            image:
               description: The image identifies which image of the registration service
                 should be used for a deployment
               type: string
+            replicas:
+              description: The number of replicas of the deployed registration service
+              type: integer
           required:
-          - version
+          - image
           type: object
         status:
           description: RegistrationServiceStatus defines the observed state of RegistrationService
           properties:
             conditions:
               description: 'Conditions is an array of current Registration Service
-                deployment conditions Supported condition types: Deploying, and Deployed'
+                deployment conditions Supported condition reasons: Deploying, and
+                Deployed'
               items:
                 properties:
                   lastTransitionTime:
