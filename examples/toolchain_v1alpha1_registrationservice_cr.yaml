@@ -1,0 +1,11 @@
+apiVersion: toolchain.dev.openshift.com/v1alpha1
+kind: RegistrationService
+metadata:
+  labels:
+    provider: codeready-toolchain
+  name: reg-service
+  namespace: toolchain-host-operator
+spec:
+  image: quay.io/codeready-toolchain/registration-service:1574697457
+  environment: dev
+  replicas: 4
