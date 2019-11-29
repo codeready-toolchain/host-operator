@@ -2,6 +2,7 @@ package registrationservice
 
 import (
 	"context"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
