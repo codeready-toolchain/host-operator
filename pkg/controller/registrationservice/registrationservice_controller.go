@@ -42,7 +42,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource RegistrationService
-	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.RegistrationService{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.RegistrationService{}}, &handler.EnqueueRequestForObject{}, predicate.GenerationChangedPredicate{})
 	if err != nil {
 		return err
 	}
