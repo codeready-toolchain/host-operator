@@ -433,6 +433,132 @@ data:
       kind: CustomResourceDefinition
       metadata:
         creationTimestamp: null
+        name: registrationservices.toolchain.dev.openshift.com
+      spec:
+        additionalPrinterColumns:
+        - JSONPath: .spec.image
+          name: Image
+          type: string
+        - JSONPath: .spec.environment
+          name: Environment
+          type: string
+        - JSONPath: .status.conditions[?(@.type=="Ready")].status
+          name: Ready
+          type: string
+        - JSONPath: .status.conditions[?(@.type=="Ready")].reason
+          name: Reason
+          type: string
+        group: toolchain.dev.openshift.com
+        names:
+          kind: RegistrationService
+          listKind: RegistrationServiceList
+          plural: registrationservices
+          shortNames:
+          - rs
+          singular: registrationservice
+        scope: Namespaced
+        subresources:
+          status: {}
+        validation:
+          openAPIV3Schema:
+            description: RegistrationService is the Schema for the registrationservices
+              API
+            properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource this
+                  object represents. Servers may infer this from the endpoint the client
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                type: string
+              metadata:
+                type: object
+              spec:
+                description: RegistrationServiceSpec defines the desired state of RegistrationService
+                properties:
+                  authClient:
+                    description: The AuthClient contains all necessary information about
+                      the auth client
+                    properties:
+                      config:
+                        description: The Config contains the auth config
+                        type: string
+                      libraryUrl:
+                        description: The LibraryUrl identifies the auth library location
+                        type: string
+                      publicKeysUrl:
+                        description: The PublicKeysUrl identifies the public keys location
+                        type: string
+                    required:
+                    - config
+                    - libraryUrl
+                    - publicKeysUrl
+                    type: object
+                  environment:
+                    description: The environment identifies which mode the registration
+                      service should be running in - prod, stage, e2e-tests, dev, etc.
+                    type: string
+                  image:
+                    description: The image identifies which image of the registration service
+                      should be used for a deployment
+                    type: string
+                  replicas:
+                    description: The number of replicas of the deployed registration service
+                    type: integer
+                required:
+                - image
+                type: object
+              status:
+                description: RegistrationServiceStatus defines the observed state of RegistrationService
+                properties:
+                  conditions:
+                    description: 'Conditions is an array of current Registration Service
+                      deployment conditions Supported condition reasons: Deploying, and
+                      Deployed'
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          description: Last time the condition transit from one status to
+                            another.
+                          format: date-time
+                          type: string
+                        message:
+                          description: Human readable message indicating details about last
+                            transition.
+                          type: string
+                        reason:
+                          description: (brief) reason for the condition's last transition.
+                          type: string
+                        status:
+                          description: Status of the condition, one of True, False, Unknown.
+                          type: string
+                        type:
+                          description: Type of condition
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    type: array
+                type: object
+        version: v1alpha1
+        versions:
+        - name: v1alpha1
+          served: true
+          storage: true
+      status:
+        acceptedNames:
+          kind: ""
+          plural: ""
+        conditions: []
+        storedVersions: []
+    - apiVersion: apiextensions.k8s.io/v1beta1
+      kind: CustomResourceDefinition
+      metadata:
+        creationTimestamp: null
         name: usersignups.toolchain.dev.openshift.com
       spec:
         additionalPrinterColumns:
@@ -564,50 +690,6 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "NSTemplateTier",
-                "metadata": {
-                  "name": "basic"
-                },
-                "spec": {
-                  "namespaces": [
-                    {
-                      "revision": "abcdef",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"ide-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-ide\"}}}\n",
-                      "type": "ide"
-                    },
-                    {
-                      "revision": "1d2f3q",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"cicd-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-cicd\"}}}\n",
-                      "type": "cicd"
-                    },
-                    {
-                      "revision": "a34r57",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"stage-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-stage\"}}}\n",
-                      "type": "stage"
-                    },
-                    {
-                      "revision": "ra24qw",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"default-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME\"}}}\n",
-                      "type": "default"
-                    }
-                  ]
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "UserSignup",
-                "metadata": {
-                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                },
-                "spec": {
-                  "approved": true,
-                  "compliantUsername": "johnsmith-at-redhat-com",
-                  "targetCluster": "east-2a",
-                  "username": "johnsmith@redhat.com"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "MasterUserRecord",
                 "metadata": {
                   "name": "johnsmith"
@@ -646,6 +728,66 @@ data:
                   ],
                   "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
                 }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "NSTemplateTier",
+                "metadata": {
+                  "name": "basic"
+                },
+                "spec": {
+                  "namespaces": [
+                    {
+                      "revision": "abcdef",
+                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"ide-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-ide\"}}}\n",
+                      "type": "ide"
+                    },
+                    {
+                      "revision": "1d2f3q",
+                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"cicd-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-cicd\"}}}\n",
+                      "type": "cicd"
+                    },
+                    {
+                      "revision": "a34r57",
+                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"stage-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-stage\"}}}\n",
+                      "type": "stage"
+                    },
+                    {
+                      "revision": "ra24qw",
+                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"default-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME\"}}}\n",
+                      "type": "default"
+                    }
+                  ]
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "RegistrationService",
+                "metadata": {
+                  "labels": {
+                    "provider": "codeready-toolchain"
+                  },
+                  "name": "reg-service",
+                  "namespace": "toolchain-host-operator"
+                },
+                "spec": {
+                  "environment": "dev",
+                  "image": "quay.io/codeready-toolchain/registration-service:1574697457",
+                  "replicas": 4
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "UserSignup",
+                "metadata": {
+                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                },
+                "spec": {
+                  "approved": true,
+                  "compliantUsername": "johnsmith-at-redhat-com",
+                  "targetCluster": "east-2a",
+                  "username": "johnsmith@redhat.com"
+                }
               }
             ]
           capabilities: Basic Install
@@ -666,6 +808,11 @@ data:
             displayName: NSTemplateTier
             kind: NSTemplateTier
             name: nstemplatetiers.toolchain.dev.openshift.com
+            version: v1alpha1
+          - description: RegistrationService configures registration service deployment
+            displayName: RegistrationService
+            kind: RegistrationService
+            name: registrationservices.toolchain.dev.openshift.com
             version: v1alpha1
           - description: UserSignup registres a user in the CodeReady Toolchain SaaS system
             displayName: UserSignup
