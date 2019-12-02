@@ -24,6 +24,7 @@ vendor:
 
 NSTEMPLATES_DIR=deploy/templates/nstemplatetiers
 NSTEMPLATES_TEST_DIR=test/templates/nstemplatetiers
+REGISTRATION_SERVICE_DIR=deploy/registration-service
 
 .PHONY: generate
 generate: generate-metadata generate-assets 
@@ -35,6 +36,8 @@ generate-assets:
 	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nocompress -prefix $(NSTEMPLATES_DIR) $(NSTEMPLATES_DIR)
 	@echo "generating test templates bindata..."
 	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers_test -o ./test/templates/nstemplatetiers/nstemplatetier_assets.go -nocompress -prefix $(NSTEMPLATES_TEST_DIR) $(NSTEMPLATES_TEST_DIR)
+	@echo "generating registration service deployment data..."
+	@$(GOPATH)/bin/go-bindata -pkg registrationservice -o ./pkg/controller/registrationservice/deployment_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
 
 .PHONY: generate-metadata
 generate-metadata: clean-metadata
