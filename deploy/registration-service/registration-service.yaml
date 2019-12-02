@@ -10,6 +10,41 @@ objects:
         provider: codeready-toolchain
       name: registration-service
       namespace: ${NAMESPACE}
+  - kind: Role
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      labels:
+        provider: codeready-toolchain
+      name: registration-service
+      namespace: ${NAMESPACE}
+    rules:
+    - apiGroups:
+      - toolchain.dev.openshift.com
+      resources:
+      - usersignups
+      verbs:
+      - create
+      - get
+    - apiGroups:
+      - toolchain.dev.openshift.com
+      resources:
+      - masteruserrecords
+      verbs:
+      - get
+  - kind: RoleBinding
+    apiVersion: rbac.authorization.k8s.io/v1
+    metadata:
+      labels:
+        provider: codeready-toolchain
+      name: registration-service
+      namespace: ${NAMESPACE}
+    subjects:
+    - kind: ServiceAccount
+      name: registration-service
+    roleRef:
+      kind: Role
+      name: registration-service
+      apiGroup: rbac.authorization.k8s.io
   - kind: Deployment
     apiVersion: apps/v1
     metadata:
