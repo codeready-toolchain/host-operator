@@ -8,9 +8,8 @@ bin/
 tmp/
 
 # generated files
-pkg/templates/nstemplatetiers/nstemplatetier_assets.go
-test/templates/nstemplatetiers/nstemplatetier_assets.go
 deploy/templates/nstemplatetiers/metadata.yaml
+*_assets.go
 
 # Created by https://www.gitignore.io/api/go,vim,git,macos,linux,emacs,windows,eclipse,intellij+all,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=go,vim,git,macos,linux,emacs,windows,eclipse,intellij+all,visualstudiocode
