@@ -46,4 +46,9 @@ replace (
 	github.com/coreos/prometheus-operator => github.com/coreos/prometheus-operator v0.29.0
 )
 
+replace (
+	github.com/codeready-toolchain/api => github.com/alexeykazakov/api v0.0.0-20191203022256-57871e5e6c39
+	github.com/codeready-toolchain/toolchain-common => github.com/alexeykazakov/toolchain-common v0.0.0-20191203023806-0035b5057ff0
+)
+
 go 1.13
