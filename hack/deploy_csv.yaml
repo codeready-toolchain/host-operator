@@ -240,11 +240,8 @@ data:
                             some MasterUserRecord <-> UserAccount synchronization for this
                             specific UserAccount in the specific member cluster
                           type: string
-                        targetCluster:
-                          description: Deprecated! Use Cluster instead The cluster in which
-                            the user exists
-                          type: string
                       required:
+                      - cluster
                       - syncIndex
                       type: object
                     type: array

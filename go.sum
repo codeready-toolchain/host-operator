@@ -69,12 +69,10 @@ github.com/bradfitz/go-smtpd v0.0.0-20170404230938-deb6d6237625/go.mod h1:HYsPBT
 github.com/census-instrumentation/opencensus-proto v0.2.0/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1/go.mod h1:/iP1qXHoty45bqomnu2LM+VVyAEdWN+vtSHGlQgyxbw=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/codeready-toolchain/api v0.0.0-20191115062940-693a0063cf16 h1:ZNcDBuHef21y96zaiPKOlq0SW6GT+cxl9I0U/zcKmgc=
-github.com/codeready-toolchain/api v0.0.0-20191115062940-693a0063cf16/go.mod h1:K2iSNSOwpQf+Wo3LdmrGaPlha2BLwuywwWrnbuiy8Pg=
-github.com/codeready-toolchain/api v0.0.0-20191129104300-b4af5bf7d40a h1:+uU6k4bh3uoreNrQFf35G/5y9B6+5G3M7pSDnhUlGaA=
-github.com/codeready-toolchain/api v0.0.0-20191129104300-b4af5bf7d40a/go.mod h1:K2iSNSOwpQf+Wo3LdmrGaPlha2BLwuywwWrnbuiy8Pg=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20191121080604-19eb69496fd9 h1:NOwojCb0JGVaWFzkhd/R1h9c3N5Hacq5B4hn52w5QPQ=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20191121080604-19eb69496fd9/go.mod h1:Hu7D45LXLGOkZF0Z6A34eDGtti6O1Rc2Ejxn8c0rHOA=
+github.com/codeready-toolchain/api v0.0.0-20191203182149-f994640853b0 h1:APb57ts/dN2/vJb+9Fjc5I3QpOx/OBWzObGKj6zdPPU=
+github.com/codeready-toolchain/api v0.0.0-20191203182149-f994640853b0/go.mod h1:K2iSNSOwpQf+Wo3LdmrGaPlha2BLwuywwWrnbuiy8Pg=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20191203230412-406b2c86bd6c h1:0ifmV7vF71GSlT3AribGdMKX91Zo5iTFGDrJt3iXTt8=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20191203230412-406b2c86bd6c/go.mod h1:c5EL9bEskD3ViC/ma1OhyIWNdGQMu+0K2nhGs+vfb9M=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.3/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.9+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -355,6 +353,7 @@ github.com/onsi/gomega v1.7.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1Cpa
 github.com/opencontainers/go-digest v1.0.0-rc1/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQYUd2OVphdqWwCJHrFt2s=
 github.com/openshift/api v3.9.1-0.20190730142803-0922aa5a655b+incompatible h1:sMBjLRdoavwnc2khLpIOmBkMPDGRB4sIbhOb8Cx2Uh0=
 github.com/openshift/api v3.9.1-0.20190730142803-0922aa5a655b+incompatible/go.mod h1:dh9o4Fs58gpFXGSYfnVxGR9PnV53I8TW84pQaJDdGiY=
+github.com/openshift/library-go v0.0.0-20191121124438-7c776f7cc17a/go.mod h1:NBttNjZpWwup/nthuLbPAPSYC8Qyo+BBK5bCtFoyYjo=
 github.com/openshift/origin v0.0.0-20160503220234-8f127d736703/go.mod h1:0Rox5r9C8aQn6j1oAOQ0c1uC86mYbUFObzjBRvUKHII=
 github.com/openzipkin/zipkin-go v0.1.1/go.mod h1:NtoC/o8u3JlF1lSlyPNswIbeQH9bJTmOf0Erfk+hxe8=
 github.com/openzipkin/zipkin-go v0.1.3/go.mod h1:NtoC/o8u3JlF1lSlyPNswIbeQH9bJTmOf0Erfk+hxe8=
