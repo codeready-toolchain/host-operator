@@ -3,18 +3,18 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: codeready-toolchain-saas-toolchain-host-operator
+  name: source-toolchain-host-operator
   namespace: openshift-marketplace
 spec:
-  configMap: codeready-toolchain-saas-toolchain-host-operator
-  displayName: Codeready Toolchain Saas Toolchain Host Operator
+  configMap: cm-toolchain-host-operator
+  displayName: Toolchain Host Operator
   publisher: Red Hat
   sourceType: internal
 ---
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: codeready-toolchain-saas-toolchain-host-operator
+  name: cm-toolchain-host-operator
   namespace: openshift-marketplace
 data:
   customResourceDefinitions: |-
@@ -687,6 +687,19 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "UserSignup",
+                "metadata": {
+                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                },
+                "spec": {
+                  "approved": true,
+                  "compliantUsername": "johnsmith-at-redhat-com",
+                  "targetCluster": "east-2a",
+                  "username": "johnsmith@redhat.com"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "MasterUserRecord",
                 "metadata": {
                   "name": "johnsmith"
@@ -771,19 +784,6 @@ data:
                   "environment": "dev",
                   "image": "quay.io/codeready-toolchain/registration-service:1574697457",
                   "replicas": 4
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "UserSignup",
-                "metadata": {
-                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                },
-                "spec": {
-                  "approved": true,
-                  "compliantUsername": "johnsmith-at-redhat-com",
-                  "targetCluster": "east-2a",
-                  "username": "johnsmith@redhat.com"
                 }
               }
             ]
