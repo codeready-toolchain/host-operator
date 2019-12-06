@@ -34,6 +34,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 	reqService := newRegistrationService("host-operator", imageDef, "dev", 1)
 	p := template.NewProcessor(&test.FakeClient{}, s)
 	objs, err := p.Process(tmpl, getVars(reqService))
+	require.NoError(t, err)
 
 	t.Run("reconcile first object and add rolebinding", func(t *testing.T) {
 		// given
@@ -214,7 +215,7 @@ func assertObjectDoesNotExist(t *testing.T, cl client.Client, obj runtime.Object
 }
 
 func prepareServiceAndRequest(t *testing.T, s *runtime.Scheme, decoder runtime.Decoder, initObjs ...runtime.Object) (*ReconcileRegistrationService, reconcile.Request) {
-	tmpl := getDecodedTemplate(t, s, decoder)
+	tmpl := getDecodedTemplate(t, decoder)
 
 	service := &ReconcileRegistrationService{
 		client:             test.NewFakeClient(t, initObjs...),
@@ -224,7 +225,7 @@ func prepareServiceAndRequest(t *testing.T, s *runtime.Scheme, decoder runtime.D
 	return service, reconcile.Request{NamespacedName: test.NamespacedName("host-operator", "registration-service")}
 }
 
-func getDecodedTemplate(t *testing.T, s *runtime.Scheme, decoder runtime.Decoder) *tmplv1.Template {
+func getDecodedTemplate(t *testing.T, decoder runtime.Decoder) *tmplv1.Template {
 	testTemplate := test.CreateTemplate(test.WithObjects(test.ServiceAccount, configMap), test.WithParams(test.NamespaceParam, registrationServiceParam))
 	tmpl, err := test.DecodeTemplate(decoder, testTemplate)
 	require.NoError(t, err)
