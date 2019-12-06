@@ -13,6 +13,7 @@ rules:
   - events
   - configmaps
   - secrets
+  - serviceaccounts
   verbs:
   - "*"
 - apiGroups:
@@ -26,6 +27,12 @@ rules:
   verbs:
   - get
   - list
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  verbs:
+  - "*"
 - apiGroups:
   - apps
   resources:
@@ -66,5 +73,13 @@ rules:
   - toolchain.dev.openshift.com
   resources:
   - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - rbac.authorization.k8s.io
+  - authorization.openshift.io
+  resources:
+  - roles
+  - rolebindings
   verbs:
   - '*'
