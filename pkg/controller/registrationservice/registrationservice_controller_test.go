@@ -30,7 +30,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 	codecFactory := serializer.NewCodecFactory(s)
 	decoder := codecFactory.UniversalDeserializer()
 
-	tmpl := getDecodedTemplate(t, s, decoder)
+	tmpl := getDecodedTemplate(t, decoder)
 	reqService := newRegistrationService("host-operator", imageDef, "dev", 1)
 	p := template.NewProcessor(&test.FakeClient{}, s)
 	objs, err := p.Process(tmpl, getVars(reqService))
