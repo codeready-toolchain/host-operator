@@ -565,7 +565,6 @@ data:
           type: string
         - JSONPath: .spec.username
           name: Username
-          priority: 1
           type: string
         - JSONPath: .spec.targetCluster
           name: TargetCluster
@@ -587,6 +586,9 @@ data:
           type: string
         - JSONPath: .status.compliantUsername
           name: CompliantUsername
+          type: string
+        - JSONPath: .metadata.annotations.toolchain\.dev\.openshift\.com/user-email
+          name: Email
           type: string
         group: toolchain.dev.openshift.com
         names:
