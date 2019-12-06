@@ -31,3 +31,7 @@ spec:
               fieldPath: metadata.name
         - name: OPERATOR_NAME
           value: "host-operator"
+        - name: REGISTRATION_SERVICE_IMAGE
+          value: REPLACE_REGISTRATION_SERVICE_IMAGE
+        - name: REGISTRATION_SERVICE_ENVIRONMENT
+          value: REPLACE_REGISTRATION_SERVICE_ENVIRONMENT
