@@ -4,7 +4,7 @@ require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20191206004733-862cefb68396
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20191205223917-60807877b9e7
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20191206100349-1d3b3ba54c59
 	github.com/emicklei/go-restful v2.10.0+incompatible // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
@@ -28,7 +28,6 @@ require (
 	github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20190926114937-fa1a29108794 // indirect
 	golang.org/x/net v0.0.0-20190926025831-c00fd9afed17 // indirect
@@ -45,8 +44,6 @@ require (
 	sigs.k8s.io/kubefed v0.1.0-rc6.0.20191023070212-24d45e9f4f15
 	sigs.k8s.io/testing_frameworks v0.1.2 // indirect
 )
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20191206084157-d3a1765aa474
 
 // Pinned to kubernetes-1.14.1
 replace (
