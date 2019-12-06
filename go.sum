@@ -318,6 +318,8 @@ github.com/markbates/inflect v1.0.4/go.mod h1:1fR9+pO2KHEO9ZRtto13gDwwZaAKstQzfe
 github.com/martinlindhe/base36 v0.0.0-20180729042928-5cda0030da17/go.mod h1:+AtEs8xrBpCeYgSLoY/aJ6Wf37jtBuR0s35750M27+8=
 github.com/matousjobanek/toolchain-common v0.0.0-20191206081056-4f1ca5da4c86 h1:QwkB58SeMTgguLhmYpEECXYCXCKgf3TbGSRbrvKSp00=
 github.com/matousjobanek/toolchain-common v0.0.0-20191206081056-4f1ca5da4c86/go.mod h1:VJXrympoGNFDX/mounuiUDUPMx+QwYztwVo+41pvHYs=
+github.com/matousjobanek/toolchain-common v0.0.0-20191206084157-d3a1765aa474 h1:C+VHLLF+7smx9EW0djurBwo0wV+9tKcS7iExxgp7mbU=
+github.com/matousjobanek/toolchain-common v0.0.0-20191206084157-d3a1765aa474/go.mod h1:c5EL9bEskD3ViC/ma1OhyIWNdGQMu+0K2nhGs+vfb9M=
 github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a/go.mod h1:M1qoD/MqPgTZIk0EWKB38wE28ACRfVcn+cU08jyArI0=
 github.com/mattn/go-colorable v0.1.2 h1:/bC9yWikZXAL9uJdulbSfyVNIR3n3trXl+v8+1sx8mU=
 github.com/mattn/go-colorable v0.1.2/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=

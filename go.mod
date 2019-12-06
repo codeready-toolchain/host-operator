@@ -46,7 +46,7 @@ require (
 	sigs.k8s.io/testing_frameworks v0.1.2 // indirect
 )
 
-replace github.com/codeready-toolchain/toolchain-common => ../toolchain-common
+replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20191206084157-d3a1765aa474
 
 // Pinned to kubernetes-1.14.1
 replace (
