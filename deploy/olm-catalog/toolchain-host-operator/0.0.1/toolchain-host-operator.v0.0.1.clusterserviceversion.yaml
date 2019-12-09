@@ -197,6 +197,12 @@ spec:
                   value: REPLACE_REGISTRATION_SERVICE_IMAGE
                 - name: REGISTRATION_SERVICE_ENVIRONMENT
                   value: REPLACE_REGISTRATION_SERVICE_ENVIRONMENT
+                - name: REGISTRATION_AUTH_CLIENT_LIBRARY_URL
+                  value: REPLACE_REGISTRATION_AUTH_CLIENT_LIBRARY_URL
+                - name: REGISTRATION_AUTH_CLIENT_CONFIG_RAW
+                  value: REPLACE_REGISTRATION_AUTH_CLIENT_CONFIG_RAW
+                - name: REGISTRATION_AUTH_CLIENT_PUBLIC_KEYS_URL
+                  value: REPLACE_REGISTRATION_AUTH_CLIENT_PUBLIC_KEYS_URL
                 image: REPLACE_IMAGE
                 imagePullPolicy: IfNotPresent
                 name: host-operator
