@@ -45,7 +45,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 	})
 
-	t.Run("update to RegService with image and environment values set", func(t *testing.T) {
+	t.Run("update to RegService with image, environment and auth client values set", func(t *testing.T) {
 		// given
 		cl := NewFakeClient(t)
 		regService := &v1alpha1.RegistrationService{
@@ -56,9 +56,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		processor := template.NewProcessor(cl, s)
 		_, err := processor.ApplySingle(regService, false, nil)
 		require.NoError(t, err)
-		SetEnvVarsAndRestore(t,
+		restore := SetEnvVarsAndRestore(t,
 			Env("REGISTRATION_SERVICE_IMAGE", "quay.io/rh/registration-service:v0.1"),
-			Env("REGISTRATION_SERVICE_ENVIRONMENT", "test"))
+			Env("REGISTRATION_SERVICE_ENVIRONMENT", "test"),
+			Env("REGISTRATION_SERVICE_AUTH_CLIENT_LIBRARY_URL", "url/to/library/location"),
+			Env("REGISTRATION_SERVICE_AUTH_CLIENT_CONFIG_RAW", `{"my":"cool-config"}`),
+			Env("REGISTRATION_SERVICE_AUTH_CLIENT_PUBLIC_KEYS_URL", "url/to/public/key/location"))
+		defer restore()
 
 		// when
 		err = CreateOrUpdateResources(cl, s, HostOperatorNs, config)
@@ -69,9 +73,9 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			HasImage("quay.io/rh/registration-service:v0.1").
 			HasEnvironment("test").
 			HasReplicas(0).
-			HasAuthConfig("").
-			HasAuthLibraryUrl("").
-			HasAuthPublicKeysUrl("")
+			HasAuthConfig(`{"my":"cool-config"}`).
+			HasAuthLibraryUrl("url/to/library/location").
+			HasAuthPublicKeysUrl("url/to/public/key/location")
 	})
 
 	t.Run("when creation fails then should return error", func(t *testing.T) {

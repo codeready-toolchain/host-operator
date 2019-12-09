@@ -9,13 +9,17 @@ import (
 	"github.com/spf13/viper"
 )
 
+// prefixes
 const (
 	// HostEnvPrefix will be used for host environment variable name prefixing.
 	HostEnvPrefix = "HOST"
 
 	// RegServiceEnvPrefix will be used for registration service environment variable name prefixing.
 	RegServiceEnvPrefix = "REGISTRATION_SERVICE"
+)
 
+// registration-service constants
+const (
 	// varImage specifies registration service image to be used for deployment
 	varImage = "image"
 
@@ -24,6 +28,18 @@ const (
 	// DefaultEnvironment is the default registration service environment
 	DefaultEnvironment = "prod"
 
+	// varAuthClientLibraryURL identifies the auth library location
+	varAuthClientLibraryURL = "auth_client.library_url"
+
+	// varAuthClientConfigRaw contains the auth config
+	varAuthClientConfigRaw = "auth_client.config.raw"
+
+	// varAuthClientPublicKeysURL identifies the public keys location
+	varAuthClientPublicKeysURL = "auth_client.public_keys_url"
+)
+
+// host-operator constants
+const (
 	// ToolchainConfigMapName specifies a name of a ConfigMap that keeps toolchain configuration
 	ToolchainConfigMapName = "toolchain-saas-config"
 
@@ -71,7 +87,7 @@ func New(configFilePath string) (*Registry, error) {
 			reg.SetConfigType("yaml")
 			reg.SetConfigFile(configFilePath)
 			err := reg.ReadInConfig() // Find and read the config file
-			if err != nil {           // Handle errors reading the config file.
+			if err != nil { // Handle errors reading the config file.
 				return nil, errs.Wrap(err, "failed to read config file")
 			}
 		}
@@ -99,4 +115,19 @@ func (c *Registry) GetRegServiceImage() string {
 // GetRegServiceEnvironment returns the registration service environment such as prod, stage, unit-tests, e2e-tests, dev, etc
 func (c *Registry) GetRegServiceEnvironment() string {
 	return c.regService.GetString(varEnvironment)
+}
+
+// GetAuthClientLibraryURL returns the auth library location
+func (c *Registry) GetAuthClientLibraryURL() string {
+	return c.regService.GetString(varAuthClientLibraryURL)
+}
+
+// GetAuthClientConfigAuthRaw returns the auth config config
+func (c *Registry) GetAuthClientConfigAuthRaw() string {
+	return c.regService.GetString(varAuthClientConfigRaw)
+}
+
+// GetAuthClientPublicKeysURL returns the public keys URL
+func (c *Registry) GetAuthClientPublicKeysURL() string {
+	return c.regService.GetString(varAuthClientPublicKeysURL)
 }

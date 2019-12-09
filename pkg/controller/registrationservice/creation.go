@@ -18,6 +18,11 @@ func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace 
 		Spec: v1alpha1.RegistrationServiceSpec{
 			Image:       confg.GetRegServiceImage(),
 			Environment: confg.GetRegServiceEnvironment(),
+			AuthClient: v1alpha1.AuthClient{
+				Config:        confg.GetAuthClientConfigAuthRaw(),
+				PublicKeysUrl: confg.GetAuthClientPublicKeysURL(),
+				LibraryUrl:    confg.GetAuthClientLibraryURL(),
+			},
 		}}
 	processor := template.NewProcessor(client, s)
 	_, err := processor.ApplySingle(regService, false, nil)
