@@ -14,6 +14,14 @@ spec:
   - JSONPath: .spec.userAccounts[].targetCluster
     name: Cluster
     type: string
+  - JSONPath: .spec.banned
+    name: Banned
+    priority: 1
+    type: string
+  - JSONPath: .spec.disabled
+    name: Disabled
+    priority: 1
+    type: string
   group: toolchain.dev.openshift.com
   names:
     kind: MasterUserRecord
@@ -44,6 +52,10 @@ spec:
         spec:
           description: MasterUserRecordSpec defines the desired state of MasterUserRecord
           properties:
+            banned:
+              description: If set to true then the corresponding user has been banned
+                from logging in and accessing their resources
+              type: boolean
             deprovisioned:
               description: If set to true then the corresponding UserAccount should
                 be deleted "false" is assumed by default
