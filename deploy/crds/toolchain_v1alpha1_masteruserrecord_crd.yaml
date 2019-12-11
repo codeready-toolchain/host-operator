@@ -15,6 +15,10 @@ spec:
     name: Cluster
     type: string
   - JSONPath: .spec.disabled
+    name: Banned
+    priority: 1
+    type: string
+  - JSONPath: .spec.disabled
     name: Disabled
     priority: 1
     type: string
