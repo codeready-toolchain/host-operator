@@ -167,12 +167,12 @@ func TestNewNSTemplateTier(t *testing.T) {
 							require.Len(t, ns.Template.Objects, 2)
 							rbFound := false
 							for _, object := range ns.Template.Objects {
-								if strings.Contains(string(object.Raw), `"kind":"RoleBinding","metadata":{"labels":{"provider":"codeready-toolchain"},"name":"user-edit"`) {
+								if strings.Contains(string(object.Raw), `"kind":"RoleBinding","metadata":{"labels":{"provider":"codeready-toolchain"},"name":"user-admin"`) {
 									rbFound = true
 									break
 								}
 							}
-							assert.True(t, rbFound, "the user-edit RoleBinding wasn't found in the namespace of the type", "ns-type", nsType)
+							assert.True(t, rbFound, "the user-admin RoleBinding wasn't found in the namespace of the type", "ns-type", nsType)
 
 							break
 						}
