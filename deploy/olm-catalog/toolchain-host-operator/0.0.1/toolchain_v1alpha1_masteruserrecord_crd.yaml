@@ -14,6 +14,10 @@ spec:
   - JSONPath: .spec.userAccounts[].targetCluster
     name: Cluster
     type: string
+  - JSONPath: .spec.disabled
+    name: Disabled
+    priority: 1
+    type: string
   group: toolchain.dev.openshift.com
   names:
     kind: MasterUserRecord

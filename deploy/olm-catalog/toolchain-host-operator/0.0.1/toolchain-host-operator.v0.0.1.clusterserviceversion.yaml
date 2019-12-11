@@ -6,22 +6,6 @@ metadata:
       [
         {
           "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-          "kind": "RegistrationService",
-          "metadata": {
-            "labels": {
-              "provider": "codeready-toolchain"
-            },
-            "name": "reg-service",
-            "namespace": "toolchain-host-operator"
-          },
-          "spec": {
-            "environment": "dev",
-            "image": "quay.io/codeready-toolchain/registration-service:1574697457",
-            "replicas": 4
-          }
-        },
-        {
-          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
           "kind": "UserSignup",
           "metadata": {
             "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
@@ -103,6 +87,22 @@ metadata:
                 "type": "default"
               }
             ]
+          }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "RegistrationService",
+          "metadata": {
+            "labels": {
+              "provider": "codeready-toolchain"
+            },
+            "name": "reg-service",
+            "namespace": "toolchain-host-operator"
+          },
+          "spec": {
+            "environment": "dev",
+            "image": "quay.io/codeready-toolchain/registration-service:1574697457",
+            "replicas": 4
           }
         }
       ]
