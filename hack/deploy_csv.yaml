@@ -3,18 +3,18 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: source-toolchain-host-operator
+  name: codeready-toolchain-saas-toolchain-host-operator
   namespace: openshift-marketplace
 spec:
-  configMap: cm-toolchain-host-operator
-  displayName: Toolchain Host Operator
+  configMap: codeready-toolchain-saas-toolchain-host-operator
+  displayName: Codeready Toolchain Saas Toolchain Host Operator
   publisher: Red Hat
   sourceType: internal
 ---
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: cm-toolchain-host-operator
+  name: codeready-toolchain-saas-toolchain-host-operator
   namespace: openshift-marketplace
 data:
   customResourceDefinitions: |-
@@ -64,6 +64,10 @@ data:
               spec:
                 description: MasterUserRecordSpec defines the desired state of MasterUserRecord
                 properties:
+                  banned:
+                    description: If set to true then the corresponding user has been banned
+                      from logging in and accessing their resources
+                    type: boolean
                   deprovisioned:
                     description: If set to true then the corresponding UserAccount should
                       be deleted "false" is assumed by default
@@ -565,6 +569,7 @@ data:
           type: string
         - JSONPath: .spec.username
           name: Username
+          priority: 1
           type: string
         - JSONPath: .spec.targetCluster
           name: TargetCluster
@@ -586,9 +591,6 @@ data:
           type: string
         - JSONPath: .status.compliantUsername
           name: CompliantUsername
-          type: string
-        - JSONPath: .metadata.annotations.toolchain\.dev\.openshift\.com/user-email
-          name: Email
           type: string
         group: toolchain.dev.openshift.com
         names:
