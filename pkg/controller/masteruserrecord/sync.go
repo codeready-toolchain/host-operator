@@ -22,6 +22,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	consoleNamespace = "openshift-console"
+	cheNamespace     = "toolchain-che"
+)
+
 // consoleClient to be used to test connection to a public Web Console
 var consoleClient = &http.Client{
 	Timeout: time.Duration(1 * time.Second),
@@ -90,10 +95,25 @@ func (s *Synchronizer) synchronizeStatus() error {
 // withClusterDetails returns the given user account status with additional information about
 // the target cluster such as API endpoint and Console URL if not set yet
 func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
-	if status.Cluster.Name != "" && (status.Cluster.APIEndpoint == "" || status.Cluster.ConsoleURL == "") {
-		status.Cluster.APIEndpoint = s.memberCluster.APIEndpoint
+	var err error
+	if status.Cluster.Name != "" {
+		if status.Cluster.APIEndpoint == "" {
+			status.Cluster.APIEndpoint = s.memberCluster.APIEndpoint
+		}
+		status, err = s.withConsoleURL(status)
+		if err != nil {
+			return status, err
+		}
+		status, err = s.withCheDashboardURL(status)
+	}
+	return status, err
+}
+
+// withConsoleURL returns the given user account status with Console URL set if it's not already set yet
+func (s *Synchronizer) withConsoleURL(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
+	if status.Cluster.ConsoleURL == "" {
 		route := &routev1.Route{}
-		namespacedName := types.NamespacedName{Namespace: "openshift-console", Name: "console"}
+		namespacedName := types.NamespacedName{Namespace: consoleNamespace, Name: "console"}
 		err := s.memberCluster.Client.Get(context.TODO(), namespacedName, route)
 		if err != nil {
 			s.log.Error(err, "unable to get console route")
@@ -114,6 +134,29 @@ func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountSt
 		}
 
 		status.Cluster.ConsoleURL = fmt.Sprintf("https://%s/%s", route.Spec.Host, route.Spec.Path)
+	}
+	return status, nil
+}
+
+// withClusterAPIEndpoint returns the given user account status with Che Dashboard URL set if it's not already set yet
+func (s *Synchronizer) withCheDashboardURL(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
+	if status.Cluster.CheDashboardURL == "" {
+		route := &routev1.Route{}
+		namespacedName := types.NamespacedName{Namespace: cheNamespace, Name: "console"}
+		err := s.memberCluster.Client.Get(context.TODO(), namespacedName, route)
+		if err != nil {
+			s.log.Error(err, "unable to get che dashboard route")
+			if kuberrors.IsNotFound(err) {
+				// It can happen if Che Operator is not installed
+				return status, nil
+			}
+			return status, err
+		}
+		scheme := "https"
+		if route.Spec.TLS == nil || *route.Spec.TLS == (routev1.TLSConfig{}) {
+			scheme = "http"
+		}
+		status.Cluster.CheDashboardURL = fmt.Sprintf("%s://%s/%s", scheme, route.Spec.Host, route.Spec.Path)
 	}
 	return status, nil
 }
