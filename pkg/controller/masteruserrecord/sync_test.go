@@ -337,6 +337,9 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 					if key.Name == "che" {
 						return errors.New("something went wrong")
 					}
+					if key.Name == "console" {
+						return nil
+					}
 					return memberClient.Client.Get(ctx, key, obj)
 				}
 
@@ -356,15 +359,20 @@ func TestCheURL(t *testing.T) {
 	logf.SetLogger(l)
 	apiScheme(t)
 
-	mur := murtest.NewMasterUserRecord("john",
-		murtest.StatusCondition(toBeNotReady(provisioningReason, "")))
-	userAccount := uatest.NewUserAccountFromMur(mur,
-		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
-	condition := userAccount.Status.Conditions[0]
-
 	testConsoleURL := func(cheRoute *routev1.Route, expectedConsoleURL string) {
 		// given
-		memberClient := test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute)
+		mur := murtest.NewMasterUserRecord("john",
+			murtest.StatusCondition(toBeNotReady(provisioningReason, "")))
+		userAccount := uatest.NewUserAccountFromMur(mur,
+			uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
+		condition := userAccount.Status.Conditions[0]
+
+		var memberClient *test.FakeClient
+		if cheRoute != nil {
+			memberClient = test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute)
+		} else {
+			memberClient = test.NewFakeClient(t, userAccount, consoleRoute())
+		}
 		hostClient := test.NewFakeClient(t, mur)
 		sync := Synchronizer{
 			record:            mur,
