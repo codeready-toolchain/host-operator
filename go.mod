@@ -3,7 +3,7 @@ module github.com/codeready-toolchain/host-operator
 require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20191206004733-862cefb68396
+	github.com/codeready-toolchain/api v0.0.0-20191212002517-882a587d15ce
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20191206100349-1d3b3ba54c59
 	github.com/emicklei/go-restful v2.10.0+incompatible // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
