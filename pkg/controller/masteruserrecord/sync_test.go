@@ -229,36 +229,36 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			assert.Contains(t, provisionedMur.Status.UserAccounts, toBeModified)
 		})
 
+		prepareSync := func() (Synchronizer, *test.FakeClient) {
+			mur := murtest.NewMasterUserRecord("john",
+				murtest.StatusCondition(toBeNotReady(provisioningReason, "")))
+
+			userAccount := uatest.NewUserAccountFromMur(mur,
+				uatest.StatusCondition(toBeNotReady(provisioningReason, "")), uatest.ResourceVersion("123abc"))
+
+			mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{{
+				SyncIndex: "111aaa",
+				Cluster: toolchainv1alpha1.Cluster{
+					Name: test.MemberClusterName,
+				},
+				UserAccountStatus: userAccount.Status,
+			}}
+
+			uatest.Modify(userAccount, uatest.StatusCondition(toBeProvisioned()))
+
+			memberClient := test.NewFakeClient(t, userAccount)
+			hostClient := test.NewFakeClient(t, mur)
+			return Synchronizer{
+				record:            mur,
+				hostClient:        hostClient,
+				memberCluster:     newMemberCluster(memberClient),
+				memberUserAcc:     userAccount,
+				recordSpecUserAcc: mur.Spec.UserAccounts[0],
+				log:               l,
+			}, memberClient
+		}
+
 		t.Run("when unable to get console route", func(t *testing.T) {
-			prepareSync := func() (Synchronizer, *test.FakeClient) {
-				mur := murtest.NewMasterUserRecord("john",
-					murtest.StatusCondition(toBeNotReady(provisioningReason, "")))
-
-				userAccount := uatest.NewUserAccountFromMur(mur,
-					uatest.StatusCondition(toBeNotReady(provisioningReason, "")), uatest.ResourceVersion("123abc"))
-
-				mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{{
-					SyncIndex: "111aaa",
-					Cluster: toolchainv1alpha1.Cluster{
-						Name: test.MemberClusterName,
-					},
-					UserAccountStatus: userAccount.Status,
-				}}
-
-				uatest.Modify(userAccount, uatest.StatusCondition(toBeProvisioned()))
-
-				memberClient := test.NewFakeClient(t, userAccount)
-				hostClient := test.NewFakeClient(t, mur)
-				return Synchronizer{
-					record:            mur,
-					hostClient:        hostClient,
-					memberCluster:     newMemberCluster(memberClient),
-					memberUserAcc:     userAccount,
-					recordSpecUserAcc: mur.Spec.UserAccounts[0],
-					log:               l,
-				}, memberClient
-			}
-
 			t.Run("no OpenShift 3.11 console available", func(t *testing.T) {
 				// given
 				sync, _ := prepareSync()
@@ -328,6 +328,82 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 				assert.EqualError(t, err, "something went wrong")
 			})
 		})
+
+		t.Run("when unable to get che route", func(t *testing.T) {
+			t.Run("get route fails with error other than 404", func(t *testing.T) {
+				// given
+				sync, memberClient := prepareSync()
+				memberClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					if key.Name == "che" {
+						return errors.New("something went wrong")
+					}
+					return memberClient.Client.Get(ctx, key, obj)
+				}
+
+				// when
+				err := sync.synchronizeStatus()
+
+				// then
+				assert.EqualError(t, err, "something went wrong")
+			})
+		})
+	})
+}
+
+func TestCheURL(t *testing.T) {
+	// given
+	l := logf.ZapLogger(true)
+	logf.SetLogger(l)
+	apiScheme(t)
+
+	mur := murtest.NewMasterUserRecord("john",
+		murtest.StatusCondition(toBeNotReady(provisioningReason, "")))
+	userAccount := uatest.NewUserAccountFromMur(mur,
+		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
+	condition := userAccount.Status.Conditions[0]
+
+	testConsoleURL := func(cheRoute *routev1.Route, expectedConsoleURL string) {
+		// given
+		memberClient := test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute)
+		hostClient := test.NewFakeClient(t, mur)
+		sync := Synchronizer{
+			record:            mur,
+			hostClient:        hostClient,
+			memberCluster:     newMemberCluster(memberClient),
+			memberUserAcc:     userAccount,
+			recordSpecUserAcc: mur.Spec.UserAccounts[0],
+			log:               l,
+		}
+
+		// when
+		err := sync.synchronizeStatus()
+		require.NoError(t, err)
+
+		// then
+		uatest.AssertThatUserAccount(t, "john", memberClient).
+			Exists().
+			HasSpec(mur.Spec.UserAccounts[0].Spec).
+			HasConditions(condition)
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
+				Name:            test.MemberClusterName,
+				APIEndpoint:     "https://api.member-cluster:6433",
+				ConsoleURL:      "https://console.member-cluster/",
+				CheDashboardURL: expectedConsoleURL,
+			}).
+			AllUserAccountsHaveCondition(condition)
+	}
+
+	t.Run("tls enabled", func(t *testing.T) {
+		testConsoleURL(cheRoute(true), "https://che-toolchain-che.member-cluster/")
+	})
+
+	t.Run("tls disabled", func(t *testing.T) {
+		testConsoleURL(cheRoute(false), "http://che-toolchain-che.member-cluster/")
+	})
+
+	t.Run("no route", func(t *testing.T) {
+		testConsoleURL(nil, "")
 	})
 }
 
@@ -335,7 +411,7 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchain
 	l := logf.ZapLogger(true)
 	condition := userAccount.Status.Conditions[0]
 
-	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
+	memberClient := test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute(false))
 	hostClient := test.NewFakeClient(t, mur)
 	sync := Synchronizer{
 		record:            mur,
@@ -361,9 +437,10 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchain
 		HasStatusUserAccounts(test.MemberClusterName).
 		AllUserAccountsHaveStatusSyncIndex("123abc").
 		AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
-			Name:        test.MemberClusterName,
-			APIEndpoint: "https://api.member-cluster:6433",
-			ConsoleURL:  "https://console.member-cluster/",
+			Name:            test.MemberClusterName,
+			APIEndpoint:     "https://api.member-cluster:6433",
+			ConsoleURL:      "https://console.member-cluster/",
+			CheDashboardURL: "http://che-toolchain-che.member-cluster/",
 		}).
 		AllUserAccountsHaveCondition(condition)
 }
@@ -393,4 +470,18 @@ func consoleRoute() *routev1.Route {
 		},
 		Spec: routev1.RouteSpec{Host: fmt.Sprintf("console.%s", test.MemberClusterName)},
 	}
+}
+
+func cheRoute(tls bool) *routev1.Route {
+	r := &routev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "che",
+			Namespace: "toolchain-che",
+		},
+		Spec: routev1.RouteSpec{Host: fmt.Sprintf("che-toolchain-che.%s", test.MemberClusterName)},
+	}
+	if tls {
+		r.Spec.TLS = &routev1.TLSConfig{Termination: "edge"}
+	}
+	return r
 }

@@ -142,7 +142,7 @@ func (s *Synchronizer) withConsoleURL(status toolchainv1alpha1.UserAccountStatus
 func (s *Synchronizer) withCheDashboardURL(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
 	if status.Cluster.CheDashboardURL == "" {
 		route := &routev1.Route{}
-		namespacedName := types.NamespacedName{Namespace: cheNamespace, Name: "console"}
+		namespacedName := types.NamespacedName{Namespace: cheNamespace, Name: "che"}
 		err := s.memberCluster.Client.Get(context.TODO(), namespacedName, route)
 		if err != nil {
 			s.log.Error(err, "unable to get che dashboard route")
