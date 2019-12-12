@@ -138,7 +138,7 @@ func (s *Synchronizer) withConsoleURL(status toolchainv1alpha1.UserAccountStatus
 	return status, nil
 }
 
-// withClusterAPIEndpoint returns the given user account status with Che Dashboard URL set if it's not already set yet
+// withCheDashboardURL returns the given user account status with Che Dashboard URL set if it's not already set yet
 func (s *Synchronizer) withCheDashboardURL(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
 	if status.Cluster.CheDashboardURL == "" {
 		route := &routev1.Route{}
