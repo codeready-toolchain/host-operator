@@ -186,6 +186,10 @@ spec:
                       apiEndpoint:
                         description: APIEndpoint is the API Endpoint of the cluster
                         type: string
+                      cheDashboardURL:
+                        description: CheDashboardURL is the Che Dashboard URL of the
+                          cluster if Che is installed
+                        type: string
                       consoleURL:
                         description: ConsoleURL is the web console URL of the cluster
                         type: string
