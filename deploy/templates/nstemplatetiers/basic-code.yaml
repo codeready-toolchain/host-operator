@@ -60,7 +60,7 @@ objects:
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
-    name: toolchain-workspaces
+    name: toolchain-che-edit
   subjects:
     - kind: User
       name: ${USERNAME}
