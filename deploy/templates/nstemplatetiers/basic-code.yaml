@@ -15,20 +15,50 @@ objects:
     labels:
       provider: codeready-toolchain
     name: ${USERNAME}-code
-- apiVersion: v1
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    labels:
+      provider: codeready-toolchain
+    name: toolchain-che-edit
+    namespace: ${USERNAME}-code
+  rules:
+    - apiGroups:
+        - authorization.openshift.io
+        - rbac.authorization.k8s.io
+      resources:
+        - roles
+        - rolebindings
+      verbs:
+        - '*'
+- apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     labels:
       provider: codeready-toolchain
-    name: user-admin
+    name: user-edit
     namespace: ${USERNAME}-code
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
-    name: admin
+    name: edit
   subjects:
   - kind: User
     name: ${USERNAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    labels:
+      provider: codeready-toolchain
+    name: user-toolchain-che-edit
+    namespace: ${USERNAME}-code
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: toolchain-che-edit
+  subjects:
+    - kind: User
+      name: ${USERNAME}
 parameters:
 - name: USERNAME
   required: true

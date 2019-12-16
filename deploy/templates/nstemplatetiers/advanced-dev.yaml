@@ -15,17 +15,17 @@ objects:
     labels:
       provider: codeready-toolchain
     name: ${USERNAME}-dev
-- apiVersion: v1
+- apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     labels:
       provider: codeready-toolchain
-    name: user-admin
+    name: user-edit
     namespace: ${USERNAME}-dev
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
-    name: admin
+    name: edit
   subjects:
   - kind: User
     name: ${USERNAME}
