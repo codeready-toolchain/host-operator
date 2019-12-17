@@ -35,6 +35,8 @@ const (
 	noTemplateTierAvailableReason        = "NoTemplateTierAvailable"
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason              = "UnableToCreateMUR"
+	unableToDeleteMURReason              = "UnableToDeleteMUR"
+	userDeactivatedReason                = "Deactivated"
 	invalidMURState                      = "InvalidMURState"
 	approvedAutomaticallyReason          = "ApprovedAutomatically"
 	approvedByAdminReason                = "ApprovedByAdmin"
@@ -142,12 +144,31 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		err = NewSignupError("multiple matching MasterUserRecord resources found")
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Multiple MasterUserRecords found")
 	} else if len(murs) == 1 {
+		mur := murs[0]
+
+		// If the user has been deactivated, then we need to delete the MUR
+		if instance.Spec.Deactivated {
+			err = r.client.Delete(context.TODO(), &mur)
+			if err != nil {
+				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToDeleteMUR, err,
+					"Error creating MasterUserRecord")
+			}
+
+			reqLogger.Info("Deleted MasterUserRecord", "Name", mur.Name)
+			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
+		}
+
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
-		mur := murs[0]
 		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
 		instance.Status.CompliantUsername = mur.Name
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusComplete)
+	}
+
+	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, simply set the status
+	// and return
+	if instance.Spec.Deactivated {
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
 	}
 
 	// Check the user approval policy.
@@ -397,6 +418,17 @@ func (r *ReconcileUserSignup) setStatusFailedToCreateMUR(userSignup *toolchainv1
 		})
 }
 
+func (r *ReconcileUserSignup) setStatusFailedToDeleteMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  unableToDeleteMURReason,
+			Message: message,
+		})
+}
+
 func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return r.updateStatusConditions(
 		userSignup,
@@ -426,6 +458,17 @@ func (r *ReconcileUserSignup) setStatusComplete(userSignup *toolchainv1alpha1.Us
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionTrue,
 			Reason:  "",
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusDeactivated(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionTrue,
+			Reason:  userDeactivatedReason,
 			Message: message,
 		})
 }
