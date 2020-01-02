@@ -28,5 +28,7 @@ rules:
   - template.openshift.io
   resources:
   - brokertemplateinstances
+  - processedtemplates
   verbs:
+  - "get"
   - "list"
