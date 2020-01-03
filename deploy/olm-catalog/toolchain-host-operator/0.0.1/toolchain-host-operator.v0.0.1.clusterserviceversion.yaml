@@ -149,6 +149,7 @@ spec:
           - componentstatuses
           - pods
           - services
+          - bindings
           verbs:
           - get
           - list
