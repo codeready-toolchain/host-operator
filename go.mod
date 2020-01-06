@@ -3,7 +3,7 @@ module github.com/codeready-toolchain/host-operator
 require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20191212002517-882a587d15ce
+	github.com/codeready-toolchain/api v0.0.0-20200106152046-f16301c72bc9
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20191206100349-1d3b3ba54c59
 	github.com/emicklei/go-restful v2.10.0+incompatible // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -44,8 +44,6 @@ require (
 	sigs.k8s.io/kubefed v0.1.0-rc6.0.20191023070212-24d45e9f4f15
 	sigs.k8s.io/testing_frameworks v0.1.2 // indirect
 )
-
-replace github.com/codeready-toolchain/api => github.com/matousjobanek/api v0.0.0-20200106115125-b76764e1418b
 
 // Pinned to kubernetes-1.14.1
 replace (
