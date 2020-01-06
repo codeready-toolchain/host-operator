@@ -37,6 +37,7 @@ require (
 	gopkg.in/h2non/gock.v1 v1.0.14
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0
+	k8s.io/apiextensions-apiserver v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/klog v1.0.0
@@ -44,6 +45,8 @@ require (
 	sigs.k8s.io/kubefed v0.1.0-rc6.0.20191023070212-24d45e9f4f15
 	sigs.k8s.io/testing_frameworks v0.1.2 // indirect
 )
+
+replace github.com/codeready-toolchain/api => github.com/matousjobanek/api v0.0.0-20200106155738-11f245f559ba
 
 // Pinned to kubernetes-1.14.1
 replace (
