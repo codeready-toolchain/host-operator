@@ -813,6 +813,144 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 	)
 }
 
+func TestUserSignupDeactivatedWithNoMUR(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+			UID:       types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username:    "foo#bar@redhat.com",
+			Approved:    false,
+			Deactivated: true,
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	_, err := r.Reconcile(req)
+	require.NoError(t, err)
+
+	key := types.NamespacedName{
+		Namespace: operatorNamespace,
+		Name:      userSignup.Name,
+	}
+	instance := &v1alpha1.UserSignup{}
+	err = r.client.Get(context.TODO(), key, instance)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, instance.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+			Reason: "Deactivated",
+		},
+	)
+}
+
+func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+			UID:       types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "john.doe@redhat.com",
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	createMemberCluster(r.client)
+	defer clearMemberClusters(r.client)
+
+	// First reconcile
+	_, err := r.Reconcile(req)
+	require.NoError(t, err)
+
+	// Lookup the UserSignup
+	key := types.NamespacedName{
+		Namespace: operatorNamespace,
+		Name:      userSignup.Name,
+	}
+	err = r.client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+
+	// Confirm that the signup is approved
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		})
+
+	// Lookup the MasterUserRecords
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 1)
+
+	mur := murs.Items[0]
+
+	// Confirm the MUR was created and its values are correct
+	require.Equal(t, operatorNamespace, mur.Namespace)
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Len(t, mur.Spec.UserAccounts, 1)
+
+	// Reconcile again
+	_, err = r.Reconcile(req)
+	require.NoError(t, err)
+
+	// Lookup the userSignup one more and check the conditions are updated
+	err = r.client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+		})
+
+	// Now mark the UserSignup as Deactivated
+	userSignup.Spec.Deactivated = true
+	err = r.client.Update(context.TODO(), userSignup)
+	require.NoError(t, err)
+
+	// Reconcile once again
+	_, err = r.Reconcile(req)
+	require.NoError(t, err)
+
+	// Lookup the UserSignup
+	err = r.client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+
+	// Confirm the status has been set to Deactivated
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+			Reason: "Deactivated",
+		})
+
+	// The MUR should have now been deleted
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 0)
+}
+
 func TestDeathBy100Signups(t *testing.T) {
 	userID := uuid.NewV4().String()
 
