@@ -17,18 +17,6 @@ rules:
   verbs:
   - "*"
 - apiGroups:
-  - ""
-  resources:
-  - podtemplates
-  - resourcequotas
-  - serviceaccounts
-  - replicationcontrollers
-  - limitranges
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - route.openshift.io
   resources:
   - routes
@@ -38,9 +26,6 @@ rules:
   - apps
   resources:
   - deployments
-  - daemonsets
-  - replicasets
-  - statefulsets
   verbs:
   - "*"
 - apiGroups:
