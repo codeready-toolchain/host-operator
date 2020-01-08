@@ -54,13 +54,13 @@ rules:
   resources:
   - kubefedclusters/status
   verbs:
-  - update
+  - "update"
 - apiGroups:
   - toolchain.dev.openshift.com
   resources:
-  - '*'
+  - "*"
   verbs:
-  - '*'
+  - "*"
 - apiGroups:
   - rbac.authorization.k8s.io
   - authorization.openshift.io
@@ -68,4 +68,4 @@ rules:
   - roles
   - rolebindings
   verbs:
-  - '*'
+  - "*"
