@@ -130,10 +130,15 @@ spec:
       kind: RegistrationService
       name: registrationservices.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: UserSignup registres a user in the CodeReady Toolchain SaaS system
+    - description: UserSignup registers a user in the CodeReady Toolchain SaaS system
       displayName: UserSignup
       kind: UserSignup
       name: usersignups.toolchain.dev.openshift.com
+      version: v1alpha1
+    - description: BannedUser is used to maintain a list of banned e-mail addresses
+      displayName: BannedUser
+      kind: BannedUser
+      name: bannedusers.toolchain.dev.openshift.com
       version: v1alpha1
   description: Placeholder description
   displayName: Host Operator
