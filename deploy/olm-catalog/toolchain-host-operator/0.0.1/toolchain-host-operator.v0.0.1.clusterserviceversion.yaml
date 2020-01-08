@@ -145,10 +145,7 @@ spec:
           - ""
           resources:
           - nodes
-          - namespaces
-          - componentstatuses
           verbs:
-          - get
           - list
         - apiGroups:
           - apiextensions.k8s.io
@@ -157,14 +154,6 @@ spec:
           verbs:
           - get
           - create
-          - list
-          - watch
-        - apiGroups:
-          - template.openshift.io
-          resources:
-          - brokertemplateinstances
-          verbs:
-          - list
         serviceAccountName: host-operator
       deployments:
       - name: host-operator
@@ -224,17 +213,6 @@ spec:
           verbs:
           - '*'
         - apiGroups:
-          - ""
-          resources:
-          - podtemplates
-          - resourcequotas
-          - serviceaccounts
-          - replicationcontrollers
-          - limitranges
-          verbs:
-          - get
-          - list
-        - apiGroups:
           - route.openshift.io
           resources:
           - routes
@@ -244,9 +222,6 @@ spec:
           - apps
           resources:
           - deployments
-          - daemonsets
-          - replicasets
-          - statefulsets
           verbs:
           - '*'
         - apiGroups:

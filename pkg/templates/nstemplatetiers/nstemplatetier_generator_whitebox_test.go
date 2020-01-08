@@ -164,7 +164,12 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 							// Assert expected objects in the template
 							// Each template should have one Namespace and one RoleBinding object
-							require.Len(t, ns.Template.Objects, 2)
+							// except "code" which should also have additional RoleBinding and Role
+							if nsType == "code" {
+								require.Len(t, ns.Template.Objects, 4)
+							} else {
+								require.Len(t, ns.Template.Objects, 2)
+							}
 							rbFound := false
 							for _, object := range ns.Template.Objects {
 								if strings.Contains(string(object.Raw), `"kind":"RoleBinding","metadata":{"labels":{"provider":"codeready-toolchain"},"name":"user-edit"`) {

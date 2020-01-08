@@ -34,6 +34,14 @@ data:
         - JSONPath: .spec.userAccounts[].targetCluster
           name: Cluster
           type: string
+        - JSONPath: .spec.banned
+          name: Banned
+          priority: 1
+          type: string
+        - JSONPath: .spec.disabled
+          name: Disabled
+          priority: 1
+          type: string
         group: toolchain.dev.openshift.com
         names:
           kind: MasterUserRecord
@@ -64,6 +72,10 @@ data:
               spec:
                 description: MasterUserRecordSpec defines the desired state of MasterUserRecord
                 properties:
+                  banned:
+                    description: If set to true then the corresponding user has been banned
+                      from logging in and accessing their resources
+                    type: boolean
                   deprovisioned:
                     description: If set to true then the corresponding UserAccount should
                       be deleted "false" is assumed by default
@@ -193,6 +205,10 @@ data:
                           properties:
                             apiEndpoint:
                               description: APIEndpoint is the API Endpoint of the cluster
+                              type: string
+                            cheDashboardURL:
+                              description: CheDashboardURL is the Che Dashboard URL of the
+                                cluster if Che is installed
                               type: string
                             consoleURL:
                               description: ConsoleURL is the web console URL of the cluster
@@ -584,6 +600,10 @@ data:
           name: ApprovedBy
           priority: 1
           type: string
+        - JSONPath: .spec.deactivated
+          name: Deactivated
+          priority: 1
+          type: string
         - JSONPath: .status.compliantUsername
           name: CompliantUsername
           type: string
@@ -622,6 +642,10 @@ data:
                     description: If Approved set to 'true' then the user has been manually
                       approved If not set then the user is subject of auto-approval (if
                       enabled)
+                    type: boolean
+                  deactivated:
+                    description: Deactivated is used to deactivate the user.  If not set,
+                      then by default the user is active
                     type: boolean
                   targetCluster:
                     description: The cluster in which the user is provisioned in If not
@@ -828,10 +852,7 @@ data:
                 - ""
                 resources:
                 - nodes
-                - namespaces
-                - componentstatuses
                 verbs:
-                - get
                 - list
               - apiGroups:
                 - apiextensions.k8s.io
@@ -840,14 +861,6 @@ data:
                 verbs:
                 - get
                 - create
-                - list
-                - watch
-              - apiGroups:
-                - template.openshift.io
-                resources:
-                - brokertemplateinstances
-                verbs:
-                - list
               serviceAccountName: host-operator
             deployments:
             - name: host-operator
@@ -907,17 +920,6 @@ data:
                 verbs:
                 - '*'
               - apiGroups:
-                - ""
-                resources:
-                - podtemplates
-                - resourcequotas
-                - serviceaccounts
-                - replicationcontrollers
-                - limitranges
-                verbs:
-                - get
-                - list
-              - apiGroups:
                 - route.openshift.io
                 resources:
                 - routes
@@ -927,9 +929,6 @@ data:
                 - apps
                 resources:
                 - deployments
-                - daemonsets
-                - replicasets
-                - statefulsets
                 verbs:
                 - '*'
               - apiGroups:
