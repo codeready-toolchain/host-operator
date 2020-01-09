@@ -17,18 +17,6 @@ rules:
   verbs:
   - "*"
 - apiGroups:
-  - ""
-  resources:
-  - podtemplates
-  - resourcequotas
-  - serviceaccounts
-  - replicationcontrollers
-  - limitranges
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - route.openshift.io
   resources:
   - routes
@@ -38,9 +26,6 @@ rules:
   - apps
   resources:
   - deployments
-  - daemonsets
-  - replicasets
-  - statefulsets
   verbs:
   - "*"
 - apiGroups:
@@ -69,13 +54,13 @@ rules:
   resources:
   - kubefedclusters/status
   verbs:
-  - update
+  - "update"
 - apiGroups:
   - toolchain.dev.openshift.com
   resources:
-  - '*'
+  - "*"
   verbs:
-  - '*'
+  - "*"
 - apiGroups:
   - rbac.authorization.k8s.io
   - authorization.openshift.io
@@ -83,4 +68,4 @@ rules:
   - roles
   - rolebindings
   verbs:
-  - '*'
+  - "*"
