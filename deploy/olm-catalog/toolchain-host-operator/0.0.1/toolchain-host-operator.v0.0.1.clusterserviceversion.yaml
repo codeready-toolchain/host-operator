@@ -104,6 +104,18 @@ metadata:
             "targetCluster": "east-2a",
             "username": "johnsmith@redhat.com"
           }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "BannedUser",
+          "metadata": {
+            "labels": {
+              "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+            }
+          },
+          "spec": {
+            "email": "john.doe@gmail.com"
+          }
         }
       ]
     capabilities: Basic Install
@@ -113,6 +125,11 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
+    - description: BannedUser is used to maintain a list of banned e-mail addresses
+      displayName: BannedUser
+      kind: BannedUser
+      name: bannedusers.toolchain.dev.openshift.com
+      version: v1alpha1
     - description: MasterUserRecord keeps all information about user, user accounts
         and namespaces provisioned in CodeReady Toolchain SaaS system
       displayName: MasterUserRecord
@@ -130,7 +147,7 @@ spec:
       kind: RegistrationService
       name: registrationservices.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: UserSignup registres a user in the CodeReady Toolchain SaaS system
+    - description: UserSignup registers a user in the CodeReady Toolchain SaaS system
       displayName: UserSignup
       kind: UserSignup
       name: usersignups.toolchain.dev.openshift.com
@@ -145,14 +162,8 @@ spec:
           - ""
           resources:
           - nodes
-          - namespaces
-          - componentstatuses
-          - pods
-          - services
           verbs:
-          - get
           - list
-          - watch
         - apiGroups:
           - apiextensions.k8s.io
           resources:
@@ -160,16 +171,6 @@ spec:
           verbs:
           - get
           - create
-          - list
-          - watch
-        - apiGroups:
-          - template.openshift.io
-          resources:
-          - brokertemplateinstances
-          - processedtemplates
-          verbs:
-          - get
-          - list
         serviceAccountName: host-operator
       deployments:
       - name: host-operator
@@ -219,18 +220,6 @@ spec:
           verbs:
           - '*'
         - apiGroups:
-          - ""
-          resources:
-          - podtemplates
-          - resourcequotas
-          - serviceaccounts
-          - replicationcontrollers
-          - limitranges
-          verbs:
-          - get
-          - list
-          - watch
-        - apiGroups:
           - route.openshift.io
           resources:
           - routes
@@ -240,9 +229,6 @@ spec:
           - apps
           resources:
           - deployments
-          - daemonsets
-          - replicasets
-          - statefulsets
           verbs:
           - '*'
         - apiGroups:
