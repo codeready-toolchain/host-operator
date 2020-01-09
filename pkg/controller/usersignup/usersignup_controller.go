@@ -151,7 +151,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			err = r.client.Delete(context.TODO(), &mur)
 			if err != nil {
 				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToDeleteMUR, err,
-					"Error creating MasterUserRecord")
+					"Error deleting MasterUserRecord")
 			}
 
 			reqLogger.Info("Deleted MasterUserRecord", "Name", mur.Name)
