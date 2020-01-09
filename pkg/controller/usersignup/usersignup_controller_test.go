@@ -928,6 +928,15 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 	_, err = r.Reconcile(req)
 	require.NoError(t, err)
 
+	// The MUR should have now been deleted
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 0)
+
+	// Reconcile one last time, which should now update the status since the MUR is deleted
+	_, err = r.Reconcile(req)
+	require.NoError(t, err)
+
 	// Lookup the UserSignup
 	err = r.client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
@@ -944,11 +953,6 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			Status: v1.ConditionTrue,
 			Reason: "Deactivated",
 		})
-
-	// The MUR should have now been deleted
-	err = r.client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 0)
 }
 
 func TestDeathBy100Signups(t *testing.T) {

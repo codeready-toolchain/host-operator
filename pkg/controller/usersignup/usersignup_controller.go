@@ -155,7 +155,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 
 			reqLogger.Info("Deleted MasterUserRecord", "Name", mur.Name)
-			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
+			return reconcile.Result{}, nil
 		}
 
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
