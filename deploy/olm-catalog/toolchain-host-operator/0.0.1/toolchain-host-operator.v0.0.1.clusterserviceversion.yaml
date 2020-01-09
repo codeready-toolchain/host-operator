@@ -104,6 +104,18 @@ metadata:
             "targetCluster": "east-2a",
             "username": "johnsmith@redhat.com"
           }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "BannedUser",
+          "metadata": {
+            "labels": {
+              "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+            }
+          },
+          "spec": {
+            "email": "john.doe@gmail.com"
+          }
         }
       ]
     capabilities: Basic Install
@@ -113,6 +125,11 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
+    - description: BannedUser is used to maintain a list of banned e-mail addresses
+      displayName: BannedUser
+      kind: BannedUser
+      name: bannedusers.toolchain.dev.openshift.com
+      version: v1alpha1
     - description: MasterUserRecord keeps all information about user, user accounts
         and namespaces provisioned in CodeReady Toolchain SaaS system
       displayName: MasterUserRecord
@@ -134,11 +151,6 @@ spec:
       displayName: UserSignup
       kind: UserSignup
       name: usersignups.toolchain.dev.openshift.com
-      version: v1alpha1
-    - description: BannedUser is used to maintain a list of banned e-mail addresses
-      displayName: BannedUser
-      kind: BannedUser
-      name: bannedusers.toolchain.dev.openshift.com
       version: v1alpha1
   description: Placeholder description
   displayName: Host Operator
