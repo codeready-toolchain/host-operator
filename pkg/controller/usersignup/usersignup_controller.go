@@ -36,6 +36,7 @@ const (
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason              = "UnableToCreateMUR"
 	unableToDeleteMURReason              = "UnableToDeleteMUR"
+	userDeactivatingReason               = "Deactivating"
 	userDeactivatedReason                = "Deactivated"
 	invalidMURState                      = "InvalidMURState"
 	approvedAutomaticallyReason          = "ApprovedAutomatically"
@@ -155,7 +156,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 
 			reqLogger.Info("Deleted MasterUserRecord", "Name", mur.Name)
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivating)
 		}
 
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
@@ -458,6 +459,17 @@ func (r *ReconcileUserSignup) setStatusComplete(userSignup *toolchainv1alpha1.Us
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionTrue,
 			Reason:  "",
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusDeactivating(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  userDeactivatingReason,
 			Message: message,
 		})
 }
