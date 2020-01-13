@@ -72,6 +72,8 @@ github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDk
 github.com/codeready-toolchain/api v0.0.0-20191203182149-f994640853b0/go.mod h1:K2iSNSOwpQf+Wo3LdmrGaPlha2BLwuywwWrnbuiy8Pg=
 github.com/codeready-toolchain/api v0.0.0-20200106162618-9b2c84309f9d h1:eKA5oNOO/Z2f9n9mjEdoVgRUSlj8HIzK49QDVrlpghY=
 github.com/codeready-toolchain/api v0.0.0-20200106162618-9b2c84309f9d/go.mod h1:st8k0LKhkg1Z7hNNia2NYLiFoNCxeBfJwpwgRdzqrLg=
+github.com/codeready-toolchain/api v0.0.0-20200113054908-d895c3a1acdf h1:FsaI7EqSD00pZGWWipqng2UBYhn0Ij1S8KQwXXRR9xQ=
+github.com/codeready-toolchain/api v0.0.0-20200113054908-d895c3a1acdf/go.mod h1:zPbdWiEiv9SpZMvyRkY6E6n7Eynm5Y0uhJhBiGXjkg0=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20191206100349-1d3b3ba54c59 h1:jolppHHBI9Vouzd2X5fvvj/73kvyBgxMFMUAMCXeih4=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20191206100349-1d3b3ba54c59/go.mod h1:c5EL9bEskD3ViC/ma1OhyIWNdGQMu+0K2nhGs+vfb9M=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=

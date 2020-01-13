@@ -77,7 +77,9 @@ func (s *Synchronizer) synchronizeStatus() error {
 			s.record.Status.UserAccounts[index] = recordStatusUserAcc
 		}
 
-		s.alignReadiness()
+		if !s.alignReadiness() {
+			s.alignDisabledness()
+		}
 
 		err = s.hostClient.Status().Update(context.TODO(), s.record)
 		if err != nil {
@@ -179,14 +181,33 @@ func (s *Synchronizer) openShift3XConsoleURL(apiEndpoint string) (string, error)
 	return url, nil
 }
 
-// alignReadiness checks if all embedded SAs are ready
-func (s *Synchronizer) alignReadiness() {
+func (s *Synchronizer) alignDisabledness() {
 	for _, uaStatus := range s.record.Status.UserAccounts {
-		if !isReady(uaStatus.Conditions) {
+		if !isDisabled(uaStatus.Conditions) {
 			return
 		}
 	}
+	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeDisabled())
+}
+
+func isDisabled(conditions []toolchainv1alpha1.Condition) bool {
+	for _, con := range conditions {
+		if con.Type == toolchainv1alpha1.ConditionReady {
+			return con.Reason == toolchainv1alpha1.UserAccountDisabledReason
+		}
+	}
+	return false
+}
+
+// alignReadiness checks if all embedded SAs are ready
+func (s *Synchronizer) alignReadiness() bool {
+	for _, uaStatus := range s.record.Status.UserAccounts {
+		if !isReady(uaStatus.Conditions) {
+			return false
+		}
+	}
 	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
+	return true
 }
 
 func isReady(conditions []toolchainv1alpha1.Condition) bool {
