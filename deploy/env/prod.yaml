@@ -1,0 +1,13 @@
+registration-service:
+  environment: 'prod'
+  auth-client:
+    library-url: 'https://sso.redhat.com/auth/js/keycloak.js'
+    config-raw: '{
+                  "realm": "redhat-external",
+                  "auth-server-url": "https://sso.redhat.com/auth",
+                  "ssl-required": "none",
+                  "resource": "crtoolchain-public",
+                  "clientId": "crtoolchain-public",
+                  "public-client": true
+                }'
+    public-keys-url: 'https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/certs'
