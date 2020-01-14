@@ -3,6 +3,7 @@
 package configuration
 
 import (
+	"os"
 	"strings"
 
 	errs "github.com/pkg/errors"
@@ -26,8 +27,6 @@ const (
 
 // host-operator constants
 const (
-	varDynamicKeys = "dynamic.keys"
-
 	// ToolchainConfigMapName specifies a name of a ConfigMap that keeps toolchain configuration
 	ToolchainConfigMapName = "toolchain-saas-config"
 
@@ -98,13 +97,14 @@ func (c *Registry) GetRegServiceImage() string {
 // GetDynamicallyAddedParameters returns the map with key-values pairs of dynamically added parameters
 func (c *Registry) GetDynamicallyAddedParameters() map[string]string {
 	vars := map[string]string{}
-	dynamicKeys := c.host.GetString(varDynamicKeys)
-	if len(dynamicKeys) == 0 {
-		return vars
-	}
-	for _, key := range strings.Split(dynamicKeys, ",") {
-		if key != "" {
-			vars[key] = c.noPrefix.GetString(key)
+
+	for _, env := range os.Environ() {
+		keyValue := strings.Split(env, "=")
+		if len(keyValue) != 2 {
+			continue
+		}
+		if strings.HasPrefix(keyValue[0], RegServiceEnvPrefix) {
+			vars[keyValue[0]] = keyValue[1]
 		}
 	}
 	return vars

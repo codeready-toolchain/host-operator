@@ -1,7 +1,6 @@
 package configuration_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -94,12 +93,8 @@ func TestGetImage(t *testing.T) {
 }
 
 func TestGetDynamicKeys(t *testing.T) {
-	keysKey := configuration.HostEnvPrefix + "_" + "DYNAMIC_KEYS"
 	firstKey := configuration.RegServiceEnvPrefix + "_" + "FIRST_KEY"
 	secondKey := configuration.RegServiceEnvPrefix + "_" + "SECOND_KEY"
-
-	resetFunc := test.UnsetEnvVarAndRestore(t, keysKey)
-	defer resetFunc()
 
 	t.Run("default", func(t *testing.T) {
 		config := getDefaultConfiguration(t)
@@ -107,7 +102,7 @@ func TestGetDynamicKeys(t *testing.T) {
 	})
 
 	t.Run("file with empty list ", func(t *testing.T) {
-		config := getFileConfiguration(t, keysKey+`: ","`)
+		config := getFileConfiguration(t, `ANYTHING: "SOMETHING"`)
 		assert.Empty(t, config.GetDynamicallyAddedParameters())
 	})
 
@@ -121,8 +116,7 @@ func TestGetDynamicKeys(t *testing.T) {
 		//todo fix this
 		restore := test.SetEnvVarsAndRestore(t,
 			test.Env(firstKey, newVal),
-			test.Env(secondKey, newVal2),
-			test.Env(keysKey, fmt.Sprintf("%s,%s,", firstKey, secondKey)))
+			test.Env(secondKey, newVal2))
 		defer restore()
 		config := getDefaultConfiguration(t)
 		require.Len(t, config.GetDynamicallyAddedParameters(), 2)
