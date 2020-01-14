@@ -180,7 +180,6 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 			"failed to get userAccount '%s' from cluster '%s'", record.Name, recAccount.TargetCluster)
 	}
 
-	// TINA TODO: update spec.disabled
 	if record.Spec.Disabled {
 		userAccount.Spec.Disabled = true
 	} else {
