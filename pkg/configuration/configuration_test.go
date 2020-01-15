@@ -95,32 +95,33 @@ func TestGetImage(t *testing.T) {
 func TestGetDynamicKeys(t *testing.T) {
 	firstKey := configuration.RegServiceEnvPrefix + "_" + "FIRST_KEY"
 	secondKey := configuration.RegServiceEnvPrefix + "_" + "SECOND_KEY"
+	thirdKey := configuration.RegServiceEnvPrefix + "_" + "THIRD_KEY"
 
 	t.Run("default", func(t *testing.T) {
 		config := getDefaultConfiguration(t)
-		assert.Empty(t, config.GetDynamicallyAddedParameters())
+		assert.Empty(t, config.GetAllRegistrationServiceParameters())
 	})
 
 	t.Run("file with empty list ", func(t *testing.T) {
 		config := getFileConfiguration(t, `ANYTHING: "SOMETHING"`)
-		assert.Empty(t, config.GetDynamicallyAddedParameters())
+		assert.Empty(t, config.GetAllRegistrationServiceParameters())
 	})
 
 	t.Run("env overwrite", func(t *testing.T) {
 		u, err := uuid.NewV4()
 		require.NoError(t, err)
 		newVal := u.String()
-		u2, err := uuid.NewV4()
-		require.NoError(t, err)
-		newVal2 := u2.String()
+		newVal2 := "foo=bar=baz"
 		//todo fix this
 		restore := test.SetEnvVarsAndRestore(t,
 			test.Env(firstKey, newVal),
-			test.Env(secondKey, newVal2))
+			test.Env(secondKey, newVal2),
+			test.Env(thirdKey, ""))
 		defer restore()
 		config := getDefaultConfiguration(t)
-		require.Len(t, config.GetDynamicallyAddedParameters(), 2)
-		assert.Equal(t, newVal, config.GetDynamicallyAddedParameters()[firstKey])
-		assert.Equal(t, newVal2, config.GetDynamicallyAddedParameters()[secondKey])
+		require.Len(t, config.GetAllRegistrationServiceParameters(), 3)
+		assert.Equal(t, newVal, config.GetAllRegistrationServiceParameters()[firstKey])
+		assert.Equal(t, newVal2, config.GetAllRegistrationServiceParameters()[secondKey])
+		assert.Empty(t, config.GetAllRegistrationServiceParameters()[thirdKey])
 	})
 }

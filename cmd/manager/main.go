@@ -218,8 +218,7 @@ func loadConfig() (*configuration.Registry, error) {
 
 func printConfig(cfg *configuration.Registry) {
 	log.Info("Configuration values:")
-	log.Info("REGISTRATION_SERVICE_IMAGE: " + cfg.GetRegServiceImage())
-	for key, value := range cfg.GetDynamicallyAddedParameters() {
+	for key, value := range cfg.GetAllRegistrationServiceParameters() {
 		log.Info(fmt.Sprintf("%s: %s", key, value))
 	}
 }

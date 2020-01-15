@@ -94,16 +94,16 @@ func (c *Registry) GetRegServiceImage() string {
 	return c.regService.GetString(varImage)
 }
 
-// GetDynamicallyAddedParameters returns the map with key-values pairs of dynamically added parameters
-func (c *Registry) GetDynamicallyAddedParameters() map[string]string {
+// GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
+func (c *Registry) GetAllRegistrationServiceParameters() map[string]string {
 	vars := map[string]string{}
 
 	for _, env := range os.Environ() {
-		keyValue := strings.Split(env, "=")
-		if len(keyValue) != 2 {
+		keyValue := strings.SplitN(env, "=", 2)
+		if len(keyValue) < 2 {
 			continue
 		}
-		if strings.HasPrefix(keyValue[0], RegServiceEnvPrefix) {
+		if strings.HasPrefix(keyValue[0], RegServiceEnvPrefix+"_") {
 			vars[keyValue[0]] = keyValue[1]
 		}
 	}
