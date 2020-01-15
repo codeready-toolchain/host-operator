@@ -1,5 +1,6 @@
 registration-service:
   environment: 'prod'
+  replicas: 3
   auth-client:
     library-url: 'https://sso.redhat.com/auth/js/keycloak.js'
     config-raw: '{

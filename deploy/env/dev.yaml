@@ -1,5 +1,6 @@
 registration-service:
   environment: 'dev'
+  replicas: 1
   auth-client:
     library-url: 'https://sso.prod-preview.openshift.io/auth/js/keycloak.js'
     public-keys-url: 'https://sso.prod-preview.openshift.io/auth/realms/toolchain-public/protocol/openid-connect/certs'
