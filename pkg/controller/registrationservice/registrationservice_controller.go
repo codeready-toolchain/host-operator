@@ -2,7 +2,6 @@ package registrationservice
 
 import (
 	"context"
-	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -162,24 +161,15 @@ type templateVars map[string]string
 func getVars(regService *toolchainv1alpha1.RegistrationService) map[string]string {
 	var vars templateVars = map[string]string{}
 	vars.addIfNotEmpty("NAMESPACE", regService.Namespace)
-	vars.addIfNotEmpty("IMAGE", regService.Spec.Image)
-	vars.addIfNotZero("REPLICAS", regService.Spec.Replicas)
-	vars.addIfNotEmpty("ENVIRONMENT", regService.Spec.Environment)
-	vars.addIfNotEmpty("AUTH_CLIENT_LIBRARY_URL", regService.Spec.AuthClient.LibraryUrl)
-	vars.addIfNotEmpty("AUTH_CLIENT_CONFIG_RAW", regService.Spec.AuthClient.Config)
-	vars.addIfNotEmpty("AUTH_CLIENT_PUBLIC_KEYS_URL", regService.Spec.AuthClient.PublicKeysUrl)
+	for key, value := range regService.Spec.EnvironmentVariables {
+		vars.addIfNotEmpty(key, value)
+	}
 	return vars
 }
 
 func (v *templateVars) addIfNotEmpty(key, value string) {
 	if value != "" {
 		(*v)[key] = value
-	}
-}
-
-func (v *templateVars) addIfNotZero(key string, value int) {
-	if value != 0 {
-		(*v)[key] = fmt.Sprintf("%d", value)
 	}
 }
 

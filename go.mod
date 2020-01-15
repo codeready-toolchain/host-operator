@@ -46,6 +46,8 @@ require (
 	sigs.k8s.io/testing_frameworks v0.1.2 // indirect
 )
 
+replace github.com/codeready-toolchain/api => github.com/MatousJobanek/api v0.0.0-20200115111617-f3c1e80a5abe
+
 // Pinned to kubernetes-1.14.1
 replace (
 	// using 'github.com/openshift/api@release-4.2'
