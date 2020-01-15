@@ -28,7 +28,11 @@ RUN yum install epel-release -y \
     python36-virtualenv \
     jq \
     gcc \
+    pip3 \
     && yum clean all
+
+# Install yq that will be used for parsing/reading yaml files.
+RUN pip3 install yq
 
 WORKDIR /tmp
 
