@@ -5,10 +5,10 @@ metadata:
   name: registrationservices.toolchain.dev.openshift.com
 spec:
   additionalPrinterColumns:
-  - JSONPath: .spec.image
+  - JSONPath: .spec.envVars.IMAGE
     name: Image
     type: string
-  - JSONPath: .spec.environment
+  - JSONPath: .spec.envVars.ENVIRONMENT
     name: Environment
     type: string
   - JSONPath: .status.conditions[?(@.type=="Ready")].status
