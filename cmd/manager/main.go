@@ -217,10 +217,11 @@ func loadConfig() (*configuration.Registry, error) {
 }
 
 func printConfig(cfg *configuration.Registry) {
-	log.Info("Registration Service configuration variables:")
+	logWithValues := log
 	for key, value := range cfg.GetAllRegistrationServiceParameters() {
-		log.Info(fmt.Sprintf("%s: %s", key, value))
+		logWithValues = logWithValues.WithValues("key", key, "value", value)
 	}
+	logWithValues.Info("Registration Service configuration variables:")
 }
 
 // ensureKubeFedClusterCRD ensure that KubeFedCluster CRD exists in the cluster.
