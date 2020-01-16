@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -875,22 +876,13 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		},
 	}
 
-	mur := &v1alpha1.MasterUserRecord{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "john-doe-at-redhat-com",
-			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
-			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
-		},
-	}
+	mur := murtest.NewMasterUserRecord("john-doe-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// Lookup the UserSignup
-	key := types.NamespacedName{
-		Namespace: operatorNamespace,
-		Name:      userSignup.Name,
-	}
+	key := test.NamespacedName(operatorNamespace, userSignup.Name)
 	err := r.client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
 
