@@ -499,6 +499,35 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 		DoesNotHaveFinalizer()
 }
 
+// TODO: TINA
+func TestDisablingMasterUserRecord(t *testing.T) {
+	// given
+	logf.SetLogger(logf.ZapLogger(true))
+	s := apiScheme(t)
+	mur := murtest.NewMasterUserRecord("john")
+	mur.Spec.Disabled = true
+	memberClient := test.NewFakeClient(t)
+	hostClient := test.NewFakeClient(t, mur)
+	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+		clusterClient(test.MemberClusterName, memberClient))
+
+	// when
+	_, err := cntrl.Reconcile(newMurRequest(mur))
+
+	// call again to set the disabled field on user account
+	_, err = cntrl.Reconcile(newMurRequest(mur))
+
+	// then
+	require.NoError(t, err)
+
+	uatest.AssertThatUserAccount(t, "john", memberClient).
+		Exists().
+		HasSpec(mur.Spec.UserAccounts[0].Spec)
+	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+		HasConditions(toBeNotReady(provisioningReason, "")).
+		HasFinalizer()
+}
+
 func newMurRequest(mur *toolchainv1alpha1.MasterUserRecord) reconcile.Request {
 	return reconcile.Request{
 		NamespacedName: namespacedName(mur.ObjectMeta.Namespace, mur.ObjectMeta.Name),
