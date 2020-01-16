@@ -945,6 +945,73 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 	})
 }
 
+func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+			UID:       types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username:    "edward.jones@redhat.com",
+			Deactivated: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
+				{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionFalse,
+					Reason: "Deactivating",
+				},
+				{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "edward-jones-at-redhat-com",
+		},
+	}
+	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+
+	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord("edward-jones-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+		// when
+		_, err := r.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+		err = r.client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+
+		// Confirm the status is still set to Deactivating
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionFalse,
+				Reason: "Deactivating",
+			})
+
+		murs := &v1alpha1.MasterUserRecordList{}
+
+		// The MUR should have now been deleted
+		err = r.client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 0)
+	})
+}
+
 func TestDeathBy100Signups(t *testing.T) {
 	userID := uuid.NewV4().String()
 
