@@ -851,6 +851,7 @@ func TestUserSignupDeactivatedWithNoMUR(t *testing.T) {
 }
 
 func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
+	// given
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
@@ -858,7 +859,8 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
-			Username: "john.doe@redhat.com",
+			Username:    "john.doe@redhat.com",
+			Deactivated: true,
 		},
 		Status: v1alpha1.UserSignupStatus{
 			Conditions: []v1alpha1.Condition{
@@ -875,69 +877,72 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			CompliantUsername: "john-doe-at-redhat-com",
 		},
 	}
-
-	mur := murtest.NewMasterUserRecord("john-doe-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
-	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
-
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-
-	// Lookup the UserSignup
 	key := test.NamespacedName(operatorNamespace, userSignup.Name)
-	err := r.client.Get(context.TODO(), key, userSignup)
-	require.NoError(t, err)
 
-	// Now mark the UserSignup as Deactivated
-	userSignup.Spec.Deactivated = true
-	err = r.client.Update(context.TODO(), userSignup)
-	require.NoError(t, err)
+	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord("john-doe-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
-	// Reconcile
-	_, err = r.Reconcile(req)
-	require.NoError(t, err)
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
-	err = r.client.Get(context.TODO(), key, userSignup)
-	require.NoError(t, err)
+		// when
+		_, err := r.Reconcile(req)
 
-	// Confirm the status is now set to Deactivating
-	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedAutomatically",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupComplete,
-			Status: v1.ConditionFalse,
-			Reason: "Deactivating",
-		})
+		// then
+		require.NoError(t, err)
+		err = r.client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
 
-	murs := &v1alpha1.MasterUserRecordList{}
+		// Confirm the status is now set to Deactivating
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionFalse,
+				Reason: "Deactivating",
+			})
 
-	// The MUR should have now been deleted
-	err = r.client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 0)
+		murs := &v1alpha1.MasterUserRecordList{}
 
-	// Reconcile one last time, which should now update the status since the MUR is deleted
-	_, err = r.Reconcile(req)
-	require.NoError(t, err)
+		// The MUR should have now been deleted
+		err = r.client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 0)
 
-	// Lookup the UserSignup
-	err = r.client.Get(context.TODO(), key, userSignup)
-	require.NoError(t, err)
+	})
 
-	// Confirm the status has been set to Deactivated
-	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedAutomatically",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupComplete,
-			Status: v1.ConditionTrue,
-			Reason: "Deactivated",
-		})
+	t.Run("when MUR doesn't exist, then the condition should be set to Deactivated", func(t *testing.T) {
+		// given
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+		// when
+		_, err := r.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+
+		// Lookup the UserSignup
+		err = r.client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+
+		// Confirm the status has been set to Deactivated
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: "Deactivated",
+			})
+	})
 }
 
 func TestDeathBy100Signups(t *testing.T) {
