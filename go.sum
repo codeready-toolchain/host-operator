@@ -73,8 +73,9 @@ github.com/codeready-toolchain/api v0.0.0-20191203182149-f994640853b0 h1:APb57ts
 github.com/codeready-toolchain/api v0.0.0-20191203182149-f994640853b0/go.mod h1:K2iSNSOwpQf+Wo3LdmrGaPlha2BLwuywwWrnbuiy8Pg=
 github.com/codeready-toolchain/api v0.0.0-20191206004733-862cefb68396 h1:OTMOZninxzV2p2gTfyF825h4rUNb8rBQ5JwvPOVN1nk=
 github.com/codeready-toolchain/api v0.0.0-20191206004733-862cefb68396/go.mod h1:K2iSNSOwpQf+Wo3LdmrGaPlha2BLwuywwWrnbuiy8Pg=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20191206100349-1d3b3ba54c59 h1:jolppHHBI9Vouzd2X5fvvj/73kvyBgxMFMUAMCXeih4=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20191206100349-1d3b3ba54c59/go.mod h1:c5EL9bEskD3ViC/ma1OhyIWNdGQMu+0K2nhGs+vfb9M=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200117081430-1435f41dfb31 h1:WbNrOBMV0P3KBlGp77yzX7NPb77E2A8udLW04f/e9eU=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200117081430-1435f41dfb31/go.mod h1:fQpxuAw8pI0BwVJhgKHN9vbWko/eWsCzsZ+9pknFVLQ=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.3/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.9+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -187,6 +188,8 @@ github.com/gobuffalo/packd v0.3.0/go.mod h1:zC7QkmNkYVGKPw4tHpBQ+ml7W/3tIebgeo1b
 github.com/gobuffalo/packr v1.30.1/go.mod h1:ljMyFO2EcrnzsHsN99cvbq055Y9OhRrIaviy289eRuk=
 github.com/gobuffalo/packr/v2 v2.5.1/go.mod h1:8f9c96ITobJlPzI44jj+4tHnEKNt0xXWSVlXRN9X1Iw=
 github.com/gobwas/glob v0.2.3/go.mod h1:d3Ez4x06l9bZtSvzIay5+Yzi0fmZzPgnTbPcKjJAkT8=
+github.com/gofrs/uuid v3.2.0+incompatible h1:y12jRkkFxsd7GpqdSZ+/KCs/fJbqpEXSGd4+jfEaewE=
+github.com/gofrs/uuid v3.2.0+incompatible/go.mod h1:b2aQJv3Z4Fp6yNu3cdSllBxTCLRxnplIgP/c0N/04lM=
 github.com/gogo/protobuf v1.1.1/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
 github.com/gogo/protobuf v1.2.0/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
 github.com/gogo/protobuf v1.2.1/go.mod h1:hp+jE20tsWTFYpLwKvXlhS1hjn+gTNwPg2I6zVXpSg4=

@@ -31,7 +31,7 @@ import (
 
 const (
 	// Status condition reasons
-	noClustersAvailableReason            = "NoClustersAvailable"
+	noClusterAvailableReason             = "NoClusterAvailable"
 	noTemplateTierAvailableReason        = "NoTemplateTierAvailable"
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason              = "UnableToCreateMUR"
@@ -175,8 +175,8 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		if instance.Spec.TargetCluster != "" {
 			targetCluster = instance.Spec.TargetCluster
 		} else {
-			// Automatic cluster selection
-			members := cluster.GetMemberClusters()
+			// Automatic cluster selection based on cluster readiness
+			members := cluster.GetMemberClusters(cluster.Ready, cluster.CapacityNotExhausted)
 			if len(members) > 0 {
 				targetCluster = members[0].Name
 			} else {
@@ -403,7 +403,7 @@ func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchain
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  noClustersAvailableReason,
+			Reason:  noClusterAvailableReason,
 			Message: message,
 		})
 }

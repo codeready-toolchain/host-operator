@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -93,7 +94,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	// The first reconcile creates the MasterUserRecord
@@ -182,7 +183,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 		},
 	}
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic)) // basicNSTemplateTier does not exist
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 	// when
 	res, err := r.Reconcile(req)
@@ -207,6 +208,82 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 		})
 }
 
+func TestUserSignupFailedNoClusterReady(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "foo",
+			Namespace: operatorNamespace,
+			UID:       types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+			Approved: false,
+		},
+	}
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic)) // basicNSTemplateTier does not exist
+	createMemberCluster(r.client, "member1", notReady)
+	defer clearMemberClusters(r.client)
+	// when
+	res, err := r.Reconcile(req)
+	// then
+	// error reported, and request is requeued and userSignup status was updated
+	require.Error(t, err)
+	assert.Equal(t, reconcile.Result{Requeue: false}, res)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	t.Logf("usersignup status: %+v", userSignup.Status)
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "NoClusterAvailable",
+		})
+}
+
+func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "foo",
+			Namespace: operatorNamespace,
+			UID:       types.UID(uuid.NewV4().String()),
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+			Approved: false,
+		},
+	}
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic)) // basicNSTemplateTier does not exist
+	createMemberCluster(r.client, "member1", ready, capacityExhausted)
+	defer clearMemberClusters(r.client)
+	// when
+	res, err := r.Reconcile(req)
+	// then
+	// error reported, and request is NOT requeued and userSignup status was updated
+	require.Error(t, err)
+	assert.Equal(t, reconcile.Result{Requeue: false}, res)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	t.Logf("usersignup status: %+v", userSignup.Status)
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "NoClusterAvailable",
+		})
+}
+
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -222,7 +299,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyManual), basicNSTemplateTier)
 
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	res, err := r.Reconcile(req)
@@ -289,7 +366,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier)
 
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	res, err := r.Reconcile(req)
@@ -355,7 +432,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyManual))
 
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	res, err := r.Reconcile(req)
@@ -401,7 +478,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	res, err := r.Reconcile(req)
@@ -506,7 +583,7 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier)
 
 	// Add some member clusters
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	clt.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
@@ -539,7 +616,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
 
 	// Add some member clusters
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
@@ -571,7 +648,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
 
 	// Add some member clusters
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
@@ -603,7 +680,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 
 	// Add some member clusters
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
@@ -638,7 +715,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 		switch obj := obj.(type) {
 		case *v1alpha1.UserSignup:
 			for _, cond := range obj.Status.Conditions {
-				if cond.Reason == "NoClustersAvailable" {
+				if cond.Reason == "NoClusterAvailable" {
 					return errors.New("failed to update UserSignup status")
 				}
 			}
@@ -678,7 +755,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	_, err := r.Reconcile(req)
@@ -724,7 +801,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	// First reconcile loop
@@ -784,7 +861,7 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	_, err := r.Reconcile(req)
@@ -856,7 +933,7 @@ func TestDeathBy100Signups(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, args...)
 
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	res, err := r.Reconcile(req)
@@ -918,7 +995,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, mur2, configMap(config.UserApprovalPolicyAutomatic))
 
-	createMemberCluster(r.client)
+	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
 	_, err := r.Reconcile(req)
@@ -999,13 +1076,72 @@ func newReconcileRequest(name string) reconcile.Request {
 	}
 }
 
-func createMemberCluster(client client.Client) {
-	status := newClusterStatus(common.ClusterReady, v1.ConditionTrue)
+// clusterOption an option to configure the cluster to use in the tests
+type clusterOption func(*v1beta1.KubeFedCluster)
 
-	kubeFedCluster := newKubeFedCluster("east", "secret", status, labels(cluster.Member, "", nameMember))
+// ready an option to state the cluster as "ready"
+var ready clusterOption = func(c *v1beta1.KubeFedCluster) {
+	c.Status = v1beta1.KubeFedClusterStatus{
+		Conditions: []v1beta1.ClusterCondition{
+			{
+				Type:   common.ClusterReady,
+				Status: v1.ConditionTrue,
+			},
+		},
+	}
+}
 
+// notReady an option to state the cluster as "not ready"
+var notReady clusterOption = func(c *v1beta1.KubeFedCluster) {
+	c.Status = v1beta1.KubeFedClusterStatus{
+		Conditions: []v1beta1.ClusterCondition{
+			{
+				Type:   common.ClusterReady,
+				Status: v1.ConditionFalse,
+			},
+		},
+	}
+}
+
+// capacityExhausted an option to state that the cluster capacity has exhausted
+var capacityExhausted clusterOption = func(c *v1beta1.KubeFedCluster) {
+	c.Labels["toolchain.dev.openshift.com/capacity-exhausted"] = strconv.FormatBool(true)
+}
+
+var member clusterOption = func(c *v1beta1.KubeFedCluster) {
+	c.Labels["type"] = "member"
+}
+
+func createMemberCluster(client client.Client, name string, options ...clusterOption) {
+	logf.SetLogger(zap.Logger())
+	gock.New("http://cluster.com").
+		Get("api").
+		Persist().
+		Reply(200).
+		BodyString("{}")
+	kubeFedCluster := &v1beta1.KubeFedCluster{
+		Spec: v1beta1.KubeFedClusterSpec{
+			SecretRef: v1beta1.LocalSecretReference{
+				Name: "secret",
+			},
+			APIEndpoint: "http://cluster.com",
+			CABundle:    []byte{},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test-namespace",
+			Labels: map[string]string{
+				"type":             "member",
+				"ownerClusterName": "east",
+			},
+		},
+	}
+	for _, configure := range options {
+		configure(kubeFedCluster)
+	}
 	service := cluster.NewKubeFedClusterService(client, logf.Log, operatorNamespace)
 	service.AddKubeFedCluster(kubeFedCluster)
+	return
 }
 
 func clearMemberClusters(client client.Client) {
@@ -1018,52 +1154,6 @@ func clearMemberClusters(client client.Client) {
 				Name: cluster.Name,
 			},
 		})
-	}
-}
-
-func newClusterStatus(conType common.ClusterConditionType, conStatus v1.ConditionStatus) v1beta1.KubeFedClusterStatus {
-	return v1beta1.KubeFedClusterStatus{
-		Conditions: []v1beta1.ClusterCondition{{
-			Type:   conType,
-			Status: conStatus,
-		}},
-	}
-}
-
-func labels(clType cluster.Type, ns, ownerClusterName string) map[string]string {
-	labels := map[string]string{}
-	if clType != "" {
-		labels["type"] = string(clType)
-	}
-	if ns != "" {
-		labels["namespace"] = ns
-	}
-	labels["ownerClusterName"] = ownerClusterName
-	return labels
-}
-
-func newKubeFedCluster(name, secName string, status v1beta1.KubeFedClusterStatus, labels map[string]string) *v1beta1.KubeFedCluster {
-	logf.SetLogger(zap.Logger())
-	gock.New("http://cluster.com").
-		Get("api").
-		Persist().
-		Reply(200).
-		BodyString("{}")
-
-	return &v1beta1.KubeFedCluster{
-		Spec: v1beta1.KubeFedClusterSpec{
-			SecretRef: v1beta1.LocalSecretReference{
-				Name: secName,
-			},
-			APIEndpoint: "http://cluster.com",
-			CABundle:    []byte{},
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: "test-namespace",
-			Labels:    labels,
-		},
-		Status: status,
 	}
 }
 
