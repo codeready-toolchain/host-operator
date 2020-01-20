@@ -76,9 +76,11 @@ func newRegistrationService(namespace, image, env string, replicas int) *v1alpha
 			Name:      "registration-service",
 		},
 		Spec: v1alpha1.RegistrationServiceSpec{
-			Image:       image,
-			Environment: env,
-			Replicas:    replicas,
+			EnvironmentVariables: map[string]string{
+				"IMAGE":       image,
+				"ENVIRONMENT": env,
+				"REPLICAS":    fmt.Sprintf("%d", replicas),
+			},
 		},
 	}
 }
