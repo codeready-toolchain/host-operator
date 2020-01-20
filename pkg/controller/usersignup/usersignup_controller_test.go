@@ -828,7 +828,7 @@ func TestUserSignupDeactivatedWithNoMUR(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	_, err := r.Reconcile(req)
 	require.NoError(t, err)
@@ -884,7 +884,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		mur := murtest.NewMasterUserRecord("john-doe-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 		// when
 		_, err := r.Reconcile(req)
@@ -918,7 +918,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 	t.Run("when MUR doesn't exist, then the condition should be set to Deactivated", func(t *testing.T) {
 		// given
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 		// when
 		_, err := r.Reconcile(req)
@@ -980,7 +980,7 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 		mur := murtest.NewMasterUserRecord("edward-jones-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 		// when
 		_, err := r.Reconcile(req)
