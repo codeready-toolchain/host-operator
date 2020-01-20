@@ -99,9 +99,12 @@ metadata:
             "namespace": "toolchain-host-operator"
           },
           "spec": {
-            "environment": "dev",
-            "image": "quay.io/codeready-toolchain/registration-service:1574697457",
-            "replicas": 4
+            "envVars": {
+              "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
+              "ENVIRONMENT": "dev",
+              "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
+              "REPLICAS": "4"
+            }
           }
         },
         {
