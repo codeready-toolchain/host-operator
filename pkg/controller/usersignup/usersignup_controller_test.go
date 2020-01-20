@@ -219,6 +219,7 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 	}
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 	createMemberCluster(r.client, "member1", notReady)
+	createMemberCluster(r.client, "member2", notReady)
 	defer clearMemberClusters(r.client)
 	// when
 	res, err := r.Reconcile(req)
@@ -256,6 +257,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	}
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 	createMemberCluster(r.client, "member1", ready, capacityExhausted)
+	createMemberCluster(r.client, "member2", ready, capacityExhausted)
 	defer clearMemberClusters(r.client)
 	// when
 	res, err := r.Reconcile(req)
