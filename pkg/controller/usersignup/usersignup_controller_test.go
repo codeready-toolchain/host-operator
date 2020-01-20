@@ -814,49 +814,12 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 	)
 }
 
-func TestUserSignupDeactivatedWithNoMUR(t *testing.T) {
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewV4().String(),
-			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
-		},
-		Spec: v1alpha1.UserSignupSpec{
-			Username:    "foo#bar@redhat.com",
-			Approved:    false,
-			Deactivated: true,
-		},
-	}
-
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-
-	_, err := r.Reconcile(req)
-	require.NoError(t, err)
-
-	key := types.NamespacedName{
-		Namespace: operatorNamespace,
-		Name:      userSignup.Name,
-	}
-	instance := &v1alpha1.UserSignup{}
-	err = r.client.Get(context.TODO(), key, instance)
-	require.NoError(t, err)
-
-	test.AssertConditionsMatch(t, instance.Status.Conditions,
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupComplete,
-			Status: v1.ConditionTrue,
-			Reason: "Deactivated",
-		},
-	)
-}
-
 func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username:    "john.doe@redhat.com",
@@ -951,7 +914,6 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username:    "edward.jones@redhat.com",
