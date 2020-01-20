@@ -41,7 +41,6 @@ var basicNSTemplateTier = &toolchainv1alpha1.NSTemplateTier{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: operatorNamespace,
 		Name:      "basic",
-		UID:       types.UID(uuid.NewV4().String()),
 	},
 	Spec: toolchainv1alpha1.NSTemplateTierSpec{
 		Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
@@ -84,7 +83,6 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userID.String(),
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -175,7 +173,6 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -214,14 +211,13 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: false,
 		},
 	}
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic)) // basicNSTemplateTier does not exist
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 	createMemberCluster(r.client, "member1", notReady)
 	defer clearMemberClusters(r.client)
 	// when
@@ -252,14 +248,13 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: false,
 		},
 	}
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic)) // basicNSTemplateTier does not exist
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
 	createMemberCluster(r.client, "member1", ready, capacityExhausted)
 	defer clearMemberClusters(r.client)
 	// when
@@ -289,7 +284,6 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -356,7 +350,6 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -422,7 +415,6 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -467,7 +459,6 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username:      "foo@redhat.com",
@@ -535,7 +526,6 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "bar",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username:      "bar@redhat.com",
@@ -572,7 +562,6 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -605,7 +594,6 @@ func TestUserSignupMURReadFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -637,7 +625,6 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -670,7 +657,6 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -702,7 +688,6 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -735,7 +720,6 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -748,7 +732,6 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo-at-redhat-com-1",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
 		},
 	}
@@ -781,7 +764,6 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -794,7 +776,6 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo-at-redhat-com",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
 		},
 	}
@@ -851,7 +832,6 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo#bar@redhat.com",
@@ -897,7 +877,6 @@ func TestDeathBy100Signups(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userID,
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -913,7 +892,6 @@ func TestDeathBy100Signups(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo-at-redhat-com",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
 		},
 	})
@@ -923,7 +901,6 @@ func TestDeathBy100Signups(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("foo-at-redhat-com-%d", i),
 				Namespace: operatorNamespace,
-				UID:       types.UID(uuid.NewV4().String()),
 				Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
 			},
 		})
@@ -965,7 +942,6 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -978,7 +954,6 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo-at-redhat-com",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
 		},
 	}
@@ -988,7 +963,6 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "bar-at-redhat-com",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
 		},
 	}
@@ -1024,7 +998,6 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			UID:       types.UID(uuid.NewV4().String()),
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -1108,10 +1081,6 @@ var capacityExhausted clusterOption = func(c *v1beta1.KubeFedCluster) {
 	c.Labels["toolchain.dev.openshift.com/capacity-exhausted"] = strconv.FormatBool(true)
 }
 
-var member clusterOption = func(c *v1beta1.KubeFedCluster) {
-	c.Labels["type"] = "member"
-}
-
 func createMemberCluster(client client.Client, name string, options ...clusterOption) {
 	logf.SetLogger(zap.Logger())
 	gock.New("http://cluster.com").
@@ -1141,7 +1110,6 @@ func createMemberCluster(client client.Client, name string, options ...clusterOp
 	}
 	service := cluster.NewKubeFedClusterService(client, logf.Log, operatorNamespace)
 	service.AddKubeFedCluster(kubeFedCluster)
-	return
 }
 
 func clearMemberClusters(client client.Client) {
