@@ -10,7 +10,7 @@ import (
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/config"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
@@ -19,7 +19,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	gock "gopkg.in/h2non/gock.v1"
+	"gopkg.in/h2non/gock.v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,11 +71,11 @@ var basicNSTemplateTier = &toolchainv1alpha1.NSTemplateTier{
 }
 
 func TestReadUserApprovalPolicy(t *testing.T) {
-	r, _, _ := prepareReconcile(t, "test", configMap(config.UserApprovalPolicyAutomatic))
+	r, _, _ := prepareReconcile(t, "test", configMap(configuration.UserApprovalPolicyAutomatic))
 
 	policy, err := r.ReadUserApprovalPolicyConfig(operatorNamespace)
 	require.NoError(t, err)
-	require.Equal(t, config.UserApprovalPolicyAutomatic, policy)
+	require.Equal(t, configuration.UserApprovalPolicyAutomatic, policy)
 }
 
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
@@ -92,7 +92,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -182,7 +182,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 			Approved: false,
 		},
 	}
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic)) // basicNSTemplateTier does not exist
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic)) // basicNSTemplateTier does not exist
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
 	// when
@@ -221,7 +221,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyManual), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyManual), basicNSTemplateTier)
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -354,7 +354,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyManual))
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyManual))
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -400,7 +400,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -601,7 +601,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 		},
 	}
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic))
 
 	// Add some member clusters
 	createMemberCluster(r.client)
@@ -633,7 +633,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 		},
 	}
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj := obj.(type) {
@@ -677,7 +677,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -723,7 +723,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -783,7 +783,7 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -1029,7 +1029,7 @@ func TestDeathBy100Signups(t *testing.T) {
 
 	args := make([]runtime.Object, 0)
 	args = append(args, userSignup)
-	args = append(args, configMap(config.UserApprovalPolicyAutomatic))
+	args = append(args, configMap(configuration.UserApprovalPolicyAutomatic))
 
 	args = append(args, &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1115,7 +1115,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, mur2, configMap(config.UserApprovalPolicyAutomatic))
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, mur2, configMap(configuration.UserApprovalPolicyAutomatic))
 
 	createMemberCluster(r.client)
 	defer clearMemberClusters(r.client)
@@ -1155,7 +1155,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(config.UserApprovalPolicyAutomatic))
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic))
 
 	_, err := r.Reconcile(req)
 	require.Error(t, err)
@@ -1269,11 +1269,11 @@ func newKubeFedCluster(name, secName string, status v1beta1.KubeFedClusterStatus
 func configMap(approvalPolicy string) *v1.ConfigMap {
 	// Create a new ConfigMap
 	cmValues := make(map[string]string)
-	cmValues[config.ToolchainConfigMapUserApprovalPolicy] = approvalPolicy
+	cmValues[configuration.ToolchainConfigMapUserApprovalPolicy] = approvalPolicy
 	cm := &v1.ConfigMap{
 		Data: cmValues,
 	}
-	cm.Name = config.ToolchainConfigMapName
+	cm.Name = configuration.ToolchainConfigMapName
 	cm.ObjectMeta.Namespace = operatorNamespace
 	return cm
 }
@@ -1284,7 +1284,7 @@ func emptyConfigMap() *v1.ConfigMap {
 	cm := &v1.ConfigMap{
 		Data: cmValues,
 	}
-	cm.Name = config.ToolchainConfigMapName
+	cm.Name = configuration.ToolchainConfigMapName
 	cm.ObjectMeta.Namespace = operatorNamespace
 	return cm
 }
