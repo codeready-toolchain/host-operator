@@ -6,6 +6,18 @@ metadata:
       [
         {
           "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "BannedUser",
+          "metadata": {
+            "labels": {
+              "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+            }
+          },
+          "spec": {
+            "email": "john.doe@gmail.com"
+          }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
           "kind": "MasterUserRecord",
           "metadata": {
             "name": "johnsmith"
@@ -113,6 +125,11 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
+    - description: BannedUser is used to maintain a list of banned e-mail addresses
+      displayName: BannedUser
+      kind: BannedUser
+      name: bannedusers.toolchain.dev.openshift.com
+      version: v1alpha1
     - description: MasterUserRecord keeps all information about user, user accounts
         and namespaces provisioned in CodeReady Toolchain SaaS system
       displayName: MasterUserRecord
@@ -130,7 +147,7 @@ spec:
       kind: RegistrationService
       name: registrationservices.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: UserSignup registres a user in the CodeReady Toolchain SaaS system
+    - description: UserSignup registers a user in the CodeReady Toolchain SaaS system
       displayName: UserSignup
       kind: UserSignup
       name: usersignups.toolchain.dev.openshift.com
@@ -145,10 +162,7 @@ spec:
           - ""
           resources:
           - nodes
-          - namespaces
-          - componentstatuses
           verbs:
-          - get
           - list
         - apiGroups:
           - apiextensions.k8s.io
@@ -157,14 +171,6 @@ spec:
           verbs:
           - get
           - create
-          - list
-          - watch
-        - apiGroups:
-          - template.openshift.io
-          resources:
-          - brokertemplateinstances
-          verbs:
-          - list
         serviceAccountName: host-operator
       deployments:
       - name: host-operator
@@ -193,6 +199,8 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: host-operator
+                - name: REGISTRATION_SERVICE_IMAGE
+                  value: REPLACE_REGISTRATION_SERVICE_IMAGE
                 image: REPLACE_IMAGE
                 imagePullPolicy: IfNotPresent
                 name: host-operator
@@ -214,17 +222,6 @@ spec:
           verbs:
           - '*'
         - apiGroups:
-          - ""
-          resources:
-          - podtemplates
-          - resourcequotas
-          - serviceaccounts
-          - replicationcontrollers
-          - limitranges
-          verbs:
-          - get
-          - list
-        - apiGroups:
           - route.openshift.io
           resources:
           - routes
@@ -234,9 +231,6 @@ spec:
           - apps
           resources:
           - deployments
-          - daemonsets
-          - replicasets
-          - statefulsets
           verbs:
           - '*'
         - apiGroups:
