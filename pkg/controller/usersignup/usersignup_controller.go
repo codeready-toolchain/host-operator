@@ -3,14 +3,12 @@ package usersignup
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/config"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
@@ -19,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -158,7 +158,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 	// If the signup has been explicitly approved (by an admin), or the user approval policy is set to automatic,
 	// then proceed with the signup
-	if instance.Spec.Approved || userApprovalPolicy == config.UserApprovalPolicyAutomatic {
+	if instance.Spec.Approved || userApprovalPolicy == configuration.UserApprovalPolicyAutomatic {
 		if instance.Spec.Approved {
 			if statusError := r.updateStatus(reqLogger, instance, r.setStatusApprovedByAdmin); statusError != nil {
 				return reconcile.Result{}, statusError
@@ -310,15 +310,15 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 // the config map value for the user approval policy (which will either be "manual" or "automatic")
 func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig(namespace string) (string, error) {
 	cm := &corev1.ConfigMap{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: config.ToolchainConfigMapName}, cm)
+	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: configuration.ToolchainConfigMapName}, cm)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return config.UserApprovalPolicyManual, nil
+			return configuration.UserApprovalPolicyManual, nil
 		}
 		return "", err
 	}
 
-	val, ok := cm.Data[config.ToolchainConfigMapUserApprovalPolicy]
+	val, ok := cm.Data[configuration.ToolchainConfigMapUserApprovalPolicy]
 	if !ok {
 		return "", nil
 	}

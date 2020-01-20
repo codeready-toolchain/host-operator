@@ -9,17 +9,31 @@ APP_NAMESPACE ?= $(LOCAL_TEST_NAMESPACE)
 LOCAL_TEST_NAMESPACE ?= "toolchain-host-operator"
 ADD_CLUSTER_SCRIPT_PATH?=../toolchain-common/scripts/add-cluster.sh
 
+IS_OS_3 := $(shell curl -k -XGET -H "Authorization: Bearer $(shell oc whoami -t 2>/dev/null)" $(shell oc config view --minify -o jsonpath='{.clusters[0].cluster.server}')/version/openshift 2>/dev/null | grep paths)
+IS_CRC := $(shell oc config view --minify -o jsonpath='{.clusters[0].cluster.server}' 2>&1 | grep crc)
+
 .PHONY: up-local
 ## Run Operator locally
 up-local: login-as-admin create-namespace deploy-rbac build deploy-crd
+	$(eval REGISTRATION_SERVICE_IMAGE_NAME := registry.svc.ci.openshift.org/codeready-toolchain/registration-service-v0.1:registration-service)
 	$(Q)-oc new-project $(LOCAL_TEST_NAMESPACE) || true
-	$(Q)operator-sdk up local --namespace=$(APP_NAMESPACE) --verbose
+	$(Q)REGISTRATION_SERVICE_IMAGE=${REGISTRATION_SERVICE_IMAGE_NAME} REGISTRATION_SERVICE_ENVIRONMENT=dev operator-sdk up local --namespace=$(APP_NAMESPACE) --verbose
 
 .PHONY: login-as-admin
 ## Log in as system:admin
 login-as-admin:
-	$(Q)-echo "Logging using system:admin..."
-	$(Q)-oc login -u system:admin
+ifeq ($(IS_CRC),)
+    ifneq ($(IS_OS_3),)
+		# is running locally and against OS 3, so we assume that it's minishift
+		$(info logging as system:admin")
+		oc login -u system:admin 1>/dev/null
+    endif
+else
+    ifneq ($(IS_KUBE_ADMIN),)
+		$(info logging as kube:admin")
+		oc login -u=kubeadmin -p=`cat ~/.crc/cache/crc_libvirt_*/kubeadmin-password` 1>/dev/null
+    endif
+endif
 
 .PHONY: create-namespace
 ## Create the test namespace
