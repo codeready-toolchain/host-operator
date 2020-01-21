@@ -1,7 +1,6 @@
 package configuration_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -59,33 +58,6 @@ func TestNew(t *testing.T) {
 	})
 }
 
-func TestGetRegServiceEnvironment(t *testing.T) {
-	key := fmt.Sprintf("%s_ENVIRONMENT", configuration.RegServiceEnvPrefix)
-	resetFunc := test.UnsetEnvVarAndRestore(t, key)
-	defer resetFunc()
-
-	t.Run("default", func(t *testing.T) {
-		resetFunc := test.UnsetEnvVarAndRestore(t, key)
-		defer resetFunc()
-		config := getDefaultConfiguration(t)
-		assert.Equal(t, "prod", config.GetRegServiceEnvironment())
-	})
-
-	t.Run("file", func(t *testing.T) {
-		resetFunc := test.UnsetEnvVarAndRestore(t, key)
-		defer resetFunc()
-		config := getFileConfiguration(t, "environment: TestGetEnvironmentFromConfig")
-		assert.Equal(t, "TestGetEnvironmentFromConfig", config.GetRegServiceEnvironment())
-	})
-
-	t.Run("env overwrite", func(t *testing.T) {
-		err := os.Setenv(key, "TestGetEnvironmentFromEnvVar")
-		require.NoError(t, err)
-		config := getDefaultConfiguration(t)
-		assert.Equal(t, "TestGetEnvironmentFromEnvVar", config.GetRegServiceEnvironment())
-	})
-}
-
 func TestGetImage(t *testing.T) {
 	key := configuration.RegServiceEnvPrefix + "_" + "IMAGE"
 	resetFunc := test.UnsetEnvVarAndRestore(t, key)
@@ -99,8 +71,6 @@ func TestGetImage(t *testing.T) {
 	})
 
 	t.Run("file", func(t *testing.T) {
-		resetFunc := test.UnsetEnvVarAndRestore(t, key)
-		defer resetFunc()
 		u, err := uuid.NewV4()
 		require.NoError(t, err)
 		newVal := u.String()
@@ -112,106 +82,46 @@ func TestGetImage(t *testing.T) {
 		u, err := uuid.NewV4()
 		require.NoError(t, err)
 		newVal := u.String()
-		err = os.Setenv(key, newVal)
-		require.NoError(t, err)
+		restore := test.SetEnvVarAndRestore(t, key, newVal)
+		defer restore()
+
+		restore = test.SetEnvVarAndRestore(t, configuration.RegServiceEnvPrefix+"_"+"ANY_CONFIG", newVal)
+		defer restore()
 		config := getDefaultConfiguration(t)
 		assert.Equal(t, newVal, config.GetRegServiceImage())
 	})
 }
 
-func TestGetAuthClientLibraryURL(t *testing.T) {
-	key := configuration.RegServiceEnvPrefix + "_" + "AUTH_CLIENT_LIBRARY_URL"
-	resetFunc := test.UnsetEnvVarAndRestore(t, key)
-	defer resetFunc()
+func TestGetDynamicKeys(t *testing.T) {
+	firstKey := configuration.RegServiceEnvPrefix + "_" + "FIRST_KEY"
+	secondKey := configuration.RegServiceEnvPrefix + "_" + "SECOND_KEY"
+	thirdKey := configuration.RegServiceEnvPrefix + "_" + "THIRD_KEY"
 
 	t.Run("default", func(t *testing.T) {
-		resetFunc := test.UnsetEnvVarAndRestore(t, key)
-		defer resetFunc()
 		config := getDefaultConfiguration(t)
-		assert.Equal(t, "", config.GetAuthClientLibraryURL())
+		assert.Empty(t, config.GetAllRegistrationServiceParameters())
 	})
 
-	t.Run("file", func(t *testing.T) {
-		resetFunc := test.UnsetEnvVarAndRestore(t, key)
-		defer resetFunc()
-		u, err := uuid.NewV4()
-		require.NoError(t, err)
-		newVal := u.String()
-		config := getFileConfiguration(t, `auth_client.library_url: "`+newVal+`"`)
-		assert.Equal(t, newVal, config.GetAuthClientLibraryURL())
+	t.Run("file with empty list ", func(t *testing.T) {
+		config := getFileConfiguration(t, `ANYTHING: "SOMETHING"`)
+		assert.Empty(t, config.GetAllRegistrationServiceParameters())
 	})
 
 	t.Run("env overwrite", func(t *testing.T) {
 		u, err := uuid.NewV4()
 		require.NoError(t, err)
 		newVal := u.String()
-		err = os.Setenv(key, newVal)
-		require.NoError(t, err)
+		newVal2 := "foo=bar=baz"
+		//todo fix this
+		restore := test.SetEnvVarsAndRestore(t,
+			test.Env(firstKey, newVal),
+			test.Env(secondKey, newVal2),
+			test.Env(thirdKey, ""))
+		defer restore()
 		config := getDefaultConfiguration(t)
-		assert.Equal(t, newVal, config.GetAuthClientLibraryURL())
-	})
-}
-
-func TestGetAuthClientPublicKeysURL(t *testing.T) {
-	key := configuration.RegServiceEnvPrefix + "_" + "AUTH_CLIENT_PUBLIC_KEYS_URL"
-	resetFunc := test.UnsetEnvVarAndRestore(t, key)
-	defer resetFunc()
-
-	t.Run("default", func(t *testing.T) {
-		resetFunc := test.UnsetEnvVarAndRestore(t, key)
-		defer resetFunc()
-		config := getDefaultConfiguration(t)
-		assert.Equal(t, "", config.GetAuthClientPublicKeysURL())
-	})
-
-	t.Run("file", func(t *testing.T) {
-		resetFunc := test.UnsetEnvVarAndRestore(t, key)
-		defer resetFunc()
-		u, err := uuid.NewV4()
-		require.NoError(t, err)
-		newVal := u.String()
-		config := getFileConfiguration(t, `auth_client.public_keys_url: "`+newVal+`"`)
-		assert.Equal(t, newVal, config.GetAuthClientPublicKeysURL())
-	})
-
-	t.Run("env overwrite", func(t *testing.T) {
-		u, err := uuid.NewV4()
-		require.NoError(t, err)
-		newVal := u.String()
-		err = os.Setenv(key, newVal)
-		require.NoError(t, err)
-		config := getDefaultConfiguration(t)
-		assert.Equal(t, newVal, config.GetAuthClientPublicKeysURL())
-	})
-}
-
-func TestGetAuthClientConfigRaw(t *testing.T) {
-	key := configuration.RegServiceEnvPrefix + "_" + "AUTH_CLIENT_CONFIG_RAW"
-
-	t.Run("default", func(t *testing.T) {
-		resetFunc := test.UnsetEnvVarAndRestore(t, key)
-		defer resetFunc()
-		config := getDefaultConfiguration(t)
-		assert.Equal(t, "", config.GetAuthClientConfigAuthRaw())
-	})
-
-	t.Run("file", func(t *testing.T) {
-		resetFunc := test.UnsetEnvVarAndRestore(t, key)
-		defer resetFunc()
-		u, err := uuid.NewV4()
-		require.NoError(t, err)
-		newVal := u.String()
-		config := getFileConfiguration(t, `auth_client.config.raw: "`+newVal+`"`)
-		assert.Equal(t, newVal, config.GetAuthClientConfigAuthRaw())
-	})
-
-	t.Run("env overwrite", func(t *testing.T) {
-		u, err := uuid.NewV4()
-		require.NoError(t, err)
-		newVal := u.String()
-		err = os.Setenv(key, newVal)
-		require.NoError(t, err)
-		config := getDefaultConfiguration(t)
-		assert.Equal(t, newVal, config.GetAuthClientConfigAuthRaw())
+		require.Len(t, config.GetAllRegistrationServiceParameters(), 3)
+		assert.Equal(t, newVal, config.GetAllRegistrationServiceParameters()[firstKey])
+		assert.Equal(t, newVal2, config.GetAllRegistrationServiceParameters()[secondKey])
+		assert.Empty(t, config.GetAllRegistrationServiceParameters()[thirdKey])
 	})
 }

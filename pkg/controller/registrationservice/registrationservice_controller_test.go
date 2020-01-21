@@ -181,21 +181,20 @@ func TestGetVarsWhenAuthClientIsNotSpecified(t *testing.T) {
 	assert.Equal(t, "1", vars["REPLICAS"])
 }
 
-func TestGetVarsWhenAuthClientIsSpecifiedButNotReplicasNorEnv(t *testing.T) {
+func TestGetVarsWhenAuthClientIsSpecifiedButNotEnv(t *testing.T) {
 	// given
-	reqService := newRegistrationService(test.HostOperatorNs, imageDef, "", 0)
-	reqService.Spec.AuthClient = v1alpha1.AuthClient{
-		LibraryUrl:    "location/of/library",
-		PublicKeysUrl: "location/of/public/key",
-		Config:        `{"my":"cool-config"}`,
-	}
+	regService := newRegistrationService("host-operator", imageDef, "", 1)
+
+	regService.Spec.EnvironmentVariables["AUTH_CLIENT_LIBRARY_URL"] = "location/of/library"
+	regService.Spec.EnvironmentVariables["AUTH_CLIENT_PUBLIC_KEYS_URL"] = "location/of/public/key"
+	regService.Spec.EnvironmentVariables["AUTH_CLIENT_CONFIG_RAW"] = `{"my":"cool-config"}`
 
 	// when
-	vars := getVars(reqService)
+	vars := getVars(regService)
 
 	// then
-	assert.Len(t, vars, 5)
-	assert.Equal(t, test.HostOperatorNs, vars["NAMESPACE"])
+	assert.Len(t, vars, 6)
+	assert.Equal(t, "host-operator", vars["NAMESPACE"])
 	assert.Equal(t, imageDef, vars["IMAGE"])
 	assert.Equal(t, "location/of/library", vars["AUTH_CLIENT_LIBRARY_URL"])
 	assert.Equal(t, `{"my":"cool-config"}`, vars["AUTH_CLIENT_CONFIG_RAW"])

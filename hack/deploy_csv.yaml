@@ -22,6 +22,60 @@ data:
       kind: CustomResourceDefinition
       metadata:
         creationTimestamp: null
+        name: bannedusers.toolchain.dev.openshift.com
+      spec:
+        additionalPrinterColumns:
+        - JSONPath: .spec.email
+          name: Email
+          type: string
+        group: toolchain.dev.openshift.com
+        names:
+          kind: BannedUser
+          listKind: BannedUserList
+          plural: bannedusers
+          singular: banneduser
+        scope: Namespaced
+        subresources: {}
+        validation:
+          openAPIV3Schema:
+            description: BannedUser is the Schema for the banneduser API
+            properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource this
+                  object represents. Servers may infer this from the endpoint the client
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                type: string
+              metadata:
+                type: object
+              spec:
+                description: BannedUserSpec defines the desired state of BannedUser
+                properties:
+                  email:
+                    description: The e-mail address of the account that has been banned
+                    type: string
+                required:
+                - email
+                type: object
+        version: v1alpha1
+        versions:
+        - name: v1alpha1
+          served: true
+          storage: true
+      status:
+        acceptedNames:
+          kind: ""
+          plural: ""
+        conditions: []
+        storedVersions: []
+    - apiVersion: apiextensions.k8s.io/v1beta1
+      kind: CustomResourceDefinition
+      metadata:
+        creationTimestamp: null
         name: masteruserrecords.toolchain.dev.openshift.com
       spec:
         additionalPrinterColumns:
@@ -449,10 +503,10 @@ data:
         name: registrationservices.toolchain.dev.openshift.com
       spec:
         additionalPrinterColumns:
-        - JSONPath: .spec.image
+        - JSONPath: .spec.envVars.IMAGE
           name: Image
           type: string
-        - JSONPath: .spec.environment
+        - JSONPath: .spec.envVars.ENVIRONMENT
           name: Environment
           type: string
         - JSONPath: .status.conditions[?(@.type=="Ready")].status
@@ -492,37 +546,12 @@ data:
               spec:
                 description: RegistrationServiceSpec defines the desired state of RegistrationService
                 properties:
-                  authClient:
-                    description: The AuthClient contains all necessary information about
-                      the auth client
-                    properties:
-                      config:
-                        description: The Config contains the auth config
-                        type: string
-                      libraryUrl:
-                        description: The LibraryUrl identifies the auth library location
-                        type: string
-                      publicKeysUrl:
-                        description: The PublicKeysUrl identifies the public keys location
-                        type: string
-                    required:
-                    - config
-                    - libraryUrl
-                    - publicKeysUrl
+                  envVars:
+                    additionalProperties:
+                      type: string
+                    description: The environment variables are supposed to be set to registration
+                      service deployment template
                     type: object
-                  environment:
-                    description: The environment identifies which mode the registration
-                      service should be running in - prod, stage, e2e-tests, dev, etc.
-                    type: string
-                  image:
-                    description: The image identifies which image of the registration service
-                      should be used for a deployment
-                    type: string
-                  replicas:
-                    description: The number of replicas of the deployed registration service
-                    type: integer
-                required:
-                - image
                 type: object
               status:
                 description: RegistrationServiceStatus defines the observed state of RegistrationService
@@ -713,6 +742,18 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "BannedUser",
+                "metadata": {
+                  "labels": {
+                    "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+                  }
+                },
+                "spec": {
+                  "email": "john.doe@gmail.com"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "MasterUserRecord",
                 "metadata": {
                   "name": "johnsmith"
@@ -794,9 +835,12 @@ data:
                   "namespace": "toolchain-host-operator"
                 },
                 "spec": {
-                  "environment": "dev",
-                  "image": "quay.io/codeready-toolchain/registration-service:1574697457",
-                  "replicas": 4
+                  "envVars": {
+                    "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
+                    "ENVIRONMENT": "dev",
+                    "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
+                    "REPLICAS": "4"
+                  }
                 }
               },
               {
@@ -820,6 +864,11 @@ data:
         apiservicedefinitions: {}
         customresourcedefinitions:
           owned:
+          - description: BannedUser is used to maintain a list of banned e-mail addresses
+            displayName: BannedUser
+            kind: BannedUser
+            name: bannedusers.toolchain.dev.openshift.com
+            version: v1alpha1
           - description: MasterUserRecord keeps all information about user, user accounts
               and namespaces provisioned in CodeReady Toolchain SaaS system
             displayName: MasterUserRecord
@@ -837,7 +886,7 @@ data:
             kind: RegistrationService
             name: registrationservices.toolchain.dev.openshift.com
             version: v1alpha1
-          - description: UserSignup registres a user in the CodeReady Toolchain SaaS system
+          - description: UserSignup registers a user in the CodeReady Toolchain SaaS system
             displayName: UserSignup
             kind: UserSignup
             name: usersignups.toolchain.dev.openshift.com
@@ -891,14 +940,6 @@ data:
                         value: host-operator
                       - name: REGISTRATION_SERVICE_IMAGE
                         value: REPLACE_REGISTRATION_SERVICE_IMAGE
-                      - name: REGISTRATION_SERVICE_ENVIRONMENT
-                        value: REPLACE_REGISTRATION_SERVICE_ENVIRONMENT
-                      - name: REGISTRATION_AUTH_CLIENT_LIBRARY_URL
-                        value: REPLACE_REGISTRATION_AUTH_CLIENT_LIBRARY_URL
-                      - name: REGISTRATION_AUTH_CLIENT_CONFIG_RAW
-                        value: REPLACE_REGISTRATION_AUTH_CLIENT_CONFIG_RAW
-                      - name: REGISTRATION_AUTH_CLIENT_PUBLIC_KEYS_URL
-                        value: REPLACE_REGISTRATION_AUTH_CLIENT_PUBLIC_KEYS_URL
                       image: REPLACE_IMAGE
                       imagePullPolicy: IfNotPresent
                       name: host-operator

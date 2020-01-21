@@ -81,6 +81,7 @@ func main() {
 	logf.SetLogger(zap.Logger())
 
 	printVersion()
+	printConfig(confg)
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
@@ -223,6 +224,14 @@ func loadConfig() (*configuration.Registry, error) {
 	}
 
 	return configuration.New(configFilePath)
+}
+
+func printConfig(cfg *configuration.Registry) {
+	logWithValues := log
+	for key, value := range cfg.GetAllRegistrationServiceParameters() {
+		logWithValues = logWithValues.WithValues("key", key, "value", value)
+	}
+	logWithValues.Info("Registration Service configuration variables:")
 }
 
 // ensureKubeFedClusterCRD ensure that KubeFedCluster CRD exists in the cluster.

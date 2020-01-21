@@ -3,6 +3,7 @@
 package configuration
 
 import (
+	"os"
 	"strings"
 
 	errs "github.com/pkg/errors"
@@ -12,7 +13,7 @@ import (
 // prefixes
 const (
 	// HostEnvPrefix will be used for host environment variable name prefixing.
-	HostEnvPrefix = "HOST"
+	HostEnvPrefix = "HOST_OPERATOR"
 
 	// RegServiceEnvPrefix will be used for registration service environment variable name prefixing.
 	RegServiceEnvPrefix = "REGISTRATION_SERVICE"
@@ -22,20 +23,6 @@ const (
 const (
 	// varImage specifies registration service image to be used for deployment
 	varImage = "image"
-
-	// varEnvironment specifies registration service environment such as prod, stage, unit-tests, e2e-tests, dev, etc
-	varEnvironment = "environment"
-	// DefaultEnvironment is the default registration service environment
-	DefaultEnvironment = "prod"
-
-	// varAuthClientLibraryURL identifies the auth library location
-	varAuthClientLibraryURL = "auth_client.library_url"
-
-	// varAuthClientConfigRaw contains the auth config
-	varAuthClientConfigRaw = "auth_client.config.raw"
-
-	// varAuthClientPublicKeysURL identifies the public keys location
-	varAuthClientPublicKeysURL = "auth_client.public_keys_url"
 )
 
 // host-operator constants
@@ -58,6 +45,7 @@ const (
 type Registry struct {
 	host       *viper.Viper
 	regService *viper.Viper
+	noPrefix   *viper.Viper
 }
 
 // CreateEmptyRegistry creates an initial, empty registry.
@@ -65,10 +53,11 @@ func CreateEmptyRegistry() *Registry {
 	c := Registry{
 		host:       viper.New(),
 		regService: viper.New(),
+		noPrefix:   viper.New(),
 	}
 	c.host.SetEnvPrefix(HostEnvPrefix)
 	c.regService.SetEnvPrefix(RegServiceEnvPrefix)
-	for _, v := range []*viper.Viper{c.host, c.regService} {
+	for _, v := range []*viper.Viper{c.host, c.regService, c.noPrefix} {
 		v.AutomaticEnv()
 		v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 		v.SetTypeByDefaultValue(true)
@@ -95,16 +84,9 @@ func New(configFilePath string) (*Registry, error) {
 	return c, nil
 }
 
-// GetViperInstance returns the underlying Viper instance.
-func (c *Registry) GetViperInstance() *viper.Viper {
-	return c.host
-}
-
 func (c *Registry) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.regService.SetTypeByDefaultValue(true)
-
-	c.regService.SetDefault(varEnvironment, DefaultEnvironment)
 }
 
 // GetRegServiceImage returns the registration service image.
@@ -112,22 +94,18 @@ func (c *Registry) GetRegServiceImage() string {
 	return c.regService.GetString(varImage)
 }
 
-// GetRegServiceEnvironment returns the registration service environment such as prod, stage, unit-tests, e2e-tests, dev, etc
-func (c *Registry) GetRegServiceEnvironment() string {
-	return c.regService.GetString(varEnvironment)
-}
+// GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
+func (c *Registry) GetAllRegistrationServiceParameters() map[string]string {
+	vars := map[string]string{}
 
-// GetAuthClientLibraryURL returns the auth library location
-func (c *Registry) GetAuthClientLibraryURL() string {
-	return c.regService.GetString(varAuthClientLibraryURL)
-}
-
-// GetAuthClientConfigAuthRaw returns the auth config config
-func (c *Registry) GetAuthClientConfigAuthRaw() string {
-	return c.regService.GetString(varAuthClientConfigRaw)
-}
-
-// GetAuthClientPublicKeysURL returns the public keys URL
-func (c *Registry) GetAuthClientPublicKeysURL() string {
-	return c.regService.GetString(varAuthClientPublicKeysURL)
+	for _, env := range os.Environ() {
+		keyValue := strings.SplitN(env, "=", 2)
+		if len(keyValue) < 2 {
+			continue
+		}
+		if strings.HasPrefix(keyValue[0], RegServiceEnvPrefix+"_") {
+			vars[keyValue[0]] = keyValue[1]
+		}
+	}
+	return vars
 }

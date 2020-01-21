@@ -37,8 +37,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		require.NoError(t, err)
 		test.AssertThatRegistrationService(t, "registration-service", cl).
 			HasImage("").
-			HasEnvironment("prod").
-			HasReplicas(0).
+			HasEnvironment("").
+			HasReplicas("").
 			HasAuthConfig("").
 			HasAuthLibraryUrl("").
 			HasAuthPublicKeysUrl("")
@@ -72,7 +72,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		test.AssertThatRegistrationService(t, "registration-service", cl).
 			HasImage("quay.io/rh/registration-service:v0.1").
 			HasEnvironment("test").
-			HasReplicas(0).
+			HasReplicas("").
 			HasAuthConfig(`{"my":"cool-config"}`).
 			HasAuthLibraryUrl("url/to/library/location").
 			HasAuthPublicKeysUrl("url/to/public/key/location")

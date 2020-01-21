@@ -47,41 +47,41 @@ func (a *RegServiceAssertion) HasConditions(expected ...toolchainv1alpha1.Condit
 func (a *RegServiceAssertion) HasImage(image string) *RegServiceAssertion {
 	err := a.loadRegServiceAssertion()
 	require.NoError(a.t, err)
-	assert.Equal(a.t, image, a.RegistrationService.Spec.Image)
+	assert.Equal(a.t, image, a.RegistrationService.Spec.EnvironmentVariables["IMAGE"])
 	return a
 }
 
-func (a *RegServiceAssertion) HasReplicas(replicas int) *RegServiceAssertion {
+func (a *RegServiceAssertion) HasReplicas(replicas string) *RegServiceAssertion {
 	err := a.loadRegServiceAssertion()
 	require.NoError(a.t, err)
-	assert.Equal(a.t, replicas, a.RegistrationService.Spec.Replicas)
+	assert.Equal(a.t, replicas, a.RegistrationService.Spec.EnvironmentVariables["REPLICAS"])
 	return a
 }
 
 func (a *RegServiceAssertion) HasEnvironment(env string) *RegServiceAssertion {
 	err := a.loadRegServiceAssertion()
 	require.NoError(a.t, err)
-	assert.Equal(a.t, env, a.RegistrationService.Spec.Environment)
+	assert.Equal(a.t, env, a.RegistrationService.Spec.EnvironmentVariables["ENVIRONMENT"])
 	return a
 }
 
 func (a *RegServiceAssertion) HasAuthLibraryUrl(libUrl string) *RegServiceAssertion {
 	err := a.loadRegServiceAssertion()
 	require.NoError(a.t, err)
-	assert.Equal(a.t, libUrl, a.RegistrationService.Spec.AuthClient.LibraryUrl)
+	assert.Equal(a.t, libUrl, a.RegistrationService.Spec.EnvironmentVariables["AUTH_CLIENT_LIBRARY_URL"])
 	return a
 }
 
 func (a *RegServiceAssertion) HasAuthPublicKeysUrl(publicKeysUrl string) *RegServiceAssertion {
 	err := a.loadRegServiceAssertion()
 	require.NoError(a.t, err)
-	assert.Equal(a.t, publicKeysUrl, a.RegistrationService.Spec.AuthClient.PublicKeysUrl)
+	assert.Equal(a.t, publicKeysUrl, a.RegistrationService.Spec.EnvironmentVariables["AUTH_CLIENT_PUBLIC_KEYS_URL"])
 	return a
 }
 
 func (a *RegServiceAssertion) HasAuthConfig(config string) *RegServiceAssertion {
 	err := a.loadRegServiceAssertion()
 	require.NoError(a.t, err)
-	assert.Equal(a.t, config, a.RegistrationService.Spec.AuthClient.Config)
+	assert.Equal(a.t, config, a.RegistrationService.Spec.EnvironmentVariables["AUTH_CLIENT_CONFIG_RAW"])
 	return a
 }
