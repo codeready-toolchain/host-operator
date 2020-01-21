@@ -1036,6 +1036,74 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 	})
 }
 
+func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username:    "alice.mayweather.doe@redhat.com",
+			Deactivated: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
+				{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+				},
+				{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "alice-mayweather-at-redhat-com",
+		},
+	}
+
+	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+
+	mur := murtest.NewMasterUserRecord("john-doe-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+
+	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	clt.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+		switch obj.(type) {
+		case *v1alpha1.MasterUserRecord:
+			return errors.New("unable to delete mur")
+		default:
+			return clt.Delete(ctx, obj)
+		}
+	}
+
+	// when
+	_, err := r.Reconcile(req)
+	require.Error(t, err)
+
+	// then
+
+	// Lookup the UserSignup
+	err = r.client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+
+	// Confirm the status is set to UnableToDeleteMUR
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "UnableToDeleteMUR",
+			Message: "unable to delete mur",
+		})
+}
+
 func TestDeathBy100Signups(t *testing.T) {
 	userID := uuid.NewV4().String()
 
