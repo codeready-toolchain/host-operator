@@ -4,7 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+
 	"strconv"
+
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -870,6 +874,234 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 			Reason: "ApprovedAutomatically",
 		},
 	)
+}
+
+func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username:    "john.doe@redhat.com",
+			Deactivated: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
+				{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+				},
+				{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "john-doe-at-redhat-com",
+		},
+	}
+	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+
+	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord("john-doe-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+		// when
+		_, err := r.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+		err = r.client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+
+		// Confirm the status is now set to Deactivating
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionFalse,
+				Reason: "Deactivating",
+			})
+
+		murs := &v1alpha1.MasterUserRecordList{}
+
+		// The MUR should have now been deleted
+		err = r.client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 0)
+
+	})
+
+	t.Run("when MUR doesn't exist, then the condition should be set to Deactivated", func(t *testing.T) {
+		// given
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+		// when
+		_, err := r.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+
+		// Lookup the UserSignup
+		err = r.client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+
+		// Confirm the status has been set to Deactivated
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: "Deactivated",
+			})
+	})
+}
+
+func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username:    "edward.jones@redhat.com",
+			Deactivated: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
+				{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionFalse,
+					Reason: "Deactivating",
+				},
+				{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "edward-jones-at-redhat-com",
+		},
+	}
+	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+
+	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord("edward-jones-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+		// when
+		_, err := r.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+		err = r.client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+
+		// Confirm the status is still set to Deactivating
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionFalse,
+				Reason: "Deactivating",
+			})
+
+		murs := &v1alpha1.MasterUserRecordList{}
+
+		// The MUR should have now been deleted
+		err = r.client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 0)
+	})
+}
+
+func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username:    "alice.mayweather.doe@redhat.com",
+			Deactivated: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
+				{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+				},
+				{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "alice-mayweather-at-redhat-com",
+		},
+	}
+
+	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+
+	mur := murtest.NewMasterUserRecord("john-doe-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+
+	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	clt.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+		switch obj.(type) {
+		case *v1alpha1.MasterUserRecord:
+			return errors.New("unable to delete mur")
+		default:
+			return clt.Delete(ctx, obj)
+		}
+	}
+
+	// when
+	_, err := r.Reconcile(req)
+	require.Error(t, err)
+
+	// then
+
+	// Lookup the UserSignup
+	err = r.client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+
+	// Confirm the status is set to UnableToDeleteMUR
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "UnableToDeleteMUR",
+			Message: "unable to delete mur",
+		})
 }
 
 func TestDeathBy100Signups(t *testing.T) {
