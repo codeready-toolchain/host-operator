@@ -52,7 +52,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			ObjectMeta: v1.ObjectMeta{
 				Namespace: HostOperatorNs,
 				Name:      "registration-service",
-			}}
+			},
+			Spec: v1alpha1.RegistrationServiceSpec{
+				EnvironmentVariables: map[string]string{
+					"IMAGE": "quay.io/rh/registration-service:some-old",
+				},
+			},
+		}
 		processor := template.NewProcessor(cl, s)
 		_, err := processor.ApplySingle(regService, false, nil)
 		require.NoError(t, err)
