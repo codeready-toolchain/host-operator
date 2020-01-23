@@ -34,4 +34,5 @@ install:
 - pip3 install yq
 
 script:
-- make build && make docker-login && make docker-push && curl -sSL https://raw.githubusercontent.com/codeready-toolchain/api/master/scripts/push-to-quay-nightly.sh | bash -s -- -pr ../host-operator/
+- make build && make docker-login && make docker-push && curl -sSL https://raw.githubusercontent.com/codeready-toolchain/api/master/scripts/push-to-quay-nightly.sh | bash -s -- -pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service/
+
