@@ -503,10 +503,10 @@ data:
         name: registrationservices.toolchain.dev.openshift.com
       spec:
         additionalPrinterColumns:
-        - JSONPath: .spec.image
+        - JSONPath: .spec.envVars.IMAGE
           name: Image
           type: string
-        - JSONPath: .spec.environment
+        - JSONPath: .spec.envVars.ENVIRONMENT
           name: Environment
           type: string
         - JSONPath: .status.conditions[?(@.type=="Ready")].status
@@ -546,37 +546,12 @@ data:
               spec:
                 description: RegistrationServiceSpec defines the desired state of RegistrationService
                 properties:
-                  authClient:
-                    description: The AuthClient contains all necessary information about
-                      the auth client
-                    properties:
-                      config:
-                        description: The Config contains the auth config
-                        type: string
-                      libraryUrl:
-                        description: The LibraryUrl identifies the auth library location
-                        type: string
-                      publicKeysUrl:
-                        description: The PublicKeysUrl identifies the public keys location
-                        type: string
-                    required:
-                    - config
-                    - libraryUrl
-                    - publicKeysUrl
+                  envVars:
+                    additionalProperties:
+                      type: string
+                    description: The environment variables are supposed to be set to registration
+                      service deployment template
                     type: object
-                  environment:
-                    description: The environment identifies which mode the registration
-                      service should be running in - prod, stage, e2e-tests, dev, etc.
-                    type: string
-                  image:
-                    description: The image identifies which image of the registration service
-                      should be used for a deployment
-                    type: string
-                  replicas:
-                    description: The number of replicas of the deployed registration service
-                    type: integer
-                required:
-                - image
                 type: object
               status:
                 description: RegistrationServiceStatus defines the observed state of RegistrationService
@@ -767,6 +742,18 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "BannedUser",
+                "metadata": {
+                  "labels": {
+                    "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+                  }
+                },
+                "spec": {
+                  "email": "john.doe@gmail.com"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "MasterUserRecord",
                 "metadata": {
                   "name": "johnsmith"
@@ -848,9 +835,12 @@ data:
                   "namespace": "toolchain-host-operator"
                 },
                 "spec": {
-                  "environment": "dev",
-                  "image": "quay.io/codeready-toolchain/registration-service:1574697457",
-                  "replicas": 4
+                  "envVars": {
+                    "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
+                    "ENVIRONMENT": "dev",
+                    "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
+                    "REPLICAS": "4"
+                  }
                 }
               },
               {
@@ -864,18 +854,6 @@ data:
                   "compliantUsername": "johnsmith-at-redhat-com",
                   "targetCluster": "east-2a",
                   "username": "johnsmith@redhat.com"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "BannedUser",
-                "metadata": {
-                  "labels": {
-                    "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
-                  }
-                },
-                "spec": {
-                  "email": "john.doe@gmail.com"
                 }
               }
             ]
@@ -960,6 +938,8 @@ data:
                             fieldPath: metadata.name
                       - name: OPERATOR_NAME
                         value: host-operator
+                      - name: REGISTRATION_SERVICE_IMAGE
+                        value: REPLACE_REGISTRATION_SERVICE_IMAGE
                       image: REPLACE_IMAGE
                       imagePullPolicy: IfNotPresent
                       name: host-operator

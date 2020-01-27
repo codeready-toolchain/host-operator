@@ -6,6 +6,8 @@ metadata:
   name: reg-service
   namespace: toolchain-host-operator
 spec:
-  image: quay.io/codeready-toolchain/registration-service:1574697457
-  environment: dev
-  replicas: 4
+  envVars:
+    IMAGE: 'quay.io/codeready-toolchain/registration-service:60d3b74'
+    ENVIRONMENT: 'dev'
+    REPLICAS: '4'
+    AUTH_CLIENT_LIBRARY_URL: 'https://sso.prod-preview.openshift.io/auth/js/keycloak.js'

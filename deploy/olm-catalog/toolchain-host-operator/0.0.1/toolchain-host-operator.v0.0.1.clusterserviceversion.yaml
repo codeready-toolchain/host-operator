@@ -6,6 +6,18 @@ metadata:
       [
         {
           "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "BannedUser",
+          "metadata": {
+            "labels": {
+              "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+            }
+          },
+          "spec": {
+            "email": "john.doe@gmail.com"
+          }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
           "kind": "MasterUserRecord",
           "metadata": {
             "name": "johnsmith"
@@ -87,9 +99,12 @@ metadata:
             "namespace": "toolchain-host-operator"
           },
           "spec": {
-            "environment": "dev",
-            "image": "quay.io/codeready-toolchain/registration-service:1574697457",
-            "replicas": 4
+            "envVars": {
+              "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
+              "ENVIRONMENT": "dev",
+              "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
+              "REPLICAS": "4"
+            }
           }
         },
         {
@@ -103,18 +118,6 @@ metadata:
             "compliantUsername": "johnsmith-at-redhat-com",
             "targetCluster": "east-2a",
             "username": "johnsmith@redhat.com"
-          }
-        },
-        {
-          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-          "kind": "BannedUser",
-          "metadata": {
-            "labels": {
-              "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
-            }
-          },
-          "spec": {
-            "email": "john.doe@gmail.com"
           }
         }
       ]
@@ -199,6 +202,8 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: host-operator
+                - name: REGISTRATION_SERVICE_IMAGE
+                  value: REPLACE_REGISTRATION_SERVICE_IMAGE
                 image: REPLACE_IMAGE
                 imagePullPolicy: IfNotPresent
                 name: host-operator

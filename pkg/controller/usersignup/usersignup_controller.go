@@ -3,14 +3,12 @@ package usersignup
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/config"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
@@ -19,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -31,10 +31,13 @@ import (
 
 const (
 	// Status condition reasons
-	noClustersAvailableReason            = "NoClustersAvailable"
+	noClusterAvailableReason             = "NoClusterAvailable"
 	noTemplateTierAvailableReason        = "NoTemplateTierAvailable"
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason              = "UnableToCreateMUR"
+	unableToDeleteMURReason              = "UnableToDeleteMUR"
+	userDeactivatingReason               = "Deactivating"
+	userDeactivatedReason                = "Deactivated"
 	invalidMURState                      = "InvalidMURState"
 	approvedAutomaticallyReason          = "ApprovedAutomatically"
 	approvedByAdminReason                = "ApprovedByAdmin"
@@ -142,12 +145,31 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		err = NewSignupError("multiple matching MasterUserRecord resources found")
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Multiple MasterUserRecords found")
 	} else if len(murs) == 1 {
+		mur := murs[0]
+
+		// If the user has been deactivated, then we need to delete the MUR
+		if instance.Spec.Deactivated {
+			err = r.client.Delete(context.TODO(), &mur)
+			if err != nil {
+				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToDeleteMUR, err,
+					"Error deleting MasterUserRecord")
+			}
+
+			reqLogger.Info("Deleted MasterUserRecord", "Name", mur.Name)
+			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivating)
+		}
+
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
-		mur := murs[0]
 		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
 		instance.Status.CompliantUsername = mur.Name
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusComplete)
+	}
+
+	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, simply set the status
+	// and return
+	if instance.Spec.Deactivated {
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
 	}
 
 	// Check the user approval policy.
@@ -158,7 +180,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 	// If the signup has been explicitly approved (by an admin), or the user approval policy is set to automatic,
 	// then proceed with the signup
-	if instance.Spec.Approved || userApprovalPolicy == config.UserApprovalPolicyAutomatic {
+	if instance.Spec.Approved || userApprovalPolicy == configuration.UserApprovalPolicyAutomatic {
 		if instance.Spec.Approved {
 			if statusError := r.updateStatus(reqLogger, instance, r.setStatusApprovedByAdmin); statusError != nil {
 				return reconcile.Result{}, statusError
@@ -175,8 +197,8 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		if instance.Spec.TargetCluster != "" {
 			targetCluster = instance.Spec.TargetCluster
 		} else {
-			// Automatic cluster selection
-			members := cluster.GetMemberClusters()
+			// Automatic cluster selection based on cluster readiness
+			members := cluster.GetMemberClusters(cluster.Ready, cluster.CapacityNotExhausted)
 			if len(members) > 0 {
 				targetCluster = members[0].Name
 			} else {
@@ -310,15 +332,15 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 // the config map value for the user approval policy (which will either be "manual" or "automatic")
 func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig(namespace string) (string, error) {
 	cm := &corev1.ConfigMap{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: config.ToolchainConfigMapName}, cm)
+	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: configuration.ToolchainConfigMapName}, cm)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return config.UserApprovalPolicyManual, nil
+			return configuration.UserApprovalPolicyManual, nil
 		}
 		return "", err
 	}
 
-	val, ok := cm.Data[config.ToolchainConfigMapUserApprovalPolicy]
+	val, ok := cm.Data[configuration.ToolchainConfigMapUserApprovalPolicy]
 	if !ok {
 		return "", nil
 	}
@@ -397,13 +419,24 @@ func (r *ReconcileUserSignup) setStatusFailedToCreateMUR(userSignup *toolchainv1
 		})
 }
 
+func (r *ReconcileUserSignup) setStatusFailedToDeleteMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  unableToDeleteMURReason,
+			Message: message,
+		})
+}
+
 func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return r.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  noClustersAvailableReason,
+			Reason:  noClusterAvailableReason,
 			Message: message,
 		})
 }
@@ -426,6 +459,28 @@ func (r *ReconcileUserSignup) setStatusComplete(userSignup *toolchainv1alpha1.Us
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionTrue,
 			Reason:  "",
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusDeactivating(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  userDeactivatingReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusDeactivated(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionTrue,
+			Reason:  userDeactivatedReason,
 			Message: message,
 		})
 }

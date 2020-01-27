@@ -9,7 +9,9 @@ import (
 
 	api "github.com/codeready-toolchain/api/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -62,6 +64,11 @@ func main() {
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
 	pflag.Parse()
+	confg, err := loadConfig()
+	if err != nil {
+		log.Error(err, "cannot load the configuration")
+		os.Exit(1)
+	}
 
 	// Use a zap logr.Logger implementation. If none of the zap
 	// flags are configured (or if the zap flag set is not being
@@ -74,6 +81,7 @@ func main() {
 	logf.SetLogger(zap.Logger())
 
 	printVersion()
+	printConfig(confg)
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
@@ -171,6 +179,15 @@ func main() {
 			log.Error(errors.New("timed out waiting for caches to sync"), "")
 			os.Exit(1)
 		}
+
+		// create or update Registration service during the operator deployment
+		log.Info("Creating/updating the RegistrationService resource")
+		if err := registrationservice.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, confg); err != nil {
+			log.Error(err, "cannot create/update RegistrationService resource")
+			os.Exit(1)
+		}
+		log.Info("Created/updated the RegistrationService resources")
+
 		// create or update all NSTemplateTiers on the cluster at startup
 		log.Info("Creating/updating the NSTemplateTier resources")
 		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetiers.Asset); err != nil {
@@ -186,6 +203,35 @@ func main() {
 		os.Exit(1)
 	}
 
+}
+
+func loadConfig() (*configuration.Registry, error) {
+	var configFilePath string
+	flag.StringVar(&configFilePath, "config", "", "path to the config file to read (if none is given, defaults will be used)")
+
+	// Override default -config switch with environment variable only if -config
+	// switch was not explicitly given via the command line.
+	configSwitchIsSet := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "config" {
+			configSwitchIsSet = true
+		}
+	})
+	if !configSwitchIsSet {
+		if envConfigPath, ok := os.LookupEnv(configuration.HostEnvPrefix + "_CONFIG_FILE_PATH"); ok {
+			configFilePath = envConfigPath
+		}
+	}
+
+	return configuration.New(configFilePath)
+}
+
+func printConfig(cfg *configuration.Registry) {
+	logWithValues := log
+	for key, value := range cfg.GetAllRegistrationServiceParameters() {
+		logWithValues = logWithValues.WithValues("key", key, "value", value)
+	}
+	logWithValues.Info("Registration Service configuration variables:")
 }
 
 // ensureKubeFedClusterCRD ensure that KubeFedCluster CRD exists in the cluster.
