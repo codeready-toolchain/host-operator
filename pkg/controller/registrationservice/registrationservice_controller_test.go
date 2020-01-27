@@ -7,6 +7,7 @@ import (
 
 	"github.com/codeready-toolchain/api/pkg/apis"
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
@@ -31,7 +32,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 	decoder := codecFactory.UniversalDeserializer()
 
 	tmpl := getDecodedTemplate(t, decoder)
-	reqService := newRegistrationService("host-operator", imageDef, "dev", 1)
+	reqService := newRegistrationService(test.HostOperatorNs, imageDef, "dev", 1)
 	p := template.NewProcessor(&test.FakeClient{}, s)
 	objs, err := p.Process(tmpl, getVars(reqService))
 	require.NoError(t, err)
@@ -47,7 +48,8 @@ func TestReconcileRegistrationService(t *testing.T) {
 		require.NoError(t, err)
 		assertObjectExists(t, service.client, &v1.ServiceAccount{})
 		assertObjectDoesNotExist(t, service.client, &v1.ConfigMap{})
-		assertReqServiceConditionMatch(t, service.client, toBeNotReady("Deploying", ""))
+		AssertThatRegistrationService(t, "registration-service", service.client).
+			HasConditions(toBeNotReady("Deploying", ""))
 	})
 
 	t.Run("reconcile second object and add configmap when SA is already present", func(t *testing.T) {
@@ -68,7 +70,8 @@ func TestReconcileRegistrationService(t *testing.T) {
 		assert.Equal(t, imageDef, cm.Data["reg-service-image"])
 		assert.Equal(t, "dev", cm.Data["reg-service-env"])
 
-		assertReqServiceConditionMatch(t, service.client, toBeNotReady("Deploying", ""))
+		AssertThatRegistrationService(t, "registration-service", service.client).
+			HasConditions(toBeNotReady("Deploying", ""))
 	})
 
 	t.Run("reconcile when both objects are present and don't update nor create anything", func(t *testing.T) {
@@ -98,7 +101,8 @@ func TestReconcileRegistrationService(t *testing.T) {
 		assert.Equal(t, imageDef, cm.Data["reg-service-image"])
 		assert.Equal(t, "dev", cm.Data["reg-service-env"])
 
-		assertReqServiceConditionMatch(t, service.client, toBeDeployed())
+		AssertThatRegistrationService(t, "registration-service", service.client).
+			HasConditions(toBeDeployed())
 	})
 
 	t.Run("change ConfigMap object & don't specify environment so it uses the default one", func(t *testing.T) {
@@ -109,7 +113,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 		require.NoError(t, err)
 		_, err = processor.ApplySingle(objs[1].Object.DeepCopyObject(), false, nil)
 		require.NoError(t, err)
-		reqService := newRegistrationService("host-operator", "quay.io/rh/registration-service:v0.1", "", 1)
+		reqService := newRegistrationService(test.HostOperatorNs, "quay.io/rh/registration-service:v0.1", "", 1)
 		_, err = processor.ApplySingle(reqService, false, nil)
 		require.NoError(t, err)
 
@@ -124,7 +128,8 @@ func TestReconcileRegistrationService(t *testing.T) {
 		assert.Equal(t, "quay.io/rh/registration-service:v0.1", cm.Data["reg-service-image"])
 		assert.Equal(t, "prod", cm.Data["reg-service-env"])
 
-		assertReqServiceConditionMatch(t, service.client, toBeNotReady("Deploying", ""))
+		AssertThatRegistrationService(t, "registration-service", service.client).
+			HasConditions(toBeNotReady("Deploying", ""))
 	})
 
 	t.Run("when cannot create, then it should set appropriate condition", func(t *testing.T) {
@@ -140,7 +145,8 @@ func TestReconcileRegistrationService(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assertReqServiceConditionMatch(t, service.client, toBeNotReady("DeployingFailed", "unable to create resource of kind: ServiceAccount, version: v1: creation failed"))
+		AssertThatRegistrationService(t, "registration-service", service.client).
+			HasConditions(toBeNotReady("DeployingFailed", "unable to create resource of kind: ServiceAccount, version: v1: creation failed"))
 	})
 
 	t.Run("status update of the RegistrationService failed", func(t *testing.T) {
@@ -162,14 +168,14 @@ func TestReconcileRegistrationService(t *testing.T) {
 
 func TestGetVarsWhenAuthClientIsNotSpecified(t *testing.T) {
 	// given
-	reqService := newRegistrationService("host-operator", imageDef, "dev", 1)
+	reqService := newRegistrationService(test.HostOperatorNs, imageDef, "dev", 1)
 
 	// when
 	vars := getVars(reqService)
 
 	// then
 	assert.Len(t, vars, 4)
-	assert.Equal(t, "host-operator", vars["NAMESPACE"])
+	assert.Equal(t, test.HostOperatorNs, vars["NAMESPACE"])
 	assert.Equal(t, imageDef, vars["IMAGE"])
 	assert.Equal(t, "dev", vars["ENVIRONMENT"])
 	assert.Equal(t, "1", vars["REPLICAS"])
@@ -196,19 +202,12 @@ func TestGetVarsWhenAuthClientIsSpecifiedButNotEnv(t *testing.T) {
 }
 
 func assertObjectExists(t *testing.T, cl client.Client, obj runtime.Object) {
-	err := cl.Get(context.TODO(), test.NamespacedName("host-operator", "registration-service"), obj)
+	err := cl.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, "registration-service"), obj)
 	assert.NoError(t, err)
-}
-
-func assertReqServiceConditionMatch(t *testing.T, cl client.Client, expCondition v1alpha1.Condition) {
-	regServ := &v1alpha1.RegistrationService{}
-	err := cl.Get(context.TODO(), test.NamespacedName("host-operator", "registration-service"), regServ)
-	assert.NoError(t, err)
-	test.AssertConditionsMatch(t, regServ.Status.Conditions, expCondition)
 }
 
 func assertObjectDoesNotExist(t *testing.T, cl client.Client, obj runtime.Object) {
-	err := cl.Get(context.TODO(), test.NamespacedName("host-operator", "registration-service"), obj)
+	err := cl.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, "registration-service"), obj)
 	require.Error(t, err)
 	assert.True(t, errors.IsNotFound(err))
 }
@@ -221,7 +220,7 @@ func prepareServiceAndRequest(t *testing.T, s *runtime.Scheme, decoder runtime.D
 		scheme:             s,
 		regServiceTemplate: tmpl,
 	}
-	return service, reconcile.Request{NamespacedName: test.NamespacedName("host-operator", "registration-service")}
+	return service, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, "registration-service")}
 }
 
 func getDecodedTemplate(t *testing.T, decoder runtime.Decoder) *tmplv1.Template {

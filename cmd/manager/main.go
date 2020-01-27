@@ -11,6 +11,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -178,6 +179,15 @@ func main() {
 			log.Error(errors.New("timed out waiting for caches to sync"), "")
 			os.Exit(1)
 		}
+
+		// create or update Registration service during the operator deployment
+		log.Info("Creating/updating the RegistrationService resource")
+		if err := registrationservice.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, confg); err != nil {
+			log.Error(err, "cannot create/update RegistrationService resource")
+			os.Exit(1)
+		}
+		log.Info("Created/updated the RegistrationService resources")
+
 		// create or update all NSTemplateTiers on the cluster at startup
 		log.Info("Creating/updating the NSTemplateTier resources")
 		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetiers.Asset); err != nil {
