@@ -393,27 +393,27 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 
 		userAccount := uatest.NewUserAccountFromMur(mur,
 			uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
-		mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{}
-
 		userAccount2 := uatest.NewUserAccountFromMur(mur,
 			uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
-		mur.Status.UserAccounts = append(mur.Status.UserAccounts, toolchainv1alpha1.UserAccountStatusEmbedded{
-			SyncIndex: "111aaa",
-			Cluster: toolchainv1alpha1.Cluster{
-				Name: "member2-cluster",
-			},
-			UserAccountStatus: userAccount2.Status,
-		})
-
 		userAccount3 := uatest.NewUserAccountFromMur(mur,
 			uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
-		mur.Status.UserAccounts = append(mur.Status.UserAccounts, toolchainv1alpha1.UserAccountStatusEmbedded{
-			SyncIndex: "123abc",
-			Cluster: toolchainv1alpha1.Cluster{
-				Name: "member3-cluster",
+
+		mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
+			{
+				SyncIndex: "111aaa",
+				Cluster: toolchainv1alpha1.Cluster{
+					Name: "member2-cluster",
+				},
+				UserAccountStatus: userAccount2.Status,
 			},
-			UserAccountStatus: userAccount3.Status,
-		})
+			{
+				SyncIndex: "123abc",
+				Cluster: toolchainv1alpha1.Cluster{
+					Name: "member3-cluster",
+				},
+				UserAccountStatus: userAccount3.Status,
+			},
+		}
 
 		memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
 		memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
