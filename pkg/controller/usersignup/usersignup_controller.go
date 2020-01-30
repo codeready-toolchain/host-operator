@@ -46,6 +46,40 @@ const (
 
 var log = logf.Log.WithName("controller_usersignup")
 
+type BannedUserToUserSignupMapper struct {
+	client client.Client
+}
+
+func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Request {
+	if bu, ok := obj.Object.(*toolchainv1alpha1.BannedUser); ok {
+		// look-up any associated UserSignup using the BannedUser's "toolchain.dev.openshift.com/emailHash" label
+		if emailHashLbl, exists := bu.Labels[toolchainv1alpha1.BannedUserEmailHashLabelKey]; exists {
+
+			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
+			opts := client.MatchingLabels(labels)
+			userSignupList := &toolchainv1alpha1.UserSignupList{}
+			if err := b.client.List(context.TODO(), userSignupList, opts); err != nil {
+				// What should we do here??
+				return nil
+			}
+
+			req := []reconcile.Request{}
+
+			for _, userSignup := range userSignupList.Items {
+				req = append(req, reconcile.Request{
+					NamespacedName: types.NamespacedName{Namespace: "toolchain-host-operator", Name: userSignup.Name},
+				})
+			}
+
+			return req
+		}
+	}
+	// the obj was not a BannedUser or it did not have the required label.
+	return []reconcile.Request{}
+}
+
+var _ handler.Mapper = BannedUserToUserSignupMapper{}
+
 // Add creates a new UserSignup Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -80,6 +114,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
+
+	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.BannedUser{}}, &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: BannedUserToUserSignupMapper{client: mgr.GetClient()},
+	})
 
 	return nil
 }
