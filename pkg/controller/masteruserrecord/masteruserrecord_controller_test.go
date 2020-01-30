@@ -400,7 +400,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			Cluster: toolchainv1alpha1.Cluster{
 				Name: "member2-cluster",
 			},
-			UserAccountStatus: userAccount.Status,
+			UserAccountStatus: userAccount2.Status,
 		})
 
 		userAccount3 := uatest.NewUserAccountFromMur(mur,
