@@ -380,71 +380,118 @@ func TestModifyUserAccounts(t *testing.T) {
 }
 
 func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
-	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 
-	mur := murtest.NewMasterUserRecord("john",
-		murtest.StatusCondition(toBeNotReady(provisioningReason, "")),
-		murtest.AdditionalAccounts("member2-cluster", "member3-cluster"))
+	t.Run("mur status synced with updated user account statuses", func(t *testing.T) {
+		// given
+		// setup MUR that wil contain UserAccountStatusEmbedded fields for UserAccounts from "member2-cluster" and "member3-cluster" but will miss from test.MemberClusterName
+		// then the reconcile should add the misssing UserAccountStatusEmbedded for the missing test.MemberClusterName cluster without updating anything else
+		mur := murtest.NewMasterUserRecord("john",
+			murtest.StatusCondition(toBeNotReady(provisioningReason, "")),
+			murtest.AdditionalAccounts("member2-cluster", "member3-cluster"))
 
-	userAccount := uatest.NewUserAccountFromMur(mur,
-		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
-	mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{}
+		userAccount := uatest.NewUserAccountFromMur(mur,
+			uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
+		userAccount2 := uatest.NewUserAccountFromMur(mur,
+			uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
+		userAccount3 := uatest.NewUserAccountFromMur(mur,
+			uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
 
-	userAccount2 := uatest.NewUserAccountFromMur(mur,
-		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
-	mur.Status.UserAccounts = append(mur.Status.UserAccounts, toolchainv1alpha1.UserAccountStatusEmbedded{
-		SyncIndex: "111aaa",
-		Cluster: toolchainv1alpha1.Cluster{
-			Name: "member2-cluster",
-		},
-		UserAccountStatus: userAccount.Status,
+		mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
+			{
+				SyncIndex: "111aaa",
+				Cluster: toolchainv1alpha1.Cluster{
+					Name: "member2-cluster",
+				},
+				UserAccountStatus: userAccount2.Status,
+			},
+			{
+				SyncIndex: "123abc",
+				Cluster: toolchainv1alpha1.Cluster{
+					Name: "member3-cluster",
+				},
+				UserAccountStatus: userAccount3.Status,
+			},
+		}
+
+		memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
+		memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
+		memberClient3 := test.NewFakeClient(t, userAccount3, consoleRoute())
+
+		hostClient := test.NewFakeClient(t, mur)
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2),
+			clusterClient("member3-cluster", memberClient3))
+
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.NoError(t, err)
+
+		uatest.AssertThatUserAccount(t, "john", memberClient).
+			Exists().
+			HasSpec(mur.Spec.UserAccounts[0].Spec).
+			HasConditions(userAccount.Status.Conditions...)
+		uatest.AssertThatUserAccount(t, "john", memberClient2).
+			Exists().
+			HasSpec(mur.Spec.UserAccounts[1].Spec).
+			HasConditions(userAccount2.Status.Conditions...)
+		uatest.AssertThatUserAccount(t, "john", memberClient3).
+			Exists().
+			HasSpec(mur.Spec.UserAccounts[2].Spec).
+			HasConditions(userAccount3.Status.Conditions...)
+
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasConditions(toBeNotReady(provisioningReason, "")).
+			HasStatusUserAccounts(test.MemberClusterName, "member2-cluster", "member3-cluster").
+			AllUserAccountsHaveStatusSyncIndex("123abc").
+			AllUserAccountsHaveCondition(userAccount.Status.Conditions[0])
 	})
 
-	userAccount3 := uatest.NewUserAccountFromMur(mur,
-		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
-	mur.Status.UserAccounts = append(mur.Status.UserAccounts, toolchainv1alpha1.UserAccountStatusEmbedded{
-		SyncIndex: "123abc",
-		Cluster: toolchainv1alpha1.Cluster{
-			Name: "member3-cluster",
-		},
-		UserAccountStatus: userAccount.Status,
+	t.Run("outdated mur status error cleaned", func(t *testing.T) {
+		// given
+		// MUR with ready condition set to false with an error
+		// all MUR.Status.UserAccount[] conditions are already in sync with the corresponding UserAccounts and set to Ready
+		mur := murtest.NewMasterUserRecord("john",
+			murtest.StatusCondition(toBeNotReady(targetClusterNotReadyReason, "something went wrong")),
+			murtest.AdditionalAccounts("member2-cluster"))
+		userAccount := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
+		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
+		mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
+			{
+				Cluster:           toolchainv1alpha1.Cluster{Name: test.MemberClusterName},
+				SyncIndex:         userAccount.ResourceVersion,
+				UserAccountStatus: userAccount.Status,
+			},
+			{
+				Cluster:           toolchainv1alpha1.Cluster{Name: "member2-cluster"},
+				SyncIndex:         userAccount2.ResourceVersion,
+				UserAccountStatus: userAccount2.Status,
+			},
+		}
+
+		hostClient := test.NewFakeClient(t, mur)
+
+		memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
+		memberClient2 := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur), consoleRoute())
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient),
+			clusterClient("member2-cluster", memberClient2))
+
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		// the original error status should be cleaned
+		require.NoError(t, err)
+
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasConditions(toBeProvisioned()).
+			HasStatusUserAccounts(test.MemberClusterName, "member2-cluster").
+			HasFinalizer()
 	})
-
-	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
-	memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
-	memberClient3 := test.NewFakeClient(t, userAccount3, consoleRoute())
-
-	hostClient := test.NewFakeClient(t, mur)
-	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
-		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2),
-		clusterClient("member3-cluster", memberClient3))
-
-	// when
-	_, err := cntrl.Reconcile(newMurRequest(mur))
-
-	// then
-	require.NoError(t, err)
-
-	uatest.AssertThatUserAccount(t, "john", memberClient).
-		Exists().
-		HasSpec(mur.Spec.UserAccounts[0].Spec).
-		HasConditions(userAccount.Status.Conditions...)
-	uatest.AssertThatUserAccount(t, "john", memberClient2).
-		Exists().
-		HasSpec(mur.Spec.UserAccounts[1].Spec).
-		HasConditions(userAccount2.Status.Conditions...)
-	uatest.AssertThatUserAccount(t, "john", memberClient3).
-		Exists().
-		HasSpec(mur.Spec.UserAccounts[2].Spec).
-		HasConditions(userAccount3.Status.Conditions...)
-
-	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-		HasConditions(toBeNotReady(provisioningReason, "")).
-		HasStatusUserAccounts(test.MemberClusterName, "member2-cluster", "member3-cluster").
-		AllUserAccountsHaveStatusSyncIndex("123abc").
-		AllUserAccountsHaveCondition(userAccount.Status.Conditions[0])
 }
 
 func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
