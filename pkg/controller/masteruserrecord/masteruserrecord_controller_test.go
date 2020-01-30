@@ -410,7 +410,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			Cluster: toolchainv1alpha1.Cluster{
 				Name: "member3-cluster",
 			},
-			UserAccountStatus: userAccount.Status,
+			UserAccountStatus: userAccount3.Status,
 		})
 
 		memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
