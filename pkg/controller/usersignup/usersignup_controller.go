@@ -42,6 +42,10 @@ const (
 	approvedAutomaticallyReason          = "ApprovedAutomatically"
 	approvedByAdminReason                = "ApprovedByAdmin"
 	pendingApprovalReason                = "PendingApproval"
+	failedToReadBannedUsersReason        = "FailedToReadBannedUsers"
+	missingUserEmailLabelReason          = "MissingUserEmailLabel"
+	missingEmailHashLabelReason          = "MissingEmailHashLabel"
+	invalidEmailHashLabelReason          = "InvalidEmailHashLabel"
 )
 
 var log = logf.Log.WithName("controller_usersignup")
@@ -59,7 +63,7 @@ func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Req
 			opts := client.MatchingLabels(labels)
 			userSignupList := &toolchainv1alpha1.UserSignupList{}
 			if err := b.client.List(context.TODO(), userSignupList, opts); err != nil {
-				// What should we do here??
+				log.Error(err, "Could not list UserSignup resources with label value", toolchainv1alpha1.BannedUserEmailHashLabelKey, emailHashLbl)
 				return nil
 			}
 
@@ -118,6 +122,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.BannedUser{}}, &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: BannedUserToUserSignupMapper{client: mgr.GetClient()},
 	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -167,6 +174,50 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
+	}
+
+	// Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
+	// is based on the user's emailHash value - if there is a match, and the e-mail addresses are equal, then the
+	// user is banned.
+	banned := false
+
+	// Lookup the email hash label
+	if emailHashLbl, exists := instance.Labels[toolchainv1alpha1.BannedUserEmailHashLabelKey]; exists {
+
+		var emailLbl string
+
+		// Lookup the user email label
+		if emailLbl, exists = instance.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
+			if !validateEmailHash(emailLbl, emailHashLbl) {
+				return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidEmailHash)
+			}
+		} else {
+			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMissingUserEmailLabel)
+		}
+
+		labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
+		opts := client.MatchingLabels(labels)
+		bannedUserList := &toolchainv1alpha1.BannedUserList{}
+
+		// Query BannedUser for resources that match the same email hash
+		if err = r.client.List(context.TODO(), bannedUserList, opts); err != nil {
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToReadBannedUsers, err, "Failed to query BannedUsers")
+		}
+
+		// One last check to confirm that the e-mail addresses match also (in case of the infinitesimal chance of a hash collision)
+		for _, bannedUser := range bannedUserList.Items {
+			if bannedUser.Spec.Email == emailLbl {
+				banned = true
+				break
+			}
+		}
+	} else {
+		// If there isn't an emailHash label, then the state is invalid
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusMissingEmailHash)
+	}
+
+	if banned {
+		// TODO implement banned logic
 	}
 
 	// List all MasterUserRecord resources that have a UserID label equal to the UserSignup.Name
@@ -523,6 +574,50 @@ func (r *ReconcileUserSignup) setStatusDeactivated(userSignup *toolchainv1alpha1
 		})
 }
 
+func (r *ReconcileUserSignup) setStatusFailedToReadBannedUsers(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  failedToReadBannedUsersReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusInvalidMissingUserEmailLabel(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  missingUserEmailLabelReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusMissingEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  missingEmailHashLabelReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusInvalidEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  invalidEmailHashLabelReason,
+			Message: message,
+		})
+}
+
 func (r *ReconcileUserSignup) updateStatus(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error) error {
 
@@ -554,4 +649,12 @@ func (r *ReconcileUserSignup) updateStatusConditions(userSignup *toolchainv1alph
 		return nil
 	}
 	return r.client.Status().Update(context.TODO(), userSignup)
+}
+
+// validateEmailHash calculates an md5 hash value for the provided userEmail string, and compares it to the provided
+// userEmailHash.  If the values are the same the function returns true, otherwise it will return false
+func validateEmailHash(userEmail, userEmailHash string) bool {
+	// TODO implement this
+
+	return true
 }

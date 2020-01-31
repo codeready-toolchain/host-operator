@@ -87,6 +87,10 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userID.String(),
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -177,6 +181,10 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -215,6 +223,10 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -253,6 +265,10 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -290,6 +306,10 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -356,6 +376,10 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -421,6 +445,10 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -465,6 +493,10 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username:      "foo@redhat.com",
@@ -532,6 +564,10 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "bar",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "bar@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "ce880faae6d6a27c3c15a0639c70cec2",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username:      "bar@redhat.com",
@@ -568,6 +604,10 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -600,6 +640,10 @@ func TestUserSignupMURReadFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -631,6 +675,10 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -663,6 +711,10 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -694,6 +746,10 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -726,6 +782,10 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -770,6 +830,10 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -838,6 +902,10 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo#bar@redhat.com",
@@ -882,6 +950,10 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "john.doe@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "3d87017fe4a26245c967098f3d6e091d",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username:    "john.doe@redhat.com",
@@ -976,6 +1048,10 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "edward.jones@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "6435d4d195732b26882318d4a3b2f23e",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username:    "edward.jones@redhat.com",
@@ -1042,6 +1118,10 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "747a250430df0c7976bf2363ebb4014a",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username:    "alice.mayweather.doe@redhat.com",
@@ -1111,6 +1191,10 @@ func TestDeathBy100Signups(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userID,
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -1176,6 +1260,10 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -1232,6 +1320,10 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
