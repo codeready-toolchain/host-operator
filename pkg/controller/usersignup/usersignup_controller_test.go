@@ -175,7 +175,42 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		})
 }
 
-func TestUserSignupWithInvalidEmailHashFails(t *testing.T) {
+func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
+	userID := uuid.NewV4()
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userID.String(),
+			Namespace: operatorNamespace,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+			Approved: false,
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	createMemberCluster(r.client, "member1", ready)
+	defer clearMemberClusters(r.client)
+
+	// Reconcile the UserSignup
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the user signup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "MissingUserEmailLabel",
+		})
+}
+
+func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	userID := uuid.NewV4()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -211,6 +246,44 @@ func TestUserSignupWithInvalidEmailHashFails(t *testing.T) {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "InvalidEmailHashLabel",
+		})
+}
+
+func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
+	userID := uuid.NewV4()
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userID.String(),
+			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+			},
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+			Approved: false,
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	createMemberCluster(r.client, "member1", ready)
+	defer clearMemberClusters(r.client)
+
+	// Reconcile the UserSignup
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the user signup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "MissingEmailHashLabel",
 		})
 }
 

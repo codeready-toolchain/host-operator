@@ -183,39 +183,38 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// user is banned.
 	banned := false
 
-	// Lookup the email hash label
-	if emailHashLbl, exists := instance.Labels[toolchainv1alpha1.BannedUserEmailHashLabelKey]; exists {
+	// Lookup the user email label
+	if emailLbl, exists := instance.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
 
-		var emailLbl string
+		// Lookup the email hash label
+		if emailHashLbl, exists := instance.Labels[toolchainv1alpha1.BannedUserEmailHashLabelKey]; exists {
 
-		// Lookup the user email label
-		if emailLbl, exists = instance.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
+			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
+			opts := client.MatchingLabels(labels)
+			bannedUserList := &toolchainv1alpha1.BannedUserList{}
+
+			// Query BannedUser for resources that match the same email hash
+			if err = r.client.List(context.TODO(), bannedUserList, opts); err != nil {
+				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToReadBannedUsers, err, "Failed to query BannedUsers")
+			}
+
+			// One last check to confirm that the e-mail addresses match also (in case of the infinitesimal chance of a hash collision)
+			for _, bannedUser := range bannedUserList.Items {
+				if bannedUser.Spec.Email == emailLbl {
+					banned = true
+					break
+				}
+			}
+
 			if !validateEmailHash(emailLbl, emailHashLbl) {
 				return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidEmailHash)
 			}
 		} else {
-			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMissingUserEmailLabel)
-		}
-
-		labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
-		opts := client.MatchingLabels(labels)
-		bannedUserList := &toolchainv1alpha1.BannedUserList{}
-
-		// Query BannedUser for resources that match the same email hash
-		if err = r.client.List(context.TODO(), bannedUserList, opts); err != nil {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToReadBannedUsers, err, "Failed to query BannedUsers")
-		}
-
-		// One last check to confirm that the e-mail addresses match also (in case of the infinitesimal chance of a hash collision)
-		for _, bannedUser := range bannedUserList.Items {
-			if bannedUser.Spec.Email == emailLbl {
-				banned = true
-				break
-			}
+			// If there isn't an emailHash label, then the state is invalid
+			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusMissingEmailHash)
 		}
 	} else {
-		// If there isn't an emailHash label, then the state is invalid
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusMissingEmailHash)
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMissingUserEmailLabel)
 	}
 
 	if banned {
