@@ -38,6 +38,8 @@ const (
 	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
 	unableToCreateMURReason              = "UnableToCreateMUR"
 	unableToDeleteMURReason              = "UnableToDeleteMUR"
+	userBanningReason                    = "Banning"
+	userBannedReason                     = "Banned"
 	userDeactivatingReason               = "Deactivating"
 	userDeactivatedReason                = "Deactivated"
 	invalidMURState                      = "InvalidMURState"
@@ -217,10 +219,6 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMissingUserEmailLabel)
 	}
 
-	if banned {
-		// TODO implement banned logic
-	}
-
 	// List all MasterUserRecord resources that have a UserID label equal to the UserSignup.Name
 	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: instance.Name}
 	opts := client.MatchingLabels(labels)
@@ -236,6 +234,18 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Multiple MasterUserRecords found")
 	} else if len(murs) == 1 {
 		mur := murs[0]
+
+		// If the user has been banned, then we need to delete the MUR
+		if banned {
+			err = r.client.Delete(context.TODO(), &mur)
+			if err != nil {
+				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToDeleteMUR, err,
+					"Error deleting MasterUserRecord for banned UserSignup")
+			}
+
+			reqLogger.Info("Deleted MasterUserRecord", "Name", mur.Name)
+			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusBanning)
+		}
 
 		// If the user has been deactivated, then we need to delete the MUR
 		if instance.Spec.Deactivated {
@@ -254,6 +264,12 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
 		instance.Status.CompliantUsername = mur.Name
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusComplete)
+	}
+
+	// If there is no MasterUserRecord created, yet the UserSignup is Banned, simply set the status
+	// and return
+	if banned {
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusBanned)
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, simply set the status
@@ -549,6 +565,29 @@ func (r *ReconcileUserSignup) setStatusComplete(userSignup *toolchainv1alpha1.Us
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionTrue,
 			Reason:  "",
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusBanning(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  userBanningReason,
+			Message: message,
+		})
+}
+
+// setStatusBanned sets the Complete status to True, as the banning operation has been successful (with a reason of "Banned")
+func (r *ReconcileUserSignup) setStatusBanned(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionTrue,
+			Reason:  userBannedReason,
 			Message: message,
 		})
 }
