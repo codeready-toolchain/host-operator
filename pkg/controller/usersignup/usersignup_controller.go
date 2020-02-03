@@ -2,6 +2,8 @@ package usersignup
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -654,7 +656,7 @@ func (r *ReconcileUserSignup) updateStatusConditions(userSignup *toolchainv1alph
 // validateEmailHash calculates an md5 hash value for the provided userEmail string, and compares it to the provided
 // userEmailHash.  If the values are the same the function returns true, otherwise it will return false
 func validateEmailHash(userEmail, userEmailHash string) bool {
-	// TODO implement this
-
-	return true
+	md5hash := md5.New()
+	md5hash.Write([]byte(userEmail))
+	return hex.EncodeToString(md5hash.Sum(nil)) == userEmailHash
 }
