@@ -83,15 +83,21 @@ func (s *Synchronizer) synchronizeStatus() error {
 
 		err = s.hostClient.Status().Update(context.TODO(), s.record)
 		if err != nil {
+			// if there is an error during status update then we "roll back" all the status changes we did above
+			// (don't add new user account status if it was added or don't change it if it's updated)
 			if index < 0 {
 				s.record.Status.UserAccounts = s.record.Status.UserAccounts[:len(s.record.Status.UserAccounts)-1]
 			} else {
 				s.record.Status.UserAccounts[index] = originalStatusUserAcc
 			}
-			return err
 		}
+		return err
 	}
-	return nil
+
+	// Align readiness even if the user account statuses were not changed.
+	// We need to do it to cleanup outdated errors (for example if the target cluster was unavailable) if any
+	s.alignReadiness()
+	return s.hostClient.Status().Update(context.TODO(), s.record)
 }
 
 // withClusterDetails returns the given user account status with additional information about
