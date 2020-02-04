@@ -1224,6 +1224,148 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 	})
 }
 
+func TestUserSignupBanned(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+		},
+	}
+
+	bannedUser := &toolchainv1alpha1.BannedUser{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				toolchainv1alpha1.BannedUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+		},
+		Spec: toolchainv1alpha1.BannedUserSpec{
+			Email: "foo@redhat.com",
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, bannedUser, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	// when
+	_, err := r.Reconcile(req)
+
+	// then
+	require.NoError(t, err)
+	err = r.client.Get(context.TODO(), test.NamespacedName(operatorNamespace, userSignup.Name), userSignup)
+	require.NoError(t, err)
+
+	// Confirm the status is set to Banned
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+			Reason: "Banned",
+		})
+}
+
+func TestUserSignupBannedMURExists(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+		},
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
+				{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+				},
+				{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "foo-at-redhat-com",
+		},
+	}
+
+	bannedUser := &toolchainv1alpha1.BannedUser{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				toolchainv1alpha1.BannedUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+		},
+		Spec: toolchainv1alpha1.BannedUserSpec{
+			Email: "foo@redhat.com",
+		},
+	}
+
+	mur := murtest.NewMasterUserRecord("foo-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, bannedUser, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	// when
+	_, err := r.Reconcile(req)
+
+	// then
+	require.NoError(t, err)
+	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+	err = r.client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+
+	// Confirm the status is set to Banning
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "Banning",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		})
+
+	murs := &v1alpha1.MasterUserRecordList{}
+
+	// Confirm that the MUR has now been deleted
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 0)
+
+	// Reconcile again
+	_, err = r.Reconcile(req)
+	require.NoError(t, err)
+
+	err = r.client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+
+	// Confirm the status is now set to Banned
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+			Reason: "Banned",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		})
+}
+
 func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{

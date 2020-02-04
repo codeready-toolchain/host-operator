@@ -695,6 +695,6 @@ func (r *ReconcileUserSignup) updateStatusConditions(userSignup *toolchainv1alph
 // userEmailHash.  If the values are the same the function returns true, otherwise it will return false
 func validateEmailHash(userEmail, userEmailHash string) bool {
 	md5hash := md5.New()
-	md5hash.Write([]byte(userEmail))
+	_, _ = md5hash.Write([]byte(userEmail))
 	return hex.EncodeToString(md5hash.Sum(nil)) == userEmailHash
 }
