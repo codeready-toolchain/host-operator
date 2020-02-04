@@ -63,11 +63,11 @@ func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Req
 		// look-up any associated UserSignup using the BannedUser's "toolchain.dev.openshift.com/emailHash" label
 		if emailHashLbl, exists := bu.Labels[toolchainv1alpha1.BannedUserEmailHashLabelKey]; exists {
 
-			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
+			labels := map[string]string{toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: emailHashLbl}
 			opts := client.MatchingLabels(labels)
 			userSignupList := &toolchainv1alpha1.UserSignupList{}
 			if err := b.client.List(context.TODO(), userSignupList, opts); err != nil {
-				log.Error(err, "Could not list UserSignup resources with label value", toolchainv1alpha1.BannedUserEmailHashLabelKey, emailHashLbl)
+				log.Error(err, "Could not list UserSignup resources with label value", toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey, emailHashLbl)
 				return nil
 			}
 
@@ -189,7 +189,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	if emailLbl, exists := instance.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
 
 		// Lookup the email hash label
-		if emailHashLbl, exists := instance.Labels[toolchainv1alpha1.BannedUserEmailHashLabelKey]; exists {
+		if emailHashLbl, exists := instance.Labels[toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey]; exists {
 
 			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
 			opts := client.MatchingLabels(labels)

@@ -88,8 +88,8 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			Name:      userID.String(),
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -217,8 +217,8 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 			Name:      userID.String(),
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "abcdef0123456789",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "abcdef0123456789",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -294,8 +294,8 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -336,8 +336,8 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -378,8 +378,8 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -419,8 +419,8 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -489,8 +489,8 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -558,8 +558,8 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -606,8 +606,8 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -677,8 +677,8 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 			Name:      "bar",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "bar@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "ce880faae6d6a27c3c15a0639c70cec2",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "bar@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "ce880faae6d6a27c3c15a0639c70cec2",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -717,8 +717,8 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -753,8 +753,8 @@ func TestUserSignupMURReadFails(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -788,8 +788,8 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -824,8 +824,8 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -859,8 +859,8 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -895,8 +895,8 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -943,8 +943,8 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -1015,8 +1015,8 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -1063,8 +1063,8 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "john.doe@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "3d87017fe4a26245c967098f3d6e091d",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "john.doe@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "3d87017fe4a26245c967098f3d6e091d",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -1161,8 +1161,8 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "edward.jones@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "6435d4d195732b26882318d4a3b2f23e",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "edward.jones@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "6435d4d195732b26882318d4a3b2f23e",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -1231,8 +1231,8 @@ func TestUserSignupBanned(t *testing.T) {
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -1277,8 +1277,8 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -1373,8 +1373,8 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "747a250430df0c7976bf2363ebb4014a",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "alice.mayweather.doe@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "747a250430df0c7976bf2363ebb4014a",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -1446,8 +1446,8 @@ func TestDeathBy100Signups(t *testing.T) {
 			Name:      userID,
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -1515,8 +1515,8 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -1575,8 +1575,8 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				toolchainv1alpha1.BannedUserEmailHashLabelKey:      "fd2addbd8d82f0d2dc088fa122377eaa",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey:     "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
