@@ -51,7 +51,6 @@ const (
 	missingUserEmailAnnotationReason     = "MissingUserEmailAnnotation"
 	missingEmailHashLabelReason          = "MissingEmailHashLabel"
 	invalidEmailHashLabelReason          = "InvalidEmailHashLabel"
-	failedToValidateEmailHashLabelReason = "FailedToValidateEmailHash"
 )
 
 var log = logf.Log.WithName("controller_usersignup")
@@ -67,11 +66,11 @@ func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Req
 		// look-up any associated UserSignup using the BannedUser's "toolchain.dev.openshift.com/email-hash" label
 		if emailHashLbl, exists := bu.Labels[toolchainv1alpha1.BannedUserEmailHashLabelKey]; exists {
 
-			labels := map[string]string{toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey: emailHashLbl}
+			labels := map[string]string{toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHashLbl}
 			opts := client.MatchingLabels(labels)
 			userSignupList := &toolchainv1alpha1.UserSignupList{}
 			if err := b.client.List(context.TODO(), userSignupList, opts); err != nil {
-				log.Error(err, "Could not list UserSignup resources with label value", toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey, emailHashLbl)
+				log.Error(err, "Could not list UserSignup resources with label value", toolchainv1alpha1.UserSignupUserEmailHashLabelKey, emailHashLbl)
 				return nil
 			}
 
@@ -200,7 +199,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	if emailLbl, exists := instance.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
 
 		// Lookup the email hash label
-		if emailHashLbl, exists := instance.Labels[toolchainv1alpha1.UserSignupUserEmailHashAnnotationKey]; exists {
+		if emailHashLbl, exists := instance.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
 
 			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
 			opts := client.MatchingLabels(labels)
@@ -219,10 +218,8 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				}
 			}
 
-			hashIsValid, err := validateEmailHash(emailLbl, emailHashLbl)
-			if err != nil {
-				return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusFailedToValidateEmailHash)
-			} else if !hashIsValid {
+			hashIsValid := validateEmailHash(emailLbl, emailHashLbl)
+			if !hashIsValid {
 				return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidEmailHash)
 			}
 		} else {
@@ -669,17 +666,6 @@ func (r *ReconcileUserSignup) setStatusMissingEmailHash(userSignup *toolchainv1a
 		})
 }
 
-func (r *ReconcileUserSignup) setStatusFailedToValidateEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  failedToValidateEmailHashLabelReason,
-			Message: message,
-		})
-}
-
 func (r *ReconcileUserSignup) setStatusInvalidEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return r.updateStatusConditions(
 		userSignup,
@@ -726,11 +712,9 @@ func (r *ReconcileUserSignup) updateStatusConditions(userSignup *toolchainv1alph
 
 // validateEmailHash calculates an md5 hash value for the provided userEmail string, and compares it to the provided
 // userEmailHash.  If the values are the same the function returns true, otherwise it will return false
-func validateEmailHash(userEmail, userEmailHash string) (bool, error) {
+func validateEmailHash(userEmail, userEmailHash string) bool {
 	md5hash := md5.New()
-	_, err := md5hash.Write([]byte(userEmail))
-	if err != nil {
-		return false, err
-	}
-	return hex.EncodeToString(md5hash.Sum(nil)) == userEmailHash, nil
+	// Ignore the error, as this implementation cannot return one
+	_, _ = md5hash.Write([]byte(userEmail))
+	return hex.EncodeToString(md5hash.Sum(nil)) == userEmailHash
 }

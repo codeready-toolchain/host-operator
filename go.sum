@@ -73,8 +73,8 @@ github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghf
 github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1/go.mod h1:/iP1qXHoty45bqomnu2LM+VVyAEdWN+vtSHGlQgyxbw=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/codeready-toolchain/api v0.0.0-20191203182149-f994640853b0/go.mod h1:K2iSNSOwpQf+Wo3LdmrGaPlha2BLwuywwWrnbuiy8Pg=
-github.com/codeready-toolchain/api v0.0.0-20200204002410-9b0bcf96feca h1:u30N0mGaeR3aJrehwh+/PxH49LVZZ3EI71Z9f55jMFo=
-github.com/codeready-toolchain/api v0.0.0-20200204002410-9b0bcf96feca/go.mod h1:zPbdWiEiv9SpZMvyRkY6E6n7Eynm5Y0uhJhBiGXjkg0=
+github.com/codeready-toolchain/api v0.0.0-20200206220457-d31f1763a415 h1:JBoYSksAWN2kwUAcJFcQbhnDX+pxzXVawucn32+ybWs=
+github.com/codeready-toolchain/api v0.0.0-20200206220457-d31f1763a415/go.mod h1:zPbdWiEiv9SpZMvyRkY6E6n7Eynm5Y0uhJhBiGXjkg0=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20200131162853-984d8595ee4e h1:7B8fTyZDzB08nlFeaBZO7/J/rxYPmULqCKO1L01nBcI=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20200131162853-984d8595ee4e/go.mod h1:fQpxuAw8pI0BwVJhgKHN9vbWko/eWsCzsZ+9pknFVLQ=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
