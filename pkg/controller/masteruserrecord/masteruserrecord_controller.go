@@ -113,7 +113,6 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 		reqLogger.Error(err, "unable to get MasterUserRecord")
 		return reconcile.Result{}, err
 	}
-
 	// If the UserAccount is not being deleted, create or synchronize UserAccounts.
 	if !coputil.IsBeingDeleted(mur) {
 		// Add the finalizer if it is not present
@@ -180,7 +179,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 			"failed to get userAccount '%s' from cluster '%s'", record.Name, recAccount.TargetCluster)
 	}
 
-	userAccount.Spec.Disabled = record.Spec.Disabled
+	recAccount.Spec.Disabled = record.Spec.Disabled
 
 	sync := Synchronizer{
 		record:            record,
