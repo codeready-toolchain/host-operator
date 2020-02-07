@@ -152,41 +152,49 @@ data:
                                 not be able to login "false" is assumed by default. This
                                 field is duplicated and will be removed in the future.
                               type: boolean
-                            nsLimit:
-                              description: The namespace limit name
-                              type: string
-                            nsTemplateSet:
-                              description: Namespace template set
+                            userAccountSpecBase:
+                              description: UserAccountBase contains all base fields
                               properties:
-                                namespaces:
-                                  description: The namespace templates
-                                  items:
-                                    description: NSTemplateSetNamespace the namespace definition
-                                      in an NSTemplateSet resource
-                                    properties:
-                                      revision:
-                                        description: The revision of the corresponding template
-                                        type: string
-                                      template:
-                                        description: Optional field. Used to specify a custom
-                                          template
-                                        type: string
-                                      type:
-                                        description: 'The type of the namespace. For example:
-                                          ide|cicd|stage|default'
-                                        type: string
-                                    required:
-                                    - revision
-                                    - type
-                                    type: object
-                                  type: array
-                                tierName:
-                                  description: The name of the tier represented by this
-                                    template set
+                                nsLimit:
+                                  description: The namespace limit name
                                   type: string
+                                nsTemplateSet:
+                                  description: Namespace template set
+                                  properties:
+                                    namespaces:
+                                      description: The namespace templates
+                                      items:
+                                        description: NSTemplateSetNamespace the namespace
+                                          definition in an NSTemplateSet resource
+                                        properties:
+                                          revision:
+                                            description: The revision of the corresponding
+                                              template
+                                            type: string
+                                          template:
+                                            description: Optional field. Used to specify
+                                              a custom template
+                                            type: string
+                                          type:
+                                            description: 'The type of the namespace. For
+                                              example: ide|cicd|stage|default'
+                                            type: string
+                                        required:
+                                        - revision
+                                        - type
+                                        type: object
+                                      type: array
+                                    tierName:
+                                      description: The name of the tier represented by this
+                                        template set
+                                      type: string
+                                  required:
+                                  - namespaces
+                                  - tierName
+                                  type: object
                               required:
-                              - namespaces
-                              - tierName
+                              - nsLimit
+                              - nsTemplateSet
                               type: object
                             userID:
                               description: UserID is the user ID from RHD Identity Provider
@@ -195,8 +203,7 @@ data:
                                 and will be removed in the future.
                               type: string
                           required:
-                          - nsLimit
-                          - nsTemplateSet
+                          - userAccountSpecBase
                           type: object
                         syncIndex:
                           description: SyncIndex is to be updated by UserAccount Controller
@@ -743,6 +750,38 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "RegistrationService",
+                "metadata": {
+                  "labels": {
+                    "provider": "codeready-toolchain"
+                  },
+                  "name": "reg-service",
+                  "namespace": "toolchain-host-operator"
+                },
+                "spec": {
+                  "envVars": {
+                    "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
+                    "ENVIRONMENT": "dev",
+                    "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
+                    "REPLICAS": "4"
+                  }
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "UserSignup",
+                "metadata": {
+                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                },
+                "spec": {
+                  "approved": true,
+                  "compliantUsername": "johnsmith-at-redhat-com",
+                  "targetCluster": "east-2a",
+                  "username": "johnsmith@redhat.com"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "BannedUser",
                 "metadata": {
                   "labels": {
@@ -823,38 +862,6 @@ data:
                       "type": "default"
                     }
                   ]
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "RegistrationService",
-                "metadata": {
-                  "labels": {
-                    "provider": "codeready-toolchain"
-                  },
-                  "name": "reg-service",
-                  "namespace": "toolchain-host-operator"
-                },
-                "spec": {
-                  "envVars": {
-                    "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
-                    "ENVIRONMENT": "dev",
-                    "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
-                    "REPLICAS": "4"
-                  }
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "UserSignup",
-                "metadata": {
-                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                },
-                "spec": {
-                  "approved": true,
-                  "compliantUsername": "johnsmith-at-redhat-com",
-                  "targetCluster": "east-2a",
-                  "username": "johnsmith@redhat.com"
                 }
               }
             ]
