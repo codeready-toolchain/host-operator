@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -14,7 +15,6 @@ import (
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
 	"github.com/go-logr/logr"
-	"github.com/operator-framework/operator-sdk/pkg/predicate"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	controllerPredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -97,6 +98,44 @@ func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Req
 
 var _ handler.Mapper = BannedUserToUserSignupMapper{}
 
+type UserSignupChangedPredicate struct {
+	controllerPredicate.Funcs
+}
+
+// Update implements default UpdateEvent filter for validating generation change
+func (p UserSignupChangedPredicate) Update(e event.UpdateEvent) bool {
+	if e.MetaOld == nil {
+		log.Error(nil, "Update event has no old metadata", "event", e)
+		return false
+	}
+	if e.ObjectOld == nil {
+		log.Error(nil, "Update event has no old runtime object to update", "event", e)
+		return false
+	}
+	if e.ObjectNew == nil {
+		log.Error(nil, "Update event has no new runtime object for update", "event", e)
+		return false
+	}
+	if e.MetaNew == nil {
+		log.Error(nil, "Update event has no new metadata", "event", e)
+		return false
+	}
+	if e.MetaNew.GetGeneration() == e.MetaOld.GetGeneration() &&
+		!p.AnnotationChanged(e, toolchainv1alpha1.UserSignupUserEmailAnnotationKey) &&
+		!p.LabelChanged(e, toolchainv1alpha1.UserSignupUserEmailHashLabelKey) {
+		return false
+	}
+	return true
+}
+
+func (p UserSignupChangedPredicate) AnnotationChanged(e event.UpdateEvent, annotationName string) bool {
+	return e.MetaOld.GetAnnotations()[annotationName] != e.MetaNew.GetAnnotations()[annotationName]
+}
+
+func (p UserSignupChangedPredicate) LabelChanged(e event.UpdateEvent, labelName string) bool {
+	return e.MetaOld.GetLabels()[labelName] != e.MetaNew.GetLabels()[labelName]
+}
+
 // Add creates a new UserSignup Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -118,7 +157,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to primary resource UserSignup
 	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.UserSignup{}}, &handler.EnqueueRequestForObject{},
-		predicate.GenerationChangedPredicate{})
+		UserSignupChangedPredicate{})
 	if err != nil {
 		return err
 	}
