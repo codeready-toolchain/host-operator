@@ -34,6 +34,9 @@ RUN yum install epel-release -y \
 # Install yq that will be used for parsing/reading yaml files.
 RUN pip3 install yq
 
+# Install operator-courier that will be used in CD for nightly builds
+RUN pip3 install operator-courier
+
 WORKDIR /tmp
 
 # download, verify and install golang
