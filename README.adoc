@@ -52,6 +52,7 @@ The CSV that is part of the bundle gathers information from multiple files insid
 * cluster_role.yaml
 * the actual CSV
 * any of the CRDs
+* any of the CR examples
 
 == Installing operator
 
