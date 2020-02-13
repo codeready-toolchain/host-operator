@@ -320,13 +320,12 @@ func newUserAccount(nsdName types.NamespacedName, spec toolchainv1alpha1.UserAcc
 			Name:      nsdName.Name,
 			Namespace: nsdName.Namespace,
 		},
-		Spec:toolchainv1alpha1.UserAccountSpec{
-			UserID:              murSpec.UserID,
-			Disabled:            murSpec.Disabled,
+		Spec: toolchainv1alpha1.UserAccountSpec{
+			UserID:   murSpec.UserID,
+			Disabled: murSpec.Disabled,
 			UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
-				NSLimit: spec.UserAccountSpecBase.NSLimit,
+				NSLimit:       spec.UserAccountSpecBase.NSLimit,
 				NSTemplateSet: spec.NSTemplateSet,
-
 			},
 		},
 	}
