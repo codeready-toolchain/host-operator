@@ -279,12 +279,13 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 		{
 			TargetCluster: targetCluster,
-			Spec: toolchainv1alpha1.UserAccountSpec{
-				UserID:  userSignup.Name,
-				NSLimit: "default",
-				NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
-					TierName:   nstemplateTier.Name,
-					Namespaces: namespaces,
+			Spec: toolchainv1alpha1.UserAccountSpecEmbedded {
+				UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
+					NSLimit:       "default",
+					NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
+						TierName:   nstemplateTier.Name,
+						Namespaces: namespaces,
+					},
 				},
 			},
 		},
@@ -309,6 +310,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserAccounts: userAccounts,
+			UserID: userSignup.Name,
 		},
 	}
 

@@ -21,6 +21,7 @@ require (
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/openshift/api v3.9.1-0.20190730142803-0922aa5a655b+incompatible
 	github.com/operator-framework/operator-sdk v0.11.0
+	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4 // indirect
@@ -43,6 +44,8 @@ require (
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 	k8s.io/klog v1.0.0
+	k8s.io/kube-openapi v0.0.0-20190918143330-0270cf2f1c1d // indirect
+	k8s.io/utils v0.0.0-20190809000727-6c36bc71fc4a // indirect
 	sigs.k8s.io/controller-runtime v0.3.0
 	sigs.k8s.io/kubefed v0.1.0-rc6.0.20191023070212-24d45e9f4f15
 	sigs.k8s.io/testing_frameworks v0.1.2 // indirect
@@ -50,6 +53,8 @@ require (
 
 // Pinned to kubernetes-1.14.1
 replace (
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200117081430-1435f41dfb31 => ../toolchain-common
+
 	// using 'github.com/openshift/api@release-4.2'
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20190927182313-d4a64ec2cbd8
 

@@ -28,7 +28,7 @@ import (
 func TestSynchronizeSpec(t *testing.T) {
 	// given
 	l := logf.ZapLogger(true)
-	logf.SetLogger(l)
+	apiScheme(t)
 	mur := murtest.NewMasterUserRecord("john", murtest.StatusCondition(toBeProvisioned()))
 
 	userAccount := uatest.NewUserAccountFromMur(mur)
@@ -36,8 +36,8 @@ func TestSynchronizeSpec(t *testing.T) {
 	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"),
 		murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
 
-	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
 	hostClient := test.NewFakeClient(t, mur)
+	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
 
 	sync := Synchronizer{
 		record:            mur,
@@ -56,7 +56,7 @@ func TestSynchronizeSpec(t *testing.T) {
 
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		HasSpec(mur.Spec.UserAccounts[0].Spec)
+		HasEmbeddedSpec(mur.Spec.UserAccounts[0].Spec, mur.Spec.Disabled, mur.Spec.UserID)
 
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(updatingReason, ""))
@@ -130,7 +130,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 func TestSynchronizeUserAccountFailed(t *testing.T) {
 	// given
 	l := logf.ZapLogger(true)
-	logf.SetLogger(l)
+	apiScheme(t)
 
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
 		// given
@@ -390,7 +390,7 @@ func TestCheURL(t *testing.T) {
 		// then
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			Exists().
-			HasSpec(mur.Spec.UserAccounts[0].Spec).
+			HasEmbeddedSpec(mur.Spec.UserAccounts[0].Spec, mur.Spec.Disabled, mur.Spec.UserID).
 			HasConditions(condition)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
@@ -438,7 +438,7 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchain
 
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		HasSpec(mur.Spec.UserAccounts[0].Spec).
+		HasEmbeddedSpec(mur.Spec.UserAccounts[0].Spec, mur.Spec.Disabled, mur.Spec.UserID).
 		HasConditions(condition)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(expMurCon).
