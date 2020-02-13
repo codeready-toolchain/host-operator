@@ -56,7 +56,7 @@ func TestSynchronizeSpec(t *testing.T) {
 
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		HasEmbeddedSpec(mur.Spec.UserAccounts[0].Spec, mur.Spec.Disabled, mur.Spec.UserID)
+		HasEmbeddedSpec(mur.Spec.UserAccounts[0].Spec)
 
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(updatingReason, ""))
@@ -390,7 +390,7 @@ func TestCheURL(t *testing.T) {
 		// then
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			Exists().
-			HasEmbeddedSpec(mur.Spec.UserAccounts[0].Spec, mur.Spec.Disabled, mur.Spec.UserID).
+			HasEmbeddedSpec(mur.Spec.UserAccounts[0].Spec).
 			HasConditions(condition)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
@@ -438,7 +438,7 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchain
 
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		HasEmbeddedSpec(mur.Spec.UserAccounts[0].Spec, mur.Spec.Disabled, mur.Spec.UserID).
+		HasEmbeddedSpec(mur.Spec.UserAccounts[0].Spec).
 		HasConditions(condition)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(expMurCon).
