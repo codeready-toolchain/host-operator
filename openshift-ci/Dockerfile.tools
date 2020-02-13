@@ -8,7 +8,7 @@ ENV LANG=en_US.utf8 \
     GOCACHE=/tmp/.cache \
     GIT_COMMITTER_NAME=devtools \
     GIT_COMMITTER_EMAIL=devtools@redhat.com \
-    OPERATOR_SDK_VERSION=v0.11.0
+    OPERATOR_SDK_VERSION=v0.15.1
 
 ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 
