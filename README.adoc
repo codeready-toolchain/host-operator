@@ -42,6 +42,17 @@ There are a few more targets that you can find useful:
 * to remove the local test namespace: `$ make clean-namespace`
 * to remove & create the local test namespace, and create ClusterRole/ClusterRoleBinding and ServiceAccount inside of the namespace: `$ make reset-namespace`
 
+== OLM catalog files
+
+There is one operator bundle stored in link:./deploy/olm-catalog/toolchain-host-operator/[] directory that is used as a base template for generating all new versions of the operator bundle.
+
+The CSV that is part of the bundle gathers information from multiple files inside of this repository, so make sure that it's still in sync. Every time when any of the following files is changed, run `make generate-olm-files` to update the whole operator bundle as well as the link:./hack/[hack] files to the latest version:
+
+* role.yaml
+* cluster_role.yaml
+* the actual CSV
+* any of the CRDs
+
 == Installing operator
 
 To install the host operator via OperatorHub you need to have OpenShift 4.2+ running and access to a docker registry.
