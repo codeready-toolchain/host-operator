@@ -56,7 +56,7 @@ func (s *Synchronizer) synchronizeSpec() error {
 		if s.memberUserAcc.Spec.UserID == "" {
 			s.memberUserAcc.Spec.UserID = s.recordSpecUserAcc.Spec.UserID
 		}
-		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
+
 		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
 		if err != nil {
 			return err
