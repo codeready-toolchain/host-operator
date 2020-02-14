@@ -315,17 +315,22 @@ func updateStatusConditions(cl client.Client, record *toolchainv1alpha1.MasterUs
 }
 
 func newUserAccount(nsdName types.NamespacedName, spec toolchainv1alpha1.UserAccountSpecEmbedded, murSpec toolchainv1alpha1.MasterUserRecordSpec) *toolchainv1alpha1.UserAccount {
+	userID := murSpec.UserID
+	if userID == "" {
+		userID = spec.UserID
+	}
+
 	return &toolchainv1alpha1.UserAccount{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      nsdName.Name,
 			Namespace: nsdName.Namespace,
 		},
 		Spec: toolchainv1alpha1.UserAccountSpec{
-			UserID:   murSpec.UserID,
+			UserID:   userID,
 			Disabled: murSpec.Disabled,
 			UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
 				NSLimit:       spec.UserAccountSpecBase.NSLimit,
-				NSTemplateSet: spec.NSTemplateSet,
+				NSTemplateSet: spec.UserAccountSpecBase.NSTemplateSet,
 			},
 		},
 	}

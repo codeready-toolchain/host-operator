@@ -44,7 +44,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		MatchEmbeddedSpec(mur.Spec.UserAccounts[0].Spec)
+		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(provisioningReason, "")).
 		HasFinalizer()
