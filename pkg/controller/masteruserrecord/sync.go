@@ -53,6 +53,10 @@ func (s *Synchronizer) synchronizeSpec() error {
 		s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
 		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
+		if s.memberUserAcc.Spec.UserID == "" {
+			s.memberUserAcc.Spec.UserID = s.recordSpecUserAcc.Spec.UserID
+		}
+		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
 		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
 		if err != nil {
 			return err
