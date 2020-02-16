@@ -238,7 +238,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	return reconcile.Result{}, nil
 }
 
-func (r * ReconcileUserSignup) migrateMUR(mur toolchainv1alpha1.MasterUserRecord) error {
+func (r *ReconcileUserSignup) migrateMUR(mur toolchainv1alpha1.MasterUserRecord) error {
 	if mur.Spec.UserID != "" || len(mur.Spec.UserAccounts) <= 0 {
 		return nil
 	}

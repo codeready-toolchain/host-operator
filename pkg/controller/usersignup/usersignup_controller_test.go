@@ -768,7 +768,7 @@ func TestMigrateMUR(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: operatorNamespace, Name: mur.Name}, migratedMur)
 	require.NoError(t, err)
 
-	assert.Equal(t, migratedMur.Spec.UserID,  userID)
+	assert.Equal(t, migratedMur.Spec.UserID, userID)
 }
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {
