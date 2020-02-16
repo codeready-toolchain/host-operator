@@ -62,46 +62,6 @@ func TestSynchronizeSpec(t *testing.T) {
 		HasConditions(toBeNotReady(updatingReason, ""))
 }
 
-func TestSynchronizeSpecMigration(t *testing.T) {
-	// given
-	l := logf.ZapLogger(true)
-	apiScheme(t)
-	mur := murtest.NewMasterUserRecord("john", murtest.StatusCondition(toBeProvisioned()))
-
-	// set the old api userID value and clear the new api userID
-	mur.Spec.UserAccounts[0].Spec.UserID = mur.Spec.UserID
-	mur.Spec.UserID = ""
-	userAccount := uatest.NewUserAccountFromMur(mur)
-
-	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"),
-		murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
-
-	hostClient := test.NewFakeClient(t, mur)
-	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
-
-	sync := Synchronizer{
-		record:            mur,
-		hostClient:        hostClient,
-		memberCluster:     newMemberCluster(memberClient),
-		memberUserAcc:     userAccount,
-		recordSpecUserAcc: mur.Spec.UserAccounts[0],
-		log:               l,
-	}
-
-	// when
-	err := sync.synchronizeSpec()
-
-	// then
-	require.NoError(t, err)
-
-	uatest.AssertThatUserAccount(t, "john", memberClient).
-		Exists().
-		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
-
-	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-		HasConditions(toBeNotReady(updatingReason, ""))
-}
-
 func TestSynchronizeStatus(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))

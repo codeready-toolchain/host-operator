@@ -159,6 +159,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivating)
 		}
 
+		err = r.migrateMUR(mur)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
 		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
@@ -231,6 +236,21 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r * ReconcileUserSignup) migrateMUR(mur toolchainv1alpha1.MasterUserRecord) error {
+	if mur.Spec.UserID != "" || len(mur.Spec.UserAccounts) <= 0 {
+		return nil
+	}
+
+	mur.Spec.UserID = mur.Spec.UserAccounts[0].Spec.UserID
+
+	err := r.client.Update(context.TODO(), &mur)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
