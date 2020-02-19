@@ -245,12 +245,7 @@ func (r *ReconcileUserSignup) migrateMUR(mur toolchainv1alpha1.MasterUserRecord)
 
 	mur.Spec.UserID = mur.Spec.UserAccounts[0].Spec.UserID
 
-	err := r.client.Update(context.TODO(), &mur)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return r.client.Update(context.TODO(), &mur)
 }
 
 func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
