@@ -44,7 +44,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		HasSpec(mur.Spec.UserAccounts[0].Spec)
+		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(provisioningReason, "")).
 		HasFinalizer()
@@ -69,10 +69,10 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		HasSpec(mur.Spec.UserAccounts[0].Spec)
+		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
-		HasSpec(mur.Spec.UserAccounts[1].Spec)
+		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(provisioningReason, "")).
 		HasFinalizer()
@@ -368,13 +368,13 @@ func TestModifyUserAccounts(t *testing.T) {
 
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		HasSpec(mur.Spec.UserAccounts[0].Spec)
+		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
-		HasSpec(mur.Spec.UserAccounts[1].Spec)
+		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec)
 	uatest.AssertThatUserAccount(t, "john", memberClient3).
 		Exists().
-		HasSpec(mur.Spec.UserAccounts[2].Spec)
+		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[2].Spec)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(updatingReason, ""))
 }
@@ -432,15 +432,15 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			Exists().
-			HasSpec(mur.Spec.UserAccounts[0].Spec).
+			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
 			HasConditions(userAccount.Status.Conditions...)
 		uatest.AssertThatUserAccount(t, "john", memberClient2).
 			Exists().
-			HasSpec(mur.Spec.UserAccounts[1].Spec).
+			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec).
 			HasConditions(userAccount2.Status.Conditions...)
 		uatest.AssertThatUserAccount(t, "john", memberClient3).
 			Exists().
-			HasSpec(mur.Spec.UserAccounts[2].Spec).
+			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[2].Spec).
 			HasConditions(userAccount3.Status.Conditions...)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).

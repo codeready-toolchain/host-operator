@@ -159,6 +159,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivating)
 		}
 
+		err = r.migrateMUR(mur)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
 		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
@@ -233,6 +238,16 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	return reconcile.Result{}, nil
 }
 
+func (r *ReconcileUserSignup) migrateMUR(mur toolchainv1alpha1.MasterUserRecord) error {
+	if mur.Spec.UserID != "" || len(mur.Spec.UserAccounts) <= 0 {
+		return nil
+	}
+
+	mur.Spec.UserID = mur.Spec.UserAccounts[0].Spec.UserID
+
+	return r.client.Update(context.TODO(), &mur)
+}
+
 func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
 	replaced := strings.ReplaceAll(strings.ReplaceAll(instance.Spec.Username, "@", "-at-"), ".", "-")
 
@@ -279,12 +294,13 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 		{
 			TargetCluster: targetCluster,
-			Spec: toolchainv1alpha1.UserAccountSpec{
-				UserID:  userSignup.Name,
-				NSLimit: "default",
-				NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
-					TierName:   nstemplateTier.Name,
-					Namespaces: namespaces,
+			Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
+				UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
+					NSLimit: "default",
+					NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
+						TierName:   nstemplateTier.Name,
+						Namespaces: namespaces,
+					},
 				},
 			},
 		},
@@ -309,6 +325,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserAccounts: userAccounts,
+			UserID:       userSignup.Name,
 		},
 	}
 

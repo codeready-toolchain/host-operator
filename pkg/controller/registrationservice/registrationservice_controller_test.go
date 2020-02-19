@@ -3,6 +3,7 @@ package registrationservice
 import (
 	"context"
 	"fmt"
+	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis"
@@ -55,8 +56,8 @@ func TestReconcileRegistrationService(t *testing.T) {
 	t.Run("reconcile second object and add configmap when SA is already present", func(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder, reqService)
-		processor := template.NewProcessor(service.client, s)
-		_, err := processor.ApplySingle(objs[0].Object.DeepCopyObject(), false, nil)
+		client := commonclient.NewApplyClient(service.client, service.scheme)
+		_, err := client.CreateOrUpdateObject(objs[0].Object.DeepCopyObject(), false, nil)
 		require.NoError(t, err)
 
 		// when
@@ -77,10 +78,10 @@ func TestReconcileRegistrationService(t *testing.T) {
 	t.Run("reconcile when both objects are present and don't update nor create anything", func(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder, reqService)
-		processor := template.NewProcessor(service.client, s)
-		_, err := processor.ApplySingle(objs[0].Object.DeepCopyObject(), false, nil)
+		cclient := commonclient.NewApplyClient(service.client, service.scheme)
+		_, err := cclient.CreateOrUpdateObject(objs[0].Object.DeepCopyObject(), false, nil)
 		require.NoError(t, err)
-		_, err = processor.ApplySingle(objs[1].Object.DeepCopyObject(), false, nil)
+		_, err = cclient.CreateOrUpdateObject(objs[1].Object.DeepCopyObject(), false, nil)
 		require.NoError(t, err)
 		fakeClient := service.client.(*test.FakeClient)
 		fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
@@ -108,13 +109,13 @@ func TestReconcileRegistrationService(t *testing.T) {
 	t.Run("change ConfigMap object & don't specify environment so it uses the default one", func(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder)
-		processor := template.NewProcessor(service.client, s)
-		_, err := processor.ApplySingle(objs[0].Object.DeepCopyObject(), false, nil)
+		client := commonclient.NewApplyClient(service.client, service.scheme)
+		_, err := client.CreateOrUpdateObject(objs[0].Object.DeepCopyObject(), false, nil)
 		require.NoError(t, err)
-		_, err = processor.ApplySingle(objs[1].Object.DeepCopyObject(), false, nil)
+		_, err = client.CreateOrUpdateObject(objs[1].Object.DeepCopyObject(), false, nil)
 		require.NoError(t, err)
 		reqService := newRegistrationService(test.HostOperatorNs, "quay.io/rh/registration-service:v0.1", "", 1)
-		_, err = processor.ApplySingle(reqService, false, nil)
+		_, err = client.CreateOrUpdateObject(reqService, false, nil)
 		require.NoError(t, err)
 
 		// when
