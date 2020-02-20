@@ -53,6 +53,10 @@ require (
 
 // Pinned to kubernetes-1.14.1
 replace (
+	//TODO: Update to master once merged
+	github.com/codeready-toolchain/api v0.0.0-20200217143846-eaa75f9b390c => github.com/tinakurian/api v0.0.0-20200219143838-d7c2cb78b67a
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200214180702-e9b943931a46 => github.com/tinakurian/toolchain-common v0.0.0-20200220014601-a95e5b3bd8bd
+
 	// using 'github.com/openshift/api@release-4.2'
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20190927182313-d4a64ec2cbd8
 
