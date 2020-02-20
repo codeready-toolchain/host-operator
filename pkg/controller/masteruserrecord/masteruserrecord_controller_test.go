@@ -550,7 +550,6 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 		DoesNotHaveFinalizer()
 }
 
-// TODO: TINA
 func TestDisablingMasterUserRecord(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))

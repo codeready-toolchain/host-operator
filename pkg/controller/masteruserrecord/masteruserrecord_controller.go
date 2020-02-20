@@ -179,8 +179,6 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 			"failed to get userAccount '%s' from cluster '%s'", record.Name, recAccount.TargetCluster)
 	}
 
-	recAccount.Spec.Disabled = record.Spec.Disabled
-
 	sync := Synchronizer{
 		record:            record,
 		hostClient:        r.client,
