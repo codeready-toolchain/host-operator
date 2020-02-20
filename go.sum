@@ -72,12 +72,10 @@ github.com/census-instrumentation/opencensus-proto v0.2.0/go.mod h1:f6KPmirojxKA
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
 github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1/go.mod h1:/iP1qXHoty45bqomnu2LM+VVyAEdWN+vtSHGlQgyxbw=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/codeready-toolchain/api v0.0.0-20200212082237-859fa2e44edd h1:yxQ071tdCHEL3xB4QpLt8RJf61WNZIEqpU6Q575QTE4=
-github.com/codeready-toolchain/api v0.0.0-20200212082237-859fa2e44edd/go.mod h1:zPbdWiEiv9SpZMvyRkY6E6n7Eynm5Y0uhJhBiGXjkg0=
 github.com/codeready-toolchain/api v0.0.0-20200220052945-b24517fc619f h1:xQCr+FkzucMzruSv0bHW0sCOF4ifNkje/+9hR9FFCbE=
 github.com/codeready-toolchain/api v0.0.0-20200220052945-b24517fc619f/go.mod h1:zPbdWiEiv9SpZMvyRkY6E6n7Eynm5Y0uhJhBiGXjkg0=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200214180702-e9b943931a46 h1:SKdTuFdPGCO6/s6AiT404VIoyvx8FcAG2I/UJPOFKQ4=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200214180702-e9b943931a46/go.mod h1:8R19sLAQPZ/j0+pBa4UGE/chaWUQ6S5cyXHXsn5aJmw=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200220062916-1c35a15f0e30 h1:E5aq0v0w7verL5XuK+34sKom02p50TG+q6c8VrJH2rY=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200220062916-1c35a15f0e30/go.mod h1:w+XlpU0KTQS4KlyJnoNfjJ180Gsurdyn2a3QchbJ+RQ=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.3/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
