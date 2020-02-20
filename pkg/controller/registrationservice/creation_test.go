@@ -3,13 +3,13 @@ package registrationservice
 import (
 	"context"
 	"fmt"
+	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/test"
-	"github.com/codeready-toolchain/toolchain-common/pkg/template"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,8 +59,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				},
 			},
 		}
-		processor := template.NewProcessor(cl, s)
-		_, err := processor.ApplySingle(regService, false, nil)
+		client := commonclient.NewApplyClient(cl, s)
+		_, err := client.CreateOrUpdateObject(regService, false, nil)
 		require.NoError(t, err)
 		restore := SetEnvVarsAndRestore(t,
 			Env("REGISTRATION_SERVICE_IMAGE", "quay.io/rh/registration-service:v0.1"),

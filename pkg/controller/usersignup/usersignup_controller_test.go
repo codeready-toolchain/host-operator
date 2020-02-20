@@ -919,6 +919,56 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 }
 
+func TestMigrateMUR(t *testing.T) {
+	userID := uuid.NewV4().String()
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userID,
+			Namespace: operatorNamespace,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+			Approved: false,
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	createMemberCluster(r.client, "member1", ready)
+	defer clearMemberClusters(r.client)
+
+	// The first reconcile creates the MasterUserRecord
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Confirm that the mur exists
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 1)
+
+	mur := murs.Items[0]
+
+	mur.Spec.UserAccounts[0].Spec.UserID = mur.Spec.UserID
+	mur.Spec.UserID = ""
+	mur.Spec.UserAccounts[0].Spec.Disabled = mur.Spec.Disabled
+
+	err = r.client.Update(context.TODO(), &mur)
+	require.NoError(t, err)
+
+	// The first reconcile creates the MasterUserRecord
+	res, err = r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	migratedMur := &v1alpha1.MasterUserRecord{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: operatorNamespace, Name: mur.Name}, migratedMur)
+	require.NoError(t, err)
+
+	assert.Equal(t, migratedMur.Spec.UserID, userID)
+}
+
 func TestUserSignupWithExistingMUROK(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
