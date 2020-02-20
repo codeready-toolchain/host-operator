@@ -73,10 +73,6 @@ spec:
                   spec:
                     description: The spec of the corresponding UserAccount
                     properties:
-                      disabled:
-                        description: If set to true then the corresponding user should
-                          not be able to login "false" is assumed by default
-                        type: boolean
                       nsLimit:
                         description: The namespace limit name
                         type: string
@@ -113,15 +109,9 @@ spec:
                         - namespaces
                         - tierName
                         type: object
-                      userID:
-                        description: UserID is the user ID from RHD Identity Provider
-                          token (“sub” claim) Is to be used to create Identity and
-                          UserIdentityMapping resources
-                        type: string
                     required:
                     - nsLimit
                     - nsTemplateSet
-                    - userID
                     type: object
                   syncIndex:
                     description: SyncIndex is to be updated by UserAccount Controller

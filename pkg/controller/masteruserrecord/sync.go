@@ -45,18 +45,38 @@ type Synchronizer struct {
 }
 
 func (s *Synchronizer) synchronizeSpec() error {
-	if !reflect.DeepEqual(s.memberUserAcc.Spec, s.recordSpecUserAcc.Spec) {
-		// when UserAccount spec in record is updated - is not same as in member
-		s.memberUserAcc.Spec = s.recordSpecUserAcc.Spec
+
+	if !s.isSynchronized() {
 		if err := updateStatusConditions(s.hostClient, s.record, toBeNotReady(updatingReason, "")); err != nil {
 			return err
 		}
+		s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase
+		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
+		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
+
 		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
+}
+
+func (s *Synchronizer) isSynchronized() bool {
+	if !reflect.DeepEqual(s.memberUserAcc.Spec.UserAccountSpecBase, s.recordSpecUserAcc.Spec.UserAccountSpecBase) {
+		return false
+	}
+
+	if s.memberUserAcc.Spec.Disabled != s.record.Spec.Disabled {
+		return false
+	}
+
+	if s.memberUserAcc.Spec.UserID != s.record.Spec.UserID {
+		return false
+	}
+
+	return true
 }
 
 func (s *Synchronizer) synchronizeStatus() error {
