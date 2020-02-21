@@ -20,7 +20,7 @@ go:
 
 before_install:
 - pyenv shell 3.6.3
-- OPERATOR_SDK_VERSION=v0.15.1
+- OPERATOR_SDK_VERSION=v0.15.2
 
 install:
 - curl -L -s https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu -o operator-sdk

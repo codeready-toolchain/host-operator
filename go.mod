@@ -10,7 +10,7 @@ require (
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/gophercloud/gophercloud v0.3.0 // indirect
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
-	github.com/operator-framework/operator-sdk v0.15.1
+	github.com/operator-framework/operator-sdk v0.15.2
 	github.com/pkg/errors v0.8.1
 	github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776
 	github.com/satori/go.uuid v1.2.0
