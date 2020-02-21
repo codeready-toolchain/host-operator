@@ -4,7 +4,7 @@ import (
 	"context"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	apply "github.com/codeready-toolchain/toolchain-common/pkg/client"
+	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
 
@@ -136,6 +136,7 @@ func (r *ReconcileRegistrationService) Reconcile(request reconcile.Request) (rec
 
 	// process template with variables taken from the RegistrationService CRD
 	processor := template.NewProcessor(r.client, r.scheme)
+	client := commonclient.NewApplyClient(r.client, r.scheme)
 	objects, err := processor.Process(r.regServiceTemplate.DeepCopy(), getVars(regService))
 	if err != nil {
 		return reconcile.Result{}, err
@@ -143,9 +144,8 @@ func (r *ReconcileRegistrationService) Reconcile(request reconcile.Request) (rec
 
 	// create all objects that are within the template, and update only when the object has changed.
 	// if the object was either created or updated, then return and wait for another reconcile
-	applyClient := apply.NewApplyClient(r.client, r.scheme)
 	for _, object := range objects {
-		createdOrUpdated, err := applyClient.CreateOrUpdateObject(object.Object, false, regService)
+		createdOrUpdated, err := client.CreateOrUpdateObject(object.Object, false, regService)
 		if err != nil {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, regService, r.setStatusFailed(deployingFailedReason), err, "cannot deploy registration service template")
 		}

@@ -166,7 +166,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// does not exist - should create
-			userAccount = newUserAccount(nsdName, recAccount.Spec)
+			userAccount = newUserAccount(nsdName, recAccount.Spec, record.Spec)
 			if err := updateStatusConditions(r.client, record, toBeNotReady(provisioningReason, "")); err != nil {
 				return err
 			}
@@ -314,17 +314,13 @@ func updateStatusConditions(cl client.Client, record *toolchainv1alpha1.MasterUs
 	return cl.Status().Update(context.TODO(), record)
 }
 
-func newUserAccount(nsdName types.NamespacedName, spec toolchainv1alpha1.UserAccountSpecEmbedded) *toolchainv1alpha1.UserAccount {
+func newUserAccount(nsdName types.NamespacedName, spec toolchainv1alpha1.UserAccountSpec) *toolchainv1alpha1.UserAccount {
 	return &toolchainv1alpha1.UserAccount{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      nsdName.Name,
 			Namespace: nsdName.Namespace,
 		},
-		Spec: toolchainv1alpha1.UserAccountSpec{
-			UserID:              spec.UserID,
-			Disabled:            spec.Disabled,
-			UserAccountSpecBase: spec.UserAccountSpecBase,
-		},
+		Spec: spec,
 	}
 }
 
