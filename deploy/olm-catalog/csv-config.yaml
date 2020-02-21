@@ -1,7 +1,7 @@
-operator-path: REPLACE_ROOT_PATHdeploy/operator.yaml
+operator-path: REPLACE_ROOT_PATH/deploy/operator.yaml
 role-paths:
-- REPLACE_ROOT_PATHdeploy/role.yaml
-- REPLACE_ROOT_PATHdeploy/cluster_role.yaml
+- REPLACE_ROOT_PATH/deploy/role.yaml
+- REPLACE_ROOT_PATH/deploy/cluster_role.yaml
 crd-cr-paths:
-- REPLACE_ROOT_PATHdeploy/crds
-- REPLACE_ROOT_PATHexamples
+- REPLACE_ROOT_PATH/deploy/crds
+- REPLACE_ROOT_PATH/examples
