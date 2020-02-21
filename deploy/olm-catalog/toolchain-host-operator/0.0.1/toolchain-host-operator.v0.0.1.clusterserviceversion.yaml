@@ -126,9 +126,37 @@ metadata:
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
-  customresourcedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: BannedUser is used to maintain a list of banned e-mail addresses
+      displayName: Banned User
+      kind: BannedUser
+      name: bannedusers.toolchain.dev.openshift.com
+      version: v1alpha1
+    - description: MasterUserRecord keeps all information about user, user accounts
+        and namespaces provisioned in CodeReady Toolchain
+      displayName: Master User Record
+      kind: MasterUserRecord
+      name: masteruserrecords.toolchain.dev.openshift.com
+      version: v1alpha1
+    - description: NSTemplateTier configures user environment via templates used for
+        namespaces the user has access to
+      displayName: Namespace Template Tier
+      kind: NSTemplateTier
+      name: nstemplatetiers.toolchain.dev.openshift.com
+      version: v1alpha1
+    - description: RegistrationService configures the registration service deployment
+      displayName: Registration Service
+      kind: RegistrationService
+      name: registrationservices.toolchain.dev.openshift.com
+      version: v1alpha1
+    - description: UserSignup registers a user in the CodeReady Toolchain
+      displayName: User Signup
+      kind: UserSignup
+      name: usersignups.toolchain.dev.openshift.com
+      version: v1alpha1
   description: Placeholder description
-  displayName: Host Operator
+  displayName: Toolchain Host Operator
   install:
     spec:
       clusterPermissions:

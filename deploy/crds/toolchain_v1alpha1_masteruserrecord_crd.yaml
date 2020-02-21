@@ -37,7 +37,8 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: MasterUserRecord is the Schema for the masteruserrecords API
+      description: MasterUserRecord keeps all information about user, user accounts
+        and namespaces provisioned in CodeReady Toolchain
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
