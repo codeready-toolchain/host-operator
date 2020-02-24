@@ -6,6 +6,38 @@ metadata:
       [
         {
           "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "RegistrationService",
+          "metadata": {
+            "labels": {
+              "provider": "codeready-toolchain"
+            },
+            "name": "reg-service",
+            "namespace": "toolchain-host-operator"
+          },
+          "spec": {
+            "envVars": {
+              "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
+              "ENVIRONMENT": "dev",
+              "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
+              "REPLICAS": "4"
+            }
+          }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "UserSignup",
+          "metadata": {
+            "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+          },
+          "spec": {
+            "approved": true,
+            "compliantUsername": "johnsmith-at-redhat-com",
+            "targetCluster": "east-2a",
+            "username": "johnsmith@redhat.com"
+          }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
           "kind": "BannedUser",
           "metadata": {
             "labels": {
@@ -86,38 +118,6 @@ metadata:
                 "type": "default"
               }
             ]
-          }
-        },
-        {
-          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-          "kind": "RegistrationService",
-          "metadata": {
-            "labels": {
-              "provider": "codeready-toolchain"
-            },
-            "name": "reg-service",
-            "namespace": "toolchain-host-operator"
-          },
-          "spec": {
-            "envVars": {
-              "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
-              "ENVIRONMENT": "dev",
-              "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
-              "REPLICAS": "4"
-            }
-          }
-        },
-        {
-          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-          "kind": "UserSignup",
-          "metadata": {
-            "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-          },
-          "spec": {
-            "approved": true,
-            "compliantUsername": "johnsmith-at-redhat-com",
-            "targetCluster": "east-2a",
-            "username": "johnsmith@redhat.com"
           }
         }
       ]
