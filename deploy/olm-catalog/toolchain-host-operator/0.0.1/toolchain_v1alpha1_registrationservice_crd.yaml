@@ -32,8 +32,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: RegistrationService is the Schema for the registrationservices
-        API
+      description: RegistrationService configures the registration service deployment
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation

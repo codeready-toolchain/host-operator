@@ -53,7 +53,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: UserSignup is the Schema for the usersignup API
+      description: UserSignup registers a user in the CodeReady Toolchain
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation

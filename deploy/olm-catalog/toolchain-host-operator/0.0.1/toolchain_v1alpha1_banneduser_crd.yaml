@@ -20,7 +20,7 @@ spec:
   subresources: {}
   validation:
     openAPIV3Schema:
-      description: BannedUser is the Schema for the banneduser API
+      description: BannedUser is used to maintain a list of banned e-mail addresses
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation

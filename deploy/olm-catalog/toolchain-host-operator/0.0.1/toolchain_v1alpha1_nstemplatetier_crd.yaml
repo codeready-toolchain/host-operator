@@ -19,7 +19,8 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: NSTemplateTier is the Schema for the nstemplatetiers API
+      description: NSTemplateTier configures user environment via templates used for
+        namespaces the user has access to
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -77,7 +78,6 @@ spec:
                           output.
                         type: string
                       metadata:
-                        description: Standard object's metadata.
                         type: object
                       objects:
                         description: objects is an array of resources to include in
@@ -89,6 +89,7 @@ spec:
                         items:
                           type: object
                         type: array
+                        x-kubernetes-preserve-unknown-fields: true
                       parameters:
                         description: parameters is an optional array of Parameters
                           used during the Template to Config transformation.
