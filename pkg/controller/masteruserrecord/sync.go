@@ -98,7 +98,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 		}
 
 		if !s.alignReadiness() {
-			s.alignDisabledness()
+			s.alignDisabled()
 		}
 
 		err = s.hostClient.Status().Update(context.TODO(), s.record)
@@ -207,7 +207,7 @@ func (s *Synchronizer) openShift3XConsoleURL(apiEndpoint string) (string, error)
 	return url, nil
 }
 
-func (s *Synchronizer) alignDisabledness() {
+func (s *Synchronizer) alignDisabled() {
 	for _, uaStatus := range s.record.Status.UserAccounts {
 		if !isDisabled(uaStatus.Conditions) {
 			return
