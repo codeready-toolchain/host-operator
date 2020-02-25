@@ -567,7 +567,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 		console := types.NamespacedName{Namespace: consoleNamespace, Name: "console"}
 		che := types.NamespacedName{Namespace: cheNamespace, Name: "che"}
 		nsdName := namespacedName("toolchain-member-operator", mur.Name)
-		if _, ok := obj.(*routev1.Route); ok && (key == console || key == che ){
+		if _, ok := obj.(*routev1.Route); ok && (key == console || key == che) {
 			return nil
 		}
 
