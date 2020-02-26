@@ -16,7 +16,6 @@ import (
 	"github.com/go-logr/logr"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -207,42 +206,28 @@ func (s *Synchronizer) openShift3XConsoleURL(apiEndpoint string) (string, error)
 	return url, nil
 }
 
+// alignDisabled updates the status to Disabled if all all the embedded UserAccounts have Disabled status
 func (s *Synchronizer) alignDisabled() {
 	for _, uaStatus := range s.record.Status.UserAccounts {
-		if !isDisabled(uaStatus.Conditions) {
+		if !condition.HasConditionReason(uaStatus.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.UserAccountDisabledReason) {
 			return
 		}
 	}
-	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeDisabled())
-}
 
-func isDisabled(conditions []toolchainv1alpha1.Condition) bool {
-	for _, con := range conditions {
-		if con.Type == toolchainv1alpha1.ConditionReady {
-			return con.Reason == toolchainv1alpha1.UserAccountDisabledReason
-		}
+	if len(s.record.Status.Conditions) > 0 {
+		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeDisabled())
 	}
-	return false
 }
 
-// alignReadiness checks if all embedded SAs are ready
+// alignReadiness updates the status to Provisioned and returns true if all the embedded UserAccounts are ready
 func (s *Synchronizer) alignReadiness() bool {
 	for _, uaStatus := range s.record.Status.UserAccounts {
-		if !isReady(uaStatus.Conditions) {
+		if !condition.IsTrue(uaStatus.Conditions, toolchainv1alpha1.ConditionReady) {
 			return false
 		}
 	}
 	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
 	return true
-}
-
-func isReady(conditions []toolchainv1alpha1.Condition) bool {
-	for _, con := range conditions {
-		if con.Type == toolchainv1alpha1.ConditionReady {
-			return con.Status == corev1.ConditionTrue
-		}
-	}
-	return false
 }
 
 func getUserAccountStatus(clusterName string, record *toolchainv1alpha1.MasterUserRecord) (toolchainv1alpha1.UserAccountStatusEmbedded, int) {

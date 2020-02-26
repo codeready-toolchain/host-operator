@@ -563,7 +563,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	// when
 	res, err := cntrl.Reconcile(newMurRequest(mur))
 	require.NoError(t, err)
-	assert.Equals(t, reconcile.Result{}, res)
+	assert.Equal(t, reconcile.Result{}, res)
 
 	memberClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 		console := types.NamespacedName{Namespace: consoleNamespace, Name: "console"}

@@ -486,8 +486,8 @@ github.com/subosito/gotenv v1.2.0 h1:Slr1R9HxAlEKefgq5jn9U+DnETlIUa6HfgEzj0g5d7s
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
 github.com/technosophos/moniker v0.0.0-20180509230615-a5dbd03a2245/go.mod h1:O1c8HleITsZqzNZDjSNzirUGsMT0oGu9LhHKoJrqO+A=
-github.com/tinakurian/toolchain-common v0.0.0-20200220174242-5a8c24b05b38 h1:+vRZS3zdEPKIWSJWr5ZdMlMC6M8Txgju9oXS9SKixUU=
-github.com/tinakurian/toolchain-common v0.0.0-20200220174242-5a8c24b05b38/go.mod h1:w+XlpU0KTQS4KlyJnoNfjJ180Gsurdyn2a3QchbJ+RQ=
+github.com/tinakurian/toolchain-common v0.0.0-20200226005022-c0acecf2326e h1:3sHbZf5grQLpirSOG8JBNtV/gH/oIJr9rQpWSigIYMY=
+github.com/tinakurian/toolchain-common v0.0.0-20200226005022-c0acecf2326e/go.mod h1:w+XlpU0KTQS4KlyJnoNfjJ180Gsurdyn2a3QchbJ+RQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ugorji/go v1.1.1/go.mod h1:hnLbHMwcvSihnDhEfx2/BzKp2xb0Y+ErdfYcrs9tkJQ=
