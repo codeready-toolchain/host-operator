@@ -72,8 +72,6 @@ github.com/census-instrumentation/opencensus-proto v0.2.0/go.mod h1:f6KPmirojxKA
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
 github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1/go.mod h1:/iP1qXHoty45bqomnu2LM+VVyAEdWN+vtSHGlQgyxbw=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
-github.com/codeready-toolchain/api v0.0.0-20200220052945-b24517fc619f h1:xQCr+FkzucMzruSv0bHW0sCOF4ifNkje/+9hR9FFCbE=
-github.com/codeready-toolchain/api v0.0.0-20200220052945-b24517fc619f/go.mod h1:zPbdWiEiv9SpZMvyRkY6E6n7Eynm5Y0uhJhBiGXjkg0=
 github.com/coreos/bbolt v1.3.0/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.3/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
@@ -486,6 +484,8 @@ github.com/subosito/gotenv v1.2.0 h1:Slr1R9HxAlEKefgq5jn9U+DnETlIUa6HfgEzj0g5d7s
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
 github.com/technosophos/moniker v0.0.0-20180509230615-a5dbd03a2245/go.mod h1:O1c8HleITsZqzNZDjSNzirUGsMT0oGu9LhHKoJrqO+A=
+github.com/tinakurian/api v0.0.0-20200226003126-805c3296eb39 h1:mp9sI+p2DgmK/I55aoEMDVeJNyEAUV1y9HHOcv8u5IQ=
+github.com/tinakurian/api v0.0.0-20200226003126-805c3296eb39/go.mod h1:zPbdWiEiv9SpZMvyRkY6E6n7Eynm5Y0uhJhBiGXjkg0=
 github.com/tinakurian/toolchain-common v0.0.0-20200226005022-c0acecf2326e h1:3sHbZf5grQLpirSOG8JBNtV/gH/oIJr9rQpWSigIYMY=
 github.com/tinakurian/toolchain-common v0.0.0-20200226005022-c0acecf2326e/go.mod h1:w+XlpU0KTQS4KlyJnoNfjJ180Gsurdyn2a3QchbJ+RQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
