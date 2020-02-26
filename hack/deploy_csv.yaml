@@ -10,6 +10,8 @@ data:
     - apiVersion: apiextensions.k8s.io/v1beta1
       kind: CustomResourceDefinition
       metadata:
+        annotations:
+          controller-gen.kubebuilder.io/version: (devel)
         creationTimestamp: null
         name: bannedusers.toolchain.dev.openshift.com
       spec:
@@ -27,17 +29,17 @@ data:
         subresources: {}
         validation:
           openAPIV3Schema:
-            description: BannedUser is the Schema for the banneduser API
+            description: BannedUser is used to maintain a list of banned e-mail addresses
             properties:
               apiVersion:
                 description: 'APIVersion defines the versioned schema of this representation
                   of an object. Servers should convert recognized schemas to the latest
-                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                 type: string
               kind:
                 description: 'Kind is a string value representing the REST resource this
                   object represents. Servers may infer this from the endpoint the client
-                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                 type: string
               metadata:
                 type: object
@@ -50,6 +52,7 @@ data:
                 required:
                 - email
                 type: object
+            x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
         versions:
         - name: v1alpha1
@@ -64,6 +67,8 @@ data:
     - apiVersion: apiextensions.k8s.io/v1beta1
       kind: CustomResourceDefinition
       metadata:
+        annotations:
+          controller-gen.kubebuilder.io/version: (devel)
         creationTimestamp: null
         name: masteruserrecords.toolchain.dev.openshift.com
       spec:
@@ -98,17 +103,18 @@ data:
           status: {}
         validation:
           openAPIV3Schema:
-            description: MasterUserRecord is the Schema for the masteruserrecords API
+            description: MasterUserRecord keeps all information about user, user accounts
+              and namespaces provisioned in CodeReady Toolchain
             properties:
               apiVersion:
                 description: 'APIVersion defines the versioned schema of this representation
                   of an object. Servers should convert recognized schemas to the latest
-                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                 type: string
               kind:
                 description: 'Kind is a string value representing the REST resource this
                   object represents. Servers may infer this from the endpoint the client
-                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                 type: string
               metadata:
                 type: object
@@ -295,6 +301,7 @@ data:
                       type: object
                     type: array
                 type: object
+            x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
         versions:
         - name: v1alpha1
@@ -309,6 +316,8 @@ data:
     - apiVersion: apiextensions.k8s.io/v1beta1
       kind: CustomResourceDefinition
       metadata:
+        annotations:
+          controller-gen.kubebuilder.io/version: (devel)
         creationTimestamp: null
         name: nstemplatetiers.toolchain.dev.openshift.com
       spec:
@@ -325,17 +334,18 @@ data:
           status: {}
         validation:
           openAPIV3Schema:
-            description: NSTemplateTier is the Schema for the nstemplatetiers API
+            description: NSTemplateTier configures user environment via templates used for
+              namespaces the user has access to
             properties:
               apiVersion:
                 description: 'APIVersion defines the versioned schema of this representation
                   of an object. Servers should convert recognized schemas to the latest
-                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                 type: string
               kind:
                 description: 'Kind is a string value representing the REST resource this
                   object represents. Servers may infer this from the endpoint the client
-                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                 type: string
               metadata:
                 type: object
@@ -359,13 +369,13 @@ data:
                               description: 'APIVersion defines the versioned schema of this
                                 representation of an object. Servers should convert recognized
                                 schemas to the latest internal value, and may reject unrecognized
-                                values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                                values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                               type: string
                             kind:
                               description: 'Kind is a string value representing the REST
                                 resource this object represents. Servers may infer this
                                 from the endpoint the client submits requests to. Cannot
-                                be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                                be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                               type: string
                             labels:
                               additionalProperties:
@@ -383,7 +393,6 @@ data:
                                 output.
                               type: string
                             metadata:
-                              description: Standard object's metadata.
                               type: object
                             objects:
                               description: objects is an array of resources to include in
@@ -395,6 +404,7 @@ data:
                               items:
                                 type: object
                               type: array
+                              x-kubernetes-preserve-unknown-fields: true
                             parameters:
                               description: parameters is an optional array of Parameters
                                 used during the Template to Config transformation.
@@ -463,7 +473,37 @@ data:
                 type: object
               status:
                 description: NSTemplateTierStatus defines the observed state of NSTemplateTier
+                properties:
+                  conditions:
+                    description: 'Conditions is an array of current NSTemplateTier conditions
+                      Supported condition types: ConditionReady'
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          description: Last time the condition transit from one status to
+                            another.
+                          format: date-time
+                          type: string
+                        message:
+                          description: Human readable message indicating details about last
+                            transition.
+                          type: string
+                        reason:
+                          description: (brief) reason for the condition's last transition.
+                          type: string
+                        status:
+                          description: Status of the condition, one of True, False, Unknown.
+                          type: string
+                        type:
+                          description: Type of condition
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    type: array
                 type: object
+            x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
         versions:
         - name: v1alpha1
@@ -478,6 +518,8 @@ data:
     - apiVersion: apiextensions.k8s.io/v1beta1
       kind: CustomResourceDefinition
       metadata:
+        annotations:
+          controller-gen.kubebuilder.io/version: (devel)
         creationTimestamp: null
         name: registrationservices.toolchain.dev.openshift.com
       spec:
@@ -507,18 +549,17 @@ data:
           status: {}
         validation:
           openAPIV3Schema:
-            description: RegistrationService is the Schema for the registrationservices
-              API
+            description: RegistrationService configures the registration service deployment
             properties:
               apiVersion:
                 description: 'APIVersion defines the versioned schema of this representation
                   of an object. Servers should convert recognized schemas to the latest
-                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                 type: string
               kind:
                 description: 'Kind is a string value representing the REST resource this
                   object represents. Servers may infer this from the endpoint the client
-                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                 type: string
               metadata:
                 type: object
@@ -565,6 +606,7 @@ data:
                       type: object
                     type: array
                 type: object
+            x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
         versions:
         - name: v1alpha1
@@ -579,6 +621,8 @@ data:
     - apiVersion: apiextensions.k8s.io/v1beta1
       kind: CustomResourceDefinition
       metadata:
+        annotations:
+          controller-gen.kubebuilder.io/version: (devel)
         creationTimestamp: null
         name: usersignups.toolchain.dev.openshift.com
       spec:
@@ -629,17 +673,17 @@ data:
           status: {}
         validation:
           openAPIV3Schema:
-            description: UserSignup is the Schema for the usersignup API
+            description: UserSignup registers a user in the CodeReady Toolchain
             properties:
               apiVersion:
                 description: 'APIVersion defines the versioned schema of this representation
                   of an object. Servers should convert recognized schemas to the latest
-                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                 type: string
               kind:
                 description: 'Kind is a string value representing the REST resource this
                   object represents. Servers may infer this from the endpoint the client
-                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                 type: string
               metadata:
                 type: object
@@ -701,6 +745,7 @@ data:
                       type: object
                     type: array
                 type: object
+            x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
         versions:
         - name: v1alpha1
@@ -719,18 +764,6 @@ data:
         annotations:
           alm-examples: |-
             [
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "BannedUser",
-                "metadata": {
-                  "labels": {
-                    "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
-                  }
-                },
-                "spec": {
-                  "email": "john.doe@gmail.com"
-                }
-              },
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "MasterUserRecord",
@@ -834,6 +867,18 @@ data:
                   "targetCluster": "east-2a",
                   "username": "johnsmith@redhat.com"
                 }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "BannedUser",
+                "metadata": {
+                  "labels": {
+                    "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+                  }
+                },
+                "spec": {
+                  "email": "john.doe@gmail.com"
+                }
               }
             ]
           capabilities: Basic Install
@@ -844,34 +889,34 @@ data:
         customresourcedefinitions:
           owned:
           - description: BannedUser is used to maintain a list of banned e-mail addresses
-            displayName: BannedUser
+            displayName: Banned User
             kind: BannedUser
             name: bannedusers.toolchain.dev.openshift.com
             version: v1alpha1
           - description: MasterUserRecord keeps all information about user, user accounts
-              and namespaces provisioned in CodeReady Toolchain SaaS system
-            displayName: MasterUserRecord
+              and namespaces provisioned in CodeReady Toolchain
+            displayName: Master User Record
             kind: MasterUserRecord
             name: masteruserrecords.toolchain.dev.openshift.com
             version: v1alpha1
           - description: NSTemplateTier configures user environment via templates used for
               namespaces the user has access to
-            displayName: NSTemplateTier
+            displayName: Namespace Template Tier
             kind: NSTemplateTier
             name: nstemplatetiers.toolchain.dev.openshift.com
             version: v1alpha1
-          - description: RegistrationService configures registration service deployment
-            displayName: RegistrationService
+          - description: RegistrationService configures the registration service deployment
+            displayName: Registration Service
             kind: RegistrationService
             name: registrationservices.toolchain.dev.openshift.com
             version: v1alpha1
-          - description: UserSignup registers a user in the CodeReady Toolchain SaaS system
-            displayName: UserSignup
+          - description: UserSignup registers a user in the CodeReady Toolchain
+            displayName: User Signup
             kind: UserSignup
             name: usersignups.toolchain.dev.openshift.com
             version: v1alpha1
         description: Placeholder description
-        displayName: Host Operator
+        displayName: Toolchain Host Operator
         install:
           spec:
             clusterPermissions:
