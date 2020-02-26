@@ -13,13 +13,11 @@ import (
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
 
-	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	apierros "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -555,7 +553,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord("john", murtest.DisabledMur(true))
-	memberClient := test.NewFakeClient(t)
+	memberClient := test.NewFakeClient(t, consoleRoute(), cheRoute(false))
 	hostClient := test.NewFakeClient(t, mur)
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient))
@@ -566,13 +564,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	assert.Equal(t, reconcile.Result{}, res)
 
 	memberClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-		console := types.NamespacedName{Namespace: consoleNamespace, Name: "console"}
-		che := types.NamespacedName{Namespace: cheNamespace, Name: "che"}
 		nsdName := namespacedName("toolchain-member-operator", mur.Name)
-		if _, ok := obj.(*routev1.Route); ok && (key == console || key == che) {
-			return nil
-		}
-
 		if key == nsdName {
 			userAccount := obj.(*toolchainv1alpha1.UserAccount)
 			userAccount.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userAccount.Status.Conditions, toBeDisabled())
