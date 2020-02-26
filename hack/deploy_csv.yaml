@@ -471,7 +471,37 @@ data:
                 type: object
               status:
                 description: NSTemplateTierStatus defines the observed state of NSTemplateTier
+                properties:
+                  conditions:
+                    description: 'Conditions is an array of current NSTemplateTier conditions
+                      Supported condition types: ConditionReady'
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          description: Last time the condition transit from one status to
+                            another.
+                          format: date-time
+                          type: string
+                        message:
+                          description: Human readable message indicating details about last
+                            transition.
+                          type: string
+                        reason:
+                          description: (brief) reason for the condition's last transition.
+                          type: string
+                        status:
+                          description: Status of the condition, one of True, False, Unknown.
+                          type: string
+                        type:
+                          description: Type of condition
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    type: array
                 type: object
+            x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
         versions:
         - name: v1alpha1
@@ -732,38 +762,6 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "RegistrationService",
-                "metadata": {
-                  "labels": {
-                    "provider": "codeready-toolchain"
-                  },
-                  "name": "reg-service",
-                  "namespace": "toolchain-host-operator"
-                },
-                "spec": {
-                  "envVars": {
-                    "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
-                    "ENVIRONMENT": "dev",
-                    "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
-                    "REPLICAS": "4"
-                  }
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "UserSignup",
-                "metadata": {
-                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                },
-                "spec": {
-                  "approved": true,
-                  "compliantUsername": "johnsmith-at-redhat-com",
-                  "targetCluster": "east-2a",
-                  "username": "johnsmith@redhat.com"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "BannedUser",
                 "metadata": {
                   "labels": {
@@ -844,6 +842,38 @@ data:
                       "type": "default"
                     }
                   ]
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "RegistrationService",
+                "metadata": {
+                  "labels": {
+                    "provider": "codeready-toolchain"
+                  },
+                  "name": "reg-service",
+                  "namespace": "toolchain-host-operator"
+                },
+                "spec": {
+                  "envVars": {
+                    "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
+                    "ENVIRONMENT": "dev",
+                    "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
+                    "REPLICAS": "4"
+                  }
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "UserSignup",
+                "metadata": {
+                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                },
+                "spec": {
+                  "approved": true,
+                  "compliantUsername": "johnsmith-at-redhat-com",
+                  "targetCluster": "east-2a",
+                  "username": "johnsmith@redhat.com"
                 }
               }
             ]

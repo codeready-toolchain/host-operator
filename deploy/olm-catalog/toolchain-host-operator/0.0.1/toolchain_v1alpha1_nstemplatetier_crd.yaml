@@ -158,7 +158,37 @@ spec:
           type: object
         status:
           description: NSTemplateTierStatus defines the observed state of NSTemplateTier
+          properties:
+            conditions:
+              description: 'Conditions is an array of current NSTemplateTier conditions
+                Supported condition types: ConditionReady'
+              items:
+                properties:
+                  lastTransitionTime:
+                    description: Last time the condition transit from one status to
+                      another.
+                    format: date-time
+                    type: string
+                  message:
+                    description: Human readable message indicating details about last
+                      transition.
+                    type: string
+                  reason:
+                    description: (brief) reason for the condition's last transition.
+                    type: string
+                  status:
+                    description: Status of the condition, one of True, False, Unknown.
+                    type: string
+                  type:
+                    description: Type of condition
+                    type: string
+                required:
+                - status
+                - type
+                type: object
+              type: array
           type: object
+      x-kubernetes-preserve-unknown-fields: true
   version: v1alpha1
   versions:
   - name: v1alpha1
