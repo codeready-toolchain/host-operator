@@ -577,11 +577,10 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 		return nil
 	}
 
-	// call again to set the disabled field on user account
-	_, err = cntrl.Reconcile(newMurRequest(mur))
-
-	// then
+	// then call again to set the disabled field on user account
+	res, err = cntrl.Reconcile(newMurRequest(mur))
 	require.NoError(t, err)
+	assert.Equal(t, reconcile.Result{}, res)
 
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
