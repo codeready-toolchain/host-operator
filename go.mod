@@ -3,8 +3,8 @@ module github.com/codeready-toolchain/host-operator
 require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20200220052945-b24517fc619f
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200220062916-1c35a15f0e30
+	github.com/codeready-toolchain/api v0.0.0-20200226022556-bb2d9dd17828
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200226024011-b46a241eee88
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
@@ -52,11 +52,6 @@ replace (
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.0.0-20191016115753-cf0698c3a16b
 	k8s.io/metrics => k8s.io/metrics v0.0.0-20191016113814-3b1a734dba6e
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.0.0-20191016112829-06bb3c9d77c9
-)
-
-replace (
-	github.com/codeready-toolchain/api => github.com/alexeykazakov/api v0.0.0-20200224221537-a7747a36a9d2
-	github.com/codeready-toolchain/toolchain-common => github.com/alexeykazakov/toolchain-common v0.0.0-20200224223511-5482f4376d14
 )
 
 replace (
