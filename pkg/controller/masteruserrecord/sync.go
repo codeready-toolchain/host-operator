@@ -209,7 +209,7 @@ func (s *Synchronizer) openShift3XConsoleURL(apiEndpoint string) (string, error)
 // alignDisabled updates the status to Disabled if all all the embedded UserAccounts have Disabled status
 func (s *Synchronizer) alignDisabled() {
 	for _, uaStatus := range s.record.Status.UserAccounts {
-		if !condition.HasConditionReason(uaStatus.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.MasterUserRecordDisabledReason) {
+		if !condition.HasConditionReason(uaStatus.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.UserAccountDisabledReason) {
 			return
 		}
 	}

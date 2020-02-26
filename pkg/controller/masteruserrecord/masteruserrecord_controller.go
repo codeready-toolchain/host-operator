@@ -306,7 +306,7 @@ func toBeDisabled() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionFalse,
-		Reason: toolchainv1alpha1.UserAccountDisabledReason,
+		Reason: toolchainv1alpha1.MasterUserRecordDisabledReason,
 	}
 }
 
