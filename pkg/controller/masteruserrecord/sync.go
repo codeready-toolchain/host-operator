@@ -46,7 +46,7 @@ type Synchronizer struct {
 func (s *Synchronizer) synchronizeSpec() error {
 
 	if !s.isSynchronized() {
-		if err := updateStatusConditions(s.hostClient, s.record, toBeNotReady(updatingReason, "")); err != nil {
+		if err := updateStatusConditions(s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
 			return err
 		}
 		s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase

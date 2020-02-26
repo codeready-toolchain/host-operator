@@ -29,17 +29,6 @@ import (
 var log = logf.Log.WithName("controller_masteruserrecord")
 
 const (
-	// Status condition reasons
-	unableToGetUserAccountReason             = "UnableToGetUserAccount"
-	unableToCreateUserAccountReason          = "UnableToCreateUserAccount"
-	unableToSynchronizeUserAccountSpecReason = "UnableToSynchronizeUserAccountSpecAccount"
-	targetClusterNotReadyReason              = "TargetClusterNotReady"
-	provisioningReason                       = "Provisioning"
-	updatingReason                           = "Updating"
-	provisionedReason                        = "Provisioned"
-	unableToAddFinalizerReason               = "UnableToAddFinalizer"
-	unableToDeleteUserAccountsReason         = "UnableToDeleteUserAccounts"
-	unableToRemoveFinalizerReason            = "UnableToRemoveFinalizer"
 	// Finalizers
 	murFinalizerName = "finalizer.toolchain.dev.openshift.com"
 )
@@ -143,7 +132,7 @@ func (r *ReconcileMasterUserRecord) addFinalizer(mur *toolchainv1alpha1.MasterUs
 	if !coputil.HasFinalizer(mur, finalizer) {
 		coputil.AddFinalizer(mur, finalizer)
 		if err := r.client.Update(context.TODO(), mur); err != nil {
-			return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(unableToAddFinalizerReason), err,
+			return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason), err,
 				"failed while updating with added finalizer")
 		}
 	}
@@ -154,7 +143,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 	// get & check member cluster
 	memberCluster, err := r.getMemberCluster(recAccount.TargetCluster)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(targetClusterNotReadyReason), err,
+		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason), err,
 			"failed to get the member cluster '%s'", recAccount.TargetCluster)
 	}
 
@@ -166,16 +155,16 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 		if errors.IsNotFound(err) {
 			// does not exist - should create
 			userAccount = newUserAccount(nsdName, recAccount.Spec, record.Spec)
-			if err := updateStatusConditions(r.client, record, toBeNotReady(provisioningReason, "")); err != nil {
+			if err := updateStatusConditions(r.client, record, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")); err != nil {
 				return err
 			}
 			if err := memberCluster.Client.Create(context.TODO(), userAccount); err != nil {
-				return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(unableToCreateUserAccountReason), err,
+				return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 					"failed to create UserAccount in the member cluster '%s'", recAccount.TargetCluster)
 			}
 			return nil
 		}
-		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(unableToGetUserAccountReason), err,
+		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToGetUserAccountReason), err,
 			"failed to get userAccount '%s' from cluster '%s'", record.Name, recAccount.TargetCluster)
 	}
 
@@ -188,7 +177,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccoun
 		log:               log,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
-		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(unableToSynchronizeUserAccountSpecReason), err,
+		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason), err,
 			"update of the UserAccount.spec in the cluster '%s' failed", recAccount.TargetCluster)
 	}
 	if err := sync.synchronizeStatus(); err != nil {
@@ -250,14 +239,14 @@ func (r *ReconcileMasterUserRecord) useExistingConditionOfType(condType toolchai
 func (r *ReconcileMasterUserRecord) manageCleanUp(mur *toolchainv1alpha1.MasterUserRecord) error {
 	for _, ua := range mur.Spec.UserAccounts {
 		if err := r.deleteUserAccount(ua.TargetCluster, mur.Name); err != nil {
-			return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(unableToDeleteUserAccountsReason), err,
+			return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason), err,
 				"failed to delete UserAccount in the member cluster '%s'", ua.TargetCluster)
 		}
 	}
 	// Remove finalizer from MasterUserRecord
 	coputil.RemoveFinalizer(mur, murFinalizerName)
 	if err := r.client.Update(context.Background(), mur); err != nil {
-		return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(unableToRemoveFinalizerReason), err,
+		return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason), err,
 			"failed to update MasterUserRecord while deleting finalizer")
 	}
 	return nil
@@ -289,7 +278,7 @@ func toBeProvisioned() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionTrue,
-		Reason: provisionedReason,
+		Reason: toolchainv1alpha1.MasterUserRecordProvisionedReason,
 	}
 }
 
