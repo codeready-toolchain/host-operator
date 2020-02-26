@@ -52,6 +52,7 @@ data:
                 required:
                 - email
                 type: object
+            x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
         versions:
         - name: v1alpha1
@@ -300,6 +301,7 @@ data:
                       type: object
                     type: array
                 type: object
+            x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
         versions:
         - name: v1alpha1
@@ -604,6 +606,7 @@ data:
                       type: object
                     type: array
                 type: object
+            x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
         versions:
         - name: v1alpha1
@@ -742,6 +745,7 @@ data:
                       type: object
                     type: array
                 type: object
+            x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
         versions:
         - name: v1alpha1
@@ -760,18 +764,6 @@ data:
         annotations:
           alm-examples: |-
             [
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "BannedUser",
-                "metadata": {
-                  "labels": {
-                    "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
-                  }
-                },
-                "spec": {
-                  "email": "john.doe@gmail.com"
-                }
-              },
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "MasterUserRecord",
@@ -874,6 +866,18 @@ data:
                   "compliantUsername": "johnsmith-at-redhat-com",
                   "targetCluster": "east-2a",
                   "username": "johnsmith@redhat.com"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "BannedUser",
+                "metadata": {
+                  "labels": {
+                    "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+                  }
+                },
+                "spec": {
+                  "email": "john.doe@gmail.com"
                 }
               }
             ]
