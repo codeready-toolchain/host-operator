@@ -8,7 +8,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
-	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
@@ -18,6 +17,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	apierros "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -563,32 +563,16 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, reconcile.Result{}, res)
 
-	memberClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-		nsdName := namespacedName("toolchain-member-operator", mur.Name)
-		if key == nsdName {
-			userAccount := obj.(*toolchainv1alpha1.UserAccount)
-			userAccount.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userAccount.Status.Conditions, toBeDisabled())
-			return nil
-		}
-		return memberClient.Client.Get(ctx, key, obj)
-	}
-
-	memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-		return nil
-	}
 
 	// then call again to set the disabled field on user account
 	res, err = cntrl.Reconcile(newMurRequest(mur))
 	require.NoError(t, err)
 	assert.Equal(t, reconcile.Result{}, res)
 
-	uatest.AssertThatUserAccount(t, "john", memberClient).
-		Exists().
-		HasConditions(toBeNotReady(toolchainv1alpha1.UserAccountDisabledReason, ""))
+	userAcc := &toolchainv1alpha1.UserAccount{}
+	err = memberClient.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: "toolchain-member-operator"}, userAcc)
 
-	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordDisabledReason, "")).
-		HasFinalizer()
+	assert.True(t, userAcc.Spec.Disabled)
 }
 
 func newMurRequest(mur *toolchainv1alpha1.MasterUserRecord) reconcile.Request {
