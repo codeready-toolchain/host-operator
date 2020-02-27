@@ -102,6 +102,31 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 }
 
+func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
+	// given
+	logf.SetLogger(logf.ZapLogger(true))
+	apiScheme(t)
+
+	mur := murtest.NewMasterUserRecord("john",
+		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
+
+	userAccount := uatest.NewUserAccountFromMur(mur,
+		uatest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")), uatest.ResourceVersion("123abc"))
+
+	mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{{
+		SyncIndex: "111aaa",
+		Cluster: toolchainv1alpha1.Cluster{
+			Name: test.MemberClusterName,
+		},
+		UserAccountStatus: userAccount.Status,
+	}}
+
+	uatest.Modify(userAccount, uatest.StatusCondition(toBeDisabled()))
+
+	// when and then
+	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, toBeDisabled())
+}
+
 func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
