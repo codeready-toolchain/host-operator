@@ -22,15 +22,17 @@ objects:
       - toolchain.dev.openshift.com
       resources:
       - usersignups
+      - masteruserrecords
+      - bannedusers
       verbs:
       - create
       - get
     - apiGroups:
       - toolchain.dev.openshift.com
       resources:
-      - masteruserrecords
+      - bannedusers
       verbs:
-      - get
+      - list
   - kind: RoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     metadata:
