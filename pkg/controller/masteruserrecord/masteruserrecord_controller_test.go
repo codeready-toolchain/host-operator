@@ -563,7 +563,6 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, reconcile.Result{}, res)
 
-
 	// then call again to set the disabled field on user account
 	res, err = cntrl.Reconcile(newMurRequest(mur))
 	require.NoError(t, err)
@@ -571,6 +570,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 
 	userAcc := &toolchainv1alpha1.UserAccount{}
 	err = memberClient.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: "toolchain-member-operator"}, userAcc)
+	require.NoError(t, err)
 
 	assert.True(t, userAcc.Spec.Disabled)
 }
