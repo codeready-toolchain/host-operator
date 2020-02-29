@@ -1,0 +1,64 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  labels:
+    provider: codeready-toolchain
+  name: basic-stage
+objects:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    annotations:
+      openshift.io/description: ${USERNAME}-stage
+      openshift.io/display-name: ${USERNAME}-stage
+      openshift.io/requester: ${USERNAME}
+    labels:
+      provider: codeready-toolchain
+    name: ${USERNAME}-stage
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    labels:
+      provider: codeready-toolchain
+    name: toolchain-stage-edit
+    namespace: ${USERNAME}-stage
+  rules:
+  - apiGroups:
+    - authorization.openshift.io
+    - rbac.authorization.k8s.io
+    resources:
+    - roles
+    - rolebindings
+    verbs:
+    - '*'
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    labels:
+      provider: codeready-toolchain
+    name: user-edit
+    namespace: ${USERNAME}-stage
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: edit
+  subjects:
+  - kind: User
+    name: ${USERNAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    labels:
+      provider: codeready-toolchain
+    name: user-toolchain-stage-edit
+    namespace: ${USERNAME}-stage
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: toolchain-stage-edit
+  subjects:
+  - kind: User
+    name: ${USERNAME}
+parameters:
+- name: USERNAME
+  required: true
