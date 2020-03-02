@@ -214,7 +214,7 @@ func (s *Synchronizer) alignDisabled() {
 		}
 	}
 
-	if len(s.record.Status.Conditions) > 0 {
+	if len(s.record.Status.UserAccounts) > 0 {
 		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeDisabled())
 	}
 }
