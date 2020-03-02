@@ -117,8 +117,8 @@ github.com/codeready-toolchain/api v0.0.0-20200226022556-bb2d9dd17828 h1:lWjwDBd
 github.com/codeready-toolchain/api v0.0.0-20200226022556-bb2d9dd17828/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
 github.com/codeready-toolchain/api v0.0.0-20200226154004-addd941b675c h1://VqLgLGvtUiWcJn3qju6PjIoc01O+QrVD19oK/s8Zk=
 github.com/codeready-toolchain/api v0.0.0-20200226154004-addd941b675c/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200226154024-2462d05d9606 h1:7XfNG1fG9DUnFKyzBjDkQre68GcBk1k+6hfosZ60+P0=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200226154024-2462d05d9606/go.mod h1:IEeTz/1TH638XupkjY9miTKMSjwu7Z7eobHm0+EuxKk=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200302163208-e719aea988e2 h1:L49Olv/W1FLBwuHy4JauUHbgF+Fz+xBAa5/hBClgKR8=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200302163208-e719aea988e2/go.mod h1:IEeTz/1TH638XupkjY9miTKMSjwu7Z7eobHm0+EuxKk=
 github.com/container-storage-interface/spec v1.1.0/go.mod h1:6URME8mwIBbpVyZV93Ce5St17xBiQJQY67NDsuohiy4=
 github.com/containerd/console v0.0.0-20170925154832-84eeaae905fa/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.0.2/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=
@@ -578,8 +578,6 @@ github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtP
 github.com/pelletier/go-toml v1.0.1/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pelletier/go-toml v1.2.0 h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
-github.com/pelletier/go-toml v1.3.0 h1:e5+lF2E4Y2WCIxBefVowBuB0iHrUH4HZ8q+6mGF7fJc=
-github.com/pelletier/go-toml v1.3.0/go.mod h1:PN7xzY2wHTK0K9p34ErDQMlFxa51Fk0OUruD3k1mMwo=
 github.com/peterbourgon/diskv v2.0.1+incompatible/go.mod h1:uqqh8zWWbv1HBMNONnaR/tNboyR3/BZd58JJSHlUSCU=
 github.com/phayes/freeport v0.0.0-20171002181615-b8543db493a5/go.mod h1:iIss55rKnNBTvrwdmkUpLnDpZoAHvWaiq5+iMmen4AE=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=

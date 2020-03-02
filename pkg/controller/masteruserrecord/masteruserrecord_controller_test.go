@@ -553,13 +553,13 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord("john", murtest.DisabledMur(true))
-	userAccount := uatest.NewUserAccountFromMur(mur)
+	userAccount := uatest.NewUserAccountFromMur(mur, uatest.DisabledUa(false))
 	memberClient := test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute(false))
 	hostClient := test.NewFakeClient(t, mur)
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient))
 
-	// then call again to set the disabled field on user account
+	// when
 	res, err := cntrl.Reconcile(newMurRequest(mur))
 	require.NoError(t, err)
 	assert.Equal(t, reconcile.Result{}, res)
