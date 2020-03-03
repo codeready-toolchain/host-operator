@@ -16,7 +16,6 @@ import (
 	"github.com/go-logr/logr"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,7 +46,7 @@ type Synchronizer struct {
 func (s *Synchronizer) synchronizeSpec() error {
 
 	if !s.isSynchronized() {
-		if err := updateStatusConditions(s.hostClient, s.record, toBeNotReady(updatingReason, "")); err != nil {
+		if err := updateStatusConditions(s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
 			return err
 		}
 		s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase
@@ -97,7 +96,9 @@ func (s *Synchronizer) synchronizeStatus() error {
 			s.record.Status.UserAccounts[index] = recordStatusUserAcc
 		}
 
-		s.alignReadiness()
+		if !s.alignReadiness() {
+			s.alignDisabled()
+		}
 
 		err = s.hostClient.Status().Update(context.TODO(), s.record)
 		if err != nil {
@@ -205,23 +206,28 @@ func (s *Synchronizer) openShift3XConsoleURL(apiEndpoint string) (string, error)
 	return url, nil
 }
 
-// alignReadiness checks if all embedded SAs are ready
-func (s *Synchronizer) alignReadiness() {
+// alignDisabled updates the status to Disabled if all all the embedded UserAccounts have Disabled status
+func (s *Synchronizer) alignDisabled() {
 	for _, uaStatus := range s.record.Status.UserAccounts {
-		if !isReady(uaStatus.Conditions) {
+		if !condition.HasConditionReason(uaStatus.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.UserAccountDisabledReason) {
 			return
 		}
 	}
-	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
+
+	if len(s.record.Status.UserAccounts) > 0 {
+		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeDisabled())
+	}
 }
 
-func isReady(conditions []toolchainv1alpha1.Condition) bool {
-	for _, con := range conditions {
-		if con.Type == toolchainv1alpha1.ConditionReady {
-			return con.Status == corev1.ConditionTrue
+// alignReadiness updates the status to Provisioned and returns true if all the embedded UserAccounts are ready
+func (s *Synchronizer) alignReadiness() bool {
+	for _, uaStatus := range s.record.Status.UserAccounts {
+		if !condition.IsTrue(uaStatus.Conditions, toolchainv1alpha1.ConditionReady) {
+			return false
 		}
 	}
-	return false
+	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
+	return true
 }
 
 func getUserAccountStatus(clusterName string, record *toolchainv1alpha1.MasterUserRecord) (toolchainv1alpha1.UserAccountStatusEmbedded, int) {
