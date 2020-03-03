@@ -29,21 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	// Status condition reasons
-	noClusterAvailableReason             = "NoClusterAvailable"
-	noTemplateTierAvailableReason        = "NoTemplateTierAvailable"
-	failedToReadUserApprovalPolicyReason = "FailedToReadUserApprovalPolicy"
-	unableToCreateMURReason              = "UnableToCreateMUR"
-	unableToDeleteMURReason              = "UnableToDeleteMUR"
-	userDeactivatingReason               = "Deactivating"
-	userDeactivatedReason                = "Deactivated"
-	invalidMURState                      = "InvalidMURState"
-	approvedAutomaticallyReason          = "ApprovedAutomatically"
-	approvedByAdminReason                = "ApprovedByAdmin"
-	pendingApprovalReason                = "PendingApproval"
-)
-
 var log = logf.Log.WithName("controller_usersignup")
 
 // Add creates a new UserSignup Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -355,7 +340,7 @@ func (r *ReconcileUserSignup) setStatusApprovedAutomatically(userSignup *toolcha
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupApproved,
 			Status:  corev1.ConditionTrue,
-			Reason:  approvedAutomaticallyReason,
+			Reason:  toolchainv1alpha1.UserSignupApprovedAutomaticallyReason,
 			Message: message,
 		})
 }
@@ -366,7 +351,7 @@ func (r *ReconcileUserSignup) setStatusApprovedByAdmin(userSignup *toolchainv1al
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupApproved,
 			Status:  corev1.ConditionTrue,
-			Reason:  approvedByAdminReason,
+			Reason:  toolchainv1alpha1.UserSignupApprovedByAdminReason,
 			Message: message,
 		})
 }
@@ -377,13 +362,13 @@ func (r *ReconcileUserSignup) setStatusPendingApproval(userSignup *toolchainv1al
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupApproved,
 			Status:  corev1.ConditionFalse,
-			Reason:  pendingApprovalReason,
+			Reason:  toolchainv1alpha1.UserSignupPendingApprovalReason,
 			Message: message,
 		},
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  pendingApprovalReason,
+			Reason:  toolchainv1alpha1.UserSignupPendingApprovalReason,
 			Message: message,
 		})
 }
@@ -394,7 +379,7 @@ func (r *ReconcileUserSignup) setStatusFailedToReadUserApprovalPolicy(userSignup
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  failedToReadUserApprovalPolicyReason,
+			Reason:  toolchainv1alpha1.UserSignupFailedToReadUserApprovalPolicyReason,
 			Message: message,
 		})
 }
@@ -405,7 +390,7 @@ func (r *ReconcileUserSignup) setStatusInvalidMURState(userSignup *toolchainv1al
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  invalidMURState,
+			Reason:  toolchainv1alpha1.UserSignupInvalidMURState,
 			Message: message,
 		})
 }
@@ -416,7 +401,7 @@ func (r *ReconcileUserSignup) setStatusFailedToCreateMUR(userSignup *toolchainv1
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  unableToCreateMURReason,
+			Reason:  toolchainv1alpha1.UserSignupUnableToCreateMURReason,
 			Message: message,
 		})
 }
@@ -427,7 +412,7 @@ func (r *ReconcileUserSignup) setStatusFailedToDeleteMUR(userSignup *toolchainv1
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  unableToDeleteMURReason,
+			Reason:  toolchainv1alpha1.UserSignupUnableToDeleteMURReason,
 			Message: message,
 		})
 }
@@ -438,7 +423,7 @@ func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchain
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  noClusterAvailableReason,
+			Reason:  toolchainv1alpha1.UserSignupNoClusterAvailableReason,
 			Message: message,
 		})
 }
@@ -449,7 +434,7 @@ func (r *ReconcileUserSignup) setStatusNoTemplateTierAvailable(userSignup *toolc
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  noTemplateTierAvailableReason,
+			Reason:  toolchainv1alpha1.UserSignupNoTemplateTierAvailableReason,
 			Message: message,
 		})
 }
@@ -471,7 +456,7 @@ func (r *ReconcileUserSignup) setStatusDeactivating(userSignup *toolchainv1alpha
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  userDeactivatingReason,
+			Reason:  toolchainv1alpha1.UserSignupUserDeactivatingReason,
 			Message: message,
 		})
 }
@@ -482,7 +467,7 @@ func (r *ReconcileUserSignup) setStatusDeactivated(userSignup *toolchainv1alpha1
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionTrue,
-			Reason:  userDeactivatedReason,
+			Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
 			Message: message,
 		})
 }
