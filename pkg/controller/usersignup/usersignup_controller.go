@@ -390,7 +390,7 @@ func (r *ReconcileUserSignup) setStatusInvalidMURState(userSignup *toolchainv1al
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupInvalidMURState,
+			Reason:  toolchainv1alpha1.UserSignupInvalidMURStateReason,
 			Message: message,
 		})
 }

@@ -32,7 +32,7 @@ require (
 // Pinned to kubernetes-1.16.2
 replace (
 	//TODO: Tina replace this before merging
-	github.com/codeready-toolchain/api v0.0.0-20200302230734-dfc6c6670b91 => github.com/tinakurian/api v0.0.0-20200303042937-cff3e11ef9f4
+	github.com/codeready-toolchain/api v0.0.0-20200302230734-dfc6c6670b91 => github.com/tinakurian/api v0.0.0-20200303054928-f20e7995078e
 
 	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65
