@@ -31,13 +31,6 @@ objects:
       - masteruserrecords
       verbs:
       - get
-    - apiGroups:
-      - toolchain.dev.openshift.com
-      resources:
-      - bannedusers
-      verbs:
-      - get
-      - list
   - kind: RoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     metadata:
