@@ -57,14 +57,14 @@ spec:
               type: string
             targetCluster:
               description: The cluster to define UserAccount whose tier should be
-                changed.
+                changed. Optional. If not set then update all the UserAccounts in
+                the MasterUserRecord.
               type: string
             tierName:
               description: The tier name the tier should be changed to.
               type: string
           required:
           - murName
-          - targetCluster
           - tierName
           type: object
         status:
