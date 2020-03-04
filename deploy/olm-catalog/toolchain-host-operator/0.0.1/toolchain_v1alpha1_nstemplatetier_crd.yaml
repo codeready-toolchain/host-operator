@@ -37,8 +37,9 @@ spec:
         spec:
           description: NSTemplateTierSpec defines the desired state of NSTemplateTier
           properties:
-            clusterResourceQuota:
-              description: the cluster resource quota template
+            clusterResources:
+              description: the cluster resources template (for cluster-wide quotas,
+                etc.)
               properties:
                 revision:
                   description: The revision of the corresponding template
@@ -260,7 +261,7 @@ spec:
                 type: object
               type: array
           required:
-          - clusterResourceQuota
+          - clusterResources
           - namespaces
           type: object
         status:

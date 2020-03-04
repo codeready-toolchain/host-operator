@@ -352,8 +352,9 @@ data:
               spec:
                 description: NSTemplateTierSpec defines the desired state of NSTemplateTier
                 properties:
-                  clusterResourceQuota:
-                    description: the cluster resource quota template
+                  clusterResources:
+                    description: the cluster resources template (for cluster-wide quotas,
+                      etc.)
                     properties:
                       revision:
                         description: The revision of the corresponding template
@@ -575,7 +576,7 @@ data:
                       type: object
                     type: array
                 required:
-                - clusterResourceQuota
+                - clusterResources
                 - namespaces
                 type: object
               status:
@@ -873,19 +874,6 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "UserSignup",
-                "metadata": {
-                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                },
-                "spec": {
-                  "approved": true,
-                  "compliantUsername": "johnsmith-at-redhat-com",
-                  "targetCluster": "east-2a",
-                  "username": "johnsmith@redhat.com"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "BannedUser",
                 "metadata": {
                   "labels": {
@@ -985,6 +973,19 @@ data:
                     "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
                     "REPLICAS": "4"
                   }
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "UserSignup",
+                "metadata": {
+                  "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                },
+                "spec": {
+                  "approved": true,
+                  "compliantUsername": "johnsmith-at-redhat-com",
+                  "targetCluster": "east-2a",
+                  "username": "johnsmith@redhat.com"
                 }
               }
             ]
