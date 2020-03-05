@@ -13,6 +13,8 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/controller"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers/clusterresources"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers/namespaces"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 
@@ -174,7 +176,7 @@ func main() {
 	log.Info("Starting the Cmd.")
 
 	go func() {
-		log.Info("Creating/updating the NSTemplateTier resources once cache is sync'd")
+		log.Info("Creating/updating mandatory resources once cache is sync'd")
 		if !mgr.GetCache().WaitForCacheSync(stopChannel) {
 			log.Error(errors.New("timed out waiting for caches to sync"), "")
 			os.Exit(1)
@@ -190,7 +192,7 @@ func main() {
 
 		// create or update all NSTemplateTiers on the cluster at startup
 		log.Info("Creating/updating the NSTemplateTier resources")
-		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetiers.Asset); err != nil {
+		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, namespaces.Asset, clusterresources.Asset); err != nil {
 			log.Error(err, "")
 			os.Exit(1)
 		}

@@ -9,6 +9,8 @@ tmp/
 
 # generated files
 deploy/templates/nstemplatetiers/metadata.yaml
+deploy/templates/nstemplatetiers/namespaces/metadata.yaml
+deploy/templates/nstemplatetiers/clusterresources/metadata.yaml
 *_assets.go
 
 # Created by https://www.gitignore.io/api/go,vim,git,macos,linux,emacs,windows,eclipse,intellij+all,visualstudiocode

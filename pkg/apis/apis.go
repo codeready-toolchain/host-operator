@@ -10,7 +10,6 @@ import (
 
 // AddToScheme adds all Resources to the Scheme
 func AddToScheme(s *runtime.Scheme) error {
-	addToSchemes := append(apis.AddToSchemes, routev1.Install)
-	addToSchemes = append(addToSchemes, extensionsv1.AddToScheme)
+	addToSchemes := append(apis.AddToSchemes, routev1.Install, extensionsv1.AddToScheme)
 	return addToSchemes.AddToScheme(s)
 }
