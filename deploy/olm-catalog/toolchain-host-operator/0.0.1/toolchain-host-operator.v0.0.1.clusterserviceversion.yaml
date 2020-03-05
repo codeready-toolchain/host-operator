@@ -133,6 +133,9 @@ spec:
       kind: BannedUser
       name: bannedusers.toolchain.dev.openshift.com
       version: v1alpha1
+    - kind: ChangeTierRequest
+      name: changetierrequests.toolchain.dev.openshift.com
+      version: v1alpha1
     - description: MasterUserRecord keeps all information about user, user accounts
         and namespaces provisioned in CodeReady Toolchain
       displayName: Master User Record

@@ -46,7 +46,7 @@ spec:
                   type: string
                 template:
                   description: Template contains an OpenShift Template to be used
-                    for the cluster resource quota provisioning
+                    for provisioning of cluster-scoped resources
                   properties:
                     apiVersion:
                       description: 'APIVersion defines the versioned schema of this
@@ -261,7 +261,6 @@ spec:
                 type: object
               type: array
           required:
-          - clusterResources
           - namespaces
           type: object
         status:
