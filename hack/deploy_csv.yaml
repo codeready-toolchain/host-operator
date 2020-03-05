@@ -70,6 +70,119 @@ data:
         annotations:
           controller-gen.kubebuilder.io/version: (devel)
         creationTimestamp: null
+        name: changetierrequests.toolchain.dev.openshift.com
+      spec:
+        additionalPrinterColumns:
+        - JSONPath: .spec.murName
+          name: MurName
+          type: string
+        - JSONPath: .spec.tierName
+          name: TierName
+          type: string
+        - JSONPath: .spec.targetCluster
+          name: TargetCluster
+          priority: 1
+          type: string
+        - JSONPath: .status.conditions[?(@.type=="Complete")].status
+          name: Complete
+          type: string
+        - JSONPath: .status.conditions[?(@.type=="Complete")].reason
+          name: Reason
+          type: string
+        group: toolchain.dev.openshift.com
+        names:
+          kind: ChangeTierRequest
+          listKind: ChangeTierRequestList
+          plural: changetierrequests
+          singular: changetierrequest
+        scope: Namespaced
+        subresources:
+          status: {}
+        validation:
+          openAPIV3Schema:
+            description: ChangeTierRequest requests for changing tier for MUR/UserAccount
+            properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource this
+                  object represents. Servers may infer this from the endpoint the client
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                type: string
+              metadata:
+                type: object
+              spec:
+                description: ChangeTierRequestSpec defines the desired state of ChangeTierRequest
+                properties:
+                  murName:
+                    description: The murName is a name of MUR/UserAccount whose tier should
+                      be changed.
+                    type: string
+                  targetCluster:
+                    description: The cluster to define UserAccount whose tier should be
+                      changed. Optional. If not set then update all the UserAccounts in
+                      the MasterUserRecord.
+                    type: string
+                  tierName:
+                    description: The tier name the tier should be changed to.
+                    type: string
+                required:
+                - murName
+                - tierName
+                type: object
+              status:
+                description: ChangeTierRequestStatus defines the observed state of ChangeTierRequest
+                properties:
+                  conditions:
+                    description: 'Conditions is an array of current ChangeTierRequest conditions
+                      Supported condition types: Complete'
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          description: Last time the condition transit from one status to
+                            another.
+                          format: date-time
+                          type: string
+                        message:
+                          description: Human readable message indicating details about last
+                            transition.
+                          type: string
+                        reason:
+                          description: (brief) reason for the condition's last transition.
+                          type: string
+                        status:
+                          description: Status of the condition, one of True, False, Unknown.
+                          type: string
+                        type:
+                          description: Type of condition
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    type: array
+                type: object
+            x-kubernetes-preserve-unknown-fields: true
+        version: v1alpha1
+        versions:
+        - name: v1alpha1
+          served: true
+          storage: true
+      status:
+        acceptedNames:
+          kind: ""
+          plural: ""
+        conditions: []
+        storedVersions: []
+    - apiVersion: apiextensions.k8s.io/v1beta1
+      kind: CustomResourceDefinition
+      metadata:
+        annotations:
+          controller-gen.kubebuilder.io/version: (devel)
+        creationTimestamp: null
         name: masteruserrecords.toolchain.dev.openshift.com
       spec:
         additionalPrinterColumns:
@@ -766,6 +879,18 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "ChangeTierRequest",
+                "metadata": {
+                  "name": "changetierrequest-1a2b3c"
+                },
+                "spec": {
+                  "murName": "johnsmith",
+                  "targetCluster": "east-2a",
+                  "tierName": "advanced"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "MasterUserRecord",
                 "metadata": {
                   "name": "johnsmith"
@@ -892,6 +1017,11 @@ data:
             displayName: Banned User
             kind: BannedUser
             name: bannedusers.toolchain.dev.openshift.com
+            version: v1alpha1
+          - description: ChangeTierRequest is used as a trigger for a tier change in MasterUserRecord/UserAccount
+            displayName: Change Tier Request
+            kind: ChangeTierRequest
+            name: changetierrequests.toolchain.dev.openshift.com
             version: v1alpha1
           - description: MasterUserRecord keeps all information about user, user accounts
               and namespaces provisioned in CodeReady Toolchain
