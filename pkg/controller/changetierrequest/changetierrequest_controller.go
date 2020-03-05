@@ -37,12 +37,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource ChangeTierRequest
-	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.ChangeTierRequest{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.Watch(&source.Kind{Type: &toolchainv1alpha1.ChangeTierRequest{}}, &handler.EnqueueRequestForObject{})
 }
 
 // blank assignment to verify that ReconcileChangeTierRequest implements reconcile.Reconciler
