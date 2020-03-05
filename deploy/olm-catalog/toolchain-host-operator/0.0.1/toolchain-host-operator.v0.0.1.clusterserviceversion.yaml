@@ -6,17 +6,6 @@ metadata:
       [
         {
           "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-          "kind": "BannedUser",
-          "metadata": {
-            "labels": {
-              "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
-            }
-          },
-          "spec": {
-            "email": "john.doe@gmail.com"
-          },
-        },
-        {
           "kind": "ChangeTierRequest",
           "metadata": {
             "name": "changetierrequest-1a2b3c"
@@ -129,6 +118,18 @@ metadata:
             "compliantUsername": "johnsmith-at-redhat-com",
             "targetCluster": "east-2a",
             "username": "johnsmith@redhat.com"
+          }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "BannedUser",
+          "metadata": {
+            "labels": {
+              "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+            }
+          },
+          "spec": {
+            "email": "john.doe@gmail.com"
           }
         }
       ]
