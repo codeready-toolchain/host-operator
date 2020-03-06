@@ -24,7 +24,7 @@ var log = logf.Log.WithName("templates")
 
 // CreateOrUpdateResources generates the NSTemplateTier resources from the namespace templates,
 // then uses the manager's client to create or update the resources on the cluster.
-func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, namespaceAssets assetFunc, clusterResourceQuotaAssets assetFunc) error {
+func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, namespaceAssets, clusterResourceQuotaAssets assetFunc) error {
 	g, err := newNSTemplateTierGenerator(s, namespaceAssets, clusterResourceQuotaAssets)
 	if err != nil {
 		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
