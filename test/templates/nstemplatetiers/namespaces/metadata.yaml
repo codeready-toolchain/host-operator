@@ -4,3 +4,5 @@ advanced-stage: "123456c"
 basic-code: "123456d"
 basic-dev: "123456e"
 basic-stage: "1234567" # here, a number string
+team-dev: "123456g"
+team-stage: "123456h"

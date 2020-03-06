@@ -187,7 +187,8 @@ func loadClusterResourceAssets(get assetFunc) (map[string]asset, error) {
 	result := make(map[string]asset, len(revisions))
 	// now, get the templates associated with the revisions
 	for tier, revision := range revisions {
-		content, err := get(fmt.Sprintf("%s.yaml", tier))
+		tierYaml := fmt.Sprintf("%s.yaml", tier)
+		content, err := get(tierYaml)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to load cluster resource quota templates")
 		}

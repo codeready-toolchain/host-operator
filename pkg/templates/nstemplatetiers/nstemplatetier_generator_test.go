@@ -46,8 +46,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				}
 				return clt.Client.Create(ctx, obj)
 			}
-			// verify that no "advanced" nor "basic" NSTemplateTier resources exist prior to creation
-			for _, tierName := range []string{"advanced", "basic"} {
+			// verify that no "advanced" nor "basic" nor "team" NSTemplateTier resources exist prior to creation
+			for _, tierName := range []string{"advanced", "basic", "team"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.Error(t, err)
@@ -59,12 +59,15 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			// verify that 2 NStemplateTier CRs were created: "advanced" and "basic"
-			for _, tierName := range []string{"advanced", "basic"} {
+			// verify that 3 NSTemplateTier CRs were created: "advanced", "basic", and "team"
+			for _, tierName := range []string{"advanced", "basic", "team"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
 				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
+				if tier.Name == "team" {
+					assert.Nil(t, tier.Spec.ClusterResources) // "team" tier should not have cluster resources set
+				}
 			}
 		})
 
@@ -105,8 +108,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			fakeAssets, revisions := generateRevisions("123456")
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, fakeAssets, testclusterresources.Asset)
 			require.NoError(t, err)
-			// verify that 2 NStemplateTier CRs were created: "advanced" and "basic"
-			for _, tierName := range []string{"advanced", "basic"} {
+			// verify that 3 NSTemplateTier CRs were created: "advanced", "basic", and "team"
+			for _, tierName := range []string{"advanced", "basic", "team"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
@@ -127,8 +130,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			// verify that the 2 NStemplateTier CRs were updated
-			for _, tierName := range []string{"advanced", "basic"} {
+			// verify that the 3 NStemplateTier CRs were updated
+			for _, tierName := range []string{"advanced", "basic", "team"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
@@ -227,7 +230,10 @@ advanced-dev: %[1]sb
 advanced-stage: %[1]sc
 basic-code: %[1]sd
 basic-dev: %[1]se
-basic-stage: %[1]sf`, prefix)), nil
+basic-stage: %[1]sf
+team-dev: %[1]sg
+team-stage: %[1]sh
+`, prefix)), nil
 		}
 		return testnamespaces.Asset(name)
 	}
@@ -241,6 +247,10 @@ basic-stage: %[1]sf`, prefix)), nil
 			"code":  fmt.Sprintf("%sd", prefix),
 			"dev":   fmt.Sprintf("%se", prefix),
 			"stage": fmt.Sprintf("%sf", prefix),
+		},
+		"team": {
+			"dev":   fmt.Sprintf("%sg", prefix),
+			"stage": fmt.Sprintf("%sh", prefix),
 		},
 	}
 	return assets, revisions

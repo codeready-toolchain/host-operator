@@ -36,7 +36,7 @@ func TestNewNSTemplateTierGenerator(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		// verify that there are namespace templates+revisions for the tiers/types
-		require.Len(t, g.namespaces, 2)
+		require.Len(t, g.namespaces, 3)
 		require.NotContains(t, "foo", g.namespaces) // make sure that the `foo: bar` entry was ignored
 		assert.Equal(t, "123456a", g.namespaces["advanced"]["code"].revision)
 		assert.NotEmpty(t, "123456a", g.namespaces["advanced"]["code"].content)
@@ -50,6 +50,10 @@ func TestNewNSTemplateTierGenerator(t *testing.T) {
 		assert.NotEmpty(t, "123456a", g.namespaces["basic"]["dev"].content)
 		assert.Equal(t, "1234567", g.namespaces["basic"]["stage"].revision)
 		assert.NotEmpty(t, "123456a", g.namespaces["basic"]["stage"].content)
+		assert.Equal(t, "123456g", g.namespaces["team"]["dev"].revision)
+		assert.NotEmpty(t, "123456g", g.namespaces["team"]["dev"].content)
+		assert.Equal(t, "123456h", g.namespaces["team"]["stage"].revision)
+		assert.NotEmpty(t, "123456h", g.namespaces["team"]["stage"].content)
 		// verify that there are cluster resource quota templates+revisions for the tiers
 		require.Len(t, g.clusterResources, 2)
 	})
@@ -180,7 +184,7 @@ func TestLoadNamespaceAssets(t *testing.T) {
 		assets, err := loadNamespaceAssets(testnamespaces.Asset)
 		// then
 		require.NoError(t, err)
-		require.Len(t, assets, 2)
+		require.Len(t, assets, 3)
 		require.NotContains(t, "foo", assets) // make sure that the `foo: bar` entry was ignored
 		assert.Equal(t, "123456a", assets["advanced"]["code"].revision)
 		assert.NotEmpty(t, "123456a", assets["advanced"]["code"].content)
@@ -194,6 +198,10 @@ func TestLoadNamespaceAssets(t *testing.T) {
 		assert.NotEmpty(t, "123456a", assets["basic"]["dev"].content)
 		assert.Equal(t, "1234567", assets["basic"]["stage"].revision)
 		assert.NotEmpty(t, "123456a", assets["basic"]["stage"].content)
+		assert.Equal(t, "123456g", assets["team"]["dev"].revision)
+		assert.NotEmpty(t, "123456g", assets["team"]["dev"].content)
+		assert.Equal(t, "123456h", assets["team"]["stage"].revision)
+		assert.NotEmpty(t, "123456h", assets["team"]["stage"].content)
 	})
 
 	t.Run("failures", func(t *testing.T) {
@@ -388,7 +396,7 @@ func TestNewNSTemplateTiers(t *testing.T) {
 		tiers, err := g.newNSTemplateTiers(namespace)
 		// then
 		require.NoError(t, err)
-		require.Len(t, tiers, 2)
+		require.Len(t, tiers, 3)
 		advancedTier, found := tiers["advanced"]
 		require.True(t, found)
 		assert.Equal(t, "advanced", advancedTier.ObjectMeta.Name)
@@ -397,6 +405,10 @@ func TestNewNSTemplateTiers(t *testing.T) {
 		require.True(t, found)
 		assert.Equal(t, "basic", basic.ObjectMeta.Name)
 		assert.Equal(t, namespace, basic.ObjectMeta.Namespace)
+		team, found := tiers["team"]
+		require.True(t, found)
+		assert.Equal(t, "team", team.ObjectMeta.Name)
+		assert.Equal(t, namespace, team.ObjectMeta.Namespace)
 	})
 
 }
