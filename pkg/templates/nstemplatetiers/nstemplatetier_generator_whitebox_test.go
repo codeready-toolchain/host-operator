@@ -228,7 +228,7 @@ func TestLoadClusterResourceQuotaAssets(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		// when
-		assets, err := loadClusterResourceQuotaAssets(testclusterresources.Asset)
+		assets, err := loadClusterResourceAssets(testclusterresources.Asset)
 		// then
 		require.NoError(t, err)
 		require.Len(t, assets, 2)
@@ -244,7 +244,7 @@ func TestLoadClusterResourceQuotaAssets(t *testing.T) {
 				return []byte("foo::bar"), nil
 			}
 			// when initializing the generator with the production Asset
-			_, err := loadClusterResourceQuotaAssets(fakeAssets)
+			_, err := loadClusterResourceAssets(fakeAssets)
 			// then
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "unable to load cluster resource quota templates: yaml: unmarshal errors:")

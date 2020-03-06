@@ -139,7 +139,7 @@ func loadNamespaceAssets(get assetFunc) (map[string]map[string]asset, error) {
 		tier := data[0] // 'advanced', 'basic', etc.
 		typ := data[1]  // 'code', 'stage', etc.
 		if _, ok := revisionsByTier[tier]; !ok {
-			revisionsByTier[tier] = make(map[string]string, 3) // expect 3 entries: 'code', 'dev' and 'stage', but map size will increase if needed
+			revisionsByTier[tier] = make(map[string]string, 3) // we will probably have '-code', '-dev' and '-stage' namespace, but map size will increase if needed
 		}
 		revisionsByTier[tier][typ] = revision
 	}
