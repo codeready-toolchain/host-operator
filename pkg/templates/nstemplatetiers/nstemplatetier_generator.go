@@ -92,7 +92,7 @@ func newNSTemplateTierGenerator(s *runtime.Scheme, namespaceAssets, clusterResou
 	if err != nil {
 		return nil, err
 	}
-	clusterResources, err := loadClusterResourceQuotaAssets(clusterResourceQuotaAssets)
+	clusterResources, err := loadClusterResourceAssets(clusterResourceQuotaAssets)
 	if err != nil {
 		return nil, err
 	}
