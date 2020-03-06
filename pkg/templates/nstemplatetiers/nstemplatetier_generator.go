@@ -243,7 +243,7 @@ func (g nstemplatetierGenerator) newNSTemplateTier(tier, namespace string) (*too
 	if !ok {
 		return nil, errors.Errorf("tier '%s' does not exist", tier)
 	}
-	// retrieve the namespace types and order them, so we can order them, and compare
+	// retrieve the namespace types and order them, so we can compare
 	// with the expected templates during the tests
 	namespaceTypes := make([]string, 0, len(namespaceAssetsByType))
 	for namespaceType := range namespaceAssetsByType {
