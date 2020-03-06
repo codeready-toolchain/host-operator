@@ -284,7 +284,7 @@ func (g nstemplatetierGenerator) newNSTemplateTier(tier, namespace string) (*too
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
 		}
-		result.Spec.ClusterResources = toolchainv1alpha1.NSTemplateTierClusterResources{
+		result.Spec.ClusterResources = &toolchainv1alpha1.NSTemplateTierClusterResources{
 			Revision: crqAsset.revision,
 			Template: *tmplObj,
 		}
