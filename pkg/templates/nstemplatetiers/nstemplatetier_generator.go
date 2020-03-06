@@ -273,7 +273,7 @@ func (g nstemplatetierGenerator) newNSTemplateTier(tier, namespace string) (*too
 			Template: *tmplObj,
 		})
 	}
-	// also, add the cluster resource quota template+revision if it exists
+	// also, add the cluster resource template+revision if it exists
 	if crqAsset, exists := g.clusterResources[tier]; exists {
 		// get the content of the `-<t>.yaml` file
 		tmpl := crqAsset.content
