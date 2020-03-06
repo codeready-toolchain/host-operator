@@ -87,7 +87,7 @@ type asset struct {
 }
 
 // newNSTemplateTierGenerator returns a new nstemplatetierGenerator
-func newNSTemplateTierGenerator(s *runtime.Scheme, namespaceAssets assetFunc, clusterResourceQuotaAssets assetFunc) (*nstemplatetierGenerator, error) {
+func newNSTemplateTierGenerator(s *runtime.Scheme, namespaceAssets, clusterResourceQuotaAssets assetFunc) (*nstemplatetierGenerator, error) {
 	namespaces, err := loadNamespaceAssets(namespaceAssets)
 	if err != nil {
 		return nil, err
