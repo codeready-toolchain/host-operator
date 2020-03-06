@@ -165,7 +165,7 @@ func loadNamespaceAssets(get assetFunc) (map[string]map[string]asset, error) {
 	return result, nil
 }
 
-// loadClusterResourceQuotaAssets returns a map in which:
+// loadClusterResourceAssets returns a map in which:
 // - each key is a tier type (eg: "basic", "advanced", etc.)
 // - each value is an "asset", i.e., a template content ([]byte) and its revision (string)
 // Eg:
@@ -173,7 +173,7 @@ func loadNamespaceAssets(get assetFunc) (map[string]map[string]asset, error) {
 //		revision: "abcdef",
 //		content: []byte{...},
 //	}
-func loadClusterResourceQuotaAssets(get assetFunc) (map[string]asset, error) {
+func loadClusterResourceAssets(get assetFunc) (map[string]asset, error) {
 	// get the revisions
 	metadata, err := get("metadata.yaml")
 	if err != nil {
