@@ -67,6 +67,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
 				if tier.Name == "team" {
 					assert.Nil(t, tier.Spec.ClusterResources) // "team" tier should not have cluster resources set
+				} else {
+					assert.NotNil(t, tier.Spec.ClusterResources)
 				}
 			}
 		})
