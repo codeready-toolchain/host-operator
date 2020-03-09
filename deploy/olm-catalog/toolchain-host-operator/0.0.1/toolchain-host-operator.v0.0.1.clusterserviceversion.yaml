@@ -6,46 +6,14 @@ metadata:
       [
         {
           "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-          "kind": "RegistrationService",
+          "kind": "ChangeTierRequest",
           "metadata": {
-            "labels": {
-              "provider": "codeready-toolchain"
-            },
-            "name": "reg-service",
-            "namespace": "toolchain-host-operator"
+            "name": "changetierrequest-1a2b3c"
           },
           "spec": {
-            "envVars": {
-              "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
-              "ENVIRONMENT": "dev",
-              "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
-              "REPLICAS": "4"
-            }
-          }
-        },
-        {
-          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-          "kind": "UserSignup",
-          "metadata": {
-            "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-          },
-          "spec": {
-            "approved": true,
-            "compliantUsername": "johnsmith-at-redhat-com",
+            "murName": "johnsmith",
             "targetCluster": "east-2a",
-            "username": "johnsmith@redhat.com"
-          }
-        },
-        {
-          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-          "kind": "BannedUser",
-          "metadata": {
-            "labels": {
-              "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
-            }
-          },
-          "spec": {
-            "email": "john.doe@gmail.com"
+            "tierName": "advanced"
           }
         },
         {
@@ -119,6 +87,50 @@ metadata:
               }
             ]
           }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "RegistrationService",
+          "metadata": {
+            "labels": {
+              "provider": "codeready-toolchain"
+            },
+            "name": "reg-service",
+            "namespace": "toolchain-host-operator"
+          },
+          "spec": {
+            "envVars": {
+              "AUTH_CLIENT_LIBRARY_URL": "https://sso.prod-preview.openshift.io/auth/js/keycloak.js",
+              "ENVIRONMENT": "dev",
+              "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
+              "REPLICAS": "4"
+            }
+          }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "UserSignup",
+          "metadata": {
+            "name": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+          },
+          "spec": {
+            "approved": true,
+            "compliantUsername": "johnsmith-at-redhat-com",
+            "targetCluster": "east-2a",
+            "username": "johnsmith@redhat.com"
+          }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "BannedUser",
+          "metadata": {
+            "labels": {
+              "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+            }
+          },
+          "spec": {
+            "email": "john.doe@gmail.com"
+          }
         }
       ]
     capabilities: Basic Install
@@ -129,34 +141,39 @@ spec:
   customresourcedefinitions:
     owned:
     - description: BannedUser is used to maintain a list of banned e-mail addresses
-      displayName: BannedUser
+      displayName: Banned User
       kind: BannedUser
       name: bannedusers.toolchain.dev.openshift.com
       version: v1alpha1
+    - description: ChangeTierRequest is used as a trigger for a tier change in MasterUserRecord/UserAccount
+      displayName: Change Tier Request
+      kind: ChangeTierRequest
+      name: changetierrequests.toolchain.dev.openshift.com
+      version: v1alpha1
     - description: MasterUserRecord keeps all information about user, user accounts
-        and namespaces provisioned in CodeReady Toolchain SaaS system
-      displayName: MasterUserRecord
+        and namespaces provisioned in CodeReady Toolchain
+      displayName: Master User Record
       kind: MasterUserRecord
       name: masteruserrecords.toolchain.dev.openshift.com
       version: v1alpha1
     - description: NSTemplateTier configures user environment via templates used for
         namespaces the user has access to
-      displayName: NSTemplateTier
+      displayName: Namespace Template Tier
       kind: NSTemplateTier
       name: nstemplatetiers.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: RegistrationService configures registration service deployment
-      displayName: RegistrationService
+    - description: RegistrationService configures the registration service deployment
+      displayName: Registration Service
       kind: RegistrationService
       name: registrationservices.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: UserSignup registers a user in the CodeReady Toolchain SaaS system
-      displayName: UserSignup
+    - description: UserSignup registers a user in the CodeReady Toolchain
+      displayName: User Signup
       kind: UserSignup
       name: usersignups.toolchain.dev.openshift.com
       version: v1alpha1
   description: Placeholder description
-  displayName: Host Operator
+  displayName: Toolchain Host Operator
   install:
     spec:
       clusterPermissions:
