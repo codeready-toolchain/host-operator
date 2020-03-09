@@ -83,7 +83,7 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 
 	// if is complete, then we can delete it
 	if condition.IsTrue(changeTierRequest.Status.Conditions, toolchainv1alpha1.ChangeTierRequestComplete) {
-		return reconcile.Result{}, r.changeIsComplete(reqLogger, changeTierRequest)
+		return reconcile.Result{}, r.changeIsComplete(changeTierRequest)
 	}
 
 	err = r.changeTier(reqLogger, changeTierRequest, request.Namespace)
@@ -91,10 +91,10 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, r.changeIsComplete(reqLogger, changeTierRequest)
+	return reconcile.Result{}, r.changeIsComplete(changeTierRequest)
 }
 
-func (r *ReconcileChangeTierRequest) changeIsComplete(log logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest) error {
+func (r *ReconcileChangeTierRequest) changeIsComplete(changeTierRequest *toolchainv1alpha1.ChangeTierRequest) error {
 	if err := r.setStatusChangeComplete(changeTierRequest); err != nil {
 		return err
 	}

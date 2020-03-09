@@ -38,7 +38,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			AllUserAccountsHaveTier("team", teamTier.Spec.Namespaces)
-		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name, toBeComplete())
+		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
 
 	t.Run("the controller should change tier in all UserAccounts in MUR", func(t *testing.T) {
@@ -55,7 +55,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			AllUserAccountsHaveTier("team", teamTier.Spec.Namespaces)
-		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name, toBeComplete())
+		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
 
 	t.Run("the controller should change tier only in specified UserAccount in MUR", func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			UserAccountHasTier("another-cluster", "team", teamTier.Spec.Namespaces).
 			UserAccountHasTier(test.MemberClusterName, "basic", basicTier.Spec.Namespaces)
-		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name, toBeComplete())
+		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
 
 	t.Run("the ChangeTierRequest will be ignored as is already complete", func(t *testing.T) {
@@ -93,7 +93,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			AllUserAccountsHaveTier("basic", basicTier.Spec.Namespaces)
-		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name, toBeComplete())
+		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
 }
 
@@ -224,7 +224,7 @@ func TestUpdateStatus(t *testing.T) {
 	})
 }
 
-func AssertThatChangeTierRequestIsDeleted(t *testing.T, cl client.Client, name string, condition v1alpha1.Condition) {
+func AssertThatChangeTierRequestIsDeleted(t *testing.T, cl client.Client, name string) {
 	changeTierRequest := &v1alpha1.ChangeTierRequest{}
 	err := cl.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, name), changeTierRequest)
 	require.Error(t, err)
