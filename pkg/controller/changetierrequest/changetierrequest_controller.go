@@ -2,10 +2,16 @@ package changetierrequest
 
 import (
 	"context"
+	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/go-logr/logr"
+	errs "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -37,7 +43,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource ChangeTierRequest
-	return c.Watch(&source.Kind{Type: &toolchainv1alpha1.ChangeTierRequest{}}, &handler.EnqueueRequestForObject{})
+	return c.Watch(&source.Kind{Type: &toolchainv1alpha1.ChangeTierRequest{}}, &handler.EnqueueRequestForObject{},
+		onlyGenerationChangedAndIsNotComplete{})
 }
 
 // blank assignment to verify that ReconcileChangeTierRequest implements reconcile.Reconciler
@@ -61,8 +68,8 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 	reqLogger.Info("Reconciling ChangeTierRequest")
 
 	// Fetch the ChangeTierRequest instance
-	instance := &toolchainv1alpha1.ChangeTierRequest{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	changeTierRequest := &toolchainv1alpha1.ChangeTierRequest{}
+	err := r.client.Get(context.TODO(), request.NamespacedName, changeTierRequest)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -74,5 +81,122 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, nil
+	// if is complete, then we can delete it
+	if condition.IsTrue(changeTierRequest.Status.Conditions, toolchainv1alpha1.ChangeTierRequestComplete) {
+		return reconcile.Result{}, r.changeIsComplete(reqLogger, changeTierRequest)
+	}
+
+	err = r.changeTier(reqLogger, changeTierRequest, request.Namespace)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, r.changeIsComplete(reqLogger, changeTierRequest)
+}
+
+func (r *ReconcileChangeTierRequest) changeIsComplete(log logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest) error {
+	if err := r.setStatusChangeComplete(changeTierRequest); err != nil {
+		return err
+	}
+
+	if err := r.client.Delete(context.TODO(), changeTierRequest, deleteIn(int64(86400))); err != nil {
+		return errs.Wrapf(err, "unable to delete ChangeTierRequest object '%s'", changeTierRequest.Name)
+	}
+
+	return nil
+}
+
+func deleteIn(seconds int64) *client.DeleteOptions {
+	return &client.DeleteOptions{GracePeriodSeconds: &seconds}
+}
+
+func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) error {
+	mur := &toolchainv1alpha1.MasterUserRecord{}
+	murName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.MurName}
+	if err := r.client.Get(context.TODO(), murName, mur); err != nil {
+		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to get MasterUserRecord with name %s", changeTierRequest.Spec.MurName)
+	}
+
+	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
+	tierName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.TierName}
+	if err := r.client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
+		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to get NSTemplateTier with name %s", changeTierRequest.Spec.TierName)
+	}
+
+	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nsTemplateTier.Spec.Namespaces))
+	for i, ns := range nsTemplateTier.Spec.Namespaces {
+		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
+			Type:     ns.Type,
+			Revision: ns.Revision,
+		}
+	}
+	newNsTemplateSet := toolchainv1alpha1.NSTemplateSetSpec{
+		TierName:   changeTierRequest.Spec.TierName,
+		Namespaces: namespaces,
+	}
+	changed := false
+	for i, ua := range mur.Spec.UserAccounts {
+		if changeTierRequest.Spec.TargetCluster != "" {
+			if ua.TargetCluster == changeTierRequest.Spec.TargetCluster {
+				mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
+				changed = true
+				break
+			}
+		} else {
+			changed = true
+			mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
+		}
+	}
+
+	if !changed {
+		err := fmt.Errorf("the MasterUserRecord '%s' doesn't contain UserAccount with cluster '%s' whose tier should be changed", changeTierRequest.Spec.MurName, changeTierRequest.Spec.TargetCluster)
+		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
+	}
+
+	if err := r.client.Update(context.TODO(), mur); err != nil {
+		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
+	}
+
+	return nil
+}
+
+func (r *ReconcileChangeTierRequest) wrapErrorWithStatusUpdate(logger logr.Logger, changeRequest *toolchainv1alpha1.ChangeTierRequest, statusUpdater func(changeRequest *toolchainv1alpha1.ChangeTierRequest, message string) error, err error, format string, args ...interface{}) error {
+	if err == nil {
+		return nil
+	}
+	if err := statusUpdater(changeRequest, err.Error()); err != nil {
+		logger.Error(err, "status update failed")
+	}
+	return errs.Wrapf(err, format, args...)
+}
+
+func (r *ReconcileChangeTierRequest) updateStatusConditions(changeRequest *toolchainv1alpha1.ChangeTierRequest, newConditions ...toolchainv1alpha1.Condition) error {
+	var updated bool
+	changeRequest.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(changeRequest.Status.Conditions, newConditions...)
+	if !updated {
+		// Nothing changed
+		return nil
+	}
+	return r.client.Status().Update(context.TODO(), changeRequest)
+}
+
+func (r *ReconcileChangeTierRequest) setStatusChangeComplete(changeRequest *toolchainv1alpha1.ChangeTierRequest) error {
+	return r.updateStatusConditions(
+		changeRequest,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ChangeTierRequestComplete,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.ChangeTierRequestChangedReason,
+		})
+}
+
+func (r *ReconcileChangeTierRequest) setStatusChangeFailed(changeRequest *toolchainv1alpha1.ChangeTierRequest, message string) error {
+	return r.updateStatusConditions(
+		changeRequest,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.ChangeTierRequestComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.ChangeTierRequestChangeFiledReason,
+			Message: message,
+		})
 }
