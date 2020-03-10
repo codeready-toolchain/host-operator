@@ -37,7 +37,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier("team", teamTier.Spec.Namespaces)
+			AllUserAccountsHaveTier(*teamTier)
 		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
 
@@ -54,7 +54,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier("team", teamTier.Spec.Namespaces)
+			AllUserAccountsHaveTier(*teamTier)
 		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
 
@@ -72,8 +72,8 @@ func TestChangeTierSuccess(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			UserAccountHasTier("another-cluster", "team", teamTier.Spec.Namespaces).
-			UserAccountHasTier(test.MemberClusterName, "basic", basicTier.Spec.Namespaces)
+			UserAccountHasTier("another-cluster", *teamTier).
+			UserAccountHasTier(test.MemberClusterName, *basicTier)
 		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
 
@@ -92,7 +92,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier("basic", basicTier.Spec.Namespaces)
+			AllUserAccountsHaveTier(*basicTier)
 		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
 }
@@ -143,7 +143,7 @@ func TestChangeTierFailure(t *testing.T) {
 		// then
 		require.Error(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier("basic", basicTier.Spec.Namespaces)
+			AllUserAccountsHaveTier(*basicTier)
 		assert.Contains(t, err.Error(), "unable to change tier in MasterUserRecord johny")
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name,
 			toBeNotComplete("the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed"))
@@ -176,8 +176,8 @@ func TestChangeTierFailure(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord("johny")
 		changeTierRequest := newChangeTierRequest("johny", "faildeletion", "", noStatus)
-		teamTier := NewNSTemplateTier("faildeletion", "123fail", "stage", "dev")
-		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
+		failDeletionTier := NewNSTemplateTier("faildeletion", "123fail", "stage", "dev")
+		controller, request, cl := newController(t, changeTierRequest, mur, failDeletionTier)
 
 		// when
 		_, err := controller.Reconcile(request)
@@ -186,7 +186,7 @@ func TestChangeTierFailure(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unable to delete ChangeTierRequest object 'request-name'")
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier("faildeletion", teamTier.Spec.Namespaces)
+			AllUserAccountsHaveTier(*failDeletionTier)
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 }
