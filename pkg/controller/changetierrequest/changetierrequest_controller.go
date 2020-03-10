@@ -3,6 +3,7 @@ package changetierrequest
 import (
 	"context"
 	"fmt"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -100,14 +101,15 @@ func (r *ReconcileChangeTierRequest) complete(changeTierRequest *toolchainv1alph
 		return err
 	}
 
-	if err := r.client.Delete(context.TODO(), changeTierRequest, deleteIn(int64(86400))); err != nil {
+	if err := r.client.Delete(context.TODO(), changeTierRequest, deleteIn(24*time.Hour)); err != nil {
 		return errs.Wrapf(err, "unable to delete ChangeTierRequest object '%s'", changeTierRequest.Name)
 	}
 
 	return nil
 }
 
-func deleteIn(seconds int64) *client.DeleteOptions {
+func deleteIn(duration time.Duration) *client.DeleteOptions {
+	seconds := int64(duration.Seconds())
 	return &client.DeleteOptions{GracePeriodSeconds: &seconds}
 }
 
