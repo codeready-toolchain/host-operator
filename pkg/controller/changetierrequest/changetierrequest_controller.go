@@ -7,6 +7,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
+	"github.com/operator-framework/operator-sdk/pkg/predicate"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -44,7 +45,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to primary resource ChangeTierRequest
 	return c.Watch(&source.Kind{Type: &toolchainv1alpha1.ChangeTierRequest{}}, &handler.EnqueueRequestForObject{},
-		onlyGenerationChangedAndIsNotComplete{})
+		onlyGenerationChangedAndIsNotComplete{GenerationChangedPredicate: &predicate.GenerationChangedPredicate{}})
 }
 
 // blank assignment to verify that ReconcileChangeTierRequest implements reconcile.Reconciler
