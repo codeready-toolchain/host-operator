@@ -190,7 +190,8 @@ func main() {
 
 		// create or update all NSTemplateTiers on the cluster at startup
 		log.Info("Creating/updating the NSTemplateTier resources")
-		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetiers.Asset); err != nil {
+		assets := nstemplatetiers.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
+		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, assets); err != nil {
 			log.Error(err, "")
 			os.Exit(1)
 		}
