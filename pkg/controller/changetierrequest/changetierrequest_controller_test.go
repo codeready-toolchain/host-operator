@@ -34,8 +34,8 @@ func TestChangeTierSuccess(t *testing.T) {
 
 	t.Run("the controller should change tier in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny")
-		changeTierRequest := newChangeTierRequest("johny", "team", "", noStatus)
+		mur := murtest.NewMasterUserRecord("john")
+		changeTierRequest := newChangeTierRequest("john", "team", "", noStatus)
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
 		// when
@@ -43,7 +43,7 @@ func TestChangeTierSuccess(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		murtest.AssertThatMasterUserRecord(t, "johny", cl).
+		murtest.AssertThatMasterUserRecord(t, "john", cl).
 			AllUserAccountsHaveTier(*teamTier)
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
@@ -290,17 +290,7 @@ func NewNSTemplateTier(tierName, revision string, nsTypes ...string) *v1alpha1.N
 	}
 }
 
-var (
-	notComplete = v1alpha1.ChangeTierRequestStatus{
-		Conditions: []v1alpha1.Condition{toBeNotComplete("")},
-	}
-
-	noStatus = v1alpha1.ChangeTierRequestStatus{}
-
-	complete = v1alpha1.ChangeTierRequestStatus{
-		Conditions: []v1alpha1.Condition{toBeComplete()},
-	}
-)
+var noStatus = v1alpha1.ChangeTierRequestStatus{}
 
 func toBeComplete() v1alpha1.Condition {
 	return v1alpha1.Condition{
