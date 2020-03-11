@@ -12,3 +12,5 @@ registration-service:
                   "clientId": "crt",
                   "public-client": true
                 }'
+host-operator:
+  duration-before-change-request-deletion: '1m'

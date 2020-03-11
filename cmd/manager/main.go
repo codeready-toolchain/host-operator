@@ -130,7 +130,7 @@ func main() {
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := controller.AddToManager(mgr, confg); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
@@ -232,6 +232,11 @@ func printConfig(cfg *configuration.Registry) {
 		logWithValues = logWithValues.WithValues("key", key, "value", value)
 	}
 	logWithValues.Info("Registration Service configuration variables:")
+
+	for key, value := range cfg.GetAllHostOperatorParameters() {
+		logWithValues = logWithValues.WithValues("key", key, "value", value)
+	}
+	logWithValues.Info("Host Operator configuration variables:")
 }
 
 // ensureKubeFedClusterCRD ensure that KubeFedCluster CRD exists in the cluster.

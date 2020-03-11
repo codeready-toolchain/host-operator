@@ -46,8 +46,6 @@ github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF0
 github.com/Masterminds/semver/v3 v3.0.1/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
 github.com/Masterminds/sprig/v3 v3.0.0/go.mod h1:NEUY/Qq8Gdm2xgYA+NwJM6wmfdRV9xkh8h/Rld20R0U=
 github.com/Masterminds/vcs v1.13.0/go.mod h1:N09YCmOQr6RLxC6UNHzuVwAdodYbbnycGHSmwVJjcKA=
-github.com/MatousJobanek/toolchain-common v0.0.0-20200310095352-262d7bb57705 h1:EMJ/4uvRsoF1Tclhg2ZtpTaNeBR8RFr35Y8d1GIIn7Q=
-github.com/MatousJobanek/toolchain-common v0.0.0-20200310095352-262d7bb57705/go.mod h1:2YsPt67lgOalgg5JxekjpWGfzcpSzxEzQrImT+fHRmo=
 github.com/Microsoft/go-winio v0.4.11/go.mod h1:VhR8bwka0BXejwEJY73c50VrPtXAaKcyvVC4A4RozmA=
 github.com/Microsoft/go-winio v0.4.12/go.mod h1:VhR8bwka0BXejwEJY73c50VrPtXAaKcyvVC4A4RozmA=
 github.com/Microsoft/hcsshim v0.0.0-20190417211021-672e52e9209d/go.mod h1:Op3hHsoHPAvb6lceZHDtd9OkTew38wNoXnJs8iY7rUg=
@@ -117,6 +115,8 @@ github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c/go.mod h1
 github.com/codegangsta/negroni v1.0.0/go.mod h1:v0y3T5G7Y1UlFfyxFn/QLRU4a2EuNau2iZY63YTKWo0=
 github.com/codeready-toolchain/api v0.0.0-20200310091613-eb1bd0c28840 h1:IxoggXq/AANd8rp6/mXpMrdkdyLzVsk/LuXIbKizmzI=
 github.com/codeready-toolchain/api v0.0.0-20200310091613-eb1bd0c28840/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200311111658-3c747cbc46f8 h1:dfkUMjOsnMEMd/xvHymXo/ruIEdI7M/aziRqA6rbpLg=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200311111658-3c747cbc46f8/go.mod h1:2YsPt67lgOalgg5JxekjpWGfzcpSzxEzQrImT+fHRmo=
 github.com/container-storage-interface/spec v1.1.0/go.mod h1:6URME8mwIBbpVyZV93Ce5St17xBiQJQY67NDsuohiy4=
 github.com/containerd/console v0.0.0-20170925154832-84eeaae905fa/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.0.2/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=

@@ -5,6 +5,7 @@ package configuration
 import (
 	"os"
 	"strings"
+	"time"
 
 	errs "github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -27,6 +28,8 @@ const (
 
 // host-operator constants
 const (
+	varDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
+
 	// ToolchainConfigMapName specifies a name of a ConfigMap that keeps toolchain configuration
 	ToolchainConfigMapName = "toolchain-saas-config"
 
@@ -76,7 +79,7 @@ func New(configFilePath string) (*Registry, error) {
 			reg.SetConfigType("yaml")
 			reg.SetConfigFile(configFilePath)
 			err := reg.ReadInConfig() // Find and read the config file
-			if err != nil {           // Handle errors reading the config file.
+			if err != nil { // Handle errors reading the config file.
 				return nil, errs.Wrap(err, "failed to read config file")
 			}
 		}
@@ -86,7 +89,14 @@ func New(configFilePath string) (*Registry, error) {
 
 func (c *Registry) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
+	c.host.SetDefault(varDurationBeforeChangeRequestDeletion, "24h")
+
 	c.regService.SetTypeByDefaultValue(true)
+}
+
+// GetRegServiceImage returns the registration service image.
+func (c *Registry) GetDurationBeforeChangeRequestDeletion() time.Duration {
+	return c.host.GetDuration(varDurationBeforeChangeRequestDeletion)
 }
 
 // GetRegServiceImage returns the registration service image.
@@ -96,6 +106,15 @@ func (c *Registry) GetRegServiceImage() string {
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
 func (c *Registry) GetAllRegistrationServiceParameters() map[string]string {
+	return c.getAllParameters(RegServiceEnvPrefix)
+}
+
+// GetAllHostOperatorParameters returns the map with key-values pairs of parameters that have HOST_OPERATOR prefix
+func (c *Registry) GetAllHostOperatorParameters() map[string]string {
+	return c.getAllParameters(HostEnvPrefix)
+}
+
+func (c *Registry) getAllParameters(prefix string) map[string]string {
 	vars := map[string]string{}
 
 	for _, env := range os.Environ() {
@@ -103,7 +122,7 @@ func (c *Registry) GetAllRegistrationServiceParameters() map[string]string {
 		if len(keyValue) < 2 {
 			continue
 		}
-		if strings.HasPrefix(keyValue[0], RegServiceEnvPrefix+"_") {
+		if strings.HasPrefix(keyValue[0], prefix+"_") {
 			vars[keyValue[0]] = keyValue[1]
 		}
 	}
