@@ -13,4 +13,4 @@ registration-service:
                   "public-client": true
                 }'
 host-operator:
-  duration-before-change-request-deletion: '10s'
+  duration-before-change-request-deletion: '5s'
