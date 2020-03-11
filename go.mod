@@ -70,6 +70,4 @@ replace (
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20190927182313-d4a64ec2cbd8 // Using openshift/api 4.3
 )
 
-replace github.com/codeready-toolchain/api => ../api
-
 go 1.13

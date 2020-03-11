@@ -42,6 +42,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["dev"].content)
 			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["stage"].revision)
 			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["stage"].content)
+			require.NotNil(t, tmpls["advanced"].clusterTemplate)
 			assert.NotEmpty(t, tmpls["advanced"].clusterTemplate.revision)
 			assert.NotEmpty(t, tmpls["advanced"].clusterTemplate.content)
 			// "basic" tier
@@ -51,6 +52,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["dev"].content)
 			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["stage"].revision)
 			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["stage"].content)
+			require.NotNil(t, tmpls["basic"].clusterTemplate)
 			assert.NotEmpty(t, tmpls["basic"].clusterTemplate.revision)
 			assert.NotEmpty(t, tmpls["basic"].clusterTemplate.content)
 			// "team" tier
@@ -58,8 +60,9 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			assert.NotEmpty(t, tmpls["team"].namespaceTemplates["dev"].content)
 			assert.NotEmpty(t, tmpls["team"].namespaceTemplates["stage"].revision)
 			assert.NotEmpty(t, tmpls["team"].namespaceTemplates["stage"].content)
-			assert.Empty(t, tmpls["team"].clusterTemplate.revision)
-			assert.Empty(t, tmpls["team"].clusterTemplate.content)
+			require.NotNil(t, tmpls["team"].clusterTemplate)
+			assert.NotEmpty(t, tmpls["team"].clusterTemplate.revision)
+			assert.NotEmpty(t, tmpls["team"].clusterTemplate.content)
 
 		})
 
