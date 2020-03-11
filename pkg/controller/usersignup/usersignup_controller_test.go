@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"os"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
@@ -1643,6 +1646,70 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	_, err := r.Reconcile(req)
 	require.Error(t, err)
 	require.IsType(t, SignupError{}, err)
+}
+
+func TestBannedUserToUserSignupMapper(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+		},
+	}
+
+	userSignup2 := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      uuid.NewV4().String(),
+			Namespace: operatorNamespace,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "747a250430df0c7976bf2363ebb4014a",
+			},
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "alice.mayweather.doe@redhat.com",
+		},
+	}
+
+	c := test.NewFakeClient(t, userSignup, userSignup2)
+
+	mapper := &BannedUserToUserSignupMapper{
+		client: c,
+	}
+
+	bannedUser := &toolchainv1alpha1.BannedUser{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				toolchainv1alpha1.BannedUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+		},
+		Spec: toolchainv1alpha1.BannedUserSpec{
+			Email: "foo@redhat.com",
+		},
+	}
+
+	// This is required for the mapper to function
+	os.Setenv(k8sutil.WatchNamespaceEnvVar, operatorNamespace)
+
+	req := mapper.Map(handler.MapObject{
+		Object: bannedUser,
+	})
+
+	require.Len(t, req, 1)
+	require.Equal(t, types.NamespacedName{
+		Namespace: userSignup.Namespace,
+		Name:      userSignup.Name,
+	}, req[0].NamespacedName)
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request, *test.FakeClient) {
