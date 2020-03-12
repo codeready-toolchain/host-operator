@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -1649,44 +1650,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 }
 
 func TestBannedUserToUserSignupMapper(t *testing.T) {
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewV4().String(),
-			Namespace: operatorNamespace,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-			},
-			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
-			},
-		},
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-		},
-	}
-
-	userSignup2 := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewV4().String(),
-			Namespace: operatorNamespace,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
-			},
-			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "747a250430df0c7976bf2363ebb4014a",
-			},
-		},
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "alice.mayweather.doe@redhat.com",
-		},
-	}
-
-	c := test.NewFakeClient(t, userSignup, userSignup2)
-
-	mapper := &BannedUserToUserSignupMapper{
-		client: c,
-	}
-
+	// when
 	bannedUser := &toolchainv1alpha1.BannedUser{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
@@ -1698,18 +1662,200 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		},
 	}
 
-	// This is required for the mapper to function
-	os.Setenv(k8sutil.WatchNamespaceEnvVar, operatorNamespace)
+	t.Run("test BannedUserToUserSignupMapper maps correctly", func(t *testing.T) {
+		userSignup := &v1alpha1.UserSignup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      uuid.NewV4().String(),
+				Namespace: operatorNamespace,
+				Annotations: map[string]string{
+					toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				},
+				Labels: map[string]string{
+					toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+				},
+			},
+			Spec: v1alpha1.UserSignupSpec{
+				Username: "foo@redhat.com",
+			},
+		}
 
-	req := mapper.Map(handler.MapObject{
-		Object: bannedUser,
+		userSignup2 := &v1alpha1.UserSignup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      uuid.NewV4().String(),
+				Namespace: operatorNamespace,
+				Annotations: map[string]string{
+					toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
+				},
+				Labels: map[string]string{
+					toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "747a250430df0c7976bf2363ebb4014a",
+				},
+			},
+			Spec: v1alpha1.UserSignupSpec{
+				Username: "alice.mayweather.doe@redhat.com",
+			},
+		}
+
+		c := test.NewFakeClient(t, userSignup, userSignup2)
+
+		mapper := &BannedUserToUserSignupMapper{
+			client: c,
+		}
+
+		// This is required for the mapper to function
+		os.Setenv(k8sutil.WatchNamespaceEnvVar, operatorNamespace)
+		defer os.Unsetenv(k8sutil.WatchNamespaceEnvVar)
+
+		req := mapper.Map(handler.MapObject{
+			Object: bannedUser,
+		})
+
+		require.Len(t, req, 1)
+		require.Equal(t, types.NamespacedName{
+			Namespace: userSignup.Namespace,
+			Name:      userSignup.Name,
+		}, req[0].NamespacedName)
 	})
 
-	require.Len(t, req, 1)
-	require.Equal(t, types.NamespacedName{
-		Namespace: userSignup.Namespace,
-		Name:      userSignup.Name,
-	}, req[0].NamespacedName)
+	t.Run("test BannedUserToUserSignupMapper returns nil when client list fails", func(t *testing.T) {
+		c := test.NewFakeClient(t)
+		c.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			return errors.New("err happened")
+		}
+
+		mapper := &BannedUserToUserSignupMapper{
+			client: c,
+		}
+		req := mapper.Map(handler.MapObject{
+			Object: bannedUser,
+		})
+
+		require.Nil(t, req)
+	})
+
+	t.Run("test BannedUserToUserSignupMapper returns nil when watch namespace not set ", func(t *testing.T) {
+		c := test.NewFakeClient(t)
+
+		mapper := &BannedUserToUserSignupMapper{
+			client: c,
+		}
+		req := mapper.Map(handler.MapObject{
+			Object: bannedUser,
+		})
+
+		require.Nil(t, req)
+	})
+}
+
+func TestUserSignupChangedPredicate(t *testing.T) {
+	// when
+	pred := &UserSignupChangedPredicate{}
+	userSignupName := uuid.NewV4().String()
+
+	userSignupOld := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userSignupName,
+			Namespace: operatorNamespace,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+			Generation: 1,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+		},
+	}
+
+	userSignupNewNotChanged := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userSignupName,
+			Namespace: operatorNamespace,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+			Generation: 1,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "alice.mayweather.doe@redhat.com",
+		},
+	}
+
+	userSignupNewChanged := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userSignupName,
+			Namespace: operatorNamespace,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "747a250430df0c7976bf2363ebb4014a",
+			},
+			Generation: 2,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "alice.mayweather.doe@redhat.com",
+		},
+	}
+
+	t.Run("test UserSignupChangedPredicate returns false when MetaOld not set", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   nil,
+			ObjectOld: userSignupOld,
+			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
+			ObjectNew: userSignupNewNotChanged,
+		}
+		require.False(t, pred.Update(e))
+	})
+	t.Run("test UserSignupChangedPredicate returns false when ObjectOld not set", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
+			ObjectOld: nil,
+			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
+			ObjectNew: userSignupNewNotChanged,
+		}
+		require.False(t, pred.Update(e))
+	})
+	t.Run("test UserSignupChangedPredicate returns false when ObjectNew not set", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
+			ObjectOld: userSignupOld,
+			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
+			ObjectNew: nil,
+		}
+		require.False(t, pred.Update(e))
+	})
+	t.Run("test UserSignupChangedPredicate returns false when MetaNew not set", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
+			ObjectOld: userSignupOld,
+			MetaNew:   nil,
+			ObjectNew: userSignupNewNotChanged,
+		}
+		require.False(t, pred.Update(e))
+	})
+	t.Run("test UserSignupChangedPredicate returns false when generation unchanged and annoations unchanged", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
+			ObjectOld: userSignupOld,
+			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
+			ObjectNew: userSignupNewNotChanged,
+		}
+		require.False(t, pred.Update(e))
+	})
+	t.Run("test UserSignupChangedPredicate returns true when generation changed", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
+			ObjectOld: userSignupOld,
+			MetaNew:   userSignupNewChanged.ObjectMeta.GetObjectMeta(),
+			ObjectNew: userSignupNewChanged,
+		}
+		require.True(t, pred.Update(e))
+	})
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request, *test.FakeClient) {
