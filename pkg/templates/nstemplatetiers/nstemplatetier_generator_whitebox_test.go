@@ -308,24 +308,24 @@ func TestNewNSTemplateTiers(t *testing.T) {
 }
 
 var ExpectedRevisions = map[string]map[string]string{
-	"advanced": map[string]string{
+	"advanced": {
 		"code":    "123456a",
 		"dev":     "123456b",
 		"stage":   "123456c",
 		"cluster": "654321a",
 	},
-	"basic": map[string]string{
+	"basic": {
 		"code":    "123456d",
 		"dev":     "123456e",
 		"stage":   "123456f",
 		"cluster": "654321b",
 	},
-	"team": map[string]string{
+	"team": {
 		"dev":     "123456g",
 		"stage":   "123456h",
 		"cluster": "654321c",
 	},
-	"nocluster": map[string]string{
+	"nocluster": {
 		"code":  "123456i",
 		"dev":   "123456j",
 		"stage": "1234567",
