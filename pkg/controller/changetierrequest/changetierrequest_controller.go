@@ -85,7 +85,7 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 		return reconcile.Result{}, err
 	}
 
-	// if is complete, then check when status was changed delete it if the requested duration has passed
+	// if is complete, then check when status was changed and delete it if the requested duration has passed
 	completeCond, found := condition.FindConditionByType(changeTierRequest.Status.Conditions, toolchainv1alpha1.ChangeTierRequestComplete)
 	if found && completeCond.Status == corev1.ConditionTrue {
 		deleted, requeueAfter, err := r.checkTransitionTimeAndDelete(reqLogger, changeTierRequest, completeCond)
