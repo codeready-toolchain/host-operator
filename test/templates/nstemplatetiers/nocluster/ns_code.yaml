@@ -1,0 +1,20 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  labels:
+    provider: codeready-toolchain
+  name: nocluster-code
+objects:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    annotations:
+      openshift.io/description: ${USERNAME}-code
+      openshift.io/display-name: ${USERNAME}-code
+      openshift.io/requester: ${USERNAME}
+    labels:
+      provider: codeready-toolchain
+    name: ${USERNAME}-code
+parameters:
+- name: USERNAME
+  required: true

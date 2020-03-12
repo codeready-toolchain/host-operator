@@ -73,7 +73,7 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 // templates: namespaces and other cluster-scoped resources belonging to a given tier ("advanced", "basic", "team", etc.)
 type templates struct {
 	namespaceTemplates map[string]template // namespace templates (including roles, etc.) indexed by type ("dev", "code", "stage")
-	clusterTemplate    template            // other cluster-scoped resources, in a single template file
+	clusterTemplate    *template           // other cluster-scoped resources, in a single template file
 }
 
 // template: a template content and its latest git revision
@@ -139,7 +139,7 @@ func loadTemplatesByTiers(assets Assets) (map[string]*templates, error) {
 			kind := strings.TrimSuffix(strings.TrimPrefix(filename, "ns_"), ".yaml")
 			results[tier].namespaceTemplates[kind] = tmpl
 		case filename == "cluster.yaml":
-			results[tier].clusterTemplate = tmpl
+			results[tier].clusterTemplate = &tmpl
 		default:
 			log.Info("skipping asset: unknown scope for file", "name", name)
 		}
@@ -220,7 +220,7 @@ func newNSTemplateTier(decoder runtime.Decoder, namespace, tier string, tmpls te
 		})
 	}
 	// also, add the cluster resource template+revision if it exists
-	if tmpls.clusterTemplate.content != nil {
+	if tmpls.clusterTemplate != nil {
 		// convert the content into a templatev1.Template
 		tmplObj := &templatev1.Template{}
 		_, _, err := decoder.Decode(tmpls.clusterTemplate.content, nil, tmplObj)

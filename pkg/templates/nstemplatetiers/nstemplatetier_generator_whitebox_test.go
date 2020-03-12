@@ -35,35 +35,25 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, tmpls, 3)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			// "advanced" tier
-			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["code"].revision)
-			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["code"].content)
-			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["dev"].revision)
-			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["dev"].content)
-			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["stage"].revision)
-			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["stage"].content)
-			require.NotNil(t, tmpls["advanced"].clusterTemplate)
-			assert.NotEmpty(t, tmpls["advanced"].clusterTemplate.revision)
-			assert.NotEmpty(t, tmpls["advanced"].clusterTemplate.content)
-			// "basic" tier
-			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["code"].revision)
-			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["code"].content)
-			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["dev"].revision)
-			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["dev"].content)
-			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["stage"].revision)
-			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["stage"].content)
-			require.NotNil(t, tmpls["basic"].clusterTemplate)
-			assert.NotEmpty(t, tmpls["basic"].clusterTemplate.revision)
-			assert.NotEmpty(t, tmpls["basic"].clusterTemplate.content)
-			// "team" tier
-			assert.NotEmpty(t, tmpls["team"].namespaceTemplates["dev"].revision)
-			assert.NotEmpty(t, tmpls["team"].namespaceTemplates["dev"].content)
-			assert.NotEmpty(t, tmpls["team"].namespaceTemplates["stage"].revision)
-			assert.NotEmpty(t, tmpls["team"].namespaceTemplates["stage"].content)
-			require.NotNil(t, tmpls["team"].clusterTemplate)
-			assert.NotEmpty(t, tmpls["team"].clusterTemplate.revision)
-			assert.NotEmpty(t, tmpls["team"].clusterTemplate.content)
-
+			for _, tier := range []string{"advanced", "basic", "team"} {
+				t.Run(tier, func(t *testing.T) {
+					for _, kind := range []string{"code", "dev", "stage"} {
+						t.Run(kind, func(t *testing.T) {
+							if tier == "team" && kind == "code" {
+								// not applicable
+								return
+							}
+							assert.NotEmpty(t, tmpls[tier].namespaceTemplates[kind].revision)
+							assert.NotEmpty(t, tmpls[tier].namespaceTemplates[kind].content)
+						})
+						t.Run("cluster", func(t *testing.T) {
+							require.NotNil(t, tmpls[tier].clusterTemplate)
+							assert.NotEmpty(t, tmpls[tier].clusterTemplate.revision)
+							assert.NotEmpty(t, tmpls[tier].clusterTemplate.content)
+						})
+					}
+				})
+			}
 		})
 
 		t.Run("with test assets", func(t *testing.T) {
@@ -73,33 +63,32 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 3)
+			require.Len(t, tmpls, 4)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			// "advanced" tier
-			assert.Equal(t, "123456a", tmpls["advanced"].namespaceTemplates["code"].revision)
-			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["code"].content)
-			assert.Equal(t, "123456b", tmpls["advanced"].namespaceTemplates["dev"].revision)
-			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["dev"].content)
-			assert.Equal(t, "123456c", tmpls["advanced"].namespaceTemplates["stage"].revision)
-			assert.NotEmpty(t, tmpls["advanced"].namespaceTemplates["stage"].content)
-			assert.Equal(t, "654321a", tmpls["advanced"].clusterTemplate.revision)
-			assert.NotEmpty(t, tmpls["advanced"].clusterTemplate.content)
-			// "basic" tier
-			assert.Equal(t, "123456d", tmpls["basic"].namespaceTemplates["code"].revision)
-			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["code"].content)
-			assert.Equal(t, "123456e", tmpls["basic"].namespaceTemplates["dev"].revision)
-			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["dev"].content)
-			assert.Equal(t, "123456f", tmpls["basic"].namespaceTemplates["stage"].revision)
-			assert.NotEmpty(t, tmpls["basic"].namespaceTemplates["stage"].content)
-			assert.Equal(t, "654321b", tmpls["basic"].clusterTemplate.revision)
-			assert.NotEmpty(t, tmpls["basic"].clusterTemplate.content)
-			// "team" tier
-			assert.Equal(t, "123456g", tmpls["team"].namespaceTemplates["dev"].revision)
-			assert.NotEmpty(t, tmpls["team"].namespaceTemplates["dev"].content)
-			assert.Equal(t, "123456h", tmpls["team"].namespaceTemplates["stage"].revision)
-			assert.NotEmpty(t, tmpls["team"].namespaceTemplates["stage"].content)
-			assert.Empty(t, tmpls["team"].clusterTemplate.revision)
-			assert.Empty(t, tmpls["team"].clusterTemplate.content)
+
+			for _, tier := range []string{"advanced", "basic", "team", "nocluster"} {
+				t.Run(tier, func(t *testing.T) {
+					for _, kind := range []string{"code", "dev", "stage"} {
+						t.Run(kind, func(t *testing.T) {
+							if tier == "team" && kind == "code" {
+								// not applicable
+								return
+							}
+							assert.Equal(t, ExpectedRevisions[tier][kind], tmpls[tier].namespaceTemplates[kind].revision)
+							assert.NotEmpty(t, tmpls[tier].namespaceTemplates[kind].content)
+						})
+					}
+					t.Run("cluster", func(t *testing.T) {
+						if tier == "nocluster" {
+							assert.Nil(t, tmpls[tier].clusterTemplate)
+							return
+						}
+						require.NotNil(t, tmpls[tier].clusterTemplate)
+						assert.Equal(t, ExpectedRevisions[tier]["cluster"], tmpls[tier].clusterTemplate.revision)
+						assert.NotEmpty(t, tmpls[tier].clusterTemplate.content)
+					})
+				})
+			}
 		})
 	})
 
@@ -296,43 +285,51 @@ func TestNewNSTemplateTiers(t *testing.T) {
 		tiers, err := newNSTemplateTiers(s, namespace, templatesByTier)
 		// then
 		require.NoError(t, err)
-		require.Len(t, tiers, 3)
-		advancedTier, found := tiers["advanced"]
-		require.True(t, found)
-		assert.Equal(t, "advanced", advancedTier.ObjectMeta.Name)
-		assert.Equal(t, namespace, advancedTier.ObjectMeta.Namespace)
-		for _, ns := range advancedTier.Spec.Namespaces {
-			assert.NotEmpty(t, ns.Revision)
-			assert.NotEmpty(t, ns.Type)
-			assert.NotEmpty(t, ns.Template)
+		require.Len(t, tiers, 4)
+		for _, name := range []string{"advanced", "basic", "team", "nocluster"} {
+			tier, found := tiers[name]
+			require.True(t, found)
+			assert.Equal(t, name, tier.ObjectMeta.Name)
+			assert.Equal(t, namespace, tier.ObjectMeta.Namespace)
+			for _, ns := range tier.Spec.Namespaces {
+				assert.NotEmpty(t, ns.Revision)
+				assert.NotEmpty(t, ns.Type)
+				assert.NotEmpty(t, ns.Template)
+			}
+			if name == "nocluster" {
+				assert.Nil(t, tier.Spec.ClusterResources)
+			} else {
+				require.NotNil(t, tier.Spec.ClusterResources)
+				assert.NotEmpty(t, tier.Spec.ClusterResources.Revision)
+				assert.NotEmpty(t, tier.Spec.ClusterResources.Template)
+			}
 		}
-		require.NotNil(t, advancedTier.Spec.ClusterResources)
-		assert.NotEmpty(t, advancedTier.Spec.ClusterResources.Revision)
-		assert.NotEmpty(t, advancedTier.Spec.ClusterResources.Template)
-		basicTier, found := tiers["basic"]
-		require.True(t, found)
-		assert.Equal(t, "basic", basicTier.ObjectMeta.Name)
-		assert.Equal(t, namespace, basicTier.ObjectMeta.Namespace)
-		for _, ns := range basicTier.Spec.Namespaces {
-			assert.NotEmpty(t, ns.Revision)
-			assert.NotEmpty(t, ns.Type)
-			assert.NotEmpty(t, ns.Template)
-		}
-		require.NotNil(t, basicTier.Spec.ClusterResources)
-		assert.NotEmpty(t, basicTier.Spec.ClusterResources.Revision)
-		assert.NotEmpty(t, basicTier.Spec.ClusterResources.Template)
-		teamTier, found := tiers["team"]
-		require.True(t, found)
-		assert.Equal(t, "team", teamTier.ObjectMeta.Name)
-		assert.Equal(t, namespace, teamTier.ObjectMeta.Namespace)
-		for _, ns := range teamTier.Spec.Namespaces {
-			assert.NotEmpty(t, ns.Revision)
-			assert.NotEmpty(t, ns.Type)
-			assert.NotEmpty(t, ns.Template)
-		}
-		assert.Nil(t, teamTier.Spec.ClusterResources)
 	})
+}
 
+var ExpectedRevisions = map[string]map[string]string{
+	"advanced": map[string]string{
+		"code":    "123456a",
+		"dev":     "123456b",
+		"stage":   "123456c",
+		"cluster": "654321a",
+	},
+	"basic": map[string]string{
+		"code":    "123456d",
+		"dev":     "123456e",
+		"stage":   "123456f",
+		"cluster": "654321b",
+	},
+	"team": map[string]string{
+		"dev":     "123456g",
+		"stage":   "123456h",
+		"cluster": "654321c",
+	},
+	"nocluster": map[string]string{
+		"code":  "123456i",
+		"dev":   "123456j",
+		"stage": "1234567",
+	},
 }
 
 // newNSTemplateTierFromYAML generates toolchainv1alpha1.NSTemplateTier using a golang template which is applied to the given tier.

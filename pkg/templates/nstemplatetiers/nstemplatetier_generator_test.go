@@ -59,13 +59,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			// verify that 3 NSTemplateTier CRs were created: "advanced", "basic", and "team"
-			for _, tierName := range []string{"advanced", "basic", "team"} {
+			// verify that 4 NSTemplateTier CRs were created: "advanced", "basic", "team", "nocluster"
+			for _, tierName := range []string{"advanced", "basic", "team", "nocluster"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
 				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
-				if tier.Name == "team" {
+				if tier.Name == "nocluster" {
 					assert.Nil(t, tier.Spec.ClusterResources) // "team" tier should not have cluster resources set
 				} else {
 					assert.NotNil(t, tier.Spec.ClusterResources)
@@ -107,14 +107,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				}
 				return clt.Client.Update(ctx, obj)
 			}
-			revisions := generateRevisions()
 			assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 
 			// when
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 			require.NoError(t, err)
-			// verify that 3 NSTemplateTier CRs were created: "advanced", "basic", and "team"
-			for _, tierName := range []string{"advanced", "basic", "team"} {
+			// verify that 4 NSTemplateTier CRs were created: "advanced", "basic", "team", "nocluster"
+			for _, tierName := range []string{"advanced", "basic", "team", "nocluster"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
@@ -124,7 +123,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
 				// verify their namespace revisions
 				for _, ns := range tier.Spec.Namespaces {
-					assert.Equal(t, revisions[tierName][ns.Type], ns.Revision)
+					assert.Equal(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Revision)
 				}
 			}
 
@@ -133,8 +132,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			// verify that the 3 NStemplateTier CRs were updated
-			for _, tierName := range []string{"advanced", "basic", "team"} {
+			// verify that the 4 NStemplateTier CRs were updated
+			for _, tierName := range []string{"advanced", "basic", "team", "nocluster"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
@@ -142,8 +141,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				assert.Equal(t, int64(2), tier.ObjectMeta.Generation)
 				// verify their new namespace revisions
 				for _, ns := range tier.Spec.Namespaces {
-					assert.Equal(t, revisions[tierName][ns.Type], ns.Revision)
-					assert.NotEmpty(t, revisions[tierName][ns.Type], ns.Template)
+					assert.Equal(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Revision)
+					assert.NotEmpty(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Template)
 				}
 			}
 		})
@@ -207,25 +206,4 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		})
 
 	})
-}
-
-func generateRevisions() map[string]map[string]string {
-	return map[string]map[string]string{
-		"advanced": {
-			"code":    "123456a",
-			"dev":     "123456b",
-			"stage":   "123456c",
-			"cluster": "654321a",
-		},
-		"basic": {
-			"code":    "123456d",
-			"dev":     "123456e",
-			"stage":   "123456f",
-			"cluster": "654321b",
-		},
-		"team": {
-			"dev":   "123456g",
-			"stage": "123456h",
-		},
-	}
 }
