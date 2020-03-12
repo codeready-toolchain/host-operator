@@ -94,7 +94,7 @@ func (c *Registry) setConfigDefaults() {
 	c.regService.SetTypeByDefaultValue(true)
 }
 
-// GetRegServiceImage returns the registration service image.
+// GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
 func (c *Registry) GetDurationBeforeChangeRequestDeletion() time.Duration {
 	return c.host.GetDuration(varDurationBeforeChangeRequestDeletion)
 }
