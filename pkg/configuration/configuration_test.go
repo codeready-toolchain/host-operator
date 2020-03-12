@@ -113,7 +113,7 @@ func TestGetAllRegistrationServiceParameters(t *testing.T) {
 		require.NoError(t, err)
 		newVal := u.String()
 		newVal2 := "foo=bar=baz"
-		//todo fix this
+
 		restore := test.SetEnvVarsAndRestore(t,
 			test.Env(firstKey, newVal),
 			test.Env(secondKey, newVal2),
@@ -175,7 +175,7 @@ func TestGetAllHostOperatorParameters(t *testing.T) {
 		require.NoError(t, err)
 		newVal := u.String()
 		newVal2 := "foo=bar=baz"
-		//todo fix this
+
 		restore := test.SetEnvVarsAndRestore(t,
 			test.Env(firstKey, newVal),
 			test.Env(secondKey, newVal2),
