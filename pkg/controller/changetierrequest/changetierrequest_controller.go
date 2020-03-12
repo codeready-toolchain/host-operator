@@ -112,16 +112,16 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 
 func (r *ReconcileChangeTierRequest) checkTransitionTimeAndDelete(log logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
 	log.Info("the ChangeTierRequest is completed so we can deal with its deletion")
-	timeFromLastChange := time.Since(completeCond.LastTransitionTime.Time)
+	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
-	if timeFromLastChange >= r.config.GetDurationBeforeChangeRequestDeletion() {
+	if timeSinceCompletion >= r.config.GetDurationBeforeChangeRequestDeletion() {
 		log.Info("the ChangeTierRequest is completed for longer time than '%s' so it's ready to be deleted", r.config.GetDurationBeforeChangeRequestDeletion().String())
 		if err := r.client.Delete(context.TODO(), changeTierRequest, &client.DeleteOptions{}); err != nil {
 			return false, 0, errs.Wrapf(err, "unable to delete ChangeTierRequest object '%s'", changeTierRequest.Name)
 		}
 		return true, 0, nil
 	}
-	return false, r.config.GetDurationBeforeChangeRequestDeletion() - timeFromLastChange, nil
+	return false, r.config.GetDurationBeforeChangeRequestDeletion() - timeSinceCompletion, nil
 }
 
 func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) error {
