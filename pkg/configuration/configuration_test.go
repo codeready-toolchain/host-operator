@@ -154,37 +154,3 @@ func TestGetDurationBeforeChangeRequestDeletion(t *testing.T) {
 		assert.Equal(t, cast.ToDuration("10s"), config.GetDurationBeforeChangeRequestDeletion())
 	})
 }
-
-func TestGetAllHostOperatorParameters(t *testing.T) {
-	firstKey := configuration.HostEnvPrefix + "_" + "FIRST_KEY"
-	secondKey := configuration.HostEnvPrefix + "_" + "SECOND_KEY"
-	thirdKey := configuration.HostEnvPrefix + "_" + "THIRD_KEY"
-
-	t.Run("default", func(t *testing.T) {
-		config := getDefaultConfiguration(t)
-		assert.Empty(t, config.GetAllHostOperatorParameters())
-	})
-
-	t.Run("file with empty list ", func(t *testing.T) {
-		config := getFileConfiguration(t, `ANYTHING: "SOMETHING"`)
-		assert.Empty(t, config.GetAllHostOperatorParameters())
-	})
-
-	t.Run("env overwrite", func(t *testing.T) {
-		u, err := uuid.NewV4()
-		require.NoError(t, err)
-		newVal := u.String()
-		newVal2 := "foo=bar=baz"
-
-		restore := test.SetEnvVarsAndRestore(t,
-			test.Env(firstKey, newVal),
-			test.Env(secondKey, newVal2),
-			test.Env(thirdKey, ""))
-		defer restore()
-		config := getDefaultConfiguration(t)
-		require.Len(t, config.GetAllHostOperatorParameters(), 3)
-		assert.Equal(t, newVal, config.GetAllHostOperatorParameters()[firstKey])
-		assert.Equal(t, newVal2, config.GetAllHostOperatorParameters()[secondKey])
-		assert.Empty(t, config.GetAllHostOperatorParameters()[thirdKey])
-	})
-}

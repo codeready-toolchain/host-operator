@@ -28,7 +28,7 @@ const (
 
 // host-operator constants
 const (
-	varDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
+	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
 
 	// ToolchainConfigMapName specifies a name of a ConfigMap that keeps toolchain configuration
 	ToolchainConfigMapName = "toolchain-saas-config"
@@ -89,14 +89,14 @@ func New(configFilePath string) (*Registry, error) {
 
 func (c *Registry) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
-	c.host.SetDefault(varDurationBeforeChangeRequestDeletion, "24h")
+	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
 
 	c.regService.SetTypeByDefaultValue(true)
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
 func (c *Registry) GetDurationBeforeChangeRequestDeletion() time.Duration {
-	return c.host.GetDuration(varDurationBeforeChangeRequestDeletion)
+	return c.host.GetDuration(VarDurationBeforeChangeRequestDeletion)
 }
 
 // GetRegServiceImage returns the registration service image.
@@ -106,15 +106,6 @@ func (c *Registry) GetRegServiceImage() string {
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
 func (c *Registry) GetAllRegistrationServiceParameters() map[string]string {
-	return c.getAllParameters(RegServiceEnvPrefix)
-}
-
-// GetAllHostOperatorParameters returns the map with key-values pairs of parameters that have HOST_OPERATOR prefix
-func (c *Registry) GetAllHostOperatorParameters() map[string]string {
-	return c.getAllParameters(HostEnvPrefix)
-}
-
-func (c *Registry) getAllParameters(prefix string) map[string]string {
 	vars := map[string]string{}
 
 	for _, env := range os.Environ() {
@@ -122,7 +113,7 @@ func (c *Registry) getAllParameters(prefix string) map[string]string {
 		if len(keyValue) < 2 {
 			continue
 		}
-		if strings.HasPrefix(keyValue[0], prefix+"_") {
+		if strings.HasPrefix(keyValue[0], RegServiceEnvPrefix+"_") {
 			vars[keyValue[0]] = keyValue[1]
 		}
 	}

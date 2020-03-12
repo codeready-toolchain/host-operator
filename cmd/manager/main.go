@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 
 	api "github.com/codeready-toolchain/api/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -227,16 +228,22 @@ func loadConfig() (*configuration.Registry, error) {
 }
 
 func printConfig(cfg *configuration.Registry) {
-	logWithValues := log
+	logWithValuesRegServ := log
 	for key, value := range cfg.GetAllRegistrationServiceParameters() {
-		logWithValues = logWithValues.WithValues("key", key, "value", value)
+		logWithValuesRegServ = logWithValuesRegServ.WithValues("key", key, "value", value)
 	}
-	logWithValues.Info("Registration Service configuration variables:")
+	logWithValuesRegServ.Info("Registration Service configuration variables:")
 
-	for key, value := range cfg.GetAllHostOperatorParameters() {
-		logWithValues = logWithValues.WithValues("key", key, "value", value)
-	}
-	logWithValues.Info("Host Operator configuration variables:")
+	logWithValuesHost := log.WithValues(
+		"key", getHostEnvVarKey(configuration.VarDurationBeforeChangeRequestDeletion),
+		"value", cfg.GetDurationBeforeChangeRequestDeletion())
+
+	logWithValuesHost.Info("Host Operator configuration variables:")
+}
+
+func getHostEnvVarKey(key string) string {
+	envKey := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
+	return configuration.HostEnvPrefix + "_" + envKey
 }
 
 // ensureKubeFedClusterCRD ensure that KubeFedCluster CRD exists in the cluster.
