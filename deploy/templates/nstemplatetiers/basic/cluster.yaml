@@ -8,6 +8,8 @@ objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
+    labels:
+      provider: codeready-toolchain
     name: for-${USERNAME}
   spec:
     quota:
