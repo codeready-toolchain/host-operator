@@ -121,7 +121,10 @@ func (r *ReconcileChangeTierRequest) checkTransitionTimeAndDelete(log logr.Logge
 		}
 		return true, 0, nil
 	}
-	return false, r.config.GetDurationBeforeChangeRequestDeletion() - timeSinceCompletion, nil
+	diff := r.config.GetDurationBeforeChangeRequestDeletion() - timeSinceCompletion
+	log.Info("the ChangeTierRequest has been completed for shorter time than '%s' so it's going to be reconciled again after '%s'",
+		r.config.GetDurationBeforeChangeRequestDeletion().String(), diff.String())
+	return false, diff, nil
 }
 
 func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) error {
