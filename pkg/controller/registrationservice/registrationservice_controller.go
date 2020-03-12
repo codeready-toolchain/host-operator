@@ -27,12 +27,6 @@ import (
 
 var log = logf.Log.WithName("controller_registrationservice")
 
-const (
-	deployingReason       = "Deploying"
-	deployingFailedReason = "DeployingFailed"
-	deployedReason        = "Deployed"
-)
-
 // Add creates a new RegistrationService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
@@ -147,10 +141,10 @@ func (r *ReconcileRegistrationService) Reconcile(request reconcile.Request) (rec
 	for _, object := range objects {
 		createdOrUpdated, err := client.CreateOrUpdateObject(object.Object, false, regService)
 		if err != nil {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, regService, r.setStatusFailed(deployingFailedReason), err, "cannot deploy registration service template")
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, regService, r.setStatusFailed(toolchainv1alpha1.RegistrationServiceDeployingFailedReason), err, "cannot deploy registration service template")
 		}
 		if createdOrUpdated {
-			return reconcile.Result{}, updateStatusConditions(r.client, regService, toBeNotReady(deployingReason, ""))
+			return reconcile.Result{}, updateStatusConditions(r.client, regService, toBeNotReady(toolchainv1alpha1.RegistrationServiceDeployingReason, ""))
 		}
 	}
 
@@ -211,7 +205,7 @@ func toBeDeployed() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionTrue,
-		Reason: deployedReason,
+		Reason: toolchainv1alpha1.RegistrationServiceDeployedReason,
 	}
 }
 

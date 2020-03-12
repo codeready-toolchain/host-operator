@@ -165,7 +165,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 							// Assert expected objects in the template
 							// Each template should have one Namespace and one RoleBinding object
 							// except "code" which should also have additional RoleBinding and Role
-							if nsType == "code" {
+							if nsType == "code" || tierName == "team" {
 								require.Len(t, ns.Template.Objects, 4)
 							} else {
 								require.Len(t, ns.Template.Objects, 2)

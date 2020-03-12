@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/codeready-toolchain/host-operator/pkg/controller/changetierrequest"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
@@ -14,6 +15,7 @@ func init() {
 	addToManagerFuncs = append(addToManagerFuncs, masteruserrecord.Add)
 	addToManagerFuncs = append(addToManagerFuncs, registrationservice.Add)
 	addToManagerFuncs = append(addToManagerFuncs, usersignup.Add)
+	addToManagerFuncs = append(addToManagerFuncs, changetierrequest.Add)
 }
 
 // AddToManager adds all Controllers to the Manager

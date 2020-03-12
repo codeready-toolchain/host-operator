@@ -6,6 +6,18 @@ metadata:
       [
         {
           "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "ChangeTierRequest",
+          "metadata": {
+            "name": "changetierrequest-1a2b3c"
+          },
+          "spec": {
+            "murName": "johnsmith",
+            "targetCluster": "east-2a",
+            "tierName": "advanced"
+          }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
           "kind": "MasterUserRecord",
           "metadata": {
             "name": "johnsmith"
@@ -132,6 +144,11 @@ spec:
       displayName: Banned User
       kind: BannedUser
       name: bannedusers.toolchain.dev.openshift.com
+      version: v1alpha1
+    - description: ChangeTierRequest is used as a trigger for a tier change in MasterUserRecord/UserAccount
+      displayName: Change Tier Request
+      kind: ChangeTierRequest
+      name: changetierrequests.toolchain.dev.openshift.com
       version: v1alpha1
     - description: MasterUserRecord keeps all information about user, user accounts
         and namespaces provisioned in CodeReady Toolchain

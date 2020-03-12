@@ -11,11 +11,13 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	apierros "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -46,7 +48,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-		HasConditions(toBeNotReady(provisioningReason, "")).
+		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
 }
 
@@ -74,7 +76,7 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-		HasConditions(toBeNotReady(provisioningReason, "")).
+		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
 }
 
@@ -101,7 +103,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(targetClusterNotReadyReason, msg)).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
 	})
 
@@ -119,7 +121,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		msg := "the member cluster member-cluster not found in the registry"
 		assert.Contains(t, err.Error(), msg)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(targetClusterNotReadyReason, msg)).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
 	})
 
@@ -139,7 +141,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(targetClusterNotReadyReason, msg)).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
 	})
 
@@ -158,7 +160,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		assert.Contains(t, err.Error(), msg)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(targetClusterNotReadyReason, msg)).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
 	})
 
@@ -199,7 +201,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(unableToCreateUserAccountReason, "unable to create user account john"))
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason, "unable to create user account john"))
 	})
 
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
@@ -227,7 +229,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			Exists().
 			HasSpec(userAcc.Spec)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(unableToSynchronizeUserAccountSpecReason, "unable to update user account john"))
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason, "unable to update user account john"))
 	})
 
 	t.Run("status synchronization of the UserAccount & MasterUserRecord failed", func(t *testing.T) {
@@ -282,7 +284,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(unableToAddFinalizerReason, "unable to add finalizer to MUR john"))
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason, "unable to add finalizer to MUR john"))
 	})
 
 	t.Run("deletion of MasterUserRecord fails because it cannot remove finalizer", func(t *testing.T) {
@@ -307,7 +309,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(unableToRemoveFinalizerReason, "unable to remove finalizer from MUR john"))
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason, "unable to remove finalizer from MUR john"))
 	})
 
 	t.Run("deletion of the UserAccount failed", func(t *testing.T) {
@@ -332,7 +334,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).Exists()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(unableToDeleteUserAccountsReason, "unable to delete user account john")).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason, "unable to delete user account john")).
 			HasFinalizer()
 	})
 }
@@ -376,7 +378,7 @@ func TestModifyUserAccounts(t *testing.T) {
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[2].Spec)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-		HasConditions(toBeNotReady(updatingReason, ""))
+		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 }
 
 func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
@@ -388,7 +390,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		// setup MUR that wil contain UserAccountStatusEmbedded fields for UserAccounts from "member2-cluster" and "member3-cluster" but will miss from test.MemberClusterName
 		// then the reconcile should add the misssing UserAccountStatusEmbedded for the missing test.MemberClusterName cluster without updating anything else
 		mur := murtest.NewMasterUserRecord("john",
-			murtest.StatusCondition(toBeNotReady(provisioningReason, "")),
+			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
 			murtest.AdditionalAccounts("member2-cluster", "member3-cluster"))
 
 		userAccount := uatest.NewUserAccountFromMur(mur,
@@ -444,7 +446,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			HasConditions(userAccount3.Status.Conditions...)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(provisioningReason, "")).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 			HasStatusUserAccounts(test.MemberClusterName, "member2-cluster", "member3-cluster").
 			AllUserAccountsHaveStatusSyncIndex("123abc").
 			AllUserAccountsHaveCondition(userAccount.Status.Conditions[0])
@@ -455,7 +457,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		// MUR with ready condition set to false with an error
 		// all MUR.Status.UserAccount[] conditions are already in sync with the corresponding UserAccounts and set to Ready
 		mur := murtest.NewMasterUserRecord("john",
-			murtest.StatusCondition(toBeNotReady(targetClusterNotReadyReason, "something went wrong")),
+			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, "something went wrong")),
 			murtest.AdditionalAccounts("member2-cluster"))
 		userAccount := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
@@ -544,6 +546,29 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 		DoesNotExist()
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		DoesNotHaveFinalizer()
+}
+
+func TestDisablingMasterUserRecord(t *testing.T) {
+	// given
+	logf.SetLogger(logf.ZapLogger(true))
+	s := apiScheme(t)
+	mur := murtest.NewMasterUserRecord("john", murtest.DisabledMur(true))
+	userAccount := uatest.NewUserAccountFromMur(mur, uatest.DisabledUa(false))
+	memberClient := test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute(false))
+	hostClient := test.NewFakeClient(t, mur)
+	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+		clusterClient(test.MemberClusterName, memberClient))
+
+	// when
+	res, err := cntrl.Reconcile(newMurRequest(mur))
+	require.NoError(t, err)
+	assert.Equal(t, reconcile.Result{}, res)
+
+	userAcc := &toolchainv1alpha1.UserAccount{}
+	err = memberClient.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: "toolchain-member-operator"}, userAcc)
+	require.NoError(t, err)
+
+	assert.True(t, userAcc.Spec.Disabled)
 }
 
 func newMurRequest(mur *toolchainv1alpha1.MasterUserRecord) reconcile.Request {
