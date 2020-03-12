@@ -111,7 +111,7 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 }
 
 func (r *ReconcileChangeTierRequest) checkTransitionTimeAndDelete(log logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
-	log.Info("the ChangeTierRequest is completed so we can ignore it")
+	log.Info("the ChangeTierRequest is completed so we can deal with its deletion")
 	timeFromLastChange := time.Since(completeCond.LastTransitionTime.Time)
 
 	if timeFromLastChange >= r.config.GetDurationBeforeChangeRequestDeletion() {
