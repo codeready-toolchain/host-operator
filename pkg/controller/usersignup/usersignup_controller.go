@@ -33,16 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	// Status condition reasons
-	userBanningReason                = "Banning"
-	userBannedReason                 = "Banned"
-	failedToReadBannedUsersReason    = "FailedToReadBannedUsers"
-	missingUserEmailAnnotationReason = "MissingUserEmailAnnotation"
-	missingEmailHashLabelReason      = "MissingEmailHashLabel"
-	invalidEmailHashLabelReason      = "InvalidEmailHashLabel"
-)
-
 var log = logf.Log.WithName("controller_usersignup")
 
 type BannedUserToUserSignupMapper struct {
@@ -624,7 +614,7 @@ func (r *ReconcileUserSignup) setStatusBanning(userSignup *toolchainv1alpha1.Use
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  userBanningReason,
+			Reason:  toolchainv1alpha1.UserSignupUserBanningReason,
 			Message: message,
 		})
 }
@@ -636,7 +626,7 @@ func (r *ReconcileUserSignup) setStatusBanned(userSignup *toolchainv1alpha1.User
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionTrue,
-			Reason:  userBannedReason,
+			Reason:  toolchainv1alpha1.UserSignupUserBannedReason,
 			Message: message,
 		})
 }
@@ -669,7 +659,7 @@ func (r *ReconcileUserSignup) setStatusFailedToReadBannedUsers(userSignup *toolc
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  failedToReadBannedUsersReason,
+			Reason:  toolchainv1alpha1.UserSignupFailedToReadBannedUsersReason,
 			Message: message,
 		})
 }
@@ -680,7 +670,7 @@ func (r *ReconcileUserSignup) setStatusInvalidMissingUserEmailAnnotation(userSig
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  missingUserEmailAnnotationReason,
+			Reason:  toolchainv1alpha1.UserSignupMissingUserEmailAnnotationReason,
 			Message: message,
 		})
 }
@@ -691,7 +681,7 @@ func (r *ReconcileUserSignup) setStatusMissingEmailHash(userSignup *toolchainv1a
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  missingEmailHashLabelReason,
+			Reason:  toolchainv1alpha1.UserSignupMissingEmailHashLabelReason,
 			Message: message,
 		})
 }
@@ -702,7 +692,7 @@ func (r *ReconcileUserSignup) setStatusInvalidEmailHash(userSignup *toolchainv1a
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  invalidEmailHashLabelReason,
+			Reason:  toolchainv1alpha1.UserSignupInvalidEmailHashLabelReason,
 			Message: message,
 		})
 }
