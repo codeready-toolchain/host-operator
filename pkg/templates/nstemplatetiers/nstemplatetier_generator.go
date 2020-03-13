@@ -1,20 +1,18 @@
 package nstemplatetiers
 
 import (
-	"context"
 	"sort"
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -41,30 +39,15 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 	for _, tier := range tiers {
 		tierObj := tierObjs[tier]
 		log.Info("creating or updating NSTemplateTier", "namespace", tierObj.Namespace, "name", tierObj.Name)
-		if err := client.Create(context.TODO(), tierObj); err != nil {
-			if !apierrors.IsAlreadyExists(err) {
-				return errors.Wrapf(err, "unable to create the '%s' NSTemplateTiers in namespace '%s'", tierObj.Name, tierObj.Namespace)
-			}
-			log.Info("NSTemplateTier resource already exists", "namespace", tierObj.Namespace, "name", tierObj.Name)
-			// get the existing NSTemplateTier
-			existing := &toolchainv1alpha1.NSTemplateTier{}
-			err = client.Get(context.TODO(), types.NamespacedName{
-				Namespace: tierObj.Namespace,
-				Name:      tierObj.Name,
-			}, existing)
-			if err != nil {
-				return errors.Wrapf(err, "unable to get the '%s' NSTemplateTiers in namespace '%s'", tierObj.Name, tierObj.Namespace)
-			}
-			// retrieve the current 'resourceVersion' to set it in the resource passed to the `client.Update()`
-			// otherwise we would get an error with the following message:
-			// "nstemplatetiers.toolchain.dev.openshift.com \"basic\" is invalid: metadata.resourceVersion: Invalid value: 0x0: must be specified for an update"
-			tierObj.ObjectMeta.ResourceVersion = existing.ObjectMeta.ResourceVersion
-			if err := client.Update(context.TODO(), tierObj); err != nil {
-				return errors.Wrapf(err, "unable to update the '%s' NSTemplateTiers in namespace '%s'", tierObj.Name, tierObj.Namespace)
-			}
-			log.Info("NSTemplateTier resource updated", "namespace", tierObj.Namespace, "name", tierObj.Name, "ResourceVersion", tierObj.ResourceVersion)
-		} else {
+		cl := commonclient.NewApplyClient(client, s)
+		created, err := cl.CreateOrUpdateObject(tierObj, true, nil)
+		if err != nil {
+			return errors.Wrapf(err, "unable to create or update the '%s' NSTemplateTiers in namespace '%s'", tierObj.Name, tierObj.Namespace)
+		}
+		if created {
 			log.Info("NSTemplateTier resource created", "namespace", tierObj.Namespace, "name", tierObj.Name)
+		} else {
+			log.Info("NSTemplateTier resource updated", "namespace", tierObj.Namespace, "name", tierObj.Name, "ResourceVersion", tierObj.ResourceVersion)
 		}
 	}
 	return nil

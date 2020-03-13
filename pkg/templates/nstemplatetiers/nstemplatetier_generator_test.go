@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 func TestCreateOrUpdateResources(t *testing.T) {
@@ -28,6 +29,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
+	logf.SetLogger(logf.ZapLogger(true))
 
 	t.Run("ok", func(t *testing.T) {
 
@@ -99,11 +101,16 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			// check the 'generation' when updating the object, and increment its value
 			clt.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				if obj, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-					obj.ObjectMeta.Generation = obj.ObjectMeta.Generation + 1
 					if obj.ObjectMeta.ResourceVersion != "foo" {
 						// here, we expect that the caller will have set the ResourceVersion based on the existing object
 						return errors.Errorf("'ResourceVersion ' field must be specified during object update")
 					}
+					// increment even if the object did not change
+					existing := toolchainv1alpha1.NSTemplateTier{}
+					if err := clt.Get(ctx, types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}, &existing); err != nil {
+						return err
+					}
+					obj.SetGeneration(existing.GetGeneration() + 1)
 				}
 				return clt.Client.Update(ctx, obj)
 			}
@@ -181,7 +188,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 			// then
 			require.Error(t, err)
-			assert.Equal(t, fmt.Sprintf("unable to create the 'advanced' NSTemplateTiers in namespace '%s': an error", namespace), err.Error())
+			assert.Contains(t, err.Error(), fmt.Sprintf("unable to create or update the 'advanced' NSTemplateTiers in namespace '%s'", namespace))
 		})
 
 		t.Run("failed to update nstemplatetiers", func(t *testing.T) {
@@ -202,7 +209,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 			// then
 			require.Error(t, err)
-			assert.Equal(t, fmt.Sprintf("unable to update the 'advanced' NSTemplateTiers in namespace '%s': an error", namespace), err.Error())
+			assert.Contains(t, err.Error(), fmt.Sprintf("unable to create or update the 'advanced' NSTemplateTiers in namespace '%s'", namespace))
 		})
 
 	})
