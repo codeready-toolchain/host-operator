@@ -16,8 +16,17 @@ objects:
       hard:
         limits.cpu: 1750m
         limits.memory: 7Gi
+        limits.ephemeral-storage: 5Gi
+        requests.cpu: 1750m
+        requests.memory: 7Gi
         requests.storage: 5Gi
+        requests.ephemeral-storage: 5Gi
         persistentvolumeclaims: "2"
+        pods: "100"
+        replicationcontrollers: "100"
+        services: "100"
+        secrets: "100"
+        configmaps: "100"
     selector:
       annotations:
         openshift.io/requester: ${USERNAME}
