@@ -100,7 +100,7 @@ data:
           status: {}
         validation:
           openAPIV3Schema:
-            description: ChangeTierRequest requests for changing tier for MUR/UserAccount
+            description: ChangeTierRequest is used as a trigger for a tier change in MasterUserRecord/UserAccount
             properties:
               apiVersion:
                 description: 'APIVersion defines the versioned schema of this representation
@@ -986,6 +986,18 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "BannedUser",
+                "metadata": {
+                  "labels": {
+                    "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+                  }
+                },
+                "spec": {
+                  "email": "john.doe@gmail.com"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "ChangeTierRequest",
                 "metadata": {
                   "name": "changetierrequest-1a2b3c"
@@ -1098,18 +1110,6 @@ data:
                   "compliantUsername": "johnsmith-at-redhat-com",
                   "targetCluster": "east-2a",
                   "username": "johnsmith@redhat.com"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "BannedUser",
-                "metadata": {
-                  "labels": {
-                    "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
-                  }
-                },
-                "spec": {
-                  "email": "john.doe@gmail.com"
                 }
               }
             ]
