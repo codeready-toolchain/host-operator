@@ -18,9 +18,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 func TestLoadTemplatesByTiers(t *testing.T) {
+
+	logf.SetLogger(zap.Logger(true))
 
 	t.Run("ok", func(t *testing.T) {
 
@@ -156,26 +160,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			_, err := loadTemplatesByTiers(assets)
 			// then
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to load templates: invalid name format for file for 'foo.yaml'")
-		})
-
-		t.Run("invalid filename format", func(t *testing.T) {
-			// given
-			fakeAssetNames := func() []string {
-				return []string{`metadata.yaml`, `advanced/foo.yaml`} // '/advanced/foo.yaml' is not a valid filename
-			}
-			fakeAssets := func(name string) ([]byte, error) {
-				if name == "advanced/foo.yaml" {
-					return []byte("foo"), nil // just make sure the asset exists
-				}
-				return testnstemplatetiers.Asset(name)
-			}
-			assets := NewAssets(fakeAssetNames, fakeAssets)
-			// when
-			_, err := loadTemplatesByTiers(assets)
-			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to load templates: invalid name format for file for 'advanced/foo.yaml'")
+			assert.Contains(t, err.Error(), "unable to load templates: unknown scope for file 'advanced/foo.yaml'")
 		})
 
 	})

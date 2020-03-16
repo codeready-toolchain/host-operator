@@ -123,7 +123,7 @@ func loadTemplatesByTiers(assets Assets) (map[string]*templates, error) {
 		case filename == "cluster.yaml":
 			results[tier].clusterTemplate = &tmpl
 		default:
-			return nil, errors.Wrapf(err, "unable to load templates: unknown scope for file '%s'", name)
+			return nil, errors.Errorf("unable to load templates: unknown scope for file '%s'", name)
 		}
 	}
 	return results, nil
