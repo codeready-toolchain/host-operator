@@ -50,12 +50,12 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 							assert.NotEmpty(t, tmpls[tier].namespaceTemplates[kind].revision)
 							assert.NotEmpty(t, tmpls[tier].namespaceTemplates[kind].content)
 						})
-						t.Run("cluster", func(t *testing.T) {
-							require.NotNil(t, tmpls[tier].clusterTemplate)
-							assert.NotEmpty(t, tmpls[tier].clusterTemplate.revision)
-							assert.NotEmpty(t, tmpls[tier].clusterTemplate.content)
-						})
 					}
+					t.Run("cluster", func(t *testing.T) {
+						require.NotNil(t, tmpls[tier].clusterTemplate)
+						assert.NotEmpty(t, tmpls[tier].clusterTemplate.revision)
+						assert.NotEmpty(t, tmpls[tier].clusterTemplate.content)
+					})
 				})
 			}
 		})

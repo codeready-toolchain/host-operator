@@ -40,14 +40,14 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 		tierObj := tierObjs[tier]
 		log.Info("creating or updating NSTemplateTier", "namespace", tierObj.Namespace, "name", tierObj.Name)
 		cl := commonclient.NewApplyClient(client, s)
-		created, err := cl.CreateOrUpdateObject(tierObj, true, nil)
+		createdOrUpdated, err := cl.CreateOrUpdateObject(tierObj, true, nil)
 		if err != nil {
 			return errors.Wrapf(err, "unable to create or update the '%s' NSTemplateTiers in namespace '%s'", tierObj.Name, tierObj.Namespace)
 		}
-		if created {
-			log.Info("NSTemplateTier resource created", "namespace", tierObj.Namespace, "name", tierObj.Name)
+		if createdOrUpdated {
+			log.Info("NSTemplateTier resource created/updated", "namespace", tierObj.Namespace, "name", tierObj.Name)
 		} else {
-			log.Info("NSTemplateTier resource updated", "namespace", tierObj.Namespace, "name", tierObj.Name, "ResourceVersion", tierObj.ResourceVersion)
+			log.Info("NSTemplateTier resource was already up-to-date", "namespace", tierObj.Namespace, "name", tierObj.Name, "ResourceVersion", tierObj.ResourceVersion)
 		}
 	}
 	return nil
