@@ -97,7 +97,7 @@ func loadTemplatesByTiers(assets Assets) (map[string]*templates, error) {
 		}
 		// split the name using the `/` separator
 		parts := strings.Split(name, "/")
-		// skip any name that does not have 3 parts
+		// skip any name that does not have 2 parts
 		if len(parts) != 2 {
 			return nil, errors.Wrapf(err, "unable to load templates: invalid name format for file '%s'", name)
 		}
