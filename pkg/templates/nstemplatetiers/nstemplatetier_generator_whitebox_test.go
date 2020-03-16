@@ -135,6 +135,49 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "unable to load templates: an error occurred")
 		})
+
+		t.Run("invalid filename scope", func(t *testing.T) {
+			// given
+			fakeAssetNames := func() []string {
+				return []string{`metadata.yaml`, `advanced/foo.yaml`} // '/advanced/foo.yaml' is not a valid filename
+			}
+			fakeAssets := func(name string) ([]byte, error) {
+				switch name {
+				case "metadata.yaml":
+					return []byte(`advanced/foo.yaml: "123456a"`), nil // just make sure the asset exists
+				case "advanced/foo.yaml":
+					return []byte(`foo:bar`), nil // just make sure the asset exists
+				default:
+					return testnstemplatetiers.Asset(name)
+				}
+			}
+			assets := NewAssets(fakeAssetNames, fakeAssets)
+			// when
+			_, err := loadTemplatesByTiers(assets)
+			// then
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unable to load templates: invalid name format for file for 'foo.yaml'")
+		})
+
+		t.Run("invalid filename format", func(t *testing.T) {
+			// given
+			fakeAssetNames := func() []string {
+				return []string{`metadata.yaml`, `advanced/foo.yaml`} // '/advanced/foo.yaml' is not a valid filename
+			}
+			fakeAssets := func(name string) ([]byte, error) {
+				if name == "advanced/foo.yaml" {
+					return []byte("foo"), nil // just make sure the asset exists
+				}
+				return testnstemplatetiers.Asset(name)
+			}
+			assets := NewAssets(fakeAssetNames, fakeAssets)
+			// when
+			_, err := loadTemplatesByTiers(assets)
+			// then
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unable to load templates: invalid name format for file for 'advanced/foo.yaml'")
+		})
+
 	})
 }
 

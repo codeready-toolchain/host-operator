@@ -99,8 +99,7 @@ func loadTemplatesByTiers(assets Assets) (map[string]*templates, error) {
 		parts := strings.Split(name, "/")
 		// skip any name that does not have 3 parts
 		if len(parts) != 2 {
-			log.Info("skipping template asset: invalid name format", "name", name)
-			continue
+			return nil, errors.Wrapf(err, "unable to load templates: invalid name format for file '%s'", name)
 		}
 		tier := parts[0]
 		filename := parts[1]
@@ -124,7 +123,7 @@ func loadTemplatesByTiers(assets Assets) (map[string]*templates, error) {
 		case filename == "cluster.yaml":
 			results[tier].clusterTemplate = &tmpl
 		default:
-			log.Info("skipping asset: unknown scope for file", "name", name)
+			return nil, errors.Wrapf(err, "unable to load templates: unknown scope for file '%s'", name)
 		}
 	}
 	return results, nil
