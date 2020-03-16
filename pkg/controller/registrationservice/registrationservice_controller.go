@@ -9,7 +9,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
 
 	"github.com/go-logr/logr"
-	"github.com/openshift/api/template/v1"
+	v1 "github.com/openshift/api/template/v1"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -148,7 +148,7 @@ func (r *ReconcileRegistrationService) Reconcile(request reconcile.Request) (rec
 		}
 	}
 
-	reqLogger.Info("All objects in registration service template has been created and ar up-to-date")
+	reqLogger.Info("All objects in registration service template has been created and are up-to-date")
 	return reconcile.Result{}, updateStatusConditions(r.client, regService, toBeDeployed())
 }
 
