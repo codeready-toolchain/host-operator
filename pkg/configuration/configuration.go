@@ -62,7 +62,7 @@ func New(configFilePath string) (*Registry, error) {
 		c.host.SetConfigType("yaml")
 		c.host.SetConfigFile(configFilePath)
 		err := c.host.ReadInConfig() // Find and read the config file
-		if err != nil { // Handle errors reading the config file.
+		if err != nil {              // Handle errors reading the config file.
 			return nil, errs.Wrap(err, "failed to read config file")
 		}
 	}
