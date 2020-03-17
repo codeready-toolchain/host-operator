@@ -39,6 +39,8 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
+replace github.com/codeready-toolchain/toolchain-common => github.com/alexeykazakov/toolchain-common v0.0.0-20200317013642-7b0b4734e580
+
 // Pinned to kubernetes-1.16.2
 replace (
 	k8s.io/api => k8s.io/api v0.0.0-20191016110408-35e52d86657a
