@@ -261,6 +261,20 @@ data:
                             nsTemplateSet:
                               description: Namespace template set
                               properties:
+                                clusterResources:
+                                  description: the cluster resources template (for cluster-wide
+                                    quotas, etc.)
+                                  properties:
+                                    revision:
+                                      description: The revision of the corresponding template
+                                      type: string
+                                    template:
+                                      description: Template contains an OpenShift Template
+                                        to be used for provisioning of cluster-scoped resources
+                                      type: string
+                                  required:
+                                  - revision
+                                  type: object
                                 namespaces:
                                   description: The namespace templates
                                   items:
