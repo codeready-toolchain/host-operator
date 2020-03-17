@@ -22,34 +22,37 @@ $(OUT_DIR)/operator:
 vendor:
 	$(Q)go mod vendor
 
-NSTEMPLATES_DIR=deploy/templates/nstemplatetiers
-NSTEMPLATES_TEST_DIR=test/templates/nstemplatetiers
+NSTEMPLATES_BASEDIR = deploy/templates/nstemplatetiers
+NSTEMPLATES_FILES = $(wildcard $(NSTEMPLATES_BASEDIR)/**/*.yaml)
+NSTEMPLATES_TEST_BASEDIR = test/templates/nstemplatetiers
+NSTEMPLATES_TEST_SUBDIRS = $(wildcard $(NSTEMPLATES_TEST_BASEDIR)/**/*)
 REGISTRATION_SERVICE_DIR=deploy/registration-service
 
 .PHONY: generate
 generate: generate-metadata generate-assets 
 
-.PHONY: generate-assets
-generate-assets:
-	@echo "generating templates bindata..."
-	@go install github.com/go-bindata/go-bindata/...
-	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nocompress -prefix $(NSTEMPLATES_DIR) $(NSTEMPLATES_DIR)
-	@echo "generating test templates bindata..."
-	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers_test -o ./test/templates/nstemplatetiers/nstemplatetier_assets.go -nocompress -prefix $(NSTEMPLATES_TEST_DIR) $(NSTEMPLATES_TEST_DIR)
-	@echo "generating registration service template data..."
-	@$(GOPATH)/bin/go-bindata -pkg registrationservice -o ./pkg/controller/registrationservice/template_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
+clean-metadata:
+	@rm $(NSTEMPLATES_BASEDIR)/metadata.yaml 2>/dev/null || true
 
 .PHONY: generate-metadata
 generate-metadata: clean-metadata
-	@echo "generating namespace templates metadata for manifests in $(NSTEMPLATES_DIR)" 
-	@echo "yaml files: $(shell ls $(NSTEMPLATES_DIR)/*.yaml)"
-	@echo "yaml files: $(wildcard $(NSTEMPLATES_DIR)/*.yaml)"
-	@$(foreach tmpl,$(wildcard $(NSTEMPLATES_DIR)/*.yaml),$(call git_commit,$(tmpl),$(NSTEMPLATES_DIR)/metadata.yaml);)
-
-clean-metadata:
-	@rm $(NSTEMPLATES_DIR)/metadata.yaml 2>/dev/null || true
-
+	@echo "generating templates metadata for manifests in $(NSTEMPLATES_BASEDIR)" 
+	@$(foreach tmpl,$(wildcard $(NSTEMPLATES_FILES)),$(call git_commit,$(tmpl),$(NSTEMPLATES_BASEDIR),metadata.yaml))
+	
 define git_commit
-	echo "processing $(1)"
-	echo "$(patsubst $(NSTEMPLATES_DIR)/%.yaml,%,$(1)): \""`git log -1 --format=%h $(1)`"\"">> $(2) # surround the commit hash with quotes to force the value as a string, even if it's a number
+	echo "processing YAML files in $(2)"
+	echo "$(patsubst $(2)/%.yaml,%,$(1)): \""`git log -1 --format=%h $(1)`"\"">> $(2)/$(3) # surround the commit hash with quotes to force the value as a string, even if it's a number
 endef
+
+.PHONY: generate-assets
+generate-assets:
+	@go install github.com/go-bindata/go-bindata/...
+	@echo "generating bindata for files in $(NSTEMPLATES_BASEDIR) ..."
+	@rm ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
+	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_BASEDIR) $(NSTEMPLATES_BASEDIR)/...
+	@echo "generating bindata for files in $(NSTEMPLATES_TEST_BASEDIR) ..."
+	@rm ./test/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
+	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers_test -o ./test/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_TEST_BASEDIR) -ignore doc.go $(NSTEMPLATES_TEST_BASEDIR)/...
+	@echo "generating registration service template data..."
+	@$(GOPATH)/bin/go-bindata -pkg registrationservice -o ./pkg/controller/registrationservice/template_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
+
