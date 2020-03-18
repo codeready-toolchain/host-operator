@@ -20,12 +20,6 @@ const (
 	RegServiceEnvPrefix = "REGISTRATION_SERVICE"
 )
 
-// registration-service constants
-const (
-	// varImage specifies registration service image to be used for deployment
-	varImage = "image"
-)
-
 // host-operator constants
 const (
 	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
@@ -46,25 +40,18 @@ const (
 // Registry encapsulates the Viper configuration registry which stores the
 // configuration data in-memory.
 type Registry struct {
-	host       *viper.Viper
-	regService *viper.Viper
-	noPrefix   *viper.Viper
+	host *viper.Viper
 }
 
 // CreateEmptyRegistry creates an initial, empty registry.
 func CreateEmptyRegistry() *Registry {
 	c := Registry{
-		host:       viper.New(),
-		regService: viper.New(),
-		noPrefix:   viper.New(),
+		host: viper.New(),
 	}
 	c.host.SetEnvPrefix(HostEnvPrefix)
-	c.regService.SetEnvPrefix(RegServiceEnvPrefix)
-	for _, v := range []*viper.Viper{c.host, c.regService, c.noPrefix} {
-		v.AutomaticEnv()
-		v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-		v.SetTypeByDefaultValue(true)
-	}
+	c.host.AutomaticEnv()
+	c.host.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	c.host.SetTypeByDefaultValue(true)
 	c.setConfigDefaults()
 	return &c
 }
@@ -75,13 +62,11 @@ func CreateEmptyRegistry() *Registry {
 func New(configFilePath string) (*Registry, error) {
 	c := CreateEmptyRegistry()
 	if configFilePath != "" {
-		for _, reg := range []*viper.Viper{c.host, c.regService} {
-			reg.SetConfigType("yaml")
-			reg.SetConfigFile(configFilePath)
-			err := reg.ReadInConfig() // Find and read the config file
-			if err != nil {           // Handle errors reading the config file.
-				return nil, errs.Wrap(err, "failed to read config file")
-			}
+		c.host.SetConfigType("yaml")
+		c.host.SetConfigFile(configFilePath)
+		err := c.host.ReadInConfig() // Find and read the config file
+		if err != nil { // Handle errors reading the config file.
+			return nil, errs.Wrap(err, "failed to read config file")
 		}
 	}
 	return c, nil
@@ -90,18 +75,11 @@ func New(configFilePath string) (*Registry, error) {
 func (c *Registry) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
-
-	c.regService.SetTypeByDefaultValue(true)
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
 func (c *Registry) GetDurationBeforeChangeRequestDeletion() time.Duration {
 	return c.host.GetDuration(VarDurationBeforeChangeRequestDeletion)
-}
-
-// GetRegServiceImage returns the registration service image.
-func (c *Registry) GetRegServiceImage() string {
-	return c.regService.GetString(varImage)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
