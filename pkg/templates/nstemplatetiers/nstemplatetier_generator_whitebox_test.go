@@ -211,13 +211,13 @@ func TestNewNSTemplateTier(t *testing.T) {
 						// Each template should have one Namespace and one RoleBinding object
 						// except "code" which should also have additional RoleBinding and Role
 						if kind == "code" || tier == "team" {
-							require.Len(t, ns.Template.Objects, 4)
+							require.Len(t, ns.Template.Objects, 5)
 						} else {
-							require.Len(t, ns.Template.Objects, 2)
+							require.Len(t, ns.Template.Objects, 3)
 						}
 						rbFound := false
 						for _, object := range ns.Template.Objects {
-							if strings.Contains(string(object.Raw), `"kind":"RoleBinding","metadata":{"labels":{"provider":"codeready-toolchain"},"name":"user-edit"`) {
+							if strings.Contains(string(object.Raw), `"kind":"RoleBinding","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"user-edit"`) {
 								rbFound = true
 								break
 							}
@@ -376,7 +376,7 @@ spec:
       kind: Template
       metadata:
         labels:
-          provider: codeready-toolchain
+          toolchain.dev.openshift.com/provider: codeready-toolchain
         name: {{ $tier }}-{{ $kind }}
       objects:
       - apiVersion: v1
@@ -387,7 +387,7 @@ spec:
             openshift.io/display-name: ${USERNAME}-{{ $kind }}
             openshift.io/requester: ${USERNAME}
           labels:
-            provider: codeready-toolchain
+            toolchain.dev.openshift.com/provider: codeready-toolchain
           name: ${USERNAME}-{{ $kind }}
       parameters:
       - name: USERNAME

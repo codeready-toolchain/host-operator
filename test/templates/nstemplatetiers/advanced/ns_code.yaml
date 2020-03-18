@@ -2,7 +2,7 @@ apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
   labels:
-    provider: codeready-toolchain
+    toolchain.dev.openshift.com/provider: codeready-toolchain
   name: advanced-code
 objects:
 - apiVersion: v1
@@ -13,7 +13,7 @@ objects:
       openshift.io/display-name: ${USERNAME}-code
       openshift.io/requester: ${USERNAME}
     labels:
-      provider: codeready-toolchain
+      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: ${USERNAME}-code
 parameters:
 - name: USERNAME
