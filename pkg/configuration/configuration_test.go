@@ -58,40 +58,6 @@ func TestNew(t *testing.T) {
 	})
 }
 
-func TestGetImage(t *testing.T) {
-	key := configuration.RegServiceEnvPrefix + "_" + "IMAGE"
-	resetFunc := test.UnsetEnvVarAndRestore(t, key)
-	defer resetFunc()
-
-	t.Run("default", func(t *testing.T) {
-		resetFunc := test.UnsetEnvVarAndRestore(t, key)
-		defer resetFunc()
-		config := getDefaultConfiguration(t)
-		assert.Equal(t, "", config.GetRegServiceImage())
-	})
-
-	t.Run("file", func(t *testing.T) {
-		u, err := uuid.NewV4()
-		require.NoError(t, err)
-		newVal := u.String()
-		config := getFileConfiguration(t, `image: "`+newVal+`"`)
-		assert.Equal(t, newVal, config.GetRegServiceImage())
-	})
-
-	t.Run("env overwrite", func(t *testing.T) {
-		u, err := uuid.NewV4()
-		require.NoError(t, err)
-		newVal := u.String()
-		restore := test.SetEnvVarAndRestore(t, key, newVal)
-		defer restore()
-
-		restore = test.SetEnvVarAndRestore(t, configuration.RegServiceEnvPrefix+"_"+"ANY_CONFIG", newVal)
-		defer restore()
-		config := getDefaultConfiguration(t)
-		assert.Equal(t, newVal, config.GetRegServiceImage())
-	})
-}
-
 func TestGetDynamicKeys(t *testing.T) {
 	firstKey := configuration.RegServiceEnvPrefix + "_" + "FIRST_KEY"
 	secondKey := configuration.RegServiceEnvPrefix + "_" + "SECOND_KEY"

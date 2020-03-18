@@ -11,7 +11,6 @@ require (
 	github.com/go-openapi/spec v0.19.7 // indirect
 	github.com/go-openapi/swag v0.19.8 // indirect
 	github.com/gofrs/uuid v3.2.0+incompatible
-	github.com/golangci/golangci-lint v1.24.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/gophercloud/gophercloud v0.3.0 // indirect
 	github.com/mailru/easyjson v0.7.1 // indirect
