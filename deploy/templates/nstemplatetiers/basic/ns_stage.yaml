@@ -41,10 +41,10 @@ objects:
     - type: "Container"
       default:
         cpu: 150m
-        memory: 512Mi 
+        memory: 512Mi
       defaultRequest:
-        cpu: 100m 
-        memory: 64Mi 
+        cpu: 100m
+        memory: 64Mi
 parameters:
 - name: USERNAME
   required: true
