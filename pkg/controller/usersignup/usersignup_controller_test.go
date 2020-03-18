@@ -2,8 +2,14 @@ package usersignup
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"os"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
@@ -82,12 +88,8 @@ func TestReadUserApprovalPolicy(t *testing.T) {
 }
 
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
-	userID := uuid.NewV4()
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      userID.String(),
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: false,
@@ -171,13 +173,124 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		})
 }
 
+func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
+	userID := uuid.NewV4()
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userID.String(),
+			Namespace: operatorNamespace,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+			Approved: false,
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	createMemberCluster(r.client, "member1", ready)
+	defer clearMemberClusters(r.client)
+
+	// Reconcile the UserSignup
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the user signup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "MissingUserEmailAnnotation",
+		})
+}
+
+func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
+	userID := uuid.NewV4()
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userID.String(),
+			Namespace: operatorNamespace,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "abcdef0123456789",
+			},
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+			Approved: false,
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	createMemberCluster(r.client, "member1", ready)
+	defer clearMemberClusters(r.client)
+
+	// Reconcile the UserSignup
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the user signup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "InvalidEmailHashLabel",
+		})
+}
+
+func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
+	userID := uuid.NewV4()
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userID.String(),
+			Namespace: operatorNamespace,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+			},
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+			Approved: false,
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	createMemberCluster(r.client, "member1", ready)
+	defer clearMemberClusters(r.client)
+
+	// Reconcile the UserSignup
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the user signup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "MissingEmailHashLabel",
+		})
+}
+
 func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: false,
@@ -212,10 +325,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 func TestUserSignupFailedNoClusterReady(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: false,
@@ -250,10 +360,7 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: false,
@@ -287,10 +394,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: true,
@@ -353,10 +457,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 
 func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: true,
@@ -418,10 +519,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 
 func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: false,
@@ -462,10 +560,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 
 func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username:      "foo@redhat.com",
 			Approved:      false,
@@ -529,10 +624,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 
 func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "bar",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("bar", "bar@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username:      "bar@redhat.com",
 			Approved:      false,
@@ -565,10 +657,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 
 func TestUserSignupMURCreateFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: true,
@@ -597,10 +686,7 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 
 func TestUserSignupMURReadFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: true,
@@ -628,10 +714,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 
 func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: true,
@@ -660,10 +743,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 
 func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 		},
@@ -691,10 +771,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 
 func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 		},
@@ -726,6 +803,12 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
 			Namespace: operatorNamespace,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -767,10 +850,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 
 func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewV4().String(),
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: true,
@@ -835,10 +915,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewV4().String(),
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo#bar@redhat.com",
 			Approved: false,
@@ -879,10 +956,7 @@ func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
 func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewV4().String(),
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("", "john.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username:    "john.doe@redhat.com",
 			Deactivated: true,
@@ -973,10 +1047,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewV4().String(),
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("", "edward.jones@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username:    "edward.jones@redhat.com",
 			Deactivated: true,
@@ -1036,13 +1107,173 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 	})
 }
 
+func TestUserSignupBanned(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+		},
+	}
+
+	bannedUser := &toolchainv1alpha1.BannedUser{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				toolchainv1alpha1.BannedUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+		},
+		Spec: toolchainv1alpha1.BannedUserSpec{
+			Email: "foo@redhat.com",
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, bannedUser, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	// when
+	_, err := r.Reconcile(req)
+
+	// then
+	require.NoError(t, err)
+	err = r.client.Get(context.TODO(), test.NamespacedName(operatorNamespace, userSignup.Name), userSignup)
+	require.NoError(t, err)
+
+	// Confirm the status is set to Banned
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+			Reason: "Banned",
+		})
+
+	// Confirm that no MUR is created
+	murs := &v1alpha1.MasterUserRecordList{}
+
+	// Confirm that the MUR has now been deleted
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 0)
+}
+
+func TestUserSignupBannedMURExists(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+		},
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
+				{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+				},
+				{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "foo-at-redhat-com",
+		},
+	}
+
+	bannedUser := &toolchainv1alpha1.BannedUser{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				toolchainv1alpha1.BannedUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+		},
+		Spec: toolchainv1alpha1.BannedUserSpec{
+			Email: "foo@redhat.com",
+		},
+	}
+
+	mur := murtest.NewMasterUserRecord("foo-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, bannedUser, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	// when
+	_, err := r.Reconcile(req)
+
+	// then
+	require.NoError(t, err)
+	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+	err = r.client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+
+	// Confirm the status is set to Banning
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "Banning",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		})
+
+	murs := &v1alpha1.MasterUserRecordList{}
+
+	// Confirm that the MUR has now been deleted
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 0)
+
+	// Reconcile again
+	_, err = r.Reconcile(req)
+	require.NoError(t, err)
+
+	err = r.client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+
+	// Confirm the status is now set to Banned
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+			Reason: "Banned",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		})
+
+	// Confirm that there is still no MUR
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 0)
+}
+
+func TestUserSignupListBannedUsersFails(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+		},
+	}
+
+	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	clt.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+		return errors.New("err happened")
+	}
+
+	// when
+	_, err := r.Reconcile(req)
+
+	// then
+	require.Error(t, err)
+}
+
 func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewV4().String(),
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("", "alice.mayweather.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username:    "alice.mayweather.doe@redhat.com",
 			Deactivated: true,
@@ -1108,10 +1339,7 @@ func TestDeathBy100Signups(t *testing.T) {
 	userID := uuid.NewV4().String()
 
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      userID,
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta(userID, "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: true,
@@ -1173,10 +1401,7 @@ func TestDeathBy100Signups(t *testing.T) {
 
 func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewV4().String(),
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 			Approved: false,
@@ -1229,10 +1454,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 
 func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: operatorNamespace,
-		},
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 
@@ -1245,6 +1467,197 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	_, err := r.Reconcile(req)
 	require.Error(t, err)
 	require.IsType(t, SignupError{}, err)
+}
+
+func TestBannedUserToUserSignupMapper(t *testing.T) {
+	// when
+	bannedUser := &toolchainv1alpha1.BannedUser{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				toolchainv1alpha1.BannedUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+		},
+		Spec: toolchainv1alpha1.BannedUserSpec{
+			Email: "foo@redhat.com",
+		},
+	}
+
+	t.Run("test BannedUserToUserSignupMapper maps correctly", func(t *testing.T) {
+		userSignup := &v1alpha1.UserSignup{
+			ObjectMeta: newObjectMeta("", "foo@redhat.com"),
+			Spec: v1alpha1.UserSignupSpec{
+				Username: "foo@redhat.com",
+			},
+		}
+
+		userSignup2 := &v1alpha1.UserSignup{
+			ObjectMeta: newObjectMeta("", "alice.mayweather.doe@redhat.com"),
+			Spec: v1alpha1.UserSignupSpec{
+				Username: "alice.mayweather.doe@redhat.com",
+			},
+		}
+
+		c := test.NewFakeClient(t, userSignup, userSignup2)
+
+		mapper := &BannedUserToUserSignupMapper{
+			client: c,
+		}
+
+		// This is required for the mapper to function
+		os.Setenv(k8sutil.WatchNamespaceEnvVar, operatorNamespace)
+		defer os.Unsetenv(k8sutil.WatchNamespaceEnvVar)
+
+		req := mapper.Map(handler.MapObject{
+			Object: bannedUser,
+		})
+
+		require.Len(t, req, 1)
+		require.Equal(t, types.NamespacedName{
+			Namespace: userSignup.Namespace,
+			Name:      userSignup.Name,
+		}, req[0].NamespacedName)
+	})
+
+	t.Run("test BannedUserToUserSignupMapper returns nil when client list fails", func(t *testing.T) {
+		c := test.NewFakeClient(t)
+		c.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			return errors.New("err happened")
+		}
+
+		mapper := &BannedUserToUserSignupMapper{
+			client: c,
+		}
+		req := mapper.Map(handler.MapObject{
+			Object: bannedUser,
+		})
+
+		require.Nil(t, req)
+	})
+
+	t.Run("test BannedUserToUserSignupMapper returns nil when watch namespace not set ", func(t *testing.T) {
+		c := test.NewFakeClient(t)
+
+		mapper := &BannedUserToUserSignupMapper{
+			client: c,
+		}
+		req := mapper.Map(handler.MapObject{
+			Object: bannedUser,
+		})
+
+		require.Nil(t, req)
+	})
+}
+
+func TestUserSignupChangedPredicate(t *testing.T) {
+	// when
+	pred := &UserSignupChangedPredicate{}
+	userSignupName := uuid.NewV4().String()
+
+	userSignupOld := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userSignupName,
+			Namespace: operatorNamespace,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+			Generation: 1,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+		},
+	}
+
+	userSignupNewNotChanged := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userSignupName,
+			Namespace: operatorNamespace,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+			Generation: 1,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "alice.mayweather.doe@redhat.com",
+		},
+	}
+
+	userSignupNewChanged := &v1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userSignupName,
+			Namespace: operatorNamespace,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "747a250430df0c7976bf2363ebb4014a",
+			},
+			Generation: 2,
+		},
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "alice.mayweather.doe@redhat.com",
+		},
+	}
+
+	t.Run("test UserSignupChangedPredicate returns false when MetaOld not set", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   nil,
+			ObjectOld: userSignupOld,
+			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
+			ObjectNew: userSignupNewNotChanged,
+		}
+		require.False(t, pred.Update(e))
+	})
+	t.Run("test UserSignupChangedPredicate returns false when ObjectOld not set", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
+			ObjectOld: nil,
+			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
+			ObjectNew: userSignupNewNotChanged,
+		}
+		require.False(t, pred.Update(e))
+	})
+	t.Run("test UserSignupChangedPredicate returns false when ObjectNew not set", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
+			ObjectOld: userSignupOld,
+			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
+			ObjectNew: nil,
+		}
+		require.False(t, pred.Update(e))
+	})
+	t.Run("test UserSignupChangedPredicate returns false when MetaNew not set", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
+			ObjectOld: userSignupOld,
+			MetaNew:   nil,
+			ObjectNew: userSignupNewNotChanged,
+		}
+		require.False(t, pred.Update(e))
+	})
+	t.Run("test UserSignupChangedPredicate returns false when generation unchanged and annoations unchanged", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
+			ObjectOld: userSignupOld,
+			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
+			ObjectNew: userSignupNewNotChanged,
+		}
+		require.False(t, pred.Update(e))
+	})
+	t.Run("test UserSignupChangedPredicate returns true when generation changed", func(t *testing.T) {
+		e := event.UpdateEvent{
+			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
+			ObjectOld: userSignupOld,
+			MetaNew:   userSignupNewChanged.ObjectMeta.GetObjectMeta(),
+			ObjectNew: userSignupNewChanged,
+		}
+		require.True(t, pred.Update(e))
+	})
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request, *test.FakeClient) {
@@ -1380,4 +1793,26 @@ func emptyConfigMap() *v1.ConfigMap {
 	cm.Name = configuration.ToolchainConfigMapName
 	cm.ObjectMeta.Namespace = operatorNamespace
 	return cm
+}
+
+func newObjectMeta(name, email string) metav1.ObjectMeta {
+	if name == "" {
+		name = uuid.NewV4().String()
+	}
+
+	md5hash := md5.New()
+	// Ignore the error, as this implementation cannot return one
+	_, _ = md5hash.Write([]byte(email))
+	emailHash := hex.EncodeToString(md5hash.Sum(nil))
+
+	return metav1.ObjectMeta{
+		Name:      name,
+		Namespace: operatorNamespace,
+		Annotations: map[string]string{
+			toolchainv1alpha1.UserSignupUserEmailAnnotationKey: email,
+		},
+		Labels: map[string]string{
+			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
+		},
+	}
 }
