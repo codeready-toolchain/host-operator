@@ -113,7 +113,6 @@ github.com/clusterhq/flocker-go v0.0.0-20160920122132-2b8b7259d313/go.mod h1:P1w
 github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMeY4+DwBQ=
 github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c/go.mod h1:XGLbWH/ujMcbPbhZq52Nv6UrCghb1yGn//133kEsvDk=
 github.com/codegangsta/negroni v1.0.0/go.mod h1:v0y3T5G7Y1UlFfyxFn/QLRU4a2EuNau2iZY63YTKWo0=
-github.com/codeready-toolchain/api v0.0.0-20200313034016-bd3872e24562 h1:63IwzuDJsT3jVHItV9+cBLjO2e7y5Zg2wpwiwMej1H4=
 github.com/codeready-toolchain/api v0.0.0-20200313034016-bd3872e24562/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
 github.com/codeready-toolchain/api v0.0.0-20200317080847-786ad7121001 h1:C/AGF8I/61990c7Jj/iqcC5aNZ6FvtPVKmUmFCzB8xk=
 github.com/codeready-toolchain/api v0.0.0-20200317080847-786ad7121001/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
