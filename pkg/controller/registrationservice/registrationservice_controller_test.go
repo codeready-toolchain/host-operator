@@ -3,12 +3,12 @@ package registrationservice
 import (
 	"context"
 	"fmt"
-	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis"
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	. "github.com/codeready-toolchain/host-operator/test"
+	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 

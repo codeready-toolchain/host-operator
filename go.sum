@@ -113,10 +113,11 @@ github.com/clusterhq/flocker-go v0.0.0-20160920122132-2b8b7259d313/go.mod h1:P1w
 github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMeY4+DwBQ=
 github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c/go.mod h1:XGLbWH/ujMcbPbhZq52Nv6UrCghb1yGn//133kEsvDk=
 github.com/codegangsta/negroni v1.0.0/go.mod h1:v0y3T5G7Y1UlFfyxFn/QLRU4a2EuNau2iZY63YTKWo0=
-github.com/codeready-toolchain/api v0.0.0-20200310091613-eb1bd0c28840 h1:IxoggXq/AANd8rp6/mXpMrdkdyLzVsk/LuXIbKizmzI=
-github.com/codeready-toolchain/api v0.0.0-20200310091613-eb1bd0c28840/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200311111658-3c747cbc46f8 h1:dfkUMjOsnMEMd/xvHymXo/ruIEdI7M/aziRqA6rbpLg=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200311111658-3c747cbc46f8/go.mod h1:2YsPt67lgOalgg5JxekjpWGfzcpSzxEzQrImT+fHRmo=
+github.com/codeready-toolchain/api v0.0.0-20200313034016-bd3872e24562/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
+github.com/codeready-toolchain/api v0.0.0-20200317080847-786ad7121001 h1:C/AGF8I/61990c7Jj/iqcC5aNZ6FvtPVKmUmFCzB8xk=
+github.com/codeready-toolchain/api v0.0.0-20200317080847-786ad7121001/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200318175254-83627f297ee0 h1:DfP/FFGWcUeDH5+J/xHNKu1CQZePZ6UWJbjZlQv40tA=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200318175254-83627f297ee0/go.mod h1:SNSE7G88BCuFeIZjW3ZYBFJFYarnznmBL4uXZcIslmw=
 github.com/container-storage-interface/spec v1.1.0/go.mod h1:6URME8mwIBbpVyZV93Ce5St17xBiQJQY67NDsuohiy4=
 github.com/containerd/console v0.0.0-20170925154832-84eeaae905fa/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.0.2/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=
