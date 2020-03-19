@@ -7,6 +7,7 @@ import (
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/spf13/cast"
 
 	"github.com/gofrs/uuid"
 	"github.com/stretchr/testify/assert"
@@ -58,7 +59,7 @@ func TestNew(t *testing.T) {
 	})
 }
 
-func TestGetDynamicKeys(t *testing.T) {
+func TestGetAllRegistrationServiceParameters(t *testing.T) {
 	firstKey := configuration.RegServiceEnvPrefix + "_" + "FIRST_KEY"
 	secondKey := configuration.RegServiceEnvPrefix + "_" + "SECOND_KEY"
 	thirdKey := configuration.RegServiceEnvPrefix + "_" + "THIRD_KEY"
@@ -78,7 +79,7 @@ func TestGetDynamicKeys(t *testing.T) {
 		require.NoError(t, err)
 		newVal := u.String()
 		newVal2 := "foo=bar=baz"
-		//todo fix this
+
 		restore := test.SetEnvVarsAndRestore(t,
 			test.Env(firstKey, newVal),
 			test.Env(secondKey, newVal2),
@@ -89,5 +90,33 @@ func TestGetDynamicKeys(t *testing.T) {
 		assert.Equal(t, newVal, config.GetAllRegistrationServiceParameters()[firstKey])
 		assert.Equal(t, newVal2, config.GetAllRegistrationServiceParameters()[secondKey])
 		assert.Empty(t, config.GetAllRegistrationServiceParameters()[thirdKey])
+	})
+}
+
+func TestGetDurationBeforeChangeRequestDeletion(t *testing.T) {
+	key := configuration.HostEnvPrefix + "_" + "DURATION_BEFORE_CHANGE_REQUEST_DELETION"
+	resetFunc := test.UnsetEnvVarAndRestore(t, key)
+	defer resetFunc()
+
+	t.Run("default", func(t *testing.T) {
+		resetFunc := test.UnsetEnvVarAndRestore(t, key)
+		defer resetFunc()
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, cast.ToDuration("24h"), config.GetDurationBeforeChangeRequestDeletion())
+	})
+
+	t.Run("file", func(t *testing.T) {
+		config := getFileConfiguration(t, `duration.before.change.request.deletion: "10s"`)
+		assert.Equal(t, cast.ToDuration("10s"), config.GetDurationBeforeChangeRequestDeletion())
+	})
+
+	t.Run("env overwrite", func(t *testing.T) {
+		restore := test.SetEnvVarAndRestore(t, key, "10s")
+		defer restore()
+
+		restore = test.SetEnvVarAndRestore(t, configuration.HostEnvPrefix+"_"+"ANY_CONFIG", "20s")
+		defer restore()
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, cast.ToDuration("10s"), config.GetDurationBeforeChangeRequestDeletion())
 	})
 }
