@@ -117,7 +117,7 @@ func (p UserSignupChangedPredicate) LabelChanged(e event.UpdateEvent, labelName 
 
 // Add creates a new UserSignup Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
+func Add(mgr manager.Manager, _ *configuration.Registry) error {
 	return add(mgr, newReconciler(mgr))
 }
 

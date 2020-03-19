@@ -5,6 +5,7 @@ package configuration
 import (
 	"os"
 	"strings"
+	"time"
 
 	errs "github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -21,6 +22,8 @@ const (
 
 // host-operator constants
 const (
+	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
+
 	// ToolchainConfigMapName specifies a name of a ConfigMap that keeps toolchain configuration
 	ToolchainConfigMapName = "toolchain-saas-config"
 
@@ -71,6 +74,12 @@ func New(configFilePath string) (*Registry, error) {
 
 func (c *Registry) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
+	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
+}
+
+// GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
+func (c *Registry) GetDurationBeforeChangeRequestDeletion() time.Duration {
+	return c.host.GetDuration(VarDurationBeforeChangeRequestDeletion)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
