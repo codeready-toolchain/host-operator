@@ -5,9 +5,10 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"strings"
+
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -207,7 +208,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-
+	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 	// Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
 	// is based on the user's emailHash value - if there is a match, and the e-mail addresses are equal, then the
 	// user is banned.
@@ -242,9 +243,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 		} else {
 			// If there isn't an email-hash label, then the state is invalid
+			log.Info("missing label on usersignup", "label", toolchainv1alpha1.UserSignupUserEmailHashLabelKey, "username", instance.Spec.Username)
 			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusMissingEmailHash)
 		}
 	} else {
+		log.Info("missing annotation on usersignup", "annotation", toolchainv1alpha1.UserSignupUserEmailAnnotationKey, "username", instance.Spec.Username)
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMissingUserEmailAnnotation)
 	}
 
@@ -276,7 +279,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
 		// to Complete and return
-		reqLogger.Info("MasterUserRecord exists, setting status to Complete")
+		reqLogger.Info("MasterUserRecord exists, setting UserSignup status to 'Complete'")
 		instance.Status.CompliantUsername = mur.Name
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusComplete)
 	}
@@ -398,7 +401,14 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			Revision: ns.Revision,
 		}
 	}
-
+	var clusterResources *toolchainv1alpha1.NSTemplateSetClusterResources
+	if nstemplateTier.Spec.ClusterResources != nil {
+		clusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
+			Revision: nstemplateTier.Spec.ClusterResources.Revision,
+		}
+	} else {
+		log.Info("NSTemplateTier has no cluster resources", "name", nstemplateTier.Name)
+	}
 	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 		{
 			TargetCluster: targetCluster,
@@ -406,8 +416,9 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 				UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
 					NSLimit: "default",
 					NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
-						TierName:   nstemplateTier.Name,
-						Namespaces: namespaces,
+						TierName:         nstemplateTier.Name,
+						Namespaces:       namespaces,
+						ClusterResources: clusterResources,
 					},
 				},
 			},
@@ -443,13 +454,14 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			"Error setting controller reference for MasterUserRecord %s", mur.Name)
 	}
 
+	logger.Info("Creating MasterUserRecord", "Name", mur.Name)
 	err = r.client.Create(context.TODO(), mur)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord")
 	}
-
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
+	logger.Info("Created MasterUserRecord", "mur", mur)
 	return nil
 }
 

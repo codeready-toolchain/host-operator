@@ -40,13 +40,14 @@ type Synchronizer struct {
 	memberUserAcc     *toolchainv1alpha1.UserAccount
 	recordSpecUserAcc toolchainv1alpha1.UserAccountEmbedded
 	record            *toolchainv1alpha1.MasterUserRecord
-	log               logr.Logger
+	logger            logr.Logger
 }
 
 func (s *Synchronizer) synchronizeSpec() error {
 
 	if !s.isSynchronized() {
-		if err := updateStatusConditions(s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
+		s.logger.Info("synchronizing specs", "UserAccountSpecBase", s.recordSpecUserAcc.Spec.UserAccountSpecBase)
+		if err := updateStatusConditions(s.logger, s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
 			return err
 		}
 		s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase
@@ -55,27 +56,19 @@ func (s *Synchronizer) synchronizeSpec() error {
 
 		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
 		if err != nil {
+			s.logger.Error(err, "synchronizing failed")
 			return err
 		}
+		s.logger.Info("synchronizing complete")
 	}
 
 	return nil
 }
 
 func (s *Synchronizer) isSynchronized() bool {
-	if !reflect.DeepEqual(s.memberUserAcc.Spec.UserAccountSpecBase, s.recordSpecUserAcc.Spec.UserAccountSpecBase) {
-		return false
-	}
-
-	if s.memberUserAcc.Spec.Disabled != s.record.Spec.Disabled {
-		return false
-	}
-
-	if s.memberUserAcc.Spec.UserID != s.record.Spec.UserID {
-		return false
-	}
-
-	return true
+	return reflect.DeepEqual(s.memberUserAcc.Spec.UserAccountSpecBase, s.recordSpecUserAcc.Spec.UserAccountSpecBase) &&
+		s.memberUserAcc.Spec.Disabled == s.record.Spec.Disabled &&
+		s.memberUserAcc.Spec.UserID == s.record.Spec.UserID
 }
 
 func (s *Synchronizer) synchronizeStatus() error {
@@ -116,6 +109,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 	// Align readiness even if the user account statuses were not changed.
 	// We need to do it to cleanup outdated errors (for example if the target cluster was unavailable) if any
 	s.alignReadiness()
+	s.logger.Info("updating MUR status", "mur", s.record)
 	return s.hostClient.Status().Update(context.TODO(), s.record)
 }
 
@@ -143,17 +137,17 @@ func (s *Synchronizer) withConsoleURL(status toolchainv1alpha1.UserAccountStatus
 		namespacedName := types.NamespacedName{Namespace: consoleNamespace, Name: "console"}
 		err := s.memberCluster.Client.Get(context.TODO(), namespacedName, route)
 		if err != nil {
-			s.log.Error(err, "unable to get console route")
+			s.logger.Error(err, "unable to get console route")
 			if kuberrors.IsNotFound(err) {
 				// It can happen if running in old OpenShift version like 3.x (minishift) in dev environment
 				// TODO do this only if run in dev environment
 				consoleURL, consoleErr := s.openShift3XConsoleURL(s.memberCluster.APIEndpoint)
 				if consoleErr != nil {
 					// Log the openShift3XConsoleURL() error but return the original missing route error
-					s.log.Error(err, "OpenShit 3.x web console unreachable", "url", consoleURL)
+					s.logger.Error(err, "OpenShit 3.x web console unreachable", "url", consoleURL)
 					return status, errors.Wrapf(err, "unable to get web console route for cluster %s", s.memberCluster.Name)
 				}
-				s.log.Info("OpenShit 3.x web console URL used", "url", consoleURL)
+				s.logger.Info("OpenShit 3.x web console URL used", "url", consoleURL)
 				status.Cluster.ConsoleURL = consoleURL
 				return status, nil
 			}
@@ -172,11 +166,12 @@ func (s *Synchronizer) withCheDashboardURL(status toolchainv1alpha1.UserAccountS
 		namespacedName := types.NamespacedName{Namespace: cheNamespace, Name: "che"}
 		err := s.memberCluster.Client.Get(context.TODO(), namespacedName, route)
 		if err != nil {
-			s.log.Error(err, "unable to get che dashboard route")
 			if kuberrors.IsNotFound(err) {
 				// It can happen if Che Operator is not installed
+				s.logger.Info("unable to get che dashboard route (operator not installed?)")
 				return status, nil
 			}
+			s.logger.Error(err, "unable to get che dashboard route")
 			return status, err
 		}
 		scheme := "https"

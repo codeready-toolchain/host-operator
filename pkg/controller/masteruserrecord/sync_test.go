@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gock "gopkg.in/h2non/gock.v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,6 +24,103 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/common"
 	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 )
+
+func TestIsSynchronized(t *testing.T) {
+
+	t.Run("synchronized", func(t *testing.T) {
+		// given
+		record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+		s := Synchronizer{
+			memberUserAcc:     &memberUserAcc,
+			record:            &record,
+			recordSpecUserAcc: recordSpecUserAcc,
+		}
+		// when/then
+		assert.True(t, s.isSynchronized())
+	})
+
+	t.Run("not synchronized", func(t *testing.T) {
+
+		t.Run("different user account", func(t *testing.T) {
+			// given
+			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			recordSpecUserAcc.Spec.NSLimit = "bar"
+			s := Synchronizer{
+				memberUserAcc:     &memberUserAcc,
+				record:            &record,
+				recordSpecUserAcc: recordSpecUserAcc,
+			}
+			// when/then
+			assert.False(t, s.isSynchronized())
+		})
+
+		t.Run("different disable", func(t *testing.T) {
+			// given
+			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record.Spec.Disabled = true
+			s := Synchronizer{
+				memberUserAcc:     &memberUserAcc,
+				record:            &record,
+				recordSpecUserAcc: recordSpecUserAcc,
+			}
+			// when/then
+			assert.False(t, s.isSynchronized())
+		})
+
+		t.Run("different userID", func(t *testing.T) {
+			// given
+			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			record.Spec.UserID = "bar"
+			s := Synchronizer{
+				memberUserAcc:     &memberUserAcc,
+				record:            &record,
+				recordSpecUserAcc: recordSpecUserAcc,
+			}
+			// when/then
+			assert.False(t, s.isSynchronized())
+		})
+	})
+}
+
+func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1alpha1.UserAccountEmbedded, toolchainv1alpha1.UserAccount) {
+	base := toolchainv1alpha1.UserAccountSpecBase{
+		NSLimit: "limit",
+		NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
+			TierName: "basic",
+			ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
+				Revision: "654321a",
+			},
+			Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
+				{
+					Revision: "123456a",
+					Type:     "code",
+				},
+			},
+		},
+	}
+	memberUserAcc := toolchainv1alpha1.UserAccount{
+		Spec: toolchainv1alpha1.UserAccountSpec{
+			UserID:              "foo",
+			Disabled:            false,
+			UserAccountSpecBase: base,
+		},
+	}
+	recordSpecUserAcc := toolchainv1alpha1.UserAccountEmbedded{
+		Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
+			UserAccountSpecBase: base,
+		},
+	}
+	record := toolchainv1alpha1.MasterUserRecord{
+		Spec: toolchainv1alpha1.MasterUserRecordSpec{
+			UserID:   "foo",
+			Disabled: false,
+			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
+				recordSpecUserAcc,
+			},
+		},
+	}
+	return record, recordSpecUserAcc, memberUserAcc
+}
 
 func TestSynchronizeSpec(t *testing.T) {
 	// given
@@ -45,7 +142,7 @@ func TestSynchronizeSpec(t *testing.T) {
 		memberCluster:     newMemberCluster(memberClient),
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: mur.Spec.UserAccounts[0],
-		log:               l,
+		logger:            l,
 	}
 
 	// when
@@ -174,7 +271,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			memberCluster:     newMemberCluster(memberClient),
 			memberUserAcc:     userAcc,
 			recordSpecUserAcc: mur.Spec.UserAccounts[0],
-			log:               l,
+			logger:            l,
 		}
 
 		// when
@@ -202,7 +299,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			memberCluster:     newMemberCluster(memberClient),
 			memberUserAcc:     userAcc,
 			recordSpecUserAcc: provisionedMur.Spec.UserAccounts[0],
-			log:               l,
+			logger:            l,
 		}
 
 		t.Run("with empty set of UserAccounts statuses", func(t *testing.T) {
@@ -279,7 +376,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 				memberCluster:     newMemberCluster(memberClient),
 				memberUserAcc:     userAccount,
 				recordSpecUserAcc: mur.Spec.UserAccounts[0],
-				log:               l,
+				logger:            l,
 			}, memberClient
 		}
 
@@ -405,7 +502,7 @@ func TestCheURL(t *testing.T) {
 			memberCluster:     newMemberCluster(memberClient),
 			memberUserAcc:     userAccount,
 			recordSpecUserAcc: mur.Spec.UserAccounts[0],
-			log:               l,
+			logger:            l,
 		}
 
 		// when
@@ -452,7 +549,7 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchain
 		memberCluster:     newMemberCluster(memberClient),
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: mur.Spec.UserAccounts[0],
-		log:               l,
+		logger:            l,
 	}
 
 	// when
