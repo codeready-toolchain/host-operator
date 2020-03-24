@@ -3,7 +3,6 @@ package nstemplatetiers
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"testing"
 	texttemplate "text/template"
 
@@ -208,21 +207,32 @@ func TestNewNSTemplateTier(t *testing.T) {
 						assert.Equal(t, *tmplObj, ns.Template)
 
 						// Assert expected objects in the template
-						// Each template should have one Namespace and one RoleBinding object
-						// except "code" which should also have additional RoleBinding and Role
+						// Each template should have one Namespace, one RoleBinding, one LimitRange and three NetworkPolicy objects
+
+						// Namespace
+						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"${USERNAME}-%[1]s"}}`, ns.Type))
+						// RoleBinding "user-edit"
+						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"user-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, ns.Type))
+						// LimitRange
+						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"150m","memory":"512Mi"},"defaultRequest":{"cpu":"100m","memory":"64Mi"},"type":"Container"}]}}`, ns.Type))
+						// NetworkPolicies
+						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, ns.Type))
+						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"allow-from-openshift-ingress","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"ingress"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, ns.Type))
+						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"allow-from-openshift-monitoring","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"monitoring"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, ns.Type))
+
+						// All templates in the "team" tier and "-code" templates in other tiers should also have additional RoleBinding and Role
 						if kind == "code" || tier == "team" {
-							require.Len(t, ns.Template.Objects, 5)
-						} else {
-							require.Len(t, ns.Template.Objects, 3)
-						}
-						rbFound := false
-						for _, object := range ns.Template.Objects {
-							if strings.Contains(string(object.Raw), `"kind":"RoleBinding","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"user-edit"`) {
-								rbFound = true
-								break
+							require.Len(t, ns.Template.Objects, 8)
+							name := kind
+							if tier != "team" {
+								name = "che"
 							}
+							// Role & RoleBinding with additional permissions to edit roles/rolebindings
+							containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"toolchain-%s-edit","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":["authorization.openshift.io","rbac.authorization.k8s.io"],"resources":["roles","rolebindings"],"verbs":["*"]}]}`, name, ns.Type))
+							containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"user-toolchain-%[1]s-edit","namespace":"${USERNAME}-%[2]s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"Role","name":"toolchain-%[1]s-edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, name, ns.Type))
+						} else {
+							require.Len(t, ns.Template.Objects, 6)
 						}
-						assert.True(t, rbFound, "the user-edit RoleBinding wasn't found in the namespace of the type", "ns-type", kind)
 						break
 					}
 					assert.True(t, found, "the namespace with the type wasn't found", "ns-type", kind)
@@ -262,7 +272,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 					require.NoError(t, err)
 					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, namespaceRevisions[tier], clusterResourceQuotaRevisions[tier])
 					require.NoError(t, err)
-					// here we don't compare whoe objects because the generated NSTemplateTier
+					// here we don't compare objects because the generated NSTemplateTier
 					// has no specific values for the `TypeMeta`: the `APIVersion: toolchain.dev.openshift.com/v1alpha1`
 					// and `Kind: NSTemplateTier` should be set by the client using the registered GVK
 					assert.Equal(t, expected.ObjectMeta, actual.ObjectMeta)
@@ -294,6 +304,15 @@ func TestNewNSTemplateTier(t *testing.T) {
 			assert.Contains(t, err.Error(), "unable to generate 'advanced' NSTemplateTier manifest: couldn't get version/kind; json parse error")
 		})
 	})
+}
+
+func containsObj(t *testing.T, template templatev1.Template, obj string) {
+	for _, object := range template.Objects {
+		if string(object.Raw) == obj {
+			return
+		}
+	}
+	assert.Fail(t, "NSTemplateTier doesn't contain the expected object", "Template: %s; Expected object: %s", template, obj)
 }
 
 func TestNewNSTemplateTiers(t *testing.T) {
