@@ -1000,59 +1000,6 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "ChangeTierRequest",
-                "metadata": {
-                  "name": "changetierrequest-1a2b3c"
-                },
-                "spec": {
-                  "murName": "johnsmith",
-                  "targetCluster": "east-2a",
-                  "tierName": "advanced"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "MasterUserRecord",
-                "metadata": {
-                  "name": "johnsmith"
-                },
-                "spec": {
-                  "userAccounts": [
-                    {
-                      "spec": {
-                        "nsLimit": "admin",
-                        "nsTemplateSet": {
-                          "namespaces": [
-                            {
-                              "revision": "abcdef",
-                              "type": "ide"
-                            },
-                            {
-                              "revision": "1d2f3q",
-                              "type": "cicd"
-                            },
-                            {
-                              "revision": "a34r57",
-                              "type": "stage"
-                            },
-                            {
-                              "revision": "ra24qw",
-                              "type": "default"
-                            }
-                          ],
-                          "tierName": "basic"
-                        },
-                        "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                      },
-                      "syncIndex": "135540409",
-                      "targetCluster": "east-2a"
-                    }
-                  ],
-                  "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "NSTemplateTier",
                 "metadata": {
                   "name": "basic"
@@ -1124,6 +1071,59 @@ data:
                 },
                 "spec": {
                   "email": "john.doe@gmail.com"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "ChangeTierRequest",
+                "metadata": {
+                  "name": "changetierrequest-1a2b3c"
+                },
+                "spec": {
+                  "murName": "johnsmith",
+                  "targetCluster": "east-2a",
+                  "tierName": "advanced"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "MasterUserRecord",
+                "metadata": {
+                  "name": "johnsmith"
+                },
+                "spec": {
+                  "userAccounts": [
+                    {
+                      "spec": {
+                        "nsLimit": "admin",
+                        "nsTemplateSet": {
+                          "namespaces": [
+                            {
+                              "revision": "abcdef",
+                              "type": "ide"
+                            },
+                            {
+                              "revision": "1d2f3q",
+                              "type": "cicd"
+                            },
+                            {
+                              "revision": "a34r57",
+                              "type": "stage"
+                            },
+                            {
+                              "revision": "ra24qw",
+                              "type": "default"
+                            }
+                          ],
+                          "tierName": "basic"
+                        },
+                        "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                      },
+                      "syncIndex": "135540409",
+                      "targetCluster": "east-2a"
+                    }
+                  ],
+                  "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
                 }
               }
             ]

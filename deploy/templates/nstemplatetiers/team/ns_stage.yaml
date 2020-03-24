@@ -2,7 +2,7 @@ apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
   labels:
-    provider: codeready-toolchain
+    toolchain.dev.openshift.com/provider: codeready-toolchain
   name: team-stage
 objects:
 - apiVersion: v1
@@ -13,13 +13,13 @@ objects:
       openshift.io/display-name: ${USERNAME}-stage
       openshift.io/requester: ${USERNAME}
     labels:
-      provider: codeready-toolchain
+      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: ${USERNAME}-stage
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
   metadata:
     labels:
-      provider: codeready-toolchain
+      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: toolchain-stage-edit
     namespace: ${USERNAME}-stage
   rules:
@@ -35,7 +35,7 @@ objects:
   kind: RoleBinding
   metadata:
     labels:
-      provider: codeready-toolchain
+      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: user-edit
     namespace: ${USERNAME}-stage
   roleRef:
@@ -49,7 +49,7 @@ objects:
   kind: RoleBinding
   metadata:
     labels:
-      provider: codeready-toolchain
+      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: user-toolchain-stage-edit
     namespace: ${USERNAME}-stage
   roleRef:
@@ -59,6 +59,22 @@ objects:
   subjects:
   - kind: User
     name: ${USERNAME}
+- apiVersion: v1
+  kind: LimitRange
+  metadata:
+    labels:
+      toolchain.dev.openshift.com/provider: codeready-toolchain
+    name: resource-limits
+    namespace: ${USERNAME}-stage
+  spec:
+    limits:
+    - type: "Container"
+      default:
+        cpu: 150m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 64Mi
 parameters:
 - name: USERNAME
   required: true
