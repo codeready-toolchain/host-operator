@@ -118,6 +118,7 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 				logger.Error(err, "unable to synchronize with member UserAccount")
 				return reconcile.Result{}, err
 			} else if requeue {
+				// requeue
 				return reconcile.Result{Requeue: true}, err
 			}
 		}
@@ -141,9 +142,8 @@ func (r *ReconcileMasterUserRecord) addFinalizer(logger logr.Logger, mur *toolch
 		}
 		logger.Info("MasterUserRecord now has finalizer")
 		return true, nil
-	} else {
-		logger.Info("MasterUserRecord already has finalizer")
 	}
+	logger.Info("MasterUserRecord already has finalizer")
 	return false, nil
 }
 
@@ -181,19 +181,20 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAcc
 		recordSpecUserAcc: murAccount,
 		logger:            logger,
 	}
-	if synchronized, err := sync.synchronizeSpec(); err != nil {
-		// if we got an error while synchronizing the specs, then we probably can't update it here neither.
-		// so we just return the error
-		return false, err
-	} else if synchronized {
+	if synced, err := sync.synchronizeSpec(); err != nil {
+		// note: if we got an error while sync'ing the spec, then we may not be able to update the MUR status it here neither.
+		return false, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason), err,
+			"update of the UserAccount.spec in the cluster '%s' failed", murAccount.TargetCluster)
+	} else if synced {
 		return true, nil
 	}
 	if err := sync.synchronizeStatus(); err != nil {
 		err = errs.Wrapf(err, "update of the MasterUserRecord failed while synchronizing with UserAccount status from the cluster '%s'", murAccount.TargetCluster)
-		// if we got an error while updating the status, then we probably can't update it here neither.
-		// so we just return the error
-		return false, err
+		// note: if we got an error while updating the status, then we probably can't update it here neither.
+		return false, r.wrapErrorWithStatusUpdate(logger, mur, r.useExistingConditionOfType(toolchainv1alpha1.ConditionReady), err, "")
 	}
+	// nothing done and no error occurred
+	logger.Info("user account on member cluster was already in sync", "target_cluster", murAccount.TargetCluster)
 	return false, nil
 }
 

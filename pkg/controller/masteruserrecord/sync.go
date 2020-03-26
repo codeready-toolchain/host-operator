@@ -48,7 +48,7 @@ func (s *Synchronizer) synchronizeSpec() (bool, error) {
 	if !s.isSynchronized() {
 		s.logger.Info("synchronizing specs", "UserAccountSpecBase", s.recordSpecUserAcc.Spec.UserAccountSpecBase)
 		if err := updateStatusConditions(s.logger, s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
-			return true, err
+			return false, err
 		}
 		s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
@@ -57,7 +57,7 @@ func (s *Synchronizer) synchronizeSpec() (bool, error) {
 		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
 		if err != nil {
 			s.logger.Error(err, "synchronizing failed")
-			return true, err
+			return false, err
 		}
 		s.logger.Info("synchronizing complete")
 		return true, nil
@@ -136,9 +136,7 @@ func (s *Synchronizer) withConsoleURL(status toolchainv1alpha1.UserAccountStatus
 	if status.Cluster.ConsoleURL == "" {
 		route := &routev1.Route{}
 		namespacedName := types.NamespacedName{Namespace: consoleNamespace, Name: "console"}
-		err := s.memberCluster.Client.Get(context.TODO(), namespacedName, route)
-		if err != nil {
-			s.logger.Error(err, "unable to get console route")
+		if err := s.memberCluster.Client.Get(context.TODO(), namespacedName, route); err != nil {
 			if kuberrors.IsNotFound(err) {
 				// It can happen if running in old OpenShift version like 3.x (minishift) in dev environment
 				// TODO do this only if run in dev environment
@@ -152,6 +150,7 @@ func (s *Synchronizer) withConsoleURL(status toolchainv1alpha1.UserAccountStatus
 				status.Cluster.ConsoleURL = consoleURL
 				return status, nil
 			}
+			s.logger.Error(err, "unable to get console route")
 			return status, err
 		}
 

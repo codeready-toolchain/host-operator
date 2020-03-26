@@ -12,6 +12,7 @@ import (
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
 	"github.com/go-logr/logr"
+	routev1 "github.com/openshift/api/route/v1"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -111,18 +112,47 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	memberClient := test.NewFakeClient(t)
 	memberClient2 := test.NewFakeClient(t)
 	hostClient := test.NewFakeClient(t, mur)
+	memberClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+		if _, ok := obj.(*routev1.Route); ok {
+			obj = &routev1.Route{
+				Spec: routev1.RouteSpec{
+					Host: "host",
+					Path: "console",
+				},
+			}
+			return nil
+		}
+		return memberClient.Client.Get(ctx, key, obj)
+	}
+	memberClient2.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+		if _, ok := obj.(*routev1.Route); ok {
+			obj = &routev1.Route{
+				Spec: routev1.RouteSpec{
+					Host: "host",
+					Path: "console",
+				},
+			}
+			return nil
+		}
+		return memberClient2.Client.Get(ctx, key, obj)
+	}
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2))
 
-	// when
-	_, err := cntrl.Reconcile(newMurRequest(mur))
-
+	// when reconciling
+	result, err := cntrl.Reconcile(newMurRequest(mur))
 	// then
 	require.NoError(t, err)
-
+	assert.True(t, result.Requeue)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
+
+	// when reconciling again
+	_, err = cntrl.Reconcile(newMurRequest(mur))
+	// then
+	require.NoError(t, err)
+	assert.True(t, result.Requeue)
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec)
@@ -273,7 +303,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		msg := "update of the UserAccount.spec in the cluster 'member-cluster' failed"
+		msg := "unable to update user account john"
 		assert.Contains(t, err.Error(), msg)
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).
@@ -397,18 +427,26 @@ func TestModifyUserAccounts(t *testing.T) {
 		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2),
 		clusterClient("member3-cluster", memberClient3))
 
-	// when
+	// when ensuring 1st account
 	_, err := cntrl.Reconcile(newMurRequest(mur))
-
 	// then
 	require.NoError(t, err)
-
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
+
+	// when ensuring 2nd account
+	_, err = cntrl.Reconcile(newMurRequest(mur))
+	// then
+	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec)
+
+	// when ensuring 3rd account
+	_, err = cntrl.Reconcile(newMurRequest(mur))
+	// then
+	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient3).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[2].Spec)
@@ -604,7 +642,11 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	// when
 	res, err := cntrl.Reconcile(newMurRequest(mur))
 	require.NoError(t, err)
-	assert.Equal(t, reconcile.Result{}, res)
+	assert.Equal(t, reconcile.Result{Requeue: true}, res) // request a new reconcile loop upon ensuring user accounts...
+	// ... so let's reconcile again!
+	res, err = cntrl.Reconcile(newMurRequest(mur))
+	require.NoError(t, err)
+	assert.Equal(t, reconcile.Result{}, res) // no need to reconcile again this time
 
 	userAcc := &toolchainv1alpha1.UserAccount{}
 	err = memberClient.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: "toolchain-member-operator"}, userAcc)
