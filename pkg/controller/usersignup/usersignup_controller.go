@@ -243,11 +243,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 		} else {
 			// If there isn't an email-hash label, then the state is invalid
-			log.Info("missing label on usersignup", "label", toolchainv1alpha1.UserSignupUserEmailHashLabelKey, "username", instance.Spec.Username)
+			reqLogger.Info("missing label on usersignup", "label", toolchainv1alpha1.UserSignupUserEmailHashLabelKey, "username", instance.Spec.Username)
 			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusMissingEmailHash)
 		}
 	} else {
-		log.Info("missing annotation on usersignup", "annotation", toolchainv1alpha1.UserSignupUserEmailAnnotationKey, "username", instance.Spec.Username)
+		reqLogger.Info("missing annotation on usersignup", "annotation", toolchainv1alpha1.UserSignupUserEmailAnnotationKey, "username", instance.Spec.Username)
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMissingUserEmailAnnotation)
 	}
 
@@ -407,7 +407,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			Revision: nstemplateTier.Spec.ClusterResources.Revision,
 		}
 	} else {
-		log.Info("NSTemplateTier has no cluster resources", "name", nstemplateTier.Name)
+		logger.Info("NSTemplateTier has no cluster resources", "name", nstemplateTier.Name)
 	}
 	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 		{
