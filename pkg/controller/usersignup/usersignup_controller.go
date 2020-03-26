@@ -461,7 +461,6 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			"Error creating MasterUserRecord")
 	}
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
-	logger.Info("Created MasterUserRecord", "mur", mur)
 	return nil
 }
 
