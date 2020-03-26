@@ -12,7 +12,6 @@ import (
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
 	"github.com/go-logr/logr"
-	routev1 "github.com/openshift/api/route/v1"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -109,33 +108,9 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord("john", murtest.AdditionalAccounts("member2-cluster"), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
-	memberClient := test.NewFakeClient(t)
-	memberClient2 := test.NewFakeClient(t)
+	memberClient := test.NewFakeClient(t, consoleRoute())
+	memberClient2 := test.NewFakeClient(t, consoleRoute())
 	hostClient := test.NewFakeClient(t, mur)
-	memberClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
-		if obj, ok := obj.(*routev1.Route); ok {
-			*obj = routev1.Route{
-				Spec: routev1.RouteSpec{
-					Host: "host",
-					Path: "console",
-				},
-			}
-			return nil
-		}
-		return memberClient.Client.Get(ctx, key, obj)
-	}
-	memberClient2.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
-		if obj, ok := obj.(*routev1.Route); ok {
-			*obj = routev1.Route{
-				Spec: routev1.RouteSpec{
-					Host: "host",
-					Path: "console",
-				},
-			}
-			return nil
-		}
-		return memberClient2.Client.Get(ctx, key, obj)
-	}
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2))
 
