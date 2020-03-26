@@ -147,6 +147,11 @@ func (r *ReconcileMasterUserRecord) addFinalizer(logger logr.Logger, mur *toolch
 	return false, nil
 }
 
+// ensureUserAccount ensures that there's a UserAccount resource on the member cluster for the given `murAccount`.
+// If the UserAccount resource already exists, then this latter is synchronized using the given `murAccount` and the associated `mur` status is also updated to reflect
+// the UserAccount specs.
+// returns `true, nil` if a UserAccount was created on the member cluster, `false, nil` otherwise
+// return  `false, err` if an error occurred
 func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAccount toolchainv1alpha1.UserAccountEmbedded, mur *toolchainv1alpha1.MasterUserRecord) (bool, error) {
 	// get & check member cluster
 	memberCluster, err := r.getMemberCluster(murAccount.TargetCluster)
