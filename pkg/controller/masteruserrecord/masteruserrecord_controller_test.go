@@ -113,8 +113,8 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	memberClient2 := test.NewFakeClient(t)
 	hostClient := test.NewFakeClient(t, mur)
 	memberClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
-		if _, ok := obj.(*routev1.Route); ok {
-			obj = &routev1.Route{
+		if obj, ok := obj.(*routev1.Route); ok {
+			*obj = routev1.Route{
 				Spec: routev1.RouteSpec{
 					Host: "host",
 					Path: "console",
@@ -125,8 +125,8 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 		return memberClient.Client.Get(ctx, key, obj)
 	}
 	memberClient2.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
-		if _, ok := obj.(*routev1.Route); ok {
-			obj = &routev1.Route{
+		if obj, ok := obj.(*routev1.Route); ok {
+			*obj = routev1.Route{
 				Spec: routev1.RouteSpec{
 					Host: "host",
 					Path: "console",
