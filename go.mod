@@ -4,7 +4,7 @@ require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20200323155710-2cad93f41d50
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200318175254-83627f297ee0
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200326105658-321c7798c5b2
 	github.com/emicklei/go-restful v2.12.0+incompatible // indirect
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
@@ -67,7 +67,5 @@ replace (
 	github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309 // Required by Helm (inderectly by operator-sdk)
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20190927182313-d4a64ec2cbd8 // Using openshift/api 4.3
 )
-
-replace github.com/codeready-toolchain/toolchain-common => ../toolchain-common
 
 go 1.13

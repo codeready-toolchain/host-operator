@@ -43,12 +43,12 @@ type Synchronizer struct {
 	logger            logr.Logger
 }
 
-func (s *Synchronizer) synchronizeSpec() error {
+func (s *Synchronizer) synchronizeSpec() (bool, error) {
 
 	if !s.isSynchronized() {
 		s.logger.Info("synchronizing specs", "UserAccountSpecBase", s.recordSpecUserAcc.Spec.UserAccountSpecBase)
 		if err := updateStatusConditions(s.logger, s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
-			return err
+			return true, err
 		}
 		s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
@@ -57,12 +57,13 @@ func (s *Synchronizer) synchronizeSpec() error {
 		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
 		if err != nil {
 			s.logger.Error(err, "synchronizing failed")
-			return err
+			return true, err
 		}
 		s.logger.Info("synchronizing complete")
+		return true, nil
 	}
 
-	return nil
+	return false, nil
 }
 
 func (s *Synchronizer) isSynchronized() bool {
