@@ -243,11 +243,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 		} else {
 			// If there isn't an email-hash label, then the state is invalid
-			reqLogger.Info("missing label on usersignup", "label", toolchainv1alpha1.UserSignupUserEmailHashLabelKey, "username", instance.Spec.Username)
+			reqLogger.Info("missing label on usersignup", "label", toolchainv1alpha1.UserSignupUserEmailHashLabelKey)
 			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusMissingEmailHash)
 		}
 	} else {
-		reqLogger.Info("missing annotation on usersignup", "annotation", toolchainv1alpha1.UserSignupUserEmailAnnotationKey, "username", instance.Spec.Username)
+		reqLogger.Info("missing annotation on usersignup", "annotation", toolchainv1alpha1.UserSignupUserEmailAnnotationKey)
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMissingUserEmailAnnotation)
 	}
 
