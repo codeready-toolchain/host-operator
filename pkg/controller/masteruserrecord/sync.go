@@ -43,6 +43,9 @@ type Synchronizer struct {
 	logger            logr.Logger
 }
 
+// synchronizeSpec synhronizes the useraccount in the MasterUserRecord with the corresponding UserAccount on the member cluster.
+// returns `true` if the user account was updated on the member cluster (and the MasterUserRecord's status was updated accordingly), `false` otherwise
+// returns `false, err` if an error occurred.
 func (s *Synchronizer) synchronizeSpec() (bool, error) {
 
 	if !s.isSynchronized() {
