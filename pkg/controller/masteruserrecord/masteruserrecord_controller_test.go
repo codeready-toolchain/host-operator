@@ -47,10 +47,10 @@ func TestAddFinalizer(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		require.True(t, result.Requeue)
+		require.False(t, result.Requeue)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasNoConditions().
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 			HasFinalizer()
 	})
 
@@ -118,16 +118,10 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	result, err := cntrl.Reconcile(newMurRequest(mur))
 	// then
 	require.NoError(t, err)
-	assert.True(t, result.Requeue)
+	assert.False(t, result.Requeue)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
-
-	// when reconciling again
-	_, err = cntrl.Reconcile(newMurRequest(mur))
-	// then
-	require.NoError(t, err)
-	assert.True(t, result.Requeue)
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec)
@@ -617,16 +611,10 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	// when
 	res, err := cntrl.Reconcile(newMurRequest(mur))
 	require.NoError(t, err)
-	assert.Equal(t, reconcile.Result{Requeue: true}, res) // request a new reconcile loop upon ensuring user accounts...
-	// ... so let's reconcile again!
-	res, err = cntrl.Reconcile(newMurRequest(mur))
-	require.NoError(t, err)
-	assert.Equal(t, reconcile.Result{}, res) // no need to reconcile again this time
-
+	assert.Equal(t, reconcile.Result{Requeue: false}, res)
 	userAcc := &toolchainv1alpha1.UserAccount{}
 	err = memberClient.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: "toolchain-member-operator"}, userAcc)
 	require.NoError(t, err)
-
 	assert.True(t, userAcc.Spec.Disabled)
 }
 

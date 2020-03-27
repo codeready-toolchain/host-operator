@@ -146,11 +146,10 @@ func TestSynchronizeSpec(t *testing.T) {
 	}
 
 	// when
-	synced, err := sync.synchronizeSpec()
+	err := sync.synchronizeSpec()
 
 	// then
 	require.NoError(t, err)
-	assert.True(t, synced)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
@@ -275,12 +274,11 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		}
 
 		// when
-		synced, err := sync.synchronizeSpec()
+		err := sync.synchronizeSpec()
 
 		// then
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unable to update user account john")
-		assert.False(t, synced)
 	})
 
 	t.Run("status synchronization of the UserAccount & MasterUserRecord failed", func(t *testing.T) {

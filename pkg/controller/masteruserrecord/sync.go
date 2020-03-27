@@ -44,14 +44,12 @@ type Synchronizer struct {
 }
 
 // synchronizeSpec synhronizes the useraccount in the MasterUserRecord with the corresponding UserAccount on the member cluster.
-// returns `true, nil` if the user account was updated on the member cluster (and the MasterUserRecord's status was updated accordingly), `false, nil` otherwise
-// returns `false, err` if an error occurred.
-func (s *Synchronizer) synchronizeSpec() (bool, error) {
+func (s *Synchronizer) synchronizeSpec() error {
 
 	if !s.isSynchronized() {
 		s.logger.Info("synchronizing specs", "UserAccountSpecBase", s.recordSpecUserAcc.Spec.UserAccountSpecBase)
 		if err := updateStatusConditions(s.logger, s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
-			return false, err
+			return err
 		}
 		s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
@@ -60,13 +58,11 @@ func (s *Synchronizer) synchronizeSpec() (bool, error) {
 		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
 		if err != nil {
 			s.logger.Error(err, "synchronizing failed")
-			return false, err
+			return err
 		}
 		s.logger.Info("synchronizing complete")
-		return true, nil
 	}
-
-	return false, nil
+	return nil
 }
 
 func (s *Synchronizer) isSynchronized() bool {
