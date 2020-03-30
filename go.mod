@@ -4,7 +4,7 @@ require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20200323155710-2cad93f41d50
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200318175254-83627f297ee0
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200326105658-321c7798c5b2
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible

@@ -6,8 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"os"
+
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
@@ -76,7 +77,56 @@ var basicNSTemplateTier = &toolchainv1alpha1.NSTemplateTier{
 				},
 			},
 		},
+		ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+			Revision: "654321b",
+			Template: templatev1.Template{
+				// does not need to be filled
+			},
+		},
 	},
+}
+
+func TestUserSignupCreateMUROk(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			Username:      "foo@redhat.com",
+			Approved:      true,
+			TargetCluster: "east",
+		},
+	}
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier)
+	// when
+	res, err := r.Reconcile(req)
+	// then verify that the MUR exists and is complete
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 1)
+	mur := murs.Items[0]
+	require.Equal(t, operatorNamespace, mur.Namespace)
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Len(t, mur.Spec.UserAccounts, 1)
+	assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
+	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 3)
+	for _, ns := range mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces {
+		switch ns.Type {
+		case "code":
+			assert.Equal(t, "123456a", ns.Revision)
+		case "dev":
+			assert.Equal(t, "123456b", ns.Revision)
+		case "stage":
+			assert.Equal(t, "123456c", ns.Revision)
+		default:
+			t.Fatalf("unexpected namespace type: %s", ns.Type)
+		}
+	}
+	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
+	assert.NotEmpty(t, "654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.Template)
+	assert.Equal(t, "654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.Revision)
 }
 
 func TestReadUserApprovalPolicy(t *testing.T) {

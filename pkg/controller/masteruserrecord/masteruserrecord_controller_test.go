@@ -11,6 +11,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
+	"github.com/go-logr/logr"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,11 +29,62 @@ import (
 
 type getMemberCluster func(clusters ...clientForCluster) func(name string) (*cluster.FedCluster, bool)
 
+func TestAddFinalizer(t *testing.T) {
+
+	// given
+	logf.SetLogger(logf.ZapLogger(true))
+	s := apiScheme(t)
+
+	t.Run("ok", func(t *testing.T) {
+		mur := murtest.NewMasterUserRecord("john")
+		memberClient := test.NewFakeClient(t)
+		hostClient := test.NewFakeClient(t, mur)
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		result, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.NoError(t, err)
+		require.False(t, result.Requeue)
+
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
+			HasFinalizer()
+	})
+
+	t.Run("fails because it cannot add finalizer", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord("john")
+		hostClient := test.NewFakeClient(t, mur)
+		memberClient := test.NewFakeClient(t)
+		hostClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			return fmt.Errorf("unable to add finalizer to MUR %s", mur.Name)
+		}
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.Error(t, err)
+		msg := "failed while updating with added finalizer: unable to add finalizer to MUR john"
+		assert.Contains(t, err.Error(), msg)
+
+		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason, "unable to add finalizer to MUR john"))
+	})
+}
+
 func TestCreateUserAccountSuccessful(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord("john")
+	murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	memberClient := test.NewFakeClient(t)
 	hostClient := test.NewFakeClient(t, mur)
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
@@ -43,7 +95,6 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
@@ -56,19 +107,18 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
-	mur := murtest.NewMasterUserRecord("john", murtest.AdditionalAccounts("member2-cluster"))
-	memberClient := test.NewFakeClient(t)
-	memberClient2 := test.NewFakeClient(t)
+	mur := murtest.NewMasterUserRecord("john", murtest.AdditionalAccounts("member2-cluster"), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
+	memberClient := test.NewFakeClient(t, consoleRoute())
+	memberClient2 := test.NewFakeClient(t, consoleRoute())
 	hostClient := test.NewFakeClient(t, mur)
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2))
 
-	// when
-	_, err := cntrl.Reconcile(newMurRequest(mur))
-
+	// when reconciling
+	result, err := cntrl.Reconcile(newMurRequest(mur))
 	// then
 	require.NoError(t, err)
-
+	assert.False(t, result.Requeue)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
@@ -84,7 +134,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
-	mur := murtest.NewMasterUserRecord("john")
+	mur := murtest.NewMasterUserRecord("john", murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	hostClient := test.NewFakeClient(t, mur)
 
 	t.Run("when member cluster does not exist and UA hasn't been created yet", func(t *testing.T) {
@@ -169,7 +219,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		memberClient := test.NewFakeClient(t)
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
-		statusUpdater := func(mur *toolchainv1alpha1.MasterUserRecord, message string) error {
+		statusUpdater := func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
 			return fmt.Errorf("unable to update status")
 		}
 
@@ -211,7 +261,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
-		modifiedMur := murtest.NewMasterUserRecord("john")
+		modifiedMur := murtest.NewMasterUserRecord("john", murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 		murtest.ModifyUaInMur(modifiedMur, test.MemberClusterName, murtest.TierName("admin"))
 		hostClient := test.NewFakeClient(t, modifiedMur)
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
@@ -222,7 +272,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		msg := "update of the UserAccount.spec in the cluster 'member-cluster' failed"
+		msg := "unable to update user account john"
 		assert.Contains(t, err.Error(), msg)
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).
@@ -232,18 +282,19 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason, "unable to update user account john"))
 	})
 
-	t.Run("status synchronization of the UserAccount & MasterUserRecord failed", func(t *testing.T) {
+	t.Run("status synchronization between UserAccount and MasterUserRecord failed", func(t *testing.T) {
 		// given
 		updatingCond := toBeNotReady("updating", "")
 		provisionedMur := murtest.NewMasterUserRecord("john",
+			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 			murtest.StatusCondition(updatingCond))
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(provisionedMur,
 			uatest.StatusCondition(toBeNotReady("somethingFailed", ""))), consoleRoute())
 
 		hostClient := test.NewFakeClient(t, provisionedMur)
-		// mock only once
+
 		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-			hostClient.MockStatusUpdate = nil
+			hostClient.MockStatusUpdate = nil // mock only once
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
 		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
@@ -264,32 +315,11 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasStatusUserAccounts()
 	})
 
-	t.Run("creation of the UserAccount fails because it cannot add finalizer", func(t *testing.T) {
-		// given
-		hostClient := test.NewFakeClient(t, mur)
-		memberClient := test.NewFakeClient(t)
-		hostClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-			return fmt.Errorf("unable to add finalizer to MUR %s", mur.Name)
-		}
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
-			clusterClient(test.MemberClusterName, memberClient))
-
-		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
-
-		// then
-		require.Error(t, err)
-		msg := "failed while updating with added finalizer: unable to add finalizer to MUR john"
-		assert.Contains(t, err.Error(), msg)
-
-		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
-		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason, "unable to add finalizer to MUR john"))
-	})
-
 	t.Run("deletion of MasterUserRecord fails because it cannot remove finalizer", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("john", murtest.ToBeDeleted())
+		mur := murtest.NewMasterUserRecord("john",
+			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
+			murtest.ToBeDeleted())
 
 		hostClient := test.NewFakeClient(t, mur)
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
@@ -314,7 +344,9 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("deletion of the UserAccount failed", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("john", murtest.ToBeDeleted())
+		mur := murtest.NewMasterUserRecord("john",
+			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
+			murtest.ToBeDeleted())
 		hostClient := test.NewFakeClient(t, mur)
 
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
@@ -343,7 +375,9 @@ func TestModifyUserAccounts(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
-	mur := murtest.NewMasterUserRecord("john", murtest.StatusCondition(toBeProvisioned()),
+	mur := murtest.NewMasterUserRecord("john",
+		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
+		murtest.StatusCondition(toBeProvisioned()),
 		murtest.AdditionalAccounts("member2-cluster", "member3-cluster"))
 
 	userAccount := uatest.NewUserAccountFromMur(mur)
@@ -362,18 +396,26 @@ func TestModifyUserAccounts(t *testing.T) {
 		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2),
 		clusterClient("member3-cluster", memberClient3))
 
-	// when
+	// when ensuring 1st account
 	_, err := cntrl.Reconcile(newMurRequest(mur))
-
 	// then
 	require.NoError(t, err)
-
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
+
+	// when ensuring 2nd account
+	_, err = cntrl.Reconcile(newMurRequest(mur))
+	// then
+	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec)
+
+	// when ensuring 3rd account
+	_, err = cntrl.Reconcile(newMurRequest(mur))
+	// then
+	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient3).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[2].Spec)
@@ -390,6 +432,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		// setup MUR that wil contain UserAccountStatusEmbedded fields for UserAccounts from "member2-cluster" and "member3-cluster" but will miss from test.MemberClusterName
 		// then the reconcile should add the misssing UserAccountStatusEmbedded for the missing test.MemberClusterName cluster without updating anything else
 		mur := murtest.NewMasterUserRecord("john",
+			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
 			murtest.AdditionalAccounts("member2-cluster", "member3-cluster"))
 
@@ -457,6 +500,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		// MUR with ready condition set to false with an error
 		// all MUR.Status.UserAccount[] conditions are already in sync with the corresponding UserAccounts and set to Ready
 		mur := murtest.NewMasterUserRecord("john",
+			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, "something went wrong")),
 			murtest.AdditionalAccounts("member2-cluster"))
 		userAccount := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
@@ -500,7 +544,9 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
-	mur := murtest.NewMasterUserRecord("john", murtest.ToBeDeleted())
+	mur := murtest.NewMasterUserRecord("john",
+		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
+		murtest.ToBeDeleted())
 	userAcc := uatest.NewUserAccountFromMur(mur)
 
 	memberClient := test.NewFakeClient(t, userAcc)
@@ -525,6 +571,7 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord("john",
+		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 		murtest.ToBeDeleted(), murtest.AdditionalAccounts("member2-cluster"))
 	userAcc := uatest.NewUserAccountFromMur(mur)
 
@@ -552,7 +599,9 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
-	mur := murtest.NewMasterUserRecord("john", murtest.DisabledMur(true))
+	mur := murtest.NewMasterUserRecord("john",
+		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
+		murtest.DisabledMur(true))
 	userAccount := uatest.NewUserAccountFromMur(mur, uatest.DisabledUa(false))
 	memberClient := test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute(false))
 	hostClient := test.NewFakeClient(t, mur)
@@ -562,12 +611,10 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	// when
 	res, err := cntrl.Reconcile(newMurRequest(mur))
 	require.NoError(t, err)
-	assert.Equal(t, reconcile.Result{}, res)
-
+	assert.Equal(t, reconcile.Result{Requeue: false}, res)
 	userAcc := &toolchainv1alpha1.UserAccount{}
 	err = memberClient.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: "toolchain-member-operator"}, userAcc)
 	require.NoError(t, err)
-
 	assert.True(t, userAcc.Spec.Disabled)
 }
 
