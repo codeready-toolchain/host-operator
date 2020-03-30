@@ -86,8 +86,8 @@ type ReconcileMasterUserRecord struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling MasterUserRecord")
+	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	logger.Info("Reconciling MasterUserRecord")
 
 	// Fetch the MasterUserRecord instance
 	mur := &toolchainv1alpha1.MasterUserRecord{}
@@ -100,91 +100,97 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		reqLogger.Error(err, "unable to get MasterUserRecord")
+		logger.Error(err, "unable to get MasterUserRecord")
 		return reconcile.Result{}, err
 	}
 	// If the UserAccount is not being deleted, create or synchronize UserAccounts.
 	if !coputil.IsBeingDeleted(mur) {
 		// Add the finalizer if it is not present
-		if err := r.addFinalizer(mur, murFinalizerName); err != nil {
-			reqLogger.Error(err, "unable to add finalizer to MasterUserRecord")
+		if err := r.addFinalizer(logger, mur, murFinalizerName); err != nil {
+			logger.Error(err, "unable to add finalizer to MasterUserRecord")
 			return reconcile.Result{}, err
 		}
+		logger.Info("ensuring user accounts")
 		for _, account := range mur.Spec.UserAccounts {
-			err = r.ensureUserAccount(reqLogger, account, mur)
-			if err != nil {
-				reqLogger.Error(err, "unable to synchronize with member UserAccount")
+			if err := r.ensureUserAccount(logger, account, mur); err != nil {
+				logger.Error(err, "unable to synchronize with member UserAccount")
 				return reconcile.Result{}, err
 			}
 		}
-
 		// If the UserAccount is being deleted, delete the UserAccounts in members.
 	} else if coputil.HasFinalizer(mur, murFinalizerName) {
-		if err = r.manageCleanUp(mur); err != nil {
-			reqLogger.Error(err, "unable to clean up MasterUserRecord as part of deletion")
+		if err = r.manageCleanUp(logger, mur); err != nil {
+			logger.Error(err, "unable to clean up MasterUserRecord as part of deletion")
 			return reconcile.Result{}, err
 		}
 	}
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileMasterUserRecord) addFinalizer(mur *toolchainv1alpha1.MasterUserRecord, finalizer string) error {
+func (r *ReconcileMasterUserRecord) addFinalizer(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, finalizer string) error {
 	// Add the finalizer if it is not present
 	if !coputil.HasFinalizer(mur, finalizer) {
 		coputil.AddFinalizer(mur, finalizer)
 		if err := r.client.Update(context.TODO(), mur); err != nil {
-			return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason), err,
+			return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason), err,
 				"failed while updating with added finalizer")
 		}
+		logger.Info("MasterUserRecord now has finalizer")
+		return nil
 	}
+	logger.Info("MasterUserRecord already has finalizer")
 	return nil
 }
 
-func (r *ReconcileMasterUserRecord) ensureUserAccount(log logr.Logger, recAccount toolchainv1alpha1.UserAccountEmbedded, record *toolchainv1alpha1.MasterUserRecord) error {
+// ensureUserAccount ensures that there's a UserAccount resource on the member cluster for the given `murAccount`.
+// If the UserAccount resource already exists, then this latter is synchronized using the given `murAccount` and the associated `mur` status is also updated to reflect
+// the UserAccount specs.
+func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAccount toolchainv1alpha1.UserAccountEmbedded, mur *toolchainv1alpha1.MasterUserRecord) error {
 	// get & check member cluster
-	memberCluster, err := r.getMemberCluster(recAccount.TargetCluster)
+	memberCluster, err := r.getMemberCluster(murAccount.TargetCluster)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason), err,
-			"failed to get the member cluster '%s'", recAccount.TargetCluster)
+		return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason), err,
+			"failed to get the member cluster '%s'", murAccount.TargetCluster)
 	}
 
 	// get UserAccount from member
-	nsdName := namespacedName(memberCluster.OperatorNamespace, record.Name)
+	nsdName := namespacedName(memberCluster.OperatorNamespace, mur.Name)
 	userAccount := &toolchainv1alpha1.UserAccount{}
-	err = memberCluster.Client.Get(context.TODO(), nsdName, userAccount)
-	if err != nil {
+	if err := memberCluster.Client.Get(context.TODO(), nsdName, userAccount); err != nil {
 		if errors.IsNotFound(err) {
 			// does not exist - should create
-			userAccount = newUserAccount(nsdName, recAccount.Spec, record.Spec)
-			if err := updateStatusConditions(r.client, record, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")); err != nil {
-				return err
-			}
+			userAccount = newUserAccount(nsdName, murAccount.Spec, mur.Spec)
 			if err := memberCluster.Client.Create(context.TODO(), userAccount); err != nil {
-				return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
-					"failed to create UserAccount in the member cluster '%s'", recAccount.TargetCluster)
+				return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
+					"failed to create UserAccount in the member cluster '%s'", murAccount.TargetCluster)
 			}
-			return nil
+			return updateStatusConditions(logger, r.client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 		}
-		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToGetUserAccountReason), err,
-			"failed to get userAccount '%s' from cluster '%s'", record.Name, recAccount.TargetCluster)
+		// another/unexpected error occurred while trying to fetch the user account on the member cluster
+		return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToGetUserAccountReason), err,
+			"failed to get userAccount '%s' from cluster '%s'", mur.Name, murAccount.TargetCluster)
 	}
 
 	sync := Synchronizer{
-		record:            record,
+		record:            mur,
 		hostClient:        r.client,
 		memberCluster:     memberCluster,
 		memberUserAcc:     userAccount,
-		recordSpecUserAcc: recAccount,
-		log:               log,
+		recordSpecUserAcc: murAccount,
+		logger:            logger,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
-		return r.wrapErrorWithStatusUpdate(log, record, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason), err,
-			"update of the UserAccount.spec in the cluster '%s' failed", recAccount.TargetCluster)
+		// note: if we got an error while sync'ing the spec, then we may not be able to update the MUR status it here neither.
+		return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason), err,
+			"update of the UserAccount.spec in the cluster '%s' failed", murAccount.TargetCluster)
 	}
 	if err := sync.synchronizeStatus(); err != nil {
-		err = errs.Wrapf(err, "update of the MasterUserRecord failed while synchronizing with UserAccount status from the cluster '%s'", recAccount.TargetCluster)
-		return r.wrapErrorWithStatusUpdate(log, record, r.useExistingConditionOfType(toolchainv1alpha1.ConditionReady), err, "")
+		err = errs.Wrapf(err, "update of the MasterUserRecord failed while synchronizing with UserAccount status from the cluster '%s'", murAccount.TargetCluster)
+		// note: if we got an error while updating the status, then we probably can't update it here neither.
+		return r.wrapErrorWithStatusUpdate(logger, mur, r.useExistingConditionOfType(toolchainv1alpha1.ConditionReady), err, "")
 	}
+	// nothing done and no error occurred
+	logger.Info("user account on member cluster was already in sync", "target_cluster", murAccount.TargetCluster)
 	return nil
 }
 
@@ -200,12 +206,14 @@ func (r *ReconcileMasterUserRecord) getMemberCluster(targetCluster string) (*clu
 	return fedCluster, nil
 }
 
+type statusUpdater func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error
+
 // wrapErrorWithStatusUpdate wraps the error and update the user account status. If the update failed then logs the error.
-func (r *ReconcileMasterUserRecord) wrapErrorWithStatusUpdate(logger logr.Logger, record *toolchainv1alpha1.MasterUserRecord, statusUpdater func(record *toolchainv1alpha1.MasterUserRecord, message string) error, err error, format string, args ...interface{}) error {
+func (r *ReconcileMasterUserRecord) wrapErrorWithStatusUpdate(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, updateStatus statusUpdater, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
-	if err := statusUpdater(record, err.Error()); err != nil {
+	if err := updateStatus(logger, mur, err.Error()); err != nil {
 		logger.Error(err, "status update failed")
 	}
 	if format != "" {
@@ -214,17 +222,18 @@ func (r *ReconcileMasterUserRecord) wrapErrorWithStatusUpdate(logger logr.Logger
 	return err
 }
 
-func (r *ReconcileMasterUserRecord) setStatusFailed(reason string) func(record *toolchainv1alpha1.MasterUserRecord, message string) error {
-	return func(record *toolchainv1alpha1.MasterUserRecord, message string) error {
+func (r *ReconcileMasterUserRecord) setStatusFailed(reason string) statusUpdater {
+	return func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
 		return updateStatusConditions(
+			logger,
 			r.client,
-			record,
+			mur,
 			toBeNotReady(reason, message))
 	}
 }
 
-func (r *ReconcileMasterUserRecord) useExistingConditionOfType(condType toolchainv1alpha1.ConditionType) func(record *toolchainv1alpha1.MasterUserRecord, message string) error {
-	return func(mur *toolchainv1alpha1.MasterUserRecord, message string) error {
+func (r *ReconcileMasterUserRecord) useExistingConditionOfType(condType toolchainv1alpha1.ConditionType) statusUpdater {
+	return func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
 		cond := toolchainv1alpha1.Condition{Type: condType}
 		for _, con := range mur.Status.Conditions {
 			if con.Type == condType {
@@ -233,23 +242,24 @@ func (r *ReconcileMasterUserRecord) useExistingConditionOfType(condType toolchai
 			}
 		}
 		cond.Message = message
-		return updateStatusConditions(r.client, mur, cond)
+		return updateStatusConditions(logger, r.client, mur, cond)
 	}
 }
 
-func (r *ReconcileMasterUserRecord) manageCleanUp(mur *toolchainv1alpha1.MasterUserRecord) error {
+func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) error {
 	for _, ua := range mur.Spec.UserAccounts {
 		if err := r.deleteUserAccount(ua.TargetCluster, mur.Name); err != nil {
-			return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason), err,
+			return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason), err,
 				"failed to delete UserAccount in the member cluster '%s'", ua.TargetCluster)
 		}
 	}
 	// Remove finalizer from MasterUserRecord
 	coputil.RemoveFinalizer(mur, murFinalizerName)
 	if err := r.client.Update(context.Background(), mur); err != nil {
-		return r.wrapErrorWithStatusUpdate(log, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason), err,
+		return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason), err,
 			"failed to update MasterUserRecord while deleting finalizer")
 	}
+	log.Info("Finalizer removed from MasterUserRecord")
 	return nil
 }
 
@@ -301,14 +311,18 @@ func toBeDisabled() toolchainv1alpha1.Condition {
 }
 
 // updateStatusConditions updates user account status conditions with the new conditions
-func updateStatusConditions(cl client.Client, record *toolchainv1alpha1.MasterUserRecord, newConditions ...toolchainv1alpha1.Condition) error {
+func updateStatusConditions(logger logr.Logger, cl client.Client, mur *toolchainv1alpha1.MasterUserRecord, newConditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
-	record.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(record.Status.Conditions, newConditions...)
+	mur.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(mur.Status.Conditions, newConditions...)
 	if !updated {
 		// Nothing changed
+		logger.Info("MUR status conditions unchanged")
 		return nil
 	}
-	return cl.Status().Update(context.TODO(), record)
+	logger.Info("updating MUR status conditions", "generation", mur.Generation, "resource_version", mur.ResourceVersion)
+	err := cl.Status().Update(context.TODO(), mur)
+	logger.Info("updated MUR status conditions", "generation", mur.Generation, "resource_version", mur.ResourceVersion)
+	return err
 }
 
 func newUserAccount(nsdName types.NamespacedName, spec toolchainv1alpha1.UserAccountSpecEmbedded, murSpec toolchainv1alpha1.MasterUserRecordSpec) *toolchainv1alpha1.UserAccount {
