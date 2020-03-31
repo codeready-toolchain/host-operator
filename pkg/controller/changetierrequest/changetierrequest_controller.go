@@ -115,15 +115,16 @@ func (r *ReconcileChangeTierRequest) checkTransitionTimeAndDelete(log logr.Logge
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
 	if timeSinceCompletion >= r.config.GetDurationBeforeChangeRequestDeletion() {
-		log.Info("the ChangeTierRequest has been completed for longer time than '%s' so it's ready to be deleted", r.config.GetDurationBeforeChangeRequestDeletion().String())
+		log.Info("the ChangeTierRequest has been completed for a longer time than the 'durationBeforeChangeRequestDeletion', so it's ready to be deleted",
+			"durationBeforeChangeRequestDeletion", r.config.GetDurationBeforeChangeRequestDeletion().String())
 		if err := r.client.Delete(context.TODO(), changeTierRequest, &client.DeleteOptions{}); err != nil {
 			return false, 0, errs.Wrapf(err, "unable to delete ChangeTierRequest object '%s'", changeTierRequest.Name)
 		}
 		return true, 0, nil
 	}
 	diff := r.config.GetDurationBeforeChangeRequestDeletion() - timeSinceCompletion
-	log.Info("the ChangeTierRequest has been completed for shorter time than '%s' so it's going to be reconciled again after '%s'",
-		r.config.GetDurationBeforeChangeRequestDeletion().String(), diff.String())
+	log.Info("the ChangeTierRequest has been completed for shorter time than 'durationBeforeChangeRequestDeletion', so it's going to be reconciled again",
+		"durationBeforeChangeRequestDeletion", r.config.GetDurationBeforeChangeRequestDeletion().String(), "reconcileAfter", diff.String())
 	return false, diff, nil
 }
 
