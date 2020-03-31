@@ -1,4 +1,4 @@
-= Host Operator
+= Host Operator Test
 
 image:https://goreportcard.com/badge/github.com/codeready-toolchain/host-operator[Go Report Card, link="https://goreportcard.com/report/github.com/codeready-toolchain/host-operator"]
 image:https://godoc.org/github.com/codeready-toolchain/host-operator?status.png[GoDoc,link="https://godoc.org/github.com/codeready-toolchain/host-operator"]
