@@ -20,7 +20,7 @@ objects:
   metadata:
     labels:
       toolchain.dev.openshift.com/provider: codeready-toolchain
-    name: toolchain-stage-edit
+    name: rbac-edit
     namespace: ${USERNAME}-stage
   rules:
   - apiGroups:
@@ -50,12 +50,12 @@ objects:
   metadata:
     labels:
       toolchain.dev.openshift.com/provider: codeready-toolchain
-    name: user-toolchain-stage-edit
+    name: user-rbac-edit
     namespace: ${USERNAME}-stage
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
-    name: toolchain-stage-edit
+    name: rbac-edit
   subjects:
   - kind: User
     name: ${USERNAME}
