@@ -62,7 +62,7 @@ RUN curl -L -s https://github.com/openshift/origin/releases/download/v3.11.0/ope
 # download, verify and install operator-sdk
 RUN curl -L -s https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu -o operator-sdk \
     && curl -L -s https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu.asc -o operator-sdk.asc \
-    && gpg --keyserver keyserver.ubuntu.com --recv-key 78086003 \
+    && gpg --keyserver keyserver.ubuntu.com --recv-key 9391EA2A \
     && gpg --verify operator-sdk.asc \
     && chmod +x operator-sdk \
     && cp operator-sdk /usr/bin/operator-sdk \
