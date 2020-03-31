@@ -2,6 +2,10 @@ apiVersion: toolchain.dev.openshift.com/v1alpha1
 kind: UserSignup
 metadata:
   name: 1a03ecac-7c0b-44fc-b66d-12dd7fb21c40
+  labels:
+    toolchain.dev.openshift.com/email-hash: 57e46a4968bab87c552924607e46be82
+  annotations:
+    toolchain.dev.openshift.com/user-email: johnsmith@redhat.com
 spec:
   username: johnsmith@redhat.com
   compliantUsername: johnsmith-at-redhat-com

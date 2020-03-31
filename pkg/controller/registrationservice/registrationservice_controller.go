@@ -4,6 +4,7 @@ import (
 	"context"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
@@ -29,7 +30,7 @@ var log = logf.Log.WithName("controller_registrationservice")
 
 // Add creates a new RegistrationService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
+func Add(mgr manager.Manager, _ *configuration.Registry) error {
 	deploymentTemplate, err := getDeploymentTemplate(mgr.GetScheme())
 	if err != nil {
 		return errs.Wrap(err, "unable to decode the registration service deployment")

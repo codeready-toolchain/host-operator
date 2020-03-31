@@ -2,7 +2,7 @@ apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
   labels:
-    provider: codeready-toolchain
+    toolchain.dev.openshift.com/provider: codeready-toolchain
   name: basic-stage
 objects:
 - apiVersion: v1
@@ -13,13 +13,13 @@ objects:
       openshift.io/display-name: ${USERNAME}-stage
       openshift.io/requester: ${USERNAME}
     labels:
-      provider: codeready-toolchain
+      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: ${USERNAME}-stage
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     labels:
-      provider: codeready-toolchain
+      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: user-edit
     namespace: ${USERNAME}-stage
   roleRef:
@@ -29,6 +29,66 @@ objects:
   subjects:
   - kind: User
     name: ${USERNAME}
+- apiVersion: v1
+  kind: LimitRange
+  metadata:
+    labels:
+      toolchain.dev.openshift.com/provider: codeready-toolchain
+    name: resource-limits
+    namespace: ${USERNAME}-stage
+  spec:
+    limits:
+    - type: "Container"
+      default:
+        cpu: 150m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 64Mi
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    labels:
+      toolchain.dev.openshift.com/provider: codeready-toolchain
+    name: allow-same-namespace
+    namespace: ${USERNAME}-stage
+  spec:
+    podSelector: {}
+    ingress:
+    - from:
+      - podSelector: {}
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    labels:
+      toolchain.dev.openshift.com/provider: codeready-toolchain
+    name: allow-from-openshift-ingress
+    namespace: ${USERNAME}-stage
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: ingress
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    labels:
+      toolchain.dev.openshift.com/provider: codeready-toolchain
+    name: allow-from-openshift-monitoring
+    namespace: ${USERNAME}-stage
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: monitoring
+    podSelector: {}
+    policyTypes:
+    - Ingress
 parameters:
 - name: USERNAME
   required: true
