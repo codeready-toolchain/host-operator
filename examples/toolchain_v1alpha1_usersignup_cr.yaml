@@ -9,5 +9,5 @@ metadata:
 spec:
   username: johnsmith@redhat.com
   compliantUsername: johnsmith-at-redhat-com
-  targetCluster: member-xcoulon-20200327-44kmj
+  targetCluster: east-2a
   approved: true

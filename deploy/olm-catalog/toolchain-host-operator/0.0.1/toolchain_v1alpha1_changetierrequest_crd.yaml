@@ -34,7 +34,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: ChangeTierRequest requests for changing tier for MUR/UserAccount
+      description: ChangeTierRequest is used as a trigger for a tier change in MasterUserRecord/UserAccount
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation

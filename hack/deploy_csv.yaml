@@ -100,7 +100,7 @@ data:
           status: {}
         validation:
           openAPIV3Schema:
-            description: ChangeTierRequest requests for changing tier for MUR/UserAccount
+            description: ChangeTierRequest is used as a trigger for a tier change in MasterUserRecord/UserAccount
             properties:
               apiVersion:
                 description: 'APIVersion defines the versioned schema of this representation
@@ -1000,6 +1000,71 @@ data:
             [
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "BannedUser",
+                "metadata": {
+                  "labels": {
+                    "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
+                  }
+                },
+                "spec": {
+                  "email": "john.doe@gmail.com"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "ChangeTierRequest",
+                "metadata": {
+                  "name": "changetierrequest-1a2b3c"
+                },
+                "spec": {
+                  "murName": "johnsmith",
+                  "targetCluster": "east-2a",
+                  "tierName": "advanced"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "MasterUserRecord",
+                "metadata": {
+                  "name": "johnsmith"
+                },
+                "spec": {
+                  "userAccounts": [
+                    {
+                      "spec": {
+                        "nsLimit": "admin",
+                        "nsTemplateSet": {
+                          "namespaces": [
+                            {
+                              "revision": "abcdef",
+                              "type": "ide"
+                            },
+                            {
+                              "revision": "1d2f3q",
+                              "type": "cicd"
+                            },
+                            {
+                              "revision": "a34r57",
+                              "type": "stage"
+                            },
+                            {
+                              "revision": "ra24qw",
+                              "type": "default"
+                            }
+                          ],
+                          "tierName": "basic"
+                        },
+                        "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                      },
+                      "syncIndex": "135540409",
+                      "targetCluster": "east-2a"
+                    }
+                  ],
+                  "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "NSTemplateTier",
                 "metadata": {
                   "name": "basic"
@@ -1065,71 +1130,6 @@ data:
                   "compliantUsername": "johnsmith-at-redhat-com",
                   "targetCluster": "east-2a",
                   "username": "johnsmith@redhat.com"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "BannedUser",
-                "metadata": {
-                  "labels": {
-                    "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
-                  }
-                },
-                "spec": {
-                  "email": "john.doe@gmail.com"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "ChangeTierRequest",
-                "metadata": {
-                  "name": "changetierrequest-1a2b3c"
-                },
-                "spec": {
-                  "murName": "johnsmith",
-                  "targetCluster": "east-2a",
-                  "tierName": "advanced"
-                }
-              },
-              {
-                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
-                "kind": "MasterUserRecord",
-                "metadata": {
-                  "name": "johnsmith"
-                },
-                "spec": {
-                  "userAccounts": [
-                    {
-                      "spec": {
-                        "nsLimit": "admin",
-                        "nsTemplateSet": {
-                          "namespaces": [
-                            {
-                              "revision": "abcdef",
-                              "type": "ide"
-                            },
-                            {
-                              "revision": "1d2f3q",
-                              "type": "cicd"
-                            },
-                            {
-                              "revision": "a34r57",
-                              "type": "stage"
-                            },
-                            {
-                              "revision": "ra24qw",
-                              "type": "default"
-                            }
-                          ],
-                          "tierName": "basic"
-                        },
-                        "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
-                      },
-                      "syncIndex": "135540409",
-                      "targetCluster": "east-2a"
-                    }
-                  ],
-                  "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
                 }
               }
             ]
