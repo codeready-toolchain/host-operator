@@ -84,7 +84,7 @@ test-e2e: generate get-e2e-repo
 ifeq ($(OPENSHIFT_BUILD_NAMESPACE),)
 	$(MAKE) -C ${E2E_REPO_PATH} test-e2e HOST_REPO_PATH=${PWD}
 else
-	$(MAKE) -C ${E2E_REPO_PATH} test-e2e HOST_REPO_PATH=${PWD} HOST_IMAGE_NAME=${IMAGE_HOST_OPERATOR}
+	$(MAKE) -C ${E2E_REPO_PATH} test-e2e HOST_REPO_PATH=${PWD} HOST_IMAGE_NAME=${IMAGE_FORMAT}host-operator
 endif
 
 .PHONY: get-e2e-repo
