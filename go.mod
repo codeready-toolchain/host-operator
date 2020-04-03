@@ -3,14 +3,14 @@ module github.com/codeready-toolchain/host-operator
 require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20200331190106-9bee6c926e46
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200331061426-711ab83ff9b7
+	github.com/codeready-toolchain/api v0.0.0-20200402215020-c7a5434db5fb
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200403074820-4461b6d5a850
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/gophercloud/gophercloud v0.3.0 // indirect
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
-	github.com/operator-framework/operator-sdk v0.15.2
+	github.com/operator-framework/operator-sdk v0.16.0
 	github.com/pkg/errors v0.9.1
 	github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776
 	github.com/satori/go.uuid v1.2.0
