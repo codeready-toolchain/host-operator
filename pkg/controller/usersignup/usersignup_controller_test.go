@@ -967,7 +967,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo#bar@redhat.com",
+			Username: "foo#$%^bar@redhat.com",
 			Approved: false,
 		},
 	}
@@ -978,29 +978,9 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	defer clearMemberClusters(r.client)
 
 	_, err := r.Reconcile(req)
-	assert.EqualError(t, err, "Error generating compliant username for foo#bar@redhat.com: transformed username [foo#bar-at-redhat-com] is invalid")
-
-	key := types.NamespacedName{
-		Namespace: operatorNamespace,
-		Name:      userSignup.Name,
-	}
-	instance := &v1alpha1.UserSignup{}
-	err = r.client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
 
-	test.AssertConditionsMatch(t, instance.Status.Conditions,
-		v1alpha1.Condition{
-			Type:    v1alpha1.UserSignupComplete,
-			Status:  v1.ConditionFalse,
-			Reason:  "UnableToCreateMUR",
-			Message: "transformed username [foo#bar-at-redhat-com] is invalid",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedAutomatically",
-		},
-	)
+	murtest.AssertThatMasterUserRecord(t, "foo-bar", r.client).HasNoConditions()
 }
 
 func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
