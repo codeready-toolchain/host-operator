@@ -4,7 +4,7 @@ require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20200402215020-c7a5434db5fb
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200331061426-711ab83ff9b7
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200403074820-4461b6d5a850
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
@@ -28,8 +28,6 @@ require (
 	sigs.k8s.io/controller-runtime v0.5.0
 	sigs.k8s.io/kubefed v0.1.0-rc6.0.20200224204536-6207193c49f7
 )
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/alexeykazakov/toolchain-common v0.0.0-20200403070753-c54e4288c579
 
 // Pinned to kubernetes-1.16.2
 replace (
