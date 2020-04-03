@@ -20,12 +20,12 @@ go:
 
 before_install:
 - pyenv shell 3.6.3
-- OPERATOR_SDK_VERSION=v0.15.2
+- OPERATOR_SDK_VERSION=v0.16.0
 
 install:
 - curl -L -s https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu -o operator-sdk
 - curl -L -s https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu.asc -o operator-sdk.asc
-- gpg --keyserver keyserver.ubuntu.com --recv-key 9391EA2A
+- gpg --keyserver keyserver.ubuntu.com --recv-key 09FCE996
 - gpg --verify operator-sdk.asc
 - chmod +x operator-sdk
 - cp operator-sdk /home/travis/bin/operator-sdk
