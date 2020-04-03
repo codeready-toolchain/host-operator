@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -35,6 +36,11 @@ import (
 )
 
 var log = logf.Log.WithName("controller_usersignup")
+
+var (
+	specialCharRegexp = regexp.MustCompile("[^A-Za-z0-9]")
+	onlyNumbers       = regexp.MustCompile("^[0-9]*$")
+)
 
 type BannedUserToUserSignupMapper struct {
 	client client.Client
@@ -358,10 +364,9 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 }
 
 func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
-	replaced := strings.ReplaceAll(strings.ReplaceAll(instance.Spec.Username, "@", "-at-"), ".", "-")
-
-	errs := validation.IsQualifiedName(replaced)
-	if len(errs) > 0 {
+	replaced := transformUsername(instance.Spec.Username)
+	validationErrors := validation.IsQualifiedName(replaced)
+	if len(validationErrors) > 0 {
 		return "", NewSignupError(fmt.Sprintf("transformed username [%s] is invalid", replaced))
 	}
 
@@ -388,6 +393,24 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 	}
 
 	return "", NewSignupError(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
+}
+
+func transformUsername(username string) string {
+	userName := specialCharRegexp.ReplaceAllString(strings.Split(username, "@")[0], "-")
+	for strings.Contains(userName, "--") {
+		userName = strings.ReplaceAll(userName, "--", "-")
+	}
+	if strings.HasPrefix(userName, "-") {
+		userName = "crt" + userName
+	}
+	if strings.HasSuffix(userName, "-") {
+		userName = userName + "crt"
+	}
+	matched := onlyNumbers.MatchString(userName)
+	if matched {
+		userName = "crt-" + userName
+	}
+	return userName
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord

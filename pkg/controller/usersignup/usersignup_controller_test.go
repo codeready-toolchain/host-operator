@@ -869,7 +869,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// Create a MUR with the same UserID
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo-at-redhat-com-1",
+			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
 		},
@@ -910,7 +910,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	// Create a MUR with a different UserID
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo-at-redhat-com",
+			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
 		},
@@ -943,7 +943,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	err = r.client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
 
-	require.Equal(t, "foo-at-redhat-com-1", instance.Status.CompliantUsername)
+	require.Equal(t, "foo-1", instance.Status.CompliantUsername)
 
 	// Confirm that the mur exists
 	mur = &v1alpha1.MasterUserRecord{}
@@ -963,7 +963,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	require.Equal(t, v1.ConditionTrue, cond.Status)
 }
 
-func TestUserSignupWithInvalidNameNotOK(t *testing.T) {
+func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -1023,14 +1023,14 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 					Reason: "ApprovedAutomatically",
 				},
 			},
-			CompliantUsername: "john-doe-at-redhat-com",
+			CompliantUsername: "john-doe",
 		},
 	}
 	key := test.NamespacedName(operatorNamespace, userSignup.Name)
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("john-doe-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+		mur := murtest.NewMasterUserRecord("john-doe", murtest.MetaNamespace(operatorNamespace))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
@@ -1115,14 +1115,14 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 					Reason: "ApprovedAutomatically",
 				},
 			},
-			CompliantUsername: "edward-jones-at-redhat-com",
+			CompliantUsername: "edward-jones",
 		},
 	}
 	key := test.NamespacedName(operatorNamespace, userSignup.Name)
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("edward-jones-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+		mur := murtest.NewMasterUserRecord("edward-jones", murtest.MetaNamespace(operatorNamespace))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
@@ -1223,7 +1223,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 					Reason: "ApprovedAutomatically",
 				},
 			},
-			CompliantUsername: "foo-at-redhat-com",
+			CompliantUsername: "foo",
 		},
 	}
 
@@ -1238,7 +1238,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		},
 	}
 
-	mur := murtest.NewMasterUserRecord("foo-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+	mur := murtest.NewMasterUserRecord("foo", murtest.MetaNamespace(operatorNamespace))
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, bannedUser, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
@@ -1340,13 +1340,13 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 					Reason: "ApprovedAutomatically",
 				},
 			},
-			CompliantUsername: "alice-mayweather-at-redhat-com",
+			CompliantUsername: "alice-mayweather",
 		},
 	}
 
 	key := test.NamespacedName(operatorNamespace, userSignup.Name)
 
-	mur := murtest.NewMasterUserRecord("john-doe-at-redhat-com", murtest.MetaNamespace(operatorNamespace))
+	mur := murtest.NewMasterUserRecord("john-doe", murtest.MetaNamespace(operatorNamespace))
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
 	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
@@ -1402,7 +1402,7 @@ func TestDeathBy100Signups(t *testing.T) {
 
 	args = append(args, &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo-at-redhat-com",
+			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
 		},
@@ -1411,7 +1411,7 @@ func TestDeathBy100Signups(t *testing.T) {
 	for i := 1; i < 101; i++ {
 		args = append(args, &v1alpha1.MasterUserRecord{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("foo-at-redhat-com-%d", i),
+				Name:      fmt.Sprintf("foo-%d", i),
 				Namespace: operatorNamespace,
 				Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
 			},
@@ -1461,7 +1461,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	// Create a MUR with the same UserID
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo-at-redhat-com",
+			Name:      "foo",
 			Namespace: operatorNamespace,
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
 		},
@@ -1470,7 +1470,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	// Create another MUR with the same UserID
 	mur2 := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "bar-at-redhat-com",
+			Name:      "bar",
 			Namespace: operatorNamespace,
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
 		},
@@ -1865,4 +1865,34 @@ func newObjectMeta(name, email string) metav1.ObjectMeta {
 			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
 		},
 	}
+}
+
+func TestTransformUsername(t *testing.T) {
+	assertName(t, "some", "some@email.com")
+	assertName(t, "so-me", "so-me@email.com")
+	assertName(t, "some", "some")
+	assertName(t, "so-me", "so-me")
+	assertName(t, "so-me", "so_me")
+	assertName(t, "so-me", "so me")
+	assertName(t, "so-me", "so me@email.com")
+	assertName(t, "so-me", "so.me")
+	assertName(t, "so-me", "so?me")
+	assertName(t, "so-me", "so:me")
+	assertName(t, "so-me", "so:#$%!$%^&me")
+	assertName(t, "some1", "some1")
+	assertName(t, "so1me1", "so1me1")
+	assertName(t, "crt-me", "-me")
+	assertName(t, "crt-me", "_me")
+	assertName(t, "me-crt", "me-")
+	assertName(t, "me-crt", "me_")
+	assertName(t, "crt-me-crt", "_me_")
+	assertName(t, "crt-me-crt", "-me-")
+	assertName(t, "crt-12345", "12345")
+}
+
+var dnsRegExp = "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+
+func assertName(t *testing.T, expected, username string) {
+	assert.Regexp(t, dnsRegExp, transformUsername(username))
+	assert.Equal(t, expected, transformUsername(username))
 }
