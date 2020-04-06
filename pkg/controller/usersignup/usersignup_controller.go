@@ -396,21 +396,26 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 }
 
 func transformUsername(username string) string {
-	userName := specialCharRegexp.ReplaceAllString(strings.Split(username, "@")[0], "-")
-	for strings.Contains(userName, "--") {
-		userName = strings.ReplaceAll(userName, "--", "-")
+	newUsername := specialCharRegexp.ReplaceAllString(strings.Split(username, "@")[0], "-")
+	if len(newUsername) == 0 {
+		newUsername = strings.ReplaceAll(username, "@", "at-")
 	}
-	if strings.HasPrefix(userName, "-") {
-		userName = "crt" + userName
-	}
-	if strings.HasSuffix(userName, "-") {
-		userName = userName + "crt"
-	}
-	matched := onlyNumbers.MatchString(userName)
+	newUsername = specialCharRegexp.ReplaceAllString(newUsername, "-")
+
+	matched := onlyNumbers.MatchString(newUsername)
 	if matched {
-		userName = "crt-" + userName
+		newUsername = "crt-" + newUsername
 	}
-	return userName
+	for strings.Contains(newUsername, "--") {
+		newUsername = strings.ReplaceAll(newUsername, "--", "-")
+	}
+	if strings.HasPrefix(newUsername, "-") {
+		newUsername = "crt" + newUsername
+	}
+	if strings.HasSuffix(newUsername, "-") {
+		newUsername = newUsername + "crt"
+	}
+	return newUsername
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord

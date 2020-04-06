@@ -7,16 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
+	"testing"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
-
-	"strconv"
-
-	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -1850,6 +1848,8 @@ func newObjectMeta(name, email string) metav1.ObjectMeta {
 func TestTransformUsername(t *testing.T) {
 	assertName(t, "some", "some@email.com")
 	assertName(t, "so-me", "so-me@email.com")
+	assertName(t, "at-email-com", "@email.com")
+	assertName(t, "at-crt", "@")
 	assertName(t, "some", "some")
 	assertName(t, "so-me", "so-me")
 	assertName(t, "so-me", "so-----me")
@@ -1860,6 +1860,7 @@ func TestTransformUsername(t *testing.T) {
 	assertName(t, "so-me", "so?me")
 	assertName(t, "so-me", "so:me")
 	assertName(t, "so-me", "so:#$%!$%^&me")
+	assertName(t, "crt-crt", ":#$%!$%^&")
 	assertName(t, "some1", "some1")
 	assertName(t, "so1me1", "so1me1")
 	assertName(t, "crt-me", "-me")
