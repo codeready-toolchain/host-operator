@@ -1,8 +1,6 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  labels:
-    toolchain.dev.openshift.com/provider: codeready-toolchain
   name: advanced-dev
 objects:
 - apiVersion: v1
@@ -12,14 +10,10 @@ objects:
       openshift.io/description: ${USERNAME}-dev
       openshift.io/display-name: ${USERNAME}-dev
       openshift.io/requester: ${USERNAME}
-    labels:
-      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: ${USERNAME}-dev
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
-    labels:
-      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: user-edit
     namespace: ${USERNAME}-dev
   roleRef:
@@ -32,8 +26,6 @@ objects:
 - apiVersion: v1
   kind: LimitRange
   metadata:
-    labels:
-      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: resource-limits
     namespace: ${USERNAME}-dev
   spec:
@@ -48,8 +40,6 @@ objects:
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
-    labels:
-      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: allow-same-namespace
     namespace: ${USERNAME}-dev
   spec:
@@ -60,8 +50,6 @@ objects:
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
-    labels:
-      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: allow-from-openshift-ingress
     namespace: ${USERNAME}-dev
   spec:
@@ -76,8 +64,6 @@ objects:
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
-    labels:
-      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: allow-from-openshift-monitoring
     namespace: ${USERNAME}-dev
   spec:
