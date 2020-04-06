@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -35,6 +36,11 @@ import (
 )
 
 var log = logf.Log.WithName("controller_usersignup")
+
+var (
+	specialCharRegexp = regexp.MustCompile("[^A-Za-z0-9]")
+	onlyNumbers       = regexp.MustCompile("^[0-9]*$")
+)
 
 type BannedUserToUserSignupMapper struct {
 	client client.Client
@@ -358,16 +364,15 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 }
 
 func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
-	replaced := strings.ReplaceAll(strings.ReplaceAll(instance.Spec.Username, "@", "-at-"), ".", "-")
-
-	errs := validation.IsQualifiedName(replaced)
-	if len(errs) > 0 {
+	replaced := transformUsername(instance.Spec.Username)
+	validationErrors := validation.IsQualifiedName(replaced)
+	if len(validationErrors) > 0 {
 		return "", NewSignupError(fmt.Sprintf("transformed username [%s] is invalid", replaced))
 	}
 
 	transformed := replaced
 
-	for i := 1; i < 101; i++ { // No more than 100 attempts to find a vacant name
+	for i := 2; i < 101; i++ { // No more than 100 attempts to find a vacant name
 		mur := &toolchainv1alpha1.MasterUserRecord{}
 		// Check if a MasterUserRecord exists with the same transformed name
 		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: transformed}
@@ -388,6 +393,29 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 	}
 
 	return "", NewSignupError(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
+}
+
+func transformUsername(username string) string {
+	newUsername := specialCharRegexp.ReplaceAllString(strings.Split(username, "@")[0], "-")
+	if len(newUsername) == 0 {
+		newUsername = strings.ReplaceAll(username, "@", "at-")
+	}
+	newUsername = specialCharRegexp.ReplaceAllString(newUsername, "-")
+
+	matched := onlyNumbers.MatchString(newUsername)
+	if matched {
+		newUsername = "crt-" + newUsername
+	}
+	for strings.Contains(newUsername, "--") {
+		newUsername = strings.ReplaceAll(newUsername, "--", "-")
+	}
+	if strings.HasPrefix(newUsername, "-") {
+		newUsername = "crt" + newUsername
+	}
+	if strings.HasSuffix(newUsername, "-") {
+		newUsername = newUsername + "crt"
+	}
+	return newUsername
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord

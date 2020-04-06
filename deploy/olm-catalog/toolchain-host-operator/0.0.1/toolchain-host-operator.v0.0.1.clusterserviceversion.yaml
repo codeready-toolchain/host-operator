@@ -133,7 +133,7 @@ metadata:
           },
           "spec": {
             "approved": true,
-            "compliantUsername": "johnsmith-at-redhat-com",
+            "compliantUsername": "johnsmith",
             "targetCluster": "east-2a",
             "username": "johnsmith@redhat.com"
           }
