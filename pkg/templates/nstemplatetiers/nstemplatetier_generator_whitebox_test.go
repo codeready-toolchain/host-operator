@@ -215,11 +215,14 @@ func TestNewNSTemplateTier(t *testing.T) {
 						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"user-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, ns.Type))
 
 						// LimitRange
-						cpuLimit := "300m"
-						memoryLimit := "1400Mi"
+						cpuLimit := "150m"
+						memoryLimit := "512Mi"
 						if tier == "team" {
-							cpuLimit = "400m"
+							cpuLimit = "500m"
 							memoryLimit = "2Gi"
+						} else if ns.Type == "dev" {
+							cpuLimit = "250m"
+							memoryLimit = "1Gi"
 						}
 						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"100m","memory":"64Mi"},"type":"Container"}]}}`, ns.Type, cpuLimit, memoryLimit))
 
@@ -241,6 +244,16 @@ func TestNewNSTemplateTier(t *testing.T) {
 					}
 					assert.True(t, found, "the namespace with the type wasn't found", "ns-type", kind)
 				}
+				require.NotNil(t, actual.Spec.ClusterResources)
+				assert.Equal(t, templatesByTier[tier].clusterTemplate.revision, actual.Spec.ClusterResources.Revision)
+				cpuLimit := "1750m"
+				memoryLimit := "7Gi"
+				if tier == "team" {
+					cpuLimit = "2000m"
+					memoryLimit = "10Gi"
+				}
+				assert.Len(t, actual.Spec.ClusterResources.Template.Objects, 1)
+				containsObj(t, actual.Spec.ClusterResources.Template, fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"5Gi","limits.memory":"%[2]s","persistentvolumeclaims":"2","pods":"100","replicationcontrollers":"100","requests.cpu":"%[1]s","requests.ephemeral-storage":"5Gi","requests.memory":"%[2]s","requests.storage":"5Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, memoryLimit))
 			}
 		})
 
