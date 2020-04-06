@@ -8,6 +8,6 @@ metadata:
     toolchain.dev.openshift.com/user-email: johnsmith@redhat.com
 spec:
   username: johnsmith@redhat.com
-  compliantUsername: johnsmith-at-redhat-com
+  compliantUsername: johnsmith
   targetCluster: east-2a
   approved: true
