@@ -1852,6 +1852,7 @@ func TestTransformUsername(t *testing.T) {
 	assertName(t, "so-me", "so-me@email.com")
 	assertName(t, "some", "some")
 	assertName(t, "so-me", "so-me")
+	assertName(t, "so-me", "so-----me")
 	assertName(t, "so-me", "so_me")
 	assertName(t, "so-me", "so me")
 	assertName(t, "so-me", "so me@email.com")
