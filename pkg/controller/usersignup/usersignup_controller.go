@@ -372,7 +372,7 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 
 	transformed := replaced
 
-	for i := 1; i < 101; i++ { // No more than 100 attempts to find a vacant name
+	for i := 2; i < 101; i++ { // No more than 100 attempts to find a vacant name
 		mur := &toolchainv1alpha1.MasterUserRecord{}
 		// Check if a MasterUserRecord exists with the same transformed name
 		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: transformed}

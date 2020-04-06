@@ -941,7 +941,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	err = r.client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
 
-	require.Equal(t, "foo-1", instance.Status.CompliantUsername)
+	require.Equal(t, "foo-2", instance.Status.CompliantUsername)
 
 	// Confirm that the mur exists
 	mur = &v1alpha1.MasterUserRecord{}
@@ -1386,7 +1386,7 @@ func TestDeathBy100Signups(t *testing.T) {
 		},
 	})
 
-	for i := 1; i < 101; i++ {
+	for i := 2; i < 101; i++ {
 		args = append(args, &v1alpha1.MasterUserRecord{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("foo-%d", i),
