@@ -232,7 +232,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"allow-from-openshift-monitoring","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"monitoring"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, ns.Type))
 
 						// All templates in the "team" tier and "-code" templates in other tiers should also have additional RoleBinding and Role
-						if kind == "code" || tier == "team" {
+						if kind == "code" || tier == "team" || tier == "advanced" {
 							require.Len(t, ns.Template.Objects, 8)
 							// Role & RoleBinding with additional permissions to edit roles/rolebindings
 							containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"rbac-edit","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":["authorization.openshift.io","rbac.authorization.k8s.io"],"resources":["roles","rolebindings"],"verbs":["get","list","watch","create","update","patch","delete"]}]}`, ns.Type))

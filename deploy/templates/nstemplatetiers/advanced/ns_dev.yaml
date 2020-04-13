@@ -16,6 +16,42 @@ objects:
       toolchain.dev.openshift.com/provider: codeready-toolchain
     name: ${USERNAME}-dev
 - apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    labels:
+      toolchain.dev.openshift.com/provider: codeready-toolchain
+    name: rbac-edit
+    namespace: ${USERNAME}-dev
+  rules:
+    - apiGroups:
+        - authorization.openshift.io
+        - rbac.authorization.k8s.io
+      resources:
+        - roles
+        - rolebindings
+      verbs:
+        - get
+        - list
+        - watch
+        - create
+        - update
+        - patch
+        - delete
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    labels:
+      toolchain.dev.openshift.com/provider: codeready-toolchain
+    name: user-rbac-edit
+    namespace: ${USERNAME}-dev
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: rbac-edit
+  subjects:
+    - kind: User
+      name: ${USERNAME}
+- apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     labels:
