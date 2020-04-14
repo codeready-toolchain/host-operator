@@ -325,7 +325,6 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 func containsObj(t *testing.T, template templatev1.Template, obj string) {
 	for _, object := range template.Objects {
-		//fmt.Println(sum)
 		if string(object.Raw) == obj {
 			return
 		}
