@@ -119,8 +119,6 @@ github.com/codeready-toolchain/api v0.0.0-20200402215020-c7a5434db5fb h1:jKoTRIP
 github.com/codeready-toolchain/api v0.0.0-20200402215020-c7a5434db5fb/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
 github.com/codeready-toolchain/api v0.0.0-20200403111848-efd1f59b2e49 h1:A1QJx5ZrTFnQVbBYuiS6bqnFcPy7xS3fIpzrmEvKbdQ=
 github.com/codeready-toolchain/api v0.0.0-20200403111848-efd1f59b2e49/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200403074820-4461b6d5a850 h1:HGx1GHJcVxH7aN05EX8Jml5xIj/TP30NHuaRCcgaolY=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200403074820-4461b6d5a850/go.mod h1:OhMfZoXLHTu4b6pXxWd6MAuCoT0OcKYiDZdEn3oCPGI=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20200407121348-0020bcf2b0ff h1:unpnsRA/0A1UPn8xYdcsVMxtMakFpDq3pUGx6rLoht8=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20200407121348-0020bcf2b0ff/go.mod h1:OhMfZoXLHTu4b6pXxWd6MAuCoT0OcKYiDZdEn3oCPGI=
 github.com/container-storage-interface/spec v1.1.0/go.mod h1:6URME8mwIBbpVyZV93Ce5St17xBiQJQY67NDsuohiy4=
