@@ -1,15 +1,11 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  labels:
-    toolchain.dev.openshift.com/provider: codeready-toolchain
   name: basic-cluster-resources
 objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    labels:
-      toolchain.dev.openshift.com/provider: codeready-toolchain
     name: for-${USERNAME}
   spec:
     quota:
