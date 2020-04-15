@@ -75,10 +75,19 @@ spec:
                 approved If not set then the user is subject of auto-approval (if
                 enabled)
               type: boolean
+            company:
+              description: The user's company name, obtained from the identity provider.
+              type: string
             deactivated:
               description: Deactivated is used to deactivate the user.  If not set,
                 then by default the user is active
               type: boolean
+            familyName:
+              description: The user's last name, obtained from the identity provider.
+              type: string
+            givenName:
+              description: The user's first name, obtained from the identity provider.
+              type: string
             targetCluster:
               description: The cluster in which the user is provisioned in If not
                 set then the target cluster will be picked automatically
@@ -87,6 +96,9 @@ spec:
               description: The user's username, obtained from the identity provider.
               type: string
           required:
+          - company
+          - familyName
+          - givenName
           - username
           type: object
         status:
