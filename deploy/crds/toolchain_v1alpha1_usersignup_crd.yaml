@@ -14,6 +14,18 @@ spec:
   - JSONPath: .spec.username
     name: Username
     type: string
+  - JSONPath: .spec.givenName
+    name: First Name
+    priority: 1
+    type: string
+  - JSONPath: .spec.familyName
+    name: Last Name
+    priority: 1
+    type: string
+  - JSONPath: .spec.company
+    name: Company
+    priority: 1
+    type: string
   - JSONPath: .spec.targetCluster
     name: TargetCluster
     priority: 1
@@ -96,9 +108,6 @@ spec:
               description: The user's username, obtained from the identity provider.
               type: string
           required:
-          - company
-          - familyName
-          - givenName
           - username
           type: object
         status:
