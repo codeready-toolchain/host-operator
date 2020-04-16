@@ -14,6 +14,18 @@ spec:
   - JSONPath: .spec.username
     name: Username
     type: string
+  - JSONPath: .spec.givenName
+    name: First Name
+    priority: 1
+    type: string
+  - JSONPath: .spec.familyName
+    name: Last Name
+    priority: 1
+    type: string
+  - JSONPath: .spec.company
+    name: Company
+    priority: 1
+    type: string
   - JSONPath: .spec.targetCluster
     name: TargetCluster
     priority: 1
@@ -75,10 +87,19 @@ spec:
                 approved If not set then the user is subject of auto-approval (if
                 enabled)
               type: boolean
+            company:
+              description: The user's company name, obtained from the identity provider.
+              type: string
             deactivated:
               description: Deactivated is used to deactivate the user.  If not set,
                 then by default the user is active
               type: boolean
+            familyName:
+              description: The user's last name, obtained from the identity provider.
+              type: string
+            givenName:
+              description: The user's first name, obtained from the identity provider.
+              type: string
             targetCluster:
               description: The cluster in which the user is provisioned in If not
                 set then the target cluster will be picked automatically
