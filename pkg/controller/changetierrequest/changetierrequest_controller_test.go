@@ -29,8 +29,8 @@ func TestChangeTierSuccess(t *testing.T) {
 	// given
 	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_CHANGE_REQUEST_DELETION", "10s")
 	defer restore()
-	teamTier := NewNSTemplateTier("team", "123team", "stage", "dev")
-	basicTier := NewNSTemplateTier("basic", "123abc", "code", "stage", "dev")
+	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
+	basicTier := NewNSTemplateTier("basic", "123abc", "654321a", "code", "stage", "dev")
 
 	t.Run("the controller should change tier in MUR", func(t *testing.T) {
 		// given
@@ -128,7 +128,7 @@ func TestChangeTierFailure(t *testing.T) {
 	t.Run("the change will fail since the provided MUR doesn't exist", func(t *testing.T) {
 		// given
 		changeTierRequest := newChangeTierRequest("johny", "team", "")
-		teamTier := NewNSTemplateTier("team", "123team", "stage", "dev")
+		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, teamTier)
 
 		// when
@@ -159,8 +159,8 @@ func TestChangeTierFailure(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord("johny")
 		changeTierRequest := newChangeTierRequest("johny", "team", "some-other-cluster")
-		teamTier := NewNSTemplateTier("team", "123team", "stage", "dev")
-		basicTier := NewNSTemplateTier("basic", "123abc", "code", "stage", "dev")
+		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
+		basicTier := NewNSTemplateTier("basic", "123abc", "654321a", "code", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
 		// when
@@ -179,7 +179,7 @@ func TestChangeTierFailure(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord("johny")
 		changeTierRequest := newChangeTierRequest("johny", "team", "")
-		teamTier := NewNSTemplateTier("team", "123team", "stage", "dev")
+		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 		cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			_, ok := obj.(*v1alpha1.MasterUserRecord)
@@ -204,8 +204,8 @@ func TestChangeTierFailure(t *testing.T) {
 		changeTierRequest := newChangeTierRequest("johny", "faildeletion", "")
 		changeTierRequest.Status.Conditions = []v1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
-		teamTier := NewNSTemplateTier("team", "123team", "stage", "dev")
-		basicTier := NewNSTemplateTier("basic", "123abc", "code", "stage", "dev")
+		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
+		basicTier := NewNSTemplateTier("basic", "123abc", "654321a", "code", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 		cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("error")
@@ -270,7 +270,7 @@ func AssertThatChangeTierRequestHasCondition(t *testing.T, cl client.Client, nam
 	test.AssertConditionsMatch(t, changeTierRequest.Status.Conditions, condition)
 }
 
-func NewNSTemplateTier(tierName, revision string, nsTypes ...string) *v1alpha1.NSTemplateTier {
+func NewNSTemplateTier(tierName, revision, clusterResourcesRevision string, nsTypes ...string) *v1alpha1.NSTemplateTier {
 	namespaces := make([]v1alpha1.NSTemplateTierNamespace, len(nsTypes))
 	for i, nsType := range nsTypes {
 		namespaces[i] = v1alpha1.NSTemplateTierNamespace{
@@ -279,13 +279,20 @@ func NewNSTemplateTier(tierName, revision string, nsTypes ...string) *v1alpha1.N
 			Template: templatev1.Template{},
 		}
 	}
+	var clusterResources *v1alpha1.NSTemplateTierClusterResources
+	if clusterResourcesRevision != "" {
+		clusterResources = &v1alpha1.NSTemplateTierClusterResources{
+			Revision: clusterResourcesRevision,
+		}
+	}
 	return &v1alpha1.NSTemplateTier{
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: test.HostOperatorNs,
 			Name:      tierName,
 		},
 		Spec: v1alpha1.NSTemplateTierSpec{
-			Namespaces: namespaces,
+			Namespaces:       namespaces,
+			ClusterResources: clusterResources,
 		},
 	}
 }

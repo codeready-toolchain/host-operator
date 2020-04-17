@@ -148,9 +148,18 @@ func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierReque
 			Revision: ns.Revision,
 		}
 	}
+	var clusterResources *toolchainv1alpha1.NSTemplateSetClusterResources
+	if nsTemplateTier.Spec.ClusterResources != nil {
+		clusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
+			Revision: nsTemplateTier.Spec.ClusterResources.Revision,
+		}
+	} else {
+		log.Info("NSTemplateTier has no cluster resources", "name", nsTemplateTier.Name)
+	}
 	newNsTemplateSet := toolchainv1alpha1.NSTemplateSetSpec{
-		TierName:   changeTierRequest.Spec.TierName,
-		Namespaces: namespaces,
+		TierName:         changeTierRequest.Spec.TierName,
+		Namespaces:       namespaces,
+		ClusterResources: clusterResources,
 	}
 	changed := false
 	for i, ua := range mur.Spec.UserAccounts {
