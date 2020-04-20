@@ -93,6 +93,11 @@ spec:
                                 description: Template contains an OpenShift Template
                                   to be used for provisioning of cluster-scoped resources
                                 type: string
+                              templateRef:
+                                description: TemplateRef the name of the TemplateTier
+                                  resource on the host cluster and which contains
+                                  the template to use
+                                type: string
                             required:
                             - revision
                             type: object
@@ -108,6 +113,11 @@ spec:
                                 template:
                                   description: Optional field. Used to specify a custom
                                     template
+                                  type: string
+                                templateRef:
+                                  description: TemplateRef the name of the TemplateTier
+                                    resource on the host cluster and which contains
+                                    the template to use
                                   type: string
                                 type:
                                   description: 'The type of the namespace. For example:

@@ -140,6 +140,10 @@ spec:
                   required:
                   - objects
                   type: object
+                templateRef:
+                  description: TemplateRef the name of the TemplateTier resource which
+                    contains the template to use
+                  type: string
               required:
               - revision
               - template
@@ -251,6 +255,10 @@ spec:
                     required:
                     - objects
                     type: object
+                  templateRef:
+                    description: TemplateRef the name of the TemplateTier resource
+                      which contains the template to use
+                    type: string
                   type:
                     description: 'The type of the namespace. For example: ide|cicd|stage|default'
                     type: string

@@ -184,6 +184,11 @@ spec:
       kind: RegistrationService
       name: registrationservices.toolchain.dev.openshift.com
       version: v1alpha1
+    - description: TierTemplate is the Schema for the tiertemplates API
+      displayName: Template Tier
+      kind: TierTemplate
+      name: tiertemplates.toolchain.dev.openshift.com
+      version: v1alpha1
     - description: UserSignup registers a user in the CodeReady Toolchain
       displayName: User Signup
       kind: UserSignup
