@@ -6,6 +6,13 @@ metadata:
   creationTimestamp: null
   name: tiertemplates.toolchain.dev.openshift.com
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.type
+    name: Type
+    type: string
+  - JSONPath: .spec.revision
+    name: Revision
+    type: string
   group: toolchain.dev.openshift.com
   names:
     kind: TierTemplate
@@ -13,6 +20,7 @@ spec:
     plural: tiertemplates
     singular: tiertemplate
   scope: Namespaced
+  subresources: {}
   validation:
     openAPIV3Schema:
       description: TierTemplate is the Schema for the tiertemplates API
@@ -36,8 +44,8 @@ spec:
               description: The revision of the corresponding template
               type: string
             template:
-              description: Template the OpenShift Template to be used to provision
-                a user's namespace or cluster-wide resources
+              description: Template contains an OpenShift Template to be used to provision
+                either a user's namespace or cluster-wide resources
               properties:
                 apiVersion:
                   description: 'APIVersion defines the versioned schema of this representation
@@ -130,8 +138,8 @@ spec:
               - objects
               type: object
             type:
-              description: 'The type of the template. For example: "code", "dev" or
-                "stage"'
+              description: 'The type of the template. For example: "code", "dev",
+                "stage" or "cluster"'
               type: string
           required:
           - revision

@@ -294,9 +294,9 @@ data:
                                           template
                                         type: string
                                       templateRef:
-                                        description: TemplateRef the name of the TemplateTier
-                                          resource on the host cluster and which contains
-                                          the template to use
+                                        description: The name of the TierTemplate resource
+                                          that exists in the host cluster and that contains
+                                          the template to be used
                                         type: string
                                       type:
                                         description: 'The type of the namespace. For example:
@@ -1046,6 +1046,13 @@ data:
         creationTimestamp: null
         name: tiertemplates.toolchain.dev.openshift.com
       spec:
+        additionalPrinterColumns:
+        - JSONPath: .spec.type
+          name: Type
+          type: string
+        - JSONPath: .spec.revision
+          name: Revision
+          type: string
         group: toolchain.dev.openshift.com
         names:
           kind: TierTemplate
@@ -1053,6 +1060,7 @@ data:
           plural: tiertemplates
           singular: tiertemplate
         scope: Namespaced
+        subresources: {}
         validation:
           openAPIV3Schema:
             description: TierTemplate is the Schema for the tiertemplates API
@@ -1076,8 +1084,8 @@ data:
                     description: The revision of the corresponding template
                     type: string
                   template:
-                    description: Template the OpenShift Template to be used to provision
-                      a user's namespace or cluster-wide resources
+                    description: Template contains an OpenShift Template to be used to provision
+                      either a user's namespace or cluster-wide resources
                     properties:
                       apiVersion:
                         description: 'APIVersion defines the versioned schema of this representation
@@ -1170,8 +1178,8 @@ data:
                     - objects
                     type: object
                   type:
-                    description: 'The type of the template. For example: "code", "dev" or
-                      "stage"'
+                    description: 'The type of the template. For example: "code", "dev",
+                      "stage" or "cluster"'
                     type: string
                 required:
                 - revision
