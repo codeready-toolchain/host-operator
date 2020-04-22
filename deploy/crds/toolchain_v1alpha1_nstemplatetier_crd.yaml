@@ -141,8 +141,9 @@ spec:
                   - objects
                   type: object
                 templateRef:
-                  description: TemplateRef the name of the TemplateTier resource which
-                    contains the template to use
+                  description: TemplateRef The name of the TierTemplate resource which
+                    exists in the host cluster and which contains the template to
+                    use
                   type: string
               required:
               - revision
@@ -256,8 +257,9 @@ spec:
                     - objects
                     type: object
                   templateRef:
-                    description: TemplateRef the name of the TemplateTier resource
-                      on the host cluster and which contains the template to use
+                    description: TemplateRef The name of the TierTemplate resource
+                      which exists in the host cluster and which contains the template
+                      to use
                     type: string
                   type:
                     description: 'The type of the namespace. For example: ide|cicd|stage|default'
