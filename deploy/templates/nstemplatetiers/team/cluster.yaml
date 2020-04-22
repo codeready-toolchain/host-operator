@@ -11,10 +11,10 @@ objects:
     quota:
       hard:
         limits.cpu: 2000m
-        limits.memory: 10Gi
+        limits.memory: 15Gi
         limits.ephemeral-storage: 5Gi
         requests.cpu: 2000m
-        requests.memory: 10Gi
+        requests.memory: 15Gi
         requests.storage: 5Gi
         requests.ephemeral-storage: 5Gi
         persistentvolumeclaims: "2"
