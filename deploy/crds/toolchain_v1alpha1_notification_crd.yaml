@@ -43,11 +43,15 @@ spec:
           description: NotificationSpec defines the desired state of Notification
           properties:
             template:
-              description: Template is the notification template
+              description: Template is the name of the NotificationTemplate resource
+                that will be used to generate the notification
               type: string
             userID:
               description: UserID is the user ID from RHD Identity Provider token
-                (“sub” claim)
+                (“sub” claim).  The UserID is used by the notification service (i.e.
+                the NotificationController) to lookup the UserSignup resource for
+                the user, and extract from it the values required to generate the
+                notification content and to deliver the notification
               type: string
           required:
           - template
