@@ -20,6 +20,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const (
+	NotificationInvalidTemplateNameReason = "InvalidTemplateName"
+)
+
 var log = logf.Log.WithName("controller_notification")
 
 type StatusUpdater func(notification *toolchainv1alpha1.Notification, message string) error
@@ -93,7 +97,7 @@ func (r *ReconcileNotification) setStatusInvalidTemplate(notification *toolchain
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.NotificationDelivered,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.NotificationInvalidTemplateNameReason,
+			Reason:  NotificationInvalidTemplateNameReason,
 			Message: message,
 		})
 }
