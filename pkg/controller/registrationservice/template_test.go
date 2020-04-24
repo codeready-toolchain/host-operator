@@ -7,8 +7,6 @@ import (
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,8 +25,7 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 	deploymentTemplate, err := getDeploymentTemplate(s)
 	require.NoError(t, err)
 	vars := getVars(newRegistrationService("my-namespace", "quay.io/cr-t/registration-service:123", "dev", 10))
-	cl := test.NewFakeClient(t)
-	processor := template.NewProcessor(cl, s)
+	processor := template.NewProcessor(s)
 
 	// when
 	objects, err := processor.Process(deploymentTemplate, vars)
