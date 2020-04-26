@@ -10,7 +10,7 @@ objects:
   spec:
     quota:
       hard:
-        limits.cpu: 1750m
+        limits.cpu: 4000m
         limits.memory: 7Gi
         limits.ephemeral-storage: 5Gi
         requests.cpu: 1750m

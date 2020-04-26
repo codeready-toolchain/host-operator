@@ -12,7 +12,7 @@ objects:
   spec:
     quota:
       hard:
-        limits.cpu: 1750m
+        limits.cpu: 2000m
         limits.memory: 7Gi
         requests.storage: 5Gi
         persistentvolumeclaims: "2"

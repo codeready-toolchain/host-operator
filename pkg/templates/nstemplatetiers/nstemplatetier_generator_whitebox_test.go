@@ -244,14 +244,16 @@ func TestNewNSTemplateTier(t *testing.T) {
 				}
 				require.NotNil(t, actual.Spec.ClusterResources)
 				assert.Equal(t, templatesByTier[tier].clusterTemplate.revision, actual.Spec.ClusterResources.Revision)
-				cpuLimit := "1750m"
+				cpuLimit := "4000m"
+				cpuRequest := "1750m"
 				memoryLimit := "7Gi"
 				if tier == "team" {
 					cpuLimit = "2000m"
+					cpuRequest = "2000m"
 					memoryLimit = "15Gi"
 				}
 				assert.Len(t, actual.Spec.ClusterResources.Template.Objects, 1)
-				containsObj(t, actual.Spec.ClusterResources.Template, fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"5Gi","limits.memory":"%[2]s","persistentvolumeclaims":"2","pods":"100","replicationcontrollers":"100","requests.cpu":"%[1]s","requests.ephemeral-storage":"5Gi","requests.memory":"%[2]s","requests.storage":"5Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, memoryLimit))
+				containsObj(t, actual.Spec.ClusterResources.Template, fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"5Gi","limits.memory":"%[3]s","persistentvolumeclaims":"2","pods":"100","replicationcontrollers":"100","requests.cpu":"%[2]s","requests.ephemeral-storage":"5Gi","requests.memory":"%[3]s","requests.storage":"5Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit))
 			}
 		})
 
@@ -443,7 +445,7 @@ spec:
         spec:
           quota: 
             hard:
-              limits.cpu: 1750m
+              limits.cpu: 4000m
               limits.memory: 7Gi
               requests.storage: 5Gi
               persistentvolumeclaims: "2"
