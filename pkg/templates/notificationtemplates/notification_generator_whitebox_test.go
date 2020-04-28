@@ -3,9 +3,8 @@ package notificationtemplates
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	uuid "github.com/satori/go.uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
