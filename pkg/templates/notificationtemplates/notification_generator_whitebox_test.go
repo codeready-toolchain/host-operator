@@ -50,7 +50,7 @@ func TestNewTemplates(t *testing.T) {
 			// when
 			tmpls, err := loadTemplates(assets)
 			require.NoError(t, err)
-			notificationTemplates, err := newTemplates(namespace, tmpls)
+			notificationTemplates, err := newNotificationTemplates(namespace, tmpls)
 
 			// then
 			require.NoError(t, err)

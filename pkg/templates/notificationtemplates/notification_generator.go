@@ -27,18 +27,18 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 		return errors.Wrap(err, "unable to create or update NotificationTemplate")
 	}
 
-	notificationCRs, err := newTemplates(namespace, templates)
-	for _, notificationCR := range notificationCRs {
-		log.Info("creating or updating NotificationTemplate", "namespace", notificationCR.Namespace, "name", notificationCR.Name)
+	notificationTemplates, err := newNotificationTemplates(namespace, templates)
+	for _, notificationTemplate := range notificationTemplates {
+		log.Info("creating or updating NotificationTemplate", "namespace", notificationTemplate.Namespace, "name", notificationTemplate.Name)
 		cl := commonclient.NewApplyClient(client, s)
-		createdOrUpdated, err := cl.CreateOrUpdateObject(&notificationCR, true, nil)
+		createdOrUpdated, err := cl.CreateOrUpdateObject(&notificationTemplate, true, nil)
 		if err != nil {
-			return errors.Wrapf(err, "unable to create or update the '%s' NotificationTemplate in namespace '%s'", notificationCR.Name, notificationCR.Namespace)
+			return errors.Wrapf(err, "unable to create or update the '%s' NotificationTemplate in namespace '%s'", notificationTemplate.Name, notificationTemplate.Namespace)
 		}
 		if createdOrUpdated {
-			log.Info("NotificationTemplate resource created/updated", "namespace", notificationCR.Namespace, "name", notificationCR.Name)
+			log.Info("NotificationTemplate resource created/updated", "namespace", notificationTemplate.Namespace, "name", notificationTemplate.Name)
 		} else {
-			log.Info("NotificationTemplate resource was already up-to-date", "namespace", notificationCR.Namespace, "name", notificationCR.Name)
+			log.Info("NotificationTemplate resource was already up-to-date", "namespace", notificationTemplate.Namespace, "name", notificationTemplate.Name)
 		}
 	}
 
@@ -67,7 +67,7 @@ func loadTemplates(assets Assets) (map[string][]template, error) {
 	return templates, nil
 }
 
-func newTemplates(namespace string, data map[string][]template) ([]toolchainv1alpha1.NotificationTemplate, error) {
+func newNotificationTemplates(namespace string, data map[string][]template) ([]toolchainv1alpha1.NotificationTemplate, error) {
 	var notificationTemplates []toolchainv1alpha1.NotificationTemplate
 	for name, templates := range data {
 		var subject string
