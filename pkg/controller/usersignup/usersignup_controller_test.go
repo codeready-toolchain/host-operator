@@ -171,22 +171,29 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 3)
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
-			Type:     "code",
-			Revision: "123456a",
-			Template: "",
+			Type:        "code",
+			Revision:    "123456a",
+			TemplateRef: "basic-code-123456a",
+			Template:    "",
 		})
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
-			Type:     "dev",
-			Revision: "123456b",
-			Template: "",
+			Type:        "dev",
+			Revision:    "123456b",
+			TemplateRef: "basic-dev-123456b",
+			Template:    "",
 		})
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
-			Type:     "stage",
-			Revision: "123456c",
-			Template: "",
+			Type:        "stage",
+			Revision:    "123456c",
+			TemplateRef: "basic-stage-123456c",
+			Template:    "",
 		})
+	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
+	assert.Equal(t, "654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.Revision)
+	assert.Equal(t, "basic-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
+	assert.Empty(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.Template)
 
 	// Lookup the user signup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
