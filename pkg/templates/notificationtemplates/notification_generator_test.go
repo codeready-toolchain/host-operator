@@ -1,4 +1,4 @@
-package notificationtemplates
+package notificationtemplates_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	testsupport "github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/pkg/errors"
@@ -42,10 +43,10 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				require.Error(t, err)
 				assert.IsType(t, metav1.StatusReasonNotFound, apierrors.ReasonForError(err))
 			}
-			assets := NewAssets(AssetNames, Asset)
+			assets := notificationtemplates.NewAssets(notificationtemplates.AssetNames, notificationtemplates.Asset)
 
 			// when
-			err := CreateOrUpdateResources(s, clt, namespace, assets)
+			err := notificationtemplates.CreateOrUpdateResources(s, clt, namespace, assets)
 
 			// then
 			require.NoError(t, err)
@@ -67,12 +68,12 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 		t.Run("failed to generate notification temaplte", func(t *testing.T) {
 			// given
-			fakeAssets := NewAssets(AssetNames, func(name string) ([]byte, error) {
-				// error occurs when fetching the content of the 'advanced-code.yaml' template
+			fakeAssets := notificationtemplates.NewAssets(notificationtemplates.AssetNames, func(name string) ([]byte, error) {
+				// error occurs when fetching the content of the a notification template
 				return nil, errors.Errorf("an error")
 			})
 			// when
-			err := CreateOrUpdateResources(s, clt, namespace, fakeAssets)
+			err := notificationtemplates.CreateOrUpdateResources(s, clt, namespace, fakeAssets)
 			// then
 			require.Error(t, err)
 			assert.Equal(t, "unable to create or update NotificationTemplate: unable to load templates: an error", err.Error())
@@ -80,7 +81,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 		t.Run("failed to update notification template", func(t *testing.T) {
 			// given
-			// initialize the client with an existing `advanced` NSTemplatetier
+			// initialize the client with an existing userprovisioned notification template
 			clt := testsupport.NewFakeClient(t, &toolchainv1alpha1.NotificationTemplate{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
@@ -88,12 +89,12 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				},
 			})
 			clt.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-				// trigger an error when trying to update the existing `advanced` NSTemplatetier
+				// trigger an error when trying to update the existing userprovisioned notification template
 				return errors.Errorf("an error")
 			}
-			assets := NewAssets(AssetNames, Asset)
+			assets := notificationtemplates.NewAssets(notificationtemplates.AssetNames, notificationtemplates.Asset)
 			// when
-			err := CreateOrUpdateResources(s, clt, namespace, assets)
+			err := notificationtemplates.CreateOrUpdateResources(s, clt, namespace, assets)
 			// then
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), fmt.Sprintf("unable to create or update the 'userprovisioned' NotificationTemplate in namespace '%s'", namespace))
