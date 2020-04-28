@@ -1179,6 +1179,10 @@ data:
                     required:
                     - objects
                     type: object
+                  tierName:
+                    description: 'The tier of the template. For example: "basic", "advanced",
+                      or "team"'
+                    type: string
                   type:
                     description: 'The type of the template. For example: "code", "dev",
                       "stage" or "cluster"'
@@ -1186,6 +1190,7 @@ data:
                 required:
                 - revision
                 - template
+                - tierName
                 - type
                 type: object
             x-kubernetes-preserve-unknown-fields: true
