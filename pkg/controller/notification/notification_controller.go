@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"bytes"
 	"context"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -11,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -18,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"text/template"
 )
 
 const (
@@ -72,7 +75,7 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Notification")
 
-	// Fetch the UserSignup instance
+	// Fetch the Notification instance
 	instance := &toolchainv1alpha1.Notification{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
@@ -86,9 +89,43 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	// TODO Lookup the notification template
+	// Lookup the notification template
+	template := &toolchainv1alpha1.NotificationTemplate{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{
+		Namespace: request.Namespace,
+		Name:      instance.Spec.Template,
+	}, template)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidTemplate, err, "Failed to find template")
+		}
+		return reconcile.Result{}, err
+	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileNotification) sendNotification() {
+
+}
+
+func (r *ReconcileNotification) generateNotificationContent(userID, templateDefinition string) (string, error) {
+
+	// TODO create a context structure for holding user related state, using userID to populate
+
+	tmpl, err := template.New("notification").Parse(templateDefinition)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+
+	err = tmpl.Execute(&buf, nil)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 func (r *ReconcileNotification) setStatusInvalidTemplate(notification *toolchainv1alpha1.Notification, message string) error {
