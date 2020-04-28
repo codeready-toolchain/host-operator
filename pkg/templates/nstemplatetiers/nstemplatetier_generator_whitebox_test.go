@@ -3,6 +3,7 @@ package nstemplatetiers
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"testing"
 	texttemplate "text/template"
 
@@ -182,76 +183,232 @@ func TestNewNSTemplateTier(t *testing.T) {
 			require.NoError(t, err)
 			namespace := "host-operator-" + uuid.NewV4().String()[:7]
 			// when
-			tierObjs, err := newNSTemplateTiers(s, namespace, templatesByTier)
+			tmplTiers, err := newNSTemplateTiers(decoder, namespace, templatesByTier)
 			// then
 			require.NoError(t, err)
-			require.NotEmpty(t, tierObjs)
+			require.NotEmpty(t, tmplTiers)
 			decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
-			for _, actual := range tierObjs {
+			for _, actual := range tmplTiers {
 				tier := actual.Name
-				assert.Equal(t, namespace, actual.Namespace)
-				require.Len(t, actual.Spec.Namespaces, len(templatesByTier[tier].namespaceTemplates))
-				for kind, tmpl := range templatesByTier[tier].namespaceTemplates {
-					found := false
-					for _, ns := range actual.Spec.Namespaces {
-						if ns.Type != kind {
-							continue
-						}
-						found = true
-						assert.Equal(t, tmpl.revision, ns.Revision)
-						content, err := Asset(fmt.Sprintf("%s/ns_%s.yaml", tier, kind))
-						require.NoError(t, err)
-						tmplObj := &templatev1.Template{}
-						_, _, err = decoder.Decode(content, nil, tmplObj)
-						require.NoError(t, err)
-						assert.Equal(t, *tmplObj, ns.Template)
+				t.Run(tier, func(t *testing.T) {
+					assert.Equal(t, namespace, actual.Namespace)
+					require.Len(t, actual.Spec.Namespaces, len(templatesByTier[tier].namespaceTemplates))
+					for kind, tmpl := range templatesByTier[tier].namespaceTemplates {
+						found := false
+						for _, ns := range actual.Spec.Namespaces {
+							if ns.Type != kind {
+								continue
+							}
+							found = true
+							assert.Equal(t, tmpl.revision, ns.Revision)
+							content, err := Asset(fmt.Sprintf("%s/ns_%s.yaml", tier, kind))
+							require.NoError(t, err)
+							tmplObj := &templatev1.Template{}
+							_, _, err = decoder.Decode(content, nil, tmplObj)
+							require.NoError(t, err)
+							assert.Equal(t, *tmplObj, ns.Template)
 
+							// Assert expected objects in the template
+							// Each template should have one Namespace, one RoleBinding, one LimitRange and three NetworkPolicy objects
+
+							// Namespace
+							containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"name":"${USERNAME}-%[1]s"}}`, ns.Type))
+							// RoleBinding "user-edit"
+							containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"user-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, ns.Type))
+
+							// LimitRange
+							cpuLimit := "150m"
+							memoryLimit := "512Mi"
+							if tier == "team" {
+								memoryLimit = "1Gi"
+							} else if ns.Type == "dev" {
+								memoryLimit = "750Mi"
+							}
+							containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"100m","memory":"64Mi"},"type":"Container"}]}}`, ns.Type, cpuLimit, memoryLimit))
+
+							// NetworkPolicies
+							containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, ns.Type))
+							containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-ingress","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"ingress"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, ns.Type))
+							containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-monitoring","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"monitoring"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, ns.Type))
+
+							// All templates in the "team" tier and "-code" templates in other tiers should also have additional RoleBinding and Role
+							if kind == "code" || tier == "team" || tier == "advanced" {
+								require.Len(t, ns.Template.Objects, 8)
+								// Role & RoleBinding with additional permissions to edit roles/rolebindings
+								containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"rbac-edit","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":["authorization.openshift.io","rbac.authorization.k8s.io"],"resources":["roles","rolebindings"],"verbs":["get","list","watch","create","update","patch","delete"]}]}`, ns.Type))
+								containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"user-rbac-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"Role","name":"rbac-edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, ns.Type))
+							} else {
+								require.Len(t, ns.Template.Objects, 6)
+							}
+							break
+						}
+						assert.True(t, found, "the namespace with the type wasn't found", "ns-type", kind)
+					}
+					require.NotNil(t, actual.Spec.ClusterResources)
+					assert.Equal(t, templatesByTier[tier].clusterTemplate.revision, actual.Spec.ClusterResources.Revision)
+					cpuLimit := "1750m"
+					memoryLimit := "7Gi"
+					if tier == "team" {
+						cpuLimit = "2000m"
+						memoryLimit = "15Gi"
+					}
+					assert.Len(t, actual.Spec.ClusterResources.Template.Objects, 1)
+					containsObj(t, actual.Spec.ClusterResources.Template, fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"5Gi","limits.memory":"%[2]s","persistentvolumeclaims":"2","pods":"100","replicationcontrollers":"100","requests.cpu":"%[1]s","requests.ephemeral-storage":"5Gi","requests.memory":"%[2]s","requests.storage":"5Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, memoryLimit))
+				})
+			}
+		})
+
+		t.Run("with test assets", func(t *testing.T) {
+			// given
+			assets := NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+			templatesByTier, err := loadTemplatesByTiers(assets)
+			require.NoError(t, err)
+			namespace := "host-operator-" + uuid.NewV4().String()[:7]
+			namespaceRevisions := map[string]map[string]string{
+				"advanced": {
+					"code":  "123456a",
+					"dev":   "123456b",
+					"stage": "123456c",
+				},
+				"basic": {
+					"code":  "123456d",
+					"dev":   "123456e",
+					"stage": "123456f",
+				},
+			}
+			clusterResourceQuotaRevisions := map[string]string{
+				"advanced": "654321a",
+				"basic":    "654321b",
+			}
+			for tier := range namespaceRevisions {
+				t.Run(tier, func(t *testing.T) {
+					// given
+					tmpls := templatesByTier[tier]
+					// when
+					actual, err := newNSTemplateTier(decoder, namespace, tier, *tmpls)
+					// then
+					require.NoError(t, err)
+					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, namespaceRevisions[tier], clusterResourceQuotaRevisions[tier])
+					require.NoError(t, err)
+					// here we don't compare objects because the generated NSTemplateTier
+					// has no specific values for the `TypeMeta`: the `APIVersion: toolchain.dev.openshift.com/v1alpha1`
+					// and `Kind: NSTemplateTier` should be set by the client using the registered GVK
+					assert.Equal(t, expected.ObjectMeta, actual.ObjectMeta)
+					assert.Equal(t, expected.Spec, actual.Spec)
+				})
+			}
+		})
+	})
+
+	t.Run("failures", func(t *testing.T) {
+
+		t.Run("invalid template", func(t *testing.T) {
+			// given
+			fakeAssets := NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
+				if name == "metadata.yaml" {
+					return testnstemplatetiers.Asset(name)
+				}
+				// error occurs when fetching the content of the 'advanced-code.yaml' template
+				return []byte("invalid"), nil // return an invalid YAML represention of a Template
+			})
+			namespace := "host-operator-" + uuid.NewV4().String()[:7]
+			templatesByTier, err := loadTemplatesByTiers(fakeAssets)
+			require.NoError(t, err)
+			advancedTemplates := templatesByTier["advanced"]
+			// when
+			_, err = newNSTemplateTier(decoder, namespace, "advanced", *advancedTemplates)
+			// then
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unable to generate 'advanced' NSTemplateTier manifest: couldn't get version/kind; json parse error")
+		})
+	})
+}
+
+func TestNewTierTemplate(t *testing.T) {
+
+	s := scheme.Scheme
+	decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
+	err := apis.AddToScheme(s)
+	require.NoError(t, err)
+
+	t.Run("ok", func(t *testing.T) {
+
+		t.Run("with prod assets", func(t *testing.T) {
+			// given
+			assets := NewAssets(AssetNames, Asset)
+			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
+			templatesByTier, err := loadTemplatesByTiers(assets)
+			require.NoError(t, err)
+			namespace := "host-operator-" + uuid.NewV4().String()[:7]
+			// when
+			tierTmpls, err := newTierTemplates(decoder, namespace, templatesByTier)
+			// then
+			require.NoError(t, err)
+			require.Len(t, tierTmpls, 11) // current count of template files
+			decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
+
+			resourceNameRE, err := regexp.Compile(`[a-z0-9\.-]+`)
+			require.NoError(t, err)
+			for _, actual := range tierTmpls {
+				t.Run(actual.Name, func(t *testing.T) {
+					assert.Equal(t, namespace, actual.Namespace)
+					assert.True(t, resourceNameRE.MatchString(actual.Name)) // verifies that the TierTemplate name complies with the DNS-1123 spec
+					assert.NotEmpty(t, actual.Spec.Revision)
+					assert.NotEmpty(t, actual.Spec.TierName)
+					assert.NotEmpty(t, actual.Spec.Type)
+					assert.NotEmpty(t, actual.Spec.Template)
+					tmplObj := &templatev1.Template{}
+					content, err := Asset(fmt.Sprintf("%s/ns_%s.yaml", actual.Spec.TierName, actual.Spec.Type))
+					_, _, err = decoder.Decode(content, nil, tmplObj)
+					require.NoError(t, err)
+					switch actual.Spec.Type {
+					case "dev", "code", "stage":
 						// Assert expected objects in the template
 						// Each template should have one Namespace, one RoleBinding, one LimitRange and three NetworkPolicy objects
 
 						// Namespace
-						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"name":"${USERNAME}-%[1]s"}}`, ns.Type))
+						containsObj(t, actual.Spec.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"name":"${USERNAME}-%[1]s"}}`, actual.Spec.Type))
 						// RoleBinding "user-edit"
-						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"user-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, ns.Type))
+						containsObj(t, actual.Spec.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"user-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, actual.Spec.Type))
 
 						// LimitRange
 						cpuLimit := "150m"
 						memoryLimit := "512Mi"
-						if tier == "team" {
+						if actual.Spec.TierName == "team" {
 							memoryLimit = "1Gi"
-						} else if ns.Type == "dev" {
+						} else if actual.Spec.Type == "dev" {
 							memoryLimit = "750Mi"
 						}
-						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"100m","memory":"64Mi"},"type":"Container"}]}}`, ns.Type, cpuLimit, memoryLimit))
+						containsObj(t, actual.Spec.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"100m","memory":"64Mi"},"type":"Container"}]}}`, actual.Spec.Type, cpuLimit, memoryLimit))
 
 						// NetworkPolicies
-						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, ns.Type))
-						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-ingress","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"ingress"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, ns.Type))
-						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-monitoring","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"monitoring"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, ns.Type))
+						containsObj(t, actual.Spec.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, actual.Spec.Type))
+						containsObj(t, actual.Spec.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-ingress","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"ingress"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, actual.Spec.Type))
+						containsObj(t, actual.Spec.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-monitoring","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"monitoring"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, actual.Spec.Type))
 
 						// All templates in the "team" tier and "-code" templates in other tiers should also have additional RoleBinding and Role
-						if kind == "code" || tier == "team" || tier == "advanced" {
-							require.Len(t, ns.Template.Objects, 8)
+						if actual.Spec.Type == "code" || actual.Spec.TierName == "team" || actual.Spec.TierName == "advanced" {
+							require.Len(t, actual.Spec.Template.Objects, 8)
 							// Role & RoleBinding with additional permissions to edit roles/rolebindings
-							containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"rbac-edit","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":["authorization.openshift.io","rbac.authorization.k8s.io"],"resources":["roles","rolebindings"],"verbs":["get","list","watch","create","update","patch","delete"]}]}`, ns.Type))
-							containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"user-rbac-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"Role","name":"rbac-edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, ns.Type))
+							containsObj(t, actual.Spec.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"rbac-edit","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":["authorization.openshift.io","rbac.authorization.k8s.io"],"resources":["roles","rolebindings"],"verbs":["get","list","watch","create","update","patch","delete"]}]}`, actual.Spec.Type))
+							containsObj(t, actual.Spec.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"user-rbac-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"Role","name":"rbac-edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, actual.Spec.Type))
 						} else {
-							require.Len(t, ns.Template.Objects, 6)
+							require.Len(t, actual.Spec.Template.Objects, 6)
 						}
-						break
+					case "clusterResources":
+						assert.Len(t, actual.Spec.Template.Objects, 1)
+						cpuLimit := "1750m"
+						memoryLimit := "7Gi"
+						if actual.Spec.TierName == "team" {
+							cpuLimit = "2000m"
+							memoryLimit = "15Gi"
+						}
+						containsObj(t, actual.Spec.Template, fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"5Gi","limits.memory":"%[2]s","persistentvolumeclaims":"2","pods":"100","replicationcontrollers":"100","requests.cpu":"%[1]s","requests.ephemeral-storage":"5Gi","requests.memory":"%[2]s","requests.storage":"5Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, memoryLimit))
+
+					default:
+						t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
 					}
-					assert.True(t, found, "the namespace with the type wasn't found", "ns-type", kind)
-				}
-				require.NotNil(t, actual.Spec.ClusterResources)
-				assert.Equal(t, templatesByTier[tier].clusterTemplate.revision, actual.Spec.ClusterResources.Revision)
-				cpuLimit := "1750m"
-				memoryLimit := "7Gi"
-				if tier == "team" {
-					cpuLimit = "2000m"
-					memoryLimit = "15Gi"
-				}
-				assert.Len(t, actual.Spec.ClusterResources.Template.Objects, 1)
-				containsObj(t, actual.Spec.ClusterResources.Template, fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"5Gi","limits.memory":"%[2]s","persistentvolumeclaims":"2","pods":"100","replicationcontrollers":"100","requests.cpu":"%[1]s","requests.ephemeral-storage":"5Gi","requests.memory":"%[2]s","requests.storage":"5Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, memoryLimit))
+				})
 			}
 		})
 
@@ -334,6 +491,7 @@ func TestNewNSTemplateTiers(t *testing.T) {
 
 	// given
 	s := scheme.Scheme
+	decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 
@@ -344,7 +502,7 @@ func TestNewNSTemplateTiers(t *testing.T) {
 		require.NoError(t, err)
 		namespace := "host-operator-" + uuid.NewV4().String()[:7]
 		// when
-		tiers, err := newNSTemplateTiers(s, namespace, templatesByTier)
+		tiers, err := newNSTemplateTiers(decoder, namespace, templatesByTier)
 		// then
 		require.NoError(t, err)
 		require.Len(t, tiers, 4)
@@ -403,8 +561,8 @@ metadata:
   name: {{ .Tier }}
 spec:
   namespaces: 
-{{ $tier := .Tier }}{{ range $kind, $namespaceRevision := .NamespaceRevisions }}  - type: {{ $kind }}
-    revision: "{{ $namespaceRevision }}"
+{{ $tier := .Tier }}{{ range $kind, $revision := .NamespaceRevisions }}  - type: {{ $kind }}
+    revision: "{{ $revision }}"
     template:
       apiVersion: template.openshift.io/v1
       kind: Template
@@ -426,6 +584,7 @@ spec:
       parameters:
       - name: USERNAME
         required: true
+    templateRef: {{ $tier }}-{{ $kind }}-{{ $revision }}
 {{ end }}  clusterResources:
     revision: "{{ .ClusterResourcesRevision }}"
     template:
@@ -453,7 +612,8 @@ spec:
             labels: null
       parameters:
       - name: USERNAME
-        required: true`)
+        required: true
+    templateRef: {{ $tier }}-clusterresources-{{ .ClusterResourcesRevision }}`)
 	if err != nil {
 		return toolchainv1alpha1.NSTemplateTier{}, "", err
 	}
