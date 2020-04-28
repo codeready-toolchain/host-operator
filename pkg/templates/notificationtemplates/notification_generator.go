@@ -15,15 +15,21 @@ import (
 
 var log = logf.Log.WithName("notification-templates")
 
+// template: a template containing template name and template content
+type template struct {
+	templateName string
+	content      string
+}
+
 func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, assets Assets) error {
 	templates, err := loadTemplates(assets)
 	if err != nil {
 		return errors.Wrap(err, "unable to create or update NotificationTemplate")
 	}
-	notificationCRs, err := newTemplates(namespace, templates)
 
+	notificationCRs, err := newTemplates(namespace, templates)
 	for _, notificationCR := range notificationCRs {
-		log.Info("creating or updating NSTemplateTier", "namespace", notificationCR.Namespace, "name", notificationCR.Name)
+		log.Info("creating or updating NotificationTemplate", "namespace", notificationCR.Namespace, "name", notificationCR.Name)
 		cl := commonclient.NewApplyClient(client, s)
 		createdOrUpdated, err := cl.CreateOrUpdateObject(&notificationCR, true, nil)
 		if err != nil {
@@ -62,12 +68,10 @@ func loadTemplates(assets Assets) (map[string][]template, error) {
 }
 
 func newTemplates(namespace string, data map[string][]template) ([]toolchainv1alpha1.NotificationTemplate, error) {
-
 	var notificationTemplates []toolchainv1alpha1.NotificationTemplate
-
 	for name, templates := range data {
-		subject := ""
-		content := ""
+		var subject string
+		var content string
 		for _, template := range templates {
 			if template.templateName == "notification.html" {
 				content = template.content
@@ -90,10 +94,4 @@ func newTemplates(namespace string, data map[string][]template) ([]toolchainv1al
 	}
 
 	return notificationTemplates, nil
-}
-
-// template: a template content and its latest git revision
-type template struct {
-	templateName string
-	content      string
 }
