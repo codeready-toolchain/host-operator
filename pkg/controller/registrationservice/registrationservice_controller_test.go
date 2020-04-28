@@ -34,7 +34,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 
 	tmpl := getDecodedTemplate(t, decoder)
 	reqService := newRegistrationService(test.HostOperatorNs, imageDef, "dev", 1)
-	p := template.NewProcessor(&test.FakeClient{}, s)
+	p := template.NewProcessor(s)
 	objs, err := p.Process(tmpl, getVars(reqService))
 	require.NoError(t, err)
 

@@ -74,7 +74,7 @@ func add(mgr manager.Manager, r *ReconcileRegistrationService) error {
 	}
 
 	// process with default variables - we need to get just the list of objects - we don't care about their content
-	processor := template.NewProcessor(r.client, r.scheme)
+	processor := template.NewProcessor(r.scheme)
 	objects, err := processor.Process(r.regServiceTemplate.DeepCopy(), map[string]string{})
 	if err != nil {
 		return err
@@ -130,9 +130,8 @@ func (r *ReconcileRegistrationService) Reconcile(request reconcile.Request) (rec
 	}
 
 	// process template with variables taken from the RegistrationService CRD
-	processor := template.NewProcessor(r.client, r.scheme)
 	client := commonclient.NewApplyClient(r.client, r.scheme)
-	objects, err := processor.Process(r.regServiceTemplate.DeepCopy(), getVars(regService))
+	objects, err := template.NewProcessor(r.scheme).Process(r.regServiceTemplate.DeepCopy(), getVars(regService))
 	if err != nil {
 		return reconcile.Result{}, err
 	}
