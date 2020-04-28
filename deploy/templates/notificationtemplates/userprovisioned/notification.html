@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>
+        Notice: Your Red Hat CodeReady Toolchain account has been provisioned
+    </title>
+    <style>
+        a:hover {
+            text-decoration: underline !important;
+        }
+        p {
+            text-align: left;
+            margin: 30px 0;
+        }
+    </style>
+</head>
+
+<body
+        style="
+       padding: 10px;
+       padding: 0;
+       background-color: #f9f9f9;
+       font-family: 'Open Sans', sans-serif;
+       font-size: 15px;
+       font-weight: lighter;
+       line-height: 1.2;"
+>
+<div
+        style="
+       min-height: 300px;
+       max-width: 750px;
+       margin: 0 auto;
+       padding: 20px;
+       border: 1px solid #d7d7d7;
+       border-radius: 4px;
+       background-color: #fff;
+       box-shadow: 0 2px 4px #d7d7d7;"
+>
+
+    <p>
+        You are receiving this email because you have an online <a href={{.RegistrationURL}}>Red Hat CodeReady Toolchain</a>
+        account associated with {{.UserEmail}}.
+    </p>
+
+    <p>
+        Your <a href={{.RegistrationURL }}>Red Hat CodeReady Toolchain</a> account has been provisioned and is ready to use. Please log in to
+        <a href={{.RegistrationURL}}>Red Hat CodeReady Toolchain</a> to begin using your account. try it out.
+    </p>
+
+    <p>
+        Thanks,<br />
+        The Red Hat CodeReady Toolchain team
+    </p>
+</div>
+</body>
+</html>
