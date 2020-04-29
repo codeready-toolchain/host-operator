@@ -142,7 +142,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				if tier.Name == "nocluster" {
 					assert.Nil(t, tier.Spec.ClusterResources) // "team" tier should not have cluster resources set
 				} else {
-					assert.NotNil(t, tier.Spec.ClusterResources)
+					require.NotNil(t, tier.Spec.ClusterResources)
+					assert.Equal(t, tier.Name+"-clusterresources-"+tier.Spec.ClusterResources.Revision, tier.Spec.ClusterResources.TemplateRef)
+				}
+				for _, ns := range tier.Spec.Namespaces {
+					assert.Equal(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Revision)
+					assert.NotEmpty(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Template)
+					assert.Equal(t, tier.Name+"-"+ns.Type+"-"+ns.Revision, ns.TemplateRef)
 				}
 			}
 		})
@@ -174,18 +180,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
 				}
 
-				for _, tierName := range []string{"advanced", "basic", "team", "nocluster"} {
-					tier := toolchainv1alpha1.NSTemplateTier{}
-					err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
-					require.NoError(t, err)
-					// verify that the generation was increased
-					assert.Equal(t, int64(2), tier.ObjectMeta.Generation)
-					// verify their new namespace revisions
-					for _, ns := range tier.Spec.Namespaces {
-						assert.Equal(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Revision)
-						assert.NotEmpty(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Template)
-					}
-				}
 				// verify that the 4 NStemplateTier CRs were updated
 				for _, tierName := range []string{"advanced", "basic", "team", "nocluster"} {
 					tier := toolchainv1alpha1.NSTemplateTier{}
@@ -197,6 +191,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					for _, ns := range tier.Spec.Namespaces {
 						assert.Equal(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Revision)
 						assert.NotEmpty(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Template)
+						assert.Equal(t, tier.Name+"-"+ns.Type+"-"+ns.Revision, ns.TemplateRef)
 					}
 				}
 			})
