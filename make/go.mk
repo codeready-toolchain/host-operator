@@ -27,7 +27,6 @@ NSTEMPLATES_FILES = $(wildcard $(NSTEMPLATES_BASEDIR)/**/*.yaml)
 NSTEMPLATES_TEST_BASEDIR = test/templates/nstemplatetiers
 NSTEMPLATES_TEST_SUBDIRS = $(wildcard $(NSTEMPLATES_TEST_BASEDIR)/**/*)
 NOTIFICATION_BASEDIR = deploy/templates/notificationtemplates
-NOTIFICATION_FILES = $(wildcard $(NOTIFICATION_BASEDIR)/**/*.yaml)
 REGISTRATION_SERVICE_DIR=deploy/registration-service
 
 .PHONY: generate
