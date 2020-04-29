@@ -4,12 +4,9 @@ import (
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
@@ -21,28 +18,13 @@ type template struct {
 	content      string
 }
 
-func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, assets Assets) error {
+func GetNotificationTemplates(namespace string, assets Assets) ([]toolchainv1alpha1.NotificationTemplate, error) {
 	templates, err := loadTemplates(assets)
 	if err != nil {
-		return errors.Wrap(err, "unable to create or update NotificationTemplate")
+		return nil, errors.Wrap(err, "unable to get notification templates")
 	}
 
-	notificationTemplates, err := newNotificationTemplates(namespace, templates)
-	for _, notificationTemplate := range notificationTemplates {
-		log.Info("creating or updating NotificationTemplate", "namespace", notificationTemplate.Namespace, "name", notificationTemplate.Name)
-		cl := commonclient.NewApplyClient(client, s)
-		createdOrUpdated, err := cl.CreateOrUpdateObject(&notificationTemplate, true, nil)
-		if err != nil {
-			return errors.Wrapf(err, "unable to create or update the '%s' NotificationTemplate in namespace '%s'", notificationTemplate.Name, notificationTemplate.Namespace)
-		}
-		if createdOrUpdated {
-			log.Info("NotificationTemplate resource created/updated", "namespace", notificationTemplate.Namespace, "name", notificationTemplate.Name)
-		} else {
-			log.Info("NotificationTemplate resource was already up-to-date", "namespace", notificationTemplate.Namespace, "name", notificationTemplate.Name)
-		}
-	}
-
-	return nil
+	return newNotificationTemplates(namespace, templates)
 }
 
 func loadTemplates(assets Assets) (map[string][]template, error) {
@@ -54,9 +36,15 @@ func loadTemplates(assets Assets) (map[string][]template, error) {
 			return nil, errors.Wrapf(err, "unable to load templates")
 		}
 		segments := strings.Split(path, "/")
+		if len(segments) != 2 {
+			return nil, errors.Wrapf(errors.New("unable to load templates"), "path must contain directory and file")
+		}
 		directoryName := segments[0]
 		filename := segments[1]
 
+		if directoryName == "" || filename == "" {
+			return nil, errors.Wrapf(errors.New("unable to load templates"), "directory name and filename cannot be empty")
+		}
 		tmpl := template{
 			templateName: filename,
 			content:      string(content),
@@ -73,15 +61,17 @@ func newNotificationTemplates(namespace string, data map[string][]template) ([]t
 		var subject string
 		var content string
 		for _, template := range templates {
-			if template.templateName == "notification.html" {
+			switch template.templateName {
+			case "notification.html":
 				content = template.content
-			} else if template.templateName == "subject.txt" {
+			case "subject.txt":
 				subject = template.content
+			default:
+				return nil, errors.Wrapf(errors.New("unable to load templates"), "must contain notification.html and subject.txt")
 			}
 		}
 
 		notificationTemplates = append(notificationTemplates, toolchainv1alpha1.NotificationTemplate{
-			TypeMeta: v1.TypeMeta{},
 			ObjectMeta: v1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,

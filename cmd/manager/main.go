@@ -201,13 +201,14 @@ func main() {
 		log.Info("Created/updated the NSTemplateTier resources")
 
 		// create or update all NotificationTemplate on the cluster at startup
-		log.Info("Creating/updating the NotificationTemplate resources")
+		//TODO (tina) : remove this
+		log.Info("Get the NotificationTemplate resources")
 		notificationAssets := notificationtemplates.NewAssets(notificationtemplates.AssetNames, notificationtemplates.Asset)
-		if err := notificationtemplates.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, notificationAssets); err != nil {
+		if _, err := notificationtemplates.GetNotificationTemplates(namespace, notificationAssets); err != nil {
 			log.Error(err, "")
 			os.Exit(1)
 		}
-		log.Info("Created/updated the NotificationTemplate resources")
+		log.Info("Retrieved the NotificationTemplate resources")
 	}()
 
 	// Start the Cmd
