@@ -41,7 +41,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 		namespace := "host-operator" + uuid.NewV4().String()[:7]
 
-		t.Run("failed to get notification temapltes", func(t *testing.T) {
+		t.Run("failed to get notification templates", func(t *testing.T) {
 			// given
 			fakeAssets := notificationtemplates.NewAssets(notificationtemplates.AssetNames, func(name string) ([]byte, error) {
 				// error occurs when fetching the content of the a notification template
