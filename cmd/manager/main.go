@@ -8,8 +8,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
-
 	api "github.com/codeready-toolchain/api/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -199,16 +197,6 @@ func main() {
 			os.Exit(1)
 		}
 		log.Info("Created/updated the NSTemplateTier resources")
-
-		// create or update all NotificationTemplate on the cluster at startup
-		//TODO (tina) : remove this
-		log.Info("Get the NotificationTemplate resources")
-		notificationAssets := notificationtemplates.NewAssets(notificationtemplates.AssetNames, notificationtemplates.Asset)
-		if _, err := notificationtemplates.GetNotificationTemplates(namespace, notificationAssets); err != nil {
-			log.Error(err, "")
-			os.Exit(1)
-		}
-		log.Info("Retrieved the NotificationTemplate resources")
 	}()
 
 	// Start the Cmd

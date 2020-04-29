@@ -30,11 +30,10 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			require.NotNil(t, templates)
 
 			// verify that notification template resources exist after creation
-			for _, template := range templates {
-				assert.Equal(t, template.Name, "userprovisioned")
-				assert.NotEmpty(t, template.Spec.Subject)
-				assert.NotEmpty(t, template.Spec.Content)
-			}
+			require.Len(t, templates, 1)
+			assert.Equal(t, "userprovisioned", templates[0].Name)
+			assert.NotEmpty(t, templates[0].Spec.Content)
+			assert.NotEmpty(t, "userprovisioned", templates[0].Spec.Subject)
 		})
 	})
 	t.Run("failures", func(t *testing.T) {
