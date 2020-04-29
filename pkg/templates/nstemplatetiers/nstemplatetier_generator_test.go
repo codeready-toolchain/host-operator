@@ -31,6 +31,54 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	logf.SetLogger(zap.Logger(true))
+	mockCreate := func(clt *testsupport.FakeClient) func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+		return func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+			var objMeta *metav1.ObjectMeta
+			switch obj := obj.(type) {
+			case *toolchainv1alpha1.NSTemplateTier:
+				objMeta = &obj.ObjectMeta
+			case *toolchainv1alpha1.TierTemplate:
+				objMeta = &obj.ObjectMeta
+			default:
+				return errors.Errorf("did not expect to create a resource of type %T", obj)
+			}
+			if objMeta.Generation != 0 {
+				return errors.Errorf("'generation' field will be specified by the server during object creation: %v", objMeta.Generation)
+			}
+			objMeta.Generation = 1
+			objMeta.ResourceVersion = "foo" // set by the server
+			err := clt.Client.Create(ctx, obj)
+			if err != nil && apierrors.IsAlreadyExists(err) {
+				// prevent the fake client to return the actual ResourceVersion,
+				// as it seems like the real client/server don't not do it in the e2e tests
+				// see client.MockUpdate just underneath for the use-case
+				objMeta.ResourceVersion = ""
+			}
+			return err
+		}
+	}
+
+	// check the 'generation' when updating the object, and increment its value
+	mockUpdate := func(clt *testsupport.FakeClient) func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		return func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			if obj, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
+				if obj.ObjectMeta.ResourceVersion != "foo" {
+					// here, we expect that the caller will have set the ResourceVersion based on the existing object
+					return errors.Errorf("'ResourceVersion ' field must be specified during object update")
+				}
+				// increment even if the object did not change
+				existing := toolchainv1alpha1.NSTemplateTier{}
+				if err := clt.Get(ctx, types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}, &existing); err != nil {
+					return err
+				}
+				obj.SetGeneration(existing.GetGeneration() + 1)
+				return clt.Client.Update(ctx, obj)
+			}
+			return errors.Errorf("did not expect to update a resource of type %T", obj)
+		}
+	}
+
+	assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 
 	t.Run("ok", func(t *testing.T) {
 
@@ -38,16 +86,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.NewV4().String()[:7]
 			clt := testsupport.NewFakeClient(t)
-			// set the 'generation' when creating the object
-			clt.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
-				if obj, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-					if obj.ObjectMeta.Generation != 0 {
-						return errors.Errorf("'generation' field will be specified by the server during object creation: %v", obj.ObjectMeta.Generation)
-					}
-					obj.ObjectMeta.Generation = obj.ObjectMeta.Generation + 1
-				}
-				return clt.Client.Create(ctx, obj)
-			}
+			clt.MockCreate = mockCreate(clt)
+			clt.MockUpdate = mockUpdate(clt)
 			// verify that no NSTemplateTier resources exist prior to creation
 			nsTmplTiers := toolchainv1alpha1.NSTemplateTierList{}
 			err = clt.List(context.TODO(), &nsTmplTiers, client.InNamespace(namespace))
@@ -91,52 +131,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.NewV4().String()[:7]
 			clt := testsupport.NewFakeClient(t)
-			// set the 'generation' when creating the object
-			// set the 'generation' when creating the object
-			clt.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
-				var objMeta *metav1.ObjectMeta
-				switch obj := obj.(type) {
-				case *toolchainv1alpha1.NSTemplateTier:
-					objMeta = &obj.ObjectMeta
-				case *toolchainv1alpha1.TierTemplate:
-					objMeta = &obj.ObjectMeta
-				default:
-					return errors.Errorf("did not expect to create a resource of type %T", obj)
-				}
-				if objMeta.Generation != 0 {
-					return errors.Errorf("'generation' field will be specified by the server during object creation: %v", objMeta.Generation)
-				}
-				objMeta.Generation = 1
-				objMeta.ResourceVersion = "foo" // set by the server
-				err := clt.Client.Create(ctx, obj)
-				if err != nil && apierrors.IsAlreadyExists(err) {
-					// prevent the fake client to return the actual ResourceVersion,
-					// as it seems like the real client/server don't not do it in the e2e tests
-					// see client.MockUpdate just underneath for the use-case
-					objMeta.ResourceVersion = ""
-				}
-				return err
-			}
-
-			// check the 'generation' when updating the object, and increment its value
-			clt.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-				if obj, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-					if obj.ObjectMeta.ResourceVersion != "foo" {
-						// here, we expect that the caller will have set the ResourceVersion based on the existing object
-						return errors.Errorf("'ResourceVersion ' field must be specified during object update")
-					}
-					// increment even if the object did not change
-					existing := toolchainv1alpha1.NSTemplateTier{}
-					if err := clt.Get(ctx, types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}, &existing); err != nil {
-						return err
-					}
-					obj.SetGeneration(existing.GetGeneration() + 1)
-					return clt.Client.Update(ctx, obj)
-				}
-				return errors.Errorf("did not expect to update a resource of type %T", obj)
-			}
-
-			assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+			clt.MockCreate = mockCreate(clt)
+			clt.MockUpdate = mockUpdate(clt)
 
 			// when
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
