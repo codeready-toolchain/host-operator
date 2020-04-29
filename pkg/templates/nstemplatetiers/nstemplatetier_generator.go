@@ -160,7 +160,7 @@ func loadTemplatesByTiers(assets Assets) (map[string]*templates, error) {
 	return results, nil
 }
 
-// newTierTemplates generates all TemplateTier resources
+// newTierTemplates generates all TierTemplate resources
 func newTierTemplates(decoder runtime.Decoder, namespace string, templatesByTier map[string]*templates) ([]*toolchainv1alpha1.TierTemplate, error) {
 	result := []*toolchainv1alpha1.TierTemplate{}
 	// proceed tiers by alphabetical order
