@@ -1,6 +1,7 @@
 package nstemplatetiers
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -41,16 +43,12 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 		return errors.Wrap(err, "unable to create or update TierTemlates")
 	}
 	for _, tierTmpl := range tierTmpls {
-		log.Info("creating or updating TierTemplate", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
-		createdOrUpdated, err := cl.CreateOrUpdateObject(tierTmpl, true, nil)
-		if err != nil {
+		log.Info("creating TierTemplate", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
+		// using the "standard" client since we don't need to support updates on such resources, they should be immutable
+		if err := client.Create(context.TODO(), tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
 			return errors.Wrapf(err, "unable to create or update the '%s' TierTemplate in namespace '%s'", tierTmpl.Name, tierTmpl.Namespace)
 		}
-		if createdOrUpdated {
-			log.Info("NSTemplateTier resource created/updated", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
-		} else {
-			log.Info("NSTemplateTier resource was already up-to-date", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name, "ResourceVersion", tierTmpl.ResourceVersion)
-		}
+		log.Info("TierTemplate resource created", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
 	}
 	// create the NSTemplateTiers
 	tmplTiers, err := newNSTemplateTiers(decoder, namespace, templatesByTier)
