@@ -6,7 +6,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -31,7 +30,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		})
 	})
 	t.Run("failures", func(t *testing.T) {
-		namespace := "host-operator" + uuid.NewV4().String()[:7]
 		t.Run("failed to get notification templates", func(t *testing.T) {
 			// given
 			fakeAssets := notificationtemplates.NewAssets(notificationtemplates.AssetNames, func(name string) ([]byte, error) {
@@ -39,15 +37,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				return nil, errors.Errorf("an error")
 			})
 			// when
-			template, err := notificationtemplates.GetNotificationTemplates(namespace, fakeAssets)
+			template, err := notificationtemplates.GetNotificationTemplates("userprovisioned", fakeAssets)
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
 			assert.Equal(t, "unable to get notification templates: an error", err.Error())
 		})
-	})
-	t.Run("failures", func(t *testing.T) {
-		namespace := "host-operator" + uuid.NewV4().String()[:7]
+
 		t.Run("no filename", func(t *testing.T) {
 			// given
 			fakeAssets := notificationtemplates.NewAssets(func() []string {
@@ -58,14 +54,12 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			})
 
 			// when
-			template, err := notificationtemplates.GetNotificationTemplates(namespace, fakeAssets)
+			template, err := notificationtemplates.GetNotificationTemplates("userprovisioned", fakeAssets)
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
 			assert.Equal(t, "unable to get notification templates: unable to load templates: path must contain directory and file", err.Error())
 		})
-	})
-	t.Run("failures", func(t *testing.T) {
 		t.Run("no directory or filename", func(t *testing.T) {
 			// given
 			fakeAssets := notificationtemplates.NewAssets(func() []string {
@@ -82,8 +76,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			assert.Nil(t, template)
 			assert.Equal(t, "unable to get notification templates: unable to load templates: directory name and filename cannot be empty", err.Error())
 		})
-	})
-	t.Run("failures", func(t *testing.T) {
 		t.Run("non-existent notification template", func(t *testing.T) {
 			// given
 			fakeAssets := notificationtemplates.NewAssets(func() []string {
