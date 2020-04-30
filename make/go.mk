@@ -26,6 +26,7 @@ NSTEMPLATES_BASEDIR = deploy/templates/nstemplatetiers
 NSTEMPLATES_FILES = $(wildcard $(NSTEMPLATES_BASEDIR)/**/*.yaml)
 NSTEMPLATES_TEST_BASEDIR = test/templates/nstemplatetiers
 NSTEMPLATES_TEST_SUBDIRS = $(wildcard $(NSTEMPLATES_TEST_BASEDIR)/**/*)
+NOTIFICATION_BASEDIR = deploy/templates/notificationtemplates
 REGISTRATION_SERVICE_DIR=deploy/registration-service
 
 .PHONY: generate
@@ -53,6 +54,8 @@ generate-assets:
 	@echo "generating bindata for files in $(NSTEMPLATES_TEST_BASEDIR) ..."
 	@rm ./test/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
 	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers_test -o ./test/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_TEST_BASEDIR) -ignore doc.go $(NSTEMPLATES_TEST_BASEDIR)/...
+	@echo "generating notification service template data..."
+	@$(GOPATH)/bin/go-bindata -pkg notificationtemplates -o ./pkg/templates/notificationtemplates/notification_assets.go -nometadata -nocompress -prefix $(NOTIFICATION_BASEDIR) -ignore doc.go $(NOTIFICATION_BASEDIR)/...
 	@echo "generating registration service template data..."
 	@$(GOPATH)/bin/go-bindata -pkg registrationservice -o ./pkg/controller/registrationservice/template_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
 
