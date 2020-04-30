@@ -31,6 +31,14 @@ var log = logf.Log.WithName("controller_notification")
 
 type StatusUpdater func(notification *toolchainv1alpha1.Notification, message string) error
 
+type NotificationContext struct {
+	UserID      string
+	FirstName   string
+	LastName    string
+	Email       string
+	CompanyName string
+}
+
 // Add creates a new Notification Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, _ *configuration.Registry) error {
@@ -109,9 +117,12 @@ func (r *ReconcileNotification) sendNotification() {
 
 }
 
-func (r *ReconcileNotification) generateNotificationContent(userID, templateDefinition string) (string, error) {
+func (r *ReconcileNotification) generateNotificationContent(userID, namespace, templateDefinition string) (string, error) {
 
-	// TODO create a context structure for holding user related state, using userID to populate
+	context, err := r.createNotificationContext(userID, namespace)
+	if err != nil {
+		return "", err
+	}
 
 	tmpl, err := template.New("notification").Parse(templateDefinition)
 	if err != nil {
@@ -120,12 +131,38 @@ func (r *ReconcileNotification) generateNotificationContent(userID, templateDefi
 
 	var buf bytes.Buffer
 
-	err = tmpl.Execute(&buf, nil)
+	err = tmpl.Execute(&buf, context)
 	if err != nil {
 		return "", err
 	}
 
 	return buf.String(), nil
+}
+
+func (r *ReconcileNotification) createNotificationContext(userID, namespace string) (*NotificationContext, error) {
+	// Lookup the UserSignup resource with the specified userID
+	instance := &toolchainv1alpha1.UserSignup{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{
+		Namespace: namespace,
+		Name:      userID,
+	}, instance)
+
+	if err != nil {
+		return nil, err
+	}
+
+	notificationCtx := &NotificationContext{
+		UserID:      userID,
+		FirstName:   instance.Spec.GivenName,
+		LastName:    instance.Spec.FamilyName,
+		CompanyName: instance.Spec.Company,
+	}
+
+	if emailLbl, exists := instance.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
+		notificationCtx.Email = emailLbl
+	}
+
+	return notificationCtx, nil
 }
 
 func (r *ReconcileNotification) setStatusInvalidTemplate(notification *toolchainv1alpha1.Notification, message string) error {
