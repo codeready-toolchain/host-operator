@@ -36,7 +36,8 @@ func WithEmptyCache() Option {
 	}
 }
 
-// GetNotificationTemplates returns a notification subject and body or an error
+// GetNotificationTemplates returns a notification subject, body and a boolean
+// indicating whether or not a template was found. Otherwise, an error will be returned
 func GetNotificationTemplates(name string, opts ...Option) (*NotificationTemplate, bool, error) {
 
 	assets := assets.NewAssets(AssetNames, Asset)
