@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 
 	templatev1 "github.com/openshift/api/template/v1"
@@ -21,7 +22,7 @@ var log = logf.Log.WithName("templates")
 
 // CreateOrUpdateResources generates the NSTemplateTier resources from the namespace templates,
 // then uses the manager's client to create or update the resources on the cluster.
-func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, assets Assets) error {
+func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) error {
 	templatesByTier, err := loadTemplatesByTiers(assets)
 	if err != nil {
 		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
@@ -79,7 +80,7 @@ type template struct {
 // team/
 //   ns_code.yaml
 //   ns_xyz.yaml
-func loadTemplatesByTiers(assets Assets) (map[string]*templates, error) {
+func loadTemplatesByTiers(assets assets.Assets) (map[string]*templates, error) {
 	metadataContent, err := assets.Asset("metadata.yaml")
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to load templates")

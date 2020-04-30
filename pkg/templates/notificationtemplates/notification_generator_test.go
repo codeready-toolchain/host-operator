@@ -3,6 +3,7 @@ package notificationtemplates_test
 import (
 	"testing"
 
+	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 
 	"github.com/pkg/errors"
@@ -45,7 +46,7 @@ func TestGetNotificationTemplates(t *testing.T) {
 	t.Run("failures", func(t *testing.T) {
 		t.Run("failed to get notification templates", func(t *testing.T) {
 			// given
-			fakeAssets := notificationtemplates.NewAssets(notificationtemplates.AssetNames, func(name string) ([]byte, error) {
+			fakeAssets := assets.NewAssets(notificationtemplates.AssetNames, func(name string) ([]byte, error) {
 				// error occurs when fetching the content of the a notification template
 				return nil, errors.Errorf("an error")
 			})
@@ -60,7 +61,7 @@ func TestGetNotificationTemplates(t *testing.T) {
 		})
 		t.Run("no filename", func(t *testing.T) {
 			// given
-			fakeAssets := notificationtemplates.NewAssets(func() []string {
+			fakeAssets := assets.NewAssets(func() []string {
 				// error occurs when fetching the content of the a notification template
 				return []string{"test"}
 			}, func(s string) (bytes []byte, err error) {
@@ -77,7 +78,7 @@ func TestGetNotificationTemplates(t *testing.T) {
 		})
 		t.Run("non-existent notification template", func(t *testing.T) {
 			// given
-			fakeAssets := notificationtemplates.NewAssets(func() []string {
+			fakeAssets := assets.NewAssets(func() []string {
 				// error occurs when fetching the content of the a notification template
 				return []string{"test/test"}
 			}, func(s string) (bytes []byte, err error) {

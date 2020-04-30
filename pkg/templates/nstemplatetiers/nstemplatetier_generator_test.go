@@ -7,6 +7,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
 	testsupport "github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -55,7 +56,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				require.Error(t, err)
 				assert.IsType(t, metav1.StatusReasonNotFound, apierrors.ReasonForError(err))
 			}
-			assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 
 			// when
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
@@ -115,7 +116,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				}
 				return clt.Client.Update(ctx, obj)
 			}
-			assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 
 			// when
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
@@ -163,7 +164,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 		t.Run("failed to generate nstemplatetiers", func(t *testing.T) {
 			// given
-			fakeAssets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
+			fakeAssets := assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
 				if name == "metadata.yaml" {
 					return []byte("advanced-code: abcdef"), nil
 				}
@@ -184,7 +185,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				// simulate a client/server error
 				return errors.Errorf("an error")
 			}
-			assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 			// when
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 			// then
@@ -205,7 +206,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				// trigger an error when trying to update the existing `advanced` NSTemplatetier
 				return errors.Errorf("an error")
 			}
-			assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 			// when
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 			// then

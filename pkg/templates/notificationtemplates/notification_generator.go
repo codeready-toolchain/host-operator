@@ -3,6 +3,8 @@ package notificationtemplates
 import (
 	"strings"
 
+	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
+
 	"github.com/pkg/errors"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -16,18 +18,19 @@ type NotificationTemplate struct {
 	Content string
 }
 
-type Option func(asset *Assets)
+type Option func(asset *assets.Assets)
 
-func WithAssets(a Assets) Option {
-	return func(assets *Assets) {
+// WithAssets
+func WithAssets(a assets.Assets) Option {
+	return func(assets *assets.Assets) {
 		templates = nil
-		assets.names = a.names
-		assets.asset = a.asset
+		assets.Names = a.Names
+		assets.Asset = a.Asset
 	}
 }
 
 func WithEmptyCache() Option {
-	return func(_ *Assets) {
+	return func(_ *assets.Assets) {
 		templates = nil
 	}
 }
@@ -35,7 +38,7 @@ func WithEmptyCache() Option {
 // GetNotificationTemplates returns a notification subject and body or an error
 func GetNotificationTemplates(name string, opts ...Option) (*NotificationTemplate, bool, error) {
 
-	assets := NewAssets(AssetNames, Asset)
+	assets := assets.NewAssets(AssetNames, Asset)
 	for _, option := range opts {
 		option(&assets)
 	}
@@ -48,7 +51,7 @@ func GetNotificationTemplates(name string, opts ...Option) (*NotificationTemplat
 	return &template, found, nil
 }
 
-func loadTemplates(assets Assets) (map[string]NotificationTemplate, error) {
+func loadTemplates(assets assets.Assets) (map[string]NotificationTemplate, error) {
 	if templates != nil {
 		return templates, nil
 	}
