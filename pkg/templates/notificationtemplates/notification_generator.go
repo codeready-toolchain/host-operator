@@ -9,7 +9,7 @@ import (
 
 var log = logf.Log.WithName("notification-templates")
 
-// template: a template containing template name and template content
+// NotificationTemplate: a template containing template subject and template content
 type NotificationTemplate struct {
 	Subject string
 	Content string
