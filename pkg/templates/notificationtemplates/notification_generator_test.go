@@ -12,11 +12,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-func TestCreateOrUpdateResources(t *testing.T) {
+func TestGetNotificationTemplates(t *testing.T) {
 	logf.SetLogger(zap.Logger(true))
 	t.Run("ok", func(t *testing.T) {
 		t.Run("get notification templates", func(t *testing.T) {
 			// when
+			template, found, err := notificationtemplates.GetNotificationTemplates("userprovisioned", notificationtemplates.WithEmptyCache())
+			// then
+			require.NoError(t, err)
+			require.NotNil(t, template)
+			assert.True(t, found)
+			assert.NotEmpty(t, template.Content)
+			assert.NotEmpty(t, template.Subject)
+			assert.Equal(t, template.Subject, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned")
+			assert.Contains(t, template.Content, "You are receiving this email because you have an online <a href={{.RegistrationURL}}>Red Hat CodeReady Toolchain</a>")
+		})
+		t.Run("ensure cache is used", func(t *testing.T) {
+			// when
+			_, _, err := notificationtemplates.GetNotificationTemplates("userprovisioned", notificationtemplates.WithEmptyCache())
+			require.NoError(t, err)
 			template, found, err := notificationtemplates.GetNotificationTemplates("userprovisioned")
 			// then
 			require.NoError(t, err)

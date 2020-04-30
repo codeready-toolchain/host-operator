@@ -20,8 +20,15 @@ type Option func(asset *Assets)
 
 func WithAssets(a Assets) Option {
 	return func(assets *Assets) {
+		templates = nil
 		assets.names = a.names
 		assets.asset = a.asset
+	}
+}
+
+func WithEmptyCache() Option {
+	return func(_ *Assets) {
+		templates = nil
 	}
 }
 
