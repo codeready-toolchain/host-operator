@@ -16,17 +16,16 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	logf.SetLogger(zap.Logger(true))
 	t.Run("ok", func(t *testing.T) {
 		t.Run("get notification templates", func(t *testing.T) {
-			// given
-			assets := notificationtemplates.NewAssets(notificationtemplates.AssetNames, notificationtemplates.Asset)
-
 			// when
-			template, err := notificationtemplates.GetNotificationTemplates("userprovisioned", assets)
+			template, found, err := notificationtemplates.GetNotificationTemplates("userprovisioned")
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
+			assert.True(t, found)
 			assert.NotEmpty(t, template.Content)
 			assert.NotEmpty(t, template.Subject)
 			assert.Equal(t, template.Subject, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned")
+			assert.Contains(t, template.Content, "You are receiving this email because you have an online <a href={{.RegistrationURL}}>Red Hat CodeReady Toolchain</a>")
 		})
 	})
 	t.Run("failures", func(t *testing.T) {
@@ -36,14 +35,15 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				// error occurs when fetching the content of the a notification template
 				return nil, errors.Errorf("an error")
 			})
+
 			// when
-			template, err := notificationtemplates.GetNotificationTemplates("userprovisioned", fakeAssets)
+			template, found, err := notificationtemplates.GetNotificationTemplates("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
 			// then
 			require.Error(t, err)
+			require.False(t, found)
 			assert.Nil(t, template)
 			assert.Equal(t, "unable to get notification templates: an error", err.Error())
 		})
-
 		t.Run("no filename", func(t *testing.T) {
 			// given
 			fakeAssets := notificationtemplates.NewAssets(func() []string {
@@ -54,27 +54,12 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			})
 
 			// when
-			template, err := notificationtemplates.GetNotificationTemplates("userprovisioned", fakeAssets)
+			template, found, err := notificationtemplates.GetNotificationTemplates("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
 			// then
 			require.Error(t, err)
+			require.False(t, found)
 			assert.Nil(t, template)
 			assert.Equal(t, "unable to get notification templates: unable to load templates: path must contain directory and file", err.Error())
-		})
-		t.Run("no directory or filename", func(t *testing.T) {
-			// given
-			fakeAssets := notificationtemplates.NewAssets(func() []string {
-				// error occurs when fetching the content of the a notification template
-				return []string{"/"}
-			}, func(s string) (bytes []byte, err error) {
-				return bytes, err
-			})
-
-			// when
-			template, err := notificationtemplates.GetNotificationTemplates("userprovisioned", fakeAssets)
-			// then
-			require.Error(t, err)
-			assert.Nil(t, template)
-			assert.Equal(t, "unable to get notification templates: unable to load templates: directory name and filename cannot be empty", err.Error())
 		})
 		t.Run("non-existent notification template", func(t *testing.T) {
 			// given
@@ -86,9 +71,10 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			})
 
 			// when
-			template, err := notificationtemplates.GetNotificationTemplates("userprovisioned", fakeAssets)
+			template, found, err := notificationtemplates.GetNotificationTemplates("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
 			// then
 			require.Error(t, err)
+			require.False(t, found)
 			assert.Nil(t, template)
 			assert.Equal(t, "unable to get notification templates: unable to load templates: must contain notification.html and subject.txt", err.Error())
 		})

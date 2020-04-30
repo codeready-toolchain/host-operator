@@ -8,6 +8,7 @@ import (
 )
 
 var log = logf.Log.WithName("notification-templates")
+var templates map[string]NotificationTemplate
 
 // NotificationTemplate contains the template subject and content
 type NotificationTemplate struct {
@@ -15,19 +16,38 @@ type NotificationTemplate struct {
 	Content string
 }
 
+type Option func(asset *Assets)
+
+func WithAssets(a Assets) Option {
+	return func(assets *Assets) {
+		assets.names = a.names
+		assets.asset = a.asset
+	}
+}
+
 // GetNotificationTemplates returns a notification subject and body or an error
-func GetNotificationTemplates(name string, assets Assets) (*NotificationTemplate, error) {
+func GetNotificationTemplates(name string, opts ...Option) (*NotificationTemplate, bool, error) {
+
+	assets := NewAssets(AssetNames, Asset)
+	for _, option := range opts {
+		option(&assets)
+	}
+
 	templates, err := loadTemplates(assets)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to get notification templates")
+		return nil, false, errors.Wrap(err, "unable to get notification templates")
 	}
-	template := templates[name]
-	return &template, nil
+	template, found := templates[name]
+	return &template, found, nil
 }
 
 func loadTemplates(assets Assets) (map[string]NotificationTemplate, error) {
+	if templates != nil {
+		return templates, nil
+	}
+
 	paths := assets.Names()
-	templates := make(map[string]NotificationTemplate)
+	templates = make(map[string]NotificationTemplate)
 
 	for _, path := range paths {
 		content, err := assets.Asset(path)
@@ -40,10 +60,6 @@ func loadTemplates(assets Assets) (map[string]NotificationTemplate, error) {
 		}
 		directoryName := segments[0]
 		filename := segments[1]
-
-		if directoryName == "" || filename == "" {
-			return nil, errors.Wrapf(errors.New("directory name and filename cannot be empty"), "unable to load templates")
-		}
 
 		template := templates[directoryName]
 		switch filename {
