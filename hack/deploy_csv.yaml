@@ -195,6 +195,9 @@ data:
         - JSONPath: .spec.userAccounts[].targetCluster
           name: Cluster
           type: string
+        - JSONPath: .spec.userAccounts[].spec.nsTemplateSet.tierName
+          name: Tier
+          type: string
         - JSONPath: .spec.banned
           name: Banned
           priority: 1
