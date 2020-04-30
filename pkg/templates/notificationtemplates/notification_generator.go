@@ -3,85 +3,61 @@ package notificationtemplates
 import (
 	"strings"
 
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-
 	"github.com/pkg/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var log = logf.Log.WithName("notification-templates")
 
 // template: a template containing template name and template content
-type template struct {
-	templateName string
-	content      string
+type NotificationTemplate struct {
+	Subject string
+	Content string
 }
 
-func GetNotificationTemplates(namespace string, assets Assets) ([]toolchainv1alpha1.NotificationTemplate, error) {
+func GetNotificationTemplates(name string, assets Assets) (NotificationTemplate, error) {
 	templates, err := loadTemplates(assets)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to get notification templates")
+		return NotificationTemplate{}, errors.Wrap(err, "unable to get notification templates")
 	}
-
-	return newNotificationTemplates(namespace, templates)
+	return templates[name], nil
 }
 
-func loadTemplates(assets Assets) (map[string][]template, error) {
+func loadTemplates(assets Assets) (map[string]NotificationTemplate, error) {
 	paths := assets.Names()
-	templates := make(map[string][]template)
+	templates := make(map[string]NotificationTemplate)
+
 	for _, path := range paths {
 		content, err := assets.Asset(path)
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to load templates")
+			return nil, err
 		}
 		segments := strings.Split(path, "/")
 		if len(segments) != 2 {
-			return nil, errors.Wrapf(errors.New("unable to load templates"), "path must contain directory and file")
+			return nil, errors.Wrapf(errors.New("path must contain directory and file"), "unable to load templates")
 		}
 		directoryName := segments[0]
 		filename := segments[1]
 
 		if directoryName == "" || filename == "" {
-			return nil, errors.Wrapf(errors.New("unable to load templates"), "directory name and filename cannot be empty")
+			return nil, errors.Wrapf(errors.New("directory name and filename cannot be empty"), "unable to load templates")
 		}
-		tmpl := template{
-			templateName: filename,
-			content:      string(content),
-		}
-		templates[directoryName] = append(templates[directoryName], tmpl)
-	}
 
+		template := templates[directoryName]
+		if template == (NotificationTemplate{}) {
+			template = NotificationTemplate{}
+		}
+
+		switch filename {
+		case "notification.html":
+			template.Content = string(content)
+			templates[directoryName] = template
+		case "subject.txt":
+			template.Subject = string(content)
+			templates[directoryName] = template
+		default:
+			return nil, errors.Wrapf(errors.New("must contain notification.html and subject.txt"), "unable to load templates")
+		}
+	}
 	return templates, nil
-}
-
-func newNotificationTemplates(namespace string, data map[string][]template) ([]toolchainv1alpha1.NotificationTemplate, error) {
-	var notificationTemplates []toolchainv1alpha1.NotificationTemplate
-	for name, templates := range data {
-		var subject string
-		var content string
-		for _, template := range templates {
-			switch template.templateName {
-			case "notification.html":
-				content = template.content
-			case "subject.txt":
-				subject = template.content
-			default:
-				return nil, errors.Wrapf(errors.New("unable to load templates"), "must contain notification.html and subject.txt")
-			}
-		}
-
-		notificationTemplates = append(notificationTemplates, toolchainv1alpha1.NotificationTemplate{
-			ObjectMeta: v1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-			Spec: toolchainv1alpha1.NotificationTemplateSpec{
-				Subject: subject,
-				Content: content,
-			},
-		})
-	}
-
-	return notificationTemplates, nil
 }
