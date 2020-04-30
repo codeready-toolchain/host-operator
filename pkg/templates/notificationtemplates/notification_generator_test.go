@@ -21,12 +21,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			assets := notificationtemplates.NewAssets(notificationtemplates.AssetNames, notificationtemplates.Asset)
 
 			// when
-			templates, err := notificationtemplates.GetNotificationTemplates("userprovisioned", assets)
+			template, err := notificationtemplates.GetNotificationTemplates("userprovisioned", assets)
 			// then
 			require.NoError(t, err)
-			require.NotNil(t, templates)
-			assert.NotEmpty(t, templates.Content)
-			assert.NotEmpty(t, templates.Subject)
+			require.NotNil(t, template)
+			assert.NotEmpty(t, template.Content)
+			assert.NotEmpty(t, template.Subject)
+			assert.Equal(t, template.Subject, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned")
 		})
 	})
 	t.Run("failures", func(t *testing.T) {
@@ -38,9 +39,10 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				return nil, errors.Errorf("an error")
 			})
 			// when
-			_, err := notificationtemplates.GetNotificationTemplates(namespace, fakeAssets)
+			template, err := notificationtemplates.GetNotificationTemplates(namespace, fakeAssets)
 			// then
 			require.Error(t, err)
+			assert.Nil(t, template)
 			assert.Equal(t, "unable to get notification templates: an error", err.Error())
 		})
 	})
@@ -56,9 +58,10 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			})
 
 			// when
-			_, err := notificationtemplates.GetNotificationTemplates(namespace, fakeAssets)
+			template, err := notificationtemplates.GetNotificationTemplates(namespace, fakeAssets)
 			// then
 			require.Error(t, err)
+			assert.Nil(t, template)
 			assert.Equal(t, "unable to get notification templates: unable to load templates: path must contain directory and file", err.Error())
 		})
 	})
@@ -73,9 +76,10 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			})
 
 			// when
-			_, err := notificationtemplates.GetNotificationTemplates("userprovisioned", fakeAssets)
+			template, err := notificationtemplates.GetNotificationTemplates("userprovisioned", fakeAssets)
 			// then
 			require.Error(t, err)
+			assert.Nil(t, template)
 			assert.Equal(t, "unable to get notification templates: unable to load templates: directory name and filename cannot be empty", err.Error())
 		})
 	})
@@ -90,9 +94,10 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			})
 
 			// when
-			_, err := notificationtemplates.GetNotificationTemplates("userprovisioned", fakeAssets)
+			template, err := notificationtemplates.GetNotificationTemplates("userprovisioned", fakeAssets)
 			// then
 			require.Error(t, err)
+			assert.Nil(t, template)
 			assert.Equal(t, "unable to get notification templates: unable to load templates: must contain notification.html and subject.txt", err.Error())
 		})
 	})
