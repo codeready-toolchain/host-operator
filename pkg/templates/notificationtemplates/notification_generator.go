@@ -9,12 +9,13 @@ import (
 
 var log = logf.Log.WithName("notification-templates")
 
-// NotificationTemplate: a template containing template subject and template content
+// NotificationTemplate contains the template subject and content
 type NotificationTemplate struct {
 	Subject string
 	Content string
 }
 
+// GetNotificationTemplates returns a notification subject and body or an error
 func GetNotificationTemplates(name string, assets Assets) (NotificationTemplate, error) {
 	templates, err := loadTemplates(assets)
 	if err != nil {
