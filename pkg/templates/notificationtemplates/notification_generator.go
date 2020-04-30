@@ -44,10 +44,6 @@ func loadTemplates(assets Assets) (map[string]NotificationTemplate, error) {
 		}
 
 		template := templates[directoryName]
-		if template == (NotificationTemplate{}) {
-			template = NotificationTemplate{}
-		}
-
 		switch filename {
 		case "notification.html":
 			template.Content = string(content)
