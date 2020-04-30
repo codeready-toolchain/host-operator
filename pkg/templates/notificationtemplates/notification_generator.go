@@ -20,7 +20,7 @@ type NotificationTemplate struct {
 
 type Option func(asset *assets.Assets)
 
-// WithAssets
+// WithAssets is used to override the default assets
 func WithAssets(a assets.Assets) Option {
 	return func(assets *assets.Assets) {
 		templates = nil
@@ -29,6 +29,7 @@ func WithAssets(a assets.Assets) Option {
 	}
 }
 
+// WithEmptyCache clears the cache of templates
 func WithEmptyCache() Option {
 	return func(_ *assets.Assets) {
 		templates = nil
