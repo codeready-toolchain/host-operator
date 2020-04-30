@@ -18,6 +18,7 @@ type NotificationTemplate struct {
 	Content string
 }
 
+// Option is a function to set assets
 type Option func(asset *assets.Assets)
 
 // WithAssets is used to override the default assets
