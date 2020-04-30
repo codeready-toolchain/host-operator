@@ -153,7 +153,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			}
 		})
 
-		t.Run("create", func(t *testing.T) {
+		t.Run("create then update with same tier templates", func(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.NewV4().String()[:7]
 			clt := testsupport.NewFakeClient(t)
@@ -164,37 +164,121 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 			require.NoError(t, err)
 
-			t.Run("then update", func(t *testing.T) {
+			// when calling CreateOrUpdateResources a second time
+			err = nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 
-				// when calling CreateOrUpdateResources a second time
-				err = nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
+			// then
+			require.NoError(t, err)
+			// verify that all TemplateTier CRs were updated
+			tierTmpls := toolchainv1alpha1.TierTemplateList{}
+			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
+			require.NoError(t, err)
+			require.Len(t, tierTmpls.Items, len(testnstemplatetiers.AssetNames())-1) // exclude `metadata.yml` from the AssetNames, it does not result in a TemplateTier resource
+			for _, tierTmpl := range tierTmpls.Items {
+				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
+			}
 
-				// then
+			// verify that the 4 NStemplateTier CRs were updated
+			for _, tierName := range []string{"advanced", "basic", "team", "nocluster"} {
+				tier := toolchainv1alpha1.NSTemplateTier{}
+				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
-				// verify that all TemplateTier CRs were updated
-				tierTmpls := toolchainv1alpha1.TierTemplateList{}
-				err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
-				require.NoError(t, err)
-				require.Len(t, tierTmpls.Items, len(testnstemplatetiers.AssetNames())-1) // exclude `metadata.yml` from the AssetNames, it does not result in a TemplateTier resource
-				for _, tierTmpl := range tierTmpls.Items {
-					assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
+				// verify that the generation was increased
+				assert.Equal(t, int64(2), tier.ObjectMeta.Generation)
+				// verify the new namespace revisions
+				for _, ns := range tier.Spec.Namespaces {
+					assert.Equal(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Revision)
+					assert.NotEmpty(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Template)
+					assert.Equal(t, tier.Name+"-"+ns.Type+"-"+ns.Revision, ns.TemplateRef)
 				}
+			}
+		})
 
-				// verify that the 4 NStemplateTier CRs were updated
-				for _, tierName := range []string{"advanced", "basic", "team", "nocluster"} {
-					tier := toolchainv1alpha1.NSTemplateTier{}
-					err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
-					require.NoError(t, err)
-					// verify that the generation was increased
-					assert.Equal(t, int64(2), tier.ObjectMeta.Generation)
-					// verify their new namespace revisions
-					for _, ns := range tier.Spec.Namespaces {
-						assert.Equal(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Revision)
-						assert.NotEmpty(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Template)
-						assert.Equal(t, tier.Name+"-"+ns.Type+"-"+ns.Revision, ns.TemplateRef)
-					}
+		t.Run("create then update with new tier templates", func(t *testing.T) {
+			// given
+			namespace := "host-operator" + uuid.NewV4().String()[:7]
+			clt := testsupport.NewFakeClient(t)
+			clt.MockCreate = mockCreate(clt)
+			clt.MockUpdate = mockUpdate(clt)
+
+			// when
+			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
+			require.NoError(t, err)
+
+			// given a new set of tier templates (same content but new revisions, which is what we'll want to check here)
+			assets = nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
+				if name == "metadata.yaml" {
+					return []byte(`advanced/cluster: "111111a"` + "\n" +
+						`advanced/ns_code: "222222a"` + "\n" +
+						`advanced/ns_dev: "222222b"` + "\n" +
+						`advanced/ns_stage: "222222c"` + "\n" +
+						`basic/cluster: "111111b"` + "\n" +
+						`basic/ns_code: "222222d"` + "\n" +
+						`basic/ns_dev: "222222e"` + "\n" +
+						`basic/ns_stage: "222222f"` + "\n" +
+						`team/cluster: "111111c"` + "\n" +
+						`team/ns_dev: "222222g"` + "\n" +
+						`team/ns_stage: "222222h"` + "\n" +
+						`nocluster/ns_code: "222222i"` + "\n" +
+						`nocluster/ns_dev: "222222j"` + "\n" +
+						`nocluster/ns_stage: "2222227"`), nil
 				}
+				// return default content for other assets
+				return testnstemplatetiers.Asset(name)
 			})
+
+			// when calling CreateOrUpdateResources a second time
+			err = nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
+
+			// then
+			require.NoError(t, err)
+			// verify that all TemplateTier CRs were updated
+			tierTmpls := toolchainv1alpha1.TierTemplateList{}
+			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
+			require.NoError(t, err)
+			require.Len(t, tierTmpls.Items, 2*(len(testnstemplatetiers.AssetNames())-1)) // 2 sets of TierTemplates, but exclude the `metadata.yml`s from the AssetNames, they don't result in a TemplateTier resource
+			for _, tierTmpl := range tierTmpls.Items {
+				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
+			}
+
+			expectedRevisions := map[string]map[string]string{
+				"advanced": {
+					"code":    "222222a",
+					"dev":     "222222b",
+					"stage":   "222222c",
+					"cluster": "1111111a",
+				},
+				"basic": {
+					"code":    "222222d",
+					"dev":     "222222e",
+					"stage":   "222222f",
+					"cluster": "111111b",
+				},
+				"team": {
+					"dev":     "222222g",
+					"stage":   "222222h",
+					"cluster": "111111c",
+				},
+				"nocluster": {
+					"code":  "222222i",
+					"dev":   "222222j",
+					"stage": "2222227",
+				},
+			}
+			// verify that the 4 NStemplateTier CRs were updated
+			for _, tierName := range []string{"advanced", "basic", "team", "nocluster"} {
+				tier := toolchainv1alpha1.NSTemplateTier{}
+				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
+				require.NoError(t, err)
+				// verify that the generation was increased
+				assert.Equal(t, int64(2), tier.ObjectMeta.Generation)
+				// verify the new namespace revisions
+				for _, ns := range tier.Spec.Namespaces {
+					assert.Equal(t, expectedRevisions[tierName][ns.Type], ns.Revision)
+					assert.NotEmpty(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Template)
+					assert.Equal(t, tier.Name+"-"+ns.Type+"-"+ns.Revision, ns.TemplateRef) // new TemplateRef value with the updated revision
+				}
+			}
 		})
 	})
 
@@ -284,6 +368,5 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				assert.Contains(t, err.Error(), fmt.Sprintf("unable to create or update the 'advanced-code-123456a' TierTemplate in namespace '%s'", namespace))
 			})
 		})
-
 	})
 }

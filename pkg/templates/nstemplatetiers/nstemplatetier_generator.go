@@ -43,7 +43,6 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 		return errors.Wrap(err, "unable to create or update TierTemlates")
 	}
 	for _, tierTmpl := range tierTmpls {
-		log.Info("creating TierTemplate", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
 		// using the "standard" client since we don't need to support updates on such resources, they should be immutable
 		if err := client.Create(context.TODO(), tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
 			return errors.Wrapf(err, "unable to create or update the '%s' TierTemplate in namespace '%s'", tierTmpl.Name, tierTmpl.Namespace)
@@ -63,7 +62,6 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 	sort.Strings(tmplTierKeys)
 	for _, tmplTierKey := range tmplTierKeys {
 		tmplTier := tmplTiers[tmplTierKey]
-		log.Info("creating or updating NSTemplateTier", "namespace", tmplTier.Namespace, "name", tmplTier.Name)
 		createdOrUpdated, err := cl.CreateOrUpdateObject(tmplTier, true, nil)
 		if err != nil {
 			return errors.Wrapf(err, "unable to create or update the '%s' NSTemplateTiers in namespace '%s'", tmplTier.Name, tmplTier.Namespace)
