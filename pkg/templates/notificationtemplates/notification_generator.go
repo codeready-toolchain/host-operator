@@ -16,12 +16,13 @@ type NotificationTemplate struct {
 }
 
 // GetNotificationTemplates returns a notification subject and body or an error
-func GetNotificationTemplates(name string, assets Assets) (NotificationTemplate, error) {
+func GetNotificationTemplates(name string, assets Assets) (*NotificationTemplate, error) {
 	templates, err := loadTemplates(assets)
 	if err != nil {
-		return NotificationTemplate{}, errors.Wrap(err, "unable to get notification templates")
+		return nil, errors.Wrap(err, "unable to get notification templates")
 	}
-	return templates[name], nil
+	template := templates[name]
+	return &template, nil
 }
 
 func loadTemplates(assets Assets) (map[string]NotificationTemplate, error) {
