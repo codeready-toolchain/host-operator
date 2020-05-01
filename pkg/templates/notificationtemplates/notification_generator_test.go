@@ -13,12 +13,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-func TestGetNotificationTemplates(t *testing.T) {
+func TestGetNotificationTemplate(t *testing.T) {
 	logf.SetLogger(zap.Logger(true))
 	t.Run("ok", func(t *testing.T) {
 		t.Run("get notification templates", func(t *testing.T) {
 			// when
-			template, found, err := notificationtemplates.GetNotificationTemplates("userprovisioned", notificationtemplates.WithEmptyCache())
+			template, found, err := notificationtemplates.GetNotificationTemplate("userprovisioned", notificationtemplates.WithEmptyCache())
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -30,9 +30,9 @@ func TestGetNotificationTemplates(t *testing.T) {
 		})
 		t.Run("ensure cache is used", func(t *testing.T) {
 			// when
-			_, _, err := notificationtemplates.GetNotificationTemplates("userprovisioned", notificationtemplates.WithEmptyCache())
+			_, _, err := notificationtemplates.GetNotificationTemplate("userprovisioned", notificationtemplates.WithEmptyCache())
 			require.NoError(t, err)
-			template, found, err := notificationtemplates.GetNotificationTemplates("userprovisioned")
+			template, found, err := notificationtemplates.GetNotificationTemplate("userprovisioned")
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -52,7 +52,7 @@ func TestGetNotificationTemplates(t *testing.T) {
 			})
 
 			// when
-			template, found, err := notificationtemplates.GetNotificationTemplates("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
+			template, found, err := notificationtemplates.GetNotificationTemplate("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
 			// then
 			require.Error(t, err)
 			require.False(t, found)
@@ -69,7 +69,7 @@ func TestGetNotificationTemplates(t *testing.T) {
 			})
 
 			// when
-			template, found, err := notificationtemplates.GetNotificationTemplates("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
+			template, found, err := notificationtemplates.GetNotificationTemplate("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
 			// then
 			require.Error(t, err)
 			require.False(t, found)
@@ -86,7 +86,7 @@ func TestGetNotificationTemplates(t *testing.T) {
 			})
 
 			// when
-			template, found, err := notificationtemplates.GetNotificationTemplates("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
+			template, found, err := notificationtemplates.GetNotificationTemplate("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
 			// then
 			require.Error(t, err)
 			require.False(t, found)
