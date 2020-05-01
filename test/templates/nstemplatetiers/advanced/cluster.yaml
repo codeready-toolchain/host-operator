@@ -14,8 +14,8 @@ objects:
       hard:
         limits.cpu: 4000m
         limits.memory: 7Gi
-        requests.storage: 5Gi
-        persistentvolumeclaims: "2"
+        requests.storage: 7Gi
+        persistentvolumeclaims: "5"
     selector:
       annotations:
         openshift.io/requester: ${USERNAME}
