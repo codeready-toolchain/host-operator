@@ -222,7 +222,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 						} else if ns.Type == "dev" {
 							memoryLimit = "750Mi"
 						}
-						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"100m","memory":"64Mi"},"type":"Container"}]}}`, ns.Type, cpuLimit, memoryLimit))
+						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"10m","memory":"64Mi"},"type":"Container"}]}}`, ns.Type, cpuLimit, memoryLimit))
 
 						// NetworkPolicies
 						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, ns.Type))
@@ -244,14 +244,15 @@ func TestNewNSTemplateTier(t *testing.T) {
 				}
 				require.NotNil(t, actual.Spec.ClusterResources)
 				assert.Equal(t, templatesByTier[tier].clusterTemplate.revision, actual.Spec.ClusterResources.Revision)
-				cpuLimit := "1750m"
+				cpuLimit := "4000m"
+				cpuRequest := "1750m"
 				memoryLimit := "7Gi"
 				if tier == "team" {
-					cpuLimit = "2000m"
+					cpuRequest = "2000m"
 					memoryLimit = "15Gi"
 				}
 				assert.Len(t, actual.Spec.ClusterResources.Template.Objects, 1)
-				containsObj(t, actual.Spec.ClusterResources.Template, fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"5Gi","limits.memory":"%[2]s","persistentvolumeclaims":"2","pods":"100","replicationcontrollers":"100","requests.cpu":"%[1]s","requests.ephemeral-storage":"5Gi","requests.memory":"%[2]s","requests.storage":"5Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, memoryLimit))
+				containsObj(t, actual.Spec.ClusterResources.Template, fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","persistentvolumeclaims":"5","pods":"100","replicationcontrollers":"100","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"7Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit))
 			}
 		})
 
@@ -443,10 +444,10 @@ spec:
         spec:
           quota: 
             hard:
-              limits.cpu: 1750m
+              limits.cpu: 4000m
               limits.memory: 7Gi
-              requests.storage: 5Gi
-              persistentvolumeclaims: "2"
+              requests.storage: 7Gi
+              persistentvolumeclaims: "5"
           selector:
             annotations:
               openshift.io/requester: ${USERNAME}
