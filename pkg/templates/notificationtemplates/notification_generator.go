@@ -18,27 +18,11 @@ type NotificationTemplate struct {
 	Content string
 }
 
-// Option is a function to set assets
-type Option func(asset *assets.Assets)
-
-// WithAssets is used to override the default assets
-func WithAssets(a assets.Assets) Option {
-	return func(assets *assets.Assets) {
-		notificationTemplates = nil
-		assets.Names = a.Names
-		assets.Asset = a.Asset
-	}
-}
-
 // GetNotificationTemplate returns a notification subject, body and a boolean
 // indicating whether or not a template was found. Otherwise, an error will be returned
-func GetNotificationTemplate(name string, opts ...Option) (*NotificationTemplate, bool, error) {
+func GetNotificationTemplate(name string) (*NotificationTemplate, bool, error) {
 
 	assets := assets.NewAssets(AssetNames, Asset)
-	for _, option := range opts {
-		option(&assets)
-	}
-
 	templates, err := loadTemplates(assets)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "unable to get notification templates")
