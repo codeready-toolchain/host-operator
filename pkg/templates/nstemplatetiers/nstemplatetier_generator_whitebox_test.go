@@ -215,7 +215,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"user-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, ns.Type))
 
 						// LimitRange
-						cpuLimit := "300m"
+						cpuLimit := "150m"
 						memoryLimit := "512Mi"
 						if tier == "team" {
 							memoryLimit = "1Gi"

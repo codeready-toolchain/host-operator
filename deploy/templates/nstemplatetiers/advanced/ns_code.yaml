@@ -64,7 +64,7 @@ objects:
     limits:
     - type: "Container"
       default:
-        cpu: 300m
+        cpu: 150m
         memory: 512Mi
       defaultRequest:
         cpu: 10m
