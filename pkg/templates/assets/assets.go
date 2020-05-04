@@ -13,13 +13,3 @@ type Assets struct {
 	Names func() []string
 	Asset func(string) ([]byte, error)
 }
-
-// Names returns the name of the files
-func (a Assets) GetNames() []string {
-	return a.Names()
-}
-
-// Asset returns the content of the given file, or an error
-func (a Assets) GetAsset(name string) ([]byte, error) {
-	return a.Asset(name)
-}

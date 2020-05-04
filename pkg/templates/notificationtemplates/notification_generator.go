@@ -10,7 +10,7 @@ import (
 )
 
 var log = logf.Log.WithName("notification-templates")
-var templates map[string]NotificationTemplate
+var notificationTemplates map[string]NotificationTemplate
 
 // NotificationTemplate contains the template subject and content
 type NotificationTemplate struct {
@@ -24,7 +24,7 @@ type Option func(asset *assets.Assets)
 // WithAssets is used to override the default assets
 func WithAssets(a assets.Assets) Option {
 	return func(assets *assets.Assets) {
-		templates = nil
+		notificationTemplates = nil
 		assets.Names = a.Names
 		assets.Asset = a.Asset
 	}
@@ -33,7 +33,7 @@ func WithAssets(a assets.Assets) Option {
 // WithEmptyCache clears the cache of templates
 func WithEmptyCache() Option {
 	return func(_ *assets.Assets) {
-		templates = nil
+		notificationTemplates = nil
 	}
 }
 
@@ -55,12 +55,12 @@ func GetNotificationTemplate(name string, opts ...Option) (*NotificationTemplate
 }
 
 func loadTemplates(assets assets.Assets) (map[string]NotificationTemplate, error) {
-	if templates != nil {
-		return templates, nil
+	if notificationTemplates != nil {
+		return notificationTemplates, nil
 	}
 
 	paths := assets.Names()
-	templates = make(map[string]NotificationTemplate)
+	notificationTemplates = make(map[string]NotificationTemplate)
 
 	for _, path := range paths {
 		content, err := assets.Asset(path)
@@ -74,17 +74,17 @@ func loadTemplates(assets assets.Assets) (map[string]NotificationTemplate, error
 		directoryName := segments[0]
 		filename := segments[1]
 
-		template := templates[directoryName]
+		template := notificationTemplates[directoryName]
 		switch filename {
 		case "notification.html":
 			template.Content = string(content)
-			templates[directoryName] = template
+			notificationTemplates[directoryName] = template
 		case "subject.txt":
 			template.Subject = string(content)
-			templates[directoryName] = template
+			notificationTemplates[directoryName] = template
 		default:
 			return nil, errors.Wrapf(errors.New("must contain notification.html and subject.txt"), "unable to load templates")
 		}
 	}
-	return templates, nil
+	return notificationTemplates, nil
 }
