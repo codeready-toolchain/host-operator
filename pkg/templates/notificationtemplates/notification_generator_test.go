@@ -1,10 +1,9 @@
-package notificationtemplates_test
+package notificationtemplates
 
 import (
 	"testing"
 
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +17,8 @@ func TestGetNotificationTemplate(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		t.Run("get notification templates", func(t *testing.T) {
 			// when
-			template, found, err := notificationtemplates.GetNotificationTemplate("userprovisioned", notificationtemplates.WithEmptyCache())
+			defer resetNotificationTemplateCache()
+			template, found, err := GetNotificationTemplate("userprovisioned")
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -28,9 +28,10 @@ func TestGetNotificationTemplate(t *testing.T) {
 		})
 		t.Run("ensure cache is used", func(t *testing.T) {
 			// when
-			_, _, err := notificationtemplates.GetNotificationTemplate("userprovisioned", notificationtemplates.WithEmptyCache())
+			defer resetNotificationTemplateCache()
+			_, _, err := GetNotificationTemplate("userprovisioned")
 			require.NoError(t, err)
-			template, found, err := notificationtemplates.GetNotificationTemplate("userprovisioned")
+			template, found, err := GetNotificationTemplate("userprovisioned")
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -42,13 +43,14 @@ func TestGetNotificationTemplate(t *testing.T) {
 	t.Run("failures", func(t *testing.T) {
 		t.Run("failed to get notification templates", func(t *testing.T) {
 			// given
-			fakeAssets := assets.NewAssets(notificationtemplates.AssetNames, func(name string) ([]byte, error) {
+			defer resetNotificationTemplateCache()
+			fakeAssets := assets.NewAssets(AssetNames, func(name string) ([]byte, error) {
 				// error occurs when fetching the content of the a notification template
 				return nil, errors.Errorf("an error")
 			})
 
 			// when
-			template, found, err := notificationtemplates.GetNotificationTemplate("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
+			template, found, err := GetNotificationTemplate("userprovisioned", WithAssets(fakeAssets))
 			// then
 			require.Error(t, err)
 			require.False(t, found)
@@ -57,6 +59,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		})
 		t.Run("no filename", func(t *testing.T) {
 			// given
+			defer resetNotificationTemplateCache()
 			fakeAssets := assets.NewAssets(func() []string {
 				// error occurs when fetching the content of the a notification template
 				return []string{"test"}
@@ -65,7 +68,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			})
 
 			// when
-			template, found, err := notificationtemplates.GetNotificationTemplate("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
+			template, found, err := GetNotificationTemplate("userprovisioned", WithAssets(fakeAssets))
 			// then
 			require.Error(t, err)
 			require.False(t, found)
@@ -74,6 +77,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		})
 		t.Run("non-existent notification template", func(t *testing.T) {
 			// given
+			defer resetNotificationTemplateCache()
 			fakeAssets := assets.NewAssets(func() []string {
 				// error occurs when fetching the content of the a notification template
 				return []string{"test/test"}
@@ -82,7 +86,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			})
 
 			// when
-			template, found, err := notificationtemplates.GetNotificationTemplate("userprovisioned", notificationtemplates.WithAssets(fakeAssets))
+			template, found, err := GetNotificationTemplate("userprovisioned", WithAssets(fakeAssets))
 			// then
 			require.Error(t, err)
 			require.False(t, found)
@@ -90,4 +94,8 @@ func TestGetNotificationTemplate(t *testing.T) {
 			assert.Equal(t, "unable to get notification templates: unable to load templates: must contain notification.html and subject.txt", err.Error())
 		})
 	})
+}
+
+func resetNotificationTemplateCache() {
+	notificationTemplates = nil
 }

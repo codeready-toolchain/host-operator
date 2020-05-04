@@ -30,13 +30,6 @@ func WithAssets(a assets.Assets) Option {
 	}
 }
 
-// WithEmptyCache clears the cache of templates
-func WithEmptyCache() Option {
-	return func(_ *assets.Assets) {
-		notificationTemplates = nil
-	}
-}
-
 // GetNotificationTemplate returns a notification subject, body and a boolean
 // indicating whether or not a template was found. Otherwise, an error will be returned
 func GetNotificationTemplate(name string, opts ...Option) (*NotificationTemplate, bool, error) {
