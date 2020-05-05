@@ -48,6 +48,11 @@ type BannedUserToUserSignupMapper struct {
 
 type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error
 
+type compliantUsernameUpdater struct {
+	CompliantUsername string
+	R                 *ReconcileUserSignup
+}
+
 func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Request {
 	if bu, ok := obj.Object.(*toolchainv1alpha1.BannedUser); ok {
 		// look-up any associated UserSignup using the BannedUser's "toolchain.dev.openshift.com/email-hash" label
@@ -284,10 +289,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
-		// to Complete and return
+		// compliant username and condition and return
 		reqLogger.Info("MasterUserRecord exists, setting UserSignup status to 'Complete'")
-		instance.Status.CompliantUsername = mur.Name
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusComplete)
+		// Use compliantUsernameUpdater to properly handle when the master user record is created or updated
+		c := compliantUsernameUpdater{CompliantUsername: mur.Name, R: r}
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, c.updateCompliantName)
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is Banned, simply set the status
@@ -636,17 +642,6 @@ func (r *ReconcileUserSignup) setStatusNoTemplateTierAvailable(userSignup *toolc
 		})
 }
 
-func (r *ReconcileUserSignup) setStatusComplete(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionTrue,
-			Reason:  "",
-			Message: message,
-		})
-}
-
 func (r *ReconcileUserSignup) setStatusBanning(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return r.updateStatusConditions(
 		userSignup,
@@ -745,6 +740,27 @@ func (r *ReconcileUserSignup) updateStatus(logger logr.Logger, userSignup *toolc
 	}
 
 	return nil
+}
+
+// updateCompliantName updates the `CompliantUsername` and `Conditions` in the status, should only be invoked on completion because
+// both completion and the compliant username require the master user record to be created.
+func (u *compliantUsernameUpdater) updateCompliantName(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	usernameUpdated := userSignup.Status.CompliantUsername != u.CompliantUsername
+	userSignup.Status.CompliantUsername = u.CompliantUsername
+
+	var conditionUpdated bool
+	userSignup.Status.Conditions, conditionUpdated = commonCondition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionTrue,
+			Reason:  "",
+			Message: message,
+		})
+	if !usernameUpdated && !conditionUpdated {
+		// Nothing changed
+		return nil
+	}
+	return u.R.client.Status().Update(context.TODO(), userSignup)
 }
 
 // wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
