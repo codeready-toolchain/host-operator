@@ -439,7 +439,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	if kind == "code" || tier == "team" || tier == "advanced" {
 		require.Len(t, actual.Objects, 8)
 		// Role & RoleBinding with additional permissions to edit roles/rolebindings
-		containsObj(t, actual, editRoleObj(kind))
+		containsObj(t, actual, rbacEditRoleObj(kind))
 		containsObj(t, actual, userEditRoleBindingObj(kind))
 	} else {
 		require.Len(t, actual.Objects, 6)
@@ -471,7 +471,7 @@ func userEditRoleBindingObj(kind string) string {
 	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"user-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, kind)
 }
 
-func editRoleObj(kind string) string {
+func rbacEditRoleObj(kind string) string {
 	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"rbac-edit","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":["authorization.openshift.io","rbac.authorization.k8s.io"],"resources":["roles","rolebindings"],"verbs":["get","list","watch","create","update","patch","delete"]}]}`, kind)
 }
 
