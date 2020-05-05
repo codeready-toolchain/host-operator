@@ -365,7 +365,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 				// then
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), fmt.Sprintf("unable to create or update the 'advanced-code-123456a' TierTemplate in namespace '%s'", namespace))
+				assert.Contains(t, err.Error(), fmt.Sprintf("unable to create the 'advanced-code-123456a' TierTemplate in namespace '%s'", namespace))
 			})
 		})
 	})
