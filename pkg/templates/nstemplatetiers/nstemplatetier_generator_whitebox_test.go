@@ -217,12 +217,19 @@ func TestNewNSTemplateTier(t *testing.T) {
 						// LimitRange
 						cpuLimit := "150m"
 						memoryLimit := "512Mi"
+						memoryRequest := "64Mi"
+						cpuRequest := "10m"
+						if ns.Type == "code" {
+							cpuLimit = "1000m"
+							cpuRequest = "60m"
+							memoryRequest = "307Mi"
+						}
 						if tier == "team" {
 							memoryLimit = "1Gi"
 						} else if ns.Type == "dev" {
 							memoryLimit = "750Mi"
 						}
-						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"10m","memory":"64Mi"},"type":"Container"}]}}`, ns.Type, cpuLimit, memoryLimit))
+						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"%s","memory":"%s"},"type":"Container"}]}}`, ns.Type, cpuLimit, memoryLimit, cpuRequest, memoryRequest))
 
 						// NetworkPolicies
 						containsObj(t, ns.Template, fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, ns.Type))
