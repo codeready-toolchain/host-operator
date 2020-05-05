@@ -190,26 +190,24 @@ func TestNewNSTemplateTier(t *testing.T) {
 			decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
 			for _, actual := range tmplTiers {
 				tier := actual.Name
-				t.Run(tier, func(t *testing.T) {
-					assert.Equal(t, namespace, actual.Namespace)
-					require.Len(t, actual.Spec.Namespaces, len(templatesByTier[tier].namespaceTemplates))
-					for kind, tmpl := range templatesByTier[tier].namespaceTemplates {
-						found := false
-						for _, ns := range actual.Spec.Namespaces {
-							if ns.Type != kind {
-								continue
-							}
-							found = true
-							assert.Equal(t, tmpl.revision, ns.Revision)
-							assertNamespaceTemplate(t, decoder, ns.Template, tier, ns.Type)
-							break
+				assert.Equal(t, namespace, actual.Namespace)
+				require.Len(t, actual.Spec.Namespaces, len(templatesByTier[tier].namespaceTemplates))
+				for kind, tmpl := range templatesByTier[tier].namespaceTemplates {
+					found := false
+					for _, ns := range actual.Spec.Namespaces {
+						if ns.Type != kind {
+							continue
 						}
-						assert.True(t, found, "the namespace with the type wasn't found", "ns-type", kind)
+						found = true
+						assert.Equal(t, tmpl.revision, ns.Revision)
+						assertNamespaceTemplate(t, decoder, ns.Template, tier, ns.Type)
+						break
 					}
-					require.NotNil(t, actual.Spec.ClusterResources)
-					assert.Equal(t, templatesByTier[tier].clusterTemplate.revision, actual.Spec.ClusterResources.Revision)
-					assertClusterResourcesTemplate(t, decoder, actual.Spec.ClusterResources.Template, tier)
-				})
+					assert.True(t, found, "the namespace with the type wasn't found", "ns-type", kind)
+				}
+				require.NotNil(t, actual.Spec.ClusterResources)
+				assert.Equal(t, templatesByTier[tier].clusterTemplate.revision, actual.Spec.ClusterResources.Revision)
+				assertClusterResourcesTemplate(t, decoder, actual.Spec.ClusterResources.Template, tier)
 			}
 		})
 
