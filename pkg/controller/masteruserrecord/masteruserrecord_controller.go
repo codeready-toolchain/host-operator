@@ -312,9 +312,17 @@ func toBeDisabled() toolchainv1alpha1.Condition {
 
 func toBeProvisionedNotificationCreated() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.MasterUserRecordProvisioningNotificationCreated,
+		Type:   toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated,
 		Status: corev1.ConditionTrue,
-		Reason: toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreatedReason,
+		Reason: toolchainv1alpha1.MasterUserRecordNotificationCRCreatedReason,
+	}
+}
+
+func toBeProvisionedNotificationFailed() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated,
+		Status: corev1.ConditionFalse,
+		Reason: toolchainv1alpha1.MasterUserRecordNotificationCRCreationFailedReason,
 	}
 }
 
