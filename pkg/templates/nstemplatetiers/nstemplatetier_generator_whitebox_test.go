@@ -328,37 +328,31 @@ func TestNewTierTemplate(t *testing.T) {
 			templatesByTier, err := loadTemplatesByTiers(assets)
 			require.NoError(t, err)
 			namespace := "host-operator-" + uuid.NewV4().String()[:7]
-			namespaceRevisions := map[string]map[string]string{
-				"advanced": {
-					"code":  "123456a",
-					"dev":   "123456b",
-					"stage": "123456c",
-				},
-				"basic": {
-					"code":  "123456d",
-					"dev":   "123456e",
-					"stage": "123456f",
-				},
-			}
-			clusterResourceQuotaRevisions := map[string]string{
-				"advanced": "654321a",
-				"basic":    "654321b",
-			}
-			for tier := range namespaceRevisions {
-				t.Run(tier, func(t *testing.T) {
-					// given
-					tmpls := templatesByTier[tier]
-					// when
-					actual, err := newNSTemplateTier(decoder, namespace, tier, *tmpls)
-					// then
-					require.NoError(t, err)
-					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, namespaceRevisions[tier], clusterResourceQuotaRevisions[tier])
-					require.NoError(t, err)
-					// here we don't compare objects because the generated NSTemplateTier
-					// has no specific values for the `TypeMeta`: the `APIVersion: toolchain.dev.openshift.com/v1alpha1`
-					// and `Kind: NSTemplateTier` should be set by the client using the registered GVK
-					assert.Equal(t, expected.ObjectMeta, actual.ObjectMeta)
-					assert.Equal(t, expected.Spec, actual.Spec)
+			// when
+			tierTmpls, err := newTierTemplates(decoder, namespace, templatesByTier)
+			// then
+			require.NoError(t, err)
+			require.Len(t, tierTmpls, 14)
+			decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
+
+			resourceNameRE, err := regexp.Compile(`[a-z0-9\.-]+`)
+			require.NoError(t, err)
+			for _, actual := range tierTmpls {
+				t.Run(actual.Name, func(t *testing.T) {
+					assert.Equal(t, namespace, actual.Namespace)
+					assert.True(t, resourceNameRE.MatchString(actual.Name)) // verifies that the TierTemplate name complies with the DNS-1123 spec
+					assert.NotEmpty(t, actual.Spec.Revision)
+					assert.NotEmpty(t, actual.Spec.TierName)
+					assert.NotEmpty(t, actual.Spec.Type)
+					assert.NotEmpty(t, actual.Spec.Template)
+					switch actual.Spec.Type {
+					case "dev", "code", "stage":
+						assertTestNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
+					case "clusterResources":
+						assertTestClusteResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
+					default:
+						t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
+					}
 				})
 			}
 		})
@@ -378,12 +372,11 @@ func TestNewTierTemplate(t *testing.T) {
 			namespace := "host-operator-" + uuid.NewV4().String()[:7]
 			templatesByTier, err := loadTemplatesByTiers(fakeAssets)
 			require.NoError(t, err)
-			advancedTemplates := templatesByTier["advanced"]
 			// when
-			_, err = newNSTemplateTier(decoder, namespace, "advanced", *advancedTemplates)
+			_, err = newTierTemplates(decoder, namespace, templatesByTier)
 			// then
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to generate 'advanced' NSTemplateTier manifest: couldn't get version/kind; json parse error")
+			assert.Contains(t, err.Error(), "unable to generate 'advanced-code-123456a' TierTemplate manifest: couldn't get version/kind; json parse error")
 		})
 	})
 }
@@ -446,6 +439,33 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	}
 }
 
+func assertTestClusteResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
+	content, err := testnstemplatetiers.Asset(fmt.Sprintf("%s/cluster.yaml", tier))
+	require.NoError(t, err)
+	expected := templatev1.Template{}
+	_, _, err = decoder.Decode(content, nil, &expected)
+	require.NoError(t, err)
+	assert.Equal(t, expected, actual)
+	cpuLimit := "4000m"
+	memoryLimit := "7Gi"
+	if tier == "team" {
+		cpuLimit = "2000m"
+	}
+	containsObj(t, actual, testClusterResourceQuotaObj(cpuLimit, memoryLimit))
+}
+
+func assertTestNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
+	content, err := testnstemplatetiers.Asset(fmt.Sprintf("%s/ns_%s.yaml", tier, kind))
+	require.NoError(t, err)
+	expected := templatev1.Template{}
+	_, _, err = decoder.Decode(content, nil, &expected)
+	require.NoError(t, err)
+	assert.Equal(t, expected, actual)
+
+	// Namespace
+	containsObj(t, actual, testNamespaceObj(kind))
+}
+
 func containsObj(t *testing.T, template templatev1.Template, obj string) {
 	for _, object := range template.Objects {
 		if string(object.Raw) == obj {
@@ -463,8 +483,16 @@ func clusterResourceQuotaObj(cpuLimit, cpuRequest, memoryLimit string) string {
 	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","persistentvolumeclaims":"5","pods":"100","replicationcontrollers":"100","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"7Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
 }
 
+func testClusterResourceQuotaObj(cpuLimit, memoryLimit string) string {
+	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"limits.cpu":"%[1]s","limits.memory":"%[2]s","persistentvolumeclaims":"5","requests.storage":"7Gi"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, memoryLimit)
+}
+
 func namespaceObj(kind string) string {
 	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"name":"${USERNAME}-%[1]s"}}`, kind)
+}
+
+func testNamespaceObj(kind string) string {
+	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"${USERNAME}-%[1]s"}}`, kind)
 }
 
 func userEditRoleBindingObj(kind string) string {
@@ -637,6 +665,91 @@ spec:
 	_, _, err = codecFactory.UniversalDeserializer().Decode(expected.Bytes(), nil, result)
 	if err != nil {
 		return toolchainv1alpha1.NSTemplateTier{}, "", err
+	}
+	return *result, expected.String(), err
+}
+
+// newTierTemplateFromYAML generates toolchainv1alpha1.TierTemplate using a golang template which is applied to the given tier.
+func newTierTemplateFromYAML(s *runtime.Scheme, tier, namespace, kind, revision string) (toolchainv1alpha1.TierTemplate, string, error) {
+	expectedTmpl, err := texttemplate.New("template").Parse(`kind: TierTemplate
+apiVersion: toolchain.dev.openshift.com/v1alpha1
+metadata:
+  namespace: {{ .Namespace }}
+  name: {{ .Tier }}
+spec:
+  tierName:
+  type:
+  revision: "{{ .Revision }}"
+  template:{{ if .Kind == "clusterResources" }}
+    apiVersion: template.openshift.io/v1
+    kind: Template
+    metadata:
+      name: {{ .Tier }}-cluster-resources
+      labels:
+        toolchain.dev.openshift.com/provider: codeready-toolchain
+    objects:
+    - apiVersion: quota.openshift.io/v1
+      kind: ClusterResourceQuota
+      metadata:
+        name: for-${USERNAME}
+      spec:
+        quota: 
+          hard:
+            limits.cpu: 4000m
+            limits.memory: 7Gi
+            requests.storage: 7Gi
+            persistentvolumeclaims: "5"
+        selector:
+          annotations:
+            openshift.io/requester: ${USERNAME}
+          labels: null
+    parameters:
+    - name: USERNAME
+      required: true
+{{ else }}
+    apiVersion: template.openshift.io/v1
+      kind: Template
+      metadata:
+        labels:
+          toolchain.dev.openshift.com/provider: codeready-toolchain
+        name: {{ .Tier }}-{{ .Kind }}
+      objects:
+      - apiVersion: v1
+        kind: Namespace
+        metadata:
+          annotations:
+            openshift.io/description: ${USERNAME}-{{ .Kind }}
+            openshift.io/display-name: ${USERNAME}-{{ .Kind }}
+            openshift.io/requester: ${USERNAME}
+          labels:
+            toolchain.dev.openshift.com/provider: codeready-toolchain
+          name: ${USERNAME}-{{ .Kind }}
+      parameters:
+      - name: USERNAME
+        required: true`)
+	if err != nil {
+		return toolchainv1alpha1.TierTemplate{}, "", err
+	}
+	expected := bytes.NewBuffer(nil)
+	err = expectedTmpl.Execute(expected, struct {
+		Tier      string
+		Namespace string
+		Kind      string
+		Revision  string
+	}{
+		Tier:      tier,
+		Namespace: namespace,
+		Kind:      kind,
+		Revision:  revision,
+	})
+	if err != nil {
+		return toolchainv1alpha1.TierTemplate{}, "", err
+	}
+	result := &toolchainv1alpha1.TierTemplate{}
+	codecFactory := serializer.NewCodecFactory(s)
+	_, _, err = codecFactory.UniversalDeserializer().Decode(expected.Bytes(), nil, result)
+	if err != nil {
+		return toolchainv1alpha1.TierTemplate{}, "", err
 	}
 	return *result, expected.String(), err
 }
