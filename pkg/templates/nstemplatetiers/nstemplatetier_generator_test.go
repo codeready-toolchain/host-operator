@@ -169,7 +169,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			// verify that all TemplateTier CRs were updated
+			// verify that all TierTemplate CRs were updated
 			tierTmpls := toolchainv1alpha1.TierTemplateList{}
 			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
 			require.NoError(t, err)
