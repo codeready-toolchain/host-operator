@@ -45,7 +45,7 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 	for _, tierTmpl := range tierTmpls {
 		// using the "standard" client since we don't need to support updates on such resources, they should be immutable
 		if err := client.Create(context.TODO(), tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
-			return errors.Wrapf(err, "unable to create or update the '%s' TierTemplate in namespace '%s'", tierTmpl.Name, tierTmpl.Namespace)
+			return errors.Wrapf(err, "unable to create the '%s' TierTemplate in namespace '%s'", tierTmpl.Name, tierTmpl.Namespace)
 		}
 		log.Info("TierTemplate resource created", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
 	}
