@@ -318,11 +318,12 @@ func toBeProvisionedNotificationCreated() toolchainv1alpha1.Condition {
 	}
 }
 
-func toBeProvisionedNotificationFailed() toolchainv1alpha1.Condition {
+func toBeProvisionedNotificationFailed(msg string) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated,
-		Status: corev1.ConditionFalse,
-		Reason: toolchainv1alpha1.MasterUserRecordNotificationCRCreationFailedReason,
+		Type:    toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.MasterUserRecordNotificationCRCreationFailedReason,
+		Message: msg,
 	}
 }
 
