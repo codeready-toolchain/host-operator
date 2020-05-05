@@ -6,10 +6,8 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 
 	"github.com/pkg/errors"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-var log = logf.Log.WithName("notification-templates")
 var notificationTemplates map[string]NotificationTemplate
 
 // NotificationTemplate contains the template subject and content
