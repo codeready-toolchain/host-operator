@@ -416,12 +416,19 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	// LimitRange
 	cpuLimit := "150m"
 	memoryLimit := "512Mi"
+	memoryRequest := "64Mi"
+	cpuRequest := "10m"
+	if kind == "code" {
+		cpuLimit = "1000m"
+		cpuRequest = "60m"
+		memoryRequest = "307Mi"
+	}
 	if tier == "team" {
 		memoryLimit = "1Gi"
 	} else if kind == "dev" {
 		memoryLimit = "750Mi"
 	}
-	containsObj(t, actual, limitRangeObj(kind, cpuLimit, memoryLimit))
+	containsObj(t, actual, limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest))
 
 	// NetworkPolicies
 	containsObj(t, actual, allowSameNamespacePolicyObj(kind))
@@ -475,8 +482,8 @@ func containsObj(t *testing.T, template templatev1.Template, obj string) {
 	assert.Fail(t, "NSTemplateTier doesn't contain the expected object", "Template: %s; \n\nExpected object: %s", template, obj)
 }
 
-func limitRangeObj(kind, cpuLimit, memoryLimit string) string {
-	return fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"10m","memory":"64Mi"},"type":"Container"}]}}`, kind, cpuLimit, memoryLimit)
+func limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest string) string {
+	return fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"%s","memory":"%s"},"type":"Container"}]}}`, kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest)
 }
 
 func clusterResourceQuotaObj(cpuLimit, cpuRequest, memoryLimit string) string {
