@@ -433,7 +433,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 		require.Len(t, actual.Objects, 8)
 		// Role & RoleBinding with additional permissions to edit roles/rolebindings
 		containsObj(t, actual, rbacEditRoleObj(kind))
-		containsObj(t, actual, userEditRoleBindingObj(kind))
+		containsObj(t, actual, userRbacEditRoleBindingObj(kind))
 	} else {
 		require.Len(t, actual.Objects, 6)
 	}
