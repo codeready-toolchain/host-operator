@@ -9,6 +9,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
 
 	templatev1 "github.com/openshift/api/template/v1"
@@ -30,7 +31,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 
 		t.Run("with prod assets", func(t *testing.T) {
 			// given
-			assets := NewAssets(AssetNames, Asset)
+			assets := assets.NewAssets(AssetNames, Asset)
 			// when
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
@@ -62,7 +63,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 
 		t.Run("with test assets", func(t *testing.T) {
 			// given
-			assets := NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 			// when
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
@@ -103,7 +104,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			fakeAssets := func(name string) ([]byte, error) {
 				return []byte("foo::bar"), nil
 			}
-			assets := NewAssets(testnstemplatetiers.AssetNames, fakeAssets)
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, fakeAssets)
 			// when
 			_, err := loadTemplatesByTiers(assets)
 			// then
@@ -116,7 +117,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			fakeAssets := func(name string) ([]byte, error) {
 				return nil, fmt.Errorf("an error occurred")
 			}
-			assets := NewAssets(testnstemplatetiers.AssetNames, fakeAssets)
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, fakeAssets)
 			// when
 			_, err := loadTemplatesByTiers(assets)
 			// then
@@ -132,7 +133,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 				}
 				return nil, fmt.Errorf("an error occurred")
 			}
-			assets := NewAssets(testnstemplatetiers.AssetNames, fakeAssets)
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, fakeAssets)
 			// when
 			_, err := loadTemplatesByTiers(assets)
 			// then
@@ -155,7 +156,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 					return testnstemplatetiers.Asset(name)
 				}
 			}
-			assets := NewAssets(fakeAssetNames, fakeAssets)
+			assets := assets.NewAssets(fakeAssetNames, fakeAssets)
 			// when
 			_, err := loadTemplatesByTiers(assets)
 			// then
@@ -177,7 +178,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 		t.Run("with prod assets", func(t *testing.T) {
 			// given
-			assets := NewAssets(AssetNames, Asset)
+			assets := assets.NewAssets(AssetNames, Asset)
 			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
 			templatesByTier, err := loadTemplatesByTiers(assets)
 			require.NoError(t, err)
@@ -213,7 +214,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 		t.Run("with test assets", func(t *testing.T) {
 			// given
-			assets := NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 			templatesByTier, err := loadTemplatesByTiers(assets)
 			require.NoError(t, err)
 			namespace := "host-operator-" + uuid.NewV4().String()[:7]
@@ -257,7 +258,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 		t.Run("invalid template", func(t *testing.T) {
 			// given
-			fakeAssets := NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
+			fakeAssets := assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
 				if name == "metadata.yaml" {
 					return testnstemplatetiers.Asset(name)
 				}
@@ -288,7 +289,7 @@ func TestNewTierTemplate(t *testing.T) {
 
 		t.Run("with prod assets", func(t *testing.T) {
 			// given
-			assets := NewAssets(AssetNames, Asset)
+			assets := assets.NewAssets(AssetNames, Asset)
 			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
 			templatesByTier, err := loadTemplatesByTiers(assets)
 			require.NoError(t, err)
@@ -324,7 +325,7 @@ func TestNewTierTemplate(t *testing.T) {
 
 		t.Run("with test assets", func(t *testing.T) {
 			// given
-			assets := NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 			templatesByTier, err := loadTemplatesByTiers(assets)
 			require.NoError(t, err)
 			namespace := "host-operator-" + uuid.NewV4().String()[:7]
@@ -362,7 +363,7 @@ func TestNewTierTemplate(t *testing.T) {
 
 		t.Run("invalid template", func(t *testing.T) {
 			// given
-			fakeAssets := NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
+			fakeAssets := assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
 				if name == "metadata.yaml" {
 					return testnstemplatetiers.Asset(name)
 				}
@@ -536,7 +537,7 @@ func TestNewNSTemplateTiers(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		// given
-		assets := NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+		assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 		templatesByTier, err := loadTemplatesByTiers(assets)
 		require.NoError(t, err)
 		namespace := "host-operator-" + uuid.NewV4().String()[:7]

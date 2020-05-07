@@ -7,6 +7,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
 	testsupport "github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -31,7 +32,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	require.NoError(t, err)
 	logf.SetLogger(zap.Logger(true))
 
-	assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+	testassets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 
 	t.Run("ok", func(t *testing.T) {
 
@@ -50,7 +51,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			require.NoError(t, err)
 			require.Empty(t, tierTmpls.Items)
 
-			assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 
 			// when
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
@@ -110,11 +111,11 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			clt := testsupport.NewFakeClient(t)
 
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
+			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
 			require.NoError(t, err)
 
 			// when calling CreateOrUpdateResources a second time
-			err = nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
+			err = nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
 
 			// then
 			require.NoError(t, err)
@@ -132,7 +133,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
-				// verify that the generation was not changed 
+				// verify that the generation was not changed
 				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
 				// verify the new namespace revisions
 				for _, ns := range tier.Spec.Namespaces {
@@ -149,11 +150,11 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			clt := testsupport.NewFakeClient(t)
 
 			// when
-			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
+			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
 			require.NoError(t, err)
 
 			// given a new set of tier templates (same content but new revisions, which is what we'll want to check here)
-			assets = nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
+			testassets = assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
 				if name == "metadata.yaml" {
 					return []byte(`advanced/cluster: "111111a"` + "\n" +
 						`advanced/ns_code: "222222a"` + "\n" +
@@ -175,7 +176,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			})
 
 			// when calling CreateOrUpdateResources a second time
-			err = nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
+			err = nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
 
 			// then
 			require.NoError(t, err)
@@ -235,14 +236,14 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 		t.Run("failed to read assets", func(t *testing.T) {
 			// given
-			clt := testsupport.NewFakeClient(t)
-			fakeAssets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
+			fakeAssets := assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
 				if name == "metadata.yaml" {
 					return []byte("advanced-code: abcdef"), nil
 				}
 				// error occurs when fetching the content of the 'advanced-code.yaml' template
 				return nil, errors.Errorf("an error")
 			})
+			clt := testsupport.NewFakeClient(t)
 			// when
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, fakeAssets)
 			// then
@@ -262,7 +263,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					}
 					return clt.Client.Create(ctx, obj, opts...)
 				}
-				assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+				assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 				// when
 				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 				// then
@@ -286,9 +287,9 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					}
 					return clt.Client.Update(ctx, obj, opts...)
 				}
-				assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+				testassets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 				// when
-				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
+				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
 				// then
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), fmt.Sprintf("unable to create or update the 'advanced' NSTemplateTiers in namespace '%s'", namespace))
@@ -307,9 +308,9 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					}
 					return clt.Client.Create(ctx, obj, opts...)
 				}
-				assets := nstemplatetiers.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+				testassets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 				// when
-				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
+				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
 				// then
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), fmt.Sprintf("unable to create the 'advanced-code-123456a' TierTemplate in namespace '%s'", namespace))
