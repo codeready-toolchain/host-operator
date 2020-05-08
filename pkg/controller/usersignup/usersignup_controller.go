@@ -48,11 +48,6 @@ type BannedUserToUserSignupMapper struct {
 
 type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error
 
-type compliantUsernameUpdater struct {
-	CompliantUsername string
-	R                 *ReconcileUserSignup
-}
-
 func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Request {
 	if bu, ok := obj.Object.(*toolchainv1alpha1.BannedUser); ok {
 		// look-up any associated UserSignup using the BannedUser's "toolchain.dev.openshift.com/email-hash" label
@@ -292,8 +287,8 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		// compliant username and condition and return
 		reqLogger.Info("MasterUserRecord exists, setting UserSignup status to 'Complete'")
 		// Use compliantUsernameUpdater to properly handle when the master user record is created or updated
-		c := compliantUsernameUpdater{CompliantUsername: mur.Name, R: r}
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, c.updateCompliantName)
+		c := completeStatusUpdater{CompliantUsername: mur.Name, R: r}
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, c.updateCompleteStatus)
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is Banned, simply set the status
@@ -742,9 +737,14 @@ func (r *ReconcileUserSignup) updateStatus(logger logr.Logger, userSignup *toolc
 	return nil
 }
 
-// updateCompliantName updates the `CompliantUsername` and `Conditions` in the status, should only be invoked on completion because
+type completeStatusUpdater struct {
+	CompliantUsername string
+	R                 *ReconcileUserSignup
+}
+
+// updateCompleteStatus updates the `CompliantUsername` and `Conditions` in the status, should only be invoked on completion because
 // both completion and the compliant username require the master user record to be created.
-func (u *compliantUsernameUpdater) updateCompliantName(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *completeStatusUpdater) updateCompleteStatus(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	usernameUpdated := userSignup.Status.CompliantUsername != u.CompliantUsername
 	userSignup.Status.CompliantUsername = u.CompliantUsername
 
@@ -756,6 +756,7 @@ func (u *compliantUsernameUpdater) updateCompliantName(userSignup *toolchainv1al
 			Reason:  "",
 			Message: message,
 		})
+
 	if !usernameUpdated && !conditionUpdated {
 		// Nothing changed
 		return nil
