@@ -284,7 +284,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
-		// compliant username and condition and return
+		// conditions to complete and set the compliant username and return
 		reqLogger.Info("MasterUserRecord exists, setting UserSignup status to 'Complete'")
 		// Use compliantUsernameUpdater to properly handle when the master user record is created or updated
 		c := completeStatusUpdater{CompliantUsername: mur.Name, R: r}
