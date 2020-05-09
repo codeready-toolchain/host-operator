@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -334,8 +334,7 @@ func newController(t *testing.T, changeTier *v1alpha1.ChangeTierRequest, initObj
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, append(initObjs, changeTier)...)
-	config, err := configuration.New("")
-	require.NoError(t, err)
+	config := configuration.LoadConfig()
 	controller := &ReconcileChangeTierRequest{
 		client: cl,
 		scheme: s,

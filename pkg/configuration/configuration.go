@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	errs "github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
@@ -37,15 +36,15 @@ const (
 	UserApprovalPolicyAutomatic = "automatic"
 )
 
-// Registry encapsulates the Viper configuration registry which stores the
+// Config encapsulates the Viper configuration registry which stores the
 // configuration data in-memory.
-type Registry struct {
+type Config struct {
 	host *viper.Viper
 }
 
-// CreateEmptyRegistry creates an initial, empty registry.
-func CreateEmptyRegistry() *Registry {
-	c := Registry{
+// initConfig creates an initial, empty configuration.
+func initConfig() *Config {
+	c := Config{
 		host: viper.New(),
 	}
 	c.host.SetEnvPrefix(HostEnvPrefix)
@@ -56,34 +55,22 @@ func CreateEmptyRegistry() *Registry {
 	return &c
 }
 
-// New creates a configuration reader object using a configurable configuration
-// file path. If the provided config file path is empty, a default configuration
-// will be created.
-func New(configFilePath string) (*Registry, error) {
-	c := CreateEmptyRegistry()
-	if configFilePath != "" {
-		c.host.SetConfigType("yaml")
-		c.host.SetConfigFile(configFilePath)
-		err := c.host.ReadInConfig() // Find and read the config file
-		if err != nil {              // Handle errors reading the config file.
-			return nil, errs.Wrap(err, "failed to read config file")
-		}
-	}
-	return c, nil
+func LoadConfig() *Config {
+	return initConfig()
 }
 
-func (c *Registry) setConfigDefaults() {
+func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
-func (c *Registry) GetDurationBeforeChangeRequestDeletion() time.Duration {
+func (c *Config) GetDurationBeforeChangeRequestDeletion() time.Duration {
 	return c.host.GetDuration(VarDurationBeforeChangeRequestDeletion)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
-func (c *Registry) GetAllRegistrationServiceParameters() map[string]string {
+func (c *Config) GetAllRegistrationServiceParameters() map[string]string {
 	vars := map[string]string{}
 
 	for _, env := range os.Environ() {

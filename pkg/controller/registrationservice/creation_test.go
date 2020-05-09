@@ -3,8 +3,9 @@ package registrationservice
 import (
 	"context"
 	"fmt"
-	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"testing"
+
+	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -23,7 +24,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	config, err := configuration.New("")
+	config := configuration.LoadConfig()
 	require.NoError(t, err)
 
 	t.Run("create with default values", func(t *testing.T) {
