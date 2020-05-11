@@ -1925,20 +1925,16 @@ func TestChangedCompliantUsername(t *testing.T) {
 
 	// after the 1st reconcile verify that the MUR still exists and its name still matches the initial UserSignup CompliantUsername
 	murs := &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs)
+	err = r.client.List(context.TODO(), murs, client.InNamespace(operatorNamespace))
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 	mur := murs.Items[0]
-	require.Equal(t, operatorNamespace, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Equal(t, mur.Name, "foo-old")
 	require.Equal(t, userSignup.Status.CompliantUsername, "foo-old")
 
 	// delete the old MUR to trigger creation of a new MUR using the new username
-	murToDelete := &v1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: req.Namespace}, murToDelete)
-	require.NoError(t, err)
-	err = r.client.Delete(context.TODO(), murToDelete)
+	err = r.client.Delete(context.TODO(), oldMur)
 	require.NoError(t, err)
 
 	// 2nd reconcile should handle the deleted MUR and provision a new one
