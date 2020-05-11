@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"time"
 
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -25,6 +27,8 @@ const (
 	consoleNamespace = "openshift-console"
 	cheNamespace     = "toolchain-che"
 )
+
+var notificationCreated bool = false
 
 // consoleClient to be used to test connection to a public Web Console
 var consoleClient = &http.Client{
@@ -220,6 +224,27 @@ func (s *Synchronizer) alignReadiness() bool {
 			return false
 		}
 	}
+
+	if condition.IsTrue(s.record.Status.Conditions, toolchainv1alpha1.ConditionReady) && !notificationCreated {
+		notification := &toolchainv1alpha1.Notification{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      s.record.Name + "-provisioned",
+				Namespace: s.record.Namespace,
+			},
+			Spec: toolchainv1alpha1.NotificationSpec{
+				UserID:   s.record.Spec.UserID,
+				Template: "userprovisioned",
+			},
+		}
+
+		if err := s.memberCluster.Client.Create(context.TODO(), notification); err != nil {
+			s.logger.Error(err, "failed to create user provisioned notification")
+			return false
+		}
+
+		notificationCreated = true
+	}
+
 	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
 	return true
 }
