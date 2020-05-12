@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"testing"
 
-	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
-
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/test"
+	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
