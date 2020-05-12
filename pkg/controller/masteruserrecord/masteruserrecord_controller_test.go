@@ -475,11 +475,13 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			AllUserAccountsHaveStatusSyncIndex("123abc").
 			AllUserAccountsHaveCondition(userAccount.Status.Conditions[0])
 
-		// Get the notification resource and ensure the template type is correct
+		// Get the notification resource
 		notification := toolchainv1alpha1.Notification{}
 		hostClient.Get(context.TODO(), namespacedName(mur.Namespace, userAccount.Name+"-provisioned"), &notification)
-		assert.Equal(t, notification.Spec.UserID, userAccount.UID)
+		assert.Equal(t, notification.Spec.UserID, userAccount.Spec.UserID)
 		assert.Equal(t, notification.Spec.Template, "userprovisioned")
+		assert.Equal(t, notification.Name, userAccount.Name+"-provisioned")
+		assert.Equal(t, notification.Namespace, mur.Namespace)
 	})
 
 	t.Run("mur status synced with updated user account statuses", func(t *testing.T) {
