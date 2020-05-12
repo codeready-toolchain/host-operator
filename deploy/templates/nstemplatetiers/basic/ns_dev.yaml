@@ -32,10 +32,10 @@ objects:
     limits:
     - type: "Container"
       default:
-        cpu: 250m
-        memory: 1Gi
+        cpu: 150m
+        memory: 750Mi
       defaultRequest:
-        cpu: 100m
+        cpu: 10m
         memory: 64Mi
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy

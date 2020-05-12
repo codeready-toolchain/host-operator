@@ -13,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -191,7 +192,7 @@ func main() {
 
 		// create or update all NSTemplateTiers on the cluster at startup
 		log.Info("Creating/updating the NSTemplateTier resources")
-		assets := nstemplatetiers.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
+		assets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
 		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, assets); err != nil {
 			log.Error(err, "")
 			os.Exit(1)

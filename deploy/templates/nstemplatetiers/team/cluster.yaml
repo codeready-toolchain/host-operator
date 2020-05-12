@@ -10,14 +10,14 @@ objects:
   spec:
     quota:
       hard:
-        limits.cpu: 2000m
-        limits.memory: 10Gi
-        limits.ephemeral-storage: 5Gi
+        limits.cpu: 4000m
+        limits.memory: 15Gi
+        limits.ephemeral-storage: 7Gi
         requests.cpu: 2000m
-        requests.memory: 10Gi
-        requests.storage: 5Gi
-        requests.ephemeral-storage: 5Gi
-        persistentvolumeclaims: "2"
+        requests.memory: 15Gi
+        requests.storage: 7Gi
+        requests.ephemeral-storage: 7Gi
+        persistentvolumeclaims: "5"
         pods: "100"
         replicationcontrollers: "100"
         services: "100"
