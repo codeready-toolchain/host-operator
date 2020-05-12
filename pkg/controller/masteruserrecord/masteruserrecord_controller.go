@@ -36,7 +36,7 @@ const (
 
 // Add creates a new MasterUserRecord Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, _ *configuration.Registry) error {
+func Add(mgr manager.Manager, _ *configuration.Config) error {
 	return add(mgr, newReconciler(mgr))
 }
 

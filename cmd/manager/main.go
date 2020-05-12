@@ -66,11 +66,7 @@ func main() {
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
 	pflag.Parse()
-	confg, err := loadConfig()
-	if err != nil {
-		log.Error(err, "cannot load the configuration")
-		os.Exit(1)
-	}
+	crtConfig := configuration.LoadConfig()
 
 	// Use a zap logr.Logger implementation. If none of the zap
 	// flags are configured (or if the zap flag set is not being
@@ -83,7 +79,7 @@ func main() {
 	logf.SetLogger(zap.Logger())
 
 	printVersion()
-	printConfig(confg)
+	printConfig(crtConfig)
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
@@ -132,7 +128,7 @@ func main() {
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr, confg); err != nil {
+	if err := controller.AddToManager(mgr, crtConfig); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
@@ -184,7 +180,7 @@ func main() {
 
 		// create or update Registration service during the operator deployment
 		log.Info("Creating/updating the RegistrationService resource")
-		if err := registrationservice.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, confg); err != nil {
+		if err := registrationservice.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, crtConfig); err != nil {
 			log.Error(err, "cannot create/update RegistrationService resource")
 			os.Exit(1)
 		}
@@ -208,28 +204,7 @@ func main() {
 
 }
 
-func loadConfig() (*configuration.Registry, error) {
-	var configFilePath string
-	flag.StringVar(&configFilePath, "config", "", "path to the config file to read (if none is given, defaults will be used)")
-
-	// Override default -config switch with environment variable only if -config
-	// switch was not explicitly given via the command line.
-	configSwitchIsSet := false
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "config" {
-			configSwitchIsSet = true
-		}
-	})
-	if !configSwitchIsSet {
-		if envConfigPath, ok := os.LookupEnv(configuration.HostEnvPrefix + "_CONFIG_FILE_PATH"); ok {
-			configFilePath = envConfigPath
-		}
-	}
-
-	return configuration.New(configFilePath)
-}
-
-func printConfig(cfg *configuration.Registry) {
+func printConfig(cfg *configuration.Config) {
 	logWithValuesRegServ := log
 	for key, value := range cfg.GetAllRegistrationServiceParameters() {
 		logWithValuesRegServ = logWithValuesRegServ.WithValues("key", key, "value", value)
