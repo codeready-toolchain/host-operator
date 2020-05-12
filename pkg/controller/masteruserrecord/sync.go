@@ -236,7 +236,7 @@ func (s *Synchronizer) alignReadiness() bool {
 			},
 		}
 
-		if err := s.memberCluster.Client.Create(context.TODO(), notification); err != nil {
+		if err := s.hostClient.Create(context.TODO(), notification); err != nil {
 			s.logger.Error(err, "failed to create user provisioned notification")
 			return false
 		}
