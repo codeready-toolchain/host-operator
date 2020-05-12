@@ -284,10 +284,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
-		// to Complete and return
+		// conditions to complete and set the compliant username and return
 		reqLogger.Info("MasterUserRecord exists, setting UserSignup status to 'Complete'")
-		instance.Status.CompliantUsername = mur.Name
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusComplete)
+		// Use compliantUsernameUpdater to properly handle when the master user record is created or updated
+		c := completeStatusUpdater{CompliantUsername: mur.Name, R: r}
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, c.updateCompleteStatus)
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is Banned, simply set the status
@@ -638,17 +639,6 @@ func (r *ReconcileUserSignup) setStatusNoTemplateTierAvailable(userSignup *toolc
 		})
 }
 
-func (r *ReconcileUserSignup) setStatusComplete(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionTrue,
-			Reason:  "",
-			Message: message,
-		})
-}
-
 func (r *ReconcileUserSignup) setStatusBanning(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return r.updateStatusConditions(
 		userSignup,
@@ -747,6 +737,33 @@ func (r *ReconcileUserSignup) updateStatus(logger logr.Logger, userSignup *toolc
 	}
 
 	return nil
+}
+
+type completeStatusUpdater struct {
+	CompliantUsername string
+	R                 *ReconcileUserSignup
+}
+
+// updateCompleteStatus updates the `CompliantUsername` and `Conditions` in the status, should only be invoked on completion because
+// both completion and the compliant username require the master user record to be created.
+func (u *completeStatusUpdater) updateCompleteStatus(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	usernameUpdated := userSignup.Status.CompliantUsername != u.CompliantUsername
+	userSignup.Status.CompliantUsername = u.CompliantUsername
+
+	var conditionUpdated bool
+	userSignup.Status.Conditions, conditionUpdated = commonCondition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionTrue,
+			Reason:  "",
+			Message: message,
+		})
+
+	if !usernameUpdated && !conditionUpdated {
+		// Nothing changed
+		return nil
+	}
+	return u.R.client.Status().Update(context.TODO(), userSignup)
 }
 
 // wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
