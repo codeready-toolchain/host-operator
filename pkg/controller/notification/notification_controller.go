@@ -3,8 +3,10 @@ package notification
 import (
 	"bytes"
 	"context"
+	"fmt"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
@@ -24,7 +26,9 @@ import (
 )
 
 const (
-	NotificationInvalidTemplateNameReason = "InvalidTemplateName"
+	NotificationInvalidTemplateNameReason       = "InvalidTemplateName"
+	NotificationInvalidTemplateDefinitionReason = "InvalidTemplateDefinition"
+	NotificationFailedToDeliverReason           = "FailedToDeliver"
 )
 
 var log = logf.Log.WithName("controller_notification")
@@ -98,33 +102,54 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Lookup the notification template
-	template := &toolchainv1alpha1.NotificationTemplate{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{
-		Namespace: request.Namespace,
-		Name:      instance.Spec.Template,
-	}, template)
+	template, found, err := notificationtemplates.GetNotificationTemplate(instance.Spec.Template)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidTemplate, err, "Failed to find template")
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidTemplate, err,
+				"Failed to find template %s", instance.Spec.Template)
 		}
 		return reconcile.Result{}, err
+	}
+
+	// If the template was not found, set the status to invalid template
+	if !found {
+		return reconcile.Result{}, r.setStatusInvalidTemplate(instance, fmt.Sprintf("invalid template [%s]",
+			instance.Spec.Template))
+	}
+
+	// Generate the content of the notification
+	generated, err := r.generateNotificationContent(instance.Spec.UserID, instance.Namespace, template)
+	if err != nil {
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidTemplateDefinition,
+			err, "failed to generate template %s", instance.Spec.Template)
+	}
+
+	// Deliver the notification
+	err = r.deliverNotification(template.Subject, generated)
+	if err != nil {
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToDeliver,
+			err, "failed to deliver notification")
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileNotification) sendNotification() {
+func (r *ReconcileNotification) deliverNotification(subject, content string) error {
 
+	// TODO deliver the notification
+
+	return nil
 }
 
-func (r *ReconcileNotification) generateNotificationContent(userID, namespace, templateDefinition string) (string, error) {
+func (r *ReconcileNotification) generateNotificationContent(userID, namespace string,
+	templ *notificationtemplates.NotificationTemplate) (string, error) {
 
 	context, err := r.createNotificationContext(userID, namespace)
 	if err != nil {
 		return "", err
 	}
 
-	tmpl, err := template.New("notification").Parse(templateDefinition)
+	tmpl, err := template.New("notification").Parse(templ.Content)
 	if err != nil {
 		return "", err
 	}
@@ -172,6 +197,28 @@ func (r *ReconcileNotification) setStatusInvalidTemplate(notification *toolchain
 			Type:    toolchainv1alpha1.NotificationDelivered,
 			Status:  corev1.ConditionFalse,
 			Reason:  NotificationInvalidTemplateNameReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileNotification) setStatusInvalidTemplateDefinition(notification *toolchainv1alpha1.Notification, message string) error {
+	return r.updateStatusConditions(
+		notification,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.NotificationDelivered,
+			Status:  corev1.ConditionFalse,
+			Reason:  NotificationInvalidTemplateDefinitionReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileNotification) setStatusFailedToDeliver(notification *toolchainv1alpha1.Notification, message string) error {
+	return r.updateStatusConditions(
+		notification,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.NotificationDelivered,
+			Status:  corev1.ConditionFalse,
+			Reason:  NotificationFailedToDeliverReason,
 			Message: message,
 		})
 }
