@@ -435,7 +435,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	if nstemplateTier.Spec.ClusterResources != nil {
 		clusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
 			Revision:    nstemplateTier.Spec.ClusterResources.Revision,
-			TemplateRef: nstemplatetiers.NewTierTemplateName(nstemplateTier.Name, nstemplatetiers.ClusterResources, nstemplateTier.Spec.ClusterResources.Revision),
+			TemplateRef: nstemplateTier.Spec.ClusterResources.TemplateRef,
 		}
 	} else {
 		logger.Info("NSTemplateTier has no cluster resources", "name", nstemplateTier.Name)
