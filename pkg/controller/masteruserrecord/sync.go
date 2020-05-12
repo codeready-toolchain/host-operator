@@ -28,8 +28,6 @@ const (
 	cheNamespace     = "toolchain-che"
 )
 
-var notificationCreated bool = false
-
 // consoleClient to be used to test connection to a public Web Console
 var consoleClient = &http.Client{
 	Timeout: time.Duration(1 * time.Second),
@@ -225,7 +223,8 @@ func (s *Synchronizer) alignReadiness() bool {
 		}
 	}
 
-	if condition.IsTrue(s.record.Status.Conditions, toolchainv1alpha1.ConditionReady) && !notificationCreated {
+	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
+	if condition.IsNotTrue(s.record.Status.Conditions, toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated) {
 		notification := &toolchainv1alpha1.Notification{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      s.record.Name + "-provisioned",
@@ -241,8 +240,8 @@ func (s *Synchronizer) alignReadiness() bool {
 			s.logger.Error(err, "failed to create user provisioned notification")
 			return false
 		}
-
-		notificationCreated = true
+		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisionedNotificationCreated())
+		return true
 	}
 
 	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())

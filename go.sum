@@ -118,8 +118,8 @@ github.com/codegangsta/negroni v1.0.0/go.mod h1:v0y3T5G7Y1UlFfyxFn/QLRU4a2EuNau2
 github.com/codeready-toolchain/api v0.0.0-20200402215020-c7a5434db5fb/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
 github.com/codeready-toolchain/api v0.0.0-20200506130228-a821d9c227f1 h1:QlZeSc0rKbUEA4L2Z1EH6Q9Ckr2UrPdYumEmF2YO5W0=
 github.com/codeready-toolchain/api v0.0.0-20200506130228-a821d9c227f1/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200504150510-6252228f3527 h1:sdODhNlkdU9TXR7JrV3T81E1JB3EUXIcapH2IBVzaLg=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200504150510-6252228f3527/go.mod h1:OhMfZoXLHTu4b6pXxWd6MAuCoT0OcKYiDZdEn3oCPGI=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200512113823-0342672aa336 h1:WJeZ7PIzkkrfGJE+PWIS9oJWLGdrIazG8INzovF4U30=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200512113823-0342672aa336/go.mod h1:OhMfZoXLHTu4b6pXxWd6MAuCoT0OcKYiDZdEn3oCPGI=
 github.com/container-storage-interface/spec v1.1.0/go.mod h1:6URME8mwIBbpVyZV93Ce5St17xBiQJQY67NDsuohiy4=
 github.com/containerd/console v0.0.0-20170925154832-84eeaae905fa/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.0.2/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=
