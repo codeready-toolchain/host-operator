@@ -429,8 +429,8 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 
 	t.Run("to be provisioned notification created", func(t *testing.T) {
 		// given
-		// setup MUR that wil contain UserAccountStatusEmbedded fields for UserAccounts from "member2-cluster" and "member3-cluster" but will miss from test.MemberClusterName
-		// then the reconcile should add the misssing UserAccountStatusEmbedded for the missing test.MemberClusterName cluster without updating anything else
+		// setup MUR that wil contain UserAccountStatusEmbedded fields for UserAccounts from "member2-cluster" but will miss from test.MemberClusterName
+		// then the reconcile should sync status and create a notification CR since the status is set to provisioned
 		mur := murtest.NewMasterUserRecord("john",
 			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
