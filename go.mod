@@ -10,6 +10,8 @@ require (
 	github.com/go-openapi/swag v0.19.9 // indirect
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/gophercloud/gophercloud v0.3.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/operator-framework/operator-sdk v0.16.0
 	github.com/pkg/errors v0.9.1
@@ -18,9 +20,10 @@ require (
 	github.com/spf13/cast v1.3.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.1
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	golang.org/x/net v0.0.0-20200505041828-1ed23360d12c // indirect
 	golang.org/x/sys v0.0.0-20200501145240-bc7a7d42d5c3 // indirect
+	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/h2non/gock.v1 v1.0.14
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.18.2

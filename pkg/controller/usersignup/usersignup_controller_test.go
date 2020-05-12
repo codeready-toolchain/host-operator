@@ -79,8 +79,9 @@ var basicNSTemplateTier = &toolchainv1alpha1.NSTemplateTier{
 			},
 		},
 		ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-			Revision: "654321b",
-			Template: templatev1.Template{
+			Revision:    "654321b",
+			TemplateRef: "basic-clusterresources-654321b",
+			Template:    templatev1.Template{
 				// does not need to be filled
 			},
 		},
@@ -129,8 +130,8 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 		}
 	}
 	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
-	assert.NotEmpty(t, "654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.Template)
 	assert.Equal(t, "654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.Revision)
+	assert.Equal(t, "basic-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
 }
 
 func TestReadUserApprovalPolicy(t *testing.T) {
