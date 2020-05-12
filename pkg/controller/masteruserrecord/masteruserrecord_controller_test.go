@@ -427,6 +427,55 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 
+	t.Run("to be provisioned notification created", func(t *testing.T) {
+		// given
+		// setup MUR that wil contain UserAccountStatusEmbedded fields for UserAccounts from "member2-cluster" and "member3-cluster" but will miss from test.MemberClusterName
+		// then the reconcile should add the misssing UserAccountStatusEmbedded for the missing test.MemberClusterName cluster without updating anything else
+		mur := murtest.NewMasterUserRecord("john",
+			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
+			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")),
+			murtest.AdditionalAccounts("member2-cluster"))
+
+		userAccount := uatest.NewUserAccountFromMur(mur,
+			uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
+		userAccount2 := uatest.NewUserAccountFromMur(mur,
+			uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
+
+		mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
+			{
+				SyncIndex: "111aaa",
+				Cluster: toolchainv1alpha1.Cluster{
+					Name: "member2-cluster",
+				},
+				UserAccountStatus: userAccount2.Status,
+			},
+		}
+
+		memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
+		memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
+
+		hostClient := test.NewFakeClient(t, mur)
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2))
+
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.NoError(t, err)
+
+		uatest.AssertThatUserAccount(t, "john", memberClient).
+			Exists().
+			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+			HasConditions(userAccount.Status.Conditions...)
+
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasStatusUserAccounts(test.MemberClusterName, "member2-cluster").
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
+			AllUserAccountsHaveStatusSyncIndex("123abc").
+			AllUserAccountsHaveCondition(userAccount.Status.Conditions[0])
+	})
+
 	t.Run("mur status synced with updated user account statuses", func(t *testing.T) {
 		// given
 		// setup MUR that wil contain UserAccountStatusEmbedded fields for UserAccounts from "member2-cluster" and "member3-cluster" but will miss from test.MemberClusterName
@@ -534,7 +583,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		require.NoError(t, err)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeProvisioned()).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts(test.MemberClusterName, "member2-cluster").
 			HasFinalizer()
 	})
