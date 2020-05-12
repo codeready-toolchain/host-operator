@@ -64,7 +64,7 @@ var basicNSTemplateTier = &toolchainv1alpha1.NSTemplateTier{
 			{
 				Type:        "dev",
 				Revision:    "123456b",
-				TemplateRef: "basic-dev-123456a",
+				TemplateRef: "basic-dev-123456b",
 				Template:    templatev1.Template{
 					// does not need to be filled
 				},
@@ -72,7 +72,7 @@ var basicNSTemplateTier = &toolchainv1alpha1.NSTemplateTier{
 			{
 				Type:        "stage",
 				Revision:    "123456c",
-				TemplateRef: "basic-stage-123456a",
+				TemplateRef: "basic-stage-123456c",
 				Template:    templatev1.Template{
 					// does not need to be filled
 				},
