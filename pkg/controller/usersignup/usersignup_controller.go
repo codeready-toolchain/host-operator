@@ -428,7 +428,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
 			Type:        ns.Type,
 			Revision:    ns.Revision,
-			TemplateRef: nstemplatetiers.NewTierTemplateName(nstemplateTier.Name, ns.Type, ns.Revision),
+			TemplateRef: ns.TemplateRef,
 		}
 	}
 	var clusterResources *toolchainv1alpha1.NSTemplateSetClusterResources
