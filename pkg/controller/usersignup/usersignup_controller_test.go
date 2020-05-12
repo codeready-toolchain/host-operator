@@ -54,23 +54,26 @@ var basicNSTemplateTier = &toolchainv1alpha1.NSTemplateTier{
 	Spec: toolchainv1alpha1.NSTemplateTierSpec{
 		Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 			{
-				Type:     "code",
-				Revision: "123456a",
-				Template: templatev1.Template{
+				Type:        "code",
+				Revision:    "123456a",
+				TemplateRef: "basic-code-123456a",
+				Template:    templatev1.Template{
 					// does not need to be filled
 				},
 			},
 			{
-				Type:     "dev",
-				Revision: "123456b",
-				Template: templatev1.Template{
+				Type:        "dev",
+				Revision:    "123456b",
+				TemplateRef: "basic-dev-123456a",
+				Template:    templatev1.Template{
 					// does not need to be filled
 				},
 			},
 			{
-				Type:     "stage",
-				Revision: "123456c",
-				Template: templatev1.Template{
+				Type:        "stage",
+				Revision:    "123456c",
+				TemplateRef: "basic-stage-123456a",
+				Template:    templatev1.Template{
 					// does not need to be filled
 				},
 			},
@@ -114,10 +117,13 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 		switch ns.Type {
 		case "code":
 			assert.Equal(t, "123456a", ns.Revision)
+			assert.Equal(t, "basic-code-123456a", ns.TemplateRef)
 		case "dev":
 			assert.Equal(t, "123456b", ns.Revision)
+			assert.Equal(t, "basic-dev-123456b", ns.TemplateRef)
 		case "stage":
 			assert.Equal(t, "123456c", ns.Revision)
+			assert.Equal(t, "basic-stage-123456c", ns.TemplateRef)
 		default:
 			t.Fatalf("unexpected namespace type: %s", ns.Type)
 		}
