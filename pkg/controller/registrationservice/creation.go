@@ -3,10 +3,9 @@ package registrationservice
 import (
 	"strings"
 
-	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
-
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
