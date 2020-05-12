@@ -1878,3 +1878,99 @@ func assertName(t *testing.T, expected, username string) {
 	assert.Regexp(t, dnsRegExp, transformUsername(username))
 	assert.Equal(t, expected, transformUsername(username))
 }
+
+// Test the scenario where the existing usersignup CompliantUsername becomes outdated eg. transformUsername func is changed
+func TestChangedCompliantUsername(t *testing.T) {
+	email := "foo@redhat.com"
+	// starting with a UserSignup that exists and was approved and has the now outdated CompliantUsername
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("", email),
+		Spec: v1alpha1.UserSignupSpec{
+			Username:      email,
+			Approved:      true,
+			TargetCluster: "east",
+		},
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []toolchainv1alpha1.Condition{
+				{
+					Type:   toolchainv1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: toolchainv1alpha1.UserSignupApprovedByAdminReason,
+				},
+				{
+					Status: v1.ConditionTrue,
+					Type:   toolchainv1alpha1.UserSignupComplete,
+				},
+			},
+			CompliantUsername: "foo-old",
+		},
+	}
+
+	// also starting with the old MUR whose name matches the outdated UserSignup CompliantUsername
+	oldMur := &v1alpha1.MasterUserRecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "foo-old",
+			Namespace: operatorNamespace,
+			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
+		},
+	}
+
+	// create the initial resources
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, oldMur, basicNSTemplateTier)
+
+	// 1st reconcile should effectively be a no op because the MUR name and UserSignup CompliantUsername match and status is all good
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// after the 1st reconcile verify that the MUR still exists and its name still matches the initial UserSignup CompliantUsername
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs, client.InNamespace(operatorNamespace))
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 1)
+	mur := murs.Items[0]
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Equal(t, mur.Name, "foo-old")
+	require.Equal(t, userSignup.Status.CompliantUsername, "foo-old")
+
+	// delete the old MUR to trigger creation of a new MUR using the new username
+	err = r.client.Delete(context.TODO(), oldMur)
+	require.NoError(t, err)
+
+	// 2nd reconcile should handle the deleted MUR and provision a new one
+	res, err = r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// verify the new MUR is provisioned
+	murs = &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 1)
+	mur = murs.Items[0]
+
+	// the MUR name should match the new CompliantUserName
+	assert.Equal(t, "foo", mur.Name)
+	require.Equal(t, operatorNamespace, mur.Namespace)
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Len(t, mur.Spec.UserAccounts, 1)
+	assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
+	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 3)
+
+	// lookup the userSignup and check the conditions are updated but the CompliantUsername is still the old one
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	require.Equal(t, userSignup.Status.CompliantUsername, "foo-old")
+
+	// 3rd reconcile should update the CompliantUsername on the UserSignup status
+	res, err = r.Reconcile(req)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// lookup the userSignup one more time and verify that the CompliantUsername was updated using the current transformUsername logic
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	// the CompliantUsername and MUR name should now match
+	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+}
