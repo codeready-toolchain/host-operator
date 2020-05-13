@@ -1,17 +1,17 @@
 package registrationservice
 
 import (
-	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"strings"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace string, confg *configuration.Registry) error {
+func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace string, confg *configuration.Config) error {
 	envs := map[string]string{}
 	for key, value := range confg.GetAllRegistrationServiceParameters() {
 		envs[strings.TrimPrefix(key, configuration.RegServiceEnvPrefix+"_")] = value

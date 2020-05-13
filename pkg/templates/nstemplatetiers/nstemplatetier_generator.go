@@ -196,7 +196,7 @@ func newTierTemplates(decoder runtime.Decoder, namespace string, templatesByTier
 
 // newTierTemplate generates a TierTemplate resource for a given tier and kind
 func newTierTemplate(decoder runtime.Decoder, namespace, tier, kind string, tmpl template) (*toolchainv1alpha1.TierTemplate, error) {
-	name := newTierTemplateName(tier, kind, tmpl.revision)
+	name := NewTierTemplateName(tier, kind, tmpl.revision)
 	tmplObj := &templatev1.Template{}
 	_, _, err := decoder.Decode(tmpl.content, nil, tmplObj)
 	if err != nil {
@@ -216,9 +216,9 @@ func newTierTemplate(decoder runtime.Decoder, namespace, tier, kind string, tmpl
 	}, nil
 }
 
-// newTierTemplateName: a utility func to generate a TierTemplate name, based on the given tier, kind and revision.
+// NewTierTemplateName a utility func to generate a TierTemplate name, based on the given tier, kind and revision.
 // note: the resource name must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character
-func newTierTemplateName(tier, kind, revision string) string {
+func NewTierTemplateName(tier, kind, revision string) string {
 	return strings.ToLower(fmt.Sprintf("%s-%s-%s", tier, kind, revision))
 }
 
@@ -291,7 +291,7 @@ func newNSTemplateTier(decoder runtime.Decoder, namespace, tier string, tmpls te
 			Type:        kind,
 			Revision:    tmpls.namespaceTemplates[kind].revision,                                  // deprecated
 			Template:    *tmplObj,                                                                 // deprecated
-			TemplateRef: newTierTemplateName(tier, kind, tmpls.namespaceTemplates[kind].revision), // link to the TierTemplate resource, whose name is: `<tierName>-<nsType>-<revision>`
+			TemplateRef: NewTierTemplateName(tier, kind, tmpls.namespaceTemplates[kind].revision), // link to the TierTemplate resource, whose name is: `<tierName>-<nsType>-<revision>`
 		})
 	}
 	// also, add the cluster resource template+revision if it exists
@@ -305,7 +305,7 @@ func newNSTemplateTier(decoder runtime.Decoder, namespace, tier string, tmpls te
 		result.Spec.ClusterResources = &toolchainv1alpha1.NSTemplateTierClusterResources{
 			Revision:    tmpls.clusterTemplate.revision,
 			Template:    *tmplObj,
-			TemplateRef: newTierTemplateName(tier, ClusterResources, tmpls.clusterTemplate.revision), // link to the TierTemplate resource, whose name is: `<tierName>-<nsType>-<revision>`
+			TemplateRef: NewTierTemplateName(tier, ClusterResources, tmpls.clusterTemplate.revision), // link to the TierTemplate resource, whose name is: `<tierName>-<nsType>-<revision>`
 		}
 	}
 	return result, nil

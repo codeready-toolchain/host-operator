@@ -28,12 +28,12 @@ var log = logf.Log.WithName("controller_changetierrequest")
 
 // Add creates a new ChangeTierRequest Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, config *configuration.Registry) error {
+func Add(mgr manager.Manager, config *configuration.Config) error {
 	return add(mgr, newReconciler(mgr, config))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, config *configuration.Registry) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.Reconciler {
 	return &ReconcileChangeTierRequest{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config}
 }
 
@@ -59,7 +59,7 @@ type ReconcileChangeTierRequest struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
-	config *configuration.Registry
+	config *configuration.Config
 }
 
 // Reconcile reads that state of the cluster for a ChangeTierRequest object and makes changes based on the state read
@@ -144,14 +144,16 @@ func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierReque
 	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nsTemplateTier.Spec.Namespaces))
 	for i, ns := range nsTemplateTier.Spec.Namespaces {
 		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
-			Type:     ns.Type,
-			Revision: ns.Revision,
+			Type:        ns.Type,
+			Revision:    ns.Revision,
+			TemplateRef: ns.TemplateRef,
 		}
 	}
 	var clusterResources *toolchainv1alpha1.NSTemplateSetClusterResources
 	if nsTemplateTier.Spec.ClusterResources != nil {
 		clusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
 			Revision: nsTemplateTier.Spec.ClusterResources.Revision,
+			TemplateRef: nsTemplateTier.Spec.ClusterResources.TemplateRef,
 		}
 	} else {
 		log.Info("NSTemplateTier has no cluster resources", "name", nsTemplateTier.Name)

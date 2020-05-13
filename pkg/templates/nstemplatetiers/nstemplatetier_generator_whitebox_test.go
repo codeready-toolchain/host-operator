@@ -385,6 +385,7 @@ func TestNewTierTemplate(t *testing.T) {
 func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
 	expected := templatev1.Template{}
 	content, err := Asset(fmt.Sprintf("%s/cluster.yaml", tier))
+	require.NoError(t, err)
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
