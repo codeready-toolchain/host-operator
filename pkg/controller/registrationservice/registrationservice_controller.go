@@ -30,7 +30,7 @@ var log = logf.Log.WithName("controller_registrationservice")
 
 // Add creates a new RegistrationService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, _ *configuration.Registry) error {
+func Add(mgr manager.Manager, _ *configuration.Config) error {
 	deploymentTemplate, err := getDeploymentTemplate(mgr.GetScheme())
 	if err != nil {
 		return errs.Wrap(err, "unable to decode the registration service deployment")
