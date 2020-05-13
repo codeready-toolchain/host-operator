@@ -147,7 +147,7 @@ func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierReque
 		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
 			Type:        ns.Type,
 			Revision:    ns.Revision,
-			TemplateRef: nstemplatetiers.NewTierTemplateName(changeTierRequest.Spec.TierName, ns.Type, ns.Revision), // link to the TierTemplate resource, whose name is: `<tierName>-<nsType>-<revision>`,
+			TemplateRef: ns.TemplateRef,
 		}
 	}
 	var clusterResources *toolchainv1alpha1.NSTemplateSetClusterResources
