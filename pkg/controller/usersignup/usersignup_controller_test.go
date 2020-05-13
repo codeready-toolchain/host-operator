@@ -54,30 +54,34 @@ var basicNSTemplateTier = &toolchainv1alpha1.NSTemplateTier{
 	Spec: toolchainv1alpha1.NSTemplateTierSpec{
 		Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 			{
-				Type:     "code",
-				Revision: "123456a",
-				Template: templatev1.Template{
+				Type:        "code",
+				Revision:    "123456a",
+				TemplateRef: "basic-code-123456a",
+				Template:    templatev1.Template{
 					// does not need to be filled
 				},
 			},
 			{
-				Type:     "dev",
-				Revision: "123456b",
-				Template: templatev1.Template{
+				Type:        "dev",
+				Revision:    "123456b",
+				TemplateRef: "basic-dev-123456b",
+				Template:    templatev1.Template{
 					// does not need to be filled
 				},
 			},
 			{
-				Type:     "stage",
-				Revision: "123456c",
-				Template: templatev1.Template{
+				Type:        "stage",
+				Revision:    "123456c",
+				TemplateRef: "basic-stage-123456c",
+				Template:    templatev1.Template{
 					// does not need to be filled
 				},
 			},
 		},
 		ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-			Revision: "654321b",
-			Template: templatev1.Template{
+			Revision:    "654321b",
+			TemplateRef: "basic-clusterresources-654321b",
+			Template:    templatev1.Template{
 				// does not need to be filled
 			},
 		},
@@ -114,17 +118,20 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 		switch ns.Type {
 		case "code":
 			assert.Equal(t, "123456a", ns.Revision)
+			assert.Equal(t, "basic-code-123456a", ns.TemplateRef)
 		case "dev":
 			assert.Equal(t, "123456b", ns.Revision)
+			assert.Equal(t, "basic-dev-123456b", ns.TemplateRef)
 		case "stage":
 			assert.Equal(t, "123456c", ns.Revision)
+			assert.Equal(t, "basic-stage-123456c", ns.TemplateRef)
 		default:
 			t.Fatalf("unexpected namespace type: %s", ns.Type)
 		}
 	}
 	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
-	assert.NotEmpty(t, "654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.Template)
 	assert.Equal(t, "654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.Revision)
+	assert.Equal(t, "basic-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
 }
 
 func TestReadUserApprovalPolicy(t *testing.T) {
@@ -171,22 +178,29 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 3)
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
-			Type:     "code",
-			Revision: "123456a",
-			Template: "",
+			Type:        "code",
+			Revision:    "123456a",
+			TemplateRef: "basic-code-123456a",
+			Template:    "",
 		})
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
-			Type:     "dev",
-			Revision: "123456b",
-			Template: "",
+			Type:        "dev",
+			Revision:    "123456b",
+			TemplateRef: "basic-dev-123456b",
+			Template:    "",
 		})
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
-			Type:     "stage",
-			Revision: "123456c",
-			Template: "",
+			Type:        "stage",
+			Revision:    "123456c",
+			TemplateRef: "basic-stage-123456c",
+			Template:    "",
 		})
+	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
+	assert.Equal(t, "654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.Revision)
+	assert.Equal(t, "basic-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
+	assert.Empty(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.Template)
 
 	// Lookup the user signup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
