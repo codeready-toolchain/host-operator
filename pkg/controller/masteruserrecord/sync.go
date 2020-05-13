@@ -243,7 +243,6 @@ func (s *Synchronizer) alignReadiness() bool {
 		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisionedNotificationCreated())
 	}
 
-	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
 	return true
 }
 
