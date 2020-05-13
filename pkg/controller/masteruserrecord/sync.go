@@ -91,7 +91,12 @@ func (s *Synchronizer) synchronizeStatus() error {
 			s.record.Status.UserAccounts[index] = recordStatusUserAcc
 		}
 
-		if !s.alignReadiness() {
+		ready, err := s.alignReadiness()
+		if err != nil {
+			return err
+		}
+
+		if !ready {
 			s.alignDisabled()
 		}
 
@@ -216,10 +221,10 @@ func (s *Synchronizer) alignDisabled() {
 }
 
 // alignReadiness updates the status to Provisioned and returns true if all the embedded UserAccounts are ready
-func (s *Synchronizer) alignReadiness() bool {
+func (s *Synchronizer) alignReadiness() (bool, error) {
 	for _, uaStatus := range s.record.Status.UserAccounts {
 		if !condition.IsTrue(uaStatus.Conditions, toolchainv1alpha1.ConditionReady) {
-			return false
+			return false, nil
 		}
 	}
 
@@ -238,12 +243,12 @@ func (s *Synchronizer) alignReadiness() bool {
 
 		if err := s.hostClient.Create(context.TODO(), notification); err != nil {
 			s.logger.Error(err, "failed to create user provisioned notification")
-			return false
+			return false, err
 		}
 		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisionedNotificationCreated())
 	}
 
-	return true
+	return true, nil
 }
 
 func getUserAccountStatus(clusterName string, record *toolchainv1alpha1.MasterUserRecord) (toolchainv1alpha1.UserAccountStatusEmbedded, int) {
