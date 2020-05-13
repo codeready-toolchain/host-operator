@@ -154,7 +154,7 @@ func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierReque
 	if nsTemplateTier.Spec.ClusterResources != nil {
 		clusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
 			Revision: nsTemplateTier.Spec.ClusterResources.Revision,
-			//TemplateRef: nstemplatetiers.NewTierTemplateName(changeTierRequest.Spec.TierName, nstemplatetiers.ClusterResources, nsTemplateTier.Spec.ClusterResources.Revision), // link to the TierTemplate resource, whose name is: `<tierName>-<nsType>-<revision>`,
+			TemplateRef: nsTemplateTier.Spec.ClusterResources.TemplateRef,
 		}
 	} else {
 		log.Info("NSTemplateTier has no cluster resources", "name", nsTemplateTier.Name)
