@@ -9,9 +9,8 @@ import (
 	"reflect"
 	"time"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
@@ -19,6 +18,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -237,7 +237,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 			},
 			Spec: toolchainv1alpha1.NotificationSpec{
 				UserID:   s.record.Spec.UserID,
-				Template: "userprovisioned",
+				Template: notificationtemplates.UserProvisioned.Name,
 			},
 		}
 

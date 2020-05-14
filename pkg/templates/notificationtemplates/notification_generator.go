@@ -9,17 +9,18 @@ import (
 )
 
 var notificationTemplates map[string]NotificationTemplate
+var UserProvisioned, _, _ = GetNotificationTemplate("userprovisioned")
 
 // NotificationTemplate contains the template subject and content
 type NotificationTemplate struct {
 	Subject string
 	Content string
+	Name    string
 }
 
 // GetNotificationTemplate returns a notification subject, body and a boolean
 // indicating whether or not a template was found. Otherwise, an error will be returned
 func GetNotificationTemplate(name string) (*NotificationTemplate, bool, error) {
-
 	assets := assets.NewAssets(AssetNames, Asset)
 	templates, err := loadTemplates(assets)
 	if err != nil {
@@ -50,6 +51,7 @@ func loadTemplates(assets assets.Assets) (map[string]NotificationTemplate, error
 		filename := segments[1]
 
 		template := notificationTemplates[directoryName]
+		template.Name = directoryName
 		switch filename {
 		case "notification.html":
 			template.Content = string(content)
