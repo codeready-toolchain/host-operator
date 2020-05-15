@@ -242,7 +242,6 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 		}
 
 		if err := s.hostClient.Create(context.TODO(), notification); err != nil {
-			s.logger.Error(err, "failed to create user provisioned notification")
 			return false, err
 		}
 		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisionedNotificationCreated())

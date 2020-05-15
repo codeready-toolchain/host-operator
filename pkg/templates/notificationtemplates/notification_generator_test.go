@@ -35,18 +35,10 @@ func TestGetNotificationTemplate(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
-			require.NotNil(t, template["userprovisioned"])
+			require.NotEmpty(t, template["userprovisioned"])
 			assert.Equal(t, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned", template["userprovisioned"].Subject)
 			assert.Contains(t, template["userprovisioned"].Content, "You are receiving this email because you have an online <a href={{.RegistrationURL}}>Red Hat CodeReady Toolchain</a>")
-		})
-		t.Run("ensure cache is used", func(t *testing.T) {
-			// when
-			defer resetNotificationTemplateCache()
-
-			require.NotEmpty(t, UserProvisioned)
-			assert.Equal(t, "userprovisioned", UserProvisioned.Name)
-			assert.Equal(t, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned", UserProvisioned.Subject)
-			assert.Contains(t, UserProvisioned.Content, "You are receiving this email because you have an online <a href={{.RegistrationURL}}>Red Hat CodeReady Toolchain</a>")
+			assert.Equal(t, template["userprovisioned"], *UserProvisioned)
 		})
 	})
 	t.Run("failures", func(t *testing.T) {
