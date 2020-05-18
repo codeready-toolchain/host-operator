@@ -16,7 +16,7 @@ RUN yum install epel-release -y \
     && yum install  https://centos7.iuscommunity.org/ius-release.rpm -y \
     && yum install --enablerepo=centosplus install -y --quiet \
     findutils \
-    git2u-all \
+    git224-all \
     make \
     procps-ng \
     tar \
