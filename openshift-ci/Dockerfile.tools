@@ -14,9 +14,9 @@ ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 
 RUN yum install epel-release -y \
     && yum install  https://centos7.iuscommunity.org/ius-release.rpm -y \
-    && yum install --enablerepo=centosplus install -y --quiet \
+    && yum install --enablerepo=centosplus -y --quiet \
     findutils \
-    git2u-all \
+    git224-all \
     make \
     procps-ng \
     tar \
