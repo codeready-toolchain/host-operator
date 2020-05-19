@@ -144,15 +144,12 @@ func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierReque
 	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nsTemplateTier.Spec.Namespaces))
 	for i, ns := range nsTemplateTier.Spec.Namespaces {
 		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
-			Type:        ns.Type,
-			Revision:    ns.Revision,
 			TemplateRef: ns.TemplateRef,
 		}
 	}
 	var clusterResources *toolchainv1alpha1.NSTemplateSetClusterResources
 	if nsTemplateTier.Spec.ClusterResources != nil {
 		clusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
-			Revision: nsTemplateTier.Spec.ClusterResources.Revision,
 			TemplateRef: nsTemplateTier.Spec.ClusterResources.TemplateRef,
 		}
 	} else {

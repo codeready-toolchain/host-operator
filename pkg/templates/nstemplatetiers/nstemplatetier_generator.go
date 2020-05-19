@@ -51,7 +51,7 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 		log.Info("TierTemplate resource created", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
 	}
 	// create the NSTemplateTiers
-	tmplTiers, err := newNSTemplateTiers(decoder, namespace, templatesByTier)
+	tmplTiers, err := newNSTemplateTiers(namespace, templatesByTier)
 	if err != nil {
 		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
 	}
@@ -223,10 +223,10 @@ func NewTierTemplateName(tier, kind, revision string) string {
 }
 
 // newNSTemplateTiers generates all NSTemplateTier resources, indexed by their associated tier
-func newNSTemplateTiers(decoder runtime.Decoder, namespace string, templatesByTier map[string]*templates) (map[string]*toolchainv1alpha1.NSTemplateTier, error) {
+func newNSTemplateTiers(namespace string, templatesByTier map[string]*templates) (map[string]*toolchainv1alpha1.NSTemplateTier, error) {
 	tiers := make(map[string]*toolchainv1alpha1.NSTemplateTier, len(templatesByTier))
 	for tier, tmpls := range templatesByTier {
-		tmpl, err := newNSTemplateTier(decoder, namespace, tier, *tmpls)
+		tmpl, err := newNSTemplateTier(namespace, tier, *tmpls)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate NSTemplateTiers")
 		}
@@ -264,7 +264,7 @@ func newNSTemplateTiers(decoder runtime.Decoder, namespace string, templatesByTi
 //       template: >
 //         <yaml-ns-template>
 // ------
-func newNSTemplateTier(decoder runtime.Decoder, namespace, tier string, tmpls templates) (*toolchainv1alpha1.NSTemplateTier, error) {
+func newNSTemplateTier(namespace, tier string, tmpls templates) (*toolchainv1alpha1.NSTemplateTier, error) {
 	// retrieve the namespace types and order them, so we can compare
 	// with the expected templates during the tests
 	namespaceKinds := make([]string, 0, len(tmpls.namespaceTemplates))
@@ -280,31 +280,14 @@ func newNSTemplateTier(decoder runtime.Decoder, namespace, tier string, tmpls te
 		Spec: toolchainv1alpha1.NSTemplateTierSpec{},
 	}
 	for _, kind := range namespaceKinds {
-		// convert the content into a templatev1.Template
-		tmplObj := &templatev1.Template{}
-		_, _, err := decoder.Decode(tmpls.namespaceTemplates[kind].content, nil, tmplObj)
-		if err != nil {
-			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
-		}
 		// add it to the NSTemplateTier obj
 		result.Spec.Namespaces = append(result.Spec.Namespaces, toolchainv1alpha1.NSTemplateTierNamespace{
-			Type:        kind,
-			Revision:    tmpls.namespaceTemplates[kind].revision,                                  // deprecated
-			Template:    *tmplObj,                                                                 // deprecated
 			TemplateRef: NewTierTemplateName(tier, kind, tmpls.namespaceTemplates[kind].revision), // link to the TierTemplate resource, whose name is: `<tierName>-<nsType>-<revision>`
 		})
 	}
 	// also, add the cluster resource template+revision if it exists
 	if tmpls.clusterTemplate != nil {
-		// convert the content into a templatev1.Template
-		tmplObj := &templatev1.Template{}
-		_, _, err := decoder.Decode(tmpls.clusterTemplate.content, nil, tmplObj)
-		if err != nil {
-			return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tier)
-		}
 		result.Spec.ClusterResources = &toolchainv1alpha1.NSTemplateTierClusterResources{
-			Revision:    tmpls.clusterTemplate.revision,
-			Template:    *tmplObj,
 			TemplateRef: NewTierTemplateName(tier, ClusterResources, tmpls.clusterTemplate.revision), // link to the TierTemplate resource, whose name is: `<tierName>-<nsType>-<revision>`
 		}
 	}

@@ -170,7 +170,6 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 func TestNewNSTemplateTier(t *testing.T) {
 
 	s := scheme.Scheme
-	decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 
@@ -184,11 +183,10 @@ func TestNewNSTemplateTier(t *testing.T) {
 			require.NoError(t, err)
 			namespace := "host-operator-" + uuid.NewV4().String()[:7]
 			// when
-			tmplTiers, err := newNSTemplateTiers(decoder, namespace, templatesByTier)
+			tmplTiers, err := newNSTemplateTiers(namespace, templatesByTier)
 			// then
 			require.NoError(t, err)
 			require.NotEmpty(t, tmplTiers)
-			decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
 			for _, actual := range tmplTiers {
 				tier := actual.Name
 				assert.Equal(t, namespace, actual.Namespace)
@@ -196,19 +194,15 @@ func TestNewNSTemplateTier(t *testing.T) {
 				for kind, tmpl := range templatesByTier[tier].namespaceTemplates {
 					found := false
 					for _, ns := range actual.Spec.Namespaces {
-						if ns.Type != kind {
-							continue
+						if ns.TemplateRef == tier+"-"+kind+"-"+tmpl.revision {
+							found = true
+							break
 						}
-						found = true
-						assert.Equal(t, tmpl.revision, ns.Revision)
-						assertNamespaceTemplate(t, decoder, ns.Template, tier, ns.Type)
-						break
 					}
 					assert.True(t, found, "the namespace with the type wasn't found", "ns-type", kind)
 				}
 				require.NotNil(t, actual.Spec.ClusterResources)
-				assert.Equal(t, templatesByTier[tier].clusterTemplate.revision, actual.Spec.ClusterResources.Revision)
-				assertClusterResourcesTemplate(t, decoder, actual.Spec.ClusterResources.Template, tier)
+				assert.Equal(t, tier+"-"+"clusterresources"+"-"+templatesByTier[tier].clusterTemplate.revision, actual.Spec.ClusterResources.TemplateRef)
 			}
 		})
 
@@ -239,7 +233,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 					// given
 					tmpls := templatesByTier[tier]
 					// when
-					actual, err := newNSTemplateTier(decoder, namespace, tier, *tmpls)
+					actual, err := newNSTemplateTier(namespace, tier, *tmpls)
 					// then
 					require.NoError(t, err)
 					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, namespaceRevisions[tier], clusterResourceQuotaRevisions[tier])
@@ -251,29 +245,6 @@ func TestNewNSTemplateTier(t *testing.T) {
 					assert.Equal(t, expected.Spec, actual.Spec)
 				})
 			}
-		})
-	})
-
-	t.Run("failures", func(t *testing.T) {
-
-		t.Run("invalid template", func(t *testing.T) {
-			// given
-			fakeAssets := assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
-				if name == "metadata.yaml" {
-					return testnstemplatetiers.Asset(name)
-				}
-				// error occurs when fetching the content of the 'advanced-code.yaml' template
-				return []byte("invalid"), nil // return an invalid YAML represention of a Template
-			})
-			namespace := "host-operator-" + uuid.NewV4().String()[:7]
-			templatesByTier, err := loadTemplatesByTiers(fakeAssets)
-			require.NoError(t, err)
-			advancedTemplates := templatesByTier["advanced"]
-			// when
-			_, err = newNSTemplateTier(decoder, namespace, "advanced", *advancedTemplates)
-			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to generate 'advanced' NSTemplateTier manifest: couldn't get version/kind; json parse error")
 		})
 	})
 }
@@ -532,7 +503,6 @@ func TestNewNSTemplateTiers(t *testing.T) {
 
 	// given
 	s := scheme.Scheme
-	decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 
@@ -543,7 +513,7 @@ func TestNewNSTemplateTiers(t *testing.T) {
 		require.NoError(t, err)
 		namespace := "host-operator-" + uuid.NewV4().String()[:7]
 		// when
-		tiers, err := newNSTemplateTiers(decoder, namespace, templatesByTier)
+		tiers, err := newNSTemplateTiers(namespace, templatesByTier)
 		// then
 		require.NoError(t, err)
 		require.Len(t, tiers, 4)
@@ -553,16 +523,13 @@ func TestNewNSTemplateTiers(t *testing.T) {
 			assert.Equal(t, name, tier.ObjectMeta.Name)
 			assert.Equal(t, namespace, tier.ObjectMeta.Namespace)
 			for _, ns := range tier.Spec.Namespaces {
-				assert.NotEmpty(t, ns.Revision)
-				assert.NotEmpty(t, ns.Type)
-				assert.NotEmpty(t, ns.Template)
+				assert.NotEmpty(t, ns.TemplateRef)
 			}
 			if name == "nocluster" {
 				assert.Nil(t, tier.Spec.ClusterResources)
 			} else {
 				require.NotNil(t, tier.Spec.ClusterResources)
-				assert.NotEmpty(t, tier.Spec.ClusterResources.Revision)
-				assert.NotEmpty(t, tier.Spec.ClusterResources.Template)
+				assert.NotEmpty(t, tier.Spec.ClusterResources.TemplateRef)
 			}
 		}
 	})
