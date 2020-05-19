@@ -102,7 +102,7 @@ spec:
                                   contains the template to use
                                 type: string
                             required:
-                            - revision
+                            - templateRef
                             type: object
                           namespaces:
                             description: The namespace templates
@@ -127,8 +127,7 @@ spec:
                                     ide|cicd|stage|default'
                                   type: string
                               required:
-                              - revision
-                              - type
+                              - templateRef
                               type: object
                             type: array
                           tierName:
