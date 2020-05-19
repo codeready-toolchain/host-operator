@@ -245,7 +245,6 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 			return false, err
 		}
 		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisionedNotificationCreated())
-		fmt.Printf("TINAAAAAAAAAAA STATUS %s", s.record.Status.Conditions)
 	}
 
 	return true, nil
