@@ -46,6 +46,8 @@ spec:
                     exists in the host cluster and which contains the template to
                     use
                   type: string
+              required:
+              - templateRef
               type: object
             namespaces:
               description: The namespace templates
@@ -58,6 +60,8 @@ spec:
                       which exists in the host cluster and which contains the template
                       to use
                     type: string
+                required:
+                - templateRef
                 type: object
               type: array
           required:
