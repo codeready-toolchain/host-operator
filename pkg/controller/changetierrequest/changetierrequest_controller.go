@@ -7,6 +7,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
@@ -141,28 +142,7 @@ func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierReque
 		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to get NSTemplateTier with name %s", changeTierRequest.Spec.TierName)
 	}
 
-	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nsTemplateTier.Spec.Namespaces))
-	for i, ns := range nsTemplateTier.Spec.Namespaces {
-		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
-			Type:        ns.Type,
-			Revision:    ns.Revision,
-			TemplateRef: ns.TemplateRef,
-		}
-	}
-	var clusterResources *toolchainv1alpha1.NSTemplateSetClusterResources
-	if nsTemplateTier.Spec.ClusterResources != nil {
-		clusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
-			Revision: nsTemplateTier.Spec.ClusterResources.Revision,
-			TemplateRef: nsTemplateTier.Spec.ClusterResources.TemplateRef,
-		}
-	} else {
-		log.Info("NSTemplateTier has no cluster resources", "name", nsTemplateTier.Name)
-	}
-	newNsTemplateSet := toolchainv1alpha1.NSTemplateSetSpec{
-		TierName:         changeTierRequest.Spec.TierName,
-		Namespaces:       namespaces,
-		ClusterResources: clusterResources,
-	}
+	newNsTemplateSet := usersignup.NewNSTemplateSetSpec(nsTemplateTier)
 	changed := false
 	for i, ua := range mur.Spec.UserAccounts {
 		if changeTierRequest.Spec.TargetCluster != "" {

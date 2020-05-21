@@ -20,7 +20,6 @@ import (
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -47,6 +46,8 @@ type BannedUserToUserSignupMapper struct {
 }
 
 type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error
+
+const defaultTierName = "basic"
 
 func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Request {
 	if bu, ok := obj.Object.(*toolchainv1alpha1.BannedUser); ok {
@@ -265,6 +266,12 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Failed to list MasterUserRecords")
 	}
 
+	// look-up the `basic` NSTemplateTier to get the NS templates
+	nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, request.Namespace)
+	if err != nil {
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusNoTemplateTierAvailable, err, "")
+	}
+
 	murs := murList.Items
 	// If we found more than one MasterUserRecord, then die
 	if len(murs) > 1 {
@@ -281,6 +288,15 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		// If the user has been deactivated, then we need to delete the MUR
 		if instance.Spec.Deactivated {
 			return r.DeleteMasterUserRecord(&mur, instance, reqLogger, r.setStatusDeactivating, r.setStatusFailedToDeleteMUR)
+		}
+
+		// check if anything in the MUR chould be migrated/fixed
+		changed, masterUserRecord := migrateMurIfNecessary(&mur, nstemplateTier)
+		if changed {
+			if err := r.client.Update(context.TODO(), masterUserRecord); err != nil {
+				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
+			}
+			return reconcile.Result{}, nil
 		}
 
 		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
@@ -342,16 +358,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				return reconcile.Result{}, err
 			}
 		}
-		// look-up the `basic` NSTemplateTier to get the NS templates
-		var nstemplateTier toolchainv1alpha1.NSTemplateTier
-		err := r.client.Get(context.TODO(), types.NamespacedName{
-			Namespace: request.Namespace, // assume that NSTemplateTier were created in the same NS as Usersignups
-			Name:      "basic",
-		}, &nstemplateTier)
-		if err != nil {
-			// let's requeue until the NSTemplateTier resource is available
-			return reconcile.Result{Requeue: true}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusNoTemplateTierAvailable, err, "")
-		}
+
 		// Provision the MasterUserRecord
 		err = r.provisionMasterUserRecord(instance, targetCluster, nstemplateTier, reqLogger)
 		if err != nil {
@@ -362,6 +369,12 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchainv1alpha1.NSTemplateTier, error) {
+	nstemplateTier := &toolchainv1alpha1.NSTemplateTier{}
+	err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, nstemplateTier)
+	return nstemplateTier, err
 }
 
 func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
@@ -421,40 +434,7 @@ func transformUsername(username string) string {
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
 func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string,
-	nstemplateTier toolchainv1alpha1.NSTemplateTier, logger logr.Logger) error {
-
-	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nstemplateTier.Spec.Namespaces))
-	for i, ns := range nstemplateTier.Spec.Namespaces {
-		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
-			Type:        ns.Type,
-			Revision:    ns.Revision,
-			TemplateRef: ns.TemplateRef,
-		}
-	}
-	var clusterResources *toolchainv1alpha1.NSTemplateSetClusterResources
-	if nstemplateTier.Spec.ClusterResources != nil {
-		clusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
-			Revision:    nstemplateTier.Spec.ClusterResources.Revision,
-			TemplateRef: nstemplateTier.Spec.ClusterResources.TemplateRef,
-		}
-	} else {
-		logger.Info("NSTemplateTier has no cluster resources", "name", nstemplateTier.Name)
-	}
-	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
-		{
-			TargetCluster: targetCluster,
-			Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
-				UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
-					NSLimit: "default",
-					NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
-						TierName:         nstemplateTier.Name,
-						Namespaces:       namespaces,
-						ClusterResources: clusterResources,
-					},
-				},
-			},
-		},
-	}
+	nstemplateTier *toolchainv1alpha1.NSTemplateTier, logger logr.Logger) error {
 
 	// TODO Update the MasterUserRecord with NSTemplateTier values
 	// SEE https://jira.coreos.com/browse/CRT-74
@@ -465,19 +445,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			"Error generating compliant username for %s", userSignup.Spec.Username)
 	}
 
-	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
-
-	mur := &toolchainv1alpha1.MasterUserRecord{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      compliantUsername,
-			Namespace: userSignup.Namespace,
-			Labels:    labels,
-		},
-		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserAccounts: userAccounts,
-			UserID:       userSignup.Name,
-		},
-	}
+	mur := newMasterUserRecord(nstemplateTier, compliantUsername, userSignup.Namespace, targetCluster, userSignup.Name)
 
 	err = controllerutil.SetControllerReference(userSignup, mur, r.scheme)
 	if err != nil {
