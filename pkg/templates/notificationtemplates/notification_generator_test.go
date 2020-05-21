@@ -31,7 +31,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			defer resetNotificationTemplateCache()
 			_, _, err := GetNotificationTemplate("userprovisioned")
 			require.NoError(t, err)
-			template, err := loadTemplates(assets.NewAssets(nil, nil))
+			template, err := loadTemplates()
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -51,7 +51,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			})
 
 			// when
-			template, err := loadTemplates(fakeAssets)
+			template, err := templatesForAssets(fakeAssets)
 
 			// then
 			require.Error(t, err)
@@ -69,7 +69,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			})
 
 			// when
-			template, err := loadTemplates(fakeAssets)
+			template, err := templatesForAssets(fakeAssets)
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
@@ -86,7 +86,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			})
 
 			// when
-			template, err := loadTemplates(fakeAssets)
+			template, err := templatesForAssets(fakeAssets)
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
