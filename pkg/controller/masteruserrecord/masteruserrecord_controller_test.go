@@ -534,9 +534,17 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		require.NoError(t, err)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeProvisioned()).
+			HasConditions(toBeProvisioned(), toBeProvisionedNotificationCreated()).
 			HasStatusUserAccounts(test.MemberClusterName, "member2-cluster").
 			HasFinalizer()
+
+		// Get the notification resource and verify it
+		notification := toolchainv1alpha1.Notification{}
+		hostClient.Get(context.TODO(), namespacedName(mur.Namespace, userAccount.Name+"-provisioned"), &notification)
+		assert.Equal(t, notification.Spec.UserID, userAccount.Spec.UserID)
+		assert.Equal(t, notification.Spec.Template, "userprovisioned")
+		assert.Equal(t, notification.Name, userAccount.Name+"-provisioned")
+		assert.Equal(t, notification.Namespace, mur.Namespace)
 	})
 }
 

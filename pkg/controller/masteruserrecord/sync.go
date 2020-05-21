@@ -10,6 +10,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
@@ -17,6 +18,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/pkg/errors"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -89,7 +91,12 @@ func (s *Synchronizer) synchronizeStatus() error {
 			s.record.Status.UserAccounts[index] = recordStatusUserAcc
 		}
 
-		if !s.alignReadiness() {
+		ready, err := s.alignReadiness()
+		if err != nil {
+			return err
+		}
+
+		if !ready {
 			s.alignDisabled()
 		}
 
@@ -214,14 +221,33 @@ func (s *Synchronizer) alignDisabled() {
 }
 
 // alignReadiness updates the status to Provisioned and returns true if all the embedded UserAccounts are ready
-func (s *Synchronizer) alignReadiness() bool {
+func (s *Synchronizer) alignReadiness() (bool, error) {
 	for _, uaStatus := range s.record.Status.UserAccounts {
 		if !condition.IsTrue(uaStatus.Conditions, toolchainv1alpha1.ConditionReady) {
-			return false
+			return false, nil
 		}
 	}
+
 	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
-	return true
+	if condition.IsNotTrue(s.record.Status.Conditions, toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated) {
+		notification := &toolchainv1alpha1.Notification{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      s.record.Name + "-provisioned",
+				Namespace: s.record.Namespace,
+			},
+			Spec: toolchainv1alpha1.NotificationSpec{
+				UserID:   s.record.Spec.UserID,
+				Template: notificationtemplates.UserProvisioned.Name,
+			},
+		}
+
+		if err := s.hostClient.Create(context.TODO(), notification); err != nil {
+			return false, err
+		}
+		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisionedNotificationCreated())
+	}
+
+	return true, nil
 }
 
 func getUserAccountStatus(clusterName string, record *toolchainv1alpha1.MasterUserRecord) (toolchainv1alpha1.UserAccountStatusEmbedded, int) {
