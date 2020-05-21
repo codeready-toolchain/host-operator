@@ -167,12 +167,6 @@ spec:
       kind: Notification
       name: notifications.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: NotificationTemplate defines a notification template in the CodeReady
-        Toolchain
-      displayName: NotificationTemplate
-      kind: NotificationTemplate
-      name: notificationtemplates.toolchain.dev.openshift.com
-      version: v1alpha1
     - description: NSTemplateTier configures user environment via templates used for
         namespaces the user has access to
       displayName: Namespace Template Tier
