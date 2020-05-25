@@ -109,11 +109,27 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		// given
 		nSTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
 		mur := newMasterUserRecord(nSTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
-		// mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces
-		for index := range mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces {
-			mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces[index].TemplateRef = ""
+		mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []v1alpha1.NSTemplateSetNamespace{
+			{
+				Type:        "dev",
+				Revision:    "123abc1",
+				TemplateRef: "",
+			},
+			{
+				Type:        "stage",
+				Revision:    "123abc2",
+				TemplateRef: "",
+			},
+			{
+				Type:        "extra",
+				Revision:    "123abc3",
+				TemplateRef: "",
+			},
 		}
-		mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef = ""
+		mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &v1alpha1.NSTemplateSetClusterResources{
+			Revision:    "654321b",
+			TemplateRef: "",
+		}
 
 		// when
 		changed, changedMur := migrateMurIfNecessary(mur, nSTemplateTier)

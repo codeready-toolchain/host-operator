@@ -21,12 +21,15 @@ func migrateMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTi
 			for nsIndex, ns := range nsTemplateSet.Namespaces {
 				if ns.TemplateRef == "" {
 					ref := nstemplatetiers.NewTierTemplateName(nsTemplateSet.TierName, ns.Type, ns.Revision)
+					mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.Namespaces[nsIndex].Type = ""     // reset to allow for comparison in test. Field will be removed soon
+					mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.Namespaces[nsIndex].Revision = "" // reset to allow for comparison in test. Field will be removed soon
 					mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.Namespaces[nsIndex].TemplateRef = ref
 					changed = true
 				}
 			}
 			if nsTemplateSet.ClusterResources != nil && nsTemplateSet.ClusterResources.TemplateRef == "" {
 				ref := nstemplatetiers.NewTierTemplateName(nsTemplateSet.TierName, nstemplatetiers.ClusterResources, nsTemplateSet.ClusterResources.Revision)
+				mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.ClusterResources.Revision = "" // reset to allow for comparison in test. Field will be removed soon
 				mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.ClusterResources.TemplateRef = ref
 				changed = true
 			}
