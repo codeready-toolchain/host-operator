@@ -8,7 +8,6 @@ require (
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
-	github.com/golangci/golangci-lint v1.27.0 // indirect
 	github.com/gophercloud/gophercloud v0.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -66,7 +65,7 @@ replace (
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200204173128-addea2498afe // avoids case-insensitive import collision: "github.com/googleapis/gnostic/openapiv2" and "github.com/googleapis/gnostic/OpenAPIv2"
 )
 
-replace github.com/codeready-toolchain/api => ../api
-replace github.com/codeready-toolchain/toolchain-common => ../toolchain-common
+replace github.com/codeready-toolchain/api => github.com/xcoulon/api v0.0.0-20200520100121-e79db8363c96
+replace github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20200520123732-2bc10e7d63bf
 
 go 1.13
