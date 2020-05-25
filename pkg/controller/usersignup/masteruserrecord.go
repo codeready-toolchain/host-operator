@@ -43,15 +43,12 @@ func NewNSTemplateSetSpec(nstemplateTier *toolchainv1alpha1.NSTemplateTier) tool
 	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nstemplateTier.Spec.Namespaces))
 	for i, ns := range nstemplateTier.Spec.Namespaces {
 		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
-			Type:        ns.Type,
-			Revision:    ns.Revision,
 			TemplateRef: ns.TemplateRef,
 		}
 	}
 	var clusterResources *toolchainv1alpha1.NSTemplateSetClusterResources
 	if nstemplateTier.Spec.ClusterResources != nil {
 		clusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
-			Revision:    nstemplateTier.Spec.ClusterResources.Revision,
 			TemplateRef: nstemplateTier.Spec.ClusterResources.TemplateRef,
 		}
 	}
