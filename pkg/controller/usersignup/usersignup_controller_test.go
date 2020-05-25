@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -44,28 +45,39 @@ const (
 	operatorNamespace = "toolchain-host-operator"
 )
 
-var basicNSTemplateTier = &toolchainv1alpha1.NSTemplateTier{
-	ObjectMeta: metav1.ObjectMeta{
-		Namespace: operatorNamespace,
-		Name:      "basic",
-	},
-	Spec: toolchainv1alpha1.NSTemplateTierSpec{
-		Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
-			{
-				TemplateRef: "basic-code-123456a",
+func newNsTemplateTier(tierName, clusterRevision string, nsTypes ...string) *toolchainv1alpha1.NSTemplateTier {
+	namespaces := make([]toolchainv1alpha1.NSTemplateTierNamespace, len(nsTypes))
+	for i, nsType := range nsTypes {
+		revision := fmt.Sprintf("123abc%d", i+1)
+		namespaces[i] = toolchainv1alpha1.NSTemplateTierNamespace{
+			Type:        nsType,
+			Revision:    revision,
+			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, nsType, revision),
+			Template:    templatev1.Template{
+				// does not need to be filled
 			},
-			{
-				TemplateRef: "basic-dev-123456b",
-			},
-			{
-				TemplateRef: "basic-stage-123456c",
+		}
+	}
+
+	return &toolchainv1alpha1.NSTemplateTier{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: operatorNamespace,
+			Name:      tierName,
+		},
+		Spec: toolchainv1alpha1.NSTemplateTierSpec{
+			Namespaces: namespaces,
+			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+				Revision:    clusterRevision,
+				TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, "clusterresources", clusterRevision),
+				Template:    templatev1.Template{
+					// does not need to be filled
+				},
 			},
 		},
-		ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-			TemplateRef: "basic-clusterresources-654321b",
-		},
-	},
+	}
 }
+
+var basicNSTemplateTier = newNsTemplateTier("basic", "654321b", "code", "dev", "stage")
 
 func TestUserSignupCreateMUROk(t *testing.T) {
 	// given
@@ -96,14 +108,14 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	for _, ns := range mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces {
 		switch ns.Type {
 		case "code":
-			assert.Equal(t, "123456a", ns.Revision)
-			assert.Equal(t, "basic-code-123456a", ns.TemplateRef)
+			assert.Equal(t, "123abc1", ns.Revision)
+			assert.Equal(t, "basic-code-123abc1", ns.TemplateRef)
 		case "dev":
-			assert.Equal(t, "123456b", ns.Revision)
-			assert.Equal(t, "basic-dev-123456b", ns.TemplateRef)
+			assert.Equal(t, "123abc2", ns.Revision)
+			assert.Equal(t, "basic-dev-123abc2", ns.TemplateRef)
 		case "stage":
-			assert.Equal(t, "123456c", ns.Revision)
-			assert.Equal(t, "basic-stage-123456c", ns.TemplateRef)
+			assert.Equal(t, "123abc3", ns.Revision)
+			assert.Equal(t, "basic-stage-123abc3", ns.TemplateRef)
 		default:
 			t.Fatalf("unexpected namespace type: %s", ns.Type)
 		}
@@ -158,20 +170,38 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
 			Type:        "code",
+<<<<<<< HEAD
 			Revision:    "123456a",
 			TemplateRef: "basic-code-123456a",
+=======
+			Revision:    "123abc1",
+			TemplateRef: "basic-code-123abc1",
+			Template:    "",
+>>>>>>> master
 		})
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
 			Type:        "dev",
+<<<<<<< HEAD
 			Revision:    "123456b",
 			TemplateRef: "basic-dev-123456b",
+=======
+			Revision:    "123abc2",
+			TemplateRef: "basic-dev-123abc2",
+			Template:    "",
+>>>>>>> master
 		})
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
 			Type:        "stage",
+<<<<<<< HEAD
 			Revision:    "123456c",
 			TemplateRef: "basic-stage-123456c",
+=======
+			Revision:    "123abc3",
+			TemplateRef: "basic-stage-123abc3",
+			Template:    "",
+>>>>>>> master
 		})
 	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
 	assert.Equal(t, "654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.Revision)
@@ -337,20 +367,14 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 	// when
-	res, err := r.Reconcile(req)
+	_, err := r.Reconcile(req)
 	// then
 	// error reported, and request is requeued and userSignup status was updated
 	require.Error(t, err)
-	assert.Equal(t, reconcile.Result{Requeue: true}, res)
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedAutomatically",
-		},
 		v1alpha1.Condition{
 			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
@@ -368,7 +392,7 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 			Approved: false,
 		},
 	}
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic))
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 	createMemberCluster(r.client, "member1", notReady)
 	createMemberCluster(r.client, "member2", notReady)
 	defer clearMemberClusters(r.client)
@@ -403,7 +427,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 			Approved: false,
 		},
 	}
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic))
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 	createMemberCluster(r.client, "member1", ready, capacityExhausted)
 	createMemberCluster(r.client, "member2", ready, capacityExhausted)
 	defer clearMemberClusters(r.client)
@@ -563,7 +587,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyManual))
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyManual), basicNSTemplateTier)
 
 	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
@@ -669,7 +693,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, emptyConfigMap())
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, emptyConfigMap(), basicNSTemplateTier)
 
 	res, err := r.Reconcile(req)
 	require.NoError(t, err)
@@ -1443,7 +1467,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, mur2, configMap(configuration.UserApprovalPolicyAutomatic))
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, mur2, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	createMemberCluster(r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
@@ -1479,7 +1503,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic))
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	_, err := r.Reconcile(req)
 	require.Error(t, err)
@@ -1962,4 +1986,61 @@ func TestChangedCompliantUsername(t *testing.T) {
 
 	// the CompliantUsername and MUR name should now match
 	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+}
+
+func TestMigrateMur(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			Username:      "foo@redhat.com",
+			Approved:      true,
+			TargetCluster: "east",
+		},
+	}
+	mur := newMasterUserRecord(basicNSTemplateTier, "foo", operatorNamespace, "east", "foo")
+	expectedMur := mur.DeepCopy()
+	expectedMur.Generation = 1
+	expectedMur.ResourceVersion = "1"
+
+	// remove templateRef fields
+	for index := range mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces {
+		mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces[index].TemplateRef = ""
+	}
+	mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef = ""
+
+	t.Run("add missing templateRef fields", func(t *testing.T) {
+		// given
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier, mur)
+
+		// when
+		_, err := r.Reconcile(req)
+
+		// then verify that the MUR exists and is complete
+		require.NoError(t, err)
+		murs := &v1alpha1.MasterUserRecordList{}
+		err = r.client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+		assert.Equal(t, *expectedMur, murs.Items[0])
+	})
+
+	t.Run("fails while updating mur that is missing templateRef fields", func(t *testing.T) {
+		// given
+		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier, mur)
+		fakeClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			return fmt.Errorf("some error")
+		}
+
+		// when
+		_, err := r.Reconcile(req)
+
+		// then verify that the MUR exists and is complete
+		require.Error(t, err)
+		murs := &v1alpha1.MasterUserRecordList{}
+		err = r.client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+		assert.NotEqual(t, *expectedMur, murs.Items[0])
+	})
 }

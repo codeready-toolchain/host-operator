@@ -245,7 +245,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	uatest.Modify(userAccount, uatest.StatusCondition(toBeProvisioned()))
 
 	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, toBeProvisioned())
+	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
 }
 
 func TestSynchronizeUserAccountFailed(t *testing.T) {
@@ -536,7 +536,7 @@ func TestCheURL(t *testing.T) {
 	})
 }
 
-func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon toolchainv1alpha1.Condition) {
+func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon ...toolchainv1alpha1.Condition) {
 	l := logf.ZapLogger(true)
 	condition := userAccount.Status.Conditions[0]
 
@@ -562,7 +562,7 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchain
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
 		HasConditions(condition)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-		HasConditions(expMurCon).
+		HasConditions(expMurCon...).
 		HasStatusUserAccounts(test.MemberClusterName).
 		AllUserAccountsHaveStatusSyncIndex("123abc").
 		AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{

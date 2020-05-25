@@ -23,7 +23,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			assert.True(t, found)
-			assert.Equal(t, template.Subject, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned")
+			assert.Equal(t, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned", template.Subject)
 			assert.Contains(t, template.Content, "You are receiving this email because you have an online <a href={{.RegistrationURL}}>Red Hat CodeReady Toolchain</a>")
 		})
 		t.Run("ensure cache is used", func(t *testing.T) {
@@ -31,13 +31,14 @@ func TestGetNotificationTemplate(t *testing.T) {
 			defer resetNotificationTemplateCache()
 			_, _, err := GetNotificationTemplate("userprovisioned")
 			require.NoError(t, err)
-			template, err := loadTemplates(assets.NewAssets(nil, nil))
+			template, err := loadTemplates()
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
-			require.NotNil(t, template["userprovisioned"])
-			assert.Equal(t, template["userprovisioned"].Subject, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned")
+			require.NotEmpty(t, template["userprovisioned"])
+			assert.Equal(t, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned", template["userprovisioned"].Subject)
 			assert.Contains(t, template["userprovisioned"].Content, "You are receiving this email because you have an online <a href={{.RegistrationURL}}>Red Hat CodeReady Toolchain</a>")
+			assert.Equal(t, template["userprovisioned"], *UserProvisioned)
 		})
 	})
 	t.Run("failures", func(t *testing.T) {
@@ -50,7 +51,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			})
 
 			// when
-			template, err := loadTemplates(fakeAssets)
+			template, err := templatesForAssets(fakeAssets)
 
 			// then
 			require.Error(t, err)
@@ -68,7 +69,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			})
 
 			// when
-			template, err := loadTemplates(fakeAssets)
+			template, err := templatesForAssets(fakeAssets)
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
@@ -85,7 +86,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			})
 
 			// when
-			template, err := loadTemplates(fakeAssets)
+			template, err := templatesForAssets(fakeAssets)
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
