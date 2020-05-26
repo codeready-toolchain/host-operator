@@ -1994,11 +1994,6 @@ func TestMigrateMur(t *testing.T) {
 			TemplateRef: "basic-extra-123abc3",
 		},
 	}
-
-	// remove templateRef fields
-	for index := range mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces {
-		mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces[index].TemplateRef = ""
-	}
 	mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
 		TemplateRef: "basic-clusterresources-654321b",
 	}
