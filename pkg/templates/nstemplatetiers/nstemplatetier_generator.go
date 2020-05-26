@@ -23,11 +23,6 @@ import (
 
 var log = logf.Log.WithName("templates")
 
-const (
-	// ClusterResources the key to retrieve the cluster resources template
-	ClusterResources string = "clusterResources" // TODO: move in API and remove duplicate in https://github.com/codeready-toolchain/member-operator/blob/master/pkg/controller/nstemplateset/nstemplatetier.go#L18
-)
-
 // CreateOrUpdateResources generates the NSTemplateTier resources from the namespace templates,
 // then uses the manager's client to create or update the resources on the cluster.
 func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) error {
@@ -184,7 +179,7 @@ func newTierTemplates(decoder runtime.Decoder, namespace string, templatesByTier
 		}
 		// cluster resources templates
 		if tmpls.clusterTemplate != nil {
-			tierTmpl, err := newTierTemplate(decoder, namespace, tier, ClusterResources, *tmpls.clusterTemplate)
+			tierTmpl, err := newTierTemplate(decoder, namespace, tier, toolchainv1alpha1.ClusterResourcesTemplateType, *tmpls.clusterTemplate)
 			if err != nil {
 				return nil, err
 			}
@@ -305,7 +300,7 @@ func newNSTemplateTier(decoder runtime.Decoder, namespace, tier string, tmpls te
 		result.Spec.ClusterResources = &toolchainv1alpha1.NSTemplateTierClusterResources{
 			Revision:    tmpls.clusterTemplate.revision,
 			Template:    *tmplObj,
-			TemplateRef: NewTierTemplateName(tier, ClusterResources, tmpls.clusterTemplate.revision), // link to the TierTemplate resource, whose name is: `<tierName>-<nsType>-<revision>`
+			TemplateRef: NewTierTemplateName(tier, toolchainv1alpha1.ClusterResourcesTemplateType, tmpls.clusterTemplate.revision), // link to the TierTemplate resource, whose name is: `<tierName>-<nsType>-<revision>`
 		}
 	}
 	return result, nil
