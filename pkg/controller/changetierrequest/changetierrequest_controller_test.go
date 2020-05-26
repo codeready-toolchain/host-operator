@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
@@ -278,7 +279,7 @@ func NewNSTemplateTier(tierName, revision, clusterResourcesRevision string, nsTy
 	var clusterResources *v1alpha1.NSTemplateTierClusterResources
 	if clusterResourcesRevision != "" {
 		clusterResources = &v1alpha1.NSTemplateTierClusterResources{
-			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, nstemplatetiers.ClusterResources, clusterResourcesRevision),
+			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, toolchainv1alpha1.ClusterResourcesTemplateType, clusterResourcesRevision),
 		}
 	}
 	return &v1alpha1.NSTemplateTier{

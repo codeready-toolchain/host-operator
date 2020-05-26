@@ -290,7 +290,7 @@ func TestNewTierTemplate(t *testing.T) {
 							switch actual.Spec.Type {
 							case "dev", "code", "stage":
 								assertNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
-							case "clusterResources":
+							case "clusterresources":
 								assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
 							default:
 								t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
@@ -324,7 +324,7 @@ func TestNewTierTemplate(t *testing.T) {
 						switch actual.Spec.Type {
 						case "dev", "code", "stage":
 							assertTestNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
-						case "clusterResources":
+						case "clusterresources":
 							assertTestClusteResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
 						default:
 							t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)

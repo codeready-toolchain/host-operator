@@ -3,7 +3,7 @@ module github.com/codeready-toolchain/host-operator
 require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20200519085052-34d2a9c4a8e9
+	github.com/codeready-toolchain/api v0.0.0-20200525084630-00f2f69b8984
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20200512115123-99be69ae5627
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
@@ -65,7 +65,9 @@ replace (
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200204173128-addea2498afe // avoids case-insensitive import collision: "github.com/googleapis/gnostic/openapiv2" and "github.com/googleapis/gnostic/OpenAPIv2"
 )
 
-replace github.com/codeready-toolchain/api => github.com/xcoulon/api v0.0.0-20200520100121-e79db8363c96
-replace github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20200520123732-2bc10e7d63bf
+replace (
+	github.com/codeready-toolchain/api => github.com/xcoulon/api v0.0.0-20200526122759-6061f7c8bf85
+	github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20200526123527-0616e758768b
+)
 
 go 1.13

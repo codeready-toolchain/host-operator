@@ -28,7 +28,7 @@ func migrateMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTi
 				}
 			}
 			if nsTemplateSet.ClusterResources != nil && nsTemplateSet.ClusterResources.TemplateRef == "" {
-				ref := nstemplatetiers.NewTierTemplateName(nsTemplateSet.TierName, nstemplatetiers.ClusterResources, nsTemplateSet.ClusterResources.Revision)
+				ref := nstemplatetiers.NewTierTemplateName(nsTemplateSet.TierName, toolchainv1alpha1.ClusterResourcesTemplateType, nsTemplateSet.ClusterResources.Revision)
 				mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.ClusterResources.Revision = "" // reset to allow for comparison in test. Field will be removed soon
 				mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.ClusterResources.TemplateRef = ref
 				changed = true
