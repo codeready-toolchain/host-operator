@@ -268,11 +268,6 @@ func newNSTemplateTiers(namespace string, tierTmplsByTier map[string][]*toolchai
 func newNSTemplateTier(namespace, tier string, tierTmpls []*toolchainv1alpha1.TierTemplate) (*toolchainv1alpha1.NSTemplateTier, error) {
 	// retrieve the namespace types and order them, so we can compare
 	// with the expected templates during the tests
-	// namespaceKinds := make([]string, 0, len(tierTmpls))
-	// for kind := range tmpls.namespaceTemplates {
-	// 	namespaceKinds = append(namespaceKinds, kind)
-	// }
-	// sort.Strings(namespaceKinds)
 	result := &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tier,
