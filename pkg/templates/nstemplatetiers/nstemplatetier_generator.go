@@ -28,11 +28,11 @@ var log = logf.Log.WithName("templates")
 func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) error {
 
 	// create the TierTemplates
-	tierTmpls, err := newTierTemplates(s, namespace, assets)
+	tierTmplsByTier, err := newTierTemplates(s, namespace, assets)
 	if err != nil {
 		return errors.Wrap(err, "unable to create TierTemplates")
 	}
-	for _, tierTmpls := range tierTmpls {
+	for _, tierTmpls := range tierTmplsByTier {
 		for _, tierTmpl := range tierTmpls {
 			// using the "standard" client since we don't need to support updates on such resources, they should be immutable
 			if err := client.Create(context.TODO(), tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
@@ -42,7 +42,7 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 		}
 	}
 	// create the NSTemplateTiers
-	tmplTiers, err := newNSTemplateTiers(namespace, tierTmpls)
+	tmplTiers, err := newNSTemplateTiers(namespace, tierTmplsByTier)
 	if err != nil {
 		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
 	}
@@ -224,9 +224,9 @@ func NewTierTemplateName(tier, kind, revision string) string {
 }
 
 // newNSTemplateTiers generates all NSTemplateTier resources, indexed by their associated tier
-func newNSTemplateTiers(namespace string, tierTmpls map[string][]*toolchainv1alpha1.TierTemplate) (map[string]*toolchainv1alpha1.NSTemplateTier, error) {
-	tiers := make(map[string]*toolchainv1alpha1.NSTemplateTier, len(tierTmpls))
-	for tier, tmpls := range tierTmpls {
+func newNSTemplateTiers(namespace string, tierTmplsByTier map[string][]*toolchainv1alpha1.TierTemplate) (map[string]*toolchainv1alpha1.NSTemplateTier, error) {
+	tiers := make(map[string]*toolchainv1alpha1.NSTemplateTier, len(tierTmplsByTier))
+	for tier, tmpls := range tierTmplsByTier {
 		tmpl, err := newNSTemplateTier(namespace, tier, tmpls)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to generate NSTemplateTiers")
