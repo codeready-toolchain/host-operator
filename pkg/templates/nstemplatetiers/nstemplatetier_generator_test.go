@@ -323,7 +323,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 				// then
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), fmt.Sprintf("unable to create or update the 'advanced' NSTemplateTiers in namespace '%s'", namespace))
+				assert.Regexp(t, fmt.Sprintf("unable to create or update the '\\w+' NSTemplateTiers in namespace '%s'", namespace), err.Error())
 			})
 
 			t.Run("failed to update nstemplatetiers", func(t *testing.T) {

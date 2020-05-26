@@ -42,28 +42,21 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 		}
 	}
 	// create the NSTemplateTiers
-	tmplTiers, err := newNSTemplateTiers(namespace, tierTmplsByTier)
+	nstmplTiersByTier, err := newNSTemplateTiers(namespace, tierTmplsByTier)
 	if err != nil {
 		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
 	}
-	// sort the tiers by name so we have a predictive order of creation/update (this avoids test flakiness)
-	tmplTierKeys := make([]string, 0, len(tmplTiers))
-	for tmplTier := range tmplTiers {
-		tmplTierKeys = append(tmplTierKeys, tmplTier)
-	}
-	sort.Strings(tmplTierKeys)
 	cl := commonclient.NewApplyClient(client, s)
 
-	for _, tmplTierKey := range tmplTierKeys {
-		tmplTier := tmplTiers[tmplTierKey]
-		createdOrUpdated, err := cl.CreateOrUpdateObject(tmplTier, true, nil)
+	for _, nstmplTier := range nstmplTiersByTier {
+		createdOrUpdated, err := cl.CreateOrUpdateObject(nstmplTier, true, nil)
 		if err != nil {
-			return errors.Wrapf(err, "unable to create or update the '%s' NSTemplateTiers in namespace '%s'", tmplTier.Name, tmplTier.Namespace)
+			return errors.Wrapf(err, "unable to create or update the '%s' NSTemplateTiers in namespace '%s'", nstmplTier.Name, nstmplTier.Namespace)
 		}
 		if createdOrUpdated {
-			log.Info("NSTemplateTier resource created/updated", "namespace", tmplTier.Namespace, "name", tmplTier.Name)
+			log.Info("NSTemplateTier resource created/updated", "namespace", nstmplTier.Namespace, "name", nstmplTier.Name)
 		} else {
-			log.Info("NSTemplateTier resource was already up-to-date", "namespace", tmplTier.Namespace, "name", tmplTier.Name, "ResourceVersion", tmplTier.ResourceVersion)
+			log.Info("NSTemplateTier resource was already up-to-date", "namespace", nstmplTier.Namespace, "name", nstmplTier.Name, "ResourceVersion", nstmplTier.ResourceVersion)
 		}
 	}
 	return nil
