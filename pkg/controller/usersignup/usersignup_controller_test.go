@@ -1962,6 +1962,7 @@ func TestMigrateMur(t *testing.T) {
 		},
 	}
 	mur := newMasterUserRecord(basicNSTemplateTier, "foo", operatorNamespace, "east", "foo")
+	// override values to meet the test requirements.
 	mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []v1alpha1.NSTemplateSetNamespace{
 		{
 			Type:        "dev",
@@ -1979,6 +1980,10 @@ func TestMigrateMur(t *testing.T) {
 			TemplateRef: "",
 		},
 	}
+	mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
+		Revision:    "654321b",
+		TemplateRef: "",
+	}
 
 	expectedMur := mur.DeepCopy()
 	expectedMur.Generation = 1
@@ -1994,7 +1999,7 @@ func TestMigrateMur(t *testing.T) {
 			TemplateRef: "basic-extra-123abc3",
 		},
 	}
-	mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
+	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
 		TemplateRef: "basic-clusterresources-654321b",
 	}
 
