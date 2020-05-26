@@ -279,7 +279,7 @@ func NewNSTemplateTier(tierName, revision, clusterResourcesRevision string, nsTy
 	var clusterResources *v1alpha1.NSTemplateTierClusterResources
 	if clusterResourcesRevision != "" {
 		clusterResources = &v1alpha1.NSTemplateTierClusterResources{
-			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, toolchainv1alpha1.ClusterResourcesTemplateType, clusterResourcesRevision),
+			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, "clusterresources", clusterResourcesRevision),
 		}
 	}
 	return &v1alpha1.NSTemplateTier{
