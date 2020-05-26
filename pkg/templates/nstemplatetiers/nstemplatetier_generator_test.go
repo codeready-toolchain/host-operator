@@ -303,7 +303,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, fakeAssets)
 			// then
 			require.Error(t, err)
-			assert.Equal(t, "unable to create or update NSTemplateTiers: unable to load templates: an error", err.Error())
+			assert.Equal(t, "unable to create TierTemplates: unable to load templates: an error", err.Error()) // error occurred while creating TierTemplate resources
 		})
 
 		t.Run("nstemplatetiers", func(t *testing.T) {
@@ -368,7 +368,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
 				// then
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), fmt.Sprintf("unable to create the 'advanced-code-123456a' TierTemplate in namespace '%s'", namespace))
+				assert.Regexp(t, fmt.Sprintf("unable to create the '\\w+-\\w+-\\w+' TierTemplate in namespace '%s'", namespace), err.Error()) // we can't tell for sure which namespace will fail first, but the error should match the given regex
 			})
 		})
 	})

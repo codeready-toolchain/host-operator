@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 	texttemplate "text/template"
 
@@ -177,41 +178,47 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 		t.Run("with prod assets", func(t *testing.T) {
 			// given
+			namespace := "host-operator-" + uuid.NewV4().String()[:7]
 			assets := assets.NewAssets(AssetNames, Asset)
 			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
-			templatesByTier, err := loadTemplatesByTiers(assets)
+			tierTmpls, err := newTierTemplates(s, namespace, assets)
 			require.NoError(t, err)
-			namespace := "host-operator-" + uuid.NewV4().String()[:7]
 			// when
-			tmplTiers, err := newNSTemplateTiers(namespace, templatesByTier)
+			nstmplTiers, err := newNSTemplateTiers(namespace, tierTmpls)
 			// then
 			require.NoError(t, err)
-			require.NotEmpty(t, tmplTiers)
-			for _, actual := range tmplTiers {
-				tier := actual.Name
-				assert.Equal(t, namespace, actual.Namespace)
-				require.Len(t, actual.Spec.Namespaces, len(templatesByTier[tier].namespaceTemplates))
-				for kind, tmpl := range templatesByTier[tier].namespaceTemplates {
-					found := false
-					for _, ns := range actual.Spec.Namespaces {
-						if ns.TemplateRef == tier+"-"+kind+"-"+tmpl.revision {
-							found = true
-							break
-						}
+			require.NotEmpty(t, nstmplTiers)
+			// verify that each NSTemplateTier has the Namespaces and ClusterResources `TemplateRef` set as expected
+			for _, nstmplTier := range nstmplTiers {
+				tier := nstmplTier.Name
+				assert.Equal(t, namespace, nstmplTier.Namespace)
+				require.Len(t, nstmplTier.Spec.Namespaces, len(tierTmpls[tier])-1) // exclude clusterresources TierTemplate here
+				expectedTierTmplNames := make([]string, 0, len(tierTmpls[tier])-1)
+				var clusterResourcesTemplateRef string
+				for _, tierTmpl := range tierTmpls[tier] {
+					if strings.Contains(tierTmpl.Name, "clusterresources") {
+						clusterResourcesTemplateRef = tierTmpl.Name
+						continue // skip
 					}
-					assert.True(t, found, "the namespace with the type wasn't found", "ns-type", kind)
+					expectedTierTmplNames = append(expectedTierTmplNames, tierTmpl.Name)
 				}
-				require.NotNil(t, actual.Spec.ClusterResources)
-				assert.Equal(t, tier+"-"+"clusterresources"+"-"+templatesByTier[tier].clusterTemplate.revision, actual.Spec.ClusterResources.TemplateRef)
+				actualTemplateRefs := make([]string, 0, len(nstmplTier.Spec.Namespaces))
+				for _, ns := range nstmplTier.Spec.Namespaces {
+					actualTemplateRefs = append(actualTemplateRefs, ns.TemplateRef)
+				}
+				assert.ElementsMatch(t, expectedTierTmplNames, actualTemplateRefs)
+
+				require.NotNil(t, nstmplTier.Spec.ClusterResources)
+				assert.Equal(t, clusterResourcesTemplateRef, nstmplTier.Spec.ClusterResources.TemplateRef)
 			}
 		})
 
 		t.Run("with test assets", func(t *testing.T) {
 			// given
-			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
-			templatesByTier, err := loadTemplatesByTiers(assets)
-			require.NoError(t, err)
 			namespace := "host-operator-" + uuid.NewV4().String()[:7]
+			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+			tierTmpls, err := newTierTemplates(s, namespace, assets)
+			require.NoError(t, err)
 			namespaceRevisions := map[string]map[string]string{
 				"advanced": {
 					"code":  "123456a",
@@ -231,9 +238,9 @@ func TestNewNSTemplateTier(t *testing.T) {
 			for tier := range namespaceRevisions {
 				t.Run(tier, func(t *testing.T) {
 					// given
-					tmpls := templatesByTier[tier]
+					tmpls := tierTmpls[tier]
 					// when
-					actual, err := newNSTemplateTier(namespace, tier, *tmpls)
+					actual, err := newNSTemplateTier(namespace, tier, tmpls)
 					// then
 					require.NoError(t, err)
 					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, namespaceRevisions[tier], clusterResourceQuotaRevisions[tier])
@@ -252,9 +259,9 @@ func TestNewNSTemplateTier(t *testing.T) {
 func TestNewTierTemplate(t *testing.T) {
 
 	s := scheme.Scheme
-	decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
+	namespace := "host-operator-" + uuid.NewV4().String()[:7]
 
 	t.Run("ok", func(t *testing.T) {
 
@@ -262,33 +269,33 @@ func TestNewTierTemplate(t *testing.T) {
 			// given
 			assets := assets.NewAssets(AssetNames, Asset)
 			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
-			templatesByTier, err := loadTemplatesByTiers(assets)
-			require.NoError(t, err)
-			namespace := "host-operator-" + uuid.NewV4().String()[:7]
 			// when
-			tierTmpls, err := newTierTemplates(decoder, namespace, templatesByTier)
+			tierTmpls, err := newTierTemplates(s, namespace, assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tierTmpls, 11) // current count of template files
 			decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
 
 			resourceNameRE, err := regexp.Compile(`[a-z0-9\.-]+`)
 			require.NoError(t, err)
-			for _, actual := range tierTmpls {
-				t.Run(actual.Name, func(t *testing.T) {
-					assert.Equal(t, namespace, actual.Namespace)
-					assert.True(t, resourceNameRE.MatchString(actual.Name)) // verifies that the TierTemplate name complies with the DNS-1123 spec
-					assert.NotEmpty(t, actual.Spec.Revision)
-					assert.NotEmpty(t, actual.Spec.TierName)
-					assert.NotEmpty(t, actual.Spec.Type)
-					assert.NotEmpty(t, actual.Spec.Template)
-					switch actual.Spec.Type {
-					case "dev", "code", "stage":
-						assertNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
-					case "clusterResources":
-						assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
-					default:
-						t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
+			for tier, tmpls := range tierTmpls {
+				t.Run(tier, func(t *testing.T) {
+					for _, actual := range tmpls {
+						t.Run(actual.Name, func(t *testing.T) {
+							assert.Equal(t, namespace, actual.Namespace)
+							assert.True(t, resourceNameRE.MatchString(actual.Name)) // verifies that the TierTemplate name complies with the DNS-1123 spec
+							assert.NotEmpty(t, actual.Spec.Revision)
+							assert.NotEmpty(t, actual.Spec.TierName)
+							assert.NotEmpty(t, actual.Spec.Type)
+							assert.NotEmpty(t, actual.Spec.Template)
+							switch actual.Spec.Type {
+							case "dev", "code", "stage":
+								assertNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
+							case "clusterResources":
+								assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
+							default:
+								t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
+							}
+						})
 					}
 				})
 			}
@@ -297,33 +304,31 @@ func TestNewTierTemplate(t *testing.T) {
 		t.Run("with test assets", func(t *testing.T) {
 			// given
 			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
-			templatesByTier, err := loadTemplatesByTiers(assets)
-			require.NoError(t, err)
-			namespace := "host-operator-" + uuid.NewV4().String()[:7]
 			// when
-			tierTmpls, err := newTierTemplates(decoder, namespace, templatesByTier)
+			tierTmpls, err := newTierTemplates(s, namespace, assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tierTmpls, 14)
 			decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
 
 			resourceNameRE, err := regexp.Compile(`[a-z0-9\.-]+`)
 			require.NoError(t, err)
-			for _, actual := range tierTmpls {
-				t.Run(actual.Name, func(t *testing.T) {
-					assert.Equal(t, namespace, actual.Namespace)
-					assert.True(t, resourceNameRE.MatchString(actual.Name)) // verifies that the TierTemplate name complies with the DNS-1123 spec
-					assert.NotEmpty(t, actual.Spec.Revision)
-					assert.NotEmpty(t, actual.Spec.TierName)
-					assert.NotEmpty(t, actual.Spec.Type)
-					assert.NotEmpty(t, actual.Spec.Template)
-					switch actual.Spec.Type {
-					case "dev", "code", "stage":
-						assertTestNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
-					case "clusterResources":
-						assertTestClusteResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
-					default:
-						t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
+			for tier, tmpls := range tierTmpls {
+				t.Run(tier, func(t *testing.T) {
+					for _, actual := range tmpls {
+						assert.Equal(t, namespace, actual.Namespace)
+						assert.True(t, resourceNameRE.MatchString(actual.Name)) // verifies that the TierTemplate name complies with the DNS-1123 spec
+						assert.NotEmpty(t, actual.Spec.Revision)
+						assert.NotEmpty(t, actual.Spec.TierName)
+						assert.NotEmpty(t, actual.Spec.Type)
+						assert.NotEmpty(t, actual.Spec.Template)
+						switch actual.Spec.Type {
+						case "dev", "code", "stage":
+							assertTestNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
+						case "clusterResources":
+							assertTestClusteResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
+						default:
+							t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
+						}
 					}
 				})
 			}
@@ -341,11 +346,8 @@ func TestNewTierTemplate(t *testing.T) {
 				// error occurs when fetching the content of the 'advanced-code.yaml' template
 				return []byte("invalid"), nil // return an invalid YAML represention of a Template
 			})
-			namespace := "host-operator-" + uuid.NewV4().String()[:7]
-			templatesByTier, err := loadTemplatesByTiers(fakeAssets)
-			require.NoError(t, err)
 			// when
-			_, err = newTierTemplates(decoder, namespace, templatesByTier)
+			_, err = newTierTemplates(s, namespace, fakeAssets)
 			// then
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "unable to generate 'advanced-code-123456a' TierTemplate manifest: couldn't get version/kind; json parse error")
@@ -508,12 +510,12 @@ func TestNewNSTemplateTiers(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		// given
-		assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
-		templatesByTier, err := loadTemplatesByTiers(assets)
-		require.NoError(t, err)
 		namespace := "host-operator-" + uuid.NewV4().String()[:7]
+		assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
+		tierTmpls, err := newTierTemplates(s, namespace, assets)
+		require.NoError(t, err)
 		// when
-		tiers, err := newNSTemplateTiers(namespace, templatesByTier)
+		tiers, err := newNSTemplateTiers(namespace, tierTmpls)
 		// then
 		require.NoError(t, err)
 		require.Len(t, tiers, 4)
