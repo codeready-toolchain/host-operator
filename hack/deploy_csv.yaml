@@ -164,6 +164,7 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
@@ -309,6 +310,7 @@ data:
                                     - templateRef
                                     type: object
                                   type: array
+                                  x-kubernetes-list-type: set
                                 tierName:
                                   description: The name of the tier represented by this
                                     template set
@@ -335,6 +337,7 @@ data:
                       - targetCluster
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                   userID:
                     description: UserID is the user ID from RHD Identity Provider token
                       (“sub” claim)
@@ -373,6 +376,7 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                   userAccounts:
                     description: The status of user accounts in the member clusters which
                       belong to this MasterUserRecord
@@ -429,6 +433,7 @@ data:
                             - type
                             type: object
                           type: array
+                          x-kubernetes-list-type: set
                         syncIndex:
                           description: SyncIndex is used for checking if there is needed
                             some MasterUserRecord <-> UserAccount synchronization for this
@@ -439,6 +444,7 @@ data:
                       - syncIndex
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
@@ -542,6 +548,7 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
@@ -827,6 +834,7 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                 required:
                 - namespaces
                 type: object
@@ -861,6 +869,7 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
@@ -964,6 +973,7 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
@@ -1289,6 +1299,7 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1

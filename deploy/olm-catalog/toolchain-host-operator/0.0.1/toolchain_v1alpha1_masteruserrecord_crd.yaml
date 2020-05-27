@@ -130,6 +130,7 @@ spec:
                               - templateRef
                               type: object
                             type: array
+                            x-kubernetes-list-type: set
                           tierName:
                             description: The name of the tier represented by this
                               template set
@@ -156,6 +157,7 @@ spec:
                 - targetCluster
                 type: object
               type: array
+              x-kubernetes-list-type: set
             userID:
               description: UserID is the user ID from RHD Identity Provider token
                 (“sub” claim)
@@ -194,6 +196,7 @@ spec:
                 - type
                 type: object
               type: array
+              x-kubernetes-list-type: set
             userAccounts:
               description: The status of user accounts in the member clusters which
                 belong to this MasterUserRecord
@@ -250,6 +253,7 @@ spec:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-type: set
                   syncIndex:
                     description: SyncIndex is used for checking if there is needed
                       some MasterUserRecord <-> UserAccount synchronization for this
@@ -260,6 +264,7 @@ spec:
                 - syncIndex
                 type: object
               type: array
+              x-kubernetes-list-type: set
           type: object
       x-kubernetes-preserve-unknown-fields: true
   version: v1alpha1
