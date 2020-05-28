@@ -270,7 +270,6 @@ spec:
                 - type
                 type: object
               type: array
-              x-kubernetes-list-type: set
           required:
           - namespaces
           type: object
@@ -305,7 +304,6 @@ spec:
                 - type
                 type: object
               type: array
-              x-kubernetes-list-type: set
           type: object
       x-kubernetes-preserve-unknown-fields: true
   version: v1alpha1
