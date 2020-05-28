@@ -268,9 +268,6 @@ data:
                                   description: the cluster resources template (for cluster-wide
                                     quotas, etc.)
                                   properties:
-                                    revision:
-                                      description: The revision of the corresponding template
-                                      type: string
                                     template:
                                       description: Template contains an OpenShift Template
                                         to be used for provisioning of cluster-scoped resources
@@ -289,9 +286,6 @@ data:
                                     description: NSTemplateSetNamespace the namespace definition
                                       in an NSTemplateSet resource
                                     properties:
-                                      revision:
-                                        description: The revision of the corresponding template
-                                        type: string
                                       template:
                                         description: Optional field. Used to specify a custom
                                           template
@@ -301,21 +295,12 @@ data:
                                           resource which exists in the host cluster and
                                           which contains the template to use
                                         type: string
-                                      type:
-                                        description: 'The type of the namespace. For example:
-                                          ide|cicd|stage|default'
-                                        type: string
                                     required:
                                     - templateRef
                                     type: object
                                   type: array
-                                tierName:
-                                  description: The name of the tier represented by this
-                                    template set
-                                  type: string
                               required:
                               - namespaces
-                              - tierName
                               type: object
                           required:
                           - nsLimit
