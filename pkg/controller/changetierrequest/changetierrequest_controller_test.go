@@ -12,7 +12,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
-	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -273,16 +272,12 @@ func NewNSTemplateTier(tierName, revision, clusterResourcesRevision string, nsTy
 	namespaces := make([]v1alpha1.NSTemplateTierNamespace, len(nsTypes))
 	for i, nsType := range nsTypes {
 		namespaces[i] = v1alpha1.NSTemplateTierNamespace{
-			Type:        nsType,
-			Revision:    revision,
-			Template:    templatev1.Template{},
 			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, nsType, revision),
 		}
 	}
 	var clusterResources *v1alpha1.NSTemplateTierClusterResources
 	if clusterResourcesRevision != "" {
 		clusterResources = &v1alpha1.NSTemplateTierClusterResources{
-			Revision:    clusterResourcesRevision,
 			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, "clusterresources", clusterResourcesRevision),
 		}
 	}
