@@ -5,7 +5,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
+	applycl "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
 
@@ -75,17 +75,17 @@ func add(mgr manager.Manager, r *ReconcileRegistrationService) error {
 
 	// process with default variables - we need to get just the list of objects - we don't care about their content
 	processor := template.NewProcessor(r.scheme)
-	objects, err := processor.Process(r.regServiceTemplate.DeepCopy(), map[string]string{})
+	toolchainObjects, err := processor.Process(r.regServiceTemplate.DeepCopy(), map[string]string{})
 	if err != nil {
 		return err
 	}
 
 	// call watch for all objects contained within the template
-	for _, object := range objects {
-		if object.Object == nil {
+	for _, toolchainObject := range toolchainObjects {
+		if toolchainObject.GetObject() == nil {
 			continue
 		}
-		err = c.Watch(&source.Kind{Type: object.Object}, &handler.EnqueueRequestForOwner{
+		err = c.Watch(&source.Kind{Type: toolchainObject.GetObject()}, &handler.EnqueueRequestForOwner{
 			IsController: true,
 			OwnerType:    &toolchainv1alpha1.RegistrationService{},
 		})
@@ -130,16 +130,16 @@ func (r *ReconcileRegistrationService) Reconcile(request reconcile.Request) (rec
 	}
 
 	// process template with variables taken from the RegistrationService CRD
-	client := commonclient.NewApplyClient(r.client, r.scheme)
-	objects, err := template.NewProcessor(r.scheme).Process(r.regServiceTemplate.DeepCopy(), getVars(regService))
+	cl := applycl.NewApplyClient(r.client, r.scheme)
+	toolchainObjects, err := template.NewProcessor(r.scheme).Process(r.regServiceTemplate.DeepCopy(), getVars(regService))
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// create all objects that are within the template, and update only when the object has changed.
 	// if the object was either created or updated, then return and wait for another reconcile
-	for _, object := range objects {
-		createdOrUpdated, err := client.CreateOrUpdateObject(object.Object, false, regService)
+	for _, toolchainObject := range toolchainObjects {
+		createdOrUpdated, err := cl.CreateOrUpdateObject(toolchainObject.GetObject(), false, regService)
 		if err != nil {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, regService, r.setStatusFailed(toolchainv1alpha1.RegistrationServiceDeployingFailedReason), err, "cannot deploy registration service template")
 		}

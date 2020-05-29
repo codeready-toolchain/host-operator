@@ -12,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -28,7 +27,7 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 	processor := template.NewProcessor(s)
 
 	// when
-	objects, err := processor.Process(deploymentTemplate, vars)
+	toolchainObjects, err := processor.Process(deploymentTemplate, vars)
 
 	// then
 	require.NoError(t, err)
@@ -36,18 +35,15 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 	saFound := false
 	roleFound := false
 	roleBindingFound := false
-	for _, rawObject := range objects {
-		object := rawObject.Object
-		metaObj, err := meta.Accessor(object)
-		require.NoError(t, err)
-		assert.Equal(t, "my-namespace", metaObj.GetNamespace())
-		fmt.Println(object.GetObjectKind().GroupVersionKind())
+	for _, toolchainObject := range toolchainObjects {
+		assert.Equal(t, "my-namespace", toolchainObject.GetNamespace())
+		fmt.Println(toolchainObject.GetGvk())
 		fmt.Println(appsv1.SchemeGroupVersion.WithKind("Deployment"))
 
-		switch object.GetObjectKind().GroupVersionKind() {
+		switch toolchainObject.GetGvk() {
 		case appsv1.SchemeGroupVersion.WithKind("Deployment"):
 			deploymentFound = true
-			deployment := fmt.Sprintf("%+v", object)
+			deployment := fmt.Sprintf("%+v", toolchainObject.GetObject())
 			assert.Contains(t, deployment, "replicas:10")
 			assert.Contains(t, deployment, "image:quay.io/cr-t/registration-service:123")
 
