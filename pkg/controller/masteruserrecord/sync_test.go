@@ -86,16 +86,9 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 	base := toolchainv1alpha1.UserAccountSpecBase{
 		NSLimit: "limit",
 		NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
-			TierName: "basic",
-			ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
-				Revision: "654321a",
-			},
-			Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
-				{
-					Revision: "123456a",
-					Type:     "code",
-				},
-			},
+			TierName:         "basic",
+			ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{},
+			Namespaces:       []toolchainv1alpha1.NSTemplateSetNamespace{},
 		},
 	}
 	memberUserAcc := toolchainv1alpha1.UserAccount{
@@ -131,7 +124,7 @@ func TestSynchronizeSpec(t *testing.T) {
 	userAccount := uatest.NewUserAccountFromMur(mur)
 
 	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"),
-		murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
+		murtest.TierName("admin"), murtest.Namespace("basic-dev-123abc", "admin-ide-54321"))
 
 	hostClient := test.NewFakeClient(t, mur)
 	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
