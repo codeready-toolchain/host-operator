@@ -1950,3 +1950,49 @@ func TestChangedCompliantUsername(t *testing.T) {
 	// the CompliantUsername and MUR name should now match
 	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 }
+
+func TestMigrateMur(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			Username:      "foo@redhat.com",
+			Approved:      true,
+			TargetCluster: "east",
+		},
+	}
+	mur := newMasterUserRecord(basicNSTemplateTier, "foo", operatorNamespace, "east", "foo")
+
+	// set tier name to be empty
+	mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName = ""
+	mur.Spec.UserAccounts[0].Spec.NSLimit = ""
+
+	mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
+		TemplateRef: "basic-clusterresources-654321b",
+	}
+
+	expectedMur := mur.DeepCopy()
+	expectedMur.Generation = 1
+	expectedMur.ResourceVersion = "1"
+	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName = "basic"
+	expectedMur.Spec.UserAccounts[0].Spec.NSLimit = "default"
+
+	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
+		TemplateRef: "basic-clusterresources-654321b",
+	}
+
+	t.Run("add missing tierName and nsLimit fields", func(t *testing.T) {
+		// given
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier, mur)
+
+		// when
+		_, err := r.Reconcile(req)
+		// then verify that the MUR exists and is complete
+		require.NoError(t, err)
+		murs := &v1alpha1.MasterUserRecordList{}
+		err = r.client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+		assert.Equal(t, *expectedMur, murs.Items[0])
+	})
+}
