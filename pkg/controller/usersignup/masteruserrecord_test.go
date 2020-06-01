@@ -104,6 +104,21 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		assert.True(t, changed)
 		assert.Equal(t, newExpectedMur(), *changedMur)
 	})
+
+	t.Run("when one namespace is missing and one is extra, but rest is fine, then doesn't change", func(t *testing.T) {
+		// given
+		nSTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		mur := newMasterUserRecord(nSTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
+		mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces[0].TemplateRef = "advanced-cicd-123abc1"
+		providedMur := mur.DeepCopy()
+
+		// when
+		changed, changedMur := migrateOrFixMurIfNecessary(mur, nSTemplateTier)
+
+		// then
+		assert.False(t, changed)
+		assert.Equal(t, *providedMur, *changedMur)
+	})
 }
 
 func newExpectedNsTemplateSetSpec() v1alpha1.NSTemplateSetSpec {
