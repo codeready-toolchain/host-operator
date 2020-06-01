@@ -82,10 +82,10 @@ func add(mgr manager.Manager, r *ReconcileRegistrationService) error {
 
 	// call watch for all objects contained within the template
 	for _, toolchainObject := range toolchainObjects {
-		if toolchainObject.GetObject() == nil {
+		if toolchainObject.GetRuntimeObject() == nil {
 			continue
 		}
-		err = c.Watch(&source.Kind{Type: toolchainObject.GetObject()}, &handler.EnqueueRequestForOwner{
+		err = c.Watch(&source.Kind{Type: toolchainObject.GetRuntimeObject()}, &handler.EnqueueRequestForOwner{
 			IsController: true,
 			OwnerType:    &toolchainv1alpha1.RegistrationService{},
 		})
@@ -139,7 +139,7 @@ func (r *ReconcileRegistrationService) Reconcile(request reconcile.Request) (rec
 	// create all objects that are within the template, and update only when the object has changed.
 	// if the object was either created or updated, then return and wait for another reconcile
 	for _, toolchainObject := range toolchainObjects {
-		createdOrUpdated, err := cl.CreateOrUpdateObject(toolchainObject.GetObject(), false, regService)
+		createdOrUpdated, err := cl.CreateOrUpdateObject(toolchainObject.GetRuntimeObject(), false, regService)
 		if err != nil {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, regService, r.setStatusFailed(toolchainv1alpha1.RegistrationServiceDeployingFailedReason), err, "cannot deploy registration service template")
 		}

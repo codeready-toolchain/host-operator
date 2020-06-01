@@ -43,7 +43,7 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 		switch toolchainObject.GetGvk() {
 		case appsv1.SchemeGroupVersion.WithKind("Deployment"):
 			deploymentFound = true
-			deployment := fmt.Sprintf("%+v", toolchainObject.GetObject())
+			deployment := fmt.Sprintf("%+v", toolchainObject.GetRuntimeObject())
 			assert.Contains(t, deployment, "replicas:10")
 			assert.Contains(t, deployment, "image:quay.io/cr-t/registration-service:123")
 
