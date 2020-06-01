@@ -5,7 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func migrateMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTier *toolchainv1alpha1.NSTemplateTier) (bool, *toolchainv1alpha1.MasterUserRecord) {
+func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTier *toolchainv1alpha1.NSTemplateTier) (bool, *toolchainv1alpha1.MasterUserRecord) {
 	changed := false
 	for uaIndex, userAccount := range mur.Spec.UserAccounts {
 		if userAccount.Spec.NSLimit == "" {

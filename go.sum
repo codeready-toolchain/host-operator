@@ -706,8 +706,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v0.0.0-20180105212114-65a9db5fad51/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tinakurian/api v0.0.0-20200528175500-de4844132cd6 h1:LWMRFIAPaWdv4rZH+hoEHOdBX/R1Y+2V8ySGyMhf2Tk=
 github.com/tinakurian/api v0.0.0-20200528175500-de4844132cd6/go.mod h1:w07CIyd2cCp1i38hdPrG4aZPbwISzMkxOmtCWE4EtdY=
-github.com/tinakurian/toolchain-common v0.0.0-20200529132940-5b9818b04c61 h1:0A5z90pTfOofpsE+LcQLbjOr9CAG2tUoLPwGzyHfAU8=
-github.com/tinakurian/toolchain-common v0.0.0-20200529132940-5b9818b04c61/go.mod h1:u9K2CCWxRzP2314i9VGiSZ0ANhOMxAwDCJOvF238yzk=
+github.com/tinakurian/toolchain-common v0.0.0-20200601144142-3440b7317af0 h1:nx5zgePw6t3BrDm+P/jpL5vrLyTPpBAMZEdMgDhCws8=
+github.com/tinakurian/toolchain-common v0.0.0-20200601144142-3440b7317af0/go.mod h1:u9K2CCWxRzP2314i9VGiSZ0ANhOMxAwDCJOvF238yzk=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=

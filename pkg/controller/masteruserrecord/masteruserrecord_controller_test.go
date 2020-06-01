@@ -384,7 +384,7 @@ func TestModifyUserAccounts(t *testing.T) {
 	userAccount2 := uatest.NewUserAccountFromMur(mur)
 	userAccount3 := uatest.NewUserAccountFromMur(mur)
 
-	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"), murtest.TierName("admin"), murtest.Namespace("basic-dev-123abc", "admin-ide-54321"))
+	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"), murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
 	murtest.ModifyUaInMur(mur, "member2-cluster", murtest.NsLimit("admin"), murtest.TierName("basic"))
 
 	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())

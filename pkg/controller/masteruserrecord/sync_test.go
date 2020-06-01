@@ -124,7 +124,7 @@ func TestSynchronizeSpec(t *testing.T) {
 	userAccount := uatest.NewUserAccountFromMur(mur)
 
 	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"),
-		murtest.TierName("admin"), murtest.Namespace("basic-dev-123abc", "admin-ide-54321"))
+		murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
 
 	hostClient := test.NewFakeClient(t, mur)
 	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())

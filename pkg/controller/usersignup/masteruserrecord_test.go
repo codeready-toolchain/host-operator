@@ -70,7 +70,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		mur := newMasterUserRecord(nSTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
 
 		// when
-		changed, changedMur := migrateMurIfNecessary(mur, nSTemplateTier)
+		changed, changedMur := migrateOrFixMurIfNecessary(mur, nSTemplateTier)
 
 		// then
 		assert.False(t, changed)
@@ -84,7 +84,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		mur.Spec.UserAccounts[0].Spec.NSLimit = ""
 
 		// when
-		changed, changedMur := migrateMurIfNecessary(mur, nSTemplateTier)
+		changed, changedMur := migrateOrFixMurIfNecessary(mur, nSTemplateTier)
 
 		// then
 		assert.True(t, changed)
@@ -98,7 +98,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		mur.Spec.UserAccounts[0].Spec.NSTemplateSet = v1alpha1.NSTemplateSetSpec{}
 
 		// when
-		changed, changedMur := migrateMurIfNecessary(mur, nSTemplateTier)
+		changed, changedMur := migrateOrFixMurIfNecessary(mur, nSTemplateTier)
 
 		// then
 		assert.True(t, changed)

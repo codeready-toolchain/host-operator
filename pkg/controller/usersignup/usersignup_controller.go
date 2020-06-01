@@ -291,7 +291,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 
 		// check if anything in the MUR chould be migrated/fixed
-		changed, masterUserRecord := migrateMurIfNecessary(&mur, nstemplateTier)
+		changed, masterUserRecord := migrateOrFixMurIfNecessary(&mur, nstemplateTier)
 		if changed {
 			if err := r.client.Update(context.TODO(), masterUserRecord); err != nil {
 				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")

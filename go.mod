@@ -66,6 +66,6 @@ replace (
 
 replace github.com/codeready-toolchain/api v0.0.0-20200528065459-3e3f8c07df39 => github.com/tinakurian/api v0.0.0-20200528175500-de4844132cd6
 
-replace github.com/codeready-toolchain/toolchain-common v0.0.0-20200528070449-7c8b2f895b25 => github.com/tinakurian/toolchain-common v0.0.0-20200529132940-5b9818b04c61
+replace github.com/codeready-toolchain/toolchain-common v0.0.0-20200528070449-7c8b2f895b25 => github.com/tinakurian/toolchain-common v0.0.0-20200601144142-3440b7317af0
 
 go 1.13
