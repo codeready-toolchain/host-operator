@@ -4,7 +4,7 @@ require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20200528065459-3e3f8c07df39
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200528070449-7c8b2f895b25
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200602094958-d7789630e080
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
@@ -66,6 +66,6 @@ replace (
 
 replace github.com/codeready-toolchain/api v0.0.0-20200528065459-3e3f8c07df39 => github.com/tinakurian/api v0.0.0-20200528175500-de4844132cd6
 
-replace github.com/codeready-toolchain/toolchain-common v0.0.0-20200528070449-7c8b2f895b25 => github.com/tinakurian/toolchain-common v0.0.0-20200601144142-3440b7317af0
+replace github.com/codeready-toolchain/toolchain-common v0.0.0-20200602094958-d7789630e080 => github.com/tinakurian/toolchain-common v0.0.0-20200602131808-5ac93deaf9f0
 
 go 1.13
