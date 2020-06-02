@@ -1963,20 +1963,26 @@ func TestMigrateMur(t *testing.T) {
 	}
 	mur := newMasterUserRecord(basicNSTemplateTier, "foo", operatorNamespace, "east", "foo")
 
-	// set tier name to be empty
-	mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName = ""
+	// set NSLimit and NSTemplateSet to be empty
+	mur.Spec.UserAccounts[0].Spec.NSTemplateSet = toolchainv1alpha1.NSTemplateSetSpec{}
 	mur.Spec.UserAccounts[0].Spec.NSLimit = ""
-
-	mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
-		TemplateRef: "basic-clusterresources-654321b",
-	}
 
 	expectedMur := mur.DeepCopy()
 	expectedMur.Generation = 1
 	expectedMur.ResourceVersion = "1"
 	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName = "basic"
 	expectedMur.Spec.UserAccounts[0].Spec.NSLimit = "default"
-
+	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []v1alpha1.NSTemplateSetNamespace{
+		{
+			TemplateRef: "basic-code-123abc1",
+		},
+		{
+			TemplateRef: "basic-dev-123abc2",
+		},
+		{
+			TemplateRef: "basic-stage-123abc3",
+		},
+	}
 	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
 		TemplateRef: "basic-clusterresources-654321b",
 	}

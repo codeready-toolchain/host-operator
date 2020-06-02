@@ -86,8 +86,10 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 	base := toolchainv1alpha1.UserAccountSpecBase{
 		NSLimit: "limit",
 		NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
-			TierName:         "basic",
-			ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{},
+			TierName: "basic",
+			ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
+				TemplateRef: "basic-clusterresources-654321a",
+			},
 			Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
 				{
 					TemplateRef: "basic-code-123456a",
