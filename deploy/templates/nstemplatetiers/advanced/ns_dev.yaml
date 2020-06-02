@@ -107,6 +107,13 @@ objects:
     podSelector: {}
     policyTypes:
     - Ingress
+- apiVersion: toolchain.dev.openshift.com/v1alpha1
+  kind: Idler
+  metadata:
+    name: idler
+    namespace: ${USERNAME}-dev
+  spec:
+    timeoutSeconds: 1800
 parameters:
 - name: USERNAME
   required: true
