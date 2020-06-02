@@ -3,8 +3,8 @@ module github.com/codeready-toolchain/host-operator
 require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20200528065459-3e3f8c07df39
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200602094958-d7789630e080
+	github.com/codeready-toolchain/api v0.0.0-20200602152926-20f91753faab
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200602160631-319809018d01
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
@@ -63,9 +63,5 @@ replace (
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20190927182313-d4a64ec2cbd8 // Using openshift/api 4.3
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200204173128-addea2498afe // avoids case-insensitive import collision: "github.com/googleapis/gnostic/openapiv2" and "github.com/googleapis/gnostic/OpenAPIv2"
 )
-
-replace github.com/codeready-toolchain/api v0.0.0-20200528065459-3e3f8c07df39 => github.com/tinakurian/api v0.0.0-20200528175500-de4844132cd6
-
-replace github.com/codeready-toolchain/toolchain-common v0.0.0-20200602094958-d7789630e080 => github.com/tinakurian/toolchain-common v0.0.0-20200602133639-e5f1900fc95d
 
 go 1.13
