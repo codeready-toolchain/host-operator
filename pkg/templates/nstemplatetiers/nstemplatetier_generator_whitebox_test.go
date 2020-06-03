@@ -362,7 +362,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
-	assert.Len(t, actual.Objects, 1)
+	assert.Len(t, actual.Objects, 2)
 	cpuLimit := "4000m"
 	cpuRequest := "1750m"
 	memoryLimit := "7Gi"
@@ -371,6 +371,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		memoryLimit = "15Gi"
 	}
 	containsObj(t, actual, clusterResourceQuotaObj(cpuLimit, cpuRequest, memoryLimit))
+	containsObj(t, actual, clusterRoleBindingObj())
 }
 
 func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
@@ -428,12 +429,14 @@ func assertTestClusteResourcesTemplate(t *testing.T, decoder runtime.Decoder, ac
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
+	assert.Len(t, actual.Objects, 2)
 	cpuLimit := "4000m"
 	memoryLimit := "7Gi"
 	if tier == "team" {
 		cpuLimit = "2000m"
 	}
 	containsObj(t, actual, testClusterResourceQuotaObj(cpuLimit, memoryLimit))
+	containsObj(t, actual, clusterRoleBindingObj())
 }
 
 func assertTestNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
@@ -467,6 +470,10 @@ func clusterResourceQuotaObj(cpuLimit, cpuRequest, memoryLimit string) string {
 
 func testClusterResourceQuotaObj(cpuLimit, memoryLimit string) string {
 	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"limits.cpu":"%[1]s","limits.memory":"%[2]s","persistentvolumeclaims":"5","requests.storage":"7Gi"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, memoryLimit)
+}
+
+func clusterRoleBindingObj() string {
+	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"ClusterRoleBinding","metadata":{"name":"${USERNAME}-tekton-view"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"tekton-view"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`)
 }
 
 func namespaceObj(kind string) string {

@@ -27,6 +27,17 @@ objects:
       annotations:
         openshift.io/requester: ${USERNAME}
       labels: null
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: ${USERNAME}-tekton-view
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: tekton-view
+  subjects:
+  - kind: User
+    name: ${USERNAME}
 parameters:
 - name: USERNAME
   required: true
