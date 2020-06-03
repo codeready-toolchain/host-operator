@@ -1962,54 +1962,37 @@ func TestMigrateMur(t *testing.T) {
 		},
 	}
 	mur := newMasterUserRecord(basicNSTemplateTier, "foo", operatorNamespace, "east", "foo")
-	// override values to meet the test requirements.
-	mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []v1alpha1.NSTemplateSetNamespace{
-		{
-			Type:        "dev",
-			Revision:    "123abc1",
-			TemplateRef: "",
-		},
-		{
-			Type:        "stage",
-			Revision:    "123abc2",
-			TemplateRef: "",
-		},
-		{
-			Type:        "extra",
-			Revision:    "123abc3",
-			TemplateRef: "",
-		},
-	}
-	mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
-		Revision:    "654321b",
-		TemplateRef: "",
-	}
+
+	// set NSLimit and NSTemplateSet to be empty
+	mur.Spec.UserAccounts[0].Spec.NSTemplateSet = toolchainv1alpha1.NSTemplateSetSpec{}
+	mur.Spec.UserAccounts[0].Spec.NSLimit = ""
 
 	expectedMur := mur.DeepCopy()
 	expectedMur.Generation = 1
 	expectedMur.ResourceVersion = "1"
+	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName = "basic"
+	expectedMur.Spec.UserAccounts[0].Spec.NSLimit = "default"
 	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []v1alpha1.NSTemplateSetNamespace{
 		{
-			TemplateRef: "basic-dev-123abc1",
+			TemplateRef: "basic-code-123abc1",
 		},
 		{
-			TemplateRef: "basic-stage-123abc2",
+			TemplateRef: "basic-dev-123abc2",
 		},
 		{
-			TemplateRef: "basic-extra-123abc3",
+			TemplateRef: "basic-stage-123abc3",
 		},
 	}
 	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
 		TemplateRef: "basic-clusterresources-654321b",
 	}
 
-	t.Run("add missing templateRef fields", func(t *testing.T) {
+	t.Run("add missing tierName and nsLimit fields", func(t *testing.T) {
 		// given
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier, mur)
 
 		// when
 		_, err := r.Reconcile(req)
-
 		// then verify that the MUR exists and is complete
 		require.NoError(t, err)
 		murs := &v1alpha1.MasterUserRecordList{}
@@ -2017,24 +2000,5 @@ func TestMigrateMur(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 1)
 		assert.Equal(t, *expectedMur, murs.Items[0])
-	})
-
-	t.Run("fails while updating mur that is missing templateRef fields", func(t *testing.T) {
-		// given
-		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier, mur)
-		fakeClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-			return fmt.Errorf("some error")
-		}
-
-		// when
-		_, err := r.Reconcile(req)
-
-		// then verify that the MUR exists and is complete
-		require.Error(t, err)
-		murs := &v1alpha1.MasterUserRecordList{}
-		err = r.client.List(context.TODO(), murs)
-		require.NoError(t, err)
-		require.Len(t, murs.Items, 1)
-		assert.NotEqual(t, *expectedMur, murs.Items[0])
 	})
 }

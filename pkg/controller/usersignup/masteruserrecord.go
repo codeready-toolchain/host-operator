@@ -2,11 +2,10 @@ package usersignup
 
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func migrateMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTier *toolchainv1alpha1.NSTemplateTier) (bool, *toolchainv1alpha1.MasterUserRecord) {
+func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTier *toolchainv1alpha1.NSTemplateTier) (bool, *toolchainv1alpha1.MasterUserRecord) {
 	changed := false
 	for uaIndex, userAccount := range mur.Spec.UserAccounts {
 		if userAccount.Spec.NSLimit == "" {
@@ -17,22 +16,6 @@ func migrateMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTi
 		if nsTemplateSet.TierName == "" {
 			mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet = NewNSTemplateSetSpec(nstemplateTier)
 			changed = true
-		} else {
-			for nsIndex, ns := range nsTemplateSet.Namespaces {
-				if ns.TemplateRef == "" {
-					ref := nstemplatetiers.NewTierTemplateName(nsTemplateSet.TierName, ns.Type, ns.Revision)
-					mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.Namespaces[nsIndex].Type = ""     // reset to allow for comparison in test. Field will be removed soon
-					mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.Namespaces[nsIndex].Revision = "" // reset to allow for comparison in test. Field will be removed soon
-					mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.Namespaces[nsIndex].TemplateRef = ref
-					changed = true
-				}
-			}
-			if nsTemplateSet.ClusterResources != nil && nsTemplateSet.ClusterResources.TemplateRef == "" {
-				ref := nstemplatetiers.NewTierTemplateName(nsTemplateSet.TierName, toolchainv1alpha1.ClusterResourcesTemplateType, nsTemplateSet.ClusterResources.Revision)
-				mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.ClusterResources.Revision = "" // reset to allow for comparison in test. Field will be removed soon
-				mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet.ClusterResources.TemplateRef = ref
-				changed = true
-			}
 		}
 	}
 	return changed, mur
