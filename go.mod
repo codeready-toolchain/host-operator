@@ -34,8 +34,8 @@ replace (
 )
 
 replace (
-	github.com/codeready-toolchain/api => github.com/alexeykazakov/api v0.0.0-20200527003359-eb0931cc6f68
-	github.com/codeready-toolchain/toolchain-common => github.com/alexeykazakov/toolchain-common v0.0.0-20200527005248-30f88253f5b8
+	github.com/codeready-toolchain/api => github.com/alexeykazakov/api v0.0.0-20200605111224-5bffc0c8c700
+	github.com/codeready-toolchain/toolchain-common => github.com/alexeykazakov/toolchain-common v0.0.0-20200605112517-dffdfd1d8ae1
 )
 
 go 1.13
