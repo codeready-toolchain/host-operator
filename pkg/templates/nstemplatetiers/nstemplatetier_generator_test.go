@@ -36,6 +36,39 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 
+		expectedTemplateRefs := map[string]map[string][]string{
+			"advanced": {
+				"clusterresources": {"advanced-clusterresources-654321a"},
+				"namespaces": {
+					"advanced-code-123456a",
+					"advanced-dev-123456b",
+					"advanced-stage-123456c",
+				},
+			},
+			"basic": {
+				"clusterresources": {"basic-clusterresources-654321b"},
+				"namespaces": {
+					"basic-code-123456d",
+					"basic-dev-123456e",
+					"basic-stage-123456f",
+				},
+			},
+			"team": {
+				"clusterresources": {"team-clusterresources-654321c"},
+				"namespaces": {
+					"team-dev-123456g",
+					"team-stage-123456h",
+				},
+			},
+			"nocluster": {
+				"namespaces": {
+					"nocluster-code-123456i",
+					"nocluster-dev-123456j",
+					"nocluster-stage-1234567",
+				},
+			},
+		}
+
 		t.Run("create only", func(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.NewV4().String()[:7]
@@ -95,13 +128,15 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					assert.Nil(t, tier.Spec.ClusterResources) // "team" tier should not have cluster resources set
 				} else {
 					require.NotNil(t, tier.Spec.ClusterResources)
-					assert.Equal(t, tier.Name+"-clusterresources-"+tier.Spec.ClusterResources.Revision, tier.Spec.ClusterResources.TemplateRef)
+					assert.Equal(t, expectedTemplateRefs[tierName]["clusterresources"][0], tier.Spec.ClusterResources.TemplateRef)
 				}
-				for _, ns := range tier.Spec.Namespaces {
-					assert.Equal(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Revision)
-					assert.NotEmpty(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Template)
-					assert.Equal(t, tier.Name+"-"+ns.Type+"-"+ns.Revision, ns.TemplateRef)
+				// retain the actual TemplateRefs
+				actualTemplateRefs := make([]string, len(tier.Spec.Namespaces))
+				for i, ns := range tier.Spec.Namespaces {
+					actualTemplateRefs[i] = ns.TemplateRef
 				}
+				// now check against the expected TemplateRefs
+				assert.ElementsMatch(t, expectedTemplateRefs[tierName]["namespaces"], actualTemplateRefs)
 			}
 		})
 
@@ -128,19 +163,25 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
 			}
 
-			// verify that the 4 NStemplateTier CRs were NOT updated since assets did not change
+			// verify that 4 NSTemplateTier CRs were created: "advanced", "basic", "team", "nocluster"
 			for _, tierName := range []string{"advanced", "basic", "team", "nocluster"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
-				// verify that the generation was not changed
 				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
-				// verify the new namespace revisions
-				for _, ns := range tier.Spec.Namespaces {
-					assert.Equal(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Revision)
-					assert.NotEmpty(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Template)
-					assert.Equal(t, tier.Name+"-"+ns.Type+"-"+ns.Revision, ns.TemplateRef)
+				if tier.Name == "nocluster" {
+					assert.Nil(t, tier.Spec.ClusterResources) // "team" tier should not have cluster resources set
+				} else {
+					require.NotNil(t, tier.Spec.ClusterResources)
+					assert.Equal(t, expectedTemplateRefs[tierName]["clusterresources"][0], tier.Spec.ClusterResources.TemplateRef)
 				}
+				// retain the actual TemplateRefs
+				actualTemplateRefs := make([]string, len(tier.Spec.Namespaces))
+				for i, ns := range tier.Spec.Namespaces {
+					actualTemplateRefs[i] = ns.TemplateRef
+				}
+				// now check against the expected TemplateRefs
+				assert.ElementsMatch(t, expectedTemplateRefs[tierName]["namespaces"], actualTemplateRefs)
 			}
 		})
 
@@ -189,28 +230,36 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
 			}
 
-			expectedRevisions := map[string]map[string]string{
+			expectedTemplateRefs := map[string]map[string][]string{
 				"advanced": {
-					"code":    "222222a",
-					"dev":     "222222b",
-					"stage":   "222222c",
-					"cluster": "1111111a",
+					"clusterresources": {"advanced-clusterresources-111111a"},
+					"namespaces": {
+						"advanced-code-222222a",
+						"advanced-dev-222222b",
+						"advanced-stage-222222c",
+					},
 				},
 				"basic": {
-					"code":    "222222d",
-					"dev":     "222222e",
-					"stage":   "222222f",
-					"cluster": "111111b",
+					"clusterresources": {"basic-clusterresources-111111b"},
+					"namespaces": {
+						"basic-code-222222d",
+						"basic-dev-222222e",
+						"basic-stage-222222f",
+					},
 				},
 				"team": {
-					"dev":     "222222g",
-					"stage":   "222222h",
-					"cluster": "111111c",
+					"clusterresources": {"team-clusterresources-111111c"},
+					"namespaces": {
+						"team-dev-222222g",
+						"team-stage-222222h",
+					},
 				},
 				"nocluster": {
-					"code":  "222222i",
-					"dev":   "222222j",
-					"stage": "2222227",
+					"namespaces": {
+						"nocluster-code-222222i",
+						"nocluster-dev-222222j",
+						"nocluster-stage-2222227",
+					},
 				},
 			}
 			// verify that the 4 NStemplateTier CRs were updated
@@ -218,14 +267,20 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
-				// verify that the generation was increased
 				assert.Equal(t, int64(2), tier.ObjectMeta.Generation)
-				// verify the new namespace revisions
-				for _, ns := range tier.Spec.Namespaces {
-					assert.Equal(t, expectedRevisions[tierName][ns.Type], ns.Revision)
-					assert.NotEmpty(t, nstemplatetiers.ExpectedRevisions[tierName][ns.Type], ns.Template)
-					assert.Equal(t, tier.Name+"-"+ns.Type+"-"+ns.Revision, ns.TemplateRef) // new TemplateRef value with the updated revision
+				if tier.Name == "nocluster" {
+					assert.Nil(t, tier.Spec.ClusterResources) // "team" tier should not have cluster resources set
+				} else {
+					require.NotNil(t, tier.Spec.ClusterResources)
+					assert.Equal(t, expectedTemplateRefs[tierName]["clusterresources"][0], tier.Spec.ClusterResources.TemplateRef)
 				}
+				// retain the actual TemplateRefs
+				actualTemplateRefs := make([]string, len(tier.Spec.Namespaces))
+				for i, ns := range tier.Spec.Namespaces {
+					actualTemplateRefs[i] = ns.TemplateRef
+				}
+				// now check against the expected TemplateRefs
+				assert.ElementsMatch(t, expectedTemplateRefs[tierName]["namespaces"], actualTemplateRefs)
 			}
 		})
 	})
@@ -248,7 +303,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, fakeAssets)
 			// then
 			require.Error(t, err)
-			assert.Equal(t, "unable to create or update NSTemplateTiers: unable to load templates: an error", err.Error())
+			assert.Equal(t, "unable to create TierTemplates: unable to load templates: an error", err.Error()) // error occurred while creating TierTemplate resources
 		})
 
 		t.Run("nstemplatetiers", func(t *testing.T) {
@@ -268,7 +323,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 				// then
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), fmt.Sprintf("unable to create or update the 'advanced' NSTemplateTiers in namespace '%s'", namespace))
+				assert.Regexp(t, fmt.Sprintf("unable to create or update the '\\w+' NSTemplateTiers in namespace '%s'", namespace), err.Error())
 			})
 
 			t.Run("failed to update nstemplatetiers", func(t *testing.T) {
@@ -313,7 +368,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
 				// then
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), fmt.Sprintf("unable to create the 'advanced-code-123456a' TierTemplate in namespace '%s'", namespace))
+				assert.Regexp(t, fmt.Sprintf("unable to create the '\\w+-\\w+-\\w+' TierTemplate in namespace '%s'", namespace), err.Error()) // we can't tell for sure which namespace will fail first, but the error should match the given regex
 			})
 		})
 	})
