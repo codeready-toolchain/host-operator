@@ -22,6 +22,7 @@ const (
 // host-operator constants
 const (
 	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
+	varNotificationDeliveryService         = "notification.delivery.service"
 
 	// ToolchainConfigMapName specifies a name of a ConfigMap that keeps toolchain configuration
 	ToolchainConfigMapName = "toolchain-saas-config"
@@ -34,6 +35,12 @@ const (
 
 	// UserApprovalPolicyAutomatic defines that the new users should be approved automatically
 	UserApprovalPolicyAutomatic = "automatic"
+
+	// NotificationDeliveryServiceMock is the notification delivery service to use for testing
+	NotificationDeliveryServiceMock = "mock"
+
+	// NotificationDeliveryServiceMailgun is the notification delivery service to use during production
+	NotificationDeliveryServiceMailgun = "mailgun"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -62,11 +69,17 @@ func LoadConfig() *Config {
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
+	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMock)
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
 func (c *Config) GetDurationBeforeChangeRequestDeletion() time.Duration {
 	return c.host.GetDuration(VarDurationBeforeChangeRequestDeletion)
+}
+
+// GetNotificationDeliveryService returns the name of the notification delivery service to use for delivering user notifications
+func (c *Config) GetNotificationDeliveryService() string {
+	return c.host.GetString(varNotificationDeliveryService)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
