@@ -1,0 +1,11 @@
+apiVersion: toolchain.dev.openshift.com/v1alpha1
+kind: TierTemplate
+metadata:
+  name: basic-code-abcdef
+spec:
+  namespaces:
+    - type: code
+      tier: basic
+      revision: abcdef
+      template: >
+        {"apiVersion":"v1","kind":"Template","metadata":{"name":"basic-code"},"objects":{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"$USERNAME-code"}}}

@@ -1,0 +1,11 @@
+apiVersion: toolchain.dev.openshift.com/v1alpha1
+kind: NSTemplateTier
+metadata:
+  name: basic
+spec:
+  namespaces:
+  - templateRef: basic-code-abcdef
+  - templateRef: basic-dev-1d2f3q
+  - templateRef: basic-stage-a34r57
+  clusterResources:
+  - templateRef: basic-clusterresources-a34r57

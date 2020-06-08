@@ -164,6 +164,9 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
@@ -299,6 +302,7 @@ data:
                                     - templateRef
                                     type: object
                                   type: array
+                                  x-kubernetes-list-type: atomic
                                 tierName:
                                   description: The name of the tier represented by this
                                     template set
@@ -325,6 +329,9 @@ data:
                       - targetCluster
                       type: object
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - targetCluster
+                    x-kubernetes-list-type: map
                   userID:
                     description: UserID is the user ID from RHD Identity Provider token
                       (“sub” claim)
@@ -363,6 +370,9 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
                   userAccounts:
                     description: The status of user accounts in the member clusters which
                       belong to this MasterUserRecord
@@ -419,6 +429,9 @@ data:
                             - type
                             type: object
                           type: array
+                          x-kubernetes-list-map-keys:
+                          - type
+                          x-kubernetes-list-type: map
                         syncIndex:
                           description: SyncIndex is used for checking if there is needed
                             some MasterUserRecord <-> UserAccount synchronization for this
@@ -429,6 +442,7 @@ data:
                       - syncIndex
                       type: object
                     type: array
+                    x-kubernetes-list-type: atomic
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
@@ -532,6 +546,9 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
@@ -611,6 +628,7 @@ data:
                       - templateRef
                       type: object
                     type: array
+                    x-kubernetes-list-type: atomic
                 required:
                 - namespaces
                 type: object
@@ -645,6 +663,9 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
@@ -709,12 +730,13 @@ data:
               spec:
                 description: RegistrationServiceSpec defines the desired state of RegistrationService
                 properties:
-                  envVars:
+                  environmentVariables:
                     additionalProperties:
                       type: string
                     description: The environment variables are supposed to be set to registration
                       service deployment template
                     type: object
+                    x-kubernetes-map-type: atomic
                 type: object
               status:
                 description: RegistrationServiceStatus defines the observed state of RegistrationService
@@ -748,6 +770,9 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
@@ -1073,6 +1098,9 @@ data:
                       - type
                       type: object
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
                 type: object
             x-kubernetes-preserve-unknown-fields: true
         version: v1alpha1
@@ -1099,7 +1127,8 @@ data:
                 "metadata": {
                   "labels": {
                     "toolchain.dev.openshift.com/emailHash": "e13743a7f1db7f4246badd6fd6ff54ff"
-                  }
+                  },
+                  "name": "banneduser-123abc"
                 },
                 "spec": {
                   "email": "john.doe@gmail.com"
@@ -1129,22 +1158,20 @@ data:
                       "spec": {
                         "nsLimit": "admin",
                         "nsTemplateSet": {
+                          "clusterResources": [
+                            {
+                              "templateRef": "basic-clusterresources-a34r57"
+                            }
+                          ],
                           "namespaces": [
                             {
-                              "revision": "abcdef",
-                              "type": "ide"
+                              "templateRef": "basic-code-abcdef"
                             },
                             {
-                              "revision": "1d2f3q",
-                              "type": "cicd"
+                              "templateRef": "basic-dev-1d2f3q"
                             },
                             {
-                              "revision": "a34r57",
-                              "type": "stage"
-                            },
-                            {
-                              "revision": "ra24qw",
-                              "type": "default"
+                              "templateRef": "basic-stage-a34r57"
                             }
                           ],
                           "tierName": "basic"
@@ -1160,31 +1187,36 @@ data:
               },
               {
                 "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "Notification",
+                "metadata": {
+                  "name": "notification-123abc"
+                },
+                "spec": {
+                  "template": "user-provisioned",
+                  "userID": "1a03ecac-7c0b-44fc-b66d-12dd7fb21c40"
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
                 "kind": "NSTemplateTier",
                 "metadata": {
                   "name": "basic"
                 },
                 "spec": {
+                  "clusterResources": [
+                    {
+                      "templateRef": "basic-clusterresources-a34r57"
+                    }
+                  ],
                   "namespaces": [
                     {
-                      "revision": "abcdef",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"ide-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-ide\"}}}\n",
-                      "type": "ide"
+                      "templateRef": "basic-code-abcdef"
                     },
                     {
-                      "revision": "1d2f3q",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"cicd-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-cicd\"}}}\n",
-                      "type": "cicd"
+                      "templateRef": "basic-dev-1d2f3q"
                     },
                     {
-                      "revision": "a34r57",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"stage-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME-stage\"}}}\n",
-                      "type": "stage"
-                    },
-                    {
-                      "revision": "ra24qw",
-                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"default-template\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"ProjectRequest\",\"metadata\":{\"name\":\"$USERNAME\"}}}\n",
-                      "type": "default"
+                      "templateRef": "basic-stage-a34r57"
                     }
                   ]
                 }
@@ -1206,6 +1238,23 @@ data:
                     "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
                     "REPLICAS": "4"
                   }
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "TierTemplate",
+                "metadata": {
+                  "name": "basic-code-abcdef"
+                },
+                "spec": {
+                  "namespaces": [
+                    {
+                      "revision": "abcdef",
+                      "template": "{\"apiVersion\":\"v1\",\"kind\":\"Template\",\"metadata\":{\"name\":\"basic-code\"},\"objects\":{\"apiVersion\":\"v1\",\"kind\":\"Namespace\",\"metadata\":{\"name\":\"$USERNAME-code\"}}}\n",
+                      "tier": "basic",
+                      "type": "code"
+                    }
+                  ]
                 }
               },
               {
