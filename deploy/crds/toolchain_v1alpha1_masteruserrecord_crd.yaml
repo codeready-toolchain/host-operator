@@ -120,9 +120,7 @@ spec:
                               - templateRef
                               type: object
                             type: array
-                            x-kubernetes-list-map-keys:
-                            - type
-                            x-kubernetes-list-type: map
+                            x-kubernetes-list-type: atomic
                           tierName:
                             description: The name of the tier represented by this
                               template set
@@ -262,9 +260,7 @@ spec:
                 - syncIndex
                 type: object
               type: array
-              x-kubernetes-list-map-keys:
-              - targetCluster
-              x-kubernetes-list-type: map
+              x-kubernetes-list-type: atomic
           type: object
       x-kubernetes-preserve-unknown-fields: true
   version: v1alpha1
