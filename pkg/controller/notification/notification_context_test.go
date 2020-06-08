@@ -77,6 +77,7 @@ func TestNotificationContextExtractedFromUserSignupOk(t *testing.T) {
 	require.Equal(t, userSignup.Spec.GivenName, notificationCtx.FirstName)
 	require.Equal(t, userSignup.Spec.FamilyName, notificationCtx.LastName)
 	require.Equal(t, userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey], notificationCtx.Email)
+	require.Equal(t, userSignup.Spec.Company, notificationCtx.CompanyName)
 }
 
 func newObjectMeta(name, email string) metav1.ObjectMeta {
