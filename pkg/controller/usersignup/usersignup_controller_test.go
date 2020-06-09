@@ -1160,7 +1160,7 @@ func TestUserSignupBanned(t *testing.T) {
 
 func TestUserSignupBannedMURExists(t *testing.T) {
 	// given
-	userSignup := &v1alpha1.UserSignup{
+		userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
