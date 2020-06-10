@@ -40,7 +40,11 @@ func Add(mgr manager.Manager, config *configuration.Config) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileNSTemplateTier{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileNSTemplateTier{
+		client:                 mgr.GetClient(),
+		scheme:                 mgr.GetScheme(),
+		retrieveMemberClusters: cluster.GetMemberClusters, // default func, can be overridden in unit tests
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler

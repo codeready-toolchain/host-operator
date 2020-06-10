@@ -13,8 +13,6 @@ spec:
     plural: templateupdaterequests
     singular: templateupdaterequest
   scope: Namespaced
-  subresources:
-    status: {}
   validation:
     openAPIV3Schema:
       description: TemplateUpdateRequest is the Schema for the templateupdaterequests
@@ -34,7 +32,7 @@ spec:
           type: object
         spec:
           description: TemplateUpdateRequestSpec defines the desired state of TemplateUpdateRequest
-            It contains the new TemplateRefs to
+            It contains the new TemplateRefs to use in the MasterUserRecords
           properties:
             clusterResources:
               description: the cluster resources template (for cluster-wide quotas,
@@ -70,6 +68,7 @@ spec:
           - namespaces
           - tierName
           type: object
+      x-kubernetes-preserve-unknown-fields: true
   version: v1alpha1
   versions:
   - name: v1alpha1
