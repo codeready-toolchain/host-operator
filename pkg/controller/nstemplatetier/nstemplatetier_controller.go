@@ -51,7 +51,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource NSTemplateTier
-	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.NSTemplateTier{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.NSTemplateTier{}}, &handler.EnqueueRequestForObject{}, predicate.GenerationChangedPredicate{})
 	if err != nil {
 		return err
 	}
