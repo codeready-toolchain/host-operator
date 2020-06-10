@@ -108,11 +108,11 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, err
 	}
 
-	members := r.retrieveMemberClusters()
-loop:
-	for _, member := range members {
-		// create a TemplateUpdateRequest if active count < max pol size
-		if activeTemplateUpdateRequests < maxPoolSize {
+	if activeTemplateUpdateRequests < maxPoolSize {
+		members := r.retrieveMemberClusters()
+	loop:
+		for _, member := range members {
+			// create a TemplateUpdateRequest if active count < max pol size
 			// find a MasterUserRecord which is not already up-to-date
 			// and for which there is no TemplateUpdateRequest yet
 			// fetch by subsets of "maxPoolSize + 1" size until a MasterUserRecord candidate is found
