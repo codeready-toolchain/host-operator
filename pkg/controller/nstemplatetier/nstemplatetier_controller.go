@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -93,7 +94,7 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 	instance := toolchainv1alpha1.NSTemplateTier{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, &instance)
 	if err != nil {
-		log.Error(err, "unable to get the current NSTemplateTier instance")
+		logger.Error(err, "unable to get the current NSTemplateTier instance")
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
@@ -103,7 +104,7 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 
 	activeTemplateUpdateRequests, err := r.activeTemplateUpdateRequests(instance)
 	if err != nil {
-		log.Error(err, "unable to get active TemplateUpdateRequests")
+		logger.Error(err, "unable to get active TemplateUpdateRequests")
 		return reconcile.Result{}, err
 	}
 
@@ -118,7 +119,7 @@ loop:
 			murs := toolchainv1alpha1.MasterUserRecordList{}
 			matchingLabels, err := newLabelSelector(instance, *member)
 			if err != nil {
-				log.Error(err, "unable to get MasterUserRecords to update")
+				logger.Error(err, "unable to get MasterUserRecords to update")
 				return reconcile.Result{}, err
 			}
 			r.client.List(context.Background(), &murs,
@@ -126,18 +127,18 @@ loop:
 				client.Limit(maxPoolSize+1),
 				matchingLabels,
 			)
-			log.Info("listed MasterUserRecords", "count", len(murs.Items), "cluster", member.Name)
+			logger.Info("listed MasterUserRecords", "count", len(murs.Items), "cluster", member.Name)
 			for _, mur := range murs.Items {
 				for _, account := range mur.Spec.UserAccounts {
 					accountTmpls := account.Spec.NSTemplateSet
-					log.Info("checking mur account", "name", mur.Name, "tier", accountTmpls.TierName)
+					logger.Info("checking mur account", "name", mur.Name, "tier", accountTmpls.TierName)
 					if accountTmpls.TierName != instance.Name {
 						// skip if the user account is not based on the current Tier
 						continue
 					}
 					// compare all TemplateRefs in the current MUR.UserAccount vs NSTemplateTier instance
 					if !reflect.DeepEqual(templateRefs(accountTmpls), templateRefs(instance.Spec)) {
-						log.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", instance.Name)
+						logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", instance.Name)
 						r.client.Create(context.TODO(), &toolchainv1alpha1.TemplateUpdateRequest{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: mur.Name,
@@ -156,7 +157,7 @@ loop:
 			}
 		}
 	}
-	log.Info("done with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", instance.Name)
+	logger.Info("done with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", instance.Name)
 	return reconcile.Result{}, nil
 }
 
@@ -164,7 +165,6 @@ func newLabelSelector(instance toolchainv1alpha1.NSTemplateTier, member cluster.
 	// compute the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
 	hash, err := computeTemplateRefsHash(instance)
 	if err != nil {
-		log.Error(err, "unable to generate the hash for the NSTemplateTier")
 		return client.MatchingLabelsSelector{}, err
 	}
 	selector := labels.NewSelector()
@@ -183,11 +183,9 @@ func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance toolchai
 	if err := r.client.List(context.Background(), &templateUpdateRequests, client.MatchingLabels{
 		toolchainv1alpha1.NSTemplateTierNameLabelKey: instance.Name,
 	}); err != nil {
-		log.Error(err, "unable to list current TemplateUpdateRequest resources for the NSTemplateTier update")
 		return -1, err
 	}
 
-	log.Info("listed TemplateUpdateRequests", "count", len(templateUpdateRequests.Items))
 	// count non-deleted templateUpdateRequest items
 	activeTemplateUpdateRequests := 0
 	for _, r := range templateUpdateRequests.Items {
