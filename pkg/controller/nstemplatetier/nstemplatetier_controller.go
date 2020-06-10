@@ -94,11 +94,11 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 	instance := toolchainv1alpha1.NSTemplateTier{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, &instance)
 	if err != nil {
-		logger.Error(err, "unable to get the current NSTemplateTier instance")
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
+		logger.Error(err, "unable to get the current NSTemplateTier instance")
 		return reconcile.Result{}, err
 	}
 
