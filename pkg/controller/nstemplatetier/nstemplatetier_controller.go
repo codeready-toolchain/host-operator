@@ -151,8 +151,9 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 								},
 							},
 							Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
-								TierName:           instance.Name,
-								NSTemplateTierSpec: instance.Spec,
+								TierName:         instance.Name,
+								Namespaces:       instance.Spec.Namespaces,
+								ClusterResources: instance.Spec.ClusterResources,
 							},
 						})
 						break loop // create a single TemplateUpdateRequest resource per reconcile loop
