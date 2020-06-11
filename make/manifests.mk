@@ -5,7 +5,7 @@ PATH_TO_OLM_GENERATE_FILE=scripts/olm-catalog-generate.sh
 .PHONY: push-to-quay-nightly
 ## Creates a new version of CSV and pushes it to quay
 push-to-quay-nightly:
-	$(eval PUSH_PARAMS = -pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service/ -qn ${QUAY_NAMESPACE})
+	$(eval PUSH_PARAMS = -pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service/ -qn ${QUAY_NAMESPACE} -ch nightly)
 ifneq ("$(wildcard ../api/$(PATH_TO_PUSH_NIGHTLY_FILE))","")
 	@echo "pushing to quay in nightly channel using script from local api repo..."
 	../api/${PATH_TO_PUSH_NIGHTLY_FILE} ${PUSH_PARAMS}
