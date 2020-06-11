@@ -4,11 +4,9 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
@@ -23,29 +21,6 @@ import (
 const (
 	operatorNamespace = "toolchain-host-operator"
 )
-
-func newNsTemplateTier(tierName, clusterRevision string, nsTypes ...string) *toolchainv1alpha1.NSTemplateTier {
-	namespaces := make([]toolchainv1alpha1.NSTemplateTierNamespace, len(nsTypes))
-	for i, nsType := range nsTypes {
-		revision := fmt.Sprintf("123abc%d", i+1)
-		namespaces[i] = toolchainv1alpha1.NSTemplateTierNamespace{
-			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, nsType, revision),
-		}
-	}
-
-	return &toolchainv1alpha1.NSTemplateTier{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: operatorNamespace,
-			Name:      tierName,
-		},
-		Spec: toolchainv1alpha1.NSTemplateTierSpec{
-			Namespaces: namespaces,
-			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-				TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, "clusterresources", clusterRevision),
-			},
-		},
-	}
-}
 
 func TestNotificationContextExtractedFromUserSignupOk(t *testing.T) {
 	// given
