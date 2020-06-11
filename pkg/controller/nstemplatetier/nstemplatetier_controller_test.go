@@ -91,7 +91,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{newNSTemplateTier}
 			initObjs = append(initObjs, newMasterUserRecords(t, 10, WithTemplates("cluster1", *oldNSTemplateTier))...)
-			initObjs = append(initObjs, newTemplateUpdateRequests(maxPoolSize, WithTierName("other"))...)
+			initObjs = append(initObjs, newTemplateUpdateRequests(MaxPoolSize, WithTierName("other"))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -102,7 +102,7 @@ func TestReconcile(t *testing.T) {
 			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
 			require.NoError(t, err)
-			assert.Len(t, actualTemplateUpdateRequests.Items, maxPoolSize+1) // 1 resource was created, `maxPoolSize` already existed
+			assert.Len(t, actualTemplateUpdateRequests.Items, MaxPoolSize+1) // 1 resource was created, `MaxPoolSize` already existed
 		})
 
 		// in this test, the controller can create an extra TemplateUpdateRequest resource
@@ -111,7 +111,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{newNSTemplateTier}
 			initObjs = append(initObjs, newMasterUserRecords(t, 10, WithTemplates("cluster1", *oldNSTemplateTier))...)
-			initObjs = append(initObjs, newTemplateUpdateRequests(maxPoolSize, WithDeletionTimestamp(0))...)
+			initObjs = append(initObjs, newTemplateUpdateRequests(MaxPoolSize, WithDeletionTimestamp(0))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -122,7 +122,7 @@ func TestReconcile(t *testing.T) {
 			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
 			require.NoError(t, err)
-			assert.Len(t, actualTemplateUpdateRequests.Items, maxPoolSize+1) // one more TemplateUpdateRequest
+			assert.Len(t, actualTemplateUpdateRequests.Items, MaxPoolSize+1) // one more TemplateUpdateRequest
 		})
 
 		// in this test, there are 10 MasterUserRecords already up-to-date, and a few other ones which need to be updated
@@ -188,7 +188,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{newNSTemplateTier}
 			initObjs = append(initObjs, newMasterUserRecords(t, 20, WithTemplates("cluster1", *newNSTemplateTier))...)
-			initObjs = append(initObjs, newTemplateUpdateRequests(maxPoolSize)...)
+			initObjs = append(initObjs, newTemplateUpdateRequests(MaxPoolSize)...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -199,17 +199,17 @@ func TestReconcile(t *testing.T) {
 			templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 			err = cl.List(context.TODO(), &templateUpdateRequests)
 			require.NoError(t, err)
-			assert.Len(t, templateUpdateRequests.Items, maxPoolSize) // size unchanged
+			assert.Len(t, templateUpdateRequests.Items, MaxPoolSize) // size unchanged
 
 		})
 
-		// in this test, there are a more MasterUserRecords to update than `maxPoolSize` allows, but
-		// the max number of current TemplateRequestUpdate resources is reached (`maxPoolSize`)
+		// in this test, there are a more MasterUserRecords to update than `MaxPoolSize` allows, but
+		// the max number of current TemplateRequestUpdate resources is reached (`MaxPoolSize`)
 		t.Run("when maximum number of active TemplateUpdateRequest resources is reached", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{newNSTemplateTier}
 			initObjs = append(initObjs, newMasterUserRecords(t, 10, WithTemplates("cluster1", *oldNSTemplateTier))...)
-			initObjs = append(initObjs, newTemplateUpdateRequests(maxPoolSize)...)
+			initObjs = append(initObjs, newTemplateUpdateRequests(MaxPoolSize)...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -220,7 +220,7 @@ func TestReconcile(t *testing.T) {
 			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
 			require.NoError(t, err)
-			assert.Len(t, actualTemplateUpdateRequests.Items, maxPoolSize) // no increase
+			assert.Len(t, actualTemplateUpdateRequests.Items, MaxPoolSize) // no increase
 		})
 	})
 }

@@ -28,8 +28,8 @@ import (
 var log = logf.Log.WithName("controller_nstemplatetier")
 
 const (
-	// maxPoolSize the maximum number of TemplateUpdateRequest resources that can exist at the same time
-	maxPoolSize = 5
+	// MaxPoolSize the maximum number of TemplateUpdateRequest resources that can exist at the same time
+	MaxPoolSize = 5
 )
 
 // Add creates a new NSTemplateTier Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -112,14 +112,14 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, err
 	}
 
-	if activeTemplateUpdateRequests < maxPoolSize {
+	if activeTemplateUpdateRequests < MaxPoolSize {
 		members := r.retrieveMemberClusters()
 	loop:
 		for _, member := range members {
 			// create a TemplateUpdateRequest if active count < max pol size
 			// find a MasterUserRecord which is not already up-to-date
 			// and for which there is no TemplateUpdateRequest yet
-			// fetch by subsets of "maxPoolSize + 1" size until a MasterUserRecord candidate is found
+			// fetch by subsets of "MaxPoolSize + 1" size until a MasterUserRecord candidate is found
 			murs := toolchainv1alpha1.MasterUserRecordList{}
 			matchingLabels, err := newLabelSelector(instance, *member)
 			if err != nil {
@@ -128,7 +128,7 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 			}
 			r.client.List(context.Background(), &murs,
 				client.InNamespace(instance.Namespace),
-				client.Limit(maxPoolSize+1),
+				client.Limit(MaxPoolSize+1),
 				matchingLabels,
 			)
 			logger.Info("listed MasterUserRecords", "count", len(murs.Items), "cluster", member.Name)
