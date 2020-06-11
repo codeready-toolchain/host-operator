@@ -54,6 +54,7 @@ func TestNotificationContext(t *testing.T) {
 
 		// then
 		require.Error(t, err)
+		require.Equal(t, "usersignups.toolchain.dev.openshift.com \"other\" not found", err.Error())
 	})
 }
 
