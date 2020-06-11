@@ -165,6 +165,18 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 	return reconcile.Result{}, nil
 }
 
+// newLabelSelector creates a label selector to find MasterUserRecords which are not up-to-date with
+// the templateRefs of the given NSTemplateTier.
+//
+// (longer explanation)
+// newLabelSelector creates a selector to find MasterUserRecords with the following labels:
+// - toolchain.dev.openshift.com/<member>-templates-tier: <tier>
+// - toolchain.dev.openshift.com/<member>-templates-tier-hash: !<hash>
+//
+// In other words, this label selector will be used to list MasterUserRecords which have a user account set to the given `<tier>`
+// but with a template version (defined by `<hash>`) which is NOT to the expected value (the one provided by `instance`).
+//
+// Note: The `hash` value is computed from the TemplateRefs. See `computeTemplateRefsHash()`
 func newLabelSelector(instance toolchainv1alpha1.NSTemplateTier, member cluster.FedCluster) (client.MatchingLabelsSelector, error) {
 	// compute the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
 	hash, err := computeTemplateRefsHash(instance)
