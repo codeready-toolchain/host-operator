@@ -13,8 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"testing"
 )
 
@@ -79,14 +77,6 @@ func newObjectMeta(name, email string) metav1.ObjectMeta {
 			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
 		},
 	}
-}
-
-// ReconcileUserSignup reconciles a UserSignup object
-type ReconcileUserSignup struct {
-	// This client, initialized using mgr.Client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) *test.FakeClient {
