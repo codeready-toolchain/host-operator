@@ -12,13 +12,10 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"testing"
 )
@@ -50,8 +47,6 @@ func newNsTemplateTier(tierName, clusterRevision string, nsTypes ...string) *too
 	}
 }
 
-var basicNSTemplateTier = newNsTemplateTier("basic", "654321b", "code", "dev", "stage")
-
 func TestNotificationContextExtractedFromUserSignupOk(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{
@@ -65,10 +60,10 @@ func TestNotificationContextExtractedFromUserSignupOk(t *testing.T) {
 		},
 	}
 
-	r, _, _ := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier)
+	client := prepareReconcile(t, userSignup.Name, userSignup)
 
 	// when
-	notificationCtx, err := NewNotificationContext(context.Background(), r.client, userSignup.Name, operatorNamespace)
+	notificationCtx, err := NewNotificationContext(context.Background(), client, userSignup.Name, operatorNamespace)
 
 	// then
 	require.NoError(t, err)
@@ -78,6 +73,28 @@ func TestNotificationContextExtractedFromUserSignupOk(t *testing.T) {
 	require.Equal(t, userSignup.Spec.FamilyName, notificationCtx.LastName)
 	require.Equal(t, userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey], notificationCtx.Email)
 	require.Equal(t, userSignup.Spec.Company, notificationCtx.CompanyName)
+}
+
+func TestNotificationContextNoUserSignupFails(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("john", "jsmith@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			Username:      "jsmith@redhat.com",
+			Approved:      true,
+			TargetCluster: "east",
+			FamilyName:    "Smith",
+			GivenName:     "John",
+		},
+	}
+
+	client := prepareReconcile(t, userSignup.Name, userSignup)
+
+	// when
+	_, err := NewNotificationContext(context.Background(), client, "other", operatorNamespace)
+
+	// then
+	require.Error(t, err)
 }
 
 func newObjectMeta(name, email string) metav1.ObjectMeta {
@@ -110,38 +127,14 @@ type ReconcileUserSignup struct {
 	scheme *runtime.Scheme
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) *test.FakeClient {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 
-	secret := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "secret",
-			Namespace: "test-namespace",
-		},
-		Type: v1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			"token": []byte("mycooltoken"),
-		},
-	}
-
-	initObjs = append(initObjs, secret)
+	initObjs = append(initObjs)
 
 	client := test.NewFakeClient(t, initObjs...)
 
-	r := &ReconcileUserSignup{
-		client: client,
-		scheme: s,
-	}
-	return r, newReconcileRequest(name), client
-}
-
-func newReconcileRequest(name string) reconcile.Request {
-	return reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      name,
-			Namespace: operatorNamespace,
-		},
-	}
+	return client
 }
