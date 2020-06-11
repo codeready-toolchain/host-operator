@@ -22,7 +22,7 @@ const (
 	operatorNamespace = "toolchain-host-operator"
 )
 
-func TestNotificationContextExtractedFromUserSignupOk(t *testing.T) {
+func TestNotificationContext(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("john", "jsmith@redhat.com"),
@@ -34,42 +34,29 @@ func TestNotificationContextExtractedFromUserSignupOk(t *testing.T) {
 			GivenName:     "John",
 		},
 	}
-
 	client := prepareReconcile(t, userSignup.Name, userSignup)
 
-	// when
-	notificationCtx, err := NewNotificationContext(context.Background(), client, userSignup.Name, operatorNamespace)
+	t.Run("user found", func(t *testing.T) {
+		// when
+		notificationCtx, err := NewNotificationContext(context.Background(), client, userSignup.Name, operatorNamespace)
 
-	// then
-	require.NoError(t, err)
+		// then
+		require.NoError(t, err)
 
-	require.Equal(t, userSignup.Name, notificationCtx.UserID)
-	require.Equal(t, userSignup.Spec.GivenName, notificationCtx.FirstName)
-	require.Equal(t, userSignup.Spec.FamilyName, notificationCtx.LastName)
-	require.Equal(t, userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey], notificationCtx.Email)
-	require.Equal(t, userSignup.Spec.Company, notificationCtx.CompanyName)
-}
+		require.Equal(t, userSignup.Name, notificationCtx.UserID)
+		require.Equal(t, userSignup.Spec.GivenName, notificationCtx.FirstName)
+		require.Equal(t, userSignup.Spec.FamilyName, notificationCtx.LastName)
+		require.Equal(t, userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey], notificationCtx.Email)
+		require.Equal(t, userSignup.Spec.Company, notificationCtx.CompanyName)
+	})
 
-func TestNotificationContextNoUserSignupFails(t *testing.T) {
-	// given
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("john", "jsmith@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username:      "jsmith@redhat.com",
-			Approved:      true,
-			TargetCluster: "east",
-			FamilyName:    "Smith",
-			GivenName:     "John",
-		},
-	}
+	t.Run("user not found", func(t *testing.T) {
+		// when
+		_, err := NewNotificationContext(context.Background(), client, "other", operatorNamespace)
 
-	client := prepareReconcile(t, userSignup.Name, userSignup)
-
-	// when
-	_, err := NewNotificationContext(context.Background(), client, "other", operatorNamespace)
-
-	// then
-	require.Error(t, err)
+		// then
+		require.Error(t, err)
+	})
 }
 
 func newObjectMeta(name, email string) metav1.ObjectMeta {
