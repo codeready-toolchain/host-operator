@@ -1,7 +1,0 @@
-apiVersion: toolchain.dev.openshift.com/v1alpha1
-kind: BannedUser
-metadata:
-    labels:
-        toolchain.dev.openshift.com/emailHash: e13743a7f1db7f4246badd6fd6ff54ff
-spec:
-    email: john.doe@gmail.com
