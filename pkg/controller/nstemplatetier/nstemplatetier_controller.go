@@ -126,11 +126,15 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 				logger.Error(err, "unable to get MasterUserRecords to update")
 				return reconcile.Result{}, err
 			}
-			r.client.List(context.Background(), &murs,
+			err = r.client.List(context.Background(), &murs,
 				client.InNamespace(instance.Namespace),
 				client.Limit(MaxPoolSize+1),
 				matchingLabels,
 			)
+			if err != nil {
+				logger.Error(err, "unable to get MasterUserRecords to update")
+				return reconcile.Result{}, err
+			}
 			logger.Info("listed MasterUserRecords", "count", len(murs.Items), "cluster", member.Name)
 			for _, mur := range murs.Items {
 				// check if there's already a TemplateUpdateRequest for this MasterUserRecord
