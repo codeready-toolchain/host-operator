@@ -7,17 +7,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type NotificationDeliveryServiceConfig interface {
+	GetNotificationDeliveryService() string
+}
+
 type NotificationDeliveryService interface {
-	Deliver(context.Context, NotificationContext, string, string) error
+	Deliver(ctx context.Context, notificationCtx NotificationContext, templateName string) error
 }
 
 type NotificationDeliveryServiceFactory struct {
 	Client client.Client
-	Config *configuration.Config
+	Config NotificationDeliveryServiceConfig
 }
 
-func NewNotificationDeliveryServiceFactory(client client.Client, config *configuration.Config) *NotificationDeliveryServiceFactory {
-	return &NotificationDeliveryServiceFactory{Client: client}
+func NewNotificationDeliveryServiceFactory(client client.Client, config NotificationDeliveryServiceConfig) *NotificationDeliveryServiceFactory {
+	return &NotificationDeliveryServiceFactory{Client: client, Config: config}
 }
 
 func (f *NotificationDeliveryServiceFactory) CreateNotificationDeliveryService() (NotificationDeliveryService, error) {
