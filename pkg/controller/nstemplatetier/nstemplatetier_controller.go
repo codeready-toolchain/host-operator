@@ -253,7 +253,7 @@ func ComputeTemplateRefsHash(instance *toolchainv1alpha1.NSTemplateTier) (string
 	}
 	md5hash := md5.New()
 	// Ignore the error, as this implementation cannot return one
-	md5hash.Write([]byte(spec))
+	_, _ = md5hash.Write([]byte(spec))
 	return hex.EncodeToString(md5hash.Sum(nil)), nil
 }
 
