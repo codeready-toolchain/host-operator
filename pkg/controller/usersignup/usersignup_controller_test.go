@@ -1160,7 +1160,7 @@ func TestUserSignupBanned(t *testing.T) {
 
 func TestUserSignupBannedMURExists(t *testing.T) {
 	// given
-		userSignup := &v1alpha1.UserSignup{
+	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -1961,7 +1961,8 @@ func TestMigrateMur(t *testing.T) {
 			TargetCluster: "east",
 		},
 	}
-	mur := newMasterUserRecord(basicNSTemplateTier, "foo", operatorNamespace, "east", "foo")
+	mur, err := newMasterUserRecord(basicNSTemplateTier, "foo", operatorNamespace, "east", "foo")
+	require.NoError(t, err)
 
 	// set NSLimit and NSTemplateSet to be empty
 	mur.Spec.UserAccounts[0].Spec.NSTemplateSet = toolchainv1alpha1.NSTemplateSetSpec{}

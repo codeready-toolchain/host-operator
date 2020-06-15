@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -95,8 +96,8 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 	logger.Info("Reconciling NSTemplateTier")
 
 	// Fetch the NSTemplateTier instance
-	instance := toolchainv1alpha1.NSTemplateTier{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, &instance)
+	instance := &toolchainv1alpha1.NSTemplateTier{}
+	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -114,7 +115,6 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 
 	if activeTemplateUpdateRequests < MaxPoolSize {
 		members := r.retrieveMemberClusters()
-	loop:
 		for _, member := range members {
 			// create a TemplateUpdateRequest if active count < max pol size
 			// find a MasterUserRecord which is not already up-to-date
@@ -133,9 +133,21 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 			)
 			logger.Info("listed MasterUserRecords", "count", len(murs.Items), "cluster", member.Name)
 			for _, mur := range murs.Items {
+				// check if there's already a TemplateUpdateRequest for this MasterUserRecord
+				templateUpdateRequest := toolchainv1alpha1.TemplateUpdateRequest{}
+				if err := r.client.Get(context.TODO(), types.NamespacedName{
+					Namespace: instance.Namespace,
+					Name:      mur.Name,
+				}, &templateUpdateRequest); err == nil {
+					logger.Info("MasterUserRecord already has an associated TemplateUpdateRequest", "name", mur.Name)
+					continue
+				} else if !errors.IsNotFound(err) {
+					logger.Error(err, "unable to get TemplateUpdateRequest for MasterUserRecord", "name", mur.Name)
+					return reconcile.Result{}, err
+				}
 				for _, account := range mur.Spec.UserAccounts {
 					accountTmpls := account.Spec.NSTemplateSet
-					logger.Info("checking mur account", "name", mur.Name, "tier", accountTmpls.TierName)
+					logger.Info("checking MasterUserRecord account", "name", mur.Name, "tier", accountTmpls.TierName)
 					if accountTmpls.TierName != instance.Name {
 						// skip if the user account is not based on the current Tier
 						continue
@@ -143,9 +155,10 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 					// compare all TemplateRefs in the current MUR.UserAccount vs NSTemplateTier instance
 					if !reflect.DeepEqual(templateRefs(accountTmpls), templateRefs(instance.Spec)) {
 						logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", instance.Name)
-						r.client.Create(context.TODO(), &toolchainv1alpha1.TemplateUpdateRequest{
+						if err = r.client.Create(context.TODO(), &toolchainv1alpha1.TemplateUpdateRequest{
 							ObjectMeta: metav1.ObjectMeta{
-								Name: mur.Name,
+								Namespace: instance.Namespace,
+								Name:      mur.Name,
 								Labels: map[string]string{
 									toolchainv1alpha1.NSTemplateTierNameLabelKey: instance.Name,
 								},
@@ -155,8 +168,13 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 								Namespaces:       instance.Spec.Namespaces,
 								ClusterResources: instance.Spec.ClusterResources,
 							},
-						})
-						break loop // create a single TemplateUpdateRequest resource per reconcile loop
+						}); err != nil {
+							return reconcile.Result{}, err
+						}
+
+						// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
+						// so the request has to be requeued, in order to create other TemplateUpdateRequests
+						return reconcile.Result{Requeue: true}, nil
 					}
 				}
 			}
@@ -178,23 +196,33 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 // but with a template version (defined by `<hash>`) which is NOT to the expected value (the one provided by `instance`).
 //
 // Note: The `hash` value is computed from the TemplateRefs. See `computeTemplateRefsHash()`
-func newLabelSelector(instance toolchainv1alpha1.NSTemplateTier, member cluster.FedCluster) (client.MatchingLabelsSelector, error) {
+func newLabelSelector(instance *toolchainv1alpha1.NSTemplateTier, member cluster.FedCluster) (client.MatchingLabelsSelector, error) {
 	// compute the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-	hash, err := computeTemplateRefsHash(instance)
+	hash, err := ComputeTemplateRefsHash(instance)
 	if err != nil {
 		return client.MatchingLabelsSelector{}, err
 	}
 	selector := labels.NewSelector()
-	tierLabel, err := labels.NewRequirement(toolchainv1alpha1.LabelKeyPrefix+member.Name+"-templates-tier", selection.Equals, []string{instance.Name})
+	tierLabel, err := labels.NewRequirement(TemplateTierNameLabel(member.Name), selection.Equals, []string{instance.Name})
 	selector = selector.Add(*tierLabel)
-	templateHashLabel, err := labels.NewRequirement(toolchainv1alpha1.LabelKeyPrefix+member.Name+"-templates-tier-hash", selection.NotEquals, []string{hash})
+	templateHashLabel, err := labels.NewRequirement(TemplateTierHashLabel(member.Name), selection.NotEquals, []string{hash})
 	selector = selector.Add(*templateHashLabel)
 	return client.MatchingLabelsSelector{
 		Selector: selector,
 	}, nil
 }
 
-func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance toolchainv1alpha1.NSTemplateTier) (int, error) {
+// TemplateTierNameLabel returns the label key to specify the tier templates in use on the given cluster
+func TemplateTierNameLabel(cluster string) string {
+	return toolchainv1alpha1.LabelKeyPrefix + cluster + "-templates-tier"
+}
+
+// TemplateTierHashLabel returns the label key to specify the version of the tier templates in use on the given cluster
+func TemplateTierHashLabel(cluster string) string {
+	return toolchainv1alpha1.LabelKeyPrefix + cluster + "-templates-tier-hash"
+}
+
+func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance *toolchainv1alpha1.NSTemplateTier) (int, error) {
 	// fetch the list of TemplateUpdateRequest owned by the NSTemplateTier instance
 	templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 	if err := r.client.List(context.Background(), &templateUpdateRequests, client.MatchingLabels{
@@ -213,8 +241,8 @@ func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance toolchai
 	return activeTemplateUpdateRequests, nil
 }
 
-// compute the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-func computeTemplateRefsHash(instance toolchainv1alpha1.NSTemplateTier) (string, error) {
+// ComputeTemplateRefsHash computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
+func ComputeTemplateRefsHash(instance *toolchainv1alpha1.NSTemplateTier) (string, error) {
 	spec, err := json.Marshal(instance.Spec)
 	if err != nil {
 		return "", err

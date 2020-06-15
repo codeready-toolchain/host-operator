@@ -2,6 +2,7 @@ package usersignup
 
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -21,10 +22,45 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 	return changed, mur
 }
 
-func newMasterUserRecord(nstemplateTier *toolchainv1alpha1.NSTemplateTier, name, namespace, targetCluster, userSignupName string) *toolchainv1alpha1.MasterUserRecord {
-	return newMasterUserRecordWithNsSet(name, namespace, targetCluster, userSignupName, "default", NewNSTemplateSetSpec(nstemplateTier))
+func newMasterUserRecord(nstemplateTier *toolchainv1alpha1.NSTemplateTier, name, namespace, targetCluster, userSignupName string) (*toolchainv1alpha1.MasterUserRecord, error) {
+	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
+		{
+			TargetCluster: targetCluster,
+			Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
+				UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
+					NSLimit:       "default",
+					NSTemplateSet: NewNSTemplateSetSpec(nstemplateTier),
+				},
+			},
+		},
+	}
+	hash, err := nstemplatetier.ComputeTemplateRefsHash(nstemplateTier)
+	if err != nil {
+		return nil, err
+	}
+
+	labels := map[string]string{
+		toolchainv1alpha1.MasterUserRecordUserIDLabelKey:    userSignupName,
+		nstemplatetier.TemplateTierNameLabel(targetCluster): nstemplateTier.Name,
+		nstemplatetier.TemplateTierHashLabel(targetCluster): hash,
+	}
+
+	mur := &toolchainv1alpha1.MasterUserRecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: toolchainv1alpha1.MasterUserRecordSpec{
+			UserAccounts: userAccounts,
+			UserID:       userSignupName,
+		},
+	}
+	return mur, nil
+
 }
 
+// NewNSTemplateSetSpec initializes a NSTemplateSetSpec from the given NSTemplateTier
 func NewNSTemplateSetSpec(nstemplateTier *toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {
 	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nstemplateTier.Spec.Namespaces))
 	for i, ns := range nstemplateTier.Spec.Namespaces {
@@ -43,33 +79,4 @@ func NewNSTemplateSetSpec(nstemplateTier *toolchainv1alpha1.NSTemplateTier) tool
 		Namespaces:       namespaces,
 		ClusterResources: clusterResources,
 	}
-}
-
-func newMasterUserRecordWithNsSet(name, namespace, targetCluster, userSignupName, nsLimit string, nsTmplSet toolchainv1alpha1.NSTemplateSetSpec) *toolchainv1alpha1.MasterUserRecord {
-	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
-		{
-			TargetCluster: targetCluster,
-			Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
-				UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
-					NSLimit:       nsLimit,
-					NSTemplateSet: nsTmplSet,
-				},
-			},
-		},
-	}
-
-	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignupName}
-
-	mur := &toolchainv1alpha1.MasterUserRecord{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    labels,
-		},
-		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserAccounts: userAccounts,
-			UserID:       userSignupName,
-		},
-	}
-	return mur
 }

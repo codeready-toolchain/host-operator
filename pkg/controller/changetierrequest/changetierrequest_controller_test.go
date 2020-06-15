@@ -21,16 +21,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 func TestChangeTierSuccess(t *testing.T) {
 	// given
+	logf.SetLogger(logf.ZapLogger(true))
 	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_CHANGE_REQUEST_DELETION", "10s")
 	defer restore()
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-	basicTier := NewNSTemplateTier("basic", "123abc", "654321a", "code", "stage", "dev")
 
 	t.Run("the controller should change tier in MUR", func(t *testing.T) {
 		// given
@@ -75,7 +75,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			UserAccountHasTier("another-cluster", *teamTier).
-			UserAccountHasTier(test.MemberClusterName, *basicTier)
+			UserAccountHasTier(test.MemberClusterName, murtest.DefaultNSTemplateTier)
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
@@ -95,7 +95,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		assert.True(t, result.RequeueAfter < cast.ToDuration("10s"))
 		assert.True(t, result.RequeueAfter > cast.ToDuration("1s"))
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier(*basicTier)
+			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
@@ -114,7 +114,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, result.Requeue)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier(*basicTier)
+			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
 		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
 }
@@ -158,7 +158,6 @@ func TestChangeTierFailure(t *testing.T) {
 		mur := murtest.NewMasterUserRecord("johny")
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("some-other-cluster"))
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		basicTier := NewNSTemplateTier("basic", "123abc", "654321a", "code", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
 		// when
@@ -167,7 +166,7 @@ func TestChangeTierFailure(t *testing.T) {
 		// then
 		require.Error(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier(*basicTier)
+			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
 		assert.Contains(t, err.Error(), "unable to change tier in MasterUserRecord johny")
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name,
 			toBeNotComplete("the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed"))
@@ -203,7 +202,6 @@ func TestChangeTierFailure(t *testing.T) {
 		changeTierRequest.Status.Conditions = []v1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		basicTier := NewNSTemplateTier("basic", "123abc", "654321a", "code", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 		cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("error")
@@ -216,7 +214,7 @@ func TestChangeTierFailure(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unable to delete ChangeTierRequest object 'request-name'")
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier(*basicTier)
+			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 }

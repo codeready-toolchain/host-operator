@@ -4,33 +4,37 @@ import (
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestNewMasterUserRecord(t *testing.T) {
 	t.Run("when clusterResources template is specified", func(t *testing.T) {
 		// given
-		nSTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
 
 		// when
-		mur := newMasterUserRecord(nSTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
+		mur, err := newMasterUserRecord(nsTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
 
 		// then
-		assert.Equal(t, newExpectedMur(), *mur)
+		require.NoError(t, err)
+		assert.Equal(t, newExpectedMur(nsTemplateTier), *mur)
 	})
 
 	t.Run("when clusterResources template is NOT specified", func(t *testing.T) {
 		// given
-		nSTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
-		nSTemplateTier.Spec.ClusterResources = nil
+		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		nsTemplateTier.Spec.ClusterResources = nil
 
 		// when
-		mur := newMasterUserRecord(nSTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
+		mur, err := newMasterUserRecord(nsTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
 
 		// then
-		withoutClusterRes := newExpectedMur()
+		require.NoError(t, err)
+		withoutClusterRes := newExpectedMur(nsTemplateTier)
 		withoutClusterRes.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = nil
 		assert.EqualValues(t, withoutClusterRes, *mur)
 	})
@@ -39,10 +43,10 @@ func TestNewMasterUserRecord(t *testing.T) {
 func TestNewNsTemplateSetSpec(t *testing.T) {
 	t.Run("when clusterResources template is specified", func(t *testing.T) {
 		// given
-		nSTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
 
 		// when
-		setSpec := NewNSTemplateSetSpec(nSTemplateTier)
+		setSpec := NewNSTemplateSetSpec(nsTemplateTier)
 
 		// then
 		assert.Equal(t, newExpectedNsTemplateSetSpec(), setSpec)
@@ -50,11 +54,11 @@ func TestNewNsTemplateSetSpec(t *testing.T) {
 
 	t.Run("when clusterResources template is NOT specified", func(t *testing.T) {
 		// given
-		nSTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
-		nSTemplateTier.Spec.ClusterResources = nil
+		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		nsTemplateTier.Spec.ClusterResources = nil
 
 		// when
-		setSpec := NewNSTemplateSetSpec(nSTemplateTier)
+		setSpec := NewNSTemplateSetSpec(nsTemplateTier)
 
 		// then
 		withoutClusterRes := newExpectedNsTemplateSetSpec()
@@ -66,54 +70,58 @@ func TestNewNsTemplateSetSpec(t *testing.T) {
 func TestMigrateMurIfNecessary(t *testing.T) {
 	t.Run("when mur is the same", func(t *testing.T) {
 		// given
-		nSTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
-		mur := newMasterUserRecord(nSTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
+		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		mur, err := newMasterUserRecord(nsTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
+		require.NoError(t, err)
 
 		// when
-		changed, changedMur := migrateOrFixMurIfNecessary(mur, nSTemplateTier)
+		changed, changedMur := migrateOrFixMurIfNecessary(mur, nsTemplateTier)
 
 		// then
 		assert.False(t, changed)
-		assert.Equal(t, newExpectedMur(), *changedMur)
+		assert.Equal(t, newExpectedMur(nsTemplateTier), *changedMur)
 	})
 
 	t.Run("when mur is missing NsLimit", func(t *testing.T) {
 		// given
-		nSTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
-		mur := newMasterUserRecord(nSTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
+		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		mur, err := newMasterUserRecord(nsTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
+		require.NoError(t, err)
 		mur.Spec.UserAccounts[0].Spec.NSLimit = ""
 
 		// when
-		changed, changedMur := migrateOrFixMurIfNecessary(mur, nSTemplateTier)
+		changed, changedMur := migrateOrFixMurIfNecessary(mur, nsTemplateTier)
 
 		// then
 		assert.True(t, changed)
-		assert.Equal(t, newExpectedMur(), *changedMur)
+		assert.Equal(t, newExpectedMur(nsTemplateTier), *changedMur)
 	})
 
 	t.Run("when whole NSTemplateSet is missing", func(t *testing.T) {
 		// given
-		nSTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
-		mur := newMasterUserRecord(nSTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
+		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		mur, err := newMasterUserRecord(nsTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
+		require.NoError(t, err)
 		mur.Spec.UserAccounts[0].Spec.NSTemplateSet = v1alpha1.NSTemplateSetSpec{}
 
 		// when
-		changed, changedMur := migrateOrFixMurIfNecessary(mur, nSTemplateTier)
+		changed, changedMur := migrateOrFixMurIfNecessary(mur, nsTemplateTier)
 
 		// then
 		assert.True(t, changed)
-		assert.Equal(t, newExpectedMur(), *changedMur)
+		assert.Equal(t, newExpectedMur(nsTemplateTier), *changedMur)
 	})
 
 	t.Run("when one namespace is missing and one is extra, but rest is fine, then doesn't change", func(t *testing.T) {
 		// given
-		nSTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
-		mur := newMasterUserRecord(nSTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
+		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		mur, err := newMasterUserRecord(nsTemplateTier, "johny", operatorNamespace, test.MemberClusterName, "123456789")
+		require.NoError(t, err)
 		mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces[0].TemplateRef = "advanced-cicd-123abc1"
 		providedMur := mur.DeepCopy()
 
 		// when
-		changed, changedMur := migrateOrFixMurIfNecessary(mur, nSTemplateTier)
+		changed, changedMur := migrateOrFixMurIfNecessary(mur, nsTemplateTier)
 
 		// then
 		assert.False(t, changed)
@@ -141,13 +149,16 @@ func newExpectedNsTemplateSetSpec() v1alpha1.NSTemplateSetSpec {
 	}
 }
 
-func newExpectedMur() v1alpha1.MasterUserRecord {
+func newExpectedMur(tier *v1alpha1.NSTemplateTier) v1alpha1.MasterUserRecord {
+	hash, _ := nstemplatetier.ComputeTemplateRefsHash(tier)
 	return v1alpha1.MasterUserRecord{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      "johny",
 			Namespace: operatorNamespace,
 			Labels: map[string]string{
-				"toolchain.dev.openshift.com/user-id": "123456789",
+				"toolchain.dev.openshift.com/user-id":                        "123456789",
+				nstemplatetier.TemplateTierNameLabel(test.MemberClusterName): tier.Name,
+				nstemplatetier.TemplateTierHashLabel(test.MemberClusterName): hash,
 			},
 		},
 		Spec: v1alpha1.MasterUserRecordSpec{

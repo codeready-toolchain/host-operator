@@ -7,6 +7,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
@@ -144,16 +145,34 @@ func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierReque
 
 	newNsTemplateSet := usersignup.NewNSTemplateSetSpec(nsTemplateTier)
 	changed := false
+	hash, err := nstemplatetier.ComputeTemplateRefsHash(nsTemplateTier)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to compute hash for NSTemplateTier with name '%s'", nsTemplateTier.Name)
+	}
+
 	for i, ua := range mur.Spec.UserAccounts {
 		if changeTierRequest.Spec.TargetCluster != "" {
 			if ua.TargetCluster == changeTierRequest.Spec.TargetCluster {
 				mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
+				// also update some of the labels on the MUR, those related to the new Tier in use.
+				if mur.Labels == nil {
+					mur.Labels = map[string]string{}
+				}
+				mur.Labels[nstemplatetier.TemplateTierNameLabel(ua.TargetCluster)] = nsTemplateTier.Name
+				mur.Labels[nstemplatetier.TemplateTierHashLabel(ua.TargetCluster)] = hash
 				changed = true
 				break
 			}
 		} else {
 			changed = true
 			mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
+			// also update some of the labels on the MUR, those related to the new Tier in use.
+			if mur.Labels == nil {
+				mur.Labels = map[string]string{}
+			}
+			mur.Labels[nstemplatetier.TemplateTierNameLabel(ua.TargetCluster)] = nsTemplateTier.Name
+			mur.Labels[nstemplatetier.TemplateTierHashLabel(ua.TargetCluster)] = hash
+
 		}
 	}
 

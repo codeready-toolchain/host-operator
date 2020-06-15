@@ -136,8 +136,6 @@ github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMe
 github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c/go.mod h1:XGLbWH/ujMcbPbhZq52Nv6UrCghb1yGn//133kEsvDk=
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200608102500-f81c6b7e77cf h1:co7HGUfH6yAWLf1dNkukg5M7+Z49wfW+emRRdcxZoyc=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200608102500-f81c6b7e77cf/go.mod h1:NEidpsizFce1C6fknsCawASPpdpLViyauZBB5GdxJk4=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=
 github.com/containerd/console v0.0.0-20180822173158-c12b1e7919c1/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.2.7/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=
@@ -829,6 +827,8 @@ github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv
 github.com/xanzy/go-gitlab v0.15.0/go.mod h1:8zdQa/ri1dfn8eS3Ir1SyfvOKlw7WBJ8DVThkpGiXrs=
 github.com/xcoulon/api v0.0.0-20200611075458-b5b18794d435 h1:irVSpp51LIuWvy+ynP/6WLfEpQ7zGiE3dZRFmLuPf7Y=
 github.com/xcoulon/api v0.0.0-20200611075458-b5b18794d435/go.mod h1:uh4hKem1mo1TE66qtuA5ZV3orpsKJNufWCSE0uPSES8=
+github.com/xcoulon/toolchain-common v0.0.0-20200615152009-d3c17e733d39 h1:/c6qS6Yqo6etoMjlrgIPM7sUe0kkrG2O8PYBPArGpVA=
+github.com/xcoulon/toolchain-common v0.0.0-20200615152009-d3c17e733d39/go.mod h1:NEidpsizFce1C6fknsCawASPpdpLViyauZBB5GdxJk4=
 github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c/go.mod h1:lB8K/P019DLNhemzwFU4jHLhdvlE6uDZjXFejJXr49I=
 github.com/xdg/stringprep v1.0.0/go.mod h1:Jhud4/sHMO4oL310DaZAKk9ZaJ08SJfe+sJh0HrGL1Y=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
