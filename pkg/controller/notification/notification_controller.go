@@ -136,8 +136,8 @@ func (r *ReconcileNotification) setStatusNotificationDelivered(notification *too
 	return r.updateStatusConditions(
 		notification,
 		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.NotificationDelivered,
+			Type:   toolchainv1alpha1.NotificationSent,
 			Status: corev1.ConditionTrue,
-			Reason: toolchainv1alpha1.NotificationServiceDeliveredReason,
+			Reason: toolchainv1alpha1.NotificationServiceSentReason,
 		})
 }
