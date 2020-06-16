@@ -85,7 +85,7 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// if is delivered, then check when status was changed and delete it if the requested duration has passed
-	completeCond, found := condition.FindConditionByType(notification.Status.Conditions, toolchainv1alpha1.NotificationDelivered)
+	completeCond, found := condition.FindConditionByType(notification.Status.Conditions, toolchainv1alpha1.NotificationSent)
 	if found && completeCond.Status == corev1.ConditionTrue {
 		deleted, requeueAfter, err := r.checkTransitionTimeAndDelete(reqLogger, notification, completeCond)
 		if deleted || err != nil {

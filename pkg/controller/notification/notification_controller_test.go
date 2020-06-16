@@ -111,7 +111,7 @@ func AssertThatNotificationHasCondition(t *testing.T, cl client.Client, name str
 
 func toBeDelivered() v1alpha1.Condition {
 	return v1alpha1.Condition{
-		Type:               v1alpha1.NotificationDelivered,
+		Type:               v1alpha1.NotificationSent,
 		Status:             apiv1.ConditionTrue,
 		Reason:             "Delivered",
 		LastTransitionTime: v1.Time{Time: time.Now()},
