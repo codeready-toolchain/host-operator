@@ -96,8 +96,8 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 	logger.Info("Reconciling NSTemplateTier")
 
 	// Fetch the NSTemplateTier instance
-	instance := &toolchainv1alpha1.NSTemplateTier{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	instance := toolchainv1alpha1.NSTemplateTier{}
+	err := r.client.Get(context.TODO(), request.NamespacedName, &instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -114,72 +114,69 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 	}
 
 	if activeTemplateUpdateRequests < MaxPoolSize {
-		members := r.retrieveMemberClusters()
-		for _, member := range members {
-			// create a TemplateUpdateRequest if active count < max pol size
-			// find a MasterUserRecord which is not already up-to-date
-			// and for which there is no TemplateUpdateRequest yet
-			// fetch by subsets of "MaxPoolSize + 1" size until a MasterUserRecord candidate is found
-			murs := toolchainv1alpha1.MasterUserRecordList{}
-			matchingLabels, err := newLabelSelector(instance, *member)
-			if err != nil {
-				logger.Error(err, "unable to get MasterUserRecords to update")
+		// create a TemplateUpdateRequest if active count < max pol size
+		// find a MasterUserRecord which is not already up-to-date
+		// and for which there is no TemplateUpdateRequest yet
+		// fetch by subsets of "MaxPoolSize + 1" size until a MasterUserRecord candidate is found
+		murs := toolchainv1alpha1.MasterUserRecordList{}
+		matchingLabels, err := newLabelSelector(instance)
+		if err != nil {
+			logger.Error(err, "unable to get MasterUserRecords to update")
+			return reconcile.Result{}, err
+		}
+		err = r.client.List(context.Background(), &murs,
+			client.InNamespace(instance.Namespace),
+			client.Limit(MaxPoolSize+1),
+			matchingLabels,
+		)
+		if err != nil {
+			logger.Error(err, "unable to get MasterUserRecords to update")
+			return reconcile.Result{}, err
+		}
+		logger.Info("listed MasterUserRecords", "count", len(murs.Items))
+		for _, mur := range murs.Items {
+			// check if there's already a TemplateUpdateRequest for this MasterUserRecord
+			templateUpdateRequest := toolchainv1alpha1.TemplateUpdateRequest{}
+			if err := r.client.Get(context.TODO(), types.NamespacedName{
+				Namespace: instance.Namespace,
+				Name:      mur.Name,
+			}, &templateUpdateRequest); err == nil {
+				logger.Info("MasterUserRecord already has an associated TemplateUpdateRequest", "name", mur.Name)
+				continue
+			} else if !errors.IsNotFound(err) {
+				logger.Error(err, "unable to get TemplateUpdateRequest for MasterUserRecord", "name", mur.Name)
 				return reconcile.Result{}, err
 			}
-			err = r.client.List(context.Background(), &murs,
-				client.InNamespace(instance.Namespace),
-				client.Limit(MaxPoolSize+1),
-				matchingLabels,
-			)
-			if err != nil {
-				logger.Error(err, "unable to get MasterUserRecords to update")
-				return reconcile.Result{}, err
-			}
-			logger.Info("listed MasterUserRecords", "count", len(murs.Items), "cluster", member.Name)
-			for _, mur := range murs.Items {
-				// check if there's already a TemplateUpdateRequest for this MasterUserRecord
-				templateUpdateRequest := toolchainv1alpha1.TemplateUpdateRequest{}
-				if err := r.client.Get(context.TODO(), types.NamespacedName{
-					Namespace: instance.Namespace,
-					Name:      mur.Name,
-				}, &templateUpdateRequest); err == nil {
-					logger.Info("MasterUserRecord already has an associated TemplateUpdateRequest", "name", mur.Name)
+			for _, account := range mur.Spec.UserAccounts {
+				accountTmpls := account.Spec.NSTemplateSet
+				logger.Info("checking MasterUserRecord account", "name", mur.Name, "tier", accountTmpls.TierName)
+				if accountTmpls.TierName != instance.Name {
+					// skip if the user account is not based on the current Tier
 					continue
-				} else if !errors.IsNotFound(err) {
-					logger.Error(err, "unable to get TemplateUpdateRequest for MasterUserRecord", "name", mur.Name)
-					return reconcile.Result{}, err
 				}
-				for _, account := range mur.Spec.UserAccounts {
-					accountTmpls := account.Spec.NSTemplateSet
-					logger.Info("checking MasterUserRecord account", "name", mur.Name, "tier", accountTmpls.TierName)
-					if accountTmpls.TierName != instance.Name {
-						// skip if the user account is not based on the current Tier
-						continue
+				// compare all TemplateRefs in the current MUR.UserAccount vs NSTemplateTier instance
+				if !reflect.DeepEqual(templateRefs(accountTmpls), templateRefs(instance.Spec)) {
+					logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", instance.Name)
+					if err = r.client.Create(context.TODO(), &toolchainv1alpha1.TemplateUpdateRequest{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: instance.Namespace,
+							Name:      mur.Name,
+							Labels: map[string]string{
+								toolchainv1alpha1.NSTemplateTierNameLabelKey: instance.Name,
+							},
+						},
+						Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
+							TierName:         instance.Name,
+							Namespaces:       instance.Spec.Namespaces,
+							ClusterResources: instance.Spec.ClusterResources,
+						},
+					}); err != nil {
+						return reconcile.Result{}, err
 					}
-					// compare all TemplateRefs in the current MUR.UserAccount vs NSTemplateTier instance
-					if !reflect.DeepEqual(templateRefs(accountTmpls), templateRefs(instance.Spec)) {
-						logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", instance.Name)
-						if err = r.client.Create(context.TODO(), &toolchainv1alpha1.TemplateUpdateRequest{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: instance.Namespace,
-								Name:      mur.Name,
-								Labels: map[string]string{
-									toolchainv1alpha1.NSTemplateTierNameLabelKey: instance.Name,
-								},
-							},
-							Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
-								TierName:         instance.Name,
-								Namespaces:       instance.Spec.Namespaces,
-								ClusterResources: instance.Spec.ClusterResources,
-							},
-						}); err != nil {
-							return reconcile.Result{}, err
-						}
 
-						// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
-						// so the request has to be requeued, in order to create other TemplateUpdateRequests
-						return reconcile.Result{Requeue: true}, nil
-					}
+					// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
+					// so the request has to be requeued, in order to create other TemplateUpdateRequests
+					return reconcile.Result{Requeue: true}, nil
 				}
 			}
 		}
@@ -192,41 +189,35 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 // the templateRefs of the given NSTemplateTier.
 //
 // (longer explanation)
-// newLabelSelector creates a selector to find MasterUserRecords with the following labels:
-// - toolchain.dev.openshift.com/<member>-templates-tier: <tier>
-// - toolchain.dev.openshift.com/<member>-templates-tier-hash: !<hash>
+// newLabelSelector creates a selector to find MasterUserRecords which have a label with key
+// `toolchain.dev.openshift.com/<tiername>-tier-hash` but whose value is NOT `<hash>`
 //
 // In other words, this label selector will be used to list MasterUserRecords which have a user account set to the given `<tier>`
 // but with a template version (defined by `<hash>`) which is NOT to the expected value (the one provided by `instance`).
 //
 // Note: The `hash` value is computed from the TemplateRefs. See `computeTemplateRefsHash()`
-func newLabelSelector(instance *toolchainv1alpha1.NSTemplateTier, member cluster.FedCluster) (client.MatchingLabelsSelector, error) {
+func newLabelSelector(tier toolchainv1alpha1.NSTemplateTier) (client.MatchingLabelsSelector, error) {
 	// compute the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-	hash, err := ComputeTemplateRefsHash(instance)
+	hash, err := ComputeTemplateRefsHash(tier)
 	if err != nil {
 		return client.MatchingLabelsSelector{}, err
 	}
 	selector := labels.NewSelector()
-	tierLabel, err := labels.NewRequirement(TemplateTierNameLabel(member.Name), selection.Equals, []string{instance.Name})
+	tierLabel, err := labels.NewRequirement(TemplateTierHashLabelKey(tier.Name), selection.Exists, []string{})
 	selector = selector.Add(*tierLabel)
-	templateHashLabel, err := labels.NewRequirement(TemplateTierHashLabel(member.Name), selection.NotEquals, []string{hash})
+	templateHashLabel, err := labels.NewRequirement(TemplateTierHashLabelKey(tier.Name), selection.NotEquals, []string{hash})
 	selector = selector.Add(*templateHashLabel)
 	return client.MatchingLabelsSelector{
 		Selector: selector,
 	}, nil
 }
 
-// TemplateTierNameLabel returns the label key to specify the tier templates in use on the given cluster
-func TemplateTierNameLabel(cluster string) string {
-	return toolchainv1alpha1.LabelKeyPrefix + cluster + "-templates-tier"
+// TemplateTierHashLabelKey returns the label key to specify the version of the templates of the given tier
+func TemplateTierHashLabelKey(tierName string) string {
+	return toolchainv1alpha1.LabelKeyPrefix + tierName + "-tier-hash"
 }
 
-// TemplateTierHashLabel returns the label key to specify the version of the tier templates in use on the given cluster
-func TemplateTierHashLabel(cluster string) string {
-	return toolchainv1alpha1.LabelKeyPrefix + cluster + "-templates-tier-hash"
-}
-
-func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance *toolchainv1alpha1.NSTemplateTier) (int, error) {
+func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance toolchainv1alpha1.NSTemplateTier) (int, error) {
 	// fetch the list of TemplateUpdateRequest owned by the NSTemplateTier instance
 	templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 	if err := r.client.List(context.Background(), &templateUpdateRequests, client.MatchingLabels{
@@ -246,7 +237,7 @@ func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance *toolcha
 }
 
 // ComputeTemplateRefsHash computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-func ComputeTemplateRefsHash(instance *toolchainv1alpha1.NSTemplateTier) (string, error) {
+func ComputeTemplateRefsHash(instance toolchainv1alpha1.NSTemplateTier) (string, error) {
 	spec, err := json.Marshal(instance.Spec)
 	if err != nil {
 		return "", err

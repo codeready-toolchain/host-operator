@@ -155,23 +155,12 @@ func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierReque
 			if ua.TargetCluster == changeTierRequest.Spec.TargetCluster {
 				mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
 				// also update some of the labels on the MUR, those related to the new Tier in use.
-				if mur.Labels == nil {
-					mur.Labels = map[string]string{}
-				}
-				mur.Labels[nstemplatetier.TemplateTierNameLabel(ua.TargetCluster)] = nsTemplateTier.Name
-				mur.Labels[nstemplatetier.TemplateTierHashLabel(ua.TargetCluster)] = hash
 				changed = true
 				break
 			}
 		} else {
 			changed = true
 			mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
-			// also update some of the labels on the MUR, those related to the new Tier in use.
-			if mur.Labels == nil {
-				mur.Labels = map[string]string{}
-			}
-			mur.Labels[nstemplatetier.TemplateTierNameLabel(ua.TargetCluster)] = nsTemplateTier.Name
-			mur.Labels[nstemplatetier.TemplateTierHashLabel(ua.TargetCluster)] = hash
 
 		}
 	}
@@ -180,6 +169,12 @@ func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierReque
 		err := fmt.Errorf("the MasterUserRecord '%s' doesn't contain UserAccount with cluster '%s' whose tier should be changed", changeTierRequest.Spec.MurName, changeTierRequest.Spec.TargetCluster)
 		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
 	}
+
+	// also update some of the labels on the MUR, those related to the new Tier in use.
+	if mur.Labels == nil {
+		mur.Labels = map[string]string{}
+	}
+	mur.Labels[nstemplatetier.TemplateTierHashLabelKey(nsTemplateTier.Name)] = hash
 
 	if err := r.client.Update(context.TODO(), mur); err != nil {
 		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
