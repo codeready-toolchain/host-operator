@@ -827,8 +827,8 @@ github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv
 github.com/xanzy/go-gitlab v0.15.0/go.mod h1:8zdQa/ri1dfn8eS3Ir1SyfvOKlw7WBJ8DVThkpGiXrs=
 github.com/xcoulon/api v0.0.0-20200611075458-b5b18794d435 h1:irVSpp51LIuWvy+ynP/6WLfEpQ7zGiE3dZRFmLuPf7Y=
 github.com/xcoulon/api v0.0.0-20200611075458-b5b18794d435/go.mod h1:uh4hKem1mo1TE66qtuA5ZV3orpsKJNufWCSE0uPSES8=
-github.com/xcoulon/toolchain-common v0.0.0-20200615152009-d3c17e733d39 h1:/c6qS6Yqo6etoMjlrgIPM7sUe0kkrG2O8PYBPArGpVA=
-github.com/xcoulon/toolchain-common v0.0.0-20200615152009-d3c17e733d39/go.mod h1:NEidpsizFce1C6fknsCawASPpdpLViyauZBB5GdxJk4=
+github.com/xcoulon/toolchain-common v0.0.0-20200616145633-e90e189d2d24 h1:dEsf5mjj8Szf0Gp///kYGTARjMaXOVSyLCexipVP7wY=
+github.com/xcoulon/toolchain-common v0.0.0-20200616145633-e90e189d2d24/go.mod h1:NEidpsizFce1C6fknsCawASPpdpLViyauZBB5GdxJk4=
 github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c/go.mod h1:lB8K/P019DLNhemzwFU4jHLhdvlE6uDZjXFejJXr49I=
 github.com/xdg/stringprep v1.0.0/go.mod h1:Jhud4/sHMO4oL310DaZAKk9ZaJ08SJfe+sJh0HrGL1Y=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=

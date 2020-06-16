@@ -9,6 +9,7 @@ import (
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -43,7 +44,9 @@ func TestChangeTierSuccess(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		murtest.AssertThatMasterUserRecord(t, "john", cl).AllUserAccountsHaveTier(*teamTier)
+		murtest.AssertThatMasterUserRecord(t, "john", cl).
+			AllUserAccountsHaveTier(*teamTier).
+			DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTier.Name))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
@@ -58,7 +61,8 @@ func TestChangeTierSuccess(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		murtest.AssertThatMasterUserRecord(t, "johny", cl).AllUserAccountsHaveTier(*teamTier)
+		murtest.AssertThatMasterUserRecord(t, "johny", cl).AllUserAccountsHaveTier(*teamTier).
+			DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTier.Name))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
@@ -75,7 +79,9 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			UserAccountHasTier("another-cluster", *teamTier).
-			UserAccountHasTier(test.MemberClusterName, murtest.DefaultNSTemplateTier)
+			HasLabel(nstemplatetier.TemplateTierHashLabelKey(teamTier.Name)).
+			UserAccountHasTier(test.MemberClusterName, murtest.DefaultNSTemplateTier).
+			HasLabel(nstemplatetier.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTier.Name))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 

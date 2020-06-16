@@ -12,6 +12,7 @@ import (
 )
 
 func TestNewMasterUserRecord(t *testing.T) {
+
 	t.Run("when clusterResources template is specified", func(t *testing.T) {
 		// given
 		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
@@ -21,7 +22,7 @@ func TestNewMasterUserRecord(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, newExpectedMur(nsTemplateTier), *mur)
+		assert.Equal(t, newExpectedMur(*nsTemplateTier), *mur)
 	})
 
 	t.Run("when clusterResources template is NOT specified", func(t *testing.T) {
@@ -34,7 +35,7 @@ func TestNewMasterUserRecord(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		withoutClusterRes := newExpectedMur(nsTemplateTier)
+		withoutClusterRes := newExpectedMur(*nsTemplateTier)
 		withoutClusterRes.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = nil
 		assert.EqualValues(t, withoutClusterRes, *mur)
 	})
@@ -79,7 +80,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		// then
 		assert.False(t, changed)
-		assert.Equal(t, newExpectedMur(nsTemplateTier), *changedMur)
+		assert.Equal(t, newExpectedMur(*nsTemplateTier), *changedMur)
 	})
 
 	t.Run("when mur is missing NsLimit", func(t *testing.T) {
@@ -94,7 +95,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		// then
 		assert.True(t, changed)
-		assert.Equal(t, newExpectedMur(nsTemplateTier), *changedMur)
+		assert.Equal(t, newExpectedMur(*nsTemplateTier), *changedMur)
 	})
 
 	t.Run("when whole NSTemplateSet is missing", func(t *testing.T) {
@@ -109,7 +110,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		// then
 		assert.True(t, changed)
-		assert.Equal(t, newExpectedMur(nsTemplateTier), *changedMur)
+		assert.Equal(t, newExpectedMur(*nsTemplateTier), *changedMur)
 	})
 
 	t.Run("when one namespace is missing and one is extra, but rest is fine, then doesn't change", func(t *testing.T) {
@@ -149,8 +150,8 @@ func newExpectedNsTemplateSetSpec() v1alpha1.NSTemplateSetSpec {
 	}
 }
 
-func newExpectedMur(tier *v1alpha1.NSTemplateTier) v1alpha1.MasterUserRecord {
-	hash, _ := nstemplatetier.ComputeTemplateRefsHash(tier)
+func newExpectedMur(tier v1alpha1.NSTemplateTier) v1alpha1.MasterUserRecord {
+	hash, _ := nstemplatetier.ComputeHashForNSTemplateTier(tier)
 	return v1alpha1.MasterUserRecord{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      "johny",

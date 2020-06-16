@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"reflect"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -96,8 +97,8 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 	logger.Info("Reconciling NSTemplateTier")
 
 	// Fetch the NSTemplateTier instance
-	instance := toolchainv1alpha1.NSTemplateTier{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, &instance)
+	instance := &toolchainv1alpha1.NSTemplateTier{}
+	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
@@ -133,7 +134,7 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 			logger.Error(err, "unable to get MasterUserRecords to update")
 			return reconcile.Result{}, err
 		}
-		logger.Info("listed MasterUserRecords", "count", len(murs.Items))
+		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchingLabels)
 		for _, mur := range murs.Items {
 			// check if there's already a TemplateUpdateRequest for this MasterUserRecord
 			templateUpdateRequest := toolchainv1alpha1.TemplateUpdateRequest{}
@@ -155,7 +156,7 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 					continue
 				}
 				// compare all TemplateRefs in the current MUR.UserAccount vs NSTemplateTier instance
-				if !reflect.DeepEqual(templateRefs(accountTmpls), templateRefs(instance.Spec)) {
+				if !reflect.DeepEqual(templateRefsFor(accountTmpls), templateRefsFor(instance.Spec)) {
 					logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", instance.Name)
 					if err = r.client.Create(context.TODO(), &toolchainv1alpha1.TemplateUpdateRequest{
 						ObjectMeta: metav1.ObjectMeta{
@@ -196,9 +197,9 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 // but with a template version (defined by `<hash>`) which is NOT to the expected value (the one provided by `instance`).
 //
 // Note: The `hash` value is computed from the TemplateRefs. See `computeTemplateRefsHash()`
-func newLabelSelector(tier toolchainv1alpha1.NSTemplateTier) (client.MatchingLabelsSelector, error) {
+func newLabelSelector(tier *toolchainv1alpha1.NSTemplateTier) (client.MatchingLabelsSelector, error) {
 	// compute the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-	hash, err := ComputeTemplateRefsHash(tier)
+	hash, err := ComputeHashForNSTemplateTier(*tier)
 	if err != nil {
 		return client.MatchingLabelsSelector{}, err
 	}
@@ -217,7 +218,7 @@ func TemplateTierHashLabelKey(tierName string) string {
 	return toolchainv1alpha1.LabelKeyPrefix + tierName + "-tier-hash"
 }
 
-func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance toolchainv1alpha1.NSTemplateTier) (int, error) {
+func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance *toolchainv1alpha1.NSTemplateTier) (int, error) {
 	// fetch the list of TemplateUpdateRequest owned by the NSTemplateTier instance
 	templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 	if err := r.client.List(context.Background(), &templateUpdateRequests, client.MatchingLabels{
@@ -236,19 +237,48 @@ func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance toolchai
 	return activeTemplateUpdateRequests, nil
 }
 
-// ComputeTemplateRefsHash computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-func ComputeTemplateRefsHash(instance toolchainv1alpha1.NSTemplateTier) (string, error) {
-	spec, err := json.Marshal(instance.Spec)
+// ComputeHashForNSTemplateTier computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
+func ComputeHashForNSTemplateTier(tier toolchainv1alpha1.NSTemplateTier) (string, error) {
+	refs := templateRefs{}
+	for _, ns := range tier.Spec.Namespaces {
+		refs.Namespaces = append(refs.Namespaces, ns.TemplateRef)
+	}
+	if tier.Spec.ClusterResources != nil {
+		refs.ClusterResources = tier.Spec.ClusterResources.TemplateRef
+	}
+	return computeHash(refs)
+}
+
+// ComputeHashForNSTemplateSetSpec computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
+func ComputeHashForNSTemplateSetSpec(s toolchainv1alpha1.NSTemplateSetSpec) (string, error) {
+	refs := templateRefs{}
+	for _, ns := range s.Namespaces {
+		refs.Namespaces = append(refs.Namespaces, ns.TemplateRef)
+	}
+	if s.ClusterResources != nil {
+		refs.ClusterResources = s.ClusterResources.TemplateRef
+	}
+	return computeHash(refs)
+}
+
+type templateRefs struct {
+	Namespaces       []string `json:"namespaces"`
+	ClusterResources string   `json:"clusterresource,omitempty"`
+}
+
+func computeHash(refs templateRefs) (string, error) {
+	m, err := json.Marshal(refs)
 	if err != nil {
 		return "", err
 	}
 	md5hash := md5.New()
 	// Ignore the error, as this implementation cannot return one
-	_, _ = md5hash.Write([]byte(spec))
-	return hex.EncodeToString(md5hash.Sum(nil)), nil
+	md5hash.Write(m)
+	hash := hex.EncodeToString(md5hash.Sum(nil))
+	return hash, nil
 }
 
-func templateRefs(obj interface{}) []string {
+func templateRefsFor(obj interface{}) []string {
 	switch obj := obj.(type) {
 	case toolchainv1alpha1.NSTemplateSetSpec:
 		templateRefs := []string{}

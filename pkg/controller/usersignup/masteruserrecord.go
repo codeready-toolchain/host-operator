@@ -34,7 +34,7 @@ func newMasterUserRecord(nstemplateTier *toolchainv1alpha1.NSTemplateTier, name,
 			},
 		},
 	}
-	hash, err := nstemplatetier.ComputeTemplateRefsHash(nstemplateTier)
+	hash, err := nstemplatetier.ComputeHashForNSTemplateTier(*nstemplateTier)
 	if err != nil {
 		return nil, err
 	}
