@@ -32,7 +32,7 @@ func TestNotificationSuccess(t *testing.T) {
 	t.Run("will not do anything and return requeue with shorter duration that 10s", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord("jane")
-		notification := newNotification("jane", "team")
+		notification := newNotification("jane", "")
 		notification.Status.Conditions = []v1alpha1.Condition{toBeDelivered()}
 		controller, request, cl := newController(t, notification, mur)
 
