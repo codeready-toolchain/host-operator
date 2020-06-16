@@ -72,7 +72,7 @@ func TestNotificationDeliveredFailure(t *testing.T) {
 	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_NOTIFICATION_DELETION", "10s")
 	defer restore()
 
-	t.Run("will return an error since it cannot delete the ChangeTierRequest after successfully delivering", func(t *testing.T) {
+	t.Run("will return an error since it cannot delete the Notification after successfully delivering", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord("jane")
 		notification := newNotification("abc123", "")
