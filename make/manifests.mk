@@ -7,6 +7,8 @@ PATH_TO_RECOVERY_FILE=scripts/recover-operator-dir.sh
 PATH_TO_OLM_GENERATE_FILE=scripts/olm-catalog-generate.sh
 
 TMP_DIR?=/tmp
+IMAGE_BUILDER?=docker
+INDEX_IMAGE?=hosted-toolchain-index
 
 .PHONY: push-to-quay-nightly
 ## Creates a new version of CSV and pushes it to quay
@@ -39,7 +41,7 @@ endif
 .PHONY: push-bundle-and-index-image
 ## Pushes generated manifests as a bundle image to quay and adds is to the image index
 push-bundle-and-index-image:
-	$(eval PUSH_BUNDLE_PARAMS = -pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service/ -qn ${QUAY_NAMESPACE} -ch staging -im hosted-toolchain-index -td ${TMP_DIR})
+	$(eval PUSH_BUNDLE_PARAMS = -pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service/ -qn ${QUAY_NAMESPACE} -ch staging -td ${TMP_DIR} -ib ${IMAGE_BUILDER} -im ${INDEX_IMAGE})
 ifneq ("$(wildcard ../api/$(PATH_TO_BUNDLE_FILE))","")
 	@echo "pushing to quay in staging channel using script from local api repo..."
 	../api/${PATH_TO_BUNDLE_FILE} ${PUSH_BUNDLE_PARAMS}
