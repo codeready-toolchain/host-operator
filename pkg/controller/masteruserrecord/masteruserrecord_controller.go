@@ -148,7 +148,7 @@ func (r *ReconcileMasterUserRecord) addFinalizer(logger logr.Logger, mur *toolch
 	return nil
 }
 
-// check all tiers in use, and make sure that there's a label with a hash of the templates for each of them.
+// ensureTierTemplatesLabel checks all tiers in use, and make sure that there's a label with a hash of the templates for each of them.
 // this label will be needed to select master user record that need to be updated when tier templates changed.
 // NOTE: this is a one-time update in relation with https://issues.redhat.com/browse/CRT-693 (as part of https://issues.redhat.com/browse/CRT-665)
 func (r *ReconcileMasterUserRecord) ensureTierTemplatesLabel(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) error {
