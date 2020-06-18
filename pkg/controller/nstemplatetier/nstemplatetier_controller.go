@@ -2,19 +2,17 @@ package nstemplatetier
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
-	"encoding/json"
 	"reflect"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+
+	"github.com/go-logr/logr"
+	errs "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -95,22 +93,35 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	logger.Info("Reconciling NSTemplateTier")
 
-	// Fetch the NSTemplateTier instance
-	instance := &toolchainv1alpha1.NSTemplateTier{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	// Fetch the NSTemplateTier tier
+	tier := &toolchainv1alpha1.NSTemplateTier{}
+	err := r.client.Get(context.TODO(), request.NamespacedName, tier)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		logger.Error(err, "unable to get the current NSTemplateTier instance")
+		logger.Error(err, "unable to get the current NSTemplateTier tier")
 		return reconcile.Result{}, err
 	}
-
-	activeTemplateUpdateRequests, err := r.activeTemplateUpdateRequests(instance)
-	if err != nil {
-		logger.Error(err, "unable to get active TemplateUpdateRequests")
+	if requeue, err := r.ensureTemplateUpdateRequest(logger, tier); err != nil {
+		log.Error(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed.")
 		return reconcile.Result{}, err
+	} else if requeue {
+		return reconcile.Result{Requeue: true}, nil
+	}
+
+	return reconcile.Result{}, nil
+}
+
+// ensureTemplateUpdateRequest ensures that all relared MasterUserRecords are up-to-date with the NSTemplateTier that changed.
+// If not, then it creates a TemplateUpdateRequest resource for the first MasterUserRecord not up-to-date with the tier, and
+// return `true, nil` so the controller will requeue the request to create subsequent TemplateUpdateRequest resources, until the
+// `MaxPoolSize` threashold is reached.
+func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
+	activeTemplateUpdateRequests, err := r.activeTemplateUpdateRequests(tier)
+	if err != nil {
+		return false, errs.Wrap(err, "unable to get active TemplateUpdateRequests")
 	}
 
 	if activeTemplateUpdateRequests < MaxPoolSize {
@@ -119,109 +130,73 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 		// and for which there is no TemplateUpdateRequest yet
 		// fetch by subsets of "MaxPoolSize + 1" size until a MasterUserRecord candidate is found
 		murs := toolchainv1alpha1.MasterUserRecordList{}
-		matchingLabels, err := newLabelSelector(instance)
+		matchingLabels, err := murSelector(tier)
 		if err != nil {
-			logger.Error(err, "unable to get MasterUserRecords to update")
-			return reconcile.Result{}, err
+			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
 		err = r.client.List(context.Background(), &murs,
-			client.InNamespace(instance.Namespace),
+			client.InNamespace(tier.Namespace),
 			client.Limit(MaxPoolSize+1),
 			matchingLabels,
 		)
 		if err != nil {
-			logger.Error(err, "unable to get MasterUserRecords to update")
-			return reconcile.Result{}, err
+			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
 		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchingLabels)
 		for _, mur := range murs.Items {
 			// check if there's already a TemplateUpdateRequest for this MasterUserRecord
 			templateUpdateRequest := toolchainv1alpha1.TemplateUpdateRequest{}
 			if err := r.client.Get(context.TODO(), types.NamespacedName{
-				Namespace: instance.Namespace,
+				Namespace: tier.Namespace,
 				Name:      mur.Name,
 			}, &templateUpdateRequest); err == nil {
 				logger.Info("MasterUserRecord already has an associated TemplateUpdateRequest", "name", mur.Name)
 				continue
 			} else if !errors.IsNotFound(err) {
-				logger.Error(err, "unable to get TemplateUpdateRequest for MasterUserRecord", "name", mur.Name)
-				return reconcile.Result{}, err
+				return false, errs.Wrapf(err, "unable to get TemplateUpdateRequest for MasterUserRecord '%s'", mur.Name)
 			}
 			for _, account := range mur.Spec.UserAccounts {
 				accountTmpls := account.Spec.NSTemplateSet
 				logger.Info("checking MasterUserRecord account", "name", mur.Name, "tier", accountTmpls.TierName)
-				if accountTmpls.TierName != instance.Name {
+				if accountTmpls.TierName != tier.Name {
 					// skip if the user account is not based on the current Tier
 					continue
 				}
-				// compare all TemplateRefs in the current MUR.UserAccount vs NSTemplateTier instance
-				if !reflect.DeepEqual(templateRefsFor(accountTmpls), templateRefsFor(instance.Spec)) {
-					logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", instance.Name)
+				// compare all TemplateRefs in the current MUR.UserAccount vs NSTemplateTier tier
+				if !reflect.DeepEqual(templateRefsFor(accountTmpls), templateRefsFor(tier.Spec)) {
+					logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", tier.Name)
 					if err = r.client.Create(context.TODO(), &toolchainv1alpha1.TemplateUpdateRequest{
 						ObjectMeta: metav1.ObjectMeta{
-							Namespace: instance.Namespace,
+							Namespace: tier.Namespace,
 							Name:      mur.Name,
 							Labels: map[string]string{
-								toolchainv1alpha1.NSTemplateTierNameLabelKey: instance.Name,
+								toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
 							},
 						},
 						Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
-							TierName:         instance.Name,
-							Namespaces:       instance.Spec.Namespaces,
-							ClusterResources: instance.Spec.ClusterResources,
+							TierName:         tier.Name,
+							Namespaces:       tier.Spec.Namespaces,
+							ClusterResources: tier.Spec.ClusterResources,
 						},
 					}); err != nil {
-						return reconcile.Result{}, err
+						return false, err
 					}
-
 					// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
 					// so the request has to be requeued, in order to create other TemplateUpdateRequests
-					return reconcile.Result{Requeue: true}, nil
+					// in the next loops
+					return true, nil
 				}
 			}
 		}
 	}
-	logger.Info("done with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", instance.Name)
-	return reconcile.Result{}, nil
+	logger.Info("done with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", tier.Name)
+	return false, nil // no need to requeue
 }
-
-// newLabelSelector creates a label selector to find MasterUserRecords which are not up-to-date with
-// the templateRefs of the given NSTemplateTier.
-//
-// (longer explanation)
-// newLabelSelector creates a selector to find MasterUserRecords which have a label with key
-// `toolchain.dev.openshift.com/<tiername>-tier-hash` but whose value is NOT `<hash>`
-//
-// In other words, this label selector will be used to list MasterUserRecords which have a user account set to the given `<tier>`
-// but with a template version (defined by `<hash>`) which is NOT to the expected value (the one provided by `instance`).
-//
-// Note: The `hash` value is computed from the TemplateRefs. See `computeTemplateRefsHash()`
-func newLabelSelector(tier *toolchainv1alpha1.NSTemplateTier) (client.MatchingLabelsSelector, error) {
-	// compute the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-	hash, err := ComputeHashForNSTemplateTier(*tier)
-	if err != nil {
-		return client.MatchingLabelsSelector{}, err
-	}
-	selector := labels.NewSelector()
-	tierLabel, err := labels.NewRequirement(TemplateTierHashLabelKey(tier.Name), selection.Exists, []string{})
-	selector = selector.Add(*tierLabel)
-	templateHashLabel, err := labels.NewRequirement(TemplateTierHashLabelKey(tier.Name), selection.NotEquals, []string{hash})
-	selector = selector.Add(*templateHashLabel)
-	return client.MatchingLabelsSelector{
-		Selector: selector,
-	}, nil
-}
-
-// TemplateTierHashLabelKey returns the label key to specify the version of the templates of the given tier
-func TemplateTierHashLabelKey(tierName string) string {
-	return toolchainv1alpha1.LabelKeyPrefix + tierName + "-tier-hash"
-}
-
-func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance *toolchainv1alpha1.NSTemplateTier) (int, error) {
-	// fetch the list of TemplateUpdateRequest owned by the NSTemplateTier instance
+func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(tier *toolchainv1alpha1.NSTemplateTier) (int, error) {
+	// fetch the list of TemplateUpdateRequest owned by the NSTemplateTier tier
 	templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 	if err := r.client.List(context.Background(), &templateUpdateRequests, client.MatchingLabels{
-		toolchainv1alpha1.NSTemplateTierNameLabelKey: instance.Name,
+		toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
 	}); err != nil {
 		return -1, err
 	}
@@ -234,70 +209,4 @@ func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(instance *toolcha
 		}
 	}
 	return activeTemplateUpdateRequests, nil
-}
-
-// ComputeHashForNSTemplateTier computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-func ComputeHashForNSTemplateTier(tier toolchainv1alpha1.NSTemplateTier) (string, error) {
-	refs := templateRefs{}
-	for _, ns := range tier.Spec.Namespaces {
-		refs.Namespaces = append(refs.Namespaces, ns.TemplateRef)
-	}
-	if tier.Spec.ClusterResources != nil {
-		refs.ClusterResources = tier.Spec.ClusterResources.TemplateRef
-	}
-	return computeHash(refs)
-}
-
-// ComputeHashForNSTemplateSetSpec computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-func ComputeHashForNSTemplateSetSpec(s toolchainv1alpha1.NSTemplateSetSpec) (string, error) {
-	refs := templateRefs{}
-	for _, ns := range s.Namespaces {
-		refs.Namespaces = append(refs.Namespaces, ns.TemplateRef)
-	}
-	if s.ClusterResources != nil {
-		refs.ClusterResources = s.ClusterResources.TemplateRef
-	}
-	return computeHash(refs)
-}
-
-type templateRefs struct {
-	Namespaces       []string `json:"namespaces"`
-	ClusterResources string   `json:"clusterresource,omitempty"`
-}
-
-func computeHash(refs templateRefs) (string, error) {
-	m, err := json.Marshal(refs)
-	if err != nil {
-		return "", err
-	}
-	md5hash := md5.New()
-	// Ignore the error, as this implementation cannot return one
-	md5hash.Write(m)
-	hash := hex.EncodeToString(md5hash.Sum(nil))
-	return hash, nil
-}
-
-func templateRefsFor(obj interface{}) []string {
-	switch obj := obj.(type) {
-	case toolchainv1alpha1.NSTemplateSetSpec:
-		templateRefs := []string{}
-		for _, ns := range obj.Namespaces {
-			templateRefs = append(templateRefs, ns.TemplateRef)
-		}
-		if obj.ClusterResources != nil {
-			templateRefs = append(templateRefs, obj.ClusterResources.TemplateRef)
-		}
-		return templateRefs
-	case toolchainv1alpha1.NSTemplateTierSpec:
-		templateRefs := []string{}
-		for _, ns := range obj.Namespaces {
-			templateRefs = append(templateRefs, ns.TemplateRef)
-		}
-		if obj.ClusterResources != nil {
-			templateRefs = append(templateRefs, obj.ClusterResources.TemplateRef)
-		}
-		return templateRefs
-	default:
-		return []string{}
-	}
 }
