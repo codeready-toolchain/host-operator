@@ -7,6 +7,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -76,6 +77,56 @@ func TestAddFinalizer(t *testing.T) {
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason, "unable to add finalizer to MUR john"))
+	})
+}
+
+func TestAddTierHashLabel(t *testing.T) {
+
+	// given
+	logf.SetLogger(logf.ZapLogger(true))
+	s := apiScheme(t)
+
+	t.Run("success", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord("john", murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
+		// reset the labels
+		mur.Labels = map[string]string{}
+		hostClient := test.NewFakeClient(t, mur)
+		memberClient := test.NewFakeClient(t)
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.NoError(t, err)
+		// verify that a label for the template tier were added
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasLabel(nstemplatetier.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTier.Name))
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord("john", murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
+		// reset the labels
+		mur.Labels = map[string]string{}
+		hostClient := test.NewFakeClient(t, mur)
+		hostClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			return fmt.Errorf("unable to update MUR %s", mur.Name)
+		}
+		memberClient := test.NewFakeClient(t)
+		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.Error(t, err)
+		// verify that a label for the template tier were added
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToCheckLabelsReason, fmt.Sprintf("unable to update MUR %s", mur.Name)))
 	})
 }
 

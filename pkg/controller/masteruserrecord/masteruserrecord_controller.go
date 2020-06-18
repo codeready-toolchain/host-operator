@@ -127,6 +127,7 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 	}
 	if err = r.ensureTierTemplatesLabel(logger, mur); err != nil {
 		logger.Error(err, "unable to check labels on MasterUserRecord")
+		r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCheckLabelsReason), err, "unable to check labels on MasterUserRecord")
 		return reconcile.Result{}, err
 	}
 
@@ -160,6 +161,9 @@ func (r *ReconcileMasterUserRecord) ensureTierTemplatesLabel(logger logr.Logger,
 			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(ua.Spec.NSTemplateSet)
 			if err != nil {
 				return err
+			}
+			if mur.Labels == nil {
+				mur.Labels = map[string]string{}
 			}
 			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)] = hash
 			update = true
