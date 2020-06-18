@@ -2,15 +2,15 @@ package nstemplatetier
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"testing"
-	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	turtest "github.com/codeready-toolchain/toolchain-common/pkg/test/templateupdaterequest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -322,7 +322,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("when no TemplateUpdateRequest resource exists at all", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, newMasterUserRecords(t, 10, templates(oldNSTemplateTier))...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -340,8 +340,8 @@ func TestReconcile(t *testing.T) {
 		t.Run("when no TemplateUpdateRequest resource exists for the given NSTemplateTier", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, newMasterUserRecords(t, 10, templates(oldNSTemplateTier))...)
-			initObjs = append(initObjs, newTemplateUpdateRequests(MaxPoolSize, tierName("other"), nameFormat("other-%d"))...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, turtest.TierName("other"), turtest.NameFormat("other-%d"))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -360,8 +360,8 @@ func TestReconcile(t *testing.T) {
 		t.Run("when maximum number of TemplateUpdateRequest is reached but one is being deleted", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, newMasterUserRecords(t, 10, templates(oldNSTemplateTier))...)
-			initObjs = append(initObjs, newTemplateUpdateRequests(MaxPoolSize, deletionTimestamp(0))...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, turtest.DeletionTimestamp(0))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -379,8 +379,8 @@ func TestReconcile(t *testing.T) {
 		t.Run("when MasterUserRecord in continued fetch is not up-to-date", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, newMasterUserRecords(t, 10, nameFormat("new-user-%d"), templates(newNSTemplateTier))...)
-			initObjs = append(initObjs, newMasterUserRecords(t, 10, nameFormat("old-user-%d"), templates(oldNSTemplateTier))...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "new-user-%d", murtest.Account("cluster1", newNSTemplateTier))...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "old-user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -418,7 +418,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("when all MasterUserRecords are up-to-date", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, newMasterUserRecords(t, 20, templates(newNSTemplateTier))...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 20, "user-%d", murtest.Account("cluster1", newNSTemplateTier))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -437,8 +437,8 @@ func TestReconcile(t *testing.T) {
 		t.Run("when all MasterUserRecords are being updated", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, newMasterUserRecords(t, 20, templates(newNSTemplateTier))...)
-			initObjs = append(initObjs, newTemplateUpdateRequests(MaxPoolSize)...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 20, "user-%d", murtest.Account("cluster1", newNSTemplateTier))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize)...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -458,8 +458,8 @@ func TestReconcile(t *testing.T) {
 		t.Run("when maximum number of active TemplateUpdateRequest resources is reached", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, newMasterUserRecords(t, 10, templates(oldNSTemplateTier))...)
-			initObjs = append(initObjs, newTemplateUpdateRequests(MaxPoolSize)...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize)...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -478,7 +478,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("when no MasterUserRecord is associated with the updated NSTemplteTier", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, newMasterUserRecords(t, 10, templates(otherNSTemplateTier))...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", otherNSTemplateTier))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -562,123 +562,4 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 			Namespace: operatorNamespace,
 		},
 	}, cl
-}
-
-type masterUserRecordOption interface {
-	applyToMasterUserRecord(int, *toolchainv1alpha1.MasterUserRecord) error
-}
-
-type templateUpdateRequestOption interface {
-	applyToTemplateUpdateRequest(int, *toolchainv1alpha1.TemplateUpdateRequest)
-}
-
-type nameFormat string
-
-var _ masterUserRecordOption = nameFormat("")
-var _ templateUpdateRequestOption = nameFormat("")
-
-func (f nameFormat) applyToMasterUserRecord(i int, mur *toolchainv1alpha1.MasterUserRecord) error {
-	mur.ObjectMeta.Name = fmt.Sprintf(string(f), i)
-	return nil
-}
-
-func (f nameFormat) applyToTemplateUpdateRequest(i int, mur *toolchainv1alpha1.TemplateUpdateRequest) {
-	mur.ObjectMeta.Name = fmt.Sprintf(string(f), i)
-}
-
-type templates toolchainv1alpha1.NSTemplateTier
-
-var _ masterUserRecordOption = templates(toolchainv1alpha1.NSTemplateTier{})
-
-func (t templates) applyToMasterUserRecord(_ int, mur *toolchainv1alpha1.MasterUserRecord) error {
-	s := toolchainv1alpha1.NSTemplateSetSpec{}
-	s.TierName = t.Name
-	s.Namespaces = make([]toolchainv1alpha1.NSTemplateSetNamespace, len(t.Spec.Namespaces))
-	for i, ns := range t.Spec.Namespaces {
-		s.Namespaces[i].TemplateRef = ns.TemplateRef
-	}
-	s.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{}
-	s.ClusterResources.TemplateRef = t.Spec.ClusterResources.TemplateRef
-	// add the user account
-	mur.Spec.UserAccounts = append(mur.Spec.UserAccounts, toolchainv1alpha1.UserAccountEmbedded{
-		TargetCluster: "member-cluster",
-		Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
-			UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
-				NSTemplateSet: s,
-			},
-		},
-	})
-	// set the labels for the tier templates in use
-	hash, err := ComputeHashForNSTemplateTier(toolchainv1alpha1.NSTemplateTier(t))
-	if err != nil {
-		return err
-	}
-	mur.ObjectMeta.Labels = map[string]string{
-		toolchainv1alpha1.LabelKeyPrefix + t.Name + "-tier-hash": hash,
-	}
-	return nil
-}
-
-func newMasterUserRecords(t *testing.T, size int, options ...masterUserRecordOption) []runtime.Object {
-	murs := make([]runtime.Object, size)
-	for i := 0; i < size; i++ {
-		mur := &toolchainv1alpha1.MasterUserRecord{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: operatorNamespace,
-				Name:      fmt.Sprintf("user-%d", i),
-				Labels:    map[string]string{},
-			},
-			Spec: toolchainv1alpha1.MasterUserRecordSpec{
-				UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{},
-			},
-		}
-		for _, opt := range options {
-			err := opt.applyToMasterUserRecord(i, mur)
-			require.NoError(t, err)
-		}
-		murs[i] = mur
-	}
-	return murs
-}
-
-type deletionTimestamp int
-
-var _ templateUpdateRequestOption = deletionTimestamp(0)
-
-func (d deletionTimestamp) applyToTemplateUpdateRequest(i int, r *toolchainv1alpha1.TemplateUpdateRequest) {
-	if i == int(d) {
-		deletionTS := metav1.NewTime(time.Now())
-		r.DeletionTimestamp = &deletionTS
-	}
-}
-
-type tierName string
-
-var _ templateUpdateRequestOption = tierName("")
-
-func (t tierName) applyToTemplateUpdateRequest(_ int, r *toolchainv1alpha1.TemplateUpdateRequest) {
-	r.Spec.TierName = string(t)
-	r.Labels = map[string]string{
-		toolchainv1alpha1.NSTemplateTierNameLabelKey: string(t),
-	}
-}
-
-func newTemplateUpdateRequests(size int, options ...templateUpdateRequestOption) []runtime.Object {
-	templateUpdateRequests := make([]runtime.Object, size)
-	for i := 0; i < size; i++ {
-		r := &toolchainv1alpha1.TemplateUpdateRequest{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("user-%d", i),
-				Namespace: operatorNamespace,
-				Labels: map[string]string{
-					toolchainv1alpha1.NSTemplateTierNameLabelKey: "basic",
-				},
-			},
-		}
-		for _, opt := range options {
-			opt.applyToTemplateUpdateRequest(i, r)
-		}
-		templateUpdateRequests[i] = r
-	}
-	return templateUpdateRequests
 }

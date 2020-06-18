@@ -31,7 +31,7 @@ func TestNotificationSuccess(t *testing.T) {
 
 	t.Run("will not do anything and return requeue with shorter duration that 10s", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("jane")
+		mur := murtest.NewMasterUserRecord(t, "jane")
 		notification := newNotification("jane", "")
 		notification.Status.Conditions = []v1alpha1.Condition{toBeDelivered()}
 		controller, request, cl := newController(t, notification, mur)
@@ -50,7 +50,7 @@ func TestNotificationSuccess(t *testing.T) {
 
 	t.Run("will delete the notification as the notification duration before deletion will already pass", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("jane")
+		mur := murtest.NewMasterUserRecord(t, "jane")
 		notification := newNotification("jane", "")
 		notification.Status.Conditions = []v1alpha1.Condition{toBeDelivered()}
 		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
@@ -74,7 +74,7 @@ func TestNotificationDeliveredFailure(t *testing.T) {
 
 	t.Run("will return an error since it cannot delete the Notification after successfully delivering", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("jane")
+		mur := murtest.NewMasterUserRecord(t, "jane")
 		notification := newNotification("abc123", "")
 		notification.Status.Conditions = []v1alpha1.Condition{toBeDelivered()}
 		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}

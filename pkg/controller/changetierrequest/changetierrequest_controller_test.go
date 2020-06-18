@@ -35,7 +35,7 @@ func TestChangeTierSuccess(t *testing.T) {
 
 	t.Run("the controller should change tier in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("john")
+		mur := murtest.NewMasterUserRecord(t, "john")
 		changeTierRequest := newChangeTierRequest("john", "team")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
@@ -52,7 +52,7 @@ func TestChangeTierSuccess(t *testing.T) {
 
 	t.Run("the controller should change tier in all UserAccounts in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny", murtest.AdditionalAccounts("another-cluster"))
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
@@ -68,7 +68,7 @@ func TestChangeTierSuccess(t *testing.T) {
 
 	t.Run("the controller should change tier only in specified UserAccount in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny", murtest.AdditionalAccounts("another-cluster"))
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("another-cluster"))
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
@@ -87,7 +87,7 @@ func TestChangeTierSuccess(t *testing.T) {
 
 	t.Run("will not do anything and return requeue with shorter duration that 10s", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny")
+		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		changeTierRequest.Status.Conditions = []v1alpha1.Condition{toBeComplete()}
 		controller, request, cl := newController(t, changeTierRequest, mur)
@@ -107,7 +107,7 @@ func TestChangeTierSuccess(t *testing.T) {
 
 	t.Run("will delete the request as the requested duration before deletion will already pass", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny")
+		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		changeTierRequest.Status.Conditions = []v1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
@@ -146,7 +146,7 @@ func TestChangeTierFailure(t *testing.T) {
 
 	t.Run("the change will fail since the provided tier doesn't exist", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny", murtest.AdditionalAccounts("another-cluster"))
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		controller, request, cl := newController(t, changeTierRequest, mur)
 
@@ -161,7 +161,7 @@ func TestChangeTierFailure(t *testing.T) {
 
 	t.Run("the change will fail since it won't be able to find the correct UserAccount in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny")
+		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("some-other-cluster"))
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
@@ -180,7 +180,7 @@ func TestChangeTierFailure(t *testing.T) {
 
 	t.Run("the change will fail since the actual update operation will return an error", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny")
+		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
@@ -203,7 +203,7 @@ func TestChangeTierFailure(t *testing.T) {
 
 	t.Run("will return an error since it cannot delete the ChangeTierRequest after successful completion", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny")
+		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "faildeletion")
 		changeTierRequest.Status.Conditions = []v1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
