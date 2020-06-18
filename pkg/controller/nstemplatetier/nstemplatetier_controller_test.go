@@ -7,7 +7,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	turtest "github.com/codeready-toolchain/toolchain-common/pkg/test/templateupdaterequest"
@@ -545,16 +544,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 	r := &ReconcileNSTemplateTier{
 		client: cl,
 		scheme: s,
-		retrieveMemberClusters: func(conditions ...cluster.Condition) []*cluster.FedCluster {
-			return []*cluster.FedCluster{
-				{
-					Name: "cluster1",
-				},
-				{
-					Name: "cluster2",
-				},
-			}
-		},
 	}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{

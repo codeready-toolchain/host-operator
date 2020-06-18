@@ -6,7 +6,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
@@ -40,9 +39,8 @@ func Add(mgr manager.Manager, config *configuration.Config) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileNSTemplateTier{
-		client:                 mgr.GetClient(),
-		scheme:                 mgr.GetScheme(),
-		retrieveMemberClusters: cluster.GetMemberClusters, // default func, can be overridden in unit tests
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
 	}
 }
 
@@ -79,9 +77,8 @@ var _ reconcile.Reconciler = &ReconcileNSTemplateTier{}
 type ReconcileNSTemplateTier struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client                 client.Client
-	scheme                 *runtime.Scheme
-	retrieveMemberClusters cluster.GetMemberClustersFunc
+	client client.Client
+	scheme *runtime.Scheme
 }
 
 // Reconcile reads that state of the cluster for a NSTemplateTier object and makes changes based on the state read
