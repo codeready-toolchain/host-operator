@@ -126,7 +126,6 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 		}
 	}
 	if err = r.ensureTierTemplatesLabel(logger, mur); err != nil {
-		logger.Error(err, "unable to check labels on MasterUserRecord")
 		r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCheckLabelsReason), err, "unable to check labels on MasterUserRecord")
 		return reconcile.Result{}, err
 	}
