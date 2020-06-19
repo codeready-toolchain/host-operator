@@ -227,8 +227,8 @@ func (r *ReconcileChangeTierRequest) setStatusChangeTierRequestDeletionFailed(ch
 	return r.updateStatusConditions(
 		changeRequest,
 		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.ChangeTierRequestDeleted,
-			Status:  corev1.ConditionFalse,
+			Type:    toolchainv1alpha1.ChangeTierRequestDeletionError,
+			Status:  corev1.ConditionTrue,
 			Reason:  toolchainv1alpha1.ChangeTierRequestDeletionErrorReason,
 			Message: message,
 		})

@@ -313,8 +313,8 @@ func toBeNotComplete(msg string) v1alpha1.Condition {
 
 func toBeDeletionError(msg string) v1alpha1.Condition {
 	return v1alpha1.Condition{
-		Type:               v1alpha1.ChangeTierRequestDeleted,
-		Status:             apiv1.ConditionFalse,
+		Type:               v1alpha1.ChangeTierRequestDeletionError,
+		Status:             apiv1.ConditionTrue,
 		Reason:             v1alpha1.ChangeTierRequestDeletionErrorReason,
 		Message:            msg,
 		LastTransitionTime: v1.Time{Time: time.Now()},
