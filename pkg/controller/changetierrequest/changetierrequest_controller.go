@@ -116,7 +116,7 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 
 	return reconcile.Result{
 		Requeue:      true,
-		RequeueAfter: r.config.GetDurationBeforeNotificationDeletion(),
+		RequeueAfter: r.config.GetDurationBeforeChangeRequestDeletion(),
 	}, nil
 }
 
