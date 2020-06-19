@@ -159,7 +159,7 @@ func (r *ReconcileNotification) setStatusNotificationDeletionFailed(notification
 	return r.updateStatusConditions(
 		notification,
 		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.NotificationDelitionError,
+			Type:    toolchainv1alpha1.NotificationDeletionError,
 			Status:  corev1.ConditionTrue,
 			Reason:  toolchainv1alpha1.NotificationDeletionErrorReason,
 			Message: msg,

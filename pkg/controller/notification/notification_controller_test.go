@@ -118,7 +118,7 @@ func toBeSent() v1alpha1.Condition {
 
 func toBeDeletionError(msg string) v1alpha1.Condition {
 	return v1alpha1.Condition{
-		Type:               v1alpha1.NotificationDelitionError,
+		Type:               v1alpha1.NotificationDeletionError,
 		Status:             apiv1.ConditionTrue,
 		Reason:             v1alpha1.NotificationDeletionErrorReason,
 		Message:            msg,
