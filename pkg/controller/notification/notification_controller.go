@@ -84,12 +84,15 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	// if is delivered, then check when status was changed and delete it if the requested duration has passed
+	// if is sent, then check when status was changed and delete it if the requested duration has passed
 	completeCond, found := condition.FindConditionByType(notification.Status.Conditions, toolchainv1alpha1.NotificationSent)
 	if found && completeCond.Status == corev1.ConditionTrue {
 		deleted, requeueAfter, err := r.checkTransitionTimeAndDelete(reqLogger, notification, completeCond)
-		if deleted || err != nil {
+		if deleted {
 			return reconcile.Result{}, err
+		}
+		if err != nil {
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification, r.setStatusNotificationDeletionFailed, err, "failed to delete notification")
 		}
 		return reconcile.Result{
 			Requeue:      true,
@@ -97,19 +100,29 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 		}, nil
 	}
 
-	reqLogger.Info("Notification has been delivered")
+	reqLogger.Info("Notification has been sent")
+	err = r.setStatusNotificationSent(notification)
+	if err != nil {
+		reqLogger.Error(err, "unable to set sent status to Notification")
+		return reconcile.Result{}, err
+	}
+
 	return reconcile.Result{
 		Requeue:      true,
 		RequeueAfter: r.config.GetDurationBeforeNotificationDeletion(),
-	}, r.setStatusNotificationDelivered(notification)
+	}, nil
 }
 
+// checkTransitionTimeAndDelete checks if the last transition time has surpassed
+// the duration before the notification should be deleted. If so, the notification is deleted.
+// Returns bool indicating if the notification was deleted, the time before the notification
+// can be deleted and error
 func (r *ReconcileNotification) checkTransitionTimeAndDelete(log logr.Logger, notification *toolchainv1alpha1.Notification, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
-	log.Info("the Notification is delivered so we can deal with its deletion")
+	log.Info("the Notification is sent so we can deal with its deletion")
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
 	if timeSinceCompletion >= r.config.GetDurationBeforeNotificationDeletion() {
-		log.Info("the Notification has been delivered for a longer time than the 'durationBeforeNotificationDeletion', so it's ready to be deleted",
+		log.Info("the Notification has been sent for a longer time than the 'durationBeforeNotificationDeletion', so it's ready to be deleted",
 			"durationBeforeNotificationDeletion", r.config.GetDurationBeforeNotificationDeletion().String())
 		if err := r.client.Delete(context.TODO(), notification, &client.DeleteOptions{}); err != nil {
 			return false, 0, errs.Wrapf(err, "unable to delete Notification object '%s'", notification.Name)
@@ -122,6 +135,16 @@ func (r *ReconcileNotification) checkTransitionTimeAndDelete(log logr.Logger, no
 	return false, diff, nil
 }
 
+func (r *ReconcileNotification) wrapErrorWithStatusUpdate(logger logr.Logger, notification *toolchainv1alpha1.Notification, statusUpdater func(notification *toolchainv1alpha1.Notification, message string) error, err error, format string, args ...interface{}) error {
+	if err == nil {
+		return nil
+	}
+	if err := statusUpdater(notification, err.Error()); err != nil {
+		logger.Error(err, "status update failed")
+	}
+	return errs.Wrapf(err, format, args...)
+}
+
 func (r *ReconcileNotification) updateStatusConditions(notification *toolchainv1alpha1.Notification, newConditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
 	notification.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(notification.Status.Conditions, newConditions...)
@@ -132,12 +155,23 @@ func (r *ReconcileNotification) updateStatusConditions(notification *toolchainv1
 	return r.client.Status().Update(context.TODO(), notification)
 }
 
-func (r *ReconcileNotification) setStatusNotificationDelivered(notification *toolchainv1alpha1.Notification) error {
+func (r *ReconcileNotification) setStatusNotificationDeletionFailed(notification *toolchainv1alpha1.Notification, msg string) error {
+	return r.updateStatusConditions(
+		notification,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.NotificationDeletionError,
+			Status:  corev1.ConditionTrue,
+			Reason:  toolchainv1alpha1.NotificationDeletionErrorReason,
+			Message: msg,
+		})
+}
+
+func (r *ReconcileNotification) setStatusNotificationSent(notification *toolchainv1alpha1.Notification) error {
 	return r.updateStatusConditions(
 		notification,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.NotificationSent,
 			Status: corev1.ConditionTrue,
-			Reason: toolchainv1alpha1.NotificationServiceSentReason,
+			Reason: toolchainv1alpha1.NotificationSentReason,
 		})
 }

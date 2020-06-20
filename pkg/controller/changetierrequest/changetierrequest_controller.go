@@ -9,6 +9,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
 	errs "github.com/pkg/errors"
@@ -90,8 +91,11 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 	completeCond, found := condition.FindConditionByType(changeTierRequest.Status.Conditions, toolchainv1alpha1.ChangeTierRequestComplete)
 	if found && completeCond.Status == corev1.ConditionTrue {
 		deleted, requeueAfter, err := r.checkTransitionTimeAndDelete(reqLogger, changeTierRequest, completeCond)
-		if deleted || err != nil {
+		if deleted {
 			return reconcile.Result{}, err
+		}
+		if err != nil {
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, changeTierRequest, r.setStatusChangeTierRequestDeletionFailed, err, "failed to delete changeTierRequest")
 		}
 		return reconcile.Result{
 			Requeue:      true,
@@ -105,12 +109,22 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 	}
 
 	reqLogger.Info("Change of the tier is completed")
+	err = r.setStatusChangeComplete(changeTierRequest)
+	if err != nil {
+		reqLogger.Error(err, "unable to set change complete status to ChangeTierRequest")
+		return reconcile.Result{}, err
+	}
+
 	return reconcile.Result{
 		Requeue:      true,
 		RequeueAfter: r.config.GetDurationBeforeChangeRequestDeletion(),
-	}, r.setStatusChangeComplete(changeTierRequest)
+	}, nil
 }
 
+// checkTransitionTimeAndDelete checks if the last transition time has surpassed
+// the duration before the changetierrequest should be deleted. If so, the changetierrequest is deleted.
+// Returns bool indicating if the changetierrequest was deleted, the time before the changetierrequest
+// can be deleted and error
 func (r *ReconcileChangeTierRequest) checkTransitionTimeAndDelete(log logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
 	log.Info("the ChangeTierRequest is completed so we can deal with its deletion")
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
@@ -206,6 +220,17 @@ func (r *ReconcileChangeTierRequest) setStatusChangeFailed(changeRequest *toolch
 			Type:    toolchainv1alpha1.ChangeTierRequestComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.ChangeTierRequestChangeFiledReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileChangeTierRequest) setStatusChangeTierRequestDeletionFailed(changeRequest *toolchainv1alpha1.ChangeTierRequest, message string) error {
+	return r.updateStatusConditions(
+		changeRequest,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.ChangeTierRequestDeletionError,
+			Status:  corev1.ConditionTrue,
+			Reason:  toolchainv1alpha1.ChangeTierRequestDeletionErrorReason,
 			Message: message,
 		})
 }
