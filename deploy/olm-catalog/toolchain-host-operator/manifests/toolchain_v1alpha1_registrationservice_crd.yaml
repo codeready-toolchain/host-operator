@@ -71,6 +71,10 @@ spec:
                       another.
                     format: date-time
                     type: string
+                  lastUpdatedTime:
+                    description: Last time the condition was updated
+                    format: date-time
+                    type: string
                   message:
                     description: Human readable message indicating details about last
                       transition.
