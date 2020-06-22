@@ -6,7 +6,6 @@ import (
 	"errors"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	//"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"text/template"
 )
