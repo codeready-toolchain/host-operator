@@ -3,6 +3,7 @@ package notification
 import (
 	"context"
 	"errors"
+
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -12,7 +13,7 @@ type NotificationDeliveryServiceConfig interface {
 }
 
 type NotificationDeliveryService interface {
-	Deliver(ctx context.Context, notificationCtx NotificationContext, templateName string) error
+	Send(ctx context.Context, notificationCtx NotificationContext, templateName string) error
 }
 
 type NotificationDeliveryServiceFactory struct {

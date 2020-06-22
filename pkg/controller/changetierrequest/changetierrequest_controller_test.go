@@ -13,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,7 +86,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
-	t.Run("will not do anything and return requeue with shorter duration that 10s", func(t *testing.T) {
+	t.Run("completed changetierrequest is requeued with the remaining deletion timeout", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
@@ -105,7 +106,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
-	t.Run("will delete the request as the requested duration before deletion will already pass", func(t *testing.T) {
+	t.Run("change request deleted when deletion timeout passed", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
@@ -140,7 +141,7 @@ func TestChangeTierFailure(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unable to get MasterUserRecord with name johny")
+		assert.Equal(t, err.Error(), "unable to get MasterUserRecord with name johny: masteruserrecords.toolchain.dev.openshift.com \"johny\" not found")
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("masteruserrecords.toolchain.dev.openshift.com \"johny\" not found"))
 	})
 
@@ -155,7 +156,7 @@ func TestChangeTierFailure(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unable to get NSTemplateTier with name team")
+		assert.Equal(t, err.Error(), "unable to get NSTemplateTier with name team: nstemplatetiers.toolchain.dev.openshift.com \"team\" not found")
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("nstemplatetiers.toolchain.dev.openshift.com \"team\" not found"))
 	})
 
@@ -173,7 +174,7 @@ func TestChangeTierFailure(t *testing.T) {
 		require.Error(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
-		assert.Contains(t, err.Error(), "unable to change tier in MasterUserRecord johny")
+		assert.Equal(t, err.Error(), "unable to change tier in MasterUserRecord johny: the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed")
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name,
 			toBeNotComplete("the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed"))
 	})
@@ -197,7 +198,7 @@ func TestChangeTierFailure(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unable to change tier in MasterUserRecord johny: error")
+		assert.Equal(t, err.Error(), "unable to change tier in MasterUserRecord johny: error")
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("error"))
 	})
 
@@ -218,10 +219,10 @@ func TestChangeTierFailure(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unable to delete ChangeTierRequest object 'request-name'")
+		assert.Equal(t, err.Error(), "failed to delete changeTierRequest: unable to delete ChangeTierRequest object 'request-name': error")
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
-		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
+		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete(), toBeDeletionError("unable to delete ChangeTierRequest object 'request-name': error"))
 	})
 }
 
@@ -265,11 +266,11 @@ func AssertThatChangeTierRequestIsDeleted(t *testing.T, cl client.Client, name s
 	assert.IsType(t, v1.StatusReasonNotFound, apierrors.ReasonForError(err))
 }
 
-func AssertThatChangeTierRequestHasCondition(t *testing.T, cl client.Client, name string, condition v1alpha1.Condition) {
+func AssertThatChangeTierRequestHasCondition(t *testing.T, cl client.Client, name string, condition ...v1alpha1.Condition) {
 	changeTierRequest := &v1alpha1.ChangeTierRequest{}
 	err := cl.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, name), changeTierRequest)
 	require.NoError(t, err)
-	test.AssertConditionsMatch(t, changeTierRequest.Status.Conditions, condition)
+	test.AssertConditionsMatch(t, changeTierRequest.Status.Conditions, condition...)
 }
 
 func NewNSTemplateTier(tierName, revision, clusterResourcesRevision string, nsTypes ...string) *v1alpha1.NSTemplateTier {
@@ -312,6 +313,16 @@ func toBeNotComplete(msg string) v1alpha1.Condition {
 		Status:  apiv1.ConditionFalse,
 		Reason:  v1alpha1.ChangeTierRequestChangeFiledReason,
 		Message: msg,
+	}
+}
+
+func toBeDeletionError(msg string) v1alpha1.Condition {
+	return v1alpha1.Condition{
+		Type:               v1alpha1.ChangeTierRequestDeletionError,
+		Status:             apiv1.ConditionTrue,
+		Reason:             v1alpha1.ChangeTierRequestDeletionErrorReason,
+		Message:            msg,
+		LastTransitionTime: v1.Time{Time: time.Now()},
 	}
 }
 
