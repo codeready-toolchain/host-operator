@@ -21,8 +21,13 @@ const (
 
 // host-operator constants
 const (
+	// VarDurationBeforeChangeRequestDeletion specificies the duration before a change request is deleted
 	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
-	varNotificationDeliveryService         = "notification.delivery.service"
+
+	varNotificationDeliveryService = "notification.delivery.service"
+
+	//varDurationBeforeNotificationDeletion specifies the duration before a notification will be deleted
+	varDurationBeforeNotificationDeletion = "duration.before.notification.deletion"
 
 	// ToolchainConfigMapName specifies a name of a ConfigMap that keeps toolchain configuration
 	ToolchainConfigMapName = "toolchain-saas-config"
@@ -70,6 +75,7 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMock)
+	c.host.SetDefault(varDurationBeforeNotificationDeletion, "24h")
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
@@ -80,6 +86,11 @@ func (c *Config) GetDurationBeforeChangeRequestDeletion() time.Duration {
 // GetNotificationDeliveryService returns the name of the notification delivery service to use for delivering user notifications
 func (c *Config) GetNotificationDeliveryService() string {
 	return c.host.GetString(varNotificationDeliveryService)
+}
+
+// GetDurationBeforeNotificationDeletion returns the timeout before a delivered notification will be deleted.
+func (c *Config) GetDurationBeforeNotificationDeletion() time.Duration {
+	return c.host.GetDuration(varDurationBeforeNotificationDeletion)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	//"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,7 +16,7 @@ type NotificationDeliveryServiceConfig interface {
 }
 
 type NotificationDeliveryService interface {
-	Deliver(ctx context.Context, notificationCtx NotificationContext, templateName string) error
+	Send(ctx context.Context, notificationCtx NotificationContext, templateName string) error
 }
 
 type NotificationDeliveryServiceFactory struct {
