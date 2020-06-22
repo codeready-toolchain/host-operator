@@ -9,12 +9,14 @@ import (
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -162,7 +164,7 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 				// compare all TemplateRefs in the current MUR.UserAccount vs NSTemplateTier tier
 				if !reflect.DeepEqual(templateRefsFor(accountTmpls), templateRefsFor(tier.Spec)) {
 					logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", tier.Name)
-					if err = r.client.Create(context.TODO(), &toolchainv1alpha1.TemplateUpdateRequest{
+					tur := &toolchainv1alpha1.TemplateUpdateRequest{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: tier.Namespace,
 							Name:      mur.Name,
@@ -175,7 +177,12 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 							Namespaces:       tier.Spec.Namespaces,
 							ClusterResources: tier.Spec.ClusterResources,
 						},
-					}); err != nil {
+					}
+					err = controllerutil.SetControllerReference(tier, tur, r.scheme)
+					if err != nil {
+						return false, err
+					}
+					if err = r.client.Create(context.TODO(), tur); err != nil {
 						return false, err
 					}
 					// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
@@ -200,10 +207,20 @@ func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(tier *toolchainv1
 
 	// count non-deleted templateUpdateRequest items
 	activeTemplateUpdateRequests := 0
+items:
 	for _, r := range templateUpdateRequests.Items {
-		if r.DeletionTimestamp == nil {
-			activeTemplateUpdateRequests++
+		if r.DeletionTimestamp != nil {
+			// ignore when being deleted
+			continue
 		}
+		for _, c := range r.Status.Conditions {
+			if c.Type == toolchainv1alpha1.TemplateUpdateRequestComplete &&
+				c.Status == corev1.ConditionTrue {
+				// ignore when in `complete` status condition
+				continue items
+			}
+		}
+		activeTemplateUpdateRequests++
 	}
 	return activeTemplateUpdateRequests, nil
 }

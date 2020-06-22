@@ -333,6 +333,7 @@ func TestReconcile(t *testing.T) {
 			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
 			require.NoError(t, err)
 			assert.Len(t, actualTemplateUpdateRequests.Items, 1)
+			assert.NotEmpty(t, actualTemplateUpdateRequests.Items[0].OwnerReferences)
 		})
 
 		// in this test, there are TemplateUpdateRequest resources but for associated with the update of another NSTemplateTier
@@ -355,7 +356,27 @@ func TestReconcile(t *testing.T) {
 		})
 
 		// in this test, the controller can create an extra TemplateUpdateRequest resource
-		// because one of the existing ones is being deleted
+		// because one is in a "completed" status
+		t.Run("when maximum number of TemplateUpdateRequest is reached but one is complete", func(t *testing.T) {
+			// given
+			initObjs := []runtime.Object{&newNSTemplateTier}
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d", turtest.Complete("user-0"))...)
+			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
+			// when
+			res, err := r.Reconcile(req)
+			// then
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{Requeue: true}, res) // expect a requeue to create more TemplateUpdateRequest resources (if possible)
+			// check that a single TemplateUpdateRequest was created
+			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
+			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
+			require.NoError(t, err)
+			assert.Len(t, actualTemplateUpdateRequests.Items, MaxPoolSize+1) // one more TemplateUpdateRequest
+		})
+
+		// in this test, the controller can create an extra TemplateUpdateRequest resource
+		// because one is being deleted
 		t.Run("when maximum number of TemplateUpdateRequest is reached but one is being deleted", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
