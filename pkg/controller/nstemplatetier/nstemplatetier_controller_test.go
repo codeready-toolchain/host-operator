@@ -340,7 +340,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, turtest.TierName("other"), turtest.NameFormat("other-%d"))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "other-%d", turtest.TierName("other"))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -360,7 +360,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, turtest.DeletionTimestamp(0))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d", turtest.DeletionTimestamp("user-0"))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -437,7 +437,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 20, "user-%d", murtest.Account("cluster1", newNSTemplateTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize)...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d")...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -458,7 +458,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize)...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d")...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)

@@ -35,6 +35,6 @@ replace (
 
 replace github.com/codeready-toolchain/api => github.com/xcoulon/api v0.0.0-20200622090457-2029d4ec2588
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20200618093617-d64fab2a1da0
+replace github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20200622101528-45e42af703cd
 
 go 1.13
