@@ -205,7 +205,7 @@ func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(tier *toolchainv1
 	activeTemplateUpdateRequests := 0
 items:
 	for _, r := range templateUpdateRequests.Items {
-		if r.DeletionTimestamp != nil {
+		util.IsBeingDeleted(&r)
 			// ignore when being deleted
 			continue
 		}
