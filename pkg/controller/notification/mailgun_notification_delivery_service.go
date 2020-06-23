@@ -12,7 +12,7 @@ func NewMailgunNotificationDeliveryService() NotificationDeliveryService {
 	return &MailgunNotificationDeliveryService{}
 }
 
-func (s *MailgunNotificationDeliveryService) Deliver(ctx context.Context, notificationCtx NotificationContext, templateName string) error {
+func (s *MailgunNotificationDeliveryService) Send(ctx context.Context, notificationCtx NotificationContext, templateName string) error {
 	// TODO implement
 	return nil
 }

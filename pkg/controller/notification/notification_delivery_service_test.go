@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"context"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/require"
@@ -54,5 +55,58 @@ func TestNotificationDeliveryServiceFactory(t *testing.T) {
 		// then
 		require.Error(t, err)
 		require.Equal(t, "invalid notification delivery service configuration", err.Error())
+	})
+}
+
+func TestBaseNotificationDeliveryServiceGenerateContent(t *testing.T) {
+	// given
+	baseService := &BaseNotificationDeliveryService{}
+
+	nCtx := &NotificationContext{
+		UserID:      "jsmith",
+		FirstName:   "John",
+		LastName:    "Smith",
+		Email:       "jsmith@redhat.com",
+		CompanyName: "Red Hat",
+	}
+
+	t.Run("test content generation with notification context for user id", func(t *testing.T) {
+		// when
+		def := "hello, {{.UserID}}"
+		content, err := baseService.GenerateContent(context.Background(), nCtx, def)
+
+		// then
+		require.NoError(t, err)
+		require.Equal(t, "hello, jsmith", content)
+	})
+
+	t.Run("test content generation with notification context for firstname lastname", func(t *testing.T) {
+		// when
+		def := "Dear {{.FirstName}} {{.LastName}},"
+		content, err := baseService.GenerateContent(context.Background(), nCtx, def)
+
+		// then
+		require.NoError(t, err)
+		require.Equal(t, "Dear John Smith,", content)
+	})
+
+	t.Run("test content generation with notification context for full email", func(t *testing.T) {
+		// when
+		def := "{{.FirstName}} {{.LastName}}<{{.Email}}>"
+		content, err := baseService.GenerateContent(context.Background(), nCtx, def)
+
+		// then
+		require.NoError(t, err)
+		require.Equal(t, "John Smith<jsmith@redhat.com>", content)
+	})
+
+	t.Run("test content generation with notification context for company name", func(t *testing.T) {
+		// when
+		def := "Increase developer productivity at {{.CompanyName}} today!"
+		content, err := baseService.GenerateContent(context.Background(), nCtx, def)
+
+		// then
+		require.NoError(t, err)
+		require.Equal(t, "Increase developer productivity at Red Hat today!", content)
 	})
 }

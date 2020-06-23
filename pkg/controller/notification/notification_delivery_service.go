@@ -1,10 +1,13 @@
 package notification
 
 import (
+	"bytes"
 	"context"
 	"errors"
+
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"text/template"
 )
 
 type NotificationDeliveryServiceConfig interface {
@@ -12,7 +15,7 @@ type NotificationDeliveryServiceConfig interface {
 }
 
 type NotificationDeliveryService interface {
-	Deliver(ctx context.Context, notificationCtx NotificationContext, templateName string) error
+	Send(ctx context.Context, notificationCtx NotificationContext, templateName string) error
 }
 
 type NotificationDeliveryServiceFactory struct {
@@ -32,4 +35,25 @@ func (f *NotificationDeliveryServiceFactory) CreateNotificationDeliveryService()
 		return NewMailgunNotificationDeliveryService(), nil
 	}
 	return nil, errors.New("invalid notification delivery service configuration")
+}
+
+type BaseNotificationDeliveryService struct {
+}
+
+func (s *BaseNotificationDeliveryService) GenerateContent(ctx context.Context, notificationCtx *NotificationContext,
+	templateDefinition string) (string, error) {
+
+	tmpl, err := template.New("template").Parse(templateDefinition)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+
+	err = tmpl.Execute(&buf, notificationCtx)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
