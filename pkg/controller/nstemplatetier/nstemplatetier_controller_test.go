@@ -553,7 +553,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 				murs.Items = murs.Items[c:]
 			}
 			if int(listOpts.Limit) < len(murs.Items) {
-				// remove first items
+				// keep the first items and remove the following ones to fit into the limit
 				murs.Items = murs.Items[:listOpts.Limit]
 			}
 			murs.Continue = strconv.Itoa(c + int(listOpts.Limit))
