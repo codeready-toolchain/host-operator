@@ -31,8 +31,14 @@ func murSelector(tier *toolchainv1alpha1.NSTemplateTier) (client.MatchingLabelsS
 	}
 	selector := labels.NewSelector()
 	tierLabel, err := labels.NewRequirement(TemplateTierHashLabelKey(tier.Name), selection.Exists, []string{})
+	if err != nil {
+		return client.MatchingLabelsSelector{}, err
+	}
 	selector = selector.Add(*tierLabel)
 	templateHashLabel, err := labels.NewRequirement(TemplateTierHashLabelKey(tier.Name), selection.NotEquals, []string{hash})
+	if err != nil {
+		return client.MatchingLabelsSelector{}, err
+	}
 	selector = selector.Add(*templateHashLabel)
 	return client.MatchingLabelsSelector{
 		Selector: selector,
