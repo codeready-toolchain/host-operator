@@ -2,7 +2,6 @@ package nstemplatetier
 
 import (
 	"context"
-	"reflect"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -161,35 +160,32 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 					// skip if the user account is not based on the current Tier
 					continue
 				}
-				// compare all TemplateRefs in the current MUR.UserAccount vs NSTemplateTier tier
-				if !reflect.DeepEqual(templateRefsFor(accountTmpls), templateRefsFor(tier.Spec)) {
-					logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", tier.Name)
-					tur := &toolchainv1alpha1.TemplateUpdateRequest{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: tier.Namespace,
-							Name:      mur.Name,
-							Labels: map[string]string{
-								toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
-							},
+				logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", tier.Name)
+				tur := &toolchainv1alpha1.TemplateUpdateRequest{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: tier.Namespace,
+						Name:      mur.Name,
+						Labels: map[string]string{
+							toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
 						},
-						Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
-							TierName:         tier.Name,
-							Namespaces:       tier.Spec.Namespaces,
-							ClusterResources: tier.Spec.ClusterResources,
-						},
-					}
-					err = controllerutil.SetControllerReference(tier, tur, r.scheme)
-					if err != nil {
-						return false, err
-					}
-					if err = r.client.Create(context.TODO(), tur); err != nil {
-						return false, err
-					}
-					// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
-					// so the request has to be requeued, in order to create other TemplateUpdateRequests
-					// in the next loops
-					return true, nil
+					},
+					Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
+						TierName:         tier.Name,
+						Namespaces:       tier.Spec.Namespaces,
+						ClusterResources: tier.Spec.ClusterResources,
+					},
 				}
+				err = controllerutil.SetControllerReference(tier, tur, r.scheme)
+				if err != nil {
+					return false, err
+				}
+				if err = r.client.Create(context.TODO(), tur); err != nil {
+					return false, err
+				}
+				// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
+				// so the request has to be requeued, in order to create other TemplateUpdateRequests
+				// in the next loops
+				return true, nil
 			}
 		}
 	}
