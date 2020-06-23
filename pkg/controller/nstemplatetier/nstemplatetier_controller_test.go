@@ -7,9 +7,9 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	turtest "github.com/codeready-toolchain/host-operator/test/templateupdaterequest"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
-	turtest "github.com/codeready-toolchain/toolchain-common/pkg/test/templateupdaterequest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
