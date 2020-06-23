@@ -135,7 +135,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john")
-	murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
+	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
 	memberClient := test.NewFakeClient(t)
 	hostClient := test.NewFakeClient(t, mur)
 	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
