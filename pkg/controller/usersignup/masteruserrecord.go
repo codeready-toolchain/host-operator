@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTier *toolchainv1alpha1.NSTemplateTier) (bool, *toolchainv1alpha1.MasterUserRecord) {
+func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
 	changed := false
 	for uaIndex, userAccount := range mur.Spec.UserAccounts {
 		if userAccount.Spec.NSLimit == "" {
@@ -19,7 +19,24 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 			changed = true
 		}
 	}
-	return changed, mur
+	// also, ensure that the MUR has a label for each tier in use
+	// this label will be needed to select master user record that need to be updated when tier templates changed.
+	for _, ua := range mur.Spec.UserAccounts {
+		tierName := ua.Spec.NSTemplateSet.TierName
+		// only set the label if it is missing.
+		if _, ok := mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)]; !ok {
+			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(ua.Spec.NSTemplateSet)
+			if err != nil {
+				return false, err
+			}
+			if mur.Labels == nil {
+				mur.Labels = map[string]string{}
+			}
+			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)] = hash
+			changed = true
+		}
+	}
+	return changed, nil
 }
 
 func newMasterUserRecord(nstemplateTier *toolchainv1alpha1.NSTemplateTier, name, namespace, targetCluster, userSignupName string) (*toolchainv1alpha1.MasterUserRecord, error) {

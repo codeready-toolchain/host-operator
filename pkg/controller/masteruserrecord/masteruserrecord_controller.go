@@ -6,7 +6,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
@@ -125,10 +124,6 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 			return reconcile.Result{}, err
 		}
 	}
-	if err = r.ensureTierTemplatesLabel(logger, mur); err != nil {
-		r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCheckLabelsReason), err, "unable to check labels on MasterUserRecord")
-		return reconcile.Result{}, err
-	}
 
 	return reconcile.Result{}, nil
 }
@@ -146,33 +141,6 @@ func (r *ReconcileMasterUserRecord) addFinalizer(logger logr.Logger, mur *toolch
 	}
 	logger.Info("MasterUserRecord already has finalizer")
 	return nil
-}
-
-// ensureTierTemplatesLabel checks all tiers in use, and make sure that there's a label with a hash of the templates for each of them.
-// this label will be needed to select master user record that need to be updated when tier templates changed.
-// NOTE: this is a one-time update in relation with https://issues.redhat.com/browse/CRT-693 (as part of https://issues.redhat.com/browse/CRT-665)
-func (r *ReconcileMasterUserRecord) ensureTierTemplatesLabel(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) error {
-	update := false
-	for _, ua := range mur.Spec.UserAccounts {
-		tierName := ua.Spec.NSTemplateSet.TierName
-		// only set the label if it is missing.
-		if _, ok := mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)]; !ok {
-			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(ua.Spec.NSTemplateSet)
-			if err != nil {
-				return err
-			}
-			if mur.Labels == nil {
-				mur.Labels = map[string]string{}
-			}
-			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)] = hash
-			update = true
-		}
-	}
-	if !update {
-		return nil
-	}
-	logger.Info("updating MasterUserRecord after one or more template hash labels were added")
-	return r.client.Update(context.TODO(), mur)
 }
 
 // ensureUserAccount ensures that there's a UserAccount resource on the member cluster for the given `murAccount`.
