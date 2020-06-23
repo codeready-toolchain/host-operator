@@ -328,11 +328,8 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
-			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
-			require.NoError(t, err)
-			assert.Len(t, actualTemplateUpdateRequests.Items, 1)
-			assert.NotEmpty(t, actualTemplateUpdateRequests.Items[0].OwnerReferences)
+			turs := assertNumberOfTemplateUpdateRequests(t, cl, 1)
+			assert.NotEmpty(t, turs[0].OwnerReferences)
 		})
 
 		// in this test, there are TemplateUpdateRequest resources but for associated with the update of another NSTemplateTier
@@ -348,10 +345,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
-			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
-			require.NoError(t, err)
-			assert.Len(t, actualTemplateUpdateRequests.Items, MaxPoolSize+1) // 1 resource was created, `MaxPoolSize` already existed
+			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize+1) // 1 resource was created, `MaxPoolSize` already existed
 		})
 
 		// in this test, the controller can create an extra TemplateUpdateRequest resource
@@ -368,10 +362,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
-			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
-			require.NoError(t, err)
-			assert.Len(t, actualTemplateUpdateRequests.Items, MaxPoolSize+1) // one more TemplateUpdateRequest
+			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize+1) // one more TemplateUpdateRequest
 		})
 
 		// in this test, the controller can create an extra TemplateUpdateRequest resource
@@ -388,10 +379,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
-			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
-			require.NoError(t, err)
-			assert.Len(t, actualTemplateUpdateRequests.Items, MaxPoolSize+1) // one more TemplateUpdateRequest
+			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize+1) // one more TemplateUpdateRequest
 		})
 
 		// in this test, there are 20 MasterUserRecords on the same tier. The first 10 are already up-to-date, and the other ones which need to be updated
@@ -407,10 +395,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
-			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
-			require.NoError(t, err)
-			assert.Len(t, actualTemplateUpdateRequests.Items, 1) // one TemplateUpdateRequest created
+			assertNumberOfTemplateUpdateRequests(t, cl, 1) // one TemplateUpdateRequest created
 		})
 	})
 
@@ -427,10 +412,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 			// check that no TemplateUpdateRequest was created
-			templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-			err = cl.List(context.TODO(), &templateUpdateRequests)
-			require.NoError(t, err)
-			assert.Empty(t, templateUpdateRequests.Items)
+			assertNumberOfTemplateUpdateRequests(t, cl, 0)
 		})
 
 		// in this test, all existing MasterUserRecords are already up-to-date
@@ -445,10 +427,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 			// check that no TemplateUpdateRequest was created
-			templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-			err = cl.List(context.TODO(), &templateUpdateRequests)
-			require.NoError(t, err)
-			assert.Empty(t, templateUpdateRequests.Items)
+			assertNumberOfTemplateUpdateRequests(t, cl, 0)
 		})
 
 		// in this test, all MasterUserRecords are being updated,
@@ -465,10 +444,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 			// check that no TemplateUpdateRequest was created
-			templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-			err = cl.List(context.TODO(), &templateUpdateRequests)
-			require.NoError(t, err)
-			assert.Len(t, templateUpdateRequests.Items, MaxPoolSize) // size unchanged
+			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize) // size unchanged
 
 		})
 
@@ -486,10 +462,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 			// check that a single TemplateUpdateRequest was created
-			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
-			require.NoError(t, err)
-			assert.Len(t, actualTemplateUpdateRequests.Items, MaxPoolSize) // no increase
+			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize) // no increase
 		})
 
 		// in this test, all MasterUserRecords are associated with a different tier,
@@ -505,13 +478,18 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 			// check that no TemplateUpdateRequest was created
-			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
-			require.NoError(t, err)
-			assert.Empty(t, actualTemplateUpdateRequests.Items)
+			assertNumberOfTemplateUpdateRequests(t, cl, 0)
 		})
 
 	})
+}
+
+func assertNumberOfTemplateUpdateRequests(t *testing.T, cl *test.FakeClient, expectedNumber int) []toolchainv1alpha1.TemplateUpdateRequest {
+	actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
+	err := cl.List(context.TODO(), &actualTemplateUpdateRequests)
+	require.NoError(t, err)
+	require.Len(t, actualTemplateUpdateRequests.Items, expectedNumber)
+	return actualTemplateUpdateRequests.Items
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileNSTemplateTier, reconcile.Request, *test.FakeClient) {
