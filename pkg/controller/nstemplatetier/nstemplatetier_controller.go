@@ -188,7 +188,7 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(tier *toolchainv1alpha1.NSTemplateTier) (int, error) {
 	// fetch the list of TemplateUpdateRequest owned by the NSTemplateTier tier
 	templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-	if err := r.client.List(context.Background(), &templateUpdateRequests, client.MatchingLabels{
+	if err := r.client.List(context.TODO(), &templateUpdateRequests, client.MatchingLabels{
 		toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
 	}); err != nil {
 		return -1, err
