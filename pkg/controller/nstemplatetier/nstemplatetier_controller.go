@@ -112,7 +112,7 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 
 // ensureTemplateUpdateRequest ensures that all relared MasterUserRecords are up-to-date with the NSTemplateTier that changed.
 // If not, then it creates a TemplateUpdateRequest resource for the first MasterUserRecord not up-to-date with the tier, and
-// return `true, nil` so the controller will requeue the request to create subsequent TemplateUpdateRequest resources, until the
+// return `nil` so the controller will wait for the next reconcile to create subsequent TemplateUpdateRequest resources, until the
 // `MaxPoolSize` threashold is reached.
 func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) error {
 	activeTemplateUpdateRequests, err := r.activeTemplateUpdateRequests(tier)
