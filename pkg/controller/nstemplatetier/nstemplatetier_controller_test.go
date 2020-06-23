@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -519,17 +518,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	secret := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "secret",
-			Namespace: "test-namespace",
-		},
-		Type: v1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			"token": []byte("mycooltoken"),
-		},
-	}
-	initObjs = append(initObjs, secret)
 	cl := test.NewFakeClient(t, initObjs...)
 	// (partial) support the `limit` and `continue` when listing MasterUserRecords
 	// Here, the result's `continue` is the initial `continue` + `limit`
