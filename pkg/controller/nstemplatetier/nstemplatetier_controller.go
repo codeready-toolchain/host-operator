@@ -5,10 +5,11 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -153,40 +154,32 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 			} else if !errors.IsNotFound(err) {
 				return false, errs.Wrapf(err, "unable to get TemplateUpdateRequest for MasterUserRecord '%s'", mur.Name)
 			}
-			for _, account := range mur.Spec.UserAccounts {
-				accountTmpls := account.Spec.NSTemplateSet
-				logger.Info("checking MasterUserRecord account", "name", mur.Name, "tier", accountTmpls.TierName)
-				if accountTmpls.TierName != tier.Name {
-					// skip if the user account is not based on the current Tier
-					continue
-				}
-				logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", tier.Name)
-				tur := &toolchainv1alpha1.TemplateUpdateRequest{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: tier.Namespace,
-						Name:      mur.Name,
-						Labels: map[string]string{
-							toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
-						},
+			logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", tier.Name)
+			tur := &toolchainv1alpha1.TemplateUpdateRequest{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: tier.Namespace,
+					Name:      mur.Name,
+					Labels: map[string]string{
+						toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
 					},
-					Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
-						TierName:         tier.Name,
-						Namespaces:       tier.Spec.Namespaces,
-						ClusterResources: tier.Spec.ClusterResources,
-					},
-				}
-				err = controllerutil.SetControllerReference(tier, tur, r.scheme)
-				if err != nil {
-					return false, err
-				}
-				if err = r.client.Create(context.TODO(), tur); err != nil {
-					return false, err
-				}
-				// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
-				// so the request has to be requeued, in order to create other TemplateUpdateRequests
-				// in the next loops
-				return true, nil
+				},
+				Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
+					TierName:         tier.Name,
+					Namespaces:       tier.Spec.Namespaces,
+					ClusterResources: tier.Spec.ClusterResources,
+				},
 			}
+			err = controllerutil.SetControllerReference(tier, tur, r.scheme)
+			if err != nil {
+				return false, err
+			}
+			if err = r.client.Create(context.TODO(), tur); err != nil {
+				return false, err
+			}
+			// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
+			// so the request has to be requeued, in order to create other TemplateUpdateRequests
+			// in the next loops
+			return true, nil
 		}
 	}
 	logger.Info("done with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", tier.Name)
@@ -205,7 +198,7 @@ func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(tier *toolchainv1
 	activeTemplateUpdateRequests := 0
 items:
 	for _, r := range templateUpdateRequests.Items {
-		util.IsBeingDeleted(&r)
+		if util.IsBeingDeleted(&r) {
 			// ignore when being deleted
 			continue
 		}
