@@ -177,7 +177,7 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 		}
 	}
 	logger.Info("done with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", tier.Name)
-	return nil // no need to requeue
+	return nil
 }
 
 func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(tier *toolchainv1alpha1.NSTemplateTier) (int, error) {
