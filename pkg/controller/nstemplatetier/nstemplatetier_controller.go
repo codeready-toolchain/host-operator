@@ -103,13 +103,10 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 		logger.Error(err, "unable to get the current NSTemplateTier tier")
 		return reconcile.Result{}, err
 	}
-	if requeue, err := r.ensureTemplateUpdateRequest(logger, tier); err != nil {
+	if err := r.ensureTemplateUpdateRequest(logger, tier); err != nil {
 		log.Error(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed.")
 		return reconcile.Result{}, err
-	} else if requeue {
-		return reconcile.Result{Requeue: true}, nil
 	}
-
 	return reconcile.Result{}, nil
 }
 
@@ -117,10 +114,10 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 // If not, then it creates a TemplateUpdateRequest resource for the first MasterUserRecord not up-to-date with the tier, and
 // return `true, nil` so the controller will requeue the request to create subsequent TemplateUpdateRequest resources, until the
 // `MaxPoolSize` threashold is reached.
-func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
+func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) error {
 	activeTemplateUpdateRequests, err := r.activeTemplateUpdateRequests(tier)
 	if err != nil {
-		return false, errs.Wrap(err, "unable to get active TemplateUpdateRequests")
+		return errs.Wrap(err, "unable to get active TemplateUpdateRequests")
 	}
 
 	if activeTemplateUpdateRequests < MaxPoolSize {
@@ -131,7 +128,7 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 		murs := toolchainv1alpha1.MasterUserRecordList{}
 		matchingLabels, err := murSelector(tier)
 		if err != nil {
-			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
+			return errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
 		err = r.client.List(context.Background(), &murs,
 			client.InNamespace(tier.Namespace),
@@ -139,7 +136,7 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 			matchingLabels,
 		)
 		if err != nil {
-			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
+			return errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
 		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchingLabels)
 		for _, mur := range murs.Items {
@@ -152,7 +149,7 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 				logger.Info("MasterUserRecord already has an associated TemplateUpdateRequest", "name", mur.Name)
 				continue
 			} else if !errors.IsNotFound(err) {
-				return false, errs.Wrapf(err, "unable to get TemplateUpdateRequest for MasterUserRecord '%s'", mur.Name)
+				return errs.Wrapf(err, "unable to get TemplateUpdateRequest for MasterUserRecord '%s'", mur.Name)
 			}
 			logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", tier.Name)
 			tur := &toolchainv1alpha1.TemplateUpdateRequest{
@@ -171,20 +168,18 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 			}
 			err = controllerutil.SetControllerReference(tier, tur, r.scheme)
 			if err != nil {
-				return false, err
-			}
-			if err = r.client.Create(context.TODO(), tur); err != nil {
-				return false, err
+				return err
 			}
 			// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
-			// so the request has to be requeued, in order to create other TemplateUpdateRequests
-			// in the next loops
-			return true, nil
+			// and the creation of this TemplateUpdateRequest will trigger another reconcile loop
+			// since the controller watches TemplateUpdateRequests owned by the NSTemplateTier
+			return r.client.Create(context.TODO(), tur)
 		}
 	}
 	logger.Info("done with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", tier.Name)
-	return false, nil // no need to requeue
+	return nil // no need to requeue
 }
+
 func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(tier *toolchainv1alpha1.NSTemplateTier) (int, error) {
 	// fetch the list of TemplateUpdateRequest owned by the NSTemplateTier tier
 	templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}

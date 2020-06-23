@@ -327,7 +327,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{Requeue: true}, res) // expect a requeue to create more TemplateUpdateRequest resources
+			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
 			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
@@ -347,7 +347,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{Requeue: true}, res) // expect a requeue to create more TemplateUpdateRequest resources
+			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
 			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
@@ -367,7 +367,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{Requeue: true}, res) // expect a requeue to create more TemplateUpdateRequest resources (if possible)
+			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
 			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
@@ -387,7 +387,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{Requeue: true}, res) // expect a requeue to create more TemplateUpdateRequest resources (if possible)
+			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
 			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
@@ -406,7 +406,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{Requeue: true}, res) // expect a requeue to create more TemplateUpdateRequest resources
+			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
 			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
