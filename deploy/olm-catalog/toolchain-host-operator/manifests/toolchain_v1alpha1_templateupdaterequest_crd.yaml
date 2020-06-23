@@ -6,6 +6,10 @@ metadata:
   creationTimestamp: null
   name: templateupdaterequests.toolchain.dev.openshift.com
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.tierName
+    name: Tier
+    type: string
   group: toolchain.dev.openshift.com
   names:
     kind: TemplateUpdateRequest
@@ -13,6 +17,7 @@ spec:
     plural: templateupdaterequests
     singular: templateupdaterequest
   scope: Namespaced
+  subresources: {}
   validation:
     openAPIV3Schema:
       description: TemplateUpdateRequest is the Schema for the templateupdaterequests
@@ -63,6 +68,7 @@ spec:
               type: array
               x-kubernetes-list-type: atomic
             tierName:
+              description: The name of the tier to be updated
               type: string
           required:
           - namespaces

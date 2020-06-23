@@ -818,6 +818,10 @@ data:
         creationTimestamp: null
         name: templateupdaterequests.toolchain.dev.openshift.com
       spec:
+        additionalPrinterColumns:
+        - JSONPath: .spec.tierName
+          name: Tier
+          type: string
         group: toolchain.dev.openshift.com
         names:
           kind: TemplateUpdateRequest
@@ -825,6 +829,7 @@ data:
           plural: templateupdaterequests
           singular: templateupdaterequest
         scope: Namespaced
+        subresources: {}
         validation:
           openAPIV3Schema:
             description: TemplateUpdateRequest is the Schema for the templateupdaterequests
@@ -875,6 +880,7 @@ data:
                     type: array
                     x-kubernetes-list-type: atomic
                   tierName:
+                    description: The name of the tier to be updated
                     type: string
                 required:
                 - namespaces
@@ -1387,6 +1393,32 @@ data:
                     "IMAGE": "quay.io/codeready-toolchain/registration-service:60d3b74",
                     "REPLICAS": "4"
                   }
+                }
+              },
+              {
+                "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+                "kind": "TemplateUpdateRequest",
+                "metadata": {
+                  "name": "johnsmith"
+                },
+                "spec": {
+                  "clusterResources": [
+                    {
+                      "templateRef": "basic-clusterresources-a34r57"
+                    }
+                  ],
+                  "namespaces": [
+                    {
+                      "templateRef": "basic-code-abcdef"
+                    },
+                    {
+                      "templateRef": "basic-dev-1d2f3q"
+                    },
+                    {
+                      "templateRef": "basic-stage-a34r57"
+                    }
+                  ],
+                  "tierName": "basic"
                 }
               },
               {
