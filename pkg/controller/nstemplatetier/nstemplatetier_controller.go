@@ -209,12 +209,9 @@ items:
 			// ignore when being deleted
 			continue
 		}
-		for _, c := range r.Status.Conditions {
-			if c.Type == toolchainv1alpha1.TemplateUpdateRequestComplete &&
-				c.Status == corev1.ConditionTrue {
-				// ignore when in `complete` status condition
-				continue items
-			}
+		if condition.IsTrue(r.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) {
+			// ignore when in `complete` status condition
+			continue items
 		}
 		activeTemplateUpdateRequests++
 	}
