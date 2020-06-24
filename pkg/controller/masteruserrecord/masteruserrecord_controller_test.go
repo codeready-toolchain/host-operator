@@ -545,6 +545,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		assert.Equal(t, "userprovisioned", notification.Spec.Template)
 		assert.Equal(t, userAccount.Name+"-provisioned", notification.Name)
 		assert.Equal(t, mur.Namespace, notification.Namespace)
+		assert.Equal(t, 1, len(notification.OwnerReferences))
 		assert.Equal(t, "MasterUserRecord", notification.OwnerReferences[0].Kind)
 		assert.Equal(t, mur.Name, notification.OwnerReferences[0].Name)
 	})
