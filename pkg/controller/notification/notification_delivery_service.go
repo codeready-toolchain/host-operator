@@ -15,7 +15,7 @@ type NotificationDeliveryServiceConfig interface {
 }
 
 type NotificationDeliveryService interface {
-	Send(ctx context.Context, notificationCtx NotificationContext, templateName string) error
+	Send(ctx context.Context, notificationCtx *NotificationContext, templateName string) error
 }
 
 type NotificationDeliveryServiceFactory struct {
@@ -32,7 +32,7 @@ func (f *NotificationDeliveryServiceFactory) CreateNotificationDeliveryService()
 	case configuration.NotificationDeliveryServiceMock:
 		return NewMockNotificationDeliveryService(), nil
 	case configuration.NotificationDeliveryServiceMailgun:
-		return NewMailgunNotificationDeliveryService(), nil
+		return NewMailgunNotificationDeliveryService(f.Client), nil
 	}
 	return nil, errors.New("invalid notification delivery service configuration")
 }

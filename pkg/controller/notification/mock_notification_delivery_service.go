@@ -12,7 +12,7 @@ func NewMockNotificationDeliveryService() NotificationDeliveryService {
 	return &MockNotificationDeliveryService{}
 }
 
-func (s *MockNotificationDeliveryService) Send(ctx context.Context, notificationCtx NotificationContext, templateName string) error {
+func (s *MockNotificationDeliveryService) Send(ctx context.Context, notificationCtx *NotificationContext, templateName string) error {
 	// TODO implement
 	return nil
 }
