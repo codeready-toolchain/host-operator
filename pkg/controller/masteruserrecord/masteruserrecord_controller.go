@@ -124,6 +124,7 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 			return reconcile.Result{}, err
 		}
 	}
+
 	return reconcile.Result{}, nil
 }
 

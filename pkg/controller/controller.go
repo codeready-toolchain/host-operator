@@ -5,6 +5,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/controller/changetierrequest"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/notification"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -18,6 +19,7 @@ func init() {
 	addToManagerFuncs = append(addToManagerFuncs, registrationservice.Add)
 	addToManagerFuncs = append(addToManagerFuncs, usersignup.Add)
 	addToManagerFuncs = append(addToManagerFuncs, changetierrequest.Add)
+	addToManagerFuncs = append(addToManagerFuncs, nstemplatetier.Add)
 	addToManagerFuncs = append(addToManagerFuncs, notification.Add)
 }
 

@@ -291,9 +291,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 
 		// check if anything in the MUR chould be migrated/fixed
-		changed, masterUserRecord := migrateOrFixMurIfNecessary(&mur, nstemplateTier)
-		if changed {
-			if err := r.client.Update(context.TODO(), masterUserRecord); err != nil {
+		if changed, err := migrateOrFixMurIfNecessary(&mur, nstemplateTier); err != nil {
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
+
+		} else if changed {
+			if err := r.client.Update(context.TODO(), &mur); err != nil {
 				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
 			}
 			return reconcile.Result{}, nil
@@ -445,7 +447,11 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			"Error generating compliant username for %s", userSignup.Spec.Username)
 	}
 
-	mur := newMasterUserRecord(nstemplateTier, compliantUsername, userSignup.Namespace, targetCluster, userSignup.Name)
+	mur, err := newMasterUserRecord(nstemplateTier, compliantUsername, userSignup.Namespace, targetCluster, userSignup.Name)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
+			"Error creating MasterUserRecord %s", mur.Name)
+	}
 
 	err = controllerutil.SetControllerReference(userSignup, mur, r.scheme)
 	if err != nil {
