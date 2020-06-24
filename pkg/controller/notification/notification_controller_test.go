@@ -63,7 +63,6 @@ func TestNotificationSuccess(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "jane", cl)
 		AssertThatNotificationIsDeleted(t, cl, notification.Name)
 	})
-
 }
 
 func TestNotificationSentFailure(t *testing.T) {

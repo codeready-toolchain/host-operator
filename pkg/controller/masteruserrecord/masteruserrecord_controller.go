@@ -178,6 +178,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAcc
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: murAccount,
 		logger:            logger,
+		scheme:            r.scheme,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
 		// note: if we got an error while sync'ing the spec, then we may not be able to update the MUR status it here neither.
