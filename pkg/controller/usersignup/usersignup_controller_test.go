@@ -984,7 +984,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("john-doe", murtest.MetaNamespace(operatorNamespace))
+		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(operatorNamespace))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
@@ -1076,7 +1076,7 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("edward-jones", murtest.MetaNamespace(operatorNamespace))
+		mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(operatorNamespace))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
@@ -1192,7 +1192,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		},
 	}
 
-	mur := murtest.NewMasterUserRecord("foo", murtest.MetaNamespace(operatorNamespace))
+	mur := murtest.NewMasterUserRecord(t, "foo", murtest.MetaNamespace(operatorNamespace))
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, bannedUser, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
@@ -1300,7 +1300,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 
 	key := test.NamespacedName(operatorNamespace, userSignup.Name)
 
-	mur := murtest.NewMasterUserRecord("john-doe", murtest.MetaNamespace(operatorNamespace))
+	mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(operatorNamespace))
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
 	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
@@ -1961,7 +1961,8 @@ func TestMigrateMur(t *testing.T) {
 			TargetCluster: "east",
 		},
 	}
-	mur := newMasterUserRecord(basicNSTemplateTier, "foo", operatorNamespace, "east", "foo")
+	mur, err := newMasterUserRecord(basicNSTemplateTier, "foo", operatorNamespace, "east", "foo")
+	require.NoError(t, err)
 
 	// set NSLimit and NSTemplateSet to be empty
 	mur.Spec.UserAccounts[0].Spec.NSTemplateSet = toolchainv1alpha1.NSTemplateSetSpec{}
