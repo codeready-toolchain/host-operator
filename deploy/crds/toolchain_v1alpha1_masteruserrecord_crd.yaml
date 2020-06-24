@@ -170,6 +170,10 @@ spec:
                       another.
                     format: date-time
                     type: string
+                  lastUpdatedTime:
+                    description: Last time the condition was updated
+                    format: date-time
+                    type: string
                   message:
                     description: Human readable message indicating details about last
                       transition.
@@ -226,6 +230,10 @@ spec:
                         lastTransitionTime:
                           description: Last time the condition transit from one status
                             to another.
+                          format: date-time
+                          type: string
+                        lastUpdatedTime:
+                          description: Last time the condition was updated
                           format: date-time
                           type: string
                         message:
