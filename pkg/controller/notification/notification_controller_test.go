@@ -60,7 +60,6 @@ func TestNotificationSuccess(t *testing.T) {
 		assert.False(t, result.Requeue)
 		AssertThatNotificationIsDeleted(t, cl, notification.Name)
 	})
-
 }
 
 func TestNotificationSentFailure(t *testing.T) {

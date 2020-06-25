@@ -541,10 +541,13 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		// Get the notification resource and verify it
 		notification := toolchainv1alpha1.Notification{}
 		hostClient.Get(context.TODO(), namespacedName(mur.Namespace, userAccount.Name+"-provisioned"), &notification)
-		assert.Equal(t, notification.Spec.UserID, userAccount.Spec.UserID)
-		assert.Equal(t, notification.Spec.Template, "userprovisioned")
-		assert.Equal(t, notification.Name, userAccount.Name+"-provisioned")
-		assert.Equal(t, notification.Namespace, mur.Namespace)
+		assert.Equal(t, userAccount.Spec.UserID, notification.Spec.UserID)
+		assert.Equal(t, "userprovisioned", notification.Spec.Template)
+		assert.Equal(t, userAccount.Name+"-provisioned", notification.Name)
+		assert.Equal(t, mur.Namespace, notification.Namespace)
+		require.Equal(t, 1, len(notification.OwnerReferences))
+		assert.Equal(t, "MasterUserRecord", notification.OwnerReferences[0].Kind)
+		assert.Equal(t, mur.Name, notification.OwnerReferences[0].Name)
 	})
 }
 
