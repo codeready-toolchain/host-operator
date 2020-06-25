@@ -104,7 +104,7 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, err
 	}
 	if err := r.ensureTemplateUpdateRequest(logger, tier); err != nil {
-		log.Error(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed.")
+		logger.Error(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed.")
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, nil
@@ -115,7 +115,7 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 // return `nil` so the controller will wait for the next reconcile to create subsequent TemplateUpdateRequest resources, until the
 // `MaxPoolSize` threashold is reached.
 func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) error {
-	activeTemplateUpdateRequests, err := r.activeTemplateUpdateRequests(tier)
+	activeTemplateUpdateRequests, err := r.activeTemplateUpdateRequests(logger, tier)
 	if err != nil {
 		return errs.Wrap(err, "unable to get active TemplateUpdateRequests")
 	}
@@ -179,8 +179,7 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 	logger.Info("done with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", tier.Name)
 	return nil
 }
-
-func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(tier *toolchainv1alpha1.NSTemplateTier) (int, error) {
+func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) (int, error) {
 	// fetch the list of TemplateUpdateRequest owned by the NSTemplateTier tier
 	templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 	if err := r.client.List(context.TODO(), &templateUpdateRequests, client.MatchingLabels{
@@ -190,18 +189,19 @@ func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(tier *toolchainv1
 	}
 
 	// count non-deleted templateUpdateRequest items
-	activeTemplateUpdateRequests := 0
-items:
+	count := 0
 	for _, r := range templateUpdateRequests.Items {
 		if util.IsBeingDeleted(&r) {
 			// ignore when being deleted
 			continue
 		}
-		if condition.IsTrue(r.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) {
-			// ignore when in `complete` status condition
-			continue items
+		if condition.IsTrue(r.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) ||
+			condition.IsFalseWithReason(r.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestFailedReason) {
+			// ignore when in `complete=true` or when in `complete=false/reason=failed` status conditions
+			continue
 		}
-		activeTemplateUpdateRequests++
+		count++
 	}
-	return activeTemplateUpdateRequests, nil
+	logger.Info("found active TemplateUpdateRequest for the current tier", "count", count)
+	return count, nil
 }

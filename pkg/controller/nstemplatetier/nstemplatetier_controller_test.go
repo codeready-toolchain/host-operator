@@ -320,7 +320,8 @@ func TestReconcile(t *testing.T) {
 		t.Run("when no TemplateUpdateRequest resource exists at all", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d",
+				murtest.Account("cluster1", oldNSTemplateTier))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -337,7 +338,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "other-%d", turtest.TierName("other"))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "other-%d", newNSTemplateTier, turtest.TierName("other"))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -354,7 +355,27 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d", turtest.Complete("user-0"))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d", newNSTemplateTier, turtest.Complete("user-0"))...)
+			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
+			// when
+			res, err := r.Reconcile(req)
+			// then
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
+			// check that a single TemplateUpdateRequest was created
+			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
+			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
+			require.NoError(t, err)
+			assert.Len(t, actualTemplateUpdateRequests.Items, MaxPoolSize+1) // one more TemplateUpdateRequest
+		})
+
+		// in this test, the controller can create an extra TemplateUpdateRequest resource
+		// because one is in a "completed" status
+		t.Run("when maximum number of TemplateUpdateRequest is reached but one is failed", func(t *testing.T) {
+			// given
+			initObjs := []runtime.Object{&newNSTemplateTier}
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d", newNSTemplateTier, turtest.Failed("user-0"))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -371,7 +392,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d", turtest.DeletionTimestamp("user-0"))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d", newNSTemplateTier, turtest.DeletionTimestamp("user-0"))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -386,8 +407,10 @@ func TestReconcile(t *testing.T) {
 		t.Run("when MasterUserRecord in continued fetch is not up-to-date", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "new-user-%d", murtest.Account("cluster1", newNSTemplateTier))...)
-			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "old-user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "new-user-%d",
+				murtest.Account("cluster1", newNSTemplateTier))...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "old-user-%d",
+				murtest.Account("cluster1", oldNSTemplateTier))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -436,7 +459,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 20, "user-%d", murtest.Account("cluster1", newNSTemplateTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d")...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d", newNSTemplateTier)...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -454,7 +477,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", oldNSTemplateTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d")...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(MaxPoolSize, "user-%d", newNSTemplateTier)...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -470,7 +493,8 @@ func TestReconcile(t *testing.T) {
 		t.Run("when no MasterUserRecord is associated with the updated NSTemplteTier", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", otherNSTemplateTier))...)
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d",
+				murtest.Account("cluster1", otherNSTemplateTier))...)
 			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)

@@ -13,27 +13,33 @@ import (
 )
 
 // NewTemplateUpdateRequest creates a specified number of TemplateRequestUpdate objects, with options
-func NewTemplateUpdateRequest(name string, options ...Option) *toolchainv1alpha1.TemplateUpdateRequest {
-	r := &toolchainv1alpha1.TemplateUpdateRequest{
+func NewTemplateUpdateRequest(name string, tier toolchainv1alpha1.NSTemplateTier, options ...Option) *toolchainv1alpha1.TemplateUpdateRequest {
+	tur := &toolchainv1alpha1.TemplateUpdateRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
-				toolchainv1alpha1.NSTemplateTierNameLabelKey: "basic",
+				toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
 			},
 		},
+		Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
+			TierName:         tier.Name,
+			Namespaces:       tier.Spec.Namespaces,
+			ClusterResources: tier.Spec.ClusterResources,
+		},
+		Status: toolchainv1alpha1.TemplateUpdateRequestStatus{},
 	}
 	for _, opt := range options {
-		opt.applyToTemplateUpdateRequest(r)
+		opt.applyToTemplateUpdateRequest(tur)
 	}
-	return r
+	return tur
 }
 
 // NewTemplateUpdateRequests creates a specified number of TemplateRequestUpdate objects, with options
-func NewTemplateUpdateRequests(size int, nameFmt string, options ...Option) []runtime.Object {
+func NewTemplateUpdateRequests(size int, nameFmt string, tier toolchainv1alpha1.NSTemplateTier, options ...Option) []runtime.Object {
 	templateUpdateRequests := make([]runtime.Object, size)
 	for i := 0; i < size; i++ {
-		templateUpdateRequests[i] = NewTemplateUpdateRequest(fmt.Sprintf(nameFmt, i), options...)
+		templateUpdateRequests[i] = NewTemplateUpdateRequest(fmt.Sprintf(nameFmt, i), tier, options...)
 	}
 	return templateUpdateRequests
 }
@@ -64,8 +70,41 @@ func (c Complete) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpda
 	if r.Name == string(c) {
 		r.Status.Conditions = []toolchainv1alpha1.Condition{
 			{
+				Type:               toolchainv1alpha1.TemplateUpdateRequestComplete,
+				Status:             corev1.ConditionTrue,
+				LastTransitionTime: metav1.NewTime(time.Now()),
+			},
+		}
+	}
+}
+
+// CompleteSince sets the status condition to "complete" on the TemplateUpdateRequest, using the value as an offset to time.Now
+type CompleteSince time.Duration
+
+var _ Option = CompleteSince(time.Second)
+
+func (c CompleteSince) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdateRequest) {
+	r.Status.Conditions = []toolchainv1alpha1.Condition{
+		{
+			Type:               toolchainv1alpha1.TemplateUpdateRequestComplete,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.NewTime(time.Now().Add(-time.Duration(c))),
+		},
+	}
+}
+
+// Failed sets the status condition to "failed" on the TemplateUpdateRequest with the given name
+type Failed string
+
+var _ Option = Failed("")
+
+func (f Failed) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdateRequest) {
+	if r.Name == string(f) {
+		r.Status.Conditions = []toolchainv1alpha1.Condition{
+			{
 				Type:   toolchainv1alpha1.TemplateUpdateRequestComplete,
-				Status: corev1.ConditionTrue,
+				Status: corev1.ConditionFalse,
+				Reason: toolchainv1alpha1.TemplateUpdateRequestFailedReason,
 			},
 		}
 	}
@@ -81,4 +120,25 @@ func (t TierName) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpda
 	r.Labels = map[string]string{
 		toolchainv1alpha1.NSTemplateTierNameLabelKey: string(t),
 	}
+}
+
+// SyncIndexes the Sync Indexes stored in the status before the MasterUserRecord update begins
+type SyncIndexes map[string]string
+
+var _ Option = SyncIndexes(map[string]string{})
+
+func (i SyncIndexes) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdateRequest) {
+	r.Status.SyncIndexes = map[string]string(i)
+}
+
+// Condition adds a condition in the TemplateUpdateRequest status
+type Condition toolchainv1alpha1.Condition
+
+var _ Option = Condition(toolchainv1alpha1.Condition{})
+
+func (c Condition) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdateRequest) {
+	if r.Status.Conditions == nil {
+		r.Status.Conditions = []toolchainv1alpha1.Condition{}
+	}
+	r.Status.Conditions = append(r.Status.Conditions, toolchainv1alpha1.Condition(c))
 }

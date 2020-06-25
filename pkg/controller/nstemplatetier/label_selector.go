@@ -62,6 +62,18 @@ func ComputeHashForNSTemplateTier(tier toolchainv1alpha1.NSTemplateTier) (string
 	return computeHash(refs)
 }
 
+// ComputeHashForTemplateUpdateRequest computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
+func ComputeHashForTemplateUpdateRequest(tur toolchainv1alpha1.TemplateUpdateRequest) (string, error) {
+	refs := templateRefs{}
+	for _, ns := range tur.Spec.Namespaces {
+		refs.Namespaces = append(refs.Namespaces, ns.TemplateRef)
+	}
+	if tur.Spec.ClusterResources != nil {
+		refs.ClusterResources = tur.Spec.ClusterResources.TemplateRef
+	}
+	return computeHash(refs)
+}
+
 // ComputeHashForNSTemplateSetSpec computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
 func ComputeHashForNSTemplateSetSpec(s toolchainv1alpha1.NSTemplateSetSpec) (string, error) {
 	refs := templateRefs{}

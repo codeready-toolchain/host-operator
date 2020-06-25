@@ -228,7 +228,7 @@ spec:
       version: v1alpha1
     - description: TemplateUpdateRequest is the Schema for the templateupdaterequests
         API
-      displayName: Template UpdateRequest
+      displayName: Template Update Request
       kind: TemplateUpdateRequest
       name: templateupdaterequests.toolchain.dev.openshift.com
       version: v1alpha1
