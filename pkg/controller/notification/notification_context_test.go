@@ -58,6 +58,15 @@ func TestNotificationContext(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, "usersignups.toolchain.dev.openshift.com \"other\" not found", err.Error())
 	})
+
+	t.Run("full email address", func(t *testing.T) {
+		// when
+		notificationCtx, err := NewNotificationContext(context.Background(), client, userSignup.Name, operatorNamespace)
+
+		// then
+		require.Error(t, err)
+		require.Equal(t, "usersignups.toolchain.dev.openshift.com \"other\" not found", err.Error())
+	})
 }
 
 func newObjectMeta(name, email string) metav1.ObjectMeta {

@@ -58,7 +58,7 @@ func (s *MailgunNotificationDeliveryService) Send(ctx context.Context, notificat
 		return err
 	}
 
-	recipient := s.ConstructRecipientEmail(notificationCtx)
+	recipient := notificationCtx.FullEmailAddress()
 
 	// The message object allows you to add attachments and Bcc recipients
 	message := s.Mailgun.NewMessage(sender, subject, body, recipient)
@@ -73,11 +73,4 @@ func (s *MailgunNotificationDeliveryService) Send(ctx context.Context, notificat
 	}
 
 	return nil
-}
-
-func (s *MailgunNotificationDeliveryService) ConstructRecipientEmail(notificationCtx *NotificationContext) string {
-	return fmt.Sprintf("%s %s<%s>",
-		notificationCtx.FirstName,
-		notificationCtx.LastName,
-		notificationCtx.Email)
 }

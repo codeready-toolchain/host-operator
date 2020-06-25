@@ -2,6 +2,7 @@ package notification
 
 import (
 	"context"
+	"fmt"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,4 +42,11 @@ func NewNotificationContext(ctx context.Context, client client.Client, userID, n
 	}
 
 	return notificationCtx, nil
+}
+
+func (c *NotificationContext) FullEmailAddress() string {
+	return fmt.Sprintf("%s %s<%s>",
+		c.FirstName,
+		c.LastName,
+		c.Email)
 }
