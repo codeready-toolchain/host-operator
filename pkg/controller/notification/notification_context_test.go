@@ -64,8 +64,8 @@ func TestNotificationContext(t *testing.T) {
 		notificationCtx, err := NewNotificationContext(context.Background(), client, userSignup.Name, operatorNamespace)
 
 		// then
-		require.Error(t, err)
-		require.Equal(t, "usersignups.toolchain.dev.openshift.com \"other\" not found", err.Error())
+		require.NoError(t, err)
+		require.Equal(t, "John Smith<jsmith@redhat.com>", notificationCtx.FullEmailAddress())
 	})
 }
 
