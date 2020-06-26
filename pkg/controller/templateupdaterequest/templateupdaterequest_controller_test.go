@@ -111,7 +111,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: ProgressDelay}, res) // now we need to requeue until update is done
+			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 			// check that the MasterUserRecord was updated
 			murtest.AssertThatMasterUserRecord(t, "user-1", cl).
 				AllUserAccountsHaveTier(newNSTemplateTier)
@@ -135,7 +135,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: ProgressDelay}, res) // now we need to requeue until update is done
+			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 			// check that the MasterUserRecord was updated
 			murtest.AssertThatMasterUserRecord(t, "user-1", cl).
 				UserAccountHasTier("cluster1", newNSTemplateTier).
@@ -169,7 +169,7 @@ func TestReconcile(t *testing.T) {
 			// when
 			res, err := r.Reconcile(req)
 			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: ProgressDelay}, res) // now we need to requeue until update is done
+			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
 				HasConditions(toBeUpdating()).
 				HasSyncIndexes(map[string]string{

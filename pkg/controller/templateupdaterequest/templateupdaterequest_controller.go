@@ -30,8 +30,6 @@ var log = logf.Log.WithName("controller_templateupdaterequest")
 const (
 	// DeletionTimeout the duration after which the TemplateUpdateRequest can be deleted, once it reached the `complete=true` condition
 	DeletionTimeout = 5 * time.Second
-	// ProgressDelay the duration for requeuing the request while the MasterUserRecord is still being updated (so we can track the progress)
-	ProgressDelay = 2 * time.Second
 )
 
 // Add creates a new TemplateUpdateRequest Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -55,6 +53,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to primary resource TemplateUpdateRequest
 	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.TemplateUpdateRequest{}}, &handler.EnqueueRequestForObject{})
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to secondary resource MasterUserRecords (although, not owned by the TemplateUpdateRequest)
+	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.MasterUserRecord{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -114,8 +118,7 @@ func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (r
 
 	// lookup the MasterUserRecord with the same name as the TemplateUpdateRequest tur
 	mur := &toolchainv1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), request.NamespacedName, mur)
-	if err != nil {
+	if err = r.client.Get(context.TODO(), request.NamespacedName, mur); err != nil {
 		if errors.IsNotFound(err) {
 			// MUR object not found, could have been deleted after reconcile request.
 			// Marking this TemplateUpdateRequest as failed
@@ -140,8 +143,8 @@ func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (r
 			logger.Error(err, "Unable to update the TemplateUpdateRequest status")
 			return reconcile.Result{}, err
 		}
-		// now requeue to track progress
-		return reconcile.Result{Requeue: true, RequeueAfter: ProgressDelay}, nil
+		// no explicit requeue: expect new reconcile loop when MasterUserRecord changes
+		return reconcile.Result{}, nil
 	}
 	// otherwise, we should compare the sync indexes of the MasterUserRecord until all tier-related values changed
 	if r.compareSyncIndexes(logger, *tur, *mur) {
@@ -155,7 +158,8 @@ func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (r
 	}
 	// otherwise, we need to wait
 	logger.Info("MasterUserRecord still being updated...")
-	return reconcile.Result{Requeue: true, RequeueAfter: ProgressDelay}, nil
+	// no explicit requeue: expect new reconcile loop when MasterUserRecord changes
+	return reconcile.Result{}, nil
 }
 
 func (r ReconcileTemplateUpdateRequest) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur *toolchainv1alpha1.MasterUserRecord) error {
