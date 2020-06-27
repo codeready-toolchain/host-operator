@@ -4,15 +4,15 @@ import (
 	"context"
 	"testing"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/gofrs/uuid"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // getDefaultConfiguration returns a configuration registry without anything but
@@ -58,12 +58,11 @@ func TestGetAllRegistrationServiceParameters(t *testing.T) {
 	})
 }
 
-func TestHostOperatorSecret(t *testing.T) {
-
+func TestGetSecret(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		config := getDefaultConfiguration(t)
-		assert.Equal(t, "", config.GetHostOperatorMailgunDomain())
-		assert.Equal(t, "", config.GetHostOperatorMailAPIKey())
+		assert.Equal(t, "", config.GetMailgunDomain())
+		assert.Equal(t, "", config.GetMailgunAPIKey())
 	})
 	t.Run("env overwrite", func(t *testing.T) {
 		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_SECRET_NAME", "test-secret")
@@ -85,8 +84,8 @@ func TestHostOperatorSecret(t *testing.T) {
 		require.NoError(t, err)
 
 		config := configuration.LoadConfig(cl)
-		assert.Equal(t, "test-domain", config.GetHostOperatorMailgunDomain())
-		assert.Equal(t, "test-api-key", config.GetHostOperatorMailAPIKey())
+		assert.Equal(t, "test-domain", config.GetMailgunDomain())
+		assert.Equal(t, "test-api-key", config.GetMailgunAPIKey())
 	})
 }
 

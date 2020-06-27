@@ -25,7 +25,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	require.NoError(t, err)
 
 	cl := NewFakeClient(t)
-
 	config := configuration.LoadConfig(cl)
 	require.NoError(t, err)
 

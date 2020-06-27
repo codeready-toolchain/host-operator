@@ -85,7 +85,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	crtConfig, err := getConfiguration(cfg)
+	crtConfig, err := getCRTConfiguration(cfg)
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -305,9 +305,9 @@ func ensureKubeFedClusterCRD(config *rest.Config) error {
 	return nil
 }
 
-// getConfiguration creates the client used for configuration and
-// returns the loaded configuration
-func getConfiguration(config *rest.Config) (*configuration.Config, error) {
+// getCRTConfiguration creates the client used for configuration and
+// returns the loaded crt configuration
+func getCRTConfiguration(config *rest.Config) (*configuration.Config, error) {
 	// create client that will be used for retrieving the host operator secret
 	cl, err := client.New(config, client.Options{})
 	if err != nil {

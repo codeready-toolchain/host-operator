@@ -8,11 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-
-	errs "github.com/pkg/errors"
 	"github.com/spf13/viper"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -53,11 +51,11 @@ const (
 	// varDurationBeforeNotificationDeletion specifies the duration before a notification will be deleted
 	varDurationBeforeNotificationDeletion = "duration.before.notification.deletion"
 
-	// varHostOperatorMailgunDomain specifies the host operator mailgun domain
-	varHostOperatorMailgunDomain = "mailgun.domain"
+	// varMailgunDomain specifies the host operator mailgun domain
+	varMailgunDomain = "mailgun.domain"
 
-	// varHostOperatorMailgunAPIKey specifies the host operator mailgun api key
-	varHostOperatorMailgunAPIKey = "mailgun.api.key"
+	// varMailgunAPIKey specifies the host operator mailgun api key
+	varMailgunAPIKey = "mailgun.api.key"
 
 	// mailgunDomain defines mailgun domain key
 	mailgunDomain = "mailgun-domain"
@@ -75,22 +73,6 @@ type Config struct {
 	host *viper.Viper
 }
 
-// New creates a configuration reader object using a configurable configuration
-// file path. If the provided config file path is empty, a default configuration
-// will be created.
-func New(configFilePath string) (*Config, error) {
-	c := initConfig()
-	if configFilePath != "" {
-		c.host.SetConfigType("yaml")
-		c.host.SetConfigFile(configFilePath)
-		err := c.host.ReadInConfig() // Find and read the config file
-		if err != nil {              // Handle errors reading the config file.
-			return nil, errs.Wrap(err, "failed to read config file")
-		}
-	}
-	return c, nil
-}
-
 // initConfig creates an initial, empty configuration.
 func initConfig() *Config {
 	c := Config{
@@ -105,12 +87,12 @@ func initConfig() *Config {
 }
 
 func LoadConfig(cl client.Client) *Config {
-	getHostOperatorSecret(cl)
+	getSecret(cl)
 	return initConfig()
 }
 
-// getHostOperatorSecret retrieves the host operator secret
-func getHostOperatorSecret(cl client.Client) error {
+// getSecret retrieves the host operator secret
+func getSecret(cl client.Client) error {
 	// get the secret name
 	secretName := os.Getenv("HOST_OPERATOR_SECRET_NAME")
 	if secretName == "" {
@@ -158,14 +140,14 @@ func (c *Config) GetDurationBeforeNotificationDeletion() time.Duration {
 	return c.host.GetDuration(varDurationBeforeNotificationDeletion)
 }
 
-// GetHostOperatorMailgunDomain returns the host operator mailgun domain
-func (c *Config) GetHostOperatorMailgunDomain() string {
-	return c.host.GetString(varHostOperatorMailgunDomain)
+// GetMailgunDomain returns the host operator mailgun domain
+func (c *Config) GetMailgunDomain() string {
+	return c.host.GetString(varMailgunDomain)
 }
 
-// GetHostOperatorMailgunAPIKey returns the host operator mailgun domain
-func (c *Config) GetHostOperatorMailAPIKey() string {
-	return c.host.GetString(varHostOperatorMailgunAPIKey)
+// GetMailAPIKey returns the host operator mailgun domain
+func (c *Config) GetMailgunAPIKey() string {
+	return c.host.GetString(varMailgunAPIKey)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
