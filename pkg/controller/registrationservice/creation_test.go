@@ -23,7 +23,10 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	config := configuration.LoadConfig()
+
+	cl := NewFakeClient(t)
+
+	config := configuration.LoadConfig(cl)
 	require.NoError(t, err)
 
 	t.Run("create with default values", func(t *testing.T) {
@@ -47,7 +50,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 	t.Run("update to RegService with image, environment and auth client values set", func(t *testing.T) {
 		// given
-		cl := NewFakeClient(t)
 		regService := &v1alpha1.RegistrationService{
 			ObjectMeta: v1.ObjectMeta{
 				Namespace: HostOperatorNs,
@@ -86,7 +88,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 	t.Run("when creation fails then should return error", func(t *testing.T) {
 		// given
-		cl := NewFakeClient(t)
 		cl.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 			return fmt.Errorf("creation failed")
 		}

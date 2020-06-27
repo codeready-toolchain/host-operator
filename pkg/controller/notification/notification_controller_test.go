@@ -145,7 +145,8 @@ func newController(t *testing.T, notification *v1alpha1.Notification, initObjs .
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, append(initObjs, notification)...)
-	config := configuration.LoadConfig()
+
+	config := configuration.LoadConfig(cl)
 	controller := &ReconcileNotification{
 		client: cl,
 		scheme: s,

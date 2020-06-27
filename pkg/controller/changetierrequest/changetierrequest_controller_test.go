@@ -354,7 +354,8 @@ func newController(t *testing.T, changeTier *v1alpha1.ChangeTierRequest, initObj
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, append(initObjs, changeTier)...)
-	config := configuration.LoadConfig()
+
+	config := configuration.LoadConfig(cl)
 	controller := &ReconcileChangeTierRequest{
 		client: cl,
 		scheme: s,
