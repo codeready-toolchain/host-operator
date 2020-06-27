@@ -87,12 +87,12 @@ func initConfig() *Config {
 }
 
 func LoadConfig(cl client.Client) *Config {
-	getSecret(cl)
+	loadFromSecret(cl)
 	return initConfig()
 }
 
-// getSecret retrieves the host operator secret
-func getSecret(cl client.Client) error {
+// loadFromSecret retrieves the host operator secret
+func loadFromSecret(cl client.Client) error {
 	// get the secret name
 	secretName := os.Getenv("HOST_OPERATOR_SECRET_NAME")
 	if secretName == "" {
@@ -107,13 +107,14 @@ func getSecret(cl client.Client) error {
 		return err
 	}
 
-	// get the domain and domain api key
-	mailgunDomain := secret.Data[mailgunDomain]
-	mailgunApiKey := secret.Data[mailgunAPIKey]
-
-	// set the domain and api key env vars
-	os.Setenv("HOST_OPERATOR_MAILGUN_DOMAIN", string(mailgunDomain))
-	os.Setenv("HOST_OPERATOR_MAILGUN_API_KEY", string(mailgunApiKey))
+	// get secrets and set environment variables
+	for key, value := range secret.Data {
+		secretKey := HostEnvPrefix + "_" + (strings.ToUpper(strings.ReplaceAll(key, "-", "_")))
+		err = os.Setenv(secretKey, string(value))
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -145,7 +146,7 @@ func (c *Config) GetMailgunDomain() string {
 	return c.host.GetString(varMailgunDomain)
 }
 
-// GetMailAPIKey returns the host operator mailgun domain
+// GetMailAPIKey returns the host operator mailgun api key
 func (c *Config) GetMailgunAPIKey() string {
 	return c.host.GetString(varMailgunAPIKey)
 }
