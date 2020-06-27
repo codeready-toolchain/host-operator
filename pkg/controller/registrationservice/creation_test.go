@@ -23,7 +23,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-
 	cl := NewFakeClient(t)
 	config := configuration.LoadConfig(cl)
 	require.NoError(t, err)
