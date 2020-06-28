@@ -58,7 +58,7 @@ func TestGetAllRegistrationServiceParameters(t *testing.T) {
 	})
 }
 
-func TestGetSecret(t *testing.T) {
+func TestLoadFromSecret(t *testing.T) {
 	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
 	defer restore()
 	t.Run("default", func(t *testing.T) {
