@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/spf13/viper"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -62,9 +63,6 @@ const (
 
 	// mailgunAPIKey defines mailgun api key
 	mailgunAPIKey = "mailgun-api-key"
-
-	// defaultNamesapce specifies  the default k8s namespace to use
-	defaultNamesapce = "toolchain-host-operator"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -99,10 +97,16 @@ func loadFromSecret(cl client.Client) error {
 		return nil
 	}
 
+	// get namespace
+	namespace, err := k8sutil.GetWatchNamespace()
+	if err != nil {
+		return err
+	}
+
 	// get the secret
 	secret := &v1.Secret{}
-	namespacedName := types.NamespacedName{Namespace: defaultNamesapce, Name: secretName}
-	err := client.Client.Get(cl, context.TODO(), namespacedName, secret)
+	namespacedName := types.NamespacedName{Namespace: namespace, Name: secretName}
+	err = client.Client.Get(cl, context.TODO(), namespacedName, secret)
 	if err != nil {
 		return err
 	}

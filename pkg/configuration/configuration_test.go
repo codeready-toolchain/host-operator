@@ -59,6 +59,8 @@ func TestGetAllRegistrationServiceParameters(t *testing.T) {
 }
 
 func TestGetSecret(t *testing.T) {
+	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
+	defer restore()
 	t.Run("default", func(t *testing.T) {
 		config := getDefaultConfiguration(t)
 		assert.Equal(t, "", config.GetMailgunDomain())
