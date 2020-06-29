@@ -78,12 +78,12 @@ func (c Complete) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpda
 	}
 }
 
-// CompleteSince sets the status condition to "complete" on the TemplateUpdateRequest, using the value as an offset to time.Now
-type CompleteSince time.Duration
+// CompleteFor sets the status condition to "complete" on the TemplateUpdateRequest, using the given duration as an offset to time.Now
+type CompleteFor time.Duration
 
-var _ Option = CompleteSince(time.Second)
+var _ Option = CompleteFor(time.Second)
 
-func (c CompleteSince) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdateRequest) {
+func (c CompleteFor) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdateRequest) {
 	r.Status.Conditions = []toolchainv1alpha1.Condition{
 		{
 			Type:               toolchainv1alpha1.TemplateUpdateRequestComplete,

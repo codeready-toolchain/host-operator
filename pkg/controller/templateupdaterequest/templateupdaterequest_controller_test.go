@@ -234,7 +234,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("when the timeout occurred", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier, turtest.CompleteSince(2*DeletionTimeout)))
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier, turtest.CompleteFor(2*DeletionTimeout)))
 			r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
 			// when
 			res, err := r.Reconcile(req)
@@ -246,7 +246,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("not when the timeout did not occur", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier, turtest.CompleteSince(DeletionTimeout-2*time.Second)))
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier, turtest.CompleteFor(DeletionTimeout-2*time.Second)))
 			r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
 			// when
 			res, err := r.Reconcile(req)
