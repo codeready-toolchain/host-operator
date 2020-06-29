@@ -177,11 +177,8 @@ func TestReconcile(t *testing.T) {
 					"cluster2": "20",
 				})
 		})
-	})
 
-	t.Run("controller should mark TemplateUpdateRequest as complete", func(t *testing.T) {
-
-		t.Run("when the MasterUserRecord is up-to-date", func(t *testing.T) {
+		t.Run("when the MasterUserRecord is up-to-date but not in 'ready' state yet", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier,
@@ -194,6 +191,41 @@ func TestReconcile(t *testing.T) {
 				murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("11")),               // here the sync index changed
 				murtest.AdditionalAccount("cluster2", oldNSTemplateTier, murtest.SyncIndex("21")),     // here the sync index changed too
 				murtest.AdditionalAccount("cluster3", otherNSTemplateTier, murtest.SyncIndex("100")))) // this account is not affected by the update
+			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+			// when
+			res, err := r.Reconcile(req)
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
+			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
+				HasConditions(toBeUpdating()).
+				HasSyncIndexes(map[string]string{
+					"cluster1": "10",
+					"cluster2": "20",
+				})
+		})
+	})
+
+	t.Run("controller should mark TemplateUpdateRequest as complete", func(t *testing.T) {
+
+		t.Run("when the MasterUserRecord is up-to-date and in 'ready' state", func(t *testing.T) {
+			// given
+			initObjs := []runtime.Object{&newNSTemplateTier}
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier,
+				turtest.Condition(toBeUpdating()),
+				turtest.SyncIndexes(map[string]string{
+					"cluster1": "10",
+					"cluster2": "20",
+				})))
+			initObjs = append(initObjs, murtest.NewMasterUserRecord(t, "user-1",
+				murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("11")),              // here the sync index changed
+				murtest.AdditionalAccount("cluster2", oldNSTemplateTier, murtest.SyncIndex("21")),    // here the sync index changed too
+				murtest.AdditionalAccount("cluster3", otherNSTemplateTier, murtest.SyncIndex("100")), // account with another tier
+				murtest.StatusCondition(toolchainv1alpha1.Condition{ // master user record is "ready"
+					Type:   toolchainv1alpha1.ConditionReady,
+					Status: corev1.ConditionTrue,
+					Reason: toolchainv1alpha1.MasterUserRecordProvisionedReason,
+				}),
+			)) // this account is not affected by the update
 			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
 			// when
 			res, err := r.Reconcile(req)

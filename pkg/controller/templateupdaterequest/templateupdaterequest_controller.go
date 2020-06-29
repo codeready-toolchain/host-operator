@@ -147,13 +147,9 @@ func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (r
 		return reconcile.Result{}, nil
 	}
 	// otherwise, we should compare the sync indexes of the MasterUserRecord until all tier-related values changed
-	if r.compareSyncIndexes(logger, *tur, *mur) {
+	if r.compareSyncIndexes(logger, *tur, *mur) && condition.IsTrue(mur.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 		// once MasterUserRecord is up-to-date, we can delete this TemplateUpdateRequest
 		logger.Info("MasterUserRecord is up-to-date. Marking the TemplateUpdateRequest as complete")
-		// if err := r.client.Status Delete(context.TODO(), tur); err != nil {
-		// 	logger.Error(err, "Unable to delete the TemplateUpdateRequest")
-		// 	return reconcile.Result{}, err
-		// }
 		return reconcile.Result{Requeue: true, RequeueAfter: DeletionTimeout}, r.updateStatusConditions(logger, tur, toBeComplete())
 	}
 	// otherwise, we need to wait
