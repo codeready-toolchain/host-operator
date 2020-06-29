@@ -76,8 +76,9 @@ func TestLoadFromSecret(t *testing.T) {
 				Namespace: "toolchain-host-operator",
 			},
 			Data: map[string][]byte{
-				"mailgun-domain":  []byte("test-domain"),
-				"mailgun-api-key": []byte("test-api-key"),
+				"mailgun-domain":       []byte("test-domain"),
+				"mailgun-api-key":      []byte("test-api-key"),
+				"mailgun-sender-email": []byte("test-sender-email"),
 			},
 		}
 
@@ -88,6 +89,7 @@ func TestLoadFromSecret(t *testing.T) {
 		config := configuration.LoadConfig(cl)
 		assert.Equal(t, "test-domain", config.GetMailgunDomain())
 		assert.Equal(t, "test-api-key", config.GetMailgunAPIKey())
+		assert.Equal(t, "test-sender-email", config.GetMailgunSenderEmail())
 	})
 }
 

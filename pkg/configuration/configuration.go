@@ -13,6 +13,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 // prefixes
@@ -52,17 +53,14 @@ const (
 	// varDurationBeforeNotificationDeletion specifies the duration before a notification will be deleted
 	varDurationBeforeNotificationDeletion = "duration.before.notification.deletion"
 
-	// varMailgunDomain specifies the host operator mailgun domain
+	// varMailgunDomain specifies the host operator mailgun domain used for creating an instance of mailgun
 	varMailgunDomain = "mailgun.domain"
 
-	// varMailgunAPIKey specifies the host operator mailgun api key
+	// varMailgunAPIKey specifies the host operator mailgun api key used for creating an instance of mailgun
 	varMailgunAPIKey = "mailgun.api.key"
 
-	// mailgunDomain defines mailgun domain key
-	mailgunDomain = "mailgun-domain"
-
-	// mailgunAPIKey defines mailgun api key
-	mailgunAPIKey = "mailgun-api-key"
+	// varMailgunAPIKey specifies the host operator mailgun senders email
+	varMailgunSenderEmail = "mailgun.sender.email"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -70,6 +68,8 @@ const (
 type Config struct {
 	host *viper.Viper
 }
+
+var log = logf.Log.WithName("configuration")
 
 // initConfig creates an initial, empty configuration.
 func initConfig() *Config {
@@ -94,6 +94,7 @@ func loadFromSecret(cl client.Client) error {
 	// get the secret name
 	secretName := os.Getenv("HOST_OPERATOR_SECRET_NAME")
 	if secretName == "" {
+		log.Info("HOST_OPERATOR_SECRET_NAME is not set")
 		return nil
 	}
 
@@ -153,6 +154,10 @@ func (c *Config) GetMailgunDomain() string {
 // GetMailAPIKey returns the host operator mailgun api key
 func (c *Config) GetMailgunAPIKey() string {
 	return c.host.GetString(varMailgunAPIKey)
+}
+
+func (c *Config) GetMailgunSenderEmail() string {
+	return c.host.GetString(varMailgunSenderEmail)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
