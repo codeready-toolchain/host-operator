@@ -137,8 +137,5 @@ type Condition toolchainv1alpha1.Condition
 var _ Option = Condition(toolchainv1alpha1.Condition{})
 
 func (c Condition) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdateRequest) {
-	if r.Status.Conditions == nil {
-		r.Status.Conditions = []toolchainv1alpha1.Condition{}
-	}
 	r.Status.Conditions = append(r.Status.Conditions, toolchainv1alpha1.Condition(c))
 }
