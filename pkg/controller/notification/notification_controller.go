@@ -52,7 +52,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.Reconciler {
-	return &ReconcileNotification{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config}
+	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), config)
+
+	reqLogger := log.WithValues("Notification.Controller", "newReconciler")
+	svc, err := factory.CreateNotificationDeliveryService()
+	if err != nil {
+		reqLogger.Error(err, "unable to create notification delivery service - notifications will not be sent")
+	}
+
+	return &ReconcileNotification{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config, deliveryService: svc}
 }
 
 var _ reconcile.Reconciler = &ReconcileNotification{}
@@ -61,9 +69,10 @@ var _ reconcile.Reconciler = &ReconcileNotification{}
 type ReconcileNotification struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
-	config *configuration.Config
+	client          client.Client
+	scheme          *runtime.Scheme
+	config          *configuration.Config
+	deliveryService NotificationDeliveryService
 }
 
 func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.Result, error) {
@@ -100,17 +109,29 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 		}, nil
 	}
 
-	reqLogger.Info("Notification has been sent")
-	err = r.setStatusNotificationSent(notification)
-	if err != nil {
-		reqLogger.Error(err, "unable to set sent status to Notification")
-		return reconcile.Result{}, err
+	// Send the notification
+	if r.deliveryService != nil {
+		notCtx, err := NewNotificationContext(context.Background(), r.client, notification.Spec.UserID, request.Namespace)
+		if err != nil {
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
+				r.setStatusNotificationContextError, err, "failed to create notification context")
+		}
+
+		err = r.deliveryService.Send(context.Background(), notCtx, notification.Spec.Template)
+		if err != nil {
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
+				r.setStatusNotificationDeliveryError, err, "failed to deliver notification")
+		}
+
+		reqLogger.Info("Notification has been sent")
+		return reconcile.Result{
+			Requeue:      true,
+			RequeueAfter: r.config.GetDurationBeforeNotificationDeletion(),
+		}, r.updateStatus(reqLogger, notification, r.setStatusNotificationSent)
 	}
 
-	return reconcile.Result{
-		Requeue:      true,
-		RequeueAfter: r.config.GetDurationBeforeNotificationDeletion(),
-	}, nil
+	// TODO so the big question here, is what happens when the delivery service is unavailable?
+	return reconcile.Result{}, nil
 }
 
 // checkTransitionTimeAndDelete checks if the last transition time has surpassed
@@ -166,12 +187,46 @@ func (r *ReconcileNotification) setStatusNotificationDeletionFailed(notification
 		})
 }
 
-func (r *ReconcileNotification) setStatusNotificationSent(notification *toolchainv1alpha1.Notification) error {
+func (r *ReconcileNotification) setStatusNotificationContextError(notification *toolchainv1alpha1.Notification, msg string) error {
 	return r.updateStatusConditions(
 		notification,
 		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.NotificationSent,
-			Status: corev1.ConditionTrue,
-			Reason: toolchainv1alpha1.NotificationSentReason,
+			Type:    toolchainv1alpha1.NotificationSent,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.NotificationContextErrorReason,
+			Message: msg,
 		})
+}
+
+func (r *ReconcileNotification) setStatusNotificationDeliveryError(notification *toolchainv1alpha1.Notification, msg string) error {
+	return r.updateStatusConditions(
+		notification,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.NotificationSent,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.NotificationDeliveryErrorReason,
+			Message: msg,
+		})
+}
+
+func (r *ReconcileNotification) setStatusNotificationSent(notification *toolchainv1alpha1.Notification, msg string) error {
+	return r.updateStatusConditions(
+		notification,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.NotificationSent,
+			Status:  corev1.ConditionTrue,
+			Reason:  toolchainv1alpha1.NotificationSentReason,
+			Message: msg,
+		})
+}
+
+func (r *ReconcileNotification) updateStatus(logger logr.Logger, notification *toolchainv1alpha1.Notification,
+	statusUpdater func(notification *toolchainv1alpha1.Notification, message string) error) error {
+
+	if err := statusUpdater(notification, ""); err != nil {
+		logger.Error(err, "status update failed")
+		return err
+	}
+
+	return nil
 }
