@@ -59,7 +59,7 @@ const (
 	// varMailgunAPIKey specifies the host operator mailgun api key used for creating an instance of mailgun
 	varMailgunAPIKey = "mailgun.api.key"
 
-	// varMailgunAPIKey specifies the host operator mailgun senders email
+	// varMailgunSenderEmail specifies the host operator mailgun senders email
 	varMailgunSenderEmail = "mailgun.sender.email"
 )
 
@@ -156,6 +156,7 @@ func (c *Config) GetMailgunAPIKey() string {
 	return c.host.GetString(varMailgunAPIKey)
 }
 
+// GetMailgunSenderEmail returns the host operator mailgun sender's email address
 func (c *Config) GetMailgunSenderEmail() string {
 	return c.host.GetString(varMailgunSenderEmail)
 }
