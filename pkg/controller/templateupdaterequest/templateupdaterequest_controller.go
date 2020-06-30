@@ -266,7 +266,7 @@ func toFailure(err error) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:               toolchainv1alpha1.TemplateUpdateRequestComplete,
 		Status:             corev1.ConditionFalse,
-		Reason:             toolchainv1alpha1.TemplateUpdateRequestFailedReason,
+		Reason:             toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason,
 		Message:            err.Error(),
 		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
@@ -276,7 +276,7 @@ func toBeUpdating() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:               toolchainv1alpha1.TemplateUpdateRequestComplete,
 		Status:             corev1.ConditionFalse,
-		Reason:             toolchainv1alpha1.TemplateUpdateRequestInProgressReason,
+		Reason:             toolchainv1alpha1.TemplateUpdateRequestUpdatingReason,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 }
@@ -285,6 +285,7 @@ func toBeComplete() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:               toolchainv1alpha1.TemplateUpdateRequestComplete,
 		Status:             corev1.ConditionTrue,
+		Reason:             toolchainv1alpha1.TemplateUpdateRequestUpdatedReason,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 }

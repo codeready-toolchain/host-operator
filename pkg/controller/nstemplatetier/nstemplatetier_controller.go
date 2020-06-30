@@ -196,7 +196,7 @@ func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(logger logr.Logge
 			continue
 		}
 		if condition.IsTrue(r.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) ||
-			condition.IsFalseWithReason(r.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestFailedReason) {
+			condition.IsFalseWithReason(r.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) {
 			// ignore when in `complete=true` or when in `complete=false/reason=failed` status conditions
 			continue
 		}

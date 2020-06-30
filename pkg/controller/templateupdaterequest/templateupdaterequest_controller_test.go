@@ -235,6 +235,7 @@ func TestReconcile(t *testing.T) {
 				HasConditions(toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.TemplateUpdateRequestComplete,
 					Status: corev1.ConditionTrue,
+					Reason: toolchainv1alpha1.TemplateUpdateRequestUpdatedReason,
 				})
 		})
 
@@ -255,7 +256,7 @@ func TestReconcile(t *testing.T) {
 				HasConditions(toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.TemplateUpdateRequestComplete,
 					Status:  corev1.ConditionFalse,
-					Reason:  toolchainv1alpha1.TemplateUpdateRequestFailedReason,
+					Reason:  toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason,
 					Message: `masteruserrecords.toolchain.dev.openshift.com "user-1" not found`,
 				})
 		})

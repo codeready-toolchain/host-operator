@@ -104,7 +104,7 @@ func (f Failed) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdate
 			{
 				Type:   toolchainv1alpha1.TemplateUpdateRequestComplete,
 				Status: corev1.ConditionFalse,
-				Reason: toolchainv1alpha1.TemplateUpdateRequestFailedReason,
+				Reason: toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason,
 			},
 		}
 	}
