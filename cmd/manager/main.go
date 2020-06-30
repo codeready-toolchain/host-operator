@@ -79,19 +79,24 @@ func main() {
 
 	printVersion()
 
-	crtConfig := configuration.LoadConfig()
+	// Get a config to talk to the apiserver
+	cfg, err := config.GetConfig()
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	crtConfig, err := getCRTConfiguration(cfg)
+	if err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
 	printConfig(crtConfig)
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
 		log.Error(err, "Failed to get watch namespace")
-		os.Exit(1)
-	}
-
-	// Get a config to talk to the apiserver
-	cfg, err := config.GetConfig()
-	if err != nil {
-		log.Error(err, "")
 		os.Exit(1)
 	}
 
@@ -299,4 +304,16 @@ func ensureKubeFedClusterCRD(config *rest.Config) error {
 	}
 
 	return nil
+}
+
+// getCRTConfiguration creates the client used for configuration and
+// returns the loaded crt configuration
+func getCRTConfiguration(config *rest.Config) (*configuration.Config, error) {
+	// create client that will be used for retrieving the host operator secret
+	cl, err := client.New(config, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	return configuration.LoadConfig(cl), nil
 }
