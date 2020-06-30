@@ -259,7 +259,6 @@ func (r *ReconcileTemplateUpdateRequest) checkTransitionTimeAndDelete(logger log
 // --------------------------------------------------
 // status updates
 // --------------------------------------------------
-type statusUpdater func(logger logr.Logger, tur *toolchainv1alpha1.TemplateUpdateRequest, message string) error
 
 func toFailure(err error) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
