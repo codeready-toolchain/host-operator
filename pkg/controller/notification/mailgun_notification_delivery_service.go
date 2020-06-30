@@ -16,20 +16,21 @@ type MailgunNotificationDeliveryService struct {
 	SenderEmail string
 }
 
+type MailgunConfiguration interface {
+	GetMailgunDomain() string
+	GetMailgunAPIKey() string
+	GetMailgunSenderEmail() string
+}
+
 // NewMailgunNotificationDeliveryService creates a delivery service that uses the Mailgun API to deliver email notifications
-func NewMailgunNotificationDeliveryService(client client.Client) NotificationDeliveryService {
+func NewMailgunNotificationDeliveryService(client client.Client, config MailgunConfiguration) NotificationDeliveryService {
 
-	// TODO load config from secret
-	senderEmail := ""
-	senderDomain := ""
-	privateAPIKey := ""
-
-	mg := mailgun.NewMailgun(senderDomain, privateAPIKey)
+	mg := mailgun.NewMailgun(config.GetMailgunDomain(), config.GetMailgunAPIKey())
 
 	svc := &MailgunNotificationDeliveryService{
 		base:        BaseNotificationDeliveryService{},
 		Mailgun:     mg,
-		SenderEmail: senderEmail,
+		SenderEmail: config.GetMailgunSenderEmail(),
 	}
 
 	return svc

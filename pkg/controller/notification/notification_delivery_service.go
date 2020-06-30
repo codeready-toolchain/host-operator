@@ -19,12 +19,18 @@ type NotificationDeliveryService interface {
 }
 
 type NotificationDeliveryServiceFactory struct {
-	Client client.Client
-	Config NotificationDeliveryServiceConfig
+	Client        client.Client
+	Config        NotificationDeliveryServiceConfig
+	MailgunConfig MailgunConfiguration
 }
 
-func NewNotificationDeliveryServiceFactory(client client.Client, config NotificationDeliveryServiceConfig) *NotificationDeliveryServiceFactory {
-	return &NotificationDeliveryServiceFactory{Client: client, Config: config}
+func NewNotificationDeliveryServiceFactory(client client.Client, config NotificationDeliveryServiceConfig,
+	mailgunConfig MailgunConfiguration) *NotificationDeliveryServiceFactory {
+	return &NotificationDeliveryServiceFactory{
+		Client:        client,
+		Config:        config,
+		MailgunConfig: mailgunConfig,
+	}
 }
 
 func (f *NotificationDeliveryServiceFactory) CreateNotificationDeliveryService() (NotificationDeliveryService, error) {
@@ -32,7 +38,7 @@ func (f *NotificationDeliveryServiceFactory) CreateNotificationDeliveryService()
 	case configuration.NotificationDeliveryServiceMock:
 		return NewMockNotificationDeliveryService(), nil
 	case configuration.NotificationDeliveryServiceMailgun:
-		return NewMailgunNotificationDeliveryService(f.Client), nil
+		return NewMailgunNotificationDeliveryService(f.Client, f.MailgunConfig), nil
 	}
 	return nil, errors.New("invalid notification delivery service configuration")
 }
