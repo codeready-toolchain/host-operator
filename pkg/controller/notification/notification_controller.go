@@ -28,7 +28,11 @@ var log = logf.Log.WithName("controller_notification")
 // Add creates a new Notification Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, config *configuration.Config) error {
-	return add(mgr, newReconciler(mgr, config))
+	reconciler, err := newReconciler(mgr, config)
+	if err != nil {
+		return err
+	}
+	return add(mgr, reconciler)
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -51,16 +55,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, config *configuration.Config) (reconcile.Reconciler, error) {
 	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), config)
 
-	reqLogger := log.WithValues("Notification.Controller", "newReconciler")
 	svc, err := factory.CreateNotificationDeliveryService()
 	if err != nil {
-		reqLogger.Error(err, "unable to create notification delivery service - notifications will not be sent")
+		return nil, err
 	}
 
-	return &ReconcileNotification{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config, deliveryService: svc}
+	return &ReconcileNotification{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config, deliveryService: svc}, nil
 }
 
 var _ reconcile.Reconciler = &ReconcileNotification{}
@@ -110,28 +113,23 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Send the notification
-	if r.deliveryService != nil {
-		notCtx, err := NewNotificationContext(context.Background(), r.client, notification.Spec.UserID, request.Namespace)
-		if err != nil {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
-				r.setStatusNotificationContextError, err, "failed to create notification context")
-		}
-
-		err = r.deliveryService.Send(context.Background(), notCtx, notification.Spec.Template)
-		if err != nil {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
-				r.setStatusNotificationDeliveryError, err, "failed to deliver notification")
-		}
-
-		reqLogger.Info("Notification has been sent")
-		return reconcile.Result{
-			Requeue:      true,
-			RequeueAfter: r.config.GetDurationBeforeNotificationDeletion(),
-		}, r.updateStatus(reqLogger, notification, r.setStatusNotificationSent)
+	notCtx, err := NewNotificationContext(context.Background(), r.client, notification.Spec.UserID, request.Namespace)
+	if err != nil {
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
+			r.setStatusNotificationContextError, err, "failed to create notification context")
 	}
 
-	// TODO so the big question here, is what happens when the delivery service is unavailable?
-	return reconcile.Result{}, nil
+	err = r.deliveryService.Send(context.Background(), notCtx, notification.Spec.Template)
+	if err != nil {
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
+			r.setStatusNotificationDeliveryError, err, "failed to deliver notification")
+	}
+
+	reqLogger.Info("Notification has been sent")
+	return reconcile.Result{
+		Requeue:      true,
+		RequeueAfter: r.config.GetDurationBeforeNotificationDeletion(),
+	}, r.updateStatus(reqLogger, notification, r.setStatusNotificationSent)
 }
 
 // checkTransitionTimeAndDelete checks if the last transition time has surpassed
