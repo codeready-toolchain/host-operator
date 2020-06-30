@@ -20,6 +20,32 @@ func NewMockNotificationDeliveryServiceConfig(service string) NotificationDelive
 	return &MockNotificationDeliveryServiceConfig{service: service}
 }
 
+type MockMailgunConfiguration struct {
+	Domain      string
+	APIKey      string
+	SenderEmail string
+}
+
+func (c *MockMailgunConfiguration) GetMailgunDomain() string {
+	return c.Domain
+}
+
+func (c *MockMailgunConfiguration) GetMailgunAPIKey() string {
+	return c.APIKey
+}
+
+func (c *MockMailgunConfiguration) GetMailgunSenderEmail() string {
+	return c.SenderEmail
+}
+
+func NewMockMailgunConfiguration(domain, apikey, senderEmail string) MailgunConfiguration {
+	return &MockMailgunConfiguration{
+		Domain:      domain,
+		APIKey:      apikey,
+		SenderEmail: senderEmail,
+	}
+}
+
 func TestNotificationDeliveryServiceFactory(t *testing.T) {
 	// given
 	client := test.NewFakeClient(t)
@@ -27,7 +53,7 @@ func TestNotificationDeliveryServiceFactory(t *testing.T) {
 	t.Run("factory configured with mock delivery service", func(t *testing.T) {
 		// when
 		factory := NewNotificationDeliveryServiceFactory(client,
-			NewMockNotificationDeliveryServiceConfig(configuration.NotificationDeliveryServiceMock))
+			NewMockNotificationDeliveryServiceConfig(configuration.NotificationDeliveryServiceMock), nil)
 		svc, err := factory.CreateNotificationDeliveryService()
 
 		// then
@@ -38,7 +64,8 @@ func TestNotificationDeliveryServiceFactory(t *testing.T) {
 	t.Run("factory configured with mailgun delivery service", func(t *testing.T) {
 		// when
 		factory := NewNotificationDeliveryServiceFactory(client,
-			NewMockNotificationDeliveryServiceConfig(configuration.NotificationDeliveryServiceMailgun))
+			NewMockNotificationDeliveryServiceConfig(configuration.NotificationDeliveryServiceMailgun),
+			NewMockMailgunConfiguration("foo.com", "12345", "sender@foo.com"))
 		svc, err := factory.CreateNotificationDeliveryService()
 
 		// then
@@ -49,7 +76,8 @@ func TestNotificationDeliveryServiceFactory(t *testing.T) {
 	t.Run("factory configured with invalid delivery service", func(t *testing.T) {
 		// when
 		factory := NewNotificationDeliveryServiceFactory(client,
-			NewMockNotificationDeliveryServiceConfig("invalid"))
+			NewMockNotificationDeliveryServiceConfig("invalid"),
+			nil)
 		_, err := factory.CreateNotificationDeliveryService()
 
 		// then
