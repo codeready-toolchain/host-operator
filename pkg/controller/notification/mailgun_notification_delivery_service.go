@@ -69,9 +69,5 @@ func (s *MailgunNotificationDeliveryService) Send(ctx context.Context, notificat
 
 	// Send the message with a 10 second timeout
 	_, _, err = s.Mailgun.Send(ctx, message)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
