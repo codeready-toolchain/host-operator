@@ -203,14 +203,13 @@ func (r ReconcileTemplateUpdateRequest) updateTemplateRefs(logger logr.Logger, t
 				ua.Spec.NSTemplateSet.ClusterResources = nil
 			}
 			mur.Spec.UserAccounts[i] = ua
+			// also, update the tier template hash label
+			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(ua.Spec.NSTemplateSet)
+			if err != nil {
+				return err
+			}
+			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tur.Spec.TierName)] = hash
 		}
-		// also, update the tier template hash label
-		hash, err := nstemplatetier.ComputeHashForTemplateUpdateRequest(tur)
-		if err != nil {
-			return err
-		}
-		mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tur.Spec.TierName)] = hash
-
 	}
 	return r.client.Update(context.TODO(), mur)
 
