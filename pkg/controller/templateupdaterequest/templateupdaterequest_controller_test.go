@@ -2,7 +2,6 @@ package templateupdaterequest
 
 import (
 	"testing"
-	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -10,7 +9,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -394,7 +392,7 @@ func TestReconcile(t *testing.T) {
 			// when
 			res, err := r.Reconcile(req)
 			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: DeletionTimeout}, res) // now we need to requeue until timeout is done
+			require.Equal(t, reconcile.Result{}, res) // NSTemplateTier controller will reconcile when the TemplateUpdateRequest is updated
 			// check that TemplateUpdateRequest is in "complete" condition
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
 				HasConditions(toolchainv1alpha1.Condition{
@@ -425,36 +423,6 @@ func TestReconcile(t *testing.T) {
 					Reason:  toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason,
 					Message: `masteruserrecords.toolchain.dev.openshift.com "user-1" not found`,
 				})
-		})
-	})
-
-	t.Run("controller should delete the TemplateUpdateRequest", func(t *testing.T) {
-
-		t.Run("when the timeout occurred", func(t *testing.T) {
-			// given
-			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier, turtest.CompleteFor(2*DeletionTimeout)))
-			r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
-			// when
-			res, err := r.Reconcile(req)
-			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{}, res)
-			// check that TemplateUpdateRequest was deleted
-			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).DoesNotExist()
-		})
-
-		t.Run("not when the timeout did not occur", func(t *testing.T) {
-			// given
-			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier, turtest.CompleteFor(DeletionTimeout-2*time.Second)))
-			r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
-			// when
-			res, err := r.Reconcile(req)
-			require.NoError(t, err)
-			assert.True(t, res.Requeue)
-			assert.GreaterOrEqual(t, int64(res.RequeueAfter), int64(time.Second))
-			// check that TemplateUpdateRequest was NOT deleted
-			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).Exists()
 		})
 	})
 }

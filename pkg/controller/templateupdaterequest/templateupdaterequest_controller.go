@@ -3,7 +3,6 @@ package templateupdaterequest
 import (
 	"context"
 	"strings"
-	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -11,7 +10,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 
-	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,11 +23,6 @@ import (
 )
 
 var log = logf.Log.WithName("controller_templateupdaterequest")
-
-const (
-	// DeletionTimeout the duration after which the TemplateUpdateRequest can be deleted, once it reached the `complete=true` condition
-	DeletionTimeout = 5 * time.Second
-)
 
 // Add creates a new TemplateUpdateRequest Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -99,22 +92,6 @@ func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (r
 		return reconcile.Result{}, err
 	}
 
-	// if is complete, then check when status was changed and delete it if the requested duration has passed
-	completeCond, found := condition.FindConditionByType(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete)
-	if found && completeCond.Status == corev1.ConditionTrue {
-		deleted, requeueAfter, err := r.checkTransitionTimeAndDelete(logger, tur, completeCond)
-		if deleted {
-			return reconcile.Result{}, nil
-		}
-		if err != nil {
-			return reconcile.Result{}, r.updateStatusConditions(logger, tur, toFailure(errs.Wrap(err, "unable to delete the resource")))
-		}
-		return reconcile.Result{
-			Requeue:      true,
-			RequeueAfter: requeueAfter,
-		}, nil
-	}
-
 	// lookup the MasterUserRecord with the same name as the TemplateUpdateRequest tur
 	mur := &toolchainv1alpha1.MasterUserRecord{}
 	if err = r.client.Get(context.TODO(), request.NamespacedName, mur); err != nil {
@@ -149,7 +126,7 @@ func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (r
 	if r.compareSyncIndexes(logger, *tur, *mur) && condition.IsTrue(mur.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 		// once MasterUserRecord is up-to-date, we can delete this TemplateUpdateRequest
 		logger.Info("MasterUserRecord is up-to-date. Marking the TemplateUpdateRequest as complete")
-		return reconcile.Result{Requeue: true, RequeueAfter: DeletionTimeout}, r.updateStatusConditions(logger, tur, toBeComplete())
+		return reconcile.Result{}, r.updateStatusConditions(logger, tur, toBeComplete())
 	}
 	// otherwise, we need to wait
 	logger.Info("MasterUserRecord still being updated...")
@@ -233,25 +210,6 @@ func (r ReconcileTemplateUpdateRequest) compareSyncIndexes(logger logr.Logger, t
 	}
 	logger.Info("All sync indexes have been updated")
 	return true
-}
-
-// checkTransitionTimeAndDelete checks if the last transition time has surpassed
-// the duration before the TemplateUpdateRequest should be deleted. If so, the TemplateUpdateRequest is deleted.
-// Returns bool indicating if the TemplateUpdateRequest was deleted, the time before the TemplateUpdateRequest
-// can be deleted and error
-func (r *ReconcileTemplateUpdateRequest) checkTransitionTimeAndDelete(logger logr.Logger, tur *toolchainv1alpha1.TemplateUpdateRequest, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
-	logger.Info("the ChangeTierRequest is completed so we can deal with its deletion")
-	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
-	if timeSinceCompletion >= DeletionTimeout {
-		logger.Info("the TemplateUpdateRequest has been completes for a long enough time, so it's ready to be deleted")
-		if err := r.client.Delete(context.TODO(), tur); err != nil {
-			return false, 0, errs.Wrapf(err, "unable to delete the TemplateUpdateRequest resource '%s'", tur.Name)
-		}
-		return true, 0, nil
-	}
-	diff := DeletionTimeout - timeSinceCompletion
-	logger.Info("the TemplateUpdateRequest has been completed for short time, so it's not going to be deleted yet", "reconcileAfter", diff.String())
-	return false, diff, nil
 }
 
 // --------------------------------------------------

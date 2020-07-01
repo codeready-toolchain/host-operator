@@ -2,6 +2,7 @@ package nstemplatetier
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -363,10 +364,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
-			actualTemplateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-			err = cl.List(context.TODO(), &actualTemplateUpdateRequests)
-			require.NoError(t, err)
-			assert.Len(t, actualTemplateUpdateRequests.Items, MaxPoolSize+1) // one more TemplateUpdateRequest
+			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize) // same number: one created and one deleted
 		})
 
 		// in this test, the controller can create an extra TemplateUpdateRequest resource
@@ -383,7 +381,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
-			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize+1) // one more TemplateUpdateRequest
+			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize) // same number: one created and one deleted
 		})
 
 		// in this test, the controller can create an extra TemplateUpdateRequest resource
@@ -505,6 +503,43 @@ func TestReconcile(t *testing.T) {
 			assertNumberOfTemplateUpdateRequests(t, cl, 0)
 		})
 
+	})
+
+	t.Run("controller should delete the TemplateUpdateRequest", func(t *testing.T) {
+
+		t.Run("when update is successful", func(t *testing.T) {
+			// given
+			initObjs := []runtime.Object{&newNSTemplateTier}
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(10, "user-%d", newNSTemplateTier, turtest.Complete("user-0"))...)
+			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...) // there is no associated MasterUserRecord
+			// when
+			res, err := r.Reconcile(req)
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res)
+			// check that TemplateUpdateRequest was deleted
+			turtest.AssertThatTemplateUpdateRequest(t, "user-0", cl).DoesNotExist()
+			// check that others still exist
+			for i := 1; i < 10; i++ {
+				turtest.AssertThatTemplateUpdateRequest(t, fmt.Sprintf("user-%d", i), cl).Exists()
+			}
+		})
+
+		t.Run("when update failed", func(t *testing.T) {
+			// given
+			initObjs := []runtime.Object{&newNSTemplateTier}
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(10, "user-%d", newNSTemplateTier, turtest.Failed("user-0"))...)
+			r, req, cl := prepareReconcile(t, newNSTemplateTier.Name, initObjs...) // there is no associated MasterUserRecord
+			// when
+			res, err := r.Reconcile(req)
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res)
+			// check that TemplateUpdateRequest was deleted
+			turtest.AssertThatTemplateUpdateRequest(t, "user-0", cl).DoesNotExist()
+			// check that others still exist
+			for i := 1; i < 10; i++ {
+				turtest.AssertThatTemplateUpdateRequest(t, fmt.Sprintf("user-%d", i), cl).Exists()
+			}
+		})
 	})
 }
 

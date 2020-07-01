@@ -97,6 +97,7 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 	err := r.client.Get(context.TODO(), request.NamespacedName, tier)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			log.Info("NSTemplateTier not found")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -190,14 +191,18 @@ func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(logger logr.Logge
 
 	// count non-deleted templateUpdateRequest items
 	count := 0
-	for _, r := range templateUpdateRequests.Items {
-		if util.IsBeingDeleted(&r) {
+	for _, tur := range templateUpdateRequests.Items {
+		if util.IsBeingDeleted(&tur) {
 			// ignore when being deleted
 			continue
 		}
-		if condition.IsTrue(r.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) ||
-			condition.IsFalseWithReason(r.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) {
-			// ignore when in `complete=true` or when in `complete=false/reason=failed` status conditions
+		if condition.IsTrue(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) ||
+			condition.IsFalseWithReason(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) {
+			// delete when in `complete=true` or when in `complete=false/reason=failed` status conditions
+			log.Info("deleting TemplateUpdateRequest", "name", tur.Name)
+			if err := r.client.Delete(context.TODO(), &tur); err != nil {
+				return -1, errs.Wrapf(err, "unable to delete the TemplateUpdateRequest resource '%s'", tur.Name)
+			}
 			continue
 		}
 		count++

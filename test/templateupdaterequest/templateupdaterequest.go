@@ -21,6 +21,13 @@ func NewTemplateUpdateRequest(name string, tier toolchainv1alpha1.NSTemplateTier
 			Labels: map[string]string{
 				toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
 			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: tier.APIVersion,
+					Kind:       tier.Kind,
+					Name:       tier.Name,
+				},
+			},
 		},
 		Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
 			TierName:         tier.Name,
@@ -61,7 +68,7 @@ func (d DeletionTimestamp) applyToTemplateUpdateRequest(r *toolchainv1alpha1.Tem
 	}
 }
 
-// Complete sets the status condition to "complete" on the TemplateUpdateRequest with the given name
+// Complete sets the status condition to "Ready=true/Reason=updated" on the TemplateUpdateRequest with the given name
 type Complete string
 
 var _ Option = Complete("")
@@ -70,30 +77,15 @@ func (c Complete) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpda
 	if r.Name == string(c) {
 		r.Status.Conditions = []toolchainv1alpha1.Condition{
 			{
-				Type:               toolchainv1alpha1.TemplateUpdateRequestComplete,
-				Status:             corev1.ConditionTrue,
-				LastTransitionTime: metav1.NewTime(time.Now()),
+				Type:   toolchainv1alpha1.TemplateUpdateRequestComplete,
+				Status: corev1.ConditionTrue,
+				Reason: toolchainv1alpha1.TemplateUpdateRequestUpdatedReason,
 			},
 		}
 	}
 }
 
-// CompleteFor sets the status condition to "complete" on the TemplateUpdateRequest, using the given duration as an offset to time.Now
-type CompleteFor time.Duration
-
-var _ Option = CompleteFor(time.Second)
-
-func (c CompleteFor) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdateRequest) {
-	r.Status.Conditions = []toolchainv1alpha1.Condition{
-		{
-			Type:               toolchainv1alpha1.TemplateUpdateRequestComplete,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.NewTime(time.Now().Add(-time.Duration(c))),
-		},
-	}
-}
-
-// Failed sets the status condition to "failed" on the TemplateUpdateRequest with the given name
+// Failed sets the status condition to "Ready=false/Reason=failed" on the TemplateUpdateRequest with the given name
 type Failed string
 
 var _ Option = Failed("")
