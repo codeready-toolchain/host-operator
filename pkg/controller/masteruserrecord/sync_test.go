@@ -310,7 +310,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisionedNotificationCreated(), toBeProvisionedNotificationCreated())
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
 	})
 
 	t.Run("failed on the host side when doing update", func(t *testing.T) {
