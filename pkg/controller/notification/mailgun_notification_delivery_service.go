@@ -22,10 +22,20 @@ type MailgunConfiguration interface {
 	GetMailgunSenderEmail() string
 }
 
+type MailgunOption interface {
+	// ApplyToMailgun applies this configuration to the given mailgun instance.
+	ApplyToMailgun(mailgun.Mailgun)
+}
+
 // NewMailgunNotificationDeliveryService creates a delivery service that uses the Mailgun API to deliver email notifications
-func NewMailgunNotificationDeliveryService(client client.Client, config MailgunConfiguration) NotificationDeliveryService {
+func NewMailgunNotificationDeliveryService(client client.Client, config MailgunConfiguration,
+	opts ...MailgunOption) NotificationDeliveryService {
 
 	mg := mailgun.NewMailgun(config.GetMailgunDomain(), config.GetMailgunAPIKey())
+
+	for _, opt := range opts {
+		opt.ApplyToMailgun(mg)
+	}
 
 	svc := &MailgunNotificationDeliveryService{
 		base:        BaseNotificationDeliveryService{},

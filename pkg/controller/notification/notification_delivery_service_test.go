@@ -50,17 +50,6 @@ func TestNotificationDeliveryServiceFactory(t *testing.T) {
 	// given
 	client := test.NewFakeClient(t)
 
-	t.Run("factory configured with mock delivery service", func(t *testing.T) {
-		// when
-		factory := NewNotificationDeliveryServiceFactory(client,
-			NewMockNotificationDeliveryServiceConfig(configuration.NotificationDeliveryServiceMock), nil)
-		svc, err := factory.CreateNotificationDeliveryService()
-
-		// then
-		require.NoError(t, err)
-		require.IsType(t, &MockNotificationDeliveryService{}, svc)
-	})
-
 	t.Run("factory configured with mailgun delivery service", func(t *testing.T) {
 		// when
 		factory := NewNotificationDeliveryServiceFactory(client,

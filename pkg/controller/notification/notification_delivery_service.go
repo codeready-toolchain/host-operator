@@ -35,8 +35,6 @@ func NewNotificationDeliveryServiceFactory(client client.Client, config Notifica
 
 func (f *NotificationDeliveryServiceFactory) CreateNotificationDeliveryService() (NotificationDeliveryService, error) {
 	switch f.Config.GetNotificationDeliveryService() {
-	case configuration.NotificationDeliveryServiceMock:
-		return NewMockNotificationDeliveryService(), nil
 	case configuration.NotificationDeliveryServiceMailgun:
 		return NewMailgunNotificationDeliveryService(f.Client, f.MailgunConfig), nil
 	}
