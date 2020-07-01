@@ -123,7 +123,6 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 
 func TestSynchronizeSpec(t *testing.T) {
 	// given
-	l := logf.ZapLogger(true)
 	apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.StatusCondition(toBeProvisioned()))
 
@@ -133,16 +132,7 @@ func TestSynchronizeSpec(t *testing.T) {
 		murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
 
 	hostClient := test.NewFakeClient(t, mur)
-	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
-
-	sync := Synchronizer{
-		record:            mur,
-		hostClient:        hostClient,
-		memberCluster:     newMemberCluster(memberClient),
-		memberUserAcc:     userAccount,
-		recordSpecUserAcc: mur.Spec.UserAccounts[0],
-		logger:            l,
-	}
+	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 	// when
 	err := sync.synchronizeSpec()
@@ -159,24 +149,45 @@ func TestSynchronizeSpec(t *testing.T) {
 
 func TestSynchronizeStatus(t *testing.T) {
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
-	scheme := apiScheme(t)
-
+	apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
 
 	userAccount := uatest.NewUserAccountFromMur(mur,
 		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
 
-	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, scheme, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
+	t.Run("successful", func(t *testing.T) {
+		// given
+		hostClient := test.NewFakeClient(t, mur)
+		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		err := sync.synchronizeStatus()
+
+		// then
+		require.NoError(t, err)
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
+	})
+
+	t.Run("failed on the host side", func(t *testing.T) {
+		// given
+		hostClient := test.NewFakeClient(t, mur)
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			return fmt.Errorf("some error")
+		}
+		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		err := sync.synchronizeStatus()
+
+		// then
+		require.Error(t, err)
+	})
 }
 
 func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
-	scheme := apiScheme(t)
-
+	apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")))
 
@@ -193,15 +204,38 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 
 	uatest.Modify(userAccount, uatest.StatusCondition(toBeNotReady("Updating", "")))
 
-	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, scheme, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
+	t.Run("successful", func(t *testing.T) {
+		// given
+		hostClient := test.NewFakeClient(t, mur)
+		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		err := sync.synchronizeStatus()
+
+		// then
+		require.NoError(t, err)
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
+	})
+
+	t.Run("failed on the host side", func(t *testing.T) {
+		// given
+		hostClient := test.NewFakeClient(t, mur)
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			return fmt.Errorf("some error")
+		}
+		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		err := sync.synchronizeStatus()
+
+		// then
+		require.Error(t, err)
+	})
 }
 
 func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
-	sheme := apiScheme(t)
-
+	apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
 
@@ -218,15 +252,38 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 
 	uatest.Modify(userAccount, uatest.StatusCondition(toBeDisabled()))
 
-	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, sheme, toBeDisabled())
+	t.Run("successful", func(t *testing.T) {
+		// given
+		hostClient := test.NewFakeClient(t, mur)
+		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		err := sync.synchronizeStatus()
+
+		// then
+		require.NoError(t, err)
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeDisabled())
+	})
+
+	t.Run("failed on the host side", func(t *testing.T) {
+		// given
+		hostClient := test.NewFakeClient(t, mur.DeepCopy())
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			return fmt.Errorf("some error")
+		}
+		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		err := sync.synchronizeStatus()
+
+		// then
+		require.Error(t, err)
+	})
 }
 
 func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
-	scheme := apiScheme(t)
-
+	apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
 
@@ -243,8 +300,48 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 	uatest.Modify(userAccount, uatest.StatusCondition(toBeProvisioned()))
 
-	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, scheme, toBeProvisioned(), toBeProvisionedNotificationCreated())
+	t.Run("successful", func(t *testing.T) {
+		// given
+		hostClient := test.NewFakeClient(t, mur)
+		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		err := sync.synchronizeStatus()
+
+		// then
+		require.NoError(t, err)
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisionedNotificationCreated(), toBeProvisionedNotificationCreated())
+	})
+
+	t.Run("failed on the host side when doing update", func(t *testing.T) {
+		// given
+		hostClient := test.NewFakeClient(t)
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			return fmt.Errorf("some error")
+		}
+		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		err := sync.synchronizeStatus()
+
+		// then
+		require.Error(t, err)
+	})
+
+	t.Run("failed on the host side when creating notification", func(t *testing.T) {
+		// given
+		hostClient := test.NewFakeClient(t, mur.DeepCopy())
+		hostClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+			return fmt.Errorf("some error")
+		}
+		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		err := sync.synchronizeStatus()
+
+		// then
+		require.Error(t, err)
+	})
 }
 
 func TestSynchronizeUserAccountFailed(t *testing.T) {
@@ -538,32 +635,26 @@ func TestCheURL(t *testing.T) {
 	})
 }
 
-func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, scheme *runtime.Scheme, expMurCon ...toolchainv1alpha1.Condition) {
-	l := logf.ZapLogger(true)
-	condition := userAccount.Status.Conditions[0]
-
+func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, hostClient *test.FakeClient) (Synchronizer, client.Client) {
+	copiedMur := mur.DeepCopy()
 	memberClient := test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute(false))
-	hostClient := test.NewFakeClient(t, mur)
-	sync := Synchronizer{
-		record:            mur,
+	return Synchronizer{
+		record:            copiedMur,
 		hostClient:        hostClient,
 		memberCluster:     newMemberCluster(memberClient),
 		memberUserAcc:     userAccount,
-		recordSpecUserAcc: mur.Spec.UserAccounts[0],
-		logger:            l,
-		scheme:            scheme,
-	}
+		recordSpecUserAcc: copiedMur.Spec.UserAccounts[0],
+		logger:            logf.ZapLogger(true),
+		scheme:            apiScheme(t),
+	}, memberClient
+}
 
-	// when
-	err := sync.synchronizeStatus()
-
-	// then
-	require.NoError(t, err)
-
+func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostClient client.Client, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon ...toolchainv1alpha1.Condition) {
+	userAccountCondition := userAccount.Status.Conditions[0]
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
-		HasConditions(condition)
+		HasConditions(userAccountCondition)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(expMurCon...).
 		HasStatusUserAccounts(test.MemberClusterName).
@@ -574,7 +665,7 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchain
 			ConsoleURL:      "https://console.member-cluster/",
 			CheDashboardURL: "http://che-toolchain-che.member-cluster/",
 		}).
-		AllUserAccountsHaveCondition(condition)
+		AllUserAccountsHaveCondition(userAccountCondition)
 }
 
 func newMemberCluster(cl client.Client) *cluster.FedCluster {
