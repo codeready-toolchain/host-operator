@@ -158,38 +158,37 @@ func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (r
 }
 
 func (r ReconcileTemplateUpdateRequest) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur *toolchainv1alpha1.MasterUserRecord) error {
-	// update MasterUserRecord' accounts whose tier matches the TemplateUpdateRequest
+	// update MasterUserRecord accounts whose tier matches the TemplateUpdateRequest
 	for i, ua := range mur.Spec.UserAccounts {
 		if ua.Spec.NSTemplateSet.TierName == tur.Spec.TierName {
 			logger.Info("updating templaterefs", "tier", tur.Spec.TierName, "target_cluster", ua.TargetCluster)
 			// reset the new templateRefs, only retain those with a custom template in use
-			namespaces := make(map[string]*toolchainv1alpha1.NSTemplateSetNamespace, len(ua.Spec.NSTemplateSet.Namespaces))
+			namespaces := make(map[string]toolchainv1alpha1.NSTemplateSetNamespace, len(ua.Spec.NSTemplateSet.Namespaces))
 			for _, ns := range ua.Spec.NSTemplateSet.Namespaces {
 				if ns.Template != "" {
 					t := namespaceType(ns.TemplateRef)
-					namespaces[t] = &ns
+					log.Info("retainining the custom namespace template", "type", t)
+					namespaces[t] = ns
 				}
 			}
-			// now, add the new templateRefs, uneless there's a custom template in use (for the same ns type)
+			// now, add the new templateRefs, unless there's a custom template in use
 			for _, ns := range tur.Spec.Namespaces {
 				t := namespaceType(ns.TemplateRef)
-				if _, found := namespaces[t]; found {
-					// don't override the custom template
-					namespaces[t].TemplateRef = ns.TemplateRef
-				} else {
-					namespaces[t] = &toolchainv1alpha1.NSTemplateSetNamespace{
-						TemplateRef: ns.TemplateRef,
-					}
+				// don't override the custom template
+				log.Info("preserving the custom namespace template", "type", t)
+				namespaces[t] = toolchainv1alpha1.NSTemplateSetNamespace{
+					TemplateRef: ns.TemplateRef,
+					Template:    namespaces[t].Template, // empty unless there was something before
 				}
 			}
 			// finally, set the new namespace templates in the user account
 			ua.Spec.NSTemplateSet.Namespaces = []toolchainv1alpha1.NSTemplateSetNamespace{}
 			for _, ns := range namespaces {
-				ua.Spec.NSTemplateSet.Namespaces = append(ua.Spec.NSTemplateSet.Namespaces, *ns)
+				ua.Spec.NSTemplateSet.Namespaces = append(ua.Spec.NSTemplateSet.Namespaces, ns)
 			}
 			// now, let's take care about the cluster resources
 			if ua.Spec.NSTemplateSet.ClusterResources != nil && ua.Spec.NSTemplateSet.ClusterResources.Template != "" {
-				// retain the custom template
+				// retain the custom template even if the TemplateUpdateRequest has no clusterresources templateref
 				if tur.Spec.ClusterResources != nil {
 					ua.Spec.NSTemplateSet.ClusterResources.TemplateRef = tur.Spec.ClusterResources.TemplateRef
 				} else {

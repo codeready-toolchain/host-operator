@@ -52,10 +52,11 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 	}
+
 	newNSTemplateTier := toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: operatorNamespace,
-			Name:      "basic",
+			Name:      "basic", // must be the same name as `oldNSTemplateTier`
 		},
 		Spec: toolchainv1alpha1.NSTemplateTierSpec{
 			Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
@@ -71,6 +72,47 @@ func TestReconcile(t *testing.T) {
 			},
 			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
 				TemplateRef: "basic-clusterresources-123456new",
+			},
+		},
+	}
+
+	newNSTemplateTier2 := toolchainv1alpha1.NSTemplateTier{ // same as newNSTemplateTier, but without "code" namespace
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: operatorNamespace,
+			Name:      "basic", // must be the same name as `oldNSTemplateTier`
+		},
+		Spec: toolchainv1alpha1.NSTemplateTierSpec{
+			Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
+				// no "code-" namespace
+				{
+					TemplateRef: "basic2-dev-123456new",
+				},
+				{
+					TemplateRef: "basic2-stage-123456new",
+				},
+			},
+			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+				TemplateRef: "basic2-clusterresources-123456new",
+			},
+		},
+	}
+
+	newNSTemplateTier3 := toolchainv1alpha1.NSTemplateTier{ // same as newNSTemplateTier, but without ClusterResources
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: operatorNamespace,
+			Name:      "basic", // must be the same name as `oldNSTemplateTier`
+		},
+		Spec: toolchainv1alpha1.NSTemplateTierSpec{
+			Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
+				{
+					TemplateRef: "basic-code-123456new",
+				},
+				{
+					TemplateRef: "basic-dev-123456new",
+				},
+				{
+					TemplateRef: "basic-stage-123456new",
+				},
 			},
 		},
 	}
@@ -101,53 +143,173 @@ func TestReconcile(t *testing.T) {
 	t.Run("controller should update the MasterUserRecord", func(t *testing.T) {
 
 		t.Run("when there is a single target cluster to update", func(t *testing.T) {
-			// given
-			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, murtest.NewMasterUserRecord(t, "user-1",
-				murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("1"))))
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
-			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
-			// when
-			res, err := r.Reconcile(req)
-			// then
-			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
-			// check that the MasterUserRecord was updated
-			murtest.AssertThatMasterUserRecord(t, "user-1", cl).
-				AllUserAccountsHaveTier(newNSTemplateTier)
-			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-				HasConditions(toBeUpdating()).
-				HasSyncIndexes(map[string]string{
-					"cluster1": "1",
-				})
+
+			t.Run("with same namespaces", func(t *testing.T) {
+				// given
+				initObjs := []runtime.Object{&newNSTemplateTier}
+				initObjs = append(initObjs, murtest.NewMasterUserRecord(t, "user-1",
+					murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("1"))))
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
+				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				// when
+				res, err := r.Reconcile(req)
+				// then
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
+				// check that the MasterUserRecord was updated
+				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					AllUserAccountsHaveTier(newNSTemplateTier)
+				// check that TemplateUpdateRequest is in "updating" condition
+				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
+					HasConditions(toBeUpdating()).
+					HasSyncIndexes(map[string]string{
+						"cluster1": "1",
+					})
+			})
+
+			t.Run("with less namespaces", func(t *testing.T) {
+				// given
+				initObjs := []runtime.Object{&newNSTemplateTier2}
+				initObjs = append(initObjs, murtest.NewMasterUserRecord(t, "user-1",
+					murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("1"))))
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier2))
+				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				// when
+				res, err := r.Reconcile(req)
+				// then
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
+				// check that the MasterUserRecord was updated
+				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					AllUserAccountsHaveTier(newNSTemplateTier2)
+				// check that TemplateUpdateRequest is in "updating" condition
+				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
+					HasConditions(toBeUpdating()).
+					HasSyncIndexes(map[string]string{
+						"cluster1": "1",
+					})
+			})
+
+			t.Run("with custom template on namespace", func(t *testing.T) {
+				// given
+				initObjs := []runtime.Object{&newNSTemplateTier}
+				mur := murtest.NewMasterUserRecord(t, "user-1",
+					murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("1"),
+						murtest.CustomNamespaceTemplate("basic-code-123456old", "custom"), // a custom template is defined for the 1st namespace
+					))
+				initObjs = append(initObjs, mur)
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
+				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				// when
+				res, err := r.Reconcile(req)
+				// then
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
+				// check that the MasterUserRecord was updated
+				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					AllUserAccountsHaveTier(newNSTemplateTier).
+					// check that the custom template for the given cluster/namespace was not lost
+					HasCustomNamespaceTemplate("cluster1", "basic-code-123456new", "custom")
+
+				// check that TemplateUpdateRequest is in "updating" condition
+				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
+					HasConditions(toBeUpdating()).
+					HasSyncIndexes(map[string]string{
+						"cluster1": "1",
+					})
+			})
+
+			t.Run("with custom template when cluster resources exist in update", func(t *testing.T) {
+				// given
+				initObjs := []runtime.Object{&newNSTemplateTier}
+				mur := murtest.NewMasterUserRecord(t, "user-1",
+					murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("1"),
+						murtest.CustomClusterResourcesTemplate("custom"), // a custom template is defined for the 1st namespace
+					))
+				initObjs = append(initObjs, mur)
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
+				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				// when
+				res, err := r.Reconcile(req)
+				// then
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
+				// check that the MasterUserRecord was updated
+				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					AllUserAccountsHaveTier(newNSTemplateTier).
+					// check that the custom template for the given cluster/namespace was not lost
+					HasCustomClusterResourcesTemplate("cluster1", "custom")
+
+				// check that TemplateUpdateRequest is in "updating" condition
+				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
+					HasConditions(toBeUpdating()).
+					HasSyncIndexes(map[string]string{
+						"cluster1": "1",
+					})
+			})
+
+			t.Run("with custom template when cluster resources do not exist in update", func(t *testing.T) {
+				// given
+				initObjs := []runtime.Object{&newNSTemplateTier3}
+				mur := murtest.NewMasterUserRecord(t, "user-1",
+					murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("1"),
+						murtest.CustomClusterResourcesTemplate("custom"), // a custom template is defined for the 1st namespace
+					))
+				initObjs = append(initObjs, mur)
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier3))
+				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				// when
+				res, err := r.Reconcile(req)
+				// then
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
+				// check that the MasterUserRecord was updated
+				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					AllUserAccountsHaveTier(newNSTemplateTier3).
+					// check that the custom template for the given cluster/namespace was not lost
+					HasCustomClusterResourcesTemplate("cluster1", "custom")
+
+				// check that TemplateUpdateRequest is in "updating" condition
+				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
+					HasConditions(toBeUpdating()).
+					HasSyncIndexes(map[string]string{
+						"cluster1": "1",
+					})
+			})
 		})
 
 		t.Run("when there are many target clusters to update", func(t *testing.T) {
-			// given
-			initObjs := []runtime.Object{&newNSTemplateTier}
-			initObjs = append(initObjs, murtest.NewMasterUserRecord(t, "user-1",
-				murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("10")),
-				murtest.AdditionalAccount("cluster2", oldNSTemplateTier, murtest.SyncIndex("20")),
-				murtest.AdditionalAccount("cluster3", otherNSTemplateTier, murtest.SyncIndex("100")))) // this account is not affected by the update
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
-			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
-			// when
-			res, err := r.Reconcile(req)
-			// then
-			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
-			// check that the MasterUserRecord was updated
-			murtest.AssertThatMasterUserRecord(t, "user-1", cl).
-				UserAccountHasTier("cluster1", newNSTemplateTier).
-				UserAccountHasTier("cluster2", newNSTemplateTier).
-				UserAccountHasTier("cluster3", otherNSTemplateTier)
-			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-				HasConditions(toBeUpdating()).
-				HasSyncIndexes(map[string]string{
-					"cluster1": "10",
-					"cluster2": "20",
-				})
+
+			t.Run("with same namespaces", func(t *testing.T) {
+				// given
+				initObjs := []runtime.Object{&newNSTemplateTier}
+				initObjs = append(initObjs, murtest.NewMasterUserRecord(t, "user-1",
+					murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("10")),
+					murtest.AdditionalAccount("cluster2", oldNSTemplateTier, murtest.SyncIndex("20")),
+					murtest.AdditionalAccount("cluster3", otherNSTemplateTier, murtest.SyncIndex("100")))) // this account is not affected by the update
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
+				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				// when
+				res, err := r.Reconcile(req)
+				// then
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
+				// check that the MasterUserRecord was updated
+				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					UserAccountHasTier("cluster1", newNSTemplateTier).
+					UserAccountHasTier("cluster2", newNSTemplateTier).
+					UserAccountHasTier("cluster3", otherNSTemplateTier)
+				// check that TemplateUpdateRequest is in "updating" condition
+				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
+					HasConditions(toBeUpdating()).
+					HasSyncIndexes(map[string]string{
+						"cluster1": "10",
+						"cluster2": "20",
+					})
+			})
+
 		})
+
 	})
 
 	t.Run("controller should not delete the TemplateUpdateRequest", func(t *testing.T) {
@@ -170,6 +332,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
+			// check that TemplateUpdateRequest is in "updating" condition
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
 				HasConditions(toBeUpdating()).
 				HasSyncIndexes(map[string]string{
@@ -196,6 +359,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
+			// check that TemplateUpdateRequest is in "updating" condition
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
 				HasConditions(toBeUpdating()).
 				HasSyncIndexes(map[string]string{
@@ -231,6 +395,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: DeletionTimeout}, res) // now we need to requeue until timeout is done
+			// check that TemplateUpdateRequest is in "complete" condition
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
 				HasConditions(toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.TemplateUpdateRequestComplete,
@@ -252,6 +417,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
+			// check that TemplateUpdateRequest is in "failed" condition
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
 				HasConditions(toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.TemplateUpdateRequestComplete,
@@ -273,6 +439,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
+			// check that TemplateUpdateRequest was deleted
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).DoesNotExist()
 		})
 
@@ -286,6 +453,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, res.Requeue)
 			assert.GreaterOrEqual(t, int64(res.RequeueAfter), int64(time.Second))
+			// check that TemplateUpdateRequest was NOT deleted
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).Exists()
 		})
 	})
