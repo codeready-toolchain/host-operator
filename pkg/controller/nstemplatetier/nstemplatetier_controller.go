@@ -64,7 +64,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.TemplateUpdateRequest{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &toolchainv1alpha1.NSTemplateTier{},
-	})
+	}) // we need to track changes in the status, so we can't use the `GenerationChangedPredicate`
 	if err != nil {
 		return err
 	}
@@ -97,6 +97,7 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 	err := r.client.Get(context.TODO(), request.NamespacedName, tier)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			log.Info("NSTemplateTier not found")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -104,7 +105,7 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, err
 	}
 	if err := r.ensureTemplateUpdateRequest(logger, tier); err != nil {
-		log.Error(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed.")
+		logger.Error(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed.")
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, nil
@@ -112,18 +113,19 @@ func (r *ReconcileNSTemplateTier) Reconcile(request reconcile.Request) (reconcil
 
 // ensureTemplateUpdateRequest ensures that all relared MasterUserRecords are up-to-date with the NSTemplateTier that changed.
 // If not, then it creates a TemplateUpdateRequest resource for the first MasterUserRecord not up-to-date with the tier, and
-// return `nil` so the controller will wait for the next reconcile to create subsequent TemplateUpdateRequest resources, until the
-// `MaxPoolSize` threashold is reached.
+// returns `nil` so the controller will wait for the next reconcile loop to create subsequent TemplateUpdateRequest resources,
+// until the `MaxPoolSize` threashold is reached.
 func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) error {
-	activeTemplateUpdateRequests, err := r.activeTemplateUpdateRequests(tier)
-	if err != nil {
+	if activeTemplateUpdateRequests, deleted, err := r.activeTemplateUpdateRequests(logger, tier); err != nil {
 		return errs.Wrap(err, "unable to get active TemplateUpdateRequests")
-	}
-
-	if activeTemplateUpdateRequests < MaxPoolSize {
-		// create a TemplateUpdateRequest if active count < max pol size
-		// find a MasterUserRecord which is not already up-to-date
+	} else if deleted {
+		// skip TemplateUpdateRequest creation in this reconcile loop since one was deleted
+		return nil
+	} else if activeTemplateUpdateRequests < MaxPoolSize {
+		// create a TemplateUpdateRequest if active count < MaxPoolSize,
+		// ie, find a MasterUserRecord which is not already up-to-date
 		// and for which there is no TemplateUpdateRequest yet
+
 		// fetch by subsets of "MaxPoolSize + 1" size until a MasterUserRecord candidate is found
 		murs := toolchainv1alpha1.MasterUserRecordList{}
 		matchingLabels, err := murSelector(tier)
@@ -166,8 +168,7 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 					ClusterResources: tier.Spec.ClusterResources,
 				},
 			}
-			err = controllerutil.SetControllerReference(tier, tur, r.scheme)
-			if err != nil {
+			if err = controllerutil.SetControllerReference(tier, tur, r.scheme); err != nil {
 				return err
 			}
 			// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
@@ -179,29 +180,33 @@ func (r *ReconcileNSTemplateTier) ensureTemplateUpdateRequest(logger logr.Logger
 	logger.Info("done with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", tier.Name)
 	return nil
 }
-
-func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(tier *toolchainv1alpha1.NSTemplateTier) (int, error) {
+func (r *ReconcileNSTemplateTier) activeTemplateUpdateRequests(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) (int, bool, error) {
 	// fetch the list of TemplateUpdateRequest owned by the NSTemplateTier tier
 	templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 	if err := r.client.List(context.TODO(), &templateUpdateRequests, client.MatchingLabels{
 		toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
 	}); err != nil {
-		return -1, err
+		return -1, false, err
 	}
 
 	// count non-deleted templateUpdateRequest items
-	activeTemplateUpdateRequests := 0
-items:
-	for _, r := range templateUpdateRequests.Items {
-		if util.IsBeingDeleted(&r) {
-			// ignore when being deleted
+	count := 0
+	for _, tur := range templateUpdateRequests.Items {
+		if util.IsBeingDeleted(&tur) {
+			// ignore when already being deleted
 			continue
 		}
-		if condition.IsTrue(r.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) {
-			// ignore when in `complete` status condition
-			continue items
+		if condition.IsTrue(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) ||
+			condition.IsFalseWithReason(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) {
+			// delete when in `complete=true` (reason=updated) or when in `complete=false/reason=failed` status conditions
+			if err := r.client.Delete(context.TODO(), &tur); err != nil {
+				return -1, false, errs.Wrapf(err, "unable to delete the TemplateUpdateRequest resource '%s'", tur.Name)
+			}
+			log.Info("deleted TemplateUpdateRequest", "name", tur.Name)
+			return -1, true, nil
 		}
-		activeTemplateUpdateRequests++
+		count++
 	}
-	return activeTemplateUpdateRequests, nil
+	logger.Info("found active TemplateUpdateRequest for the current tier", "count", count)
+	return count, false, nil
 }

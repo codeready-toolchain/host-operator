@@ -136,10 +136,10 @@ github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMe
 github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c/go.mod h1:XGLbWH/ujMcbPbhZq52Nv6UrCghb1yGn//133kEsvDk=
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
-github.com/codeready-toolchain/api v0.0.0-20200623145816-ddd6c21322c5 h1:KhDJhOgoFEbXB5jlwmMos29Okoj+A+R5VCiYHZLKaZA=
-github.com/codeready-toolchain/api v0.0.0-20200623145816-ddd6c21322c5/go.mod h1:uh4hKem1mo1TE66qtuA5ZV3orpsKJNufWCSE0uPSES8=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200623152137-da59add912df h1:xFbTXR8Qs8f4Clty9FB1KY487GL1NlPHWfWao2TkR4Q=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200623152137-da59add912df/go.mod h1:6QuERWRx2zm7g4cu708mlzie9gEsF+5OU2gs0ApJflY=
+github.com/codeready-toolchain/api v0.0.0-20200702155133-4e0f9a1d7b18 h1:IE6CHyBlDWkcjnYOKmvVTCytzEuVOD1QCIx3mI4oBUc=
+github.com/codeready-toolchain/api v0.0.0-20200702155133-4e0f9a1d7b18/go.mod h1:uh4hKem1mo1TE66qtuA5ZV3orpsKJNufWCSE0uPSES8=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200702185320-ae4ea764e078 h1:8/3oUcun/u4FVYWZM7Nb6uQ4EkyAEpbYx67gGxyrv+c=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200702185320-ae4ea764e078/go.mod h1:IfinUVMde6bLRIKQ4RrglxvlC2SzmWZFpKD2NlE5Yqc=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=
 github.com/containerd/console v0.0.0-20180822173158-c12b1e7919c1/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.2.7/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=
@@ -826,10 +826,6 @@ github.com/urfave/cli v0.0.0-20171014202726-7bc6a0acffa5/go.mod h1:70zkFmudgCuE/
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv3vaXspKw=
 github.com/xanzy/go-gitlab v0.15.0/go.mod h1:8zdQa/ri1dfn8eS3Ir1SyfvOKlw7WBJ8DVThkpGiXrs=
-github.com/xcoulon/api v0.0.0-20200623094806-f548c1c2d2a9 h1:u4sjjXKDUvLpLVh3Z8ReudMQUsP6WUxZL+FmqgszWus=
-github.com/xcoulon/api v0.0.0-20200623094806-f548c1c2d2a9/go.mod h1:uh4hKem1mo1TE66qtuA5ZV3orpsKJNufWCSE0uPSES8=
-github.com/xcoulon/toolchain-common v0.0.0-20200623095827-4caf1b476168 h1:xwNI8wSLnM7+tjt7jQZHXcOmDQ8VgkLBh6pIRu27sPs=
-github.com/xcoulon/toolchain-common v0.0.0-20200623095827-4caf1b476168/go.mod h1:eV6ZnscCPRu0opy5wpDglaHtBHg9VXuT1b3/yQ9TDiQ=
 github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c/go.mod h1:lB8K/P019DLNhemzwFU4jHLhdvlE6uDZjXFejJXr49I=
 github.com/xdg/stringprep v1.0.0/go.mod h1:Jhud4/sHMO4oL310DaZAKk9ZaJ08SJfe+sJh0HrGL1Y=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
