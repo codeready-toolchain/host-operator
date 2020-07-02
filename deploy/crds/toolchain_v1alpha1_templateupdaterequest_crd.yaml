@@ -10,6 +10,12 @@ spec:
   - JSONPath: .spec.tierName
     name: Tier
     type: string
+  - JSONPath: .status.conditions[?(@.type=="Complete")].status
+    name: Status
+    type: string
+  - JSONPath: .status.conditions[?(@.type=="Complete")].reason
+    name: Reason
+    type: string
   group: toolchain.dev.openshift.com
   names:
     kind: TemplateUpdateRequest
@@ -17,7 +23,8 @@ spec:
     plural: templateupdaterequests
     singular: templateupdaterequest
   scope: Namespaced
-  subresources: {}
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       description: TemplateUpdateRequest is the Schema for the templateupdaterequests
@@ -79,7 +86,7 @@ spec:
           properties:
             conditions:
               description: 'Conditions is an array of current TemplateUpdateRequest
-                conditions Supported condition types: ConditionReady'
+                conditions Supported condition types: TemplateUpdateRequestComplete'
               items:
                 properties:
                   lastTransitionTime:
@@ -112,6 +119,14 @@ spec:
               x-kubernetes-list-map-keys:
               - type
               x-kubernetes-list-type: map
+            syncIndexes:
+              additionalProperties:
+                type: string
+              description: SyncIndexes contains the `syncIndex` for each cluster in
+                the MasterUserRecord. The values here are "captured" before the MasterUserRecord
+                is updated, so we can track the update progress on the member clusters.
+              type: object
+              x-kubernetes-map-type: atomic
           type: object
       x-kubernetes-preserve-unknown-fields: true
   version: v1alpha1
