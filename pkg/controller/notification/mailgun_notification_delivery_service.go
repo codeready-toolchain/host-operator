@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/mailgun/mailgun-go/v4"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
@@ -28,7 +27,7 @@ type MailgunOption interface {
 }
 
 // NewMailgunNotificationDeliveryService creates a delivery service that uses the Mailgun API to deliver email notifications
-func NewMailgunNotificationDeliveryService(client client.Client, config MailgunConfiguration,
+func NewMailgunNotificationDeliveryService(client client.Client, config MailgunConfiguration, templateLoader TemplateLoader,
 	opts ...MailgunOption) NotificationDeliveryService {
 
 	mg := mailgun.NewMailgun(config.GetMailgunDomain(), config.GetMailgunAPIKey())
@@ -38,7 +37,7 @@ func NewMailgunNotificationDeliveryService(client client.Client, config MailgunC
 	}
 
 	svc := &MailgunNotificationDeliveryService{
-		base:        BaseNotificationDeliveryService{},
+		base:        BaseNotificationDeliveryService{TemplateLoader: templateLoader},
 		Mailgun:     mg,
 		SenderEmail: config.GetMailgunSenderEmail(),
 	}
@@ -48,7 +47,7 @@ func NewMailgunNotificationDeliveryService(client client.Client, config MailgunC
 
 func (s *MailgunNotificationDeliveryService) Send(ctx context.Context, notificationCtx *NotificationContext, templateName string) error {
 
-	template, found, err := notificationtemplates.GetNotificationTemplate(templateName)
+	template, found, err := s.base.TemplateLoader.GetNotificationTemplate(templateName)
 	if err != nil {
 		return err
 	}

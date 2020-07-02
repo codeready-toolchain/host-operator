@@ -2,7 +2,9 @@ package notification
 
 import (
 	"context"
+	"errors"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -44,6 +46,31 @@ func NewMockMailgunConfiguration(domain, apikey, senderEmail string) MailgunConf
 		APIKey:      apikey,
 		SenderEmail: senderEmail,
 	}
+}
+
+type MockTemplateLoader struct {
+	templates map[string]*notificationtemplates.NotificationTemplate
+}
+
+func (l *MockTemplateLoader) GetNotificationTemplate(name string) (*notificationtemplates.NotificationTemplate, bool, error) {
+	template := l.templates[name]
+	if template != nil {
+		return template, true, nil
+	} else {
+		return nil, false, errors.New("Template not found")
+	}
+}
+
+func NewMockTemplateLoader(templates ...*notificationtemplates.NotificationTemplate) TemplateLoader {
+	tmpl := make(map[string]*notificationtemplates.NotificationTemplate)
+	for _, template := range templates {
+		tmpl[template.Name] = &notificationtemplates.NotificationTemplate{
+			Subject: template.Subject,
+			Content: template.Content,
+			Name:    template.Name,
+		}
+	}
+	return &MockTemplateLoader{tmpl}
 }
 
 func TestNotificationDeliveryServiceFactory(t *testing.T) {
