@@ -64,7 +64,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.TemplateUpdateRequest{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &toolchainv1alpha1.NSTemplateTier{},
-	})
+	}, predicate.GenerationChangedPredicate{})
 	if err != nil {
 		return err
 	}
