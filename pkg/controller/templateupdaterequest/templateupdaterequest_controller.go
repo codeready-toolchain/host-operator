@@ -256,7 +256,7 @@ func (r *ReconcileTemplateUpdateRequest) updateStatusConditions(logger logr.Logg
 // setStatusConditionsUpdating sets the TemplateUpdateRequest status condition to `complete=false/reason=updating` and retains the sync indexes
 func (r *ReconcileTemplateUpdateRequest) setStatusConditionsUpdating(logger logr.Logger, tur *toolchainv1alpha1.TemplateUpdateRequest, syncIndexes map[string]string, conditions ...toolchainv1alpha1.Condition) error {
 	tur.Status.SyncIndexes = syncIndexes
-	tur.Status.Conditions = []toolchainv1alpha1.Condition{toBeUpdating()}
+	tur.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(tur.Status.Conditions, toBeUpdating())
 	return r.client.Status().Update(context.TODO(), tur)
 }
 
