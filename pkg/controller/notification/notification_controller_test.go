@@ -10,7 +10,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
@@ -43,7 +42,6 @@ func TestNotificationSuccess(t *testing.T) {
 		assert.True(t, result.Requeue)
 		assert.True(t, result.RequeueAfter < cast.ToDuration("10s"))
 		assert.True(t, result.RequeueAfter > cast.ToDuration("1s"))
-		murtest.AssertThatMasterUserRecord(t, "jane", cl)
 		AssertThatNotificationHasCondition(t, cl, notification.Name, toBeSent())
 	})
 
@@ -60,10 +58,8 @@ func TestNotificationSuccess(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.False(t, result.Requeue)
-		murtest.AssertThatMasterUserRecord(t, "jane", cl)
 		AssertThatNotificationIsDeleted(t, cl, notification.Name)
 	})
-
 }
 
 func TestNotificationSentFailure(t *testing.T) {
@@ -88,7 +84,6 @@ func TestNotificationSentFailure(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, err.Error(), "failed to delete notification: unable to delete Notification object 'notification-name': error")
 
-		murtest.AssertThatMasterUserRecord(t, "jane", cl)
 		AssertThatNotificationHasCondition(t, cl, notification.Name, toBeSent(), toBeDeletionError("unable to delete Notification object 'notification-name': error"))
 	})
 }
@@ -150,7 +145,7 @@ func newController(t *testing.T, notification *v1alpha1.Notification, initObjs .
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, append(initObjs, notification)...)
-	config := configuration.LoadConfig()
+	config := configuration.LoadConfig(cl)
 	controller := &ReconcileNotification{
 		client: cl,
 		scheme: s,

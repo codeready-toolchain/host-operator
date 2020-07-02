@@ -7,6 +7,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
@@ -125,12 +126,12 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 // the duration before the changetierrequest should be deleted. If so, the changetierrequest is deleted.
 // Returns bool indicating if the changetierrequest was deleted, the time before the changetierrequest
 // can be deleted and error
-func (r *ReconcileChangeTierRequest) checkTransitionTimeAndDelete(log logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
-	log.Info("the ChangeTierRequest is completed so we can deal with its deletion")
+func (r *ReconcileChangeTierRequest) checkTransitionTimeAndDelete(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
+	logger.Info("the ChangeTierRequest is completed so we can deal with its deletion")
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
 	if timeSinceCompletion >= r.config.GetDurationBeforeChangeRequestDeletion() {
-		log.Info("the ChangeTierRequest has been completed for a longer time than the 'durationBeforeChangeRequestDeletion', so it's ready to be deleted",
+		logger.Info("the ChangeTierRequest has been completed for a longer time than the 'durationBeforeChangeRequestDeletion', so it's ready to be deleted",
 			"durationBeforeChangeRequestDeletion", r.config.GetDurationBeforeChangeRequestDeletion().String())
 		if err := r.client.Delete(context.TODO(), changeTierRequest, &client.DeleteOptions{}); err != nil {
 			return false, 0, errs.Wrapf(err, "unable to delete ChangeTierRequest object '%s'", changeTierRequest.Name)
@@ -138,46 +139,63 @@ func (r *ReconcileChangeTierRequest) checkTransitionTimeAndDelete(log logr.Logge
 		return true, 0, nil
 	}
 	diff := r.config.GetDurationBeforeChangeRequestDeletion() - timeSinceCompletion
-	log.Info("the ChangeTierRequest has been completed for shorter time than 'durationBeforeChangeRequestDeletion', so it's going to be reconciled again",
+	logger.Info("the ChangeTierRequest has been completed for shorter time than 'durationBeforeChangeRequestDeletion', so it's going to be reconciled again",
 		"durationBeforeChangeRequestDeletion", r.config.GetDurationBeforeChangeRequestDeletion().String(), "reconcileAfter", diff.String())
 	return false, diff, nil
 }
 
-func (r *ReconcileChangeTierRequest) changeTier(log logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) error {
+func (r *ReconcileChangeTierRequest) changeTier(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) error {
 	mur := &toolchainv1alpha1.MasterUserRecord{}
 	murName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.MurName}
 	if err := r.client.Get(context.TODO(), murName, mur); err != nil {
-		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to get MasterUserRecord with name %s", changeTierRequest.Spec.MurName)
+		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get MasterUserRecord with name %s", changeTierRequest.Spec.MurName)
 	}
 
 	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
 	tierName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.TierName}
 	if err := r.client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
-		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to get NSTemplateTier with name %s", changeTierRequest.Spec.TierName)
+		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get NSTemplateTier with name %s", changeTierRequest.Spec.TierName)
 	}
 
 	newNsTemplateSet := usersignup.NewNSTemplateSetSpec(nsTemplateTier)
 	changed := false
+
 	for i, ua := range mur.Spec.UserAccounts {
 		if changeTierRequest.Spec.TargetCluster != "" {
 			if ua.TargetCluster == changeTierRequest.Spec.TargetCluster {
+				// here we remove the template hash label since it was change for one or all target clusters
+				delete(mur.Labels, nstemplatetier.TemplateTierHashLabelKey(mur.Spec.UserAccounts[i].Spec.NSTemplateSet.TierName))
 				mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
 				changed = true
 				break
 			}
 		} else {
 			changed = true
+			// here we remove the template hash label since it was change for one or all target clusters
+			delete(mur.Labels, nstemplatetier.TemplateTierHashLabelKey(mur.Spec.UserAccounts[i].Spec.NSTemplateSet.TierName))
 			mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
 		}
 	}
 
 	if !changed {
 		err := fmt.Errorf("the MasterUserRecord '%s' doesn't contain UserAccount with cluster '%s' whose tier should be changed", changeTierRequest.Spec.MurName, changeTierRequest.Spec.TargetCluster)
-		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
+		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
 	}
 
+	// also update some of the labels on the MUR, those related to the new Tier in use.
+	if mur.Labels == nil {
+		mur.Labels = map[string]string{}
+	}
+	// then we compute again *all* hashes, in case we removed the entry for a single target cluster, but others still "use" it.
+	for _, ua := range mur.Spec.UserAccounts {
+		hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(ua.Spec.NSTemplateSet)
+		if err != nil {
+			return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to compute hash for NSTemplateTier with name '%s'", nsTemplateTier.Name)
+		}
+		mur.Labels[nstemplatetier.TemplateTierHashLabelKey(ua.Spec.NSTemplateSet.TierName)] = hash
+	}
 	if err := r.client.Update(context.TODO(), mur); err != nil {
-		return r.wrapErrorWithStatusUpdate(log, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
+		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
 	}
 
 	return nil

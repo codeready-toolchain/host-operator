@@ -9,6 +9,7 @@ import (
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -22,20 +23,20 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 func TestChangeTierSuccess(t *testing.T) {
 	// given
+	logf.SetLogger(logf.ZapLogger(true))
 	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_CHANGE_REQUEST_DELETION", "10s")
 	defer restore()
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-	basicTier := NewNSTemplateTier("basic", "123abc", "654321a", "code", "stage", "dev")
 
 	t.Run("the controller should change tier in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("john")
+		mur := murtest.NewMasterUserRecord(t, "john")
 		changeTierRequest := newChangeTierRequest("john", "team")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
@@ -44,13 +45,15 @@ func TestChangeTierSuccess(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		murtest.AssertThatMasterUserRecord(t, "john", cl).AllUserAccountsHaveTier(*teamTier)
+		murtest.AssertThatMasterUserRecord(t, "john", cl).
+			AllUserAccountsHaveTier(*teamTier).
+			DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTier.Name))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
 	t.Run("the controller should change tier in all UserAccounts in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny", murtest.AdditionalAccounts("another-cluster"))
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
@@ -59,13 +62,14 @@ func TestChangeTierSuccess(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		murtest.AssertThatMasterUserRecord(t, "johny", cl).AllUserAccountsHaveTier(*teamTier)
+		murtest.AssertThatMasterUserRecord(t, "johny", cl).AllUserAccountsHaveTier(*teamTier).
+			DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTier.Name))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
 	t.Run("the controller should change tier only in specified UserAccount in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny", murtest.AdditionalAccounts("another-cluster"))
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("another-cluster"))
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
@@ -76,13 +80,13 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			UserAccountHasTier("another-cluster", *teamTier).
-			UserAccountHasTier(test.MemberClusterName, *basicTier)
+			UserAccountHasTier(test.MemberClusterName, murtest.DefaultNSTemplateTier)
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
 	t.Run("completed changetierrequest is requeued with the remaining deletion timeout", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny")
+		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		changeTierRequest.Status.Conditions = []v1alpha1.Condition{toBeComplete()}
 		controller, request, cl := newController(t, changeTierRequest, mur)
@@ -96,13 +100,13 @@ func TestChangeTierSuccess(t *testing.T) {
 		assert.True(t, result.RequeueAfter < cast.ToDuration("10s"))
 		assert.True(t, result.RequeueAfter > cast.ToDuration("1s"))
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier(*basicTier)
+			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
 	t.Run("change request deleted when deletion timeout passed", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny")
+		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		changeTierRequest.Status.Conditions = []v1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
@@ -115,7 +119,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, result.Requeue)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier(*basicTier)
+			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
 		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
 }
@@ -141,7 +145,7 @@ func TestChangeTierFailure(t *testing.T) {
 
 	t.Run("the change will fail since the provided tier doesn't exist", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny", murtest.AdditionalAccounts("another-cluster"))
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		controller, request, cl := newController(t, changeTierRequest, mur)
 
@@ -156,10 +160,9 @@ func TestChangeTierFailure(t *testing.T) {
 
 	t.Run("the change will fail since it won't be able to find the correct UserAccount in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny")
+		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("some-other-cluster"))
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		basicTier := NewNSTemplateTier("basic", "123abc", "654321a", "code", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
 		// when
@@ -168,7 +171,7 @@ func TestChangeTierFailure(t *testing.T) {
 		// then
 		require.Error(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier(*basicTier)
+			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
 		assert.Equal(t, err.Error(), "unable to change tier in MasterUserRecord johny: the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed")
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name,
 			toBeNotComplete("the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed"))
@@ -176,7 +179,7 @@ func TestChangeTierFailure(t *testing.T) {
 
 	t.Run("the change will fail since the actual update operation will return an error", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny")
+		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
@@ -199,12 +202,11 @@ func TestChangeTierFailure(t *testing.T) {
 
 	t.Run("will return an error since it cannot delete the ChangeTierRequest after successful completion", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("johny")
+		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "faildeletion")
 		changeTierRequest.Status.Conditions = []v1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		basicTier := NewNSTemplateTier("basic", "123abc", "654321a", "code", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 		cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("error")
@@ -217,7 +219,7 @@ func TestChangeTierFailure(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, err.Error(), "failed to delete changeTierRequest: unable to delete ChangeTierRequest object 'request-name': error")
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			AllUserAccountsHaveTier(*basicTier)
+			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete(), toBeDeletionError("unable to delete ChangeTierRequest object 'request-name': error"))
 	})
 }
@@ -352,7 +354,7 @@ func newController(t *testing.T, changeTier *v1alpha1.ChangeTierRequest, initObj
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, append(initObjs, changeTier)...)
-	config := configuration.LoadConfig()
+	config := configuration.LoadConfig(cl)
 	controller := &ReconcileChangeTierRequest{
 		client: cl,
 		scheme: s,

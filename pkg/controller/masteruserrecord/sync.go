@@ -19,8 +19,10 @@ import (
 	"github.com/pkg/errors"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -42,6 +44,7 @@ type Synchronizer struct {
 	memberUserAcc     *toolchainv1alpha1.UserAccount
 	recordSpecUserAcc toolchainv1alpha1.UserAccountEmbedded
 	record            *toolchainv1alpha1.MasterUserRecord
+	scheme            *runtime.Scheme
 	logger            logr.Logger
 }
 
@@ -239,6 +242,11 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 				UserID:   s.record.Spec.UserID,
 				Template: notificationtemplates.UserProvisioned.Name,
 			},
+		}
+
+		err := controllerutil.SetControllerReference(s.record, notification, s.scheme)
+		if err != nil {
+			return false, err
 		}
 
 		if err := s.hostClient.Create(context.TODO(), notification); err != nil {

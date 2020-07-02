@@ -125,7 +125,7 @@ func TestSynchronizeSpec(t *testing.T) {
 	// given
 	l := logf.ZapLogger(true)
 	apiScheme(t)
-	mur := murtest.NewMasterUserRecord("john", murtest.StatusCondition(toBeProvisioned()))
+	mur := murtest.NewMasterUserRecord(t, "john", murtest.StatusCondition(toBeProvisioned()))
 
 	userAccount := uatest.NewUserAccountFromMur(mur)
 
@@ -160,24 +160,24 @@ func TestSynchronizeSpec(t *testing.T) {
 func TestSynchronizeStatus(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
-	apiScheme(t)
+	scheme := apiScheme(t)
 
-	mur := murtest.NewMasterUserRecord("john",
+	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
 
 	userAccount := uatest.NewUserAccountFromMur(mur,
 		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
 
 	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
+	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, scheme, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 }
 
 func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
-	apiScheme(t)
+	scheme := apiScheme(t)
 
-	mur := murtest.NewMasterUserRecord("john",
+	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")))
 
 	userAccount := uatest.NewUserAccountFromMur(mur,
@@ -194,15 +194,15 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	uatest.Modify(userAccount, uatest.StatusCondition(toBeNotReady("Updating", "")))
 
 	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
+	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, scheme, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 }
 
 func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
-	apiScheme(t)
+	sheme := apiScheme(t)
 
-	mur := murtest.NewMasterUserRecord("john",
+	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
 
 	userAccount := uatest.NewUserAccountFromMur(mur,
@@ -219,15 +219,15 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 	uatest.Modify(userAccount, uatest.StatusCondition(toBeDisabled()))
 
 	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, toBeDisabled())
+	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, sheme, toBeDisabled())
 }
 
 func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
-	apiScheme(t)
+	scheme := apiScheme(t)
 
-	mur := murtest.NewMasterUserRecord("john",
+	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
 
 	userAccount := uatest.NewUserAccountFromMur(mur,
@@ -244,17 +244,17 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	uatest.Modify(userAccount, uatest.StatusCondition(toBeProvisioned()))
 
 	// when and then
-	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
+	testSyncMurStatusWithUserAccountStatus(t, userAccount, mur, scheme, toBeProvisioned(), toBeProvisionedNotificationCreated())
 }
 
 func TestSynchronizeUserAccountFailed(t *testing.T) {
 	// given
 	l := logf.ZapLogger(false)
-	apiScheme(t)
+	scheme := apiScheme(t)
 
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord("john")
+		mur := murtest.NewMasterUserRecord(t, "john")
 		userAcc := uatest.NewUserAccountFromMur(mur)
 		memberClient := test.NewFakeClient(t, userAcc, consoleRoute())
 		memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
@@ -270,6 +270,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			memberUserAcc:     userAcc,
 			recordSpecUserAcc: mur.Spec.UserAccounts[0],
 			logger:            l,
+			scheme:            scheme,
 		}
 
 		// when
@@ -282,7 +283,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 
 	t.Run("status synchronization of the UserAccount & MasterUserRecord failed", func(t *testing.T) {
 		// given
-		provisionedMur := murtest.NewMasterUserRecord("john",
+		provisionedMur := murtest.NewMasterUserRecord(t, "john",
 			murtest.StatusCondition(toBeProvisioned()))
 		userAcc := uatest.NewUserAccountFromMur(provisionedMur,
 			uatest.StatusCondition(toBeNotReady("somethingFailed", "")))
@@ -298,6 +299,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			memberUserAcc:     userAcc,
 			recordSpecUserAcc: provisionedMur.Spec.UserAccounts[0],
 			logger:            l,
+			scheme:            scheme,
 		}
 
 		t.Run("with empty set of UserAccounts statuses", func(t *testing.T) {
@@ -350,7 +352,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		})
 
 		prepareSync := func() (Synchronizer, *test.FakeClient) {
-			mur := murtest.NewMasterUserRecord("john",
+			mur := murtest.NewMasterUserRecord(t, "john",
 				murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
 
 			userAccount := uatest.NewUserAccountFromMur(mur,
@@ -375,6 +377,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 				memberUserAcc:     userAccount,
 				recordSpecUserAcc: mur.Spec.UserAccounts[0],
 				logger:            l,
+				scheme:            scheme,
 			}, memberClient
 		}
 
@@ -481,7 +484,7 @@ func TestCheURL(t *testing.T) {
 
 	testConsoleURL := func(cheRoute *routev1.Route, expectedConsoleURL string) {
 		// given
-		mur := murtest.NewMasterUserRecord("john",
+		mur := murtest.NewMasterUserRecord(t, "john",
 			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
 		userAccount := uatest.NewUserAccountFromMur(mur,
 			uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
@@ -535,7 +538,7 @@ func TestCheURL(t *testing.T) {
 	})
 }
 
-func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon ...toolchainv1alpha1.Condition) {
+func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, scheme *runtime.Scheme, expMurCon ...toolchainv1alpha1.Condition) {
 	l := logf.ZapLogger(true)
 	condition := userAccount.Status.Conditions[0]
 
@@ -548,6 +551,7 @@ func testSyncMurStatusWithUserAccountStatus(t *testing.T, userAccount *toolchain
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: mur.Spec.UserAccounts[0],
 		logger:            l,
+		scheme:            scheme,
 	}
 
 	// when

@@ -125,6 +125,32 @@ metadata:
         },
         {
           "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
+          "kind": "TemplateUpdateRequest",
+          "metadata": {
+            "name": "johnsmith"
+          },
+          "spec": {
+            "clusterResources": [
+              {
+                "templateRef": "basic-clusterresources-a34r57"
+              }
+            ],
+            "namespaces": [
+              {
+                "templateRef": "basic-code-abcdef"
+              },
+              {
+                "templateRef": "basic-dev-1d2f3q"
+              },
+              {
+                "templateRef": "basic-stage-a34r57"
+              }
+            ],
+            "tierName": "basic"
+          }
+        },
+        {
+          "apiVersion": "toolchain.dev.openshift.com/v1alpha1",
           "kind": "TierTemplate",
           "metadata": {
             "name": "basic-code-abcdef"
