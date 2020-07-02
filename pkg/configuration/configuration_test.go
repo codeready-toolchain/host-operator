@@ -1,28 +1,31 @@
 package configuration_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/spf13/cast"
 
 	"github.com/gofrs/uuid"
+	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // getDefaultConfiguration returns a configuration registry without anything but
 // defaults set. Remember that environment variables can overwrite defaults, so
 // please ensure to properly unset envionment variables using
 // UnsetEnvVarAndRestore().
-func getDefaultConfiguration() *configuration.Config {
-	return configuration.LoadConfig()
+func getDefaultConfiguration(t *testing.T) *configuration.Config {
+	return configuration.LoadConfig(test.NewFakeClient(t))
 }
 
 func TestNew(t *testing.T) {
 	t.Run("default configuration", func(t *testing.T) {
-		require.NotNil(t, getDefaultConfiguration())
+		require.NotNil(t, getDefaultConfiguration(t))
 	})
 }
 
@@ -32,7 +35,7 @@ func TestGetAllRegistrationServiceParameters(t *testing.T) {
 	thirdKey := configuration.RegServiceEnvPrefix + "_" + "THIRD_KEY"
 
 	t.Run("default", func(t *testing.T) {
-		config := getDefaultConfiguration()
+		config := getDefaultConfiguration(t)
 		assert.Empty(t, config.GetAllRegistrationServiceParameters())
 	})
 
@@ -47,11 +50,46 @@ func TestGetAllRegistrationServiceParameters(t *testing.T) {
 			test.Env(secondKey, newVal2),
 			test.Env(thirdKey, ""))
 		defer restore()
-		config := getDefaultConfiguration()
+		config := getDefaultConfiguration(t)
 		require.Len(t, config.GetAllRegistrationServiceParameters(), 3)
 		assert.Equal(t, newVal, config.GetAllRegistrationServiceParameters()[firstKey])
 		assert.Equal(t, newVal2, config.GetAllRegistrationServiceParameters()[secondKey])
 		assert.Empty(t, config.GetAllRegistrationServiceParameters()[thirdKey])
+	})
+}
+
+func TestLoadFromSecret(t *testing.T) {
+	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
+	defer restore()
+	t.Run("default", func(t *testing.T) {
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, "", config.GetMailgunDomain())
+		assert.Equal(t, "", config.GetMailgunAPIKey())
+	})
+	t.Run("env overwrite", func(t *testing.T) {
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_SECRET_NAME", "test-secret")
+		defer restore()
+
+		secret := &v1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-secret",
+				Namespace: "toolchain-host-operator",
+			},
+			Data: map[string][]byte{
+				"mailgun-domain":       []byte("test-domain"),
+				"mailgun-api-key":      []byte("test-api-key"),
+				"mailgun-sender-email": []byte("test-sender-email"),
+			},
+		}
+
+		cl := test.NewFakeClient(t)
+		err := cl.Create(context.TODO(), secret)
+		require.NoError(t, err)
+
+		config := configuration.LoadConfig(cl)
+		assert.Equal(t, "test-domain", config.GetMailgunDomain())
+		assert.Equal(t, "test-api-key", config.GetMailgunAPIKey())
+		assert.Equal(t, "test-sender-email", config.GetMailgunSenderEmail())
 	})
 }
 
@@ -63,7 +101,7 @@ func TestGetDurationBeforeChangeRequestDeletion(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		resetFunc := test.UnsetEnvVarAndRestore(t, key)
 		defer resetFunc()
-		config := getDefaultConfiguration()
+		config := getDefaultConfiguration(t)
 		assert.Equal(t, cast.ToDuration("24h"), config.GetDurationBeforeChangeRequestDeletion())
 	})
 
@@ -73,7 +111,7 @@ func TestGetDurationBeforeChangeRequestDeletion(t *testing.T) {
 
 		restore = test.SetEnvVarAndRestore(t, configuration.HostEnvPrefix+"_"+"ANY_CONFIG", "20s")
 		defer restore()
-		config := getDefaultConfiguration()
+		config := getDefaultConfiguration(t)
 		assert.Equal(t, cast.ToDuration("10s"), config.GetDurationBeforeChangeRequestDeletion())
 	})
 }

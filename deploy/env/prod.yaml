@@ -12,3 +12,6 @@ registration-service:
                   "public-client": true
                 }'
     public-keys-url: 'https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/certs'
+host-operator:
+  secret:
+    name: host-operator-secret
