@@ -274,6 +274,30 @@ func TestReconcile(t *testing.T) {
 						"cluster1": "1",
 					})
 			})
+			t.Run("when cluster resources do not exist in update then it should be removed", func(t *testing.T) {
+				// given
+				initObjs := []runtime.Object{&newNSTemplateTier3}
+				mur := murtest.NewMasterUserRecord(t, "user-1",
+					murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("1")))
+				initObjs = append(initObjs, mur)
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier3))
+				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				// when
+				res, err := r.Reconcile(req)
+				// then
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
+				// check that the MasterUserRecord was updated
+				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					AllUserAccountsHaveTier(newNSTemplateTier3)
+
+				// check that TemplateUpdateRequest is in "updating" condition
+				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
+					HasConditions(toBeUpdating()).
+					HasSyncIndexes(map[string]string{
+						"cluster1": "1",
+					})
+			})
 		})
 
 		t.Run("when there are many target clusters to update", func(t *testing.T) {
