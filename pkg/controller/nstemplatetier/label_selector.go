@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"sort"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 
@@ -52,35 +53,36 @@ func TemplateTierHashLabelKey(tierName string) string {
 
 // ComputeHashForNSTemplateTier computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
 func ComputeHashForNSTemplateTier(tier toolchainv1alpha1.NSTemplateTier) (string, error) {
-	refs := templateRefs{}
+	refs := []string{}
 	for _, ns := range tier.Spec.Namespaces {
-		refs.Namespaces = append(refs.Namespaces, ns.TemplateRef)
+		refs = append(refs, ns.TemplateRef)
 	}
 	if tier.Spec.ClusterResources != nil {
-		refs.ClusterResources = tier.Spec.ClusterResources.TemplateRef
+		refs = append(refs, tier.Spec.ClusterResources.TemplateRef)
 	}
 	return computeHash(refs)
 }
 
 // ComputeHashForNSTemplateSetSpec computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
 func ComputeHashForNSTemplateSetSpec(s toolchainv1alpha1.NSTemplateSetSpec) (string, error) {
-	refs := templateRefs{}
+	refs := []string{}
 	for _, ns := range s.Namespaces {
-		refs.Namespaces = append(refs.Namespaces, ns.TemplateRef)
+		refs = append(refs, ns.TemplateRef)
 	}
-	if s.ClusterResources != nil {
-		refs.ClusterResources = s.ClusterResources.TemplateRef
+	if s.ClusterResources != nil && s.ClusterResources.TemplateRef != "" { // ignore when ClusterResources only contains a custom template
+		refs = append(refs, s.ClusterResources.TemplateRef)
 	}
 	return computeHash(refs)
 }
 
 type templateRefs struct {
-	Namespaces       []string `json:"namespaces"`
-	ClusterResources string   `json:"clusterresource,omitempty"`
+	Refs []string `json:"refs"`
 }
 
-func computeHash(refs templateRefs) (string, error) {
-	m, err := json.Marshal(refs)
+func computeHash(refs []string) (string, error) {
+	// sort the refs to make sure we have a predictive hash!
+	sort.Strings(refs)
+	m, err := json.Marshal(templateRefs{Refs: refs}) // embed in a type with JSON tags
 	if err != nil {
 		return "", err
 	}
