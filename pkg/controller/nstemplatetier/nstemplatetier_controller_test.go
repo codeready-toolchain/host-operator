@@ -351,7 +351,7 @@ func TestReconcile(t *testing.T) {
 		})
 
 		// in this test, the controller can create an extra TemplateUpdateRequest resource
-		// because one is in a "completed" status
+		// because one is in a "completed=true" status
 		t.Run("when maximum number of TemplateUpdateRequest is reached but one is complete", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
@@ -363,12 +363,12 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
-			// check that a single TemplateUpdateRequest was created
-			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize) // same number: one created and one deleted
+			// check that no TemplateUpdateRequest was created
+			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize-1) // none created and one deleted
 		})
 
-		// in this test, the controller can create an extra TemplateUpdateRequest resource
-		// because one is in a "completed" status
+		// in this test, the controller can't create an extra TemplateUpdateRequest resource yet
+		// because one is in a "completed=true/reason=failed" status and has been deleted
 		t.Run("when maximum number of TemplateUpdateRequest is reached but one is failed", func(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
@@ -380,8 +380,8 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
-			// check that a single TemplateUpdateRequest was created
-			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize) // same number: one created and one deleted
+			// check that no TemplateUpdateRequest was created
+			assertNumberOfTemplateUpdateRequests(t, cl, MaxPoolSize-1) // none created and one deleted
 		})
 
 		// in this test, the controller can create an extra TemplateUpdateRequest resource
