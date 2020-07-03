@@ -111,6 +111,7 @@ func TestLoadFromSecret(t *testing.T) {
 
 		// then
 		require.Error(t, err)
+		assert.Equal(t, "secrets \"test-secret\" not found", err.Error())
 		assert.Nil(t, config)
 	})
 }

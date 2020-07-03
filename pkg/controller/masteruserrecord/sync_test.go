@@ -182,6 +182,7 @@ func TestSynchronizeStatus(t *testing.T) {
 
 		// then
 		require.Error(t, err)
+		assert.Equal(t, "some error", err.Error())
 	})
 }
 
