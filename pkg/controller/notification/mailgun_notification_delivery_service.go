@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mailgun/mailgun-go/v4"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
@@ -27,7 +26,7 @@ type MailgunOption interface {
 }
 
 // NewMailgunNotificationDeliveryService creates a delivery service that uses the Mailgun API to deliver email notifications
-func NewMailgunNotificationDeliveryService(client client.Client, config MailgunConfiguration, templateLoader TemplateLoader,
+func NewMailgunNotificationDeliveryService(config MailgunConfiguration, templateLoader TemplateLoader,
 	opts ...MailgunOption) NotificationDeliveryService {
 
 	mg := mailgun.NewMailgun(config.GetMailgunDomain(), config.GetMailgunAPIKey())
@@ -56,22 +55,18 @@ func (s *MailgunNotificationDeliveryService) Send(ctx context.Context, notificat
 		return errors.New(fmt.Sprintf("notification template [%s] not found", templateName))
 	}
 
-	sender := s.SenderEmail
-
-	subject, err := s.base.GenerateContent(ctx, notificationCtx, template.Subject)
+	subject, err := s.base.GenerateContent(notificationCtx, template.Subject)
 	if err != nil {
 		return err
 	}
 
-	body, err := s.base.GenerateContent(ctx, notificationCtx, template.Content)
+	body, err := s.base.GenerateContent(notificationCtx, template.Content)
 	if err != nil {
 		return err
 	}
-
-	recipient := notificationCtx.FullEmailAddress()
 
 	// The message object allows you to add attachments and Bcc recipients
-	message := s.Mailgun.NewMessage(sender, subject, body, recipient)
+	message := s.Mailgun.NewMessage(s.SenderEmail, subject, body, notificationCtx.FullEmailAddress())
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()

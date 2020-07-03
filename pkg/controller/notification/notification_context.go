@@ -8,7 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// NotificationContext
+// NotificationContext is used to pass user-specific data to the notification template parser in order to generate
+// customised notification content.
 type NotificationContext struct {
 	UserID      string
 	FirstName   string
@@ -17,8 +18,9 @@ type NotificationContext struct {
 	CompanyName string
 }
 
-// NewNotificationContext
-func NewNotificationContext(ctx context.Context, client client.Client, userID, namespace string) (*NotificationContext, error) {
+// NewNotificationContext creates a new NotificationContext by looking up the UserSignup with the specified userID
+// and using it to populate the context fields
+func NewNotificationContext(client client.Client, userID, namespace string) (*NotificationContext, error) {
 	// Lookup the UserSignup resource with the specified userID
 	instance := &toolchainv1alpha1.UserSignup{}
 	err := client.Get(context.TODO(), types.NamespacedName{

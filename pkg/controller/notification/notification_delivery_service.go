@@ -47,7 +47,7 @@ func NewNotificationDeliveryServiceFactory(client client.Client, config Notifica
 func (f *NotificationDeliveryServiceFactory) CreateNotificationDeliveryService() (NotificationDeliveryService, error) {
 	switch f.Config.GetNotificationDeliveryService() {
 	case configuration.NotificationDeliveryServiceMailgun:
-		return NewMailgunNotificationDeliveryService(f.Client, f.MailgunConfig, &DefaultTemplateLoader{}), nil
+		return NewMailgunNotificationDeliveryService(f.MailgunConfig, &DefaultTemplateLoader{}), nil
 	}
 	return nil, errors.New("invalid notification delivery service configuration")
 }
@@ -56,7 +56,7 @@ type BaseNotificationDeliveryService struct {
 	TemplateLoader TemplateLoader
 }
 
-func (s *BaseNotificationDeliveryService) GenerateContent(ctx context.Context, notificationCtx *NotificationContext,
+func (s *BaseNotificationDeliveryService) GenerateContent(notificationCtx *NotificationContext,
 	templateDefinition string) (string, error) {
 
 	tmpl, err := template.New("template").Parse(templateDefinition)
