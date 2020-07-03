@@ -8,6 +8,24 @@ import (
 	"time"
 )
 
+type MailgunDeliveryError struct {
+	id           string
+	response     string
+	errorMessage string
+}
+
+func (e MailgunDeliveryError) Error() string {
+	return fmt.Sprintf("error while delivering notification (ID: %s, Response: %s) - %s", e.id, e.response, e.errorMessage)
+}
+
+func NewMailgunDeliveryError(id, response, errorMessage string) error {
+	return MailgunDeliveryError{
+		id:           id,
+		response:     response,
+		errorMessage: errorMessage,
+	}
+}
+
 type MailgunNotificationDeliveryService struct {
 	base        BaseNotificationDeliveryService
 	Mailgun     mailgun.Mailgun
@@ -35,13 +53,11 @@ func NewMailgunNotificationDeliveryService(config MailgunConfiguration, template
 		opt.ApplyToMailgun(mg)
 	}
 
-	svc := &MailgunNotificationDeliveryService{
+	return &MailgunNotificationDeliveryService{
 		base:        BaseNotificationDeliveryService{TemplateLoader: templateLoader},
 		Mailgun:     mg,
 		SenderEmail: config.GetMailgunSenderEmail(),
 	}
-
-	return svc
 }
 
 func (s *MailgunNotificationDeliveryService) Send(ctx context.Context, notificationCtx *NotificationContext, templateName string) error {
@@ -72,6 +88,10 @@ func (s *MailgunNotificationDeliveryService) Send(ctx context.Context, notificat
 	defer cancel()
 
 	// Send the message with a 10 second timeout
-	_, _, err = s.Mailgun.Send(ctx, message)
-	return err
+	response, id, err := s.Mailgun.Send(ctx, message)
+	if err != nil {
+		return NewMailgunDeliveryError(id, response, err.Error())
+	}
+
+	return nil
 }
