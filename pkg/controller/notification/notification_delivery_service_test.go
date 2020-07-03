@@ -1,7 +1,6 @@
 package notification
 
 import (
-	"context"
 	"errors"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
@@ -117,7 +116,7 @@ func TestBaseNotificationDeliveryServiceGenerateContent(t *testing.T) {
 	t.Run("test content generation with notification context for user id", func(t *testing.T) {
 		// when
 		def := "hello, {{.UserID}}"
-		content, err := baseService.GenerateContent(context.Background(), nCtx, def)
+		content, err := baseService.GenerateContent(nCtx, def)
 
 		// then
 		require.NoError(t, err)
@@ -127,7 +126,7 @@ func TestBaseNotificationDeliveryServiceGenerateContent(t *testing.T) {
 	t.Run("test content generation with notification context for firstname lastname", func(t *testing.T) {
 		// when
 		def := "Dear {{.FirstName}} {{.LastName}},"
-		content, err := baseService.GenerateContent(context.Background(), nCtx, def)
+		content, err := baseService.GenerateContent(nCtx, def)
 
 		// then
 		require.NoError(t, err)
@@ -137,7 +136,7 @@ func TestBaseNotificationDeliveryServiceGenerateContent(t *testing.T) {
 	t.Run("test content generation with notification context for full email", func(t *testing.T) {
 		// when
 		def := "{{.FirstName}} {{.LastName}}<{{.Email}}>"
-		content, err := baseService.GenerateContent(context.Background(), nCtx, def)
+		content, err := baseService.GenerateContent(nCtx, def)
 
 		// then
 		require.NoError(t, err)
@@ -147,7 +146,7 @@ func TestBaseNotificationDeliveryServiceGenerateContent(t *testing.T) {
 	t.Run("test content generation with notification context for company name", func(t *testing.T) {
 		// when
 		def := "Increase developer productivity at {{.CompanyName}} today!"
-		content, err := baseService.GenerateContent(context.Background(), nCtx, def)
+		content, err := baseService.GenerateContent(nCtx, def)
 
 		// then
 		require.NoError(t, err)
