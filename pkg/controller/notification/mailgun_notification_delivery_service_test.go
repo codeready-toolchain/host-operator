@@ -16,14 +16,16 @@ func (o *MailgunAPIBaseOption) ApplyToMailgun(mg mailgun.Mailgun) {
 	mg.SetAPIBase(o.apiBase)
 }
 
-func NewMailguAPIBaseOption(url string) MailgunOption {
+func NewMailgunAPIBaseOption(url string) MailgunOption {
 	return &MailgunAPIBaseOption{apiBase: url}
 }
 
 func TestMailgunNotificationDeliveryService(t *testing.T) {
 	// given
 	mgs := mailgun.NewMockServer()
-	opt := NewMailguAPIBaseOption(mgs.URL())
+	mockServerOption := NewMailgunAPIBaseOption(mgs.URL())
+	invalidServerOption := NewMailgunAPIBaseOption("https://127.0.0.1:60000/v3")
+
 	mgConfig := NewMockMailgunConfiguration("mg.foo.com", "abcd12345", "noreply@foo.com")
 	notCtx := &NotificationContext{
 		UserID:      "jsmith123",
@@ -33,18 +35,68 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 		CompanyName: "Red Hat",
 	}
 
-	templateLoader := NewMockTemplateLoader(&notificationtemplates.NotificationTemplate{
-		Subject: "foo",
-		Content: "bar",
-		Name:    "test",
-	})
+	templateLoader := NewMockTemplateLoader(
+		&notificationtemplates.NotificationTemplate{
+			Subject: "foo",
+			Content: "bar",
+			Name:    "test",
+		},
+		&notificationtemplates.NotificationTemplate{
+			Subject: "Hi there, {{invalid_expression}}",
+			Content: "Content",
+			Name:    "invalid_subject",
+		},
+		&notificationtemplates.NotificationTemplate{
+			Subject: "Hi",
+			Content: "{{invalid_expression}}",
+			Name:    "invalid_content",
+		})
 
 	t.Run("test mailgun notification delivery service send", func(t *testing.T) {
 		// when
-		mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, opt)
+		mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, mockServerOption)
 		err := mgds.Send(context.Background(), notCtx, "test")
 
 		// then
 		require.NoError(t, err)
+	})
+
+	t.Run("test mailgun notification delivery service send fails", func(t *testing.T) {
+		// when
+		mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, invalidServerOption)
+		err := mgds.Send(context.Background(), notCtx, "test")
+
+		// then
+		require.Error(t, err)
+		require.IsType(t, MailgunDeliveryError{}, err)
+	})
+
+	t.Run("test mailgun notification delivery service invalid template", func(t *testing.T) {
+		// when
+		mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, mockServerOption)
+		err := mgds.Send(context.Background(), notCtx, "bar")
+
+		// then
+		require.Error(t, err)
+	})
+
+	t.Run("test mailgun notification delivery invalid subject template", func(t *testing.T) {
+		// when
+		mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, mockServerOption)
+		err := mgds.Send(context.Background(), notCtx, "invalid_subject")
+
+		// then
+		require.Error(t, err)
+		require.Equal(t, "template: template:1: function \"invalid_expression\" not defined", err.Error())
+	})
+
+	t.Run("test mailgun notification delivery invalid content template", func(t *testing.T) {
+		// when
+		mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, mockServerOption)
+		err := mgds.Send(context.Background(), notCtx, "invalid_content")
+
+		// then
+		require.Error(t, err)
+		require.Equal(t, "template: template:1: function \"invalid_expression\" not defined", err.Error())
 	})
 }
