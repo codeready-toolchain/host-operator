@@ -24,7 +24,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := NewFakeClient(t)
-	config := configuration.LoadConfig(cl)
+	config, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
 
 	t.Run("create with default values", func(t *testing.T) {

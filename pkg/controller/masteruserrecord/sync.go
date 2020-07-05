@@ -118,7 +118,10 @@ func (s *Synchronizer) synchronizeStatus() error {
 
 	// Align readiness even if the user account statuses were not changed.
 	// We need to do it to cleanup outdated errors (for example if the target cluster was unavailable) if any
-	s.alignReadiness()
+	_, err := s.alignReadiness()
+	if err != nil {
+		return err
+	}
 	s.logger.Info("updating MUR status")
 	return s.hostClient.Status().Update(context.TODO(), s.record)
 }

@@ -1,7 +1,6 @@
 package configuration_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -20,7 +19,9 @@ import (
 // please ensure to properly unset envionment variables using
 // UnsetEnvVarAndRestore().
 func getDefaultConfiguration(t *testing.T) *configuration.Config {
-	return configuration.LoadConfig(test.NewFakeClient(t))
+	config, err := configuration.LoadConfig(test.NewFakeClient(t))
+	require.NoError(t, err)
+	return config
 }
 
 func TestNew(t *testing.T) {
@@ -62,11 +63,15 @@ func TestLoadFromSecret(t *testing.T) {
 	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
 	defer restore()
 	t.Run("default", func(t *testing.T) {
+		// when
 		config := getDefaultConfiguration(t)
+
+		// then
 		assert.Equal(t, "", config.GetMailgunDomain())
 		assert.Equal(t, "", config.GetMailgunAPIKey())
 	})
 	t.Run("env overwrite", func(t *testing.T) {
+		// given
 		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_SECRET_NAME", "test-secret")
 		defer restore()
 
@@ -82,14 +87,32 @@ func TestLoadFromSecret(t *testing.T) {
 			},
 		}
 
-		cl := test.NewFakeClient(t)
-		err := cl.Create(context.TODO(), secret)
-		require.NoError(t, err)
+		cl := test.NewFakeClient(t, secret)
 
-		config := configuration.LoadConfig(cl)
+		// when
+		config, err := configuration.LoadConfig(cl)
+
+		// then
+		require.NoError(t, err)
 		assert.Equal(t, "test-domain", config.GetMailgunDomain())
 		assert.Equal(t, "test-api-key", config.GetMailgunAPIKey())
 		assert.Equal(t, "test-sender-email", config.GetMailgunSenderEmail())
+	})
+
+	t.Run("secret not found", func(t *testing.T) {
+		// given
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_SECRET_NAME", "test-secret")
+		defer restore()
+
+		cl := test.NewFakeClient(t)
+
+		// when
+		config, err := configuration.LoadConfig(cl)
+
+		// then
+		require.Error(t, err)
+		assert.Equal(t, "secrets \"test-secret\" not found", err.Error())
+		assert.Nil(t, config)
 	})
 }
 

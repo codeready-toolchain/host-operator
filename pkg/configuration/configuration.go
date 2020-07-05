@@ -81,9 +81,12 @@ func initConfig() *Config {
 	return &c
 }
 
-func LoadConfig(cl client.Client) *Config {
-	loadFromSecret(cl)
-	return initConfig()
+func LoadConfig(cl client.Client) (*Config, error) {
+	err := loadFromSecret(cl)
+	if err != nil {
+		return nil, err
+	}
+	return initConfig(), nil
 }
 
 // loadFromSecret retrieves the host operator secret
