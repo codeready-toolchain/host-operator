@@ -23,6 +23,12 @@ const (
 
 	// RegServiceEnvPrefix will be used for registration service environment variable name prefixing.
 	RegServiceEnvPrefix = "REGISTRATION_SERVICE"
+
+	// ToolchainStatusName specifies the name of the toolchain status resource that provides information about the toolchain components in this cluster
+	ToolchainStatusName = "toolchain.status"
+
+	// DefaultToolchainStatusName the default name for the toolchain status resource created during initialization of the operator
+	DefaultToolchainStatusName = "toolchain-status"
 )
 
 // host-operator constants
@@ -126,9 +132,15 @@ func loadFromSecret(cl client.Client) error {
 
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
+	c.host.SetDefault(ToolchainStatusName, DefaultToolchainStatusName)
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMock)
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, "24h")
+}
+
+// GetToolchainStatusName returns the configured name of the member status resource
+func (c *Config) GetToolchainStatusName() string {
+	return c.host.GetString(ToolchainStatusName)
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.

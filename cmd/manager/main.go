@@ -13,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainstatus"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/version"
@@ -166,6 +167,15 @@ func main() {
 			log.Error(errors.New("timed out waiting for caches to sync"), "")
 			os.Exit(1)
 		}
+
+		// create or update Toolchain status during the operator deployment
+		log.Info("Creating/updating the ToolchainStatus resource")
+		toolchainStatusName := crtConfig.GetToolchainStatusName()
+		if err := toolchainstatus.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, toolchainStatusName); err != nil {
+			log.Error(err, "cannot create/update ToolchainStatus resource")
+			os.Exit(1)
+		}
+		log.Info("Created/updated the ToolchainStatus resource")
 
 		// create or update Registration service during the operator deployment
 		log.Info("Creating/updating the RegistrationService resource")
