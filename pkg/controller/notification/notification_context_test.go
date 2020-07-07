@@ -1,7 +1,6 @@
 package notification
 
 import (
-	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"testing"
@@ -38,7 +37,7 @@ func TestNotificationContext(t *testing.T) {
 
 	t.Run("user found", func(t *testing.T) {
 		// when
-		notificationCtx, err := NewNotificationContext(context.Background(), client, userSignup.Name, operatorNamespace)
+		notificationCtx, err := NewNotificationContext(client, userSignup.Name, operatorNamespace)
 
 		// then
 		require.NoError(t, err)
@@ -52,11 +51,20 @@ func TestNotificationContext(t *testing.T) {
 
 	t.Run("user not found", func(t *testing.T) {
 		// when
-		_, err := NewNotificationContext(context.Background(), client, "other", operatorNamespace)
+		_, err := NewNotificationContext(client, "other", operatorNamespace)
 
 		// then
 		require.Error(t, err)
 		require.Equal(t, "usersignups.toolchain.dev.openshift.com \"other\" not found", err.Error())
+	})
+
+	t.Run("full email address", func(t *testing.T) {
+		// when
+		notificationCtx, err := NewNotificationContext(client, userSignup.Name, operatorNamespace)
+
+		// then
+		require.NoError(t, err)
+		require.Equal(t, "John Smith<jsmith@redhat.com>", notificationCtx.FullEmailAddress())
 	})
 }
 

@@ -42,9 +42,6 @@ const (
 	// UserApprovalPolicyAutomatic defines that the new users should be approved automatically
 	UserApprovalPolicyAutomatic = "automatic"
 
-	// NotificationDeliveryServiceMock is the notification delivery service to use for testing
-	NotificationDeliveryServiceMock = "mock"
-
 	// NotificationDeliveryServiceMailgun is the notification delivery service to use during production
 	NotificationDeliveryServiceMailgun = "mailgun"
 
@@ -130,7 +127,7 @@ func loadFromSecret(cl client.Client) error {
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
-	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMock)
+	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, "24h")
 }
 
