@@ -125,36 +125,34 @@ spec:
                 deployment:
                   description: The status of the host operator's deployment
                   properties:
-                    deploymentConditions:
+                    conditions:
                       description: 'Conditions is an array of current deployment status
                         conditions for a host operator Supported condition types:
                         Available, Progressing'
                       items:
-                        description: DeploymentCondition describes the state of a
-                          deployment at a certain point.
                         properties:
                           lastTransitionTime:
-                            description: Last time the condition transitioned from
-                              one status to another.
+                            description: Last time the condition transit from one
+                              status to another.
                             format: date-time
                             type: string
-                          lastUpdateTime:
-                            description: The last time this condition was updated.
+                          lastUpdatedTime:
+                            description: Last time the condition was updated
                             format: date-time
                             type: string
                           message:
-                            description: A human readable message indicating details
-                              about the transition.
+                            description: Human readable message indicating details
+                              about last transition.
                             type: string
                           reason:
-                            description: The reason for the condition's last transition.
+                            description: (brief) reason for the condition's last transition.
                             type: string
                           status:
                             description: Status of the condition, one of True, False,
                               Unknown.
                             type: string
                           type:
-                            description: Type of deployment condition.
+                            description: Type of condition
                             type: string
                         required:
                         - status
@@ -407,42 +405,156 @@ spec:
             registrationService:
               description: RegistrationService is the status of the registration service
               properties:
-                conditions:
-                  description: 'Conditions is an array of current host operator status
-                    conditions Supported condition types: ConditionReady'
-                  items:
-                    properties:
-                      lastTransitionTime:
-                        description: Last time the condition transit from one status
-                          to another.
-                        format: date-time
-                        type: string
-                      lastUpdatedTime:
-                        description: Last time the condition was updated
-                        format: date-time
-                        type: string
-                      message:
-                        description: Human readable message indicating details about
-                          last transition.
-                        type: string
-                      reason:
-                        description: (brief) reason for the condition's last transition.
-                        type: string
-                      status:
-                        description: Status of the condition, one of True, False,
-                          Unknown.
-                        type: string
-                      type:
-                        description: Type of condition
-                        type: string
-                    required:
-                    - status
-                    - type
-                    type: object
-                  type: array
-                  x-kubernetes-list-map-keys:
-                  - type
-                  x-kubernetes-list-type: map
+                deployment:
+                  description: Deployment is the status of the registration service's
+                    deployment
+                  properties:
+                    conditions:
+                      description: 'Conditions is an array of current deployment status
+                        conditions for a host operator Supported condition types:
+                        Available, Progressing'
+                      items:
+                        properties:
+                          lastTransitionTime:
+                            description: Last time the condition transit from one
+                              status to another.
+                            format: date-time
+                            type: string
+                          lastUpdatedTime:
+                            description: Last time the condition was updated
+                            format: date-time
+                            type: string
+                          message:
+                            description: Human readable message indicating details
+                              about last transition.
+                            type: string
+                          reason:
+                            description: (brief) reason for the condition's last transition.
+                            type: string
+                          status:
+                            description: Status of the condition, one of True, False,
+                              Unknown.
+                            type: string
+                          type:
+                            description: Type of condition
+                            type: string
+                        required:
+                        - status
+                        - type
+                        type: object
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - type
+                      x-kubernetes-list-type: map
+                    name:
+                      description: The host operator deployment name
+                      type: string
+                  required:
+                  - name
+                  type: object
+                health:
+                  description: Health provides health status of the registration service
+                  properties:
+                    alive:
+                      type: string
+                    buildTime:
+                      type: string
+                    conditions:
+                      description: 'Conditions is an array of status conditions for
+                        the health of the registration service Supported condition
+                        types: ConditionReady'
+                      items:
+                        properties:
+                          lastTransitionTime:
+                            description: Last time the condition transit from one
+                              status to another.
+                            format: date-time
+                            type: string
+                          lastUpdatedTime:
+                            description: Last time the condition was updated
+                            format: date-time
+                            type: string
+                          message:
+                            description: Human readable message indicating details
+                              about last transition.
+                            type: string
+                          reason:
+                            description: (brief) reason for the condition's last transition.
+                            type: string
+                          status:
+                            description: Status of the condition, one of True, False,
+                              Unknown.
+                            type: string
+                          type:
+                            description: Type of condition
+                            type: string
+                        required:
+                        - status
+                        - type
+                        type: object
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - type
+                      x-kubernetes-list-type: map
+                    environment:
+                      type: string
+                    revision:
+                      type: string
+                    startTime:
+                      type: string
+                  required:
+                  - alive
+                  - buildTime
+                  - environment
+                  - revision
+                  - startTime
+                  type: object
+                registrationServiceResources:
+                  description: RegistrationServiceResources is the status for resources
+                    created for the registration service
+                  properties:
+                    conditions:
+                      description: 'Conditions is an array of current registration
+                        service resource status conditions Supported condition types:
+                        Deployed, Deploying, DeployingFailed'
+                      items:
+                        properties:
+                          lastTransitionTime:
+                            description: Last time the condition transit from one
+                              status to another.
+                            format: date-time
+                            type: string
+                          lastUpdatedTime:
+                            description: Last time the condition was updated
+                            format: date-time
+                            type: string
+                          message:
+                            description: Human readable message indicating details
+                              about last transition.
+                            type: string
+                          reason:
+                            description: (brief) reason for the condition's last transition.
+                            type: string
+                          status:
+                            description: Status of the condition, one of True, False,
+                              Unknown.
+                            type: string
+                          type:
+                            description: Type of condition
+                            type: string
+                        required:
+                        - status
+                        - type
+                        type: object
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - type
+                      x-kubernetes-list-type: map
+                  type: object
+              required:
+              - deployment
+              - health
+              - registrationServiceResources
               type: object
           required:
           - hostOperator
