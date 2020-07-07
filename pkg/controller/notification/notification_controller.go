@@ -56,7 +56,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, config *configuration.Config) (reconcile.Reconciler, error) {
-	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), config)
+	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), config, config)
 
 	svc, err := factory.CreateNotificationDeliveryService()
 	if err != nil {
@@ -112,13 +112,14 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 		}, nil
 	}
 
-	// Send the notification
-	notCtx, err := NewNotificationContext(context.Background(), r.client, notification.Spec.UserID, request.Namespace)
+	// Send the notification - first create the notification context
+	notCtx, err := NewNotificationContext(r.client, notification.Spec.UserID, request.Namespace)
 	if err != nil {
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
 			r.setStatusNotificationContextError, err, "failed to create notification context")
 	}
 
+	// Send the notification via the configured delivery service
 	err = r.deliveryService.Send(context.Background(), notCtx, notification.Spec.Template)
 	if err != nil {
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
