@@ -391,12 +391,10 @@ spec:
                         - revision
                         - version
                         type: object
-                    required:
-                    - hostConnection
-                    - memberOperator
                     type: object
                 required:
                 - clusterID
+                - memberStatus
                 type: object
               type: array
               x-kubernetes-list-map-keys:

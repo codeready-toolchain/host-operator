@@ -75,6 +75,7 @@ func Add(mgr manager.Manager, crtConfig *crtCfg.Config) error {
 func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) *ReconcileToolchainStatus {
 	return &ReconcileToolchainStatus{
 		client:         mgr.GetClient(),
+		httpClientImpl: &http.Client{},
 		scheme:         mgr.GetScheme(),
 		getHostCluster: cluster.GetHostCluster,
 		config:         crtConfig,
@@ -101,11 +102,16 @@ func add(mgr manager.Manager, r *ReconcileToolchainStatus) error {
 // blank assignment to verify that ReconcileToolchainStatus implements reconcile.Reconciler
 var _ reconcile.Reconciler = &ReconcileToolchainStatus{}
 
+type httpClient interface {
+	Get(url string) (*http.Response, error)
+}
+
 // ReconcileToolchainStatus reconciles a ToolchainStatus object
 type ReconcileToolchainStatus struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client         client.Client
+	httpClientImpl httpClient
 	scheme         *runtime.Scheme
 	getHostCluster func() (*cluster.FedCluster, bool)
 	config         *crtCfg.Config
@@ -141,8 +147,10 @@ func (r *ReconcileToolchainStatus) Reconcile(request reconcile.Request) (reconci
 
 type statusHandler struct {
 	name         statusComponentTag
-	handleStatus func(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error
+	handleStatus statusHandlerFunc
 }
+
+type statusHandlerFunc func(logr.Logger, *toolchainv1alpha1.ToolchainStatus) error
 
 // aggregateAndUpdateStatus runs each of the status handlers. Each status handler reports readiness for a toolchain component. If any
 // component status is not ready then it will set the condition of the top-level status of the ToolchainStatus resource to not ready.
@@ -152,9 +160,9 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 	memberStatusHandler := statusHandler{name: memberConnections, handleStatus: r.memberHandleStatus}
 
 	statusHandlers := []statusHandler{
-		registrationServiceStatusHandler,
 		hostOperatorStatusHandler,
 		memberStatusHandler,
+		registrationServiceStatusHandler,
 	}
 
 	// track components that are not ready
@@ -208,22 +216,25 @@ func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logge
 // registrationServiceHandleStatus retrieves the Deployment for the registration service and adds its status to ToolchainStatus. It returns an error
 // if any of the conditions have a status that is not 'true'
 func (r *ReconcileToolchainStatus) registrationServiceHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) (err error) {
-	// look up status of registrationservice resource status
-	resourceErr := addRegistrationServiceResourceStatus(toolchainStatus, r.client)
-	if resourceErr != nil {
-		err = resourceErr
+
+	s := regServiceSubstatusHandler{
+		controllerClient: r.client,
+		httpClientImpl:   r.httpClientImpl,
 	}
 
-	// add registrationservice deployment status
-	deploymentErr := addRegistrationServiceDeploymentStatus(toolchainStatus, r.client)
-	if deploymentErr != nil {
-		err = deploymentErr
+	// gather the functions for handling registration service status eg. resource templates, deployment, health endpoint
+	substatusHandlers := []statusHandlerFunc{
+		s.addRegistrationServiceResourceStatus,
+		s.addRegistrationServiceDeploymentStatus,
+		s.addRegistrationServiceHealthStatus,
 	}
 
-	// add health endpoint status
-	healthErr := addRegistrationServiceHealthStatus(toolchainStatus, r.client)
-	if healthErr != nil {
-		err = healthErr
+	// call each of the registration service status handlers
+	for _, handler := range substatusHandlers {
+		handlerErr := handler(reqLogger, toolchainStatus)
+		if handlerErr != nil {
+			err = handlerErr
+		}
 	}
 
 	return err
@@ -256,9 +267,8 @@ func (r *ReconcileToolchainStatus) memberHandleStatus(reqLogger logr.Logger, too
 
 		// take only the overall conditions from the memberstatus (ie. don't include status of member operator, host connection, etc.) in order to keep readability.
 		// member status details can be viewed on the member cluster directly.
-		// memberStatus := toolchainv1alpha1.MemberStatusStatus{Conditions: memberStatusObj.Status.Conditions}
-		// members = append(members, memberResult(cluster, memberStatus))
-		members = append(members, memberResult(cluster, memberStatusObj.Status))
+		memberStatus := toolchainv1alpha1.MemberStatusStatus{Conditions: memberStatusObj.Status.Conditions}
+		members = append(members, memberResult(cluster, memberStatus))
 	}
 
 	// add member cluster statuses to toolchainstatus
@@ -314,22 +324,32 @@ func memberResult(cluster *cluster.FedCluster, memberStatus toolchainv1alpha1.Me
 	}
 }
 
-func addRegistrationServiceResourceStatus(toolchainStatus *toolchainv1alpha1.ToolchainStatus, client client.Client) error {
+type regServiceSubstatusHandler struct {
+	httpClientImpl   httpClient
+	controllerClient client.Client
+}
+
+// handles the RegistrationService.RegistrationServiceResources part of the toolchainstatus
+func (s regServiceSubstatusHandler) addRegistrationServiceResourceStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+	// get the registrationservice resource
 	registrationServiceName := types.NamespacedName{Namespace: toolchainStatus.Namespace, Name: registrationservice.ResourceName}
 	registrationService := &toolchainv1alpha1.RegistrationService{}
-	err := client.Get(context.TODO(), registrationServiceName, registrationService)
+	err := s.controllerClient.Get(context.TODO(), registrationServiceName, registrationService)
 	if err != nil {
 		err = errs.Wrap(err, errMsgCannotGetRegistrationService)
 		errCondition := status.NewComponentErrorCondition(reasonNotFound, err.Error())
 		toolchainStatus.Status.RegistrationService.RegistrationServiceResources.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return err
 	}
+
+	// use the registrationservice resource directly in the toolchainstatus
 	toolchainStatus.Status.RegistrationService.RegistrationServiceResources.Conditions = registrationService.Status.Conditions
 	return nil
 }
 
-func addRegistrationServiceDeploymentStatus(toolchainStatus *toolchainv1alpha1.ToolchainStatus, client client.Client) error {
-	deploymentConditions, err := status.GetDeploymentStatusConditions(client, registrationservice.ResourceName, toolchainStatus.Namespace)
+// handles the RegistrationService.Deployment part of the toolchainstatus
+func (s regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+	deploymentConditions, err := status.GetDeploymentStatusConditions(s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
 	if err != nil {
 		err = errs.Wrap(err, errMsgCannotGetRegistrationServiceDeploymentConditions)
 		errCondition := status.NewComponentErrorCondition(reasonNotFound, err.Error())
@@ -342,9 +362,11 @@ func addRegistrationServiceDeploymentStatus(toolchainStatus *toolchainv1alpha1.T
 	return nil
 }
 
-func addRegistrationServiceHealthStatus(toolchainStatus *toolchainv1alpha1.ToolchainStatus, client client.Client) error {
-	registrationServiceHealthURI := "http://registration-service/" + registrationServiceHealthEndpoint
-	resp, err := http.Get(registrationServiceHealthURI)
+// handles the RegistrationService.Health part of the toolchainstatus
+func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+	// get the JSON payload from the health endpoint
+	registrationServiceHealthURL := "http://registration-service/" + registrationServiceHealthEndpoint
+	resp, err := s.httpClientImpl.Get(registrationServiceHealthURL)
 	if err != nil {
 		err = errs.Wrap(err, errMsgRegistrationServiceNotReady)
 		errCondition := status.NewComponentErrorCondition(reasonNotFound, err.Error())
@@ -352,6 +374,7 @@ func addRegistrationServiceHealthStatus(toolchainStatus *toolchainv1alpha1.Toolc
 		return err
 	}
 
+	// decode the response to JSON
 	defer resp.Body.Close()
 	healthValues := status.Health{}
 	err = json.NewDecoder(resp.Body).Decode(&healthValues)
@@ -362,6 +385,7 @@ func addRegistrationServiceHealthStatus(toolchainStatus *toolchainv1alpha1.Toolc
 		return err
 	}
 
+	// get the health status values
 	healthStatus := toolchainv1alpha1.RegistrationServiceHealth{
 		Alive:       fmt.Sprintf("%t", healthValues.Alive),
 		BuildTime:   healthValues.BuildTime,
@@ -369,6 +393,8 @@ func addRegistrationServiceHealthStatus(toolchainStatus *toolchainv1alpha1.Toolc
 		Revision:    healthValues.Revision,
 		StartTime:   healthValues.StartTime,
 	}
+
+	// add the health status to the toolchainstatus
 	toolchainStatus.Status.RegistrationService.Health = healthStatus
 	if !healthValues.Alive {
 		errCondition := status.NewComponentErrorCondition(reasonUnhealthy, errMsgRegistrationServiceHealthStatusUnhealthy)
