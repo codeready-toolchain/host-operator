@@ -3,6 +3,7 @@ package notification
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -34,10 +35,12 @@ func TestNotificationContext(t *testing.T) {
 		},
 	}
 	client := prepareReconcile(t, userSignup.Name, userSignup)
+	config, err := configuration.LoadConfig(test.NewFakeClient(t))
+	require.NoError(t, err)
 
 	t.Run("user found", func(t *testing.T) {
 		// when
-		notificationCtx, err := NewNotificationContext(client, userSignup.Name, operatorNamespace)
+		notificationCtx, err := NewNotificationContext(client, userSignup.Name, operatorNamespace, config)
 
 		// then
 		require.NoError(t, err)
@@ -45,13 +48,14 @@ func TestNotificationContext(t *testing.T) {
 		require.Equal(t, userSignup.Name, notificationCtx.UserID)
 		require.Equal(t, userSignup.Spec.GivenName, notificationCtx.FirstName)
 		require.Equal(t, userSignup.Spec.FamilyName, notificationCtx.LastName)
-		require.Equal(t, userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey], notificationCtx.Email)
+		require.Equal(t, userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey], notificationCtx.UserEmail)
 		require.Equal(t, userSignup.Spec.Company, notificationCtx.CompanyName)
+		require.Equal(t, "https://registration.crt-placeholder.com", notificationCtx.RegistrationURL)
 	})
 
 	t.Run("user not found", func(t *testing.T) {
 		// when
-		_, err := NewNotificationContext(client, "other", operatorNamespace)
+		_, err := NewNotificationContext(client, "other", operatorNamespace, nil)
 
 		// then
 		require.Error(t, err)
@@ -60,7 +64,7 @@ func TestNotificationContext(t *testing.T) {
 
 	t.Run("full email address", func(t *testing.T) {
 		// when
-		notificationCtx, err := NewNotificationContext(client, userSignup.Name, operatorNamespace)
+		notificationCtx, err := NewNotificationContext(client, userSignup.Name, operatorNamespace, nil)
 
 		// then
 		require.NoError(t, err)

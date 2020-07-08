@@ -113,7 +113,7 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Send the notification - first create the notification context
-	notCtx, err := NewNotificationContext(r.client, notification.Spec.UserID, request.Namespace)
+	notCtx, err := NewNotificationContext(r.client, notification.Spec.UserID, request.Namespace, r.config)
 	if err != nil {
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
 			r.setStatusNotificationContextError, err, "failed to create notification context")
@@ -123,7 +123,7 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 	err = r.deliveryService.Send(context.Background(), notCtx, notification.Spec.Template)
 	if err != nil {
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
-			r.setStatusNotificationDeliveryError, err, "failed to deliver notification")
+			r.setStatusNotificationDeliveryError, err, "failed to send notification")
 	}
 
 	reqLogger.Info("Notification has been sent")

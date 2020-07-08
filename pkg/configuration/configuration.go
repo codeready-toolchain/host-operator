@@ -58,6 +58,9 @@ const (
 
 	// varMailgunSenderEmail specifies the host operator mailgun senders email
 	varMailgunSenderEmail = "mailgun.sender.email"
+
+	// varRegistrationServiceURL is the URL used to access the registration service
+	varRegistrationServiceURL = "registration.service.url"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -129,6 +132,7 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, "24h")
+	c.host.SetDefault(varRegistrationServiceURL, "https://registration.crt-placeholder.com")
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
@@ -159,6 +163,11 @@ func (c *Config) GetMailgunAPIKey() string {
 // GetMailgunSenderEmail returns the host operator mailgun sender's email address
 func (c *Config) GetMailgunSenderEmail() string {
 	return c.host.GetString(varMailgunSenderEmail)
+}
+
+// GetRegistrationServiceURL returns the URL of the registration service
+func (c *Config) GetRegistrationServiceURL() string {
+	return c.host.GetString(varRegistrationServiceURL)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
