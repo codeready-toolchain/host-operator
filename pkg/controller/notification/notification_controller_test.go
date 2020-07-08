@@ -3,6 +3,8 @@ package notification
 import (
 	"context"
 	"fmt"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
+	"github.com/mailgun/mailgun-go/v4"
 	"testing"
 	"time"
 
@@ -32,7 +34,8 @@ func TestNotificationSuccess(t *testing.T) {
 		// given
 		notification := newNotification("jane", "")
 		notification.Status.Conditions = []v1alpha1.Condition{toBeSent()}
-		controller, request, cl := newController(t, notification)
+		ds, _ := mockDeliveryService(defaultTemplateLoader())
+		controller, request, cl := newController(t, notification, ds)
 
 		// when
 		result, err := controller.Reconcile(request)
@@ -50,7 +53,8 @@ func TestNotificationSuccess(t *testing.T) {
 		notification := newNotification("jane", "")
 		notification.Status.Conditions = []v1alpha1.Condition{toBeSent()}
 		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
-		controller, request, cl := newController(t, notification)
+		ds, _ := mockDeliveryService(defaultTemplateLoader())
+		controller, request, cl := newController(t, notification, ds)
 
 		// when
 		result, err := controller.Reconcile(request)
@@ -72,7 +76,8 @@ func TestNotificationSentFailure(t *testing.T) {
 		notification.Status.Conditions = []v1alpha1.Condition{toBeSent()}
 		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 
-		controller, request, cl := newController(t, notification)
+		ds, _ := mockDeliveryService(defaultTemplateLoader())
+		controller, request, cl := newController(t, notification, ds)
 		cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("error")
 		}
@@ -86,6 +91,53 @@ func TestNotificationSentFailure(t *testing.T) {
 
 		AssertThatNotificationHasCondition(t, cl, notification.Name, toBeSent(), toBeDeletionError("unable to delete Notification object 'notification-name': error"))
 	})
+}
+
+func TestNotificationDelivery(t *testing.T) {
+	// given
+	ds, _ := mockDeliveryService(defaultTemplateLoader())
+
+	t.Run("test notification delivery ok", func(t *testing.T) {
+		// given
+		userSignup := &v1alpha1.UserSignup{
+			ObjectMeta: newObjectMeta("abc123", "foo@redhat.com"),
+			Spec: v1alpha1.UserSignupSpec{
+				Username:   "foo@redhat.com",
+				GivenName:  "Foo",
+				FamilyName: "Bar",
+				Company:    "Red Hat",
+			},
+		}
+		notification := newNotification("abc123", "test")
+		controller, request, _ := newController(t, notification, ds, userSignup)
+
+		// when
+		_, err := controller.Reconcile(request)
+
+		// then
+		require.NoError(t, err)
+	})
+}
+
+func defaultTemplateLoader() TemplateLoader {
+	templateLoader := NewMockTemplateLoader(
+		&notificationtemplates.NotificationTemplate{
+			Subject: "foo",
+			Content: "bar",
+			Name:    "test",
+		})
+
+	return templateLoader
+}
+
+func mockDeliveryService(templateLoader TemplateLoader) (NotificationDeliveryService, mailgun.MockServer) {
+	mgs := mailgun.NewMockServer()
+	mockServerOption := NewMailgunAPIBaseOption(mgs.URL())
+
+	mgConfig := NewMockMailgunConfiguration("mg.foo.com", "abcd12345", "noreply@foo.com")
+
+	mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, mockServerOption)
+	return mgds, mgs
 }
 
 func AssertThatNotificationIsDeleted(t *testing.T, cl client.Client, name string) {
@@ -140,17 +192,20 @@ func newNotification(userID, template string, options ...notificationOption) *v1
 	return notification
 }
 
-func newController(t *testing.T, notification *v1alpha1.Notification, initObjs ...runtime.Object) (*ReconcileNotification, reconcile.Request, *test.FakeClient) {
+func newController(t *testing.T, notification *v1alpha1.Notification, deliveryService NotificationDeliveryService,
+	initObjs ...runtime.Object) (*ReconcileNotification, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, append(initObjs, notification)...)
 	config, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
+
 	controller := &ReconcileNotification{
-		client: cl,
-		scheme: s,
-		config: config,
+		client:          cl,
+		scheme:          s,
+		config:          config,
+		deliveryService: deliveryService,
 	}
 	request := reconcile.Request{
 		NamespacedName: test.NamespacedName(test.HostOperatorNs, notification.Name),
