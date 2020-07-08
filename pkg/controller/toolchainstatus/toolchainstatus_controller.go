@@ -62,7 +62,7 @@ type statusComponentTag string
 const (
 	registrationService statusComponentTag = "registrationService"
 	hostOperator        statusComponentTag = "hostOperator"
-	memberConnections   statusComponentTag = "memberConnections"
+	memberConnections   statusComponentTag = "members"
 )
 
 // Add creates a new ToolchainStatus Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -242,23 +242,27 @@ func (r *ReconcileToolchainStatus) registrationServiceHandleStatus(reqLogger log
 
 // memberHandleStatus retrieves the status of member clusters and adds them to ToolchainStatus. It returns an error
 // if any of the conditions have a status that is not 'true' or if no member clusters are found.
-func (r *ReconcileToolchainStatus) memberHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func (r *ReconcileToolchainStatus) memberHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) (componentError error) {
 	// look up member clusters
 	memberClusters := cluster.GetMemberClusters()
 	members := []toolchainv1alpha1.Member{}
 	for _, cluster := range memberClusters {
 		memberClient := cluster.Client
 		if memberClient == nil {
-			msg := errs.Wrap(fmt.Errorf(errMsgCannotGetMemberStatus), "member cluster does not have a client assigned")
-			notFoundCondition := status.NewComponentErrorCondition(reasonNotFound, msg.Error())
+			// there is no client for the member cluster, create a status condition and add it to this member's status
+			wrappedErr := errs.Wrap(fmt.Errorf(errMsgCannotGetMemberStatus), "member cluster does not have a client assigned")
+			componentError = wrappedErr
+			notFoundCondition := status.NewComponentErrorCondition(reasonNotFound, wrappedErr.Error())
 			memberStatus := customMemberStatus(*notFoundCondition)
 			members = append(members, memberResult(cluster, memberStatus))
 			continue
 		}
 		memberStatusObj := &toolchainv1alpha1.MemberStatus{}
-		err := memberClient.Get(context.TODO(), types.NamespacedName{cluster.OperatorNamespace, memberStatusName}, memberStatusObj)
+		err := memberClient.Get(context.TODO(), types.NamespacedName{Namespace: cluster.OperatorNamespace, Name: memberStatusName}, memberStatusObj)
 		if err != nil {
+			// couldn't find the memberstatus resource on the member cluster, create a status condition and add it to this member's status
 			wrappedErr := errs.Wrap(err, fmt.Sprintf("cannot find memberstatus resource in namespace %s", cluster.OperatorNamespace))
+			componentError = wrappedErr
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(reasonNotFound, wrappedErr.Error())
 			memberStatus := customMemberStatus(*memberStatusNotFoundCondition)
 			members = append(members, memberResult(cluster, memberStatus))
@@ -268,12 +272,18 @@ func (r *ReconcileToolchainStatus) memberHandleStatus(reqLogger logr.Logger, too
 		// take only the overall conditions from the memberstatus (ie. don't include status of member operator, host connection, etc.) in order to keep readability.
 		// member status details can be viewed on the member cluster directly.
 		memberStatus := toolchainv1alpha1.MemberStatusStatus{Conditions: memberStatusObj.Status.Conditions}
+		for _, condition := range memberStatusObj.Status.Conditions {
+			if condition.Type == toolchainv1alpha1.ConditionReady && condition.Status != "True" {
+				// the existing memberstatus condition is added to the toolchainstatus but the condition is not ready so set the component error to bubble up the error to the overall toolchain status
+				componentError = errs.Wrap(fmt.Errorf(condition.Message), fmt.Sprintf("member cluster %s not ready", cluster.Name))
+			}
+		}
 		members = append(members, memberResult(cluster, memberStatus))
 	}
 
 	// add member cluster statuses to toolchainstatus
 	toolchainStatus.Status.Members = members
-	return nil
+	return componentError
 }
 
 // updateStatusConditions updates Member status conditions with the new conditions
