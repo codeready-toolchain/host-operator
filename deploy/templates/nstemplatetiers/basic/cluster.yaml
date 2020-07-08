@@ -32,7 +32,7 @@ objects:
   metadata:
     name: ${USERNAME}-dev
   spec:
-    timeoutSeconds: 2700
+    timeoutSeconds: 60
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
@@ -44,7 +44,7 @@ objects:
   metadata:
     name: ${USERNAME}-stage
   spec:
-    timeoutSeconds: 2700
+    timeoutSeconds: 30
 parameters:
 - name: USERNAME
   required: true
