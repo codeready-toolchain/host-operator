@@ -44,25 +44,18 @@ const (
 	registrationServiceHealthEndpoint = "/api/v1/health"
 )
 
-// error messages & reasons
+// error messages
 const (
-	reasonNotFound  = "NotFound"
-	reasonUnhealthy = "Unhealthy"
-
-	errMsgCannotGetRegistrationService                     = "unable to get the registrationservice resource"
-	errMsgCannotGetRegistrationServiceDeploymentConditions = "unable to determine the registration service deployment status"
-	errMsgRegistrationServiceNotReady                      = "the registration service is not ready"
-	errMsgRegistrationServiceHealthStatusUnhealthy         = "the registration service health endpoint is reporting an unhealthy status"
-
-	errMsgCannotGetMemberStatus = "unable to get the member cluster status"
+	errMsgRegistrationServiceNotReady              = "the registration service is not ready"
+	errMsgRegistrationServiceHealthStatusUnhealthy = "the registration service health endpoint is reporting an unhealthy status"
 )
 
 type statusComponentTag string
 
 const (
-	registrationService statusComponentTag = "registrationService"
-	hostOperator        statusComponentTag = "hostOperator"
-	memberConnections   statusComponentTag = "members"
+	registrationServiceTag statusComponentTag = "registrationService"
+	hostOperatorTag        statusComponentTag = "hostOperator"
+	memberConnectionsTag   statusComponentTag = "members"
 )
 
 // Add creates a new ToolchainStatus Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -77,7 +70,7 @@ func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) *ReconcileTool
 		client:         mgr.GetClient(),
 		httpClientImpl: &http.Client{},
 		scheme:         mgr.GetScheme(),
-		getHostCluster: cluster.GetHostCluster,
+		getMembersFunc: cluster.GetMemberClusters,
 		config:         crtConfig,
 	}
 }
@@ -113,7 +106,7 @@ type ReconcileToolchainStatus struct {
 	client         client.Client
 	httpClientImpl httpClient
 	scheme         *runtime.Scheme
-	getHostCluster func() (*cluster.FedCluster, bool)
+	getMembersFunc cluster.GetMemberClustersFunc
 	config         *crtCfg.Config
 }
 
@@ -155,14 +148,16 @@ type statusHandlerFunc func(logr.Logger, *toolchainv1alpha1.ToolchainStatus) err
 // aggregateAndUpdateStatus runs each of the status handlers. Each status handler reports readiness for a toolchain component. If any
 // component status is not ready then it will set the condition of the top-level status of the ToolchainStatus resource to not ready.
 func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
-	hostOperatorStatusHandler := statusHandler{name: hostOperator, handleStatus: r.hostOperatorHandleStatus}
-	registrationServiceStatusHandler := statusHandler{name: registrationService, handleStatus: r.registrationServiceHandleStatus}
-	memberStatusHandler := statusHandler{name: memberConnections, handleStatus: r.memberHandleStatus}
+
+	// instantiate an instance of a member handler that has a function to retrieve the list of member clusters
+	hostOperatorStatusHandlerFunc := statusHandler{name: hostOperatorTag, handleStatus: r.hostOperatorHandleStatus}
+	registrationServiceStatusHandlerFunc := statusHandler{name: registrationServiceTag, handleStatus: r.registrationServiceHandleStatus}
+	memberStatusHandlerFunc := statusHandler{name: memberConnectionsTag, handleStatus: r.membersHandleStatus}
 
 	statusHandlers := []statusHandler{
-		hostOperatorStatusHandler,
-		memberStatusHandler,
-		registrationServiceStatusHandler,
+		hostOperatorStatusHandlerFunc,
+		memberStatusHandlerFunc,
+		registrationServiceStatusHandlerFunc,
 	}
 
 	// track components that are not ready
@@ -197,7 +192,7 @@ func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logge
 	hostOperatorDeploymentName, err := k8sutil.GetOperatorName()
 	if err != nil {
 		err = errs.Wrap(err, status.ErrMsgCannotGetDeployment)
-		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonNoDeployment, err.Error())
+		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonDeploymentNotFound, err.Error())
 		operatorStatus.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		toolchainStatus.Status.HostOperator = operatorStatus
 		return err
@@ -242,17 +237,28 @@ func (r *ReconcileToolchainStatus) registrationServiceHandleStatus(reqLogger log
 
 // memberHandleStatus retrieves the status of member clusters and adds them to ToolchainStatus. It returns an error
 // if any of the conditions have a status that is not 'true' or if no member clusters are found.
-func (r *ReconcileToolchainStatus) memberHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) (componentError error) {
+func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) (componentError error) {
 	// look up member clusters
-	memberClusters := cluster.GetMemberClusters()
+	memberClusters := r.getMembersFunc()
 	members := []toolchainv1alpha1.Member{}
+	if len(memberClusters) == 0 {
+		err := fmt.Errorf("no member clusters found")
+		memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonMemberStatusNoClustersFound, err.Error())
+		memberStatus := customMemberStatus(*memberStatusNotFoundCondition)
+		noMemberClusterStatus := toolchainv1alpha1.Member{
+			ClusterID:    "",
+			MemberStatus: memberStatus,
+		}
+		members = append(members, noMemberClusterStatus)
+		return err
+	}
 	for _, cluster := range memberClusters {
 		memberClient := cluster.Client
 		if memberClient == nil {
 			// there is no client for the member cluster, create a status condition and add it to this member's status
-			wrappedErr := errs.Wrap(fmt.Errorf(errMsgCannotGetMemberStatus), "member cluster does not have a client assigned")
-			componentError = wrappedErr
-			notFoundCondition := status.NewComponentErrorCondition(reasonNotFound, wrappedErr.Error())
+			err := fmt.Errorf("member cluster does not have a client assigned")
+			componentError = err
+			notFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonMemberStatusNotFound, err.Error())
 			memberStatus := customMemberStatus(*notFoundCondition)
 			members = append(members, memberResult(cluster, memberStatus))
 			continue
@@ -263,7 +269,7 @@ func (r *ReconcileToolchainStatus) memberHandleStatus(reqLogger logr.Logger, too
 			// couldn't find the memberstatus resource on the member cluster, create a status condition and add it to this member's status
 			wrappedErr := errs.Wrap(err, fmt.Sprintf("cannot find memberstatus resource in namespace %s", cluster.OperatorNamespace))
 			componentError = wrappedErr
-			memberStatusNotFoundCondition := status.NewComponentErrorCondition(reasonNotFound, wrappedErr.Error())
+			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonMemberStatusNotFound, wrappedErr.Error())
 			memberStatus := customMemberStatus(*memberStatusNotFoundCondition)
 			members = append(members, memberResult(cluster, memberStatus))
 			continue
@@ -346,14 +352,19 @@ func (s regServiceSubstatusHandler) addRegistrationServiceResourceStatus(reqLogg
 	registrationService := &toolchainv1alpha1.RegistrationService{}
 	err := s.controllerClient.Get(context.TODO(), registrationServiceName, registrationService)
 	if err != nil {
-		err = errs.Wrap(err, errMsgCannotGetRegistrationService)
-		errCondition := status.NewComponentErrorCondition(reasonNotFound, err.Error())
+		err = errs.Wrap(err, "unable to get the registrationservice resource")
+		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonRegServiceResourceNotFound, err.Error())
 		toolchainStatus.Status.RegistrationService.RegistrationServiceResources.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return err
 	}
 
 	// use the registrationservice resource directly in the toolchainstatus
 	toolchainStatus.Status.RegistrationService.RegistrationServiceResources.Conditions = registrationService.Status.Conditions
+	for _, condition := range registrationService.Status.Conditions {
+		if condition.Type == toolchainv1alpha1.ConditionReady && condition.Status != "True" {
+			return errs.Wrap(fmt.Errorf(condition.Message), "registration service resource not ready")
+		}
+	}
 	return nil
 }
 
@@ -361,8 +372,8 @@ func (s regServiceSubstatusHandler) addRegistrationServiceResourceStatus(reqLogg
 func (s regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	deploymentConditions, err := status.GetDeploymentStatusConditions(s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
 	if err != nil {
-		err = errs.Wrap(err, errMsgCannotGetRegistrationServiceDeploymentConditions)
-		errCondition := status.NewComponentErrorCondition(reasonNotFound, err.Error())
+		err = errs.Wrap(err, "unable to determine the registration service deployment status")
+		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonRegServiceDeploymentNotFound, err.Error())
 		toolchainStatus.Status.RegistrationService.Deployment.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return err
 	}
@@ -379,7 +390,15 @@ func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger
 	resp, err := s.httpClientImpl.Get(registrationServiceHealthURL)
 	if err != nil {
 		err = errs.Wrap(err, errMsgRegistrationServiceNotReady)
-		errCondition := status.NewComponentErrorCondition(reasonNotFound, err.Error())
+		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonRegServiceNotReady, err.Error())
+		toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*errCondition}
+		return err
+	}
+
+	// bad response
+	if resp.StatusCode != http.StatusOK || resp.Body == nil {
+		err = errs.Wrap(fmt.Errorf("bad response from registration service: %+v", resp), errMsgRegistrationServiceNotReady)
+		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonRegServiceNotReady, err.Error())
 		toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return err
 	}
@@ -390,7 +409,7 @@ func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger
 	err = json.NewDecoder(resp.Body).Decode(&healthValues)
 	if err != nil {
 		err = errs.Wrap(err, errMsgRegistrationServiceNotReady)
-		errCondition := status.NewComponentErrorCondition(reasonNotFound, err.Error())
+		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonRegServiceNotReady, err.Error())
 		toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return err
 	}
@@ -407,9 +426,10 @@ func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger
 	// add the health status to the toolchainstatus
 	toolchainStatus.Status.RegistrationService.Health = healthStatus
 	if !healthValues.Alive {
-		errCondition := status.NewComponentErrorCondition(reasonUnhealthy, errMsgRegistrationServiceHealthStatusUnhealthy)
+		err = fmt.Errorf(errMsgRegistrationServiceHealthStatusUnhealthy)
+		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonRegServiceNotReady, err.Error())
 		toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*errCondition}
-		return fmt.Errorf(errMsgRegistrationServiceHealthStatusUnhealthy)
+		return err
 	}
 
 	componentReadyCondition := status.NewComponentReadyCondition(toolchainv1alpha1.ToolchainStatusReasonRegServiceReady)
