@@ -246,7 +246,7 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 		memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonMemberStatusNoClustersFound, err.Error())
 		memberStatus := customMemberStatus(*memberStatusNotFoundCondition)
 		noMemberClusterStatus := toolchainv1alpha1.Member{
-			ClusterID:    "",
+			ClusterName:  "",
 			MemberStatus: memberStatus,
 		}
 		members = append(members, noMemberClusterStatus)
@@ -335,7 +335,7 @@ func customMemberStatus(conditions ...toolchainv1alpha1.Condition) toolchainv1al
 
 func memberResult(cluster *cluster.FedCluster, memberStatus toolchainv1alpha1.MemberStatusStatus) toolchainv1alpha1.Member {
 	return toolchainv1alpha1.Member{
-		ClusterID:    cluster.Name,
+		ClusterName:  cluster.Name,
 		MemberStatus: memberStatus,
 	}
 }

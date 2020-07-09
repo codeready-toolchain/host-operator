@@ -186,7 +186,7 @@ spec:
               items:
                 description: Member contains the status of a member cluster
                 properties:
-                  clusterID:
+                  clusterName:
                     description: The cluster identifier
                     type: string
                   memberStatus:
@@ -393,12 +393,12 @@ spec:
                         type: object
                     type: object
                 required:
-                - clusterID
+                - clusterName
                 - memberStatus
                 type: object
               type: array
               x-kubernetes-list-map-keys:
-              - clusterID
+              - clusterName
               x-kubernetes-list-type: map
             registrationService:
               description: RegistrationService is the status of the registration service
