@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/mailgun/mailgun-go/v4"
+	"k8s.io/apimachinery/pkg/types"
 	"testing"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -95,7 +97,10 @@ func TestNotificationSentFailure(t *testing.T) {
 
 func TestNotificationDelivery(t *testing.T) {
 	// given
-	ds, _ := mockDeliveryService(defaultTemplateLoader())
+	ds, mockServer := mockDeliveryService(defaultTemplateLoader())
+
+	mg := mailgun.NewMailgun("crt-test.com", "123")
+	mg.SetAPIBase(mockServer.URL())
 
 	t.Run("test notification delivery ok", func(t *testing.T) {
 		// given
@@ -109,14 +114,42 @@ func TestNotificationDelivery(t *testing.T) {
 			},
 		}
 		notification := newNotification("abc123", "test")
-		controller, request, _ := newController(t, notification, ds, userSignup)
+		controller, request, client := newController(t, notification, ds, userSignup)
 
 		// when
 		_, err := controller.Reconcile(request)
 
 		// then
 		require.NoError(t, err)
+
+		// Load the reconciled notification
+		key := types.NamespacedName{
+			Namespace: operatorNamespace,
+			Name:      notification.Name,
+		}
+		instance := &v1alpha1.Notification{}
+		err = client.Get(context.TODO(), key, instance)
+		require.NoError(t, err)
+
+		test.AssertConditionsMatch(t, instance.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.NotificationSent,
+				Status: corev1.ConditionTrue,
+				Reason: v1alpha1.NotificationSentReason,
+			},
+		)
+
+		require.NoError(t, err)
+		//require.Len(t, mg.ListEvents(nil).Items, 1)
 	})
+
+	iter := mg.ListEvents(nil)
+	var events []mailgun.Event
+	require.True(t, iter.First(context.Background(), &events))
+	for _, event := range events {
+		fmt.Sprintf("Event: %s", event.GetID())
+	}
+
 }
 
 func defaultTemplateLoader() TemplateLoader {
