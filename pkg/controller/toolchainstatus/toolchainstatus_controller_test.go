@@ -58,13 +58,15 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	fakeClient := test.NewFakeClient(t, initObjs...)
+	hostConfig, err := configuration.LoadConfig(fakeClient)
+	require.NoError(t, err)
 
 	r := &ReconcileToolchainStatus{
 		client:         fakeClient,
 		httpClientImpl: httpTestClient,
 		scheme:         s,
 		getMembersFunc: getMemberClustersFunc(fakeClient),
-		config:         configuration.LoadConfig(fakeClient),
+		config:         hostConfig,
 	}
 	return r, reconcile.Request{test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }
