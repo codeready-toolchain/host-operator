@@ -48,9 +48,6 @@ const (
 	// UserApprovalPolicyAutomatic defines that the new users should be approved automatically
 	UserApprovalPolicyAutomatic = "automatic"
 
-	// NotificationDeliveryServiceMock is the notification delivery service to use for testing
-	NotificationDeliveryServiceMock = "mock"
-
 	// NotificationDeliveryServiceMailgun is the notification delivery service to use during production
 	NotificationDeliveryServiceMailgun = "mailgun"
 
@@ -90,9 +87,12 @@ func initConfig() *Config {
 	return &c
 }
 
-func LoadConfig(cl client.Client) *Config {
-	loadFromSecret(cl)
-	return initConfig()
+func LoadConfig(cl client.Client) (*Config, error) {
+	err := loadFromSecret(cl)
+	if err != nil {
+		return nil, err
+	}
+	return initConfig(), nil
 }
 
 // loadFromSecret retrieves the host operator secret
@@ -134,7 +134,7 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(ToolchainStatusName, DefaultToolchainStatusName)
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
-	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMock)
+	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, "24h")
 }
 

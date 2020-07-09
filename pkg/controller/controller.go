@@ -7,6 +7,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/controller/notification"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/templateupdaterequest"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainstatus"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -23,6 +24,7 @@ func init() {
 	addToManagerFuncs = append(addToManagerFuncs, nstemplatetier.Add)
 	addToManagerFuncs = append(addToManagerFuncs, notification.Add)
 	addToManagerFuncs = append(addToManagerFuncs, toolchainstatus.Add)
+	addToManagerFuncs = append(addToManagerFuncs, templateupdaterequest.Add)
 }
 
 // AddToManager adds all Controllers to the Manager

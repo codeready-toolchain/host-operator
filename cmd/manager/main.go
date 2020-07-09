@@ -325,5 +325,5 @@ func getCRTConfiguration(config *rest.Config) (*configuration.Config, error) {
 		return nil, err
 	}
 
-	return configuration.LoadConfig(cl), nil
+	return configuration.LoadConfig(cl)
 }
