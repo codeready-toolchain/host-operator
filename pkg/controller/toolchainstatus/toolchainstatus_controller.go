@@ -197,7 +197,7 @@ func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logge
 		toolchainStatus.Status.HostOperator = operatorStatus
 		return err
 	}
-	operatorStatus.Deployment.Name = hostOperatorDeploymentName
+	operatorStatus.DeploymentName = hostOperatorDeploymentName
 
 	// check host operator deployment status
 	deploymentConditions, err := status.GetDeploymentStatusConditions(r.client, hostOperatorDeploymentName, toolchainStatus.Namespace)
