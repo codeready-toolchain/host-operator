@@ -61,6 +61,7 @@ func (a *SingleTemplateUpdateRequestAssertion) HasSyncIndexes(indexes map[string
 func (a *SingleTemplateUpdateRequestAssertion) Exists() *SingleTemplateUpdateRequestAssertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
+	assert.Nil(a.t, a.templateUpdateRequest.DeletionTimestamp) // resource is not even marked for deletion
 	return a
 }
 

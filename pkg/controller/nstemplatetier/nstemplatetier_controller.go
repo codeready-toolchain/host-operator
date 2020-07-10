@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,7 +31,7 @@ import (
 var log = logf.Log.WithName("controller_nstemplatetier")
 
 // Add creates a new NSTemplateTier Controller and adds it to the Manager.
-func Add(mgr manager.Manager, config *configuration.Config) error {
+func Add(mgr manager.Manager, _ *configuration.Config) error {
 	return add(mgr, newReconciler(mgr))
 }
 
@@ -83,10 +84,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 var _ reconcile.Reconciler = &NSTemplateTierReconciler{}
 
 // NewReconciler returns a new Reconciler
-func NewReconciler(cl client.Client, s *runtime.Scheme) reconcile.Reconciler {
+func NewReconciler(cl client.Client, s *runtime.Scheme, config *configuration.Config) reconcile.Reconciler {
 	return &NSTemplateTierReconciler{
 		client: cl,
 		scheme: s,
+		config: config,
 	}
 }
 
@@ -96,6 +98,7 @@ type NSTemplateTierReconciler struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	config *configuration.Config
 }
 
 const (
@@ -281,7 +284,8 @@ func (r *NSTemplateTierReconciler) activeTemplateUpdateRequests(logger logr.Logg
 
 		// delete when in `complete=true` (reason=updated) or when in `complete=false/reason=failed` status conditions
 		if condition.IsTrue(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) ||
-			condition.IsFalseWithReason(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) {
+			(condition.IsFalseWithReason(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) &&
+				maxUpdateFailuresReached(tur, r.config.GetMasterUserRecordUpdateRetries())) {
 			if err := r.incrementCounters(logger, tier, tur); err != nil {
 				return -1, false, err
 			}
@@ -299,6 +303,14 @@ func (r *NSTemplateTierReconciler) activeTemplateUpdateRequests(logger logr.Logg
 	}
 	logger.Info("found active TemplateUpdateRequests for the current tier", "count", count)
 	return count, false, nil
+}
+
+// maxUpdateFailuresReached checks if the number of failure to update the MasterUserRecord is beyond the configured threshold
+func maxUpdateFailuresReached(tur toolchainv1alpha1.TemplateUpdateRequest, threshod int) bool {
+	return condition.Count(tur.Status.Conditions,
+		toolchainv1alpha1.TemplateUpdateRequestComplete,
+		corev1.ConditionFalse,
+		toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) > threshod
 }
 
 // incrementCounters looks-up the latest entry in the `status.updates` and increments the `Total` and `Failures` counters

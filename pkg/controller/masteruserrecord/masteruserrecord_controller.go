@@ -320,15 +320,6 @@ func toBeProvisionedNotificationCreated() toolchainv1alpha1.Condition {
 	}
 }
 
-func toBeProvisionedNotificationFailed(msg string) toolchainv1alpha1.Condition {
-	return toolchainv1alpha1.Condition{
-		Type:    toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated,
-		Status:  corev1.ConditionFalse,
-		Reason:  toolchainv1alpha1.MasterUserRecordNotificationCRCreationFailedReason,
-		Message: msg,
-	}
-}
-
 // updateStatusConditions updates user account status conditions with the new conditions
 func updateStatusConditions(logger logr.Logger, cl client.Client, mur *toolchainv1alpha1.MasterUserRecord, newConditions ...toolchainv1alpha1.Condition) error {
 	var updated bool

@@ -80,6 +80,9 @@ const (
 
 	// defaultEnvironment is the default host-operator environment
 	defaultEnvironment = "prod"
+
+	// varMasterUserRecordUpdateRetries specifies the number of retries before failing to update a MasterUserRecord
+	varMasterUserRecordUpdateRetries = "masteruserrecord.update.retries"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -100,6 +103,7 @@ func initConfig() *Config {
 	c.host.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	c.host.SetTypeByDefaultValue(true)
 	c.setConfigDefaults()
+
 	return &c
 }
 
@@ -208,6 +212,7 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeDeletion)
 	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
+	c.host.SetDefault(varMasterUserRecordUpdateRetries, 1)
 }
 
 // GetToolchainStatusName returns the configured name of the member status resource
@@ -235,7 +240,7 @@ func (c *Config) GetMailgunDomain() string {
 	return c.host.GetString(varMailgunDomain)
 }
 
-// GetMailAPIKey returns the host operator mailgun api key
+// GetMailgunAPIKey returns the host operator mailgun api key
 func (c *Config) GetMailgunAPIKey() string {
 	return c.host.GetString(varMailgunAPIKey)
 }
@@ -253,6 +258,11 @@ func (c *Config) GetRegistrationServiceURL() string {
 // GetEnvironment returns the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
 func (c *Config) GetEnvironment() string {
 	return c.host.GetString(varEnvironment)
+}
+
+// GetMasterUserRecordUpdateRetries returns the number of retries before failing to update a MasterUserRecord
+func (c *Config) GetMasterUserRecordUpdateRetries() int {
+	return c.host.GetInt(varMasterUserRecordUpdateRetries)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix

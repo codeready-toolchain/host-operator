@@ -76,6 +76,27 @@ func WithPreviousUpdates(entries ...toolchainv1alpha1.NSTemplateTierHistory) Tie
 	}
 }
 
+// WithoutCodeNamespace removes the `code` templates from the tier's specs.
+func WithoutCodeNamespace() TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		tier.Spec.Namespaces = []toolchainv1alpha1.NSTemplateTierNamespace{
+			{
+				TemplateRef: "basic-dev-123456new",
+			},
+			{
+				TemplateRef: "basic-stage-123456new",
+			},
+		}
+	}
+}
+
+// WithoutClusterResources removes the `clusterResources` templates from the tier's specs.
+func WithoutClusterResources() TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		tier.Spec.ClusterResources = nil
+	}
+}
+
 // WithCurrentUpdateInProgress appends an "in-progress" entry in the `status.updates`
 func WithCurrentUpdateInProgress() TierOption {
 	return func(tier *toolchainv1alpha1.NSTemplateTier) {

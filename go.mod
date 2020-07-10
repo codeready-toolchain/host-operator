@@ -1,6 +1,9 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
+	github.com/alecthomas/assert v0.0.0-20170929043011-405dbfeb8e38
+	github.com/alecthomas/colour v0.1.0 // indirect
+	github.com/alecthomas/repr v0.0.0-20200325044227-4184120f674c // indirect
 	github.com/codeready-toolchain/api v0.0.0-20200720155440-f85854617ec9
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20200717175027-3b8c7e68e409
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -38,5 +41,7 @@ replace (
 	k8s.io/client-go => k8s.io/client-go v0.17.4 // Required by prometheus-operator
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200204173128-addea2498afe // avoids case-insensitive import collision: "github.com/googleapis/gnostic/openapiv2" and "github.com/googleapis/gnostic/OpenAPIv2"
 )
+
+replace github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20200721070114-78c070c83827
 
 go 1.13

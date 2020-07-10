@@ -3,6 +3,7 @@ package templateupdaterequest
 import (
 	"context"
 	"strings"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -28,18 +29,26 @@ var log = logf.Log.WithName("controller_templateupdaterequest")
 
 // Add creates a new TemplateUpdateRequest Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, _ *configuration.Config) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, config *configuration.Config) error {
+	return add(mgr, newReconciler(mgr, config))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileTemplateUpdateRequest{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.Reconciler {
+	return &ReconcileTemplateUpdateRequest{
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		config: config,
+	}
 }
 
 // NewReconciler returns a new reconcile.Reconciler
-func NewReconciler(cl client.Client, s *runtime.Scheme) reconcile.Reconciler {
-	return &ReconcileTemplateUpdateRequest{client: cl, scheme: s}
+func NewReconciler(cl client.Client, s *runtime.Scheme, config *configuration.Config) reconcile.Reconciler {
+	return &ReconcileTemplateUpdateRequest{
+		client: cl,
+		scheme: s,
+		config: config,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -61,7 +70,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.MasterUserRecord{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -74,6 +82,7 @@ type ReconcileTemplateUpdateRequest struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	config *configuration.Config
 }
 
 // Reconcile reads that state of the cluster for a TemplateUpdateRequest object and makes changes based on the state read
@@ -106,26 +115,39 @@ func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (r
 		if errors.IsNotFound(err) {
 			// MUR object not found, could have been deleted after reconcile request.
 			// Marking this TemplateUpdateRequest as failed
-			return reconcile.Result{}, r.updateStatusConditions(logger, tur, ToFailure(err))
+			return reconcile.Result{}, r.addFailureStatusCondition(tur, err)
 		}
 		// Error reading the object - requeue the request.
 		logger.Error(err, "Unable to get the MasterUserRecord associated with the TemplateUpdateRequest")
 		return reconcile.Result{}, errs.Wrap(err, "unable to get the MasterUserRecord associated with the TemplateUpdateRequest")
 	}
 	if len(tur.Status.SyncIndexes) == 0 {
-		// need to be "captured" before updating the MURs
-		syncIndexes := syncIndexes(tur.Spec.TierName, *mur)
-		// if the TemplateUpdateRequest was just created (ie, `Status.SyncIndexes` is empty), then we should update the associated MasterUserRecord
+		// if the TemplateUpdateRequest was just created (ie, `Status.SyncIndexes` is empty),
+		// then we should update the associated MasterUserRecord
 		// and retain its current syncIndexex in the status
+		// NOTE: indexes need to be "captured" before updating the MURs
+		syncIndexes := syncIndexes(tur.Spec.TierName, *mur)
 		if err = r.updateTemplateRefs(logger, *tur, mur); err != nil {
+			// we want to give ourselves a few chances before marking this MasterUserRecord update as "failed":
+			// 1. count the actual number of failures (ie, which occurred before)
 			logger.Error(err, "Unable to update the MasterUserRecord associated with the TemplateUpdateRequest")
 			err = errs.Wrap(err, "unable to update the MasterUserRecord associated with the TemplateUpdateRequest")
-			_ = r.updateStatusConditions(logger, tur, ToFailure(err)) // we can ignore if an error occurred while update the TemplateUpdateRequest status because we already return the error that occurred when getting the MasterUseRecord
-			return reconcile.Result{}, err
+			if !maxUpdateFailuresReached(*tur, r.config.GetMasterUserRecordUpdateRetries()) {
+				logger.Info("Retaining the failure in the TemplateUpdateRequest 'status.conditions'")
+				// log the failure in the status...
+				if err := r.addFailureStatusCondition(tur, err); err != nil {
+					return reconcile.Result{}, err
+				}
+				// ... then requeue with a delay (and cross fingers for the update to succeed next time)
+				return reconcile.Result{Requeue: true, RequeueAfter: 5 * time.Second}, err
+			}
+			// otherwise, the failure in the status but don't requeue (unless the failure could not be added into the status)
+			// in other words, give up with the MasterUserRecord update :(
+			return reconcile.Result{}, r.addFailureStatusCondition(tur, err)
 		}
 		// update the TemplateUpdateRequest status and requeue to keep tracking the MUR changes
 		logger.Info("MasterUserRecord update started. Updating TemplateUpdateRequest status accordingly")
-		if err = r.setStatusConditionsUpdating(logger, tur, syncIndexes); err != nil {
+		if err = r.addUpdatingStatusCondition(tur, syncIndexes); err != nil {
 			logger.Error(err, "Unable to update the TemplateUpdateRequest status")
 			return reconcile.Result{}, errs.Wrap(err, "unable to update the TemplateUpdateRequest status")
 		}
@@ -133,15 +155,23 @@ func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (r
 		return reconcile.Result{}, nil
 	}
 	// otherwise, we should compare the sync indexes of the MasterUserRecord until all tier-related values changed
-	if r.compareSyncIndexes(logger, *tur, *mur) && condition.IsTrue(mur.Status.Conditions, toolchainv1alpha1.ConditionReady) {
+	if !r.sameSyncIndexes(logger, *tur, *mur) && condition.IsTrue(mur.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 		// once MasterUserRecord is up-to-date, we can delete this TemplateUpdateRequest
 		logger.Info("MasterUserRecord is up-to-date. Marking the TemplateUpdateRequest as complete")
-		return reconcile.Result{}, r.updateStatusConditions(logger, tur, ToBeComplete())
+		return reconcile.Result{}, r.setCompleteStatusCondition(tur)
 	}
 	// otherwise, we need to wait
 	logger.Info("MasterUserRecord still being updated...")
 	// no explicit requeue: expect new reconcile loop when MasterUserRecord changes
 	return reconcile.Result{}, nil
+}
+
+// maxUpdateFailuresReached checks if the maximum number of attempts to update the MasterUserRecord was reached
+func maxUpdateFailuresReached(tur toolchainv1alpha1.TemplateUpdateRequest, threshod int) bool {
+	return condition.Count(tur.Status.Conditions,
+		toolchainv1alpha1.TemplateUpdateRequestComplete,
+		corev1.ConditionFalse,
+		toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) == threshod
 }
 
 func (r ReconcileTemplateUpdateRequest) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur *toolchainv1alpha1.MasterUserRecord) error {
@@ -208,18 +238,18 @@ func namespaceType(templateRef string) string {
 	return parts[1]
 }
 
-// compareSyncIndexes compares the sync indexes in the given TemplateUpdateRequest status vs the given MasterUserRecord
-// returns `true` if ALL values are DIFFERENT, meaning that all user accounts were updated on the target clusters where the tier is in use
-func (r ReconcileTemplateUpdateRequest) compareSyncIndexes(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur toolchainv1alpha1.MasterUserRecord) bool {
+// sameSyncIndexes compares the sync indexes in the given TemplateUpdateRequest status vs the given MasterUserRecord
+// returns `false` if ALL values are DIFFERENT, meaning that all user accounts were updated on the target clusters where the tier is in use
+func (r ReconcileTemplateUpdateRequest) sameSyncIndexes(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur toolchainv1alpha1.MasterUserRecord) bool {
 	murIndexes := syncIndexes(tur.Spec.TierName, mur)
 	for targetCluster, syncIndex := range tur.Status.SyncIndexes {
 		if current, ok := murIndexes[targetCluster]; ok && current == syncIndex {
 			logger.Info("Sync index still unchanged", "target_cluster", targetCluster, "sync_index", syncIndex)
-			return false
+			return true
 		}
 	}
 	logger.Info("All sync indexes have been updated")
-	return true
+	return false
 }
 
 // --------------------------------------------------
@@ -254,22 +284,22 @@ func ToBeComplete() toolchainv1alpha1.Condition {
 	}
 }
 
-// updateStatusConditions updates the TemplateUpdateRequest status conditions with the new conditions
-func (r *ReconcileTemplateUpdateRequest) updateStatusConditions(logger logr.Logger, tur *toolchainv1alpha1.TemplateUpdateRequest, newConditions ...toolchainv1alpha1.Condition) error {
-	var updated bool
-	tur.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(tur.Status.Conditions, newConditions...)
-	if !updated {
-		// Nothing changed
-		logger.Info("TemplateUpdateRequest status conditions unchanged")
-		return nil
-	}
+// addUpdatingStatusCondition sets the TemplateUpdateRequest status condition to `complete=false/reason=updating` and retains the sync indexes
+func (r *ReconcileTemplateUpdateRequest) addUpdatingStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest, syncIndexes map[string]string) error {
+	tur.Status.SyncIndexes = syncIndexes
+	tur.Status.Conditions = condition.SetStatusConditions(ToBeUpdating())
 	return r.client.Status().Update(context.TODO(), tur)
 }
 
-// setStatusConditionsUpdating sets the TemplateUpdateRequest status condition to `complete=false/reason=updating` and retains the sync indexes
-func (r *ReconcileTemplateUpdateRequest) setStatusConditionsUpdating(logger logr.Logger, tur *toolchainv1alpha1.TemplateUpdateRequest, syncIndexes map[string]string, conditions ...toolchainv1alpha1.Condition) error {
-	tur.Status.SyncIndexes = syncIndexes
-	tur.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(tur.Status.Conditions, ToBeUpdating())
+// addFailureStatusCondition appends a new TemplateUpdateRequest status condition to `complete=false/reason=updating`
+func (r *ReconcileTemplateUpdateRequest) addFailureStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest, err error) error {
+	tur.Status.Conditions = condition.AddStatusConditions(tur.Status.Conditions, ToFailure(err))
+	return r.client.Status().Update(context.TODO(), tur)
+}
+
+// setCompleteStatusCondition sets the TemplateUpdateRequest status condition to `complete=true/reason=updated` and clears all previous conditions of the same type
+func (r *ReconcileTemplateUpdateRequest) setCompleteStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest) error {
+	tur.Status.Conditions = condition.SetStatusConditions(ToBeComplete())
 	return r.client.Status().Update(context.TODO(), tur)
 }
 
