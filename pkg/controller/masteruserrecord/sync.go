@@ -40,7 +40,7 @@ var consoleClient = &http.Client{
 
 type Synchronizer struct {
 	hostClient        client.Client
-	memberCluster     *cluster.FedCluster
+	memberCluster     *cluster.CachedToolchainCluster
 	memberUserAcc     *toolchainv1alpha1.UserAccount
 	recordSpecUserAcc toolchainv1alpha1.UserAccountEmbedded
 	record            *toolchainv1alpha1.MasterUserRecord

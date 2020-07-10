@@ -165,7 +165,7 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 	// track components that are not ready
 	unreadyComponents := []string{}
 
-	// retrieve component statuses eg. kubefed, host deployment
+	// retrieve component statuses eg. ToolchainCluster, host deployment
 	for _, handler := range statusHandlers {
 		err := handler.handleStatus(reqLogger, toolchainStatus)
 		if err != nil {
@@ -337,7 +337,7 @@ func customMemberStatus(conditions ...toolchainv1alpha1.Condition) toolchainv1al
 	}
 }
 
-func memberResult(cluster *cluster.FedCluster, memberStatus toolchainv1alpha1.MemberStatusStatus) toolchainv1alpha1.Member {
+func memberResult(cluster *cluster.CachedToolchainCluster, memberStatus toolchainv1alpha1.MemberStatusStatus) toolchainv1alpha1.Member {
 	return toolchainv1alpha1.Member{
 		ClusterName:  cluster.Name,
 		MemberStatus: memberStatus,

@@ -30,10 +30,12 @@ require (
 	k8s.io/apiextensions-apiserver v0.17.4
 	k8s.io/apimachinery v0.17.4
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/klog v1.0.0
 	sigs.k8s.io/controller-runtime v0.5.2
-	sigs.k8s.io/kubefed v0.3.0
 )
+
+replace github.com/codeready-toolchain/toolchain-common => github.com/MatousJobanek/toolchain-common v0.0.0-20200803153939-6ae8beaa74ca
+
+replace github.com/codeready-toolchain/api => github.com/MatousJobanek/api v0.0.0-20200803150704-20052fba4e3f
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.0.0+incompatible

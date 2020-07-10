@@ -15,14 +15,12 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	gock "gopkg.in/h2non/gock.v1"
+	"gopkg.in/h2non/gock.v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"sigs.k8s.io/kubefed/pkg/apis/core/common"
-	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 )
 
 func TestIsSynchronized(t *testing.T) {
@@ -669,17 +667,17 @@ func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostCl
 		AllUserAccountsHaveCondition(userAccountCondition)
 }
 
-func newMemberCluster(cl client.Client) *cluster.FedCluster {
-	return &cluster.FedCluster{
+func newMemberCluster(cl client.Client) *cluster.CachedToolchainCluster {
+	return &cluster.CachedToolchainCluster{
 		Name:              test.MemberClusterName,
 		APIEndpoint:       fmt.Sprintf("https://api.%s:6433", test.MemberClusterName),
 		Client:            cl,
 		Type:              cluster.Member,
 		OperatorNamespace: test.HostOperatorNs,
 		OwnerClusterName:  test.HostClusterName,
-		ClusterStatus: &v1beta1.KubeFedClusterStatus{
-			Conditions: []v1beta1.ClusterCondition{{
-				Type:   common.ClusterReady,
+		ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
+			Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
+				Type:   toolchainv1alpha1.ToolchainClusterReady,
 				Status: v1.ConditionTrue,
 			}},
 		},
