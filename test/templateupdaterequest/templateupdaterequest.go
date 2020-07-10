@@ -7,6 +7,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
+	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,7 +25,7 @@ func NewTemplateUpdateRequest(name string, tier toolchainv1alpha1.NSTemplateTier
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion: tier.APIVersion,
-					Kind:       tier.Kind,
+					Kind:       "NSTemplateTier",
 					Name:       tier.Name,
 				},
 			},
@@ -36,6 +37,7 @@ func NewTemplateUpdateRequest(name string, tier toolchainv1alpha1.NSTemplateTier
 		},
 		Status: toolchainv1alpha1.TemplateUpdateRequestStatus{},
 	}
+	coputil.AddFinalizer(tur, "tier.finalizer.toolchain.dev.openshift.com")
 	for _, opt := range options {
 		opt.applyToTemplateUpdateRequest(tur)
 	}

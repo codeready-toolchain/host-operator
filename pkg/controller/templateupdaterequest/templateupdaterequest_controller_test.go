@@ -1,10 +1,11 @@
-package templateupdaterequest
+package templateupdaterequest_test
 
 import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/templateupdaterequest"
 	turtest "github.com/codeready-toolchain/host-operator/test/templateupdaterequest"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -159,7 +160,7 @@ func TestReconcile(t *testing.T) {
 					AllUserAccountsHaveTier(newNSTemplateTier)
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
@@ -182,7 +183,7 @@ func TestReconcile(t *testing.T) {
 					AllUserAccountsHaveTier(newNSTemplateTier2)
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
@@ -211,7 +212,7 @@ func TestReconcile(t *testing.T) {
 
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
@@ -240,7 +241,7 @@ func TestReconcile(t *testing.T) {
 
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
@@ -269,7 +270,7 @@ func TestReconcile(t *testing.T) {
 
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
@@ -293,7 +294,7 @@ func TestReconcile(t *testing.T) {
 
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
@@ -323,7 +324,7 @@ func TestReconcile(t *testing.T) {
 					UserAccountHasTier("cluster3", otherNSTemplateTier)
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "10",
 						"cluster2": "20",
@@ -340,7 +341,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier,
-				turtest.Condition(toBeUpdating()),
+				turtest.Condition(templateupdaterequest.ToBeUpdating()),
 				turtest.SyncIndexes{
 					"cluster1": "10",
 					"cluster2": "20",
@@ -352,11 +353,12 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
 			// when
 			res, err := r.Reconcile(req)
+			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 			// check that TemplateUpdateRequest is in "updating" condition
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-				HasConditions(toBeUpdating()).
+				HasConditions(templateupdaterequest.ToBeUpdating()).
 				HasSyncIndexes(map[string]string{
 					"cluster1": "10",
 					"cluster2": "20",
@@ -367,7 +369,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier,
-				turtest.Condition(toBeUpdating()),
+				turtest.Condition(templateupdaterequest.ToBeUpdating()),
 				turtest.SyncIndexes(map[string]string{
 					"cluster1": "10",
 					"cluster2": "20",
@@ -379,11 +381,12 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
 			// when
 			res, err := r.Reconcile(req)
+			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 			// check that TemplateUpdateRequest is in "updating" condition
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-				HasConditions(toBeUpdating()).
+				HasConditions(templateupdaterequest.ToBeUpdating()).
 				HasSyncIndexes(map[string]string{
 					"cluster1": "10",
 					"cluster2": "20",
@@ -397,7 +400,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier,
-				turtest.Condition(toBeUpdating()),
+				turtest.Condition(templateupdaterequest.ToBeUpdating()),
 				turtest.SyncIndexes(map[string]string{
 					"cluster1": "10",
 					"cluster2": "20",
@@ -415,6 +418,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
 			// when
 			res, err := r.Reconcile(req)
+			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // NSTemplateTier controller will reconcile when the TemplateUpdateRequest is updated
 			// check that TemplateUpdateRequest is in "complete" condition
@@ -437,6 +441,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
 			// when
 			res, err := r.Reconcile(req)
+			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 			// check that TemplateUpdateRequest is in "failed" condition
@@ -449,17 +454,15 @@ func TestReconcile(t *testing.T) {
 				})
 		})
 	})
+
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileTemplateUpdateRequest, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, initObjs...)
-	r := &ReconcileTemplateUpdateRequest{
-		client: cl,
-		scheme: s,
-	}
+	r := templateupdaterequest.NewReconciler(cl, s)
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      name,
