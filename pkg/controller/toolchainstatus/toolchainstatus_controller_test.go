@@ -126,7 +126,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, requeueResult, res)
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-			HasCondition(ComponentsReady())
+			HasCondition(componentsReady())
 	})
 
 	t.Run("HostOperator tests", func(t *testing.T) {
@@ -148,7 +148,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(hostOperatorTag)))
+				HasCondition(componentsNotReady(string(hostOperatorTag)))
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasHostOperatorConditionErrorMsg("unable to get the operator deployment")
 		})
@@ -164,7 +164,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(hostOperatorTag)))
+				HasCondition(componentsNotReady(string(hostOperatorTag)))
 		})
 
 		t.Run("Host operator deployment not ready", func(t *testing.T) {
@@ -179,7 +179,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(hostOperatorTag)))
+				HasCondition(componentsNotReady(string(hostOperatorTag)))
 		})
 
 		t.Run("Host operator deployment not progressing", func(t *testing.T) {
@@ -194,7 +194,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(hostOperatorTag)))
+				HasCondition(componentsNotReady(string(hostOperatorTag)))
 		})
 	})
 
@@ -215,7 +215,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(registrationServiceTag)))
+				HasCondition(componentsNotReady(string(registrationServiceTag)))
 		})
 
 		t.Run("Registration service deployment not ready", func(t *testing.T) {
@@ -230,7 +230,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(registrationServiceTag)))
+				HasCondition(componentsNotReady(string(registrationServiceTag)))
 		})
 
 		t.Run("Registration service deployment not progressing", func(t *testing.T) {
@@ -245,7 +245,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(registrationServiceTag)))
+				HasCondition(componentsNotReady(string(registrationServiceTag)))
 		})
 	})
 
@@ -266,7 +266,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(registrationServiceTag)))
+				HasCondition(componentsNotReady(string(registrationServiceTag)))
 		})
 
 		t.Run("Registration service resource not ready", func(t *testing.T) {
@@ -281,7 +281,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(registrationServiceTag)))
+				HasCondition(componentsNotReady(string(registrationServiceTag)))
 		})
 	})
 
@@ -303,7 +303,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(registrationServiceTag)))
+				HasCondition(componentsNotReady(string(registrationServiceTag)))
 		})
 
 		t.Run("Registration health endpoint - bad status code", func(t *testing.T) {
@@ -317,7 +317,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(registrationServiceTag)))
+				HasCondition(componentsNotReady(string(registrationServiceTag)))
 		})
 
 		t.Run("Registration health endpoint - invalid JSON", func(t *testing.T) {
@@ -332,7 +332,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(registrationServiceTag)))
+				HasCondition(componentsNotReady(string(registrationServiceTag)))
 		})
 
 		t.Run("Registration health endpoint - not alive", func(t *testing.T) {
@@ -347,7 +347,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(registrationServiceTag)))
+				HasCondition(componentsNotReady(string(registrationServiceTag)))
 		})
 	})
 
@@ -369,7 +369,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(memberConnectionsTag)))
+				HasCondition(componentsNotReady(string(memberConnectionsTag)))
 		})
 
 		t.Run("MemberStatus member clusters not found", func(t *testing.T) {
@@ -384,7 +384,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(memberConnectionsTag)))
+				HasCondition(componentsNotReady(string(memberConnectionsTag)))
 		})
 
 		t.Run("MemberStatus not found", func(t *testing.T) {
@@ -398,7 +398,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(memberConnectionsTag)))
+				HasCondition(componentsNotReady(string(memberConnectionsTag)))
 		})
 
 		t.Run("MemberStatus not ready", func(t *testing.T) {
@@ -413,7 +413,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(ComponentsNotReady(string(memberConnectionsTag)))
+				HasCondition(componentsNotReady(string(memberConnectionsTag)))
 		})
 	})
 }
@@ -594,5 +594,22 @@ func newResponseInvalid() *fakeHTTPClient {
 			StatusCode: 200,
 			Body:       ioutil.NopCloser(bytes.NewReader([]byte(respBodyInvalid))),
 		},
+	}
+}
+
+func componentsReady() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: corev1.ConditionTrue,
+		Reason: toolchainv1alpha1.ToolchainStatusReasonAllComponentsReady,
+	}
+}
+
+func componentsNotReady(components ...string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.ToolchainStatusReasonComponentsNotReady,
+		Message: fmt.Sprintf("components not ready: %v", components),
 	}
 }

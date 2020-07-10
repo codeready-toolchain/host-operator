@@ -23,16 +23,16 @@ const (
 
 	// RegServiceEnvPrefix will be used for registration service environment variable name prefixing.
 	RegServiceEnvPrefix = "REGISTRATION_SERVICE"
+)
 
+// host-operator constants
+const (
 	// ToolchainStatusName specifies the name of the toolchain status resource that provides information about the toolchain components in this cluster
 	ToolchainStatusName = "toolchain.status"
 
 	// DefaultToolchainStatusName the default name for the toolchain status resource created during initialization of the operator
 	DefaultToolchainStatusName = "toolchain-status"
-)
 
-// host-operator constants
-const (
 	// VarDurationBeforeChangeRequestDeletion specificies the duration before a change request is deleted
 	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
 

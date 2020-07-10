@@ -149,7 +149,7 @@ type statusHandlerFunc func(logr.Logger, *toolchainv1alpha1.ToolchainStatus) err
 // component status is not ready then it will set the condition of the top-level status of the ToolchainStatus resource to not ready.
 func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 
-	// instantiate an instance of a member handler that has a function to retrieve the list of member clusters
+	// collect status handlers that will contribute status of various toolchain components
 	hostOperatorStatusHandlerFunc := statusHandler{name: hostOperatorTag, handleStatus: r.hostOperatorHandleStatus}
 	registrationServiceStatusHandlerFunc := statusHandler{name: registrationServiceTag, handleStatus: r.registrationServiceHandleStatus}
 	memberStatusHandlerFunc := statusHandler{name: memberConnectionsTag, handleStatus: r.membersHandleStatus}
@@ -180,7 +180,7 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 }
 
 // hostOperatorHandleStatus retrieves the Deployment for the host operator and adds its status to ToolchainStatus. It returns an error
-// if any of the conditions have a status that is not 'true'
+// if the deployment is not determined to be ready
 func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	operatorStatus := toolchainv1alpha1.HostOperatorStatus{
 		Version:        version.Version,
@@ -188,7 +188,7 @@ func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logge
 		BuildTimestamp: version.BuildTime,
 	}
 
-	// look up status of host deployment
+	// look up name of the host operator deployment
 	hostOperatorDeploymentName, err := k8sutil.GetOperatorName()
 	if err != nil {
 		err = errs.Wrap(err, status.ErrMsgCannotGetDeployment)
@@ -209,7 +209,7 @@ func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logge
 }
 
 // registrationServiceHandleStatus retrieves the Deployment for the registration service and adds its status to ToolchainStatus. It returns an error
-// if any of the conditions have a status that is not 'true'
+// if the registration service is not ready
 func (r *ReconcileToolchainStatus) registrationServiceHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) (err error) {
 
 	s := regServiceSubstatusHandler{
@@ -236,9 +236,9 @@ func (r *ReconcileToolchainStatus) registrationServiceHandleStatus(reqLogger log
 }
 
 // memberHandleStatus retrieves the status of member clusters and adds them to ToolchainStatus. It returns an error
-// if any of the conditions have a status that is not 'true' or if no member clusters are found.
+// if any of the members are not ready or if no member clusters are found
 func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) (componentError error) {
-	// look up member clusters
+	// get member clusters
 	memberClusters := r.getMembersFunc()
 	members := []toolchainv1alpha1.Member{}
 	if len(memberClusters) == 0 {
