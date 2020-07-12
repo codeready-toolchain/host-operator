@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/mailgun/mailgun-go/v4"
+	events2 "github.com/mailgun/mailgun-go/v4/events"
 	"k8s.io/apimachinery/pkg/types"
 	"testing"
 	"time"
@@ -140,16 +141,20 @@ func TestNotificationDelivery(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		//require.Len(t, mg.ListEvents(nil).Items, 1)
+
+		iter := mg.ListEvents(&mailgun.ListEventOptions{Limit: 1})
+		var events []mailgun.Event
+		require.True(t, iter.First(context.Background(), &events))
+		require.True(t, iter.Last(context.Background(), &events))
+		require.Len(t, events, 1)
+		e := events[0]
+		require.IsType(t, &events2.Accepted{}, e)
+		accepted := e.(*events2.Accepted)
+		require.Equal(t, "Foo Bar<foo@redhat.com>", accepted.Recipient)
+		require.Equal(t, "redhat.com", accepted.RecipientDomain)
+		require.Equal(t, "foo", accepted.Message.Headers.Subject)
+		require.Equal(t, "noreply@foo.com", accepted.Message.Headers.From)
 	})
-
-	iter := mg.ListEvents(nil)
-	var events []mailgun.Event
-	require.True(t, iter.First(context.Background(), &events))
-	for _, event := range events {
-		fmt.Sprintf("Event: %s", event.GetID())
-	}
-
 }
 
 func defaultTemplateLoader() TemplateLoader {
