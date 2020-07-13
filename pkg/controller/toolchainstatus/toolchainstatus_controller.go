@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 
 	"github.com/go-logr/logr"
@@ -278,11 +280,9 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 		// take only the overall conditions from the memberstatus (ie. don't include status of member operator, host connection, etc.) in order to keep readability.
 		// member status details can be viewed on the member cluster directly.
 		memberStatus := toolchainv1alpha1.MemberStatusStatus{Conditions: memberStatusObj.Status.Conditions}
-		for _, condition := range memberStatusObj.Status.Conditions {
-			if condition.Type == toolchainv1alpha1.ConditionReady && condition.Status != "True" {
-				// the existing memberstatus condition is added to the toolchainstatus but the condition is not ready so set the component error to bubble up the error to the overall toolchain status
-				componentError = errs.Wrap(fmt.Errorf(condition.Message), fmt.Sprintf("member cluster %s not ready", cluster.Name))
-			}
+		if condition.IsNotTrue(memberStatusObj.Status.Conditions, toolchainv1alpha1.ConditionReady) {
+			// the memberstatus is not ready so set the component error to bubble up the error to the overall toolchain status
+			componentError = fmt.Errorf("member cluster %s not ready: the memberstatus ready condition is not true", cluster.Name)
 		}
 		members = append(members, memberResult(cluster, memberStatus))
 	}
@@ -345,7 +345,7 @@ type regServiceSubstatusHandler struct {
 	controllerClient client.Client
 }
 
-// handles the RegistrationService.RegistrationServiceResources part of the toolchainstatus
+// addRegistrationServiceResourceStatus handles the RegistrationService.RegistrationServiceResources part of the toolchainstatus
 func (s regServiceSubstatusHandler) addRegistrationServiceResourceStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// get the registrationservice resource
 	registrationServiceName := types.NamespacedName{Namespace: toolchainStatus.Namespace, Name: registrationservice.ResourceName}
@@ -360,19 +360,18 @@ func (s regServiceSubstatusHandler) addRegistrationServiceResourceStatus(reqLogg
 
 	// use the registrationservice resource directly in the toolchainstatus
 	toolchainStatus.Status.RegistrationService.RegistrationServiceResources.Conditions = registrationService.Status.Conditions
-	for _, condition := range registrationService.Status.Conditions {
-		if condition.Type == toolchainv1alpha1.ConditionReady && condition.Status != "True" {
-			return errs.Wrap(fmt.Errorf(condition.Message), "registration service resource not ready")
-		}
+	if condition.IsNotTrue(registrationService.Status.Conditions, toolchainv1alpha1.ConditionReady) {
+		return fmt.Errorf("the registrationservice resource is not ready")
 	}
+
 	return nil
 }
 
-// handles the RegistrationService.Deployment part of the toolchainstatus
+// addRegistrationServiceDeploymentStatus handles the RegistrationService.Deployment part of the toolchainstatus
 func (s regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	deploymentConditions, err := status.GetDeploymentStatusConditions(s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
 	if err != nil {
-		err = errs.Wrap(err, "unable to determine the registration service deployment status")
+		err = errs.Wrap(err, "a problem was detected in the deployment status")
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceDeploymentNotFoundReason, err.Error())
 		toolchainStatus.Status.RegistrationService.Deployment.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return err
@@ -383,7 +382,7 @@ func (s regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqLo
 	return nil
 }
 
-// handles the RegistrationService.Health part of the toolchainstatus
+// addRegistrationServiceHealthStatus handles the RegistrationService.Health part of the toolchainstatus
 func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// get the JSON payload from the health endpoint
 	registrationServiceHealthURL := "http://registration-service/" + registrationServiceHealthEndpoint
@@ -404,7 +403,10 @@ func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger
 	}
 
 	// decode the response to JSON
-	defer resp.Body.Close()
+	defer func() {
+		ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+	}()
 	healthValues := status.Health{}
 	err = json.NewDecoder(resp.Body).Decode(&healthValues)
 	if err != nil {
