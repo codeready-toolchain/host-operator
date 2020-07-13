@@ -58,6 +58,9 @@ const (
 
 	// varMailgunSenderEmail specifies the host operator mailgun senders email
 	varMailgunSenderEmail = "mailgun.sender.email"
+
+	// varRegistrationServiceURL is the URL used to access the registration service
+	varRegistrationServiceURL = "registration.service.url"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -86,15 +89,19 @@ func LoadConfig(cl client.Client) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	err = loadFromConfigMap(cl)
+	if err != nil {
+		return nil, err
+	}
 	return initConfig(), nil
 }
 
 // loadFromSecret retrieves the host operator secret
 func loadFromSecret(cl client.Client) error {
 	// get the secret name
-	secretName := os.Getenv("HOST_OPERATOR_SECRET_NAME")
+	secretName := getResourceName("HOST_OPERATOR_SECRET_NAME")
 	if secretName == "" {
-		log.Info("HOST_OPERATOR_SECRET_NAME is not set")
 		return nil
 	}
 
@@ -114,8 +121,8 @@ func loadFromSecret(cl client.Client) error {
 
 	// get secrets and set environment variables
 	for key, value := range secret.Data {
-		secretKey := HostEnvPrefix + "_" + (strings.ToUpper(strings.ReplaceAll(strings.ReplaceAll(key, ".", "_"), "-", "_")))
-		err = os.Setenv(secretKey, string(value))
+		secretKey := createHostEnvVarKey(key)
+		err := os.Setenv(secretKey, string(value))
 		if err != nil {
 			return err
 		}
@@ -124,11 +131,62 @@ func loadFromSecret(cl client.Client) error {
 	return nil
 }
 
+// loadFromConfigMap retrieves the host operator configMap
+func loadFromConfigMap(cl client.Client) error {
+	// get the configMap name
+	configMapName := getResourceName("HOST_OPERATOR_CONFIG_NAME")
+	if configMapName == "" {
+		return nil
+	}
+	// get namespace
+	namespace, err := k8sutil.GetWatchNamespace()
+	if err != nil {
+		return err
+	}
+
+	// get the configMap
+	configMap := &v1.ConfigMap{}
+	namespacedName := types.NamespacedName{Namespace: namespace, Name: configMapName}
+	err = client.Client.Get(cl, context.TODO(), namespacedName, configMap)
+	if err != nil {
+		return err
+	}
+
+	// get configMap data and set environment variables
+	for key, value := range configMap.Data {
+		secretKey := createHostEnvVarKey(key)
+		err := os.Setenv(secretKey, value)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// getResourceName gets the resource name via env var
+func getResourceName(key string) string {
+	// get the resource name
+	resourceName := os.Getenv(key)
+	if resourceName == "" {
+		log.Info(key + " is not set")
+		return ""
+	}
+
+	return resourceName
+}
+
+// createHostEnvVarKey creates env vars based on resource data
+func createHostEnvVarKey(key string) string {
+	return HostEnvPrefix + "_" + (strings.ToUpper(strings.ReplaceAll(strings.ReplaceAll(key, ".", "_"), "-", "_")))
+}
+
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, "24h")
+	c.host.SetDefault(varRegistrationServiceURL, "https://registration.crt-placeholder.com")
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
@@ -159,6 +217,11 @@ func (c *Config) GetMailgunAPIKey() string {
 // GetMailgunSenderEmail returns the host operator mailgun sender's email address
 func (c *Config) GetMailgunSenderEmail() string {
 	return c.host.GetString(varMailgunSenderEmail)
+}
+
+// GetRegistrationServiceURL returns the URL of the registration service
+func (c *Config) GetRegistrationServiceURL() string {
+	return c.host.GetString(varRegistrationServiceURL)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix

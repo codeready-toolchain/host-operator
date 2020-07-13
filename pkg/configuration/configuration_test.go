@@ -85,6 +85,7 @@ func TestLoadFromSecret(t *testing.T) {
 				"mailgun.domain":       []byte("test-domain"),
 				"mailgun-api-key":      []byte("test-api-key"),
 				"mailgun-sender.email": []byte("test-sender-email"),
+				"mailgun+test":         []byte("mailgun-test"),
 			},
 		}
 
@@ -121,6 +122,68 @@ func TestLoadFromSecret(t *testing.T) {
 		// then
 		require.Error(t, err)
 		assert.Equal(t, "secrets \"test-secret\" not found", err.Error())
+		assert.Nil(t, config)
+	})
+}
+
+func TestLoadFromConfigMap(t *testing.T) {
+	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
+	defer restore()
+	t.Run("default", func(t *testing.T) {
+		// when
+		config := getDefaultConfiguration(t)
+
+		// then
+		assert.Equal(t, "https://registration.crt-placeholder.com", config.GetRegistrationServiceURL())
+	})
+	t.Run("env overwrite", func(t *testing.T) {
+		// given
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_CONFIG_NAME", "test-config")
+		defer restore()
+
+		secret := &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-config",
+				Namespace: "toolchain-host-operator",
+			},
+			Data: map[string]string{
+				"registration.service.url": "test-url",
+				"test+test":                "test-test",
+				"another-test":             "another-test",
+			},
+		}
+
+		cl := test.NewFakeClient(t, secret)
+
+		// when
+		config, err := configuration.LoadConfig(cl)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "test-url", config.GetRegistrationServiceURL())
+
+		// test env vars are parsed and created correctly
+		apiKey := os.Getenv("HOST_OPERATOR_REGISTRATION_SERVICE_URL")
+		assert.Equal(t, apiKey, "test-url")
+		domain := os.Getenv("HOST_OPERATOR_TEST+TEST")
+		assert.Equal(t, domain, "test-test")
+		senderEmail := os.Getenv("HOST_OPERATOR_ANOTHER_TEST")
+		assert.Equal(t, senderEmail, "another-test")
+	})
+
+	t.Run("configMap not found", func(t *testing.T) {
+		// given
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_CONFIG_NAME", "test-config")
+		defer restore()
+
+		cl := test.NewFakeClient(t)
+
+		// when
+		config, err := configuration.LoadConfig(cl)
+
+		// then
+		require.Error(t, err)
+		assert.Equal(t, "configmaps \"test-config\" not found", err.Error())
 		assert.Nil(t, config)
 	})
 }
