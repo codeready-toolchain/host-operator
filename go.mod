@@ -40,7 +40,7 @@ replace (
 )
 
 replace (
-	github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20200710212816-c078f7d76981
+	github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20200713185321-891ce4f59900
 	github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20200713022513-a7e1e6015660
 )
 

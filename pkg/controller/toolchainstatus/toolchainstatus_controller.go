@@ -184,7 +184,7 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 // hostOperatorHandleStatus retrieves the Deployment for the host operator and adds its status to ToolchainStatus. It returns an error
 // if the deployment is not determined to be ready
 func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
-	operatorStatus := toolchainv1alpha1.HostOperatorStatus{
+	operatorStatus := &toolchainv1alpha1.HostOperatorStatus{
 		Version:        version.Version,
 		Revision:       version.Commit,
 		BuildTimestamp: version.BuildTime,
@@ -226,6 +226,9 @@ func (r *ReconcileToolchainStatus) registrationServiceHandleStatus(reqLogger log
 		s.addRegistrationServiceHealthStatus,
 	}
 
+	// ensure the registrationservice part of the status is created
+	toolchainStatus.Status.RegistrationService = &toolchainv1alpha1.HostRegistrationServiceStatus{}
+
 	// call each of the registration service status handlers
 	for _, handler := range substatusHandlers {
 		handlerErr := handler(reqLogger, toolchainStatus)
@@ -258,7 +261,7 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 		memberClient := cluster.Client
 		if memberClient == nil {
 			// there is no client for the member cluster, create a status condition and add it to this member's status
-			componentError := fmt.Errorf("member cluster does not have a client assigned")
+			componentError = fmt.Errorf("member cluster does not have a client assigned")
 			notFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberStatusNotFoundReason, componentError.Error())
 			memberStatus := customMemberStatus(*notFoundCondition)
 			members = append(members, memberResult(cluster, memberStatus))
