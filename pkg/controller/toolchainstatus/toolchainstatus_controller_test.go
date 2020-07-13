@@ -68,7 +68,7 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 		getMembersFunc: getMemberClustersFunc(fakeClient),
 		config:         hostConfig,
 	}
-	return r, reconcile.Request{test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
+	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }
 
 func TestNoToolchainStatusFound(t *testing.T) {
@@ -113,8 +113,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 	t.Run("All components ready", func(t *testing.T) {
 		// given
 		registrationService := newRegistrationServiceReady()
-		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentReadyCondition(), status.DeploymentProgressingCondition())
-		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentReadyCondition(), status.DeploymentProgressingCondition())
+		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatusReady()
 		toolchainStatus := newToolchainStatus()
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
@@ -132,7 +132,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 	t.Run("HostOperator tests", func(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
 		toolchainStatus := newToolchainStatus()
-		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentReadyCondition(), status.DeploymentProgressingCondition())
+		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatusReady()
 
 		t.Run("Host operator deployment not found - deployment env var not set", func(t *testing.T) {
@@ -150,7 +150,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasCondition(componentsNotReady(string(hostOperatorTag)))
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasHostOperatorConditionErrorMsg("unable to get the operator deployment")
+				HasHostOperatorConditionErrorMsg("unable to get the deployment")
 		})
 
 		t.Run("Host operator deployment not found", func(t *testing.T) {
@@ -169,7 +169,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Host operator deployment not ready", func(t *testing.T) {
 			// given
-			hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentNotReadyCondition(), status.DeploymentProgressingCondition())
+			hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
@@ -184,7 +184,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Host operator deployment not progressing", func(t *testing.T) {
 			// given
-			hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentReadyCondition(), status.DeploymentNotProgressingCondition())
+			hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentNotProgressingCondition())
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
@@ -202,7 +202,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
 		toolchainStatus := newToolchainStatus()
 		memberStatus := newMemberStatusReady()
-		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentReadyCondition(), status.DeploymentProgressingCondition())
+		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
 		t.Run("Registration service deployment not found", func(t *testing.T) {
 			// given
@@ -220,7 +220,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration service deployment not ready", func(t *testing.T) {
 			// given
-			registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentNotReadyCondition(), status.DeploymentProgressingCondition())
+			registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
@@ -235,7 +235,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration service deployment not progressing", func(t *testing.T) {
 			// given
-			registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentReadyCondition(), status.DeploymentNotProgressingCondition())
+			registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentNotProgressingCondition())
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
@@ -252,8 +252,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 	t.Run("RegistrationService resource tests", func(t *testing.T) {
 		toolchainStatus := newToolchainStatus()
 		memberStatus := newMemberStatusReady()
-		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentReadyCondition(), status.DeploymentProgressingCondition())
-		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentReadyCondition(), status.DeploymentProgressingCondition())
+		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
 		t.Run("Registration service resource not found", func(t *testing.T) {
 			// given
@@ -287,8 +287,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 	t.Run("RegistrationService health tests", func(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
-		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentReadyCondition(), status.DeploymentProgressingCondition())
-		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentReadyCondition(), status.DeploymentProgressingCondition())
+		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatusReady()
 		toolchainStatus := newToolchainStatus()
 
@@ -354,8 +354,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 	t.Run("MemberStatus tests", func(t *testing.T) {
 		toolchainStatus := newToolchainStatus()
 		registrationService := newRegistrationServiceReady()
-		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentReadyCondition(), status.DeploymentProgressingCondition())
-		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentReadyCondition(), status.DeploymentProgressingCondition())
+		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
 		t.Run("MemberStatus member clusters not found - no cluster client", func(t *testing.T) {
 			// given
@@ -488,13 +488,13 @@ func memberCluster(cl client.Client, status corev1.ConditionStatus, lastProbeTim
 }
 
 func newMemberStatusReady() *toolchainv1alpha1.MemberStatus {
-	readyStatus := status.NewComponentReadyCondition(toolchainv1alpha1.ToolchainStatusReasonAllComponentsReady)
+	readyStatus := status.NewComponentReadyCondition(toolchainv1alpha1.ToolchainStatusAllComponentsReadyReason)
 	return newMemberStatus(readyStatus)
 }
 
 func newMemberStatusNotReady(unreadyComponents ...string) *toolchainv1alpha1.MemberStatus {
 	msg := fmt.Sprintf("components not ready: %v", unreadyComponents)
-	notReadyStatus := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonComponentsNotReady, msg)
+	notReadyStatus := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason, msg)
 	return newMemberStatus(notReadyStatus)
 }
 
@@ -516,7 +516,7 @@ func newMemberStatus(condition *toolchainv1alpha1.Condition) *toolchainv1alpha1.
 }
 
 func newRegistrationServiceReady() *toolchainv1alpha1.RegistrationService {
-	readyStatus := status.NewComponentReadyCondition(toolchainv1alpha1.ToolchainStatusReasonRegServiceReady)
+	readyStatus := status.NewComponentReadyCondition(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason)
 	return &toolchainv1alpha1.RegistrationService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      registrationservice.ResourceName,
@@ -536,7 +536,7 @@ func newRegistrationServiceReady() *toolchainv1alpha1.RegistrationService {
 }
 
 func newRegistrationServiceNotReady() *toolchainv1alpha1.RegistrationService {
-	notReadyStatus := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusReasonRegServiceNotReady, "registration service resource not ready")
+	notReadyStatus := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceNotReadyReason, "registration service resource not ready")
 	return &toolchainv1alpha1.RegistrationService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      registrationservice.ResourceName,
@@ -601,7 +601,7 @@ func componentsReady() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionTrue,
-		Reason: toolchainv1alpha1.ToolchainStatusReasonAllComponentsReady,
+		Reason: toolchainv1alpha1.ToolchainStatusAllComponentsReadyReason,
 	}
 }
 
@@ -609,7 +609,7 @@ func componentsNotReady(components ...string) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ConditionReady,
 		Status:  corev1.ConditionFalse,
-		Reason:  toolchainv1alpha1.ToolchainStatusReasonComponentsNotReady,
+		Reason:  toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason,
 		Message: fmt.Sprintf("components not ready: %v", components),
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// CreateOrUpdateResources creates a toolchainstatus resource with the given name in the given namespace
 func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace, toolchainStatusName string) error {
 	toolchainStatus := &v1alpha1.ToolchainStatus{
 		ObjectMeta: v1.ObjectMeta{
