@@ -117,7 +117,7 @@ func loadFromSecret(cl client.Client) error {
 
 	// get secrets and set environment variables
 	for key, value := range secret.Data {
-		secretKey := HostEnvPrefix + "_" + (strings.ToUpper(strings.ReplaceAll(key, "-", "_")))
+		secretKey := HostEnvPrefix + "_" + (strings.ToUpper(strings.ReplaceAll(strings.ReplaceAll(key, ".", "_"), "-", "_")))
 		err = os.Setenv(secretKey, string(value))
 		if err != nil {
 			return err
