@@ -154,8 +154,8 @@ func loadFromConfigMap(cl client.Client) error {
 
 	// get configMap data and set environment variables
 	for key, value := range configMap.Data {
-		secretKey := createHostEnvVarKey(key)
-		err := os.Setenv(secretKey, value)
+		configKey := createHostEnvVarKey(key)
+		err := os.Setenv(configKey, value)
 		if err != nil {
 			return err
 		}

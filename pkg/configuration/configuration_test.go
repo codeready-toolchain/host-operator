@@ -140,7 +140,7 @@ func TestLoadFromConfigMap(t *testing.T) {
 		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_CONFIG_NAME", "test-config")
 		defer restore()
 
-		secret := &v1.ConfigMap{
+		configMap := &v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-config",
 				Namespace: "toolchain-host-operator",
@@ -151,7 +151,7 @@ func TestLoadFromConfigMap(t *testing.T) {
 			},
 		}
 
-		cl := test.NewFakeClient(t, secret)
+		cl := test.NewFakeClient(t, configMap)
 
 		// when
 		config, err := configuration.LoadConfig(cl)
