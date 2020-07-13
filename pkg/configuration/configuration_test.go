@@ -85,7 +85,6 @@ func TestLoadFromSecret(t *testing.T) {
 				"mailgun.domain":       []byte("test-domain"),
 				"mailgun-api-key":      []byte("test-api-key"),
 				"mailgun-sender.email": []byte("test-sender-email"),
-				"mailgun+test":         []byte("mailgun-test"),
 			},
 		}
 
@@ -148,8 +147,7 @@ func TestLoadFromConfigMap(t *testing.T) {
 			},
 			Data: map[string]string{
 				"registration.service.url": "test-url",
-				"test+test":                "test-test",
-				"another-test":             "another-test",
+				"test-test":                "test-test",
 			},
 		}
 
@@ -163,12 +161,10 @@ func TestLoadFromConfigMap(t *testing.T) {
 		assert.Equal(t, "test-url", config.GetRegistrationServiceURL())
 
 		// test env vars are parsed and created correctly
-		apiKey := os.Getenv("HOST_OPERATOR_REGISTRATION_SERVICE_URL")
-		assert.Equal(t, apiKey, "test-url")
-		domain := os.Getenv("HOST_OPERATOR_TEST+TEST")
-		assert.Equal(t, domain, "test-test")
-		senderEmail := os.Getenv("HOST_OPERATOR_ANOTHER_TEST")
-		assert.Equal(t, senderEmail, "another-test")
+		regServiceURL := os.Getenv("HOST_OPERATOR_REGISTRATION_SERVICE_URL")
+		assert.Equal(t, regServiceURL, "test-url")
+		testTest := os.Getenv("HOST_OPERATOR_TEST_TEST")
+		assert.Equal(t, testTest, "test-test")
 	})
 
 	t.Run("configMap not found", func(t *testing.T) {
