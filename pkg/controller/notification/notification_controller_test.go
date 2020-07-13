@@ -2,6 +2,7 @@ package notification
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/mailgun/mailgun-go/v4"
@@ -27,6 +28,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+type MockDeliveryService struct {
+}
+
+func (s *MockDeliveryService) Send(ctx context.Context, notificationCtx *NotificationContext, templateName string) error {
+	return errors.New("delivery error")
+}
 
 func TestNotificationSuccess(t *testing.T) {
 	// given
@@ -140,8 +148,6 @@ func TestNotificationDelivery(t *testing.T) {
 			},
 		)
 
-		require.NoError(t, err)
-
 		iter := mg.ListEvents(&mailgun.ListEventOptions{Limit: 1})
 		var events []mailgun.Event
 		require.True(t, iter.First(context.Background(), &events))
@@ -154,6 +160,80 @@ func TestNotificationDelivery(t *testing.T) {
 		require.Equal(t, "redhat.com", accepted.RecipientDomain)
 		require.Equal(t, "foo", accepted.Message.Headers.Subject)
 		require.Equal(t, "noreply@foo.com", accepted.Message.Headers.From)
+	})
+
+	t.Run("test notification delivery fails for invalid user ID", func(t *testing.T) {
+		// given
+		notification := newNotification("abc123", "test")
+		controller, request, client := newController(t, notification, ds)
+
+		// when
+		_, err := controller.Reconcile(request)
+
+		// then
+		require.Error(t, err)
+		require.Equal(t, "failed to create notification context: usersignups.toolchain.dev.openshift.com \"abc123\" not found", err.Error())
+
+		// Load the reconciled notification
+		key := types.NamespacedName{
+			Namespace: operatorNamespace,
+			Name:      notification.Name,
+		}
+		instance := &v1alpha1.Notification{}
+		err = client.Get(context.TODO(), key, instance)
+		require.NoError(t, err)
+
+		test.AssertConditionsMatch(t, instance.Status.Conditions,
+			v1alpha1.Condition{
+				Type:    v1alpha1.NotificationSent,
+				Status:  corev1.ConditionFalse,
+				Reason:  v1alpha1.NotificationContextErrorReason,
+				Message: "usersignups.toolchain.dev.openshift.com \"abc123\" not found",
+			},
+		)
+
+	})
+
+	t.Run("test notification delivery fails for delivery service failure", func(t *testing.T) {
+		// given
+		userSignup := &v1alpha1.UserSignup{
+			ObjectMeta: newObjectMeta("abc123", "foo@redhat.com"),
+			Spec: v1alpha1.UserSignupSpec{
+				Username:   "foo@redhat.com",
+				GivenName:  "Foo",
+				FamilyName: "Bar",
+				Company:    "Red Hat",
+			},
+		}
+		mds := &MockDeliveryService{}
+		notification := newNotification("abc123", "test")
+		controller, request, client := newController(t, notification, mds, userSignup)
+
+		// when
+		_, err := controller.Reconcile(request)
+
+		// then
+		require.Error(t, err)
+		require.Equal(t, "failed to send notification: delivery error", err.Error())
+
+		// Load the reconciled notification
+		key := types.NamespacedName{
+			Namespace: operatorNamespace,
+			Name:      notification.Name,
+		}
+		instance := &v1alpha1.Notification{}
+		err = client.Get(context.TODO(), key, instance)
+		require.NoError(t, err)
+
+		test.AssertConditionsMatch(t, instance.Status.Conditions,
+			v1alpha1.Condition{
+				Type:    v1alpha1.NotificationSent,
+				Status:  corev1.ConditionFalse,
+				Reason:  v1alpha1.NotificationDeliveryErrorReason,
+				Message: "delivery error",
+			},
+		)
+
 	})
 }
 

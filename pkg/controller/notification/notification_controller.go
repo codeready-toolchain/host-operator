@@ -137,7 +137,9 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 // the duration before the notification should be deleted. If so, the notification is deleted.
 // Returns bool indicating if the notification was deleted, the time before the notification
 // can be deleted and error
-func (r *ReconcileNotification) checkTransitionTimeAndDelete(log logr.Logger, notification *toolchainv1alpha1.Notification, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
+func (r *ReconcileNotification) checkTransitionTimeAndDelete(log logr.Logger, notification *toolchainv1alpha1.Notification,
+	completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
+
 	log.Info("the Notification is sent so we can deal with its deletion")
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
@@ -155,7 +157,8 @@ func (r *ReconcileNotification) checkTransitionTimeAndDelete(log logr.Logger, no
 	return false, diff, nil
 }
 
-func (r *ReconcileNotification) wrapErrorWithStatusUpdate(logger logr.Logger, notification *toolchainv1alpha1.Notification, statusUpdater func(notification *toolchainv1alpha1.Notification, message string) error, err error, format string, args ...interface{}) error {
+func (r *ReconcileNotification) wrapErrorWithStatusUpdate(logger logr.Logger, notification *toolchainv1alpha1.Notification,
+	statusUpdater func(notification *toolchainv1alpha1.Notification, message string) error, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
@@ -220,7 +223,7 @@ func (r *ReconcileNotification) setStatusNotificationSent(notification *toolchai
 }
 
 func (r *ReconcileNotification) updateStatus(logger logr.Logger, notification *toolchainv1alpha1.Notification,
-	statusUpdater func(notification *toolchainv1alpha1.Notification, message string) error) error {
+	statusUpdater func(notification *toolchainv1alpha1.Notification, msg string) error) error {
 
 	if err := statusUpdater(notification, ""); err != nil {
 		logger.Error(err, "status update failed")
