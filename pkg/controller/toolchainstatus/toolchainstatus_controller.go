@@ -258,9 +258,8 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 		memberClient := cluster.Client
 		if memberClient == nil {
 			// there is no client for the member cluster, create a status condition and add it to this member's status
-			err := fmt.Errorf("member cluster does not have a client assigned")
-			componentError = err
-			notFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberStatusNotFoundReason, err.Error())
+			componentError := fmt.Errorf("member cluster does not have a client assigned")
+			notFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberStatusNotFoundReason, componentError.Error())
 			memberStatus := customMemberStatus(*notFoundCondition)
 			members = append(members, memberResult(cluster, memberStatus))
 			continue
