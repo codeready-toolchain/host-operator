@@ -40,8 +40,8 @@ replace (
 )
 
 replace (
-	github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20200713185321-891ce4f59900
-	github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20200713022513-a7e1e6015660
+	github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20200713212239-c401261cd16c
+	github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20200713212651-e0a4a5b9bec8
 )
 
 go 1.13

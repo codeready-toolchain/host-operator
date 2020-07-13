@@ -748,12 +748,10 @@ github.com/prometheus/prometheus v0.0.0-20180315085919-58e2a31db8de/go.mod h1:oA
 github.com/prometheus/prometheus v1.8.2-0.20200110114423-1e64d757f711/go.mod h1:7U90zPoLkWjEIQcy/rweQla82OCTUzxVHE51G3OhJbI=
 github.com/prometheus/prometheus v2.3.2+incompatible/go.mod h1:oAIUtOny2rjMX0OWN5vPR5/q/twIROJvdqnQKDdil/s=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
-github.com/rajivnathan/api v0.0.0-20200710212816-c078f7d76981 h1:8iyt4NhIRBH1DAhaEtmLT02WNiNW+xG7Tikt4KvcYAI=
-github.com/rajivnathan/api v0.0.0-20200710212816-c078f7d76981/go.mod h1:uh4hKem1mo1TE66qtuA5ZV3orpsKJNufWCSE0uPSES8=
-github.com/rajivnathan/api v0.0.0-20200713185321-891ce4f59900 h1:VuW3Kn3Z/m2UMXqROJ2RavLi5WbJ+bgaVOyShF0tWJ0=
-github.com/rajivnathan/api v0.0.0-20200713185321-891ce4f59900/go.mod h1:uh4hKem1mo1TE66qtuA5ZV3orpsKJNufWCSE0uPSES8=
-github.com/rajivnathan/toolchain-common v0.0.0-20200713022513-a7e1e6015660 h1:MAlPJIS40VVgC0tNTmn4v5AvMGaOeaAHgBnyMfXQwno=
-github.com/rajivnathan/toolchain-common v0.0.0-20200713022513-a7e1e6015660/go.mod h1:NSSfS4WcSa6TMzEPRm/n364LKbMaJXusax1BVZYzxJc=
+github.com/rajivnathan/api v0.0.0-20200713212239-c401261cd16c h1:mXSRvpp/3HKbbaZ4UdS3nlL06ltsJsBOhyjjj4/4Uv4=
+github.com/rajivnathan/api v0.0.0-20200713212239-c401261cd16c/go.mod h1:uh4hKem1mo1TE66qtuA5ZV3orpsKJNufWCSE0uPSES8=
+github.com/rajivnathan/toolchain-common v0.0.0-20200713212651-e0a4a5b9bec8 h1:IVGdd9MSNctWlkU2rYVKQNJUcKpLF0vut1TI8rLmPuY=
+github.com/rajivnathan/toolchain-common v0.0.0-20200713212651-e0a4a5b9bec8/go.mod h1:dOq8OXguZBa5b1nDAAP9LtdzdYG9zQ1e0wIkiEuuizs=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776 h1:b4BUvzMzkoRJvEbs1J3GaewlHzjxYYxVfuy8/DOU9zo=
 github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776/go.mod h1:K9f0vBA2bBiDyg9bsGDUojdwdhwUvHKX5QW0B+brWgo=
