@@ -2,10 +2,11 @@ package notification
 
 import (
 	"context"
+	"testing"
+
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/mailgun/mailgun-go/v4"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type MailgunAPIBaseOption struct {
@@ -69,8 +70,8 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 		// then
 		require.Error(t, err)
 		require.IsType(t, MailgunDeliveryError{}, err)
-		require.Equal(t, "error while delivering notification (ID: , Response: ) - while making http request: "+
-			"Post https://127.0.0.1:60000/v3/mg.foo.com/messages: dial tcp 127.0.0.1:60000: connect: connection refused", err.Error())
+		require.Equal(t, `error while delivering notification (ID: , Response: ) - while making http request: `+
+			`Post "https://127.0.0.1:60000/v3/mg.foo.com/messages": dial tcp 127.0.0.1:60000: connect: connection refused`, err.Error())
 	})
 
 	t.Run("test mailgun notification delivery service invalid template", func(t *testing.T) {
