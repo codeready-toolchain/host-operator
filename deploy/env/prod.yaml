@@ -15,3 +15,5 @@ registration-service:
 host-operator:
   secret:
     name: host-operator-secret
+  config-map:
+    name: host-operator-config
