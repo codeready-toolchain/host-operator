@@ -1,6 +1,7 @@
 package configuration_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -81,9 +82,9 @@ func TestLoadFromSecret(t *testing.T) {
 				Namespace: "toolchain-host-operator",
 			},
 			Data: map[string][]byte{
-				"mailgun-domain":       []byte("test-domain"),
+				"mailgun.domain":       []byte("test-domain"),
 				"mailgun-api-key":      []byte("test-api-key"),
-				"mailgun-sender-email": []byte("test-sender-email"),
+				"mailgun-sender.email": []byte("test-sender-email"),
 			},
 		}
 
@@ -97,6 +98,14 @@ func TestLoadFromSecret(t *testing.T) {
 		assert.Equal(t, "test-domain", config.GetMailgunDomain())
 		assert.Equal(t, "test-api-key", config.GetMailgunAPIKey())
 		assert.Equal(t, "test-sender-email", config.GetMailgunSenderEmail())
+
+		// test env vars are parsed and created correctly
+		apiKey := os.Getenv("HOST_OPERATOR_MAILGUN_API_KEY")
+		assert.Equal(t, apiKey, "test-api-key")
+		domain := os.Getenv("HOST_OPERATOR_MAILGUN_DOMAIN")
+		assert.Equal(t, domain, "test-domain")
+		senderEmail := os.Getenv("HOST_OPERATOR_MAILGUN_SENDER_EMAIL")
+		assert.Equal(t, senderEmail, "test-sender-email")
 	})
 
 	t.Run("secret not found", func(t *testing.T) {
