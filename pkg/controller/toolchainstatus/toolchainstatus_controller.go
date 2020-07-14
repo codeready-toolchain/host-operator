@@ -372,15 +372,13 @@ func (s regServiceSubstatusHandler) addRegistrationServiceResourceStatus(reqLogg
 // addRegistrationServiceDeploymentStatus handles the RegistrationService.Deployment part of the toolchainstatus
 func (s regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	deploymentConditions, err := status.GetDeploymentStatusConditions(s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
+	toolchainStatus.Status.RegistrationService.Deployment.Name = registrationservice.ResourceName
+	toolchainStatus.Status.RegistrationService.Deployment.Conditions = deploymentConditions
 	if err != nil {
 		err = errs.Wrap(err, "a problem was detected in the deployment status")
-		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceDeploymentNotFoundReason, err.Error())
-		toolchainStatus.Status.RegistrationService.Deployment.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return err
 	}
 
-	toolchainStatus.Status.RegistrationService.Deployment.Name = registrationservice.ResourceName
-	toolchainStatus.Status.RegistrationService.Deployment.Conditions = deploymentConditions
 	return nil
 }
 
