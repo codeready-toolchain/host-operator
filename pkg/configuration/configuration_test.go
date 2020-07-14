@@ -137,7 +137,7 @@ func TestLoadFromConfigMap(t *testing.T) {
 	})
 	t.Run("env overwrite", func(t *testing.T) {
 		// given
-		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_CONFIG_NAME", "test-config")
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_CONFIG_MAP_NAME", "test-config")
 		defer restore()
 
 		configMap := &v1.ConfigMap{
@@ -169,7 +169,7 @@ func TestLoadFromConfigMap(t *testing.T) {
 
 	t.Run("configMap not found", func(t *testing.T) {
 		// given
-		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_CONFIG_NAME", "test-config")
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_CONFIG_MAP_NAME", "test-config")
 		defer restore()
 
 		cl := test.NewFakeClient(t)

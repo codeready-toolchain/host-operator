@@ -134,7 +134,7 @@ func loadFromSecret(cl client.Client) error {
 // loadFromConfigMap retrieves the host operator configMap
 func loadFromConfigMap(cl client.Client) error {
 	// get the configMap name
-	configMapName := getResourceName("HOST_OPERATOR_CONFIG_NAME")
+	configMapName := getResourceName("HOST_OPERATOR_CONFIG_MAP_NAME")
 	if configMapName == "" {
 		return nil
 	}
