@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
+
 	"github.com/mailgun/mailgun-go/v4"
 	"github.com/stretchr/testify/require"
 )
