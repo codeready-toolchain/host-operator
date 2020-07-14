@@ -46,9 +46,9 @@ func (a *ToolchainStatusAssertion) HasCondition(expected toolchainv1alpha1.Condi
 	return a
 }
 
-func (a *ToolchainStatusAssertion) HasHostOperatorConditionErrorMsg(msg string) *ToolchainStatusAssertion {
+func (a *ToolchainStatusAssertion) HasHostOperatorConditionErrorMsg(expected string) *ToolchainStatusAssertion {
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
-	require.Contains(a.t, a.toolchainStatus.Status.HostOperator.Conditions[0].Message, msg)
+	require.Equal(a.t, expected, a.toolchainStatus.Status.HostOperator.Conditions[0].Message)
 	return a
 }

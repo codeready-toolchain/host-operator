@@ -49,9 +49,9 @@ func (f *fakeHTTPClient) Get(url string) (*http.Response, error) {
 	return &f.response, f.err
 }
 
-const respBodyGood = "{\"alive\":true,\"environment\":\"dev\",\"revision\":\"64af1be5c6011fae5497a7c35e2a986d633b3421\",\"buildTime\":\"0\",\"startTime\":\"2020-07-06T13:18:30Z\"}"
-const respBodyInvalid = "{\"not found\"}"
-const respBodyBad = "{\"alive\":false,\"environment\":\"dev\",\"revision\":\"64af1be5c6011fae5497a7c35e2a986d633b3421\",\"buildTime\":\"0\",\"startTime\":\"2020-07-06T13:18:30Z\"}"
+const respBodyGood = `{"alive":true,"environment":"dev","revision":"64af1be5c6011fae5497a7c35e2a986d633b3421","buildTime":"0","startTime":"2020-07-06T13:18:30Z"}`
+const respBodyInvalid = `{"not found"}`
+const respBodyBad = `{"alive":false,"environment":"dev","revision":"64af1be5c6011fae5497a7c35e2a986d633b3421","buildTime":"0","startTime":"2020-07-06T13:18:30Z"}`
 
 func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTPClient, getMemberClustersFunc func(fakeClient client.Client) cluster.GetMemberClustersFunc, initObjs ...runtime.Object) (*ReconcileToolchainStatus, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
@@ -150,7 +150,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasCondition(componentsNotReady(string(hostOperatorTag)))
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasHostOperatorConditionErrorMsg("unable to get the deployment")
+				HasHostOperatorConditionErrorMsg("unable to get the deployment: OPERATOR_NAME must be set")
 		})
 
 		t.Run("Host operator deployment not found", func(t *testing.T) {
