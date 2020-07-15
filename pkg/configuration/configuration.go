@@ -61,6 +61,9 @@ const (
 
 	// varRegistrationServiceURL is the URL used to access the registration service
 	varRegistrationServiceURL = "registration.service.url"
+
+	// varEnvironment specifies the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
+	varEnvironment = "environment"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -187,6 +190,7 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, "24h")
 	c.host.SetDefault(varRegistrationServiceURL, "https://registration.crt-placeholder.com")
+	c.host.SetDefault(varEnvironment, "dev")
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
@@ -222,6 +226,11 @@ func (c *Config) GetMailgunSenderEmail() string {
 // GetRegistrationServiceURL returns the URL of the registration service
 func (c *Config) GetRegistrationServiceURL() string {
 	return c.host.GetString(varRegistrationServiceURL)
+}
+
+// GetEnvironment returns the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
+func (c *Config) GetEnvironment() string {
+	return c.host.GetString(varEnvironment)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
