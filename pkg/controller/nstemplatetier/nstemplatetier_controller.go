@@ -140,7 +140,6 @@ func (r *NSTemplateTierReconciler) Reconcile(request reconcile.Request) (reconci
 			logger.Error(err, "unable to mark latest status.update as complete.")
 			return reconcile.Result{}, err
 		}
-		return reconcile.Result{}, nil
 	}
 	return reconcile.Result{}, nil
 }
