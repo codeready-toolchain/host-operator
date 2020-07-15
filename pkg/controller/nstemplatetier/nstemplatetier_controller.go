@@ -165,7 +165,9 @@ func (r *NSTemplateTierReconciler) ensureStatusUpdateRecord(logger logr.Logger, 
 		logger.Info("current update still in progress")
 		return false, nil
 	}
-	tier.Status.Updates[len(tier.Status.Updates)-1].FailedAccounts = nil // reset
+	// reset the `FailedAccounts` in the previous update as we don't want to retain the usernames
+	// for whom the update failed previously (no need to carry such data anymore)
+	tier.Status.Updates[len(tier.Status.Updates)-1].FailedAccounts = nil
 	logger.Info("Adding a new entry in tier.status.updates")
 	tier.Status.Updates = append(tier.Status.Updates, toolchainv1alpha1.NSTemplateTierHistory{
 		StartTime: metav1.NewTime(time.Now()),
