@@ -11,6 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// ResourceName is the name used for the registration service resource
+const ResourceName = "registration-service"
+
 func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace string, confg *configuration.Config) error {
 	envs := map[string]string{}
 	for key, value := range confg.GetAllRegistrationServiceParameters() {
@@ -20,7 +23,7 @@ func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace 
 	regService := &v1alpha1.RegistrationService{
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: namespace,
-			Name:      "registration-service",
+			Name:      ResourceName,
 		},
 		Spec: v1alpha1.RegistrationServiceSpec{
 			EnvironmentVariables: envs,

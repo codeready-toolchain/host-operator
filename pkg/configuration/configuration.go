@@ -27,6 +27,11 @@ const (
 
 // host-operator constants
 const (
+	// ToolchainStatusName specifies the name of the toolchain status resource that provides information about the toolchain components in this cluster
+	ToolchainStatusName = "toolchain.status"
+
+	// DefaultToolchainStatusName the default name for the toolchain status resource created during initialization of the operator
+	DefaultToolchainStatusName = "toolchain-status"
 
 	// VarDurationBeforeChangeRequestDeletion specifies the duration before a change request is deleted
 	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
@@ -197,11 +202,17 @@ func createHostEnvVarKey(key string) string {
 
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
+	c.host.SetDefault(ToolchainStatusName, DefaultToolchainStatusName)
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, defaultDurationBeforeDeletion)
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeDeletion)
 	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
+}
+
+// GetToolchainStatusName returns the configured name of the member status resource
+func (c *Config) GetToolchainStatusName() string {
+	return c.host.GetString(ToolchainStatusName)
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
