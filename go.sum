@@ -136,6 +136,10 @@ github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMe
 github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c/go.mod h1:XGLbWH/ujMcbPbhZq52Nv6UrCghb1yGn//133kEsvDk=
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
+github.com/codeready-toolchain/api v0.0.0-20200715195555-28ba37e37ddd h1:G54EWvJPeJer/p07NuKKMYmXKscSnQcRMTH63AzWN+w=
+github.com/codeready-toolchain/api v0.0.0-20200715195555-28ba37e37ddd/go.mod h1:uh4hKem1mo1TE66qtuA5ZV3orpsKJNufWCSE0uPSES8=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200715201956-5cea174a453d h1:N9CxG2CBZk4JQsFR5lI96Km0dNBNIgxBWlCRB/UooB0=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200715201956-5cea174a453d/go.mod h1:IC9kx4UmJCII7dEmH2ChvgGYcmZ/o9P6F/b89UvEHOw=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=
 github.com/containerd/console v0.0.0-20180822173158-c12b1e7919c1/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.2.7/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=
@@ -748,10 +752,6 @@ github.com/prometheus/prometheus v0.0.0-20180315085919-58e2a31db8de/go.mod h1:oA
 github.com/prometheus/prometheus v1.8.2-0.20200110114423-1e64d757f711/go.mod h1:7U90zPoLkWjEIQcy/rweQla82OCTUzxVHE51G3OhJbI=
 github.com/prometheus/prometheus v2.3.2+incompatible/go.mod h1:oAIUtOny2rjMX0OWN5vPR5/q/twIROJvdqnQKDdil/s=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
-github.com/rajivnathan/api v0.0.0-20200714193119-b97434990434 h1:Ls+5rYroaMefQfomhH6mrmNQWG1MASfTU6lhtWGL3q8=
-github.com/rajivnathan/api v0.0.0-20200714193119-b97434990434/go.mod h1:uh4hKem1mo1TE66qtuA5ZV3orpsKJNufWCSE0uPSES8=
-github.com/rajivnathan/toolchain-common v0.0.0-20200714193302-5e6099c72da5 h1:9lDhMqtSFKo3tYilm7myOkpfMIii2OZKnMY8bsehTf4=
-github.com/rajivnathan/toolchain-common v0.0.0-20200714193302-5e6099c72da5/go.mod h1:1QmX+kL/I+2b8eOk10MDqqDFiVtQ3I+mL4O/q52QyUE=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776 h1:b4BUvzMzkoRJvEbs1J3GaewlHzjxYYxVfuy8/DOU9zo=
 github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776/go.mod h1:K9f0vBA2bBiDyg9bsGDUojdwdhwUvHKX5QW0B+brWgo=
