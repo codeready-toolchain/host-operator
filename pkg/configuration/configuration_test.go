@@ -61,11 +61,18 @@ func TestGetAllRegistrationServiceParameters(t *testing.T) {
 }
 
 func TestEnvironment(t *testing.T) {
-	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_ENVIRONMENT", "e2e-test")
-	defer restore()
+	t.Run("default", func(t *testing.T) {
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, "prod", config.GetEnvironment())
+	})
 
-	config := getDefaultConfiguration(t)
-	assert.Equal(t, "e2e-test", config.GetEnvironment())
+	t.Run("env overwrite", func(t *testing.T) {
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_ENVIRONMENT", "e2e-test")
+		defer restore()
+
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, "e2e-test", config.GetEnvironment())
+	})
 }
 
 func TestLoadFromSecret(t *testing.T) {

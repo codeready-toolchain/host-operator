@@ -27,8 +27,12 @@ const (
 
 // host-operator constants
 const (
-	// VarDurationBeforeChangeRequestDeletion specificies the duration before a change request is deleted
+
+	// VarDurationBeforeChangeRequestDeletion specifies the duration before a change request is deleted
 	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
+
+	// defaultDurationBeforeDeletion is the time before a resource is deleted
+	defaultDurationBeforeDeletion = "24h"
 
 	// ToolchainConfigMapUserApprovalPolicy is a key for a user approval policy that should be used
 	ToolchainConfigMapUserApprovalPolicy = "user-approval-policy"
@@ -45,6 +49,7 @@ const (
 	// NotificationDeliveryServiceMailgun is the notification delivery service to use during production
 	NotificationDeliveryServiceMailgun = "mailgun"
 
+	// varNotificationDeliveryService specifies the duration before a notification is deleted
 	varNotificationDeliveryService = "notification.delivery.service"
 
 	// varDurationBeforeNotificationDeletion specifies the duration before a notification will be deleted
@@ -62,8 +67,14 @@ const (
 	// varRegistrationServiceURL is the URL used to access the registration service
 	varRegistrationServiceURL = "registration.service.url"
 
+	// defaultRegistrationServiceURL is the default location of the registration service
+	defaultRegistrationServiceURL = "https://registration.crt-placeholder.com"
+
 	// varEnvironment specifies the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
 	varEnvironment = "environment"
+
+	// defaultEnvironment is the default host-operator environment
+	defaultEnvironment = "prod"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -186,11 +197,11 @@ func createHostEnvVarKey(key string) string {
 
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
-	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
+	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, defaultDurationBeforeDeletion)
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
-	c.host.SetDefault(varDurationBeforeNotificationDeletion, "24h")
-	c.host.SetDefault(varRegistrationServiceURL, "https://registration.crt-placeholder.com")
-	c.host.SetDefault(varEnvironment, "dev")
+	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeDeletion)
+	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
+	c.host.SetDefault(varEnvironment, defaultEnvironment)
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
