@@ -135,7 +135,7 @@ func (r *NSTemplateTierReconciler) Reconcile(request reconcile.Request) (reconci
 		logger.Error(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed.")
 		return reconcile.Result{}, err
 	} else if done {
-		log.Info("No MasterUserRecord to update. Setting the completion timestamp immediately")
+		logger.Info("All MasterUserRecords are up to date. Setting the completion timestamp")
 		if err := r.markUpdateRecordAsCompleted(tier); err != nil {
 			logger.Error(err, "unable to mark latest status.update as complete.")
 			return reconcile.Result{}, err
@@ -209,8 +209,7 @@ func (r *NSTemplateTierReconciler) ensureTemplateUpdateRequest(logger logr.Logge
 		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchingLabels)
 		if activeTemplateUpdateRequests == 0 && len(murs.Items) == 0 {
 			// we've reached the end: all MasterUserRecords are up-to-date
-			logger.Info("All MasterUserRecords are up to date. Setting the completion timestamp")
-			return true, r.markUpdateRecordAsCompleted(tier)
+			return true, nil
 		}
 		for _, mur := range murs.Items {
 			// check if there's already a TemplateUpdateRequest for this MasterUserRecord
