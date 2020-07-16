@@ -120,25 +120,25 @@ func (r *NSTemplateTierReconciler) Reconcile(request reconcile.Request) (reconci
 		}
 		// Error reading the object - requeue the request.
 		logger.Error(err, "unable to get the current NSTemplateTier tier")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, errs.Wrap(err, "unable to get the current NSTemplateTier tier")
 	}
 
 	// create a new entry in the `status.history`
 	if added, err := r.ensureStatusUpdateRecord(logger, tier); err != nil {
-		logger.Error(err, "unable to insert a new entry in status.updates after NSTemplateTier changed.")
-		return reconcile.Result{}, err
+		logger.Error(err, "unable to insert a new entry in status.updates after NSTemplateTier changed")
+		return reconcile.Result{}, errs.Wrap(err, "unable to insert a new entry in status.updates after NSTemplateTier changed")
 	} else if added {
 		logger.Info("Requeing after adding a new entry in tier.status.updates")
 		return reconcile.Result{Requeue: true}, nil
 	}
 	if done, err := r.ensureTemplateUpdateRequest(logger, tier); err != nil {
-		logger.Error(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed.")
-		return reconcile.Result{}, err
+		logger.Error(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed")
+		return reconcile.Result{}, errs.Wrap(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed")
 	} else if done {
 		logger.Info("All MasterUserRecords are up to date. Setting the completion timestamp")
 		if err := r.markUpdateRecordAsCompleted(tier); err != nil {
-			logger.Error(err, "unable to mark latest status.update as complete.")
-			return reconcile.Result{}, err
+			logger.Error(err, "unable to mark latest status.update as complete")
+			return reconcile.Result{}, errs.Wrap(err, "unable to mark latest status.update as complete")
 		}
 	}
 	return reconcile.Result{}, nil
@@ -198,12 +198,11 @@ func (r *NSTemplateTierReconciler) ensureTemplateUpdateRequest(logger logr.Logge
 		if err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
-		err = r.client.List(context.Background(), &murs,
+		if err = r.client.List(context.Background(), &murs,
 			client.InNamespace(tier.Namespace),
 			client.Limit(MaxPoolSize+1),
 			matchingLabels,
-		)
-		if err != nil {
+		); err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
 		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchingLabels)
