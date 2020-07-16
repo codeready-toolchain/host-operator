@@ -127,9 +127,11 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
 				r.setStatusNotificationDeliveryError, err, "failed to send notification")
 		}
+		reqLogger.Info("Notification has been sent")
+	} else {
+		reqLogger.Info("Notification has been skipped")
 	}
 
-	reqLogger.Info("Notification has been sent")
 	return reconcile.Result{
 		Requeue:      true,
 		RequeueAfter: r.config.GetDurationBeforeNotificationDeletion(),
