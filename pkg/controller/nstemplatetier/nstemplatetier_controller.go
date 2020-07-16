@@ -321,7 +321,7 @@ func (r *NSTemplateTierReconciler) incrementCounters(logger logr.Logger, tier *t
 }
 
 // markUpdateRecordAsCompleted looks-up the latest entry in the `status.updates` and sets the `CompletionTime` to `metav1.Now()`,
-// which means that the whole update process is done
+// which means that the whole update process is done (whether there were accounts to update or not)
 func (r *NSTemplateTierReconciler) markUpdateRecordAsCompleted(tier *toolchainv1alpha1.NSTemplateTier) error {
 	if len(tier.Status.Updates) == 0 {
 		return fmt.Errorf("no entry in the `Status.Updates`")
