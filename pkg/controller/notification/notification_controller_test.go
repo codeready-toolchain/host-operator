@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/mailgun/mailgun-go/v4"
 	events2 "github.com/mailgun/mailgun-go/v4/events"
 	"k8s.io/apimachinery/pkg/types"
-	"testing"
-	"time"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -160,6 +161,48 @@ func TestNotificationDelivery(t *testing.T) {
 		require.Equal(t, "redhat.com", accepted.RecipientDomain)
 		require.Equal(t, "foo", accepted.Message.Headers.Subject)
 		require.Equal(t, "noreply@foo.com", accepted.Message.Headers.From)
+	})
+
+	t.Run("test notification with environment e2e", func(t *testing.T) {
+
+		// given
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_ENVIRONMENT", "e2e-tests")
+		defer restore()
+		userSignup := &v1alpha1.UserSignup{
+			ObjectMeta: newObjectMeta("abc123", "jane@redhat.com"),
+			Spec: v1alpha1.UserSignupSpec{
+				Username:   "jane@redhat.com",
+				GivenName:  "jane",
+				FamilyName: "doe",
+				Company:    "Red Hat",
+			},
+		}
+		notification := newNotification("abc123", "test")
+		// pass in nil for deliveryService since send won't be used (sending skipped)
+		controller, request, client := newController(t, notification, nil, userSignup)
+
+		// when
+		_, err := controller.Reconcile(request)
+
+		// then
+		require.NoError(t, err)
+
+		// Load the reconciled notification
+		key := types.NamespacedName{
+			Namespace: operatorNamespace,
+			Name:      notification.Name,
+		}
+		instance := &v1alpha1.Notification{}
+		err = client.Get(context.TODO(), key, instance)
+		require.NoError(t, err)
+
+		test.AssertConditionsMatch(t, instance.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.NotificationSent,
+				Status: corev1.ConditionTrue,
+				Reason: v1alpha1.NotificationSentReason,
+			},
+		)
 	})
 
 	t.Run("test notification delivery fails for invalid user ID", func(t *testing.T) {

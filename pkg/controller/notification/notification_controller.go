@@ -119,11 +119,13 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 			r.setStatusNotificationContextError, err, "failed to create notification context")
 	}
 
-	// Send the notification via the configured delivery service
-	err = r.deliveryService.Send(context.Background(), notCtx, notification.Spec.Template)
-	if err != nil {
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
-			r.setStatusNotificationDeliveryError, err, "failed to send notification")
+	if r.config.GetEnvironment() != "e2e-tests" {
+		// Send the notification via the configured delivery service
+		err = r.deliveryService.Send(context.Background(), notCtx, notification.Spec.Template)
+		if err != nil {
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
+				r.setStatusNotificationDeliveryError, err, "failed to send notification")
+		}
 	}
 
 	reqLogger.Info("Notification has been sent")
