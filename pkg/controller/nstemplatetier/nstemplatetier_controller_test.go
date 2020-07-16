@@ -403,7 +403,7 @@ func TestReconcile(t *testing.T) {
 
 	t.Run("failures", func(t *testing.T) {
 
-		t.Run("unable to get tier not found", func(t *testing.T) {
+		t.Run("unable to get NSTemplateTier", func(t *testing.T) {
 
 			t.Run("tier not found", func(t *testing.T) {
 				// given
