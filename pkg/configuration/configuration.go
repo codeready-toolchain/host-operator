@@ -33,8 +33,11 @@ const (
 	// DefaultToolchainStatusName the default name for the toolchain status resource created during initialization of the operator
 	DefaultToolchainStatusName = "toolchain-status"
 
-	// VarDurationBeforeChangeRequestDeletion specificies the duration before a change request is deleted
+	// VarDurationBeforeChangeRequestDeletion specifies the duration before a change request is deleted
 	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
+
+	// defaultDurationBeforeDeletion is the time before a resource is deleted
+	defaultDurationBeforeDeletion = "24h"
 
 	// ToolchainConfigMapUserApprovalPolicy is a key for a user approval policy that should be used
 	ToolchainConfigMapUserApprovalPolicy = "user-approval-policy"
@@ -51,6 +54,7 @@ const (
 	// NotificationDeliveryServiceMailgun is the notification delivery service to use during production
 	NotificationDeliveryServiceMailgun = "mailgun"
 
+	// varNotificationDeliveryService specifies the duration before a notification is deleted
 	varNotificationDeliveryService = "notification.delivery.service"
 
 	// varDurationBeforeNotificationDeletion specifies the duration before a notification will be deleted
@@ -67,6 +71,15 @@ const (
 
 	// varRegistrationServiceURL is the URL used to access the registration service
 	varRegistrationServiceURL = "registration.service.url"
+
+	// defaultRegistrationServiceURL is the default location of the registration service
+	defaultRegistrationServiceURL = "https://registration.crt-placeholder.com"
+
+	// varEnvironment specifies the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
+	varEnvironment = "environment"
+
+	// defaultEnvironment is the default host-operator environment
+	defaultEnvironment = "prod"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -190,10 +203,11 @@ func createHostEnvVarKey(key string) string {
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(ToolchainStatusName, DefaultToolchainStatusName)
-	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
+	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, defaultDurationBeforeDeletion)
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
-	c.host.SetDefault(varDurationBeforeNotificationDeletion, "24h")
-	c.host.SetDefault(varRegistrationServiceURL, "https://registration.crt-placeholder.com")
+	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeDeletion)
+	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
+	c.host.SetDefault(varEnvironment, defaultEnvironment)
 }
 
 // GetToolchainStatusName returns the configured name of the member status resource
@@ -234,6 +248,11 @@ func (c *Config) GetMailgunSenderEmail() string {
 // GetRegistrationServiceURL returns the URL of the registration service
 func (c *Config) GetRegistrationServiceURL() string {
 	return c.host.GetString(varRegistrationServiceURL)
+}
+
+// GetEnvironment returns the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
+func (c *Config) GetEnvironment() string {
+	return c.host.GetString(varEnvironment)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
