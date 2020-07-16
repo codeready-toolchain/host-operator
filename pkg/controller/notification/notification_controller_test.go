@@ -95,10 +95,11 @@ func TestNotificationSentFailure(t *testing.T) {
 		}
 
 		// when
-		_, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(request)
 
 		// then
 		require.Error(t, err)
+		require.False(t, result.Requeue)
 		assert.Equal(t, err.Error(), "failed to delete notification: unable to delete Notification object 'notification-name': error")
 
 		AssertThatNotificationHasCondition(t, cl, notification.Name, toBeSent(), toBeDeletionError("unable to delete Notification object 'notification-name': error"))
@@ -127,10 +128,11 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, request, client := newController(t, notification, ds, userSignup)
 
 		// when
-		_, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(request)
 
 		// then
 		require.NoError(t, err)
+		require.True(t, result.Requeue)
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
@@ -182,10 +184,11 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, request, client := newController(t, notification, nil, userSignup)
 
 		// when
-		_, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(request)
 
 		// then
 		require.NoError(t, err)
+		require.True(t, result.Requeue)
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
@@ -211,10 +214,11 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, request, client := newController(t, notification, ds)
 
 		// when
-		_, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(request)
 
 		// then
 		require.Error(t, err)
+		require.False(t, result.Requeue)
 		require.Equal(t, "failed to create notification context: usersignups.toolchain.dev.openshift.com \"abc123\" not found", err.Error())
 
 		// Load the reconciled notification
@@ -253,10 +257,11 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, request, client := newController(t, notification, mds, userSignup)
 
 		// when
-		_, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(request)
 
 		// then
 		require.Error(t, err)
+		require.False(t, result.Requeue)
 		require.Equal(t, "failed to send notification: delivery error", err.Error())
 
 		// Load the reconciled notification

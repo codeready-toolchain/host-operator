@@ -119,6 +119,7 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 			r.setStatusNotificationContextError, err, "failed to create notification context")
 	}
 
+	// if the environment is set to e2e do not attempt sending via mailgun
 	if r.config.GetEnvironment() != "e2e-tests" {
 		// Send the notification via the configured delivery service
 		err = r.deliveryService.Send(context.Background(), notCtx, notification.Spec.Template)
