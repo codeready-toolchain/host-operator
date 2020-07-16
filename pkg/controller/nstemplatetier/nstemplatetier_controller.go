@@ -209,7 +209,7 @@ func (r *NSTemplateTierReconciler) ensureTemplateUpdateRequest(logger logr.Logge
 		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchingLabels)
 		if activeTemplateUpdateRequests == 0 && len(murs.Items) == 0 {
 			// we've reached the end: all MasterUserRecords are up-to-date
-			logger.Info("All MasterUserRecords have been updated. Setting the completion timestamp")
+			logger.Info("All MasterUserRecords are up to date. Setting the completion timestamp")
 			return true, r.markUpdateRecordAsCompleted(tier)
 		}
 		for _, mur := range murs.Items {
