@@ -438,7 +438,7 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(req)
 				// then
 				require.Error(t, err)
-				assert.EqualError(t, err, "unable to get the current NSTemplateTier tier: mock error!")
+				assert.EqualError(t, err, "unable to get the current NSTemplateTier: mock error!")
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 		})

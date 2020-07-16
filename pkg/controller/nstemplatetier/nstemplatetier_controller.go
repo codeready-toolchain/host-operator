@@ -119,8 +119,8 @@ func (r *NSTemplateTierReconciler) Reconcile(request reconcile.Request) (reconci
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		logger.Error(err, "unable to get the current NSTemplateTier tier")
-		return reconcile.Result{}, errs.Wrap(err, "unable to get the current NSTemplateTier tier")
+		logger.Error(err, "unable to get the current NSTemplateTier")
+		return reconcile.Result{}, errs.Wrap(err, "unable to get the current NSTemplateTier")
 	}
 
 	// create a new entry in the `status.history`
