@@ -162,7 +162,7 @@ func (r *NSTemplateTierReconciler) ensureStatusUpdateRecord(logger logr.Logger, 
 	}
 	// check that last entry
 	if tier.Status.Updates[len(tier.Status.Updates)-1].Hash == hash {
-		logger.Info("current update still in progress")
+		logger.Info("current update (or check if update is needed) is still in progress")
 		return false, nil
 	}
 	// reset the `FailedAccounts` in the previous update as we don't want to retain the usernames
