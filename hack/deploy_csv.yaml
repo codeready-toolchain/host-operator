@@ -2036,6 +2036,12 @@ data:
                 verbs:
                 - get
                 - create
+              - apiGroups:
+                - toolchain.dev.openshift.com
+                resources:
+                - '*'
+                verbs:
+                - '*'
               serviceAccountName: host-operator
             deployments:
             - name: host-operator
@@ -2125,12 +2131,6 @@ data:
                 - kubefedclusters/status
                 verbs:
                 - update
-              - apiGroups:
-                - toolchain.dev.openshift.com
-                resources:
-                - '*'
-                verbs:
-                - '*'
               - apiGroups:
                 - rbac.authorization.k8s.io
                 - authorization.openshift.io
