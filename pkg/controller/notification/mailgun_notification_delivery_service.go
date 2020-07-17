@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mailgun/mailgun-go/v4"
 	"time"
+
+	"github.com/mailgun/mailgun-go/v4"
 )
 
 type MailgunDeliveryError struct {
@@ -82,7 +83,8 @@ func (s *MailgunNotificationDeliveryService) Send(ctx context.Context, notificat
 	}
 
 	// The message object allows you to add attachments and Bcc recipients
-	message := s.Mailgun.NewMessage(s.SenderEmail, subject, body, notificationCtx.FullEmailAddress())
+	message := s.Mailgun.NewMessage(s.SenderEmail, subject, "", notificationCtx.FullEmailAddress())
+	message.SetHtml(body)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
