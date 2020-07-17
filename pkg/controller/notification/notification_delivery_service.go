@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type NotificationDeliveryServiceConfig interface {
+type notificationDeliveryServiceConfig interface {
 	GetNotificationDeliveryService() string
 }
 
@@ -36,7 +36,7 @@ type NotificationDeliveryServiceFactory struct {
 }
 
 type NotificationDeliveryServiceFactoryConfig interface {
-	NotificationDeliveryServiceConfig
+	notificationDeliveryServiceConfig
 	MailgunConfig
 }
 
