@@ -31,7 +31,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 		UserID:      "jsmith123",
 		FirstName:   "John",
 		LastName:    "Smith",
-		Email:       "jsmith@redhat.com",
+		UserEmail:   "jsmith@redhat.com",
 		CompanyName: "Red Hat",
 	}
 
