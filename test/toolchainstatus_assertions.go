@@ -46,10 +46,24 @@ func (a *ToolchainStatusAssertion) HasCondition(expected toolchainv1alpha1.Condi
 	return a
 }
 
-func (a *ToolchainStatusAssertion) HasHostOperatorConditionErrorMsg(expected string) *ToolchainStatusAssertion {
+func (a *ToolchainStatusAssertion) HasHostOperatorStatus(expected toolchainv1alpha1.HostOperatorStatus) *ToolchainStatusAssertion {
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
-	require.Len(a.t, a.toolchainStatus.Status.HostOperator.Conditions, 1)
-	require.Equal(a.t, expected, a.toolchainStatus.Status.HostOperator.Conditions[0].Message)
+	require.NotNil(a.t, *a.toolchainStatus.Status.HostOperator)
+	test.AssertHostOperatorStatusMatch(a.t, *a.toolchainStatus.Status.HostOperator, expected)
+	return a
+}
+
+func (a *ToolchainStatusAssertion) HasMemberStatus(expected toolchainv1alpha1.Member) *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+	test.AssertMembersMatch(a.t, a.toolchainStatus.Status.Members, expected)
+	return a
+}
+
+func (a *ToolchainStatusAssertion) HasRegistrationServiceStatus(expected toolchainv1alpha1.HostRegistrationServiceStatus) *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+	test.AssertRegistrationServiceStatusMatch(a.t, *a.toolchainStatus.Status.RegistrationService, expected)
 	return a
 }

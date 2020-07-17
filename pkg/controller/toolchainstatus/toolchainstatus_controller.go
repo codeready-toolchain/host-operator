@@ -255,6 +255,7 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 			MemberStatus: memberStatus,
 		}
 		members = append(members, noMemberClusterStatus)
+		toolchainStatus.Status.Members = members
 		return err
 	}
 	for _, cluster := range memberClusters {
@@ -395,8 +396,8 @@ func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger
 	}
 
 	// bad response
-	if resp.StatusCode != http.StatusOK || resp.Body == nil {
-		err = errs.Wrap(fmt.Errorf("bad response from registration service: %+v", resp), errMsgRegistrationServiceNotReady)
+	if resp.StatusCode != http.StatusOK {
+		err = errs.Wrap(fmt.Errorf("bad response from %s : statusCode=%d", registrationServiceHealthURL, resp.StatusCode), errMsgRegistrationServiceNotReady)
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceNotReadyReason, err.Error())
 		toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		return err
