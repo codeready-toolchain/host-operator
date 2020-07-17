@@ -237,6 +237,11 @@ spec:
       kind: TierTemplate
       name: tiertemplates.toolchain.dev.openshift.com
       version: v1alpha1
+    - description: ToolchainStatus is used to track overall toolchain status
+      displayName: CodeReady Toolchain Status
+      kind: ToolchainStatus
+      name: toolchainstatuses.toolchain.dev.openshift.com
+      version: v1alpha1
     - description: UserSignup registers a user in the CodeReady Toolchain
       displayName: User Signup
       kind: UserSignup
@@ -264,6 +269,12 @@ spec:
           verbs:
           - get
           - create
+        - apiGroups:
+          - toolchain.dev.openshift.com
+          resources:
+          - '*'
+          verbs:
+          - '*'
         serviceAccountName: host-operator
       deployments:
       - name: host-operator
@@ -353,12 +364,6 @@ spec:
           - kubefedclusters/status
           verbs:
           - update
-        - apiGroups:
-          - toolchain.dev.openshift.com
-          resources:
-          - '*'
-          verbs:
-          - '*'
         - apiGroups:
           - rbac.authorization.k8s.io
           - authorization.openshift.io

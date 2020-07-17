@@ -27,8 +27,17 @@ const (
 
 // host-operator constants
 const (
-	// VarDurationBeforeChangeRequestDeletion specificies the duration before a change request is deleted
+	// ToolchainStatusName specifies the name of the toolchain status resource that provides information about the toolchain components in this cluster
+	ToolchainStatusName = "toolchain.status"
+
+	// DefaultToolchainStatusName the default name for the toolchain status resource created during initialization of the operator
+	DefaultToolchainStatusName = "toolchain-status"
+
+	// VarDurationBeforeChangeRequestDeletion specifies the duration before a change request is deleted
 	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
+
+	// defaultDurationBeforeDeletion is the time before a resource is deleted
+	defaultDurationBeforeDeletion = "24h"
 
 	// ToolchainConfigMapUserApprovalPolicy is a key for a user approval policy that should be used
 	ToolchainConfigMapUserApprovalPolicy = "user-approval-policy"
@@ -45,6 +54,7 @@ const (
 	// NotificationDeliveryServiceMailgun is the notification delivery service to use during production
 	NotificationDeliveryServiceMailgun = "mailgun"
 
+	// varNotificationDeliveryService specifies the duration before a notification is deleted
 	varNotificationDeliveryService = "notification.delivery.service"
 
 	// varDurationBeforeNotificationDeletion specifies the duration before a notification will be deleted
@@ -58,6 +68,18 @@ const (
 
 	// varMailgunSenderEmail specifies the host operator mailgun senders email
 	varMailgunSenderEmail = "mailgun.sender.email"
+
+	// varRegistrationServiceURL is the URL used to access the registration service
+	varRegistrationServiceURL = "registration.service.url"
+
+	// defaultRegistrationServiceURL is the default location of the registration service
+	defaultRegistrationServiceURL = "https://registration.crt-placeholder.com"
+
+	// varEnvironment specifies the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
+	varEnvironment = "environment"
+
+	// defaultEnvironment is the default host-operator environment
+	defaultEnvironment = "prod"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -86,15 +108,19 @@ func LoadConfig(cl client.Client) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	err = loadFromConfigMap(cl)
+	if err != nil {
+		return nil, err
+	}
 	return initConfig(), nil
 }
 
 // loadFromSecret retrieves the host operator secret
 func loadFromSecret(cl client.Client) error {
 	// get the secret name
-	secretName := os.Getenv("HOST_OPERATOR_SECRET_NAME")
+	secretName := getResourceName("HOST_OPERATOR_SECRET_NAME")
 	if secretName == "" {
-		log.Info("HOST_OPERATOR_SECRET_NAME is not set")
 		return nil
 	}
 
@@ -114,8 +140,8 @@ func loadFromSecret(cl client.Client) error {
 
 	// get secrets and set environment variables
 	for key, value := range secret.Data {
-		secretKey := HostEnvPrefix + "_" + (strings.ToUpper(strings.ReplaceAll(strings.ReplaceAll(key, ".", "_"), "-", "_")))
-		err = os.Setenv(secretKey, string(value))
+		secretKey := createHostEnvVarKey(key)
+		err := os.Setenv(secretKey, string(value))
 		if err != nil {
 			return err
 		}
@@ -124,11 +150,69 @@ func loadFromSecret(cl client.Client) error {
 	return nil
 }
 
+// loadFromConfigMap retrieves the host operator configMap
+func loadFromConfigMap(cl client.Client) error {
+	// get the configMap name
+	configMapName := getResourceName("HOST_OPERATOR_CONFIG_MAP_NAME")
+	if configMapName == "" {
+		return nil
+	}
+	// get namespace
+	namespace, err := k8sutil.GetWatchNamespace()
+	if err != nil {
+		return err
+	}
+
+	// get the configMap
+	configMap := &v1.ConfigMap{}
+	namespacedName := types.NamespacedName{Namespace: namespace, Name: configMapName}
+	err = client.Client.Get(cl, context.TODO(), namespacedName, configMap)
+	if err != nil {
+		return err
+	}
+
+	// get configMap data and set environment variables
+	for key, value := range configMap.Data {
+		configKey := createHostEnvVarKey(key)
+		err := os.Setenv(configKey, value)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// getResourceName gets the resource name via env var
+func getResourceName(key string) string {
+	// get the resource name
+	resourceName := os.Getenv(key)
+	if resourceName == "" {
+		log.Info(key + " is not set")
+		return ""
+	}
+
+	return resourceName
+}
+
+// createHostEnvVarKey creates env vars based on resource data
+func createHostEnvVarKey(key string) string {
+	return HostEnvPrefix + "_" + (strings.ToUpper(strings.ReplaceAll(strings.ReplaceAll(key, ".", "_"), "-", "_")))
+}
+
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
-	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, "24h")
+	c.host.SetDefault(ToolchainStatusName, DefaultToolchainStatusName)
+	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, defaultDurationBeforeDeletion)
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
-	c.host.SetDefault(varDurationBeforeNotificationDeletion, "24h")
+	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeDeletion)
+	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
+	c.host.SetDefault(varEnvironment, defaultEnvironment)
+}
+
+// GetToolchainStatusName returns the configured name of the member status resource
+func (c *Config) GetToolchainStatusName() string {
+	return c.host.GetString(ToolchainStatusName)
 }
 
 // GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
@@ -159,6 +243,16 @@ func (c *Config) GetMailgunAPIKey() string {
 // GetMailgunSenderEmail returns the host operator mailgun sender's email address
 func (c *Config) GetMailgunSenderEmail() string {
 	return c.host.GetString(varMailgunSenderEmail)
+}
+
+// GetRegistrationServiceURL returns the URL of the registration service
+func (c *Config) GetRegistrationServiceURL() string {
+	return c.host.GetString(varRegistrationServiceURL)
+}
+
+// GetEnvironment returns the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
+func (c *Config) GetEnvironment() string {
+	return c.host.GetString(varEnvironment)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix

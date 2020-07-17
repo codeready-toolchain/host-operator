@@ -60,6 +60,21 @@ func TestGetAllRegistrationServiceParameters(t *testing.T) {
 	})
 }
 
+func TestEnvironment(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, "prod", config.GetEnvironment())
+	})
+
+	t.Run("env overwrite", func(t *testing.T) {
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_ENVIRONMENT", "e2e-test")
+		defer restore()
+
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, "e2e-test", config.GetEnvironment())
+	})
+}
+
 func TestLoadFromSecret(t *testing.T) {
 	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
 	defer restore()
@@ -125,6 +140,65 @@ func TestLoadFromSecret(t *testing.T) {
 	})
 }
 
+func TestLoadFromConfigMap(t *testing.T) {
+	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
+	defer restore()
+	t.Run("default", func(t *testing.T) {
+		// when
+		config := getDefaultConfiguration(t)
+
+		// then
+		assert.Equal(t, "https://registration.crt-placeholder.com", config.GetRegistrationServiceURL())
+	})
+	t.Run("env overwrite", func(t *testing.T) {
+		// given
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_CONFIG_MAP_NAME", "test-config")
+		defer restore()
+
+		configMap := &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-config",
+				Namespace: "toolchain-host-operator",
+			},
+			Data: map[string]string{
+				"registration.service.url": "test-url",
+				"test-test":                "test-test",
+			},
+		}
+
+		cl := test.NewFakeClient(t, configMap)
+
+		// when
+		config, err := configuration.LoadConfig(cl)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "test-url", config.GetRegistrationServiceURL())
+
+		// test env vars are parsed and created correctly
+		regServiceURL := os.Getenv("HOST_OPERATOR_REGISTRATION_SERVICE_URL")
+		assert.Equal(t, regServiceURL, "test-url")
+		testTest := os.Getenv("HOST_OPERATOR_TEST_TEST")
+		assert.Equal(t, testTest, "test-test")
+	})
+
+	t.Run("configMap not found", func(t *testing.T) {
+		// given
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_CONFIG_MAP_NAME", "test-config")
+		defer restore()
+
+		cl := test.NewFakeClient(t)
+
+		// when
+		config, err := configuration.LoadConfig(cl)
+
+		// then
+		require.Error(t, err)
+		assert.Equal(t, "configmaps \"test-config\" not found", err.Error())
+		assert.Nil(t, config)
+	})
+}
+
 func TestGetDurationBeforeChangeRequestDeletion(t *testing.T) {
 	key := configuration.HostEnvPrefix + "_" + "DURATION_BEFORE_CHANGE_REQUEST_DELETION"
 	resetFunc := test.UnsetEnvVarAndRestore(t, key)
@@ -145,5 +219,29 @@ func TestGetDurationBeforeChangeRequestDeletion(t *testing.T) {
 		defer restore()
 		config := getDefaultConfiguration(t)
 		assert.Equal(t, cast.ToDuration("10s"), config.GetDurationBeforeChangeRequestDeletion())
+	})
+}
+
+func TestGetToolchainStatusName(t *testing.T) {
+	key := configuration.HostEnvPrefix + "_" + "TOOLCHAIN_STATUS"
+	resetFunc := test.UnsetEnvVarAndRestore(t, key)
+	defer resetFunc()
+
+	t.Run("default", func(t *testing.T) {
+		resetFunc := test.UnsetEnvVarAndRestore(t, key)
+		defer resetFunc()
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, "toolchain-status", config.GetToolchainStatusName())
+	})
+
+	t.Run("env overwrite", func(t *testing.T) {
+		testName := "test-toolchain-status"
+		restore := test.SetEnvVarAndRestore(t, key, testName)
+		defer restore()
+
+		restore = test.SetEnvVarAndRestore(t, configuration.HostEnvPrefix+"_"+"ANY_CONFIG", "20s")
+		defer restore()
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, testName, config.GetToolchainStatusName())
 	})
 }
