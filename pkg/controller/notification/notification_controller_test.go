@@ -284,9 +284,9 @@ func mockDeliveryService(templateLoader TemplateLoader) (NotificationDeliverySer
 	mgs := mailgun.NewMockServer()
 	mockServerOption := NewMailgunAPIBaseOption(mgs.URL())
 
-	mgConfig := NewMockMailgunConfiguration("mg.foo.com", "abcd12345", "noreply@foo.com")
+	config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345", "noreply@foo.com", "mailgun")
 
-	mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, mockServerOption)
+	mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
 	return mgds, mgs
 }
 

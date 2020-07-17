@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
+
+	"text/template"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"text/template"
 )
 
 type NotificationDeliveryServiceConfig interface {
@@ -30,24 +32,26 @@ type NotificationDeliveryService interface {
 }
 
 type NotificationDeliveryServiceFactory struct {
-	Client        client.Client
-	Config        NotificationDeliveryServiceConfig
-	MailgunConfig MailgunConfiguration
+	Client client.Client
+	Config NotificationDeliveryServiceFactoryConfig
 }
 
-func NewNotificationDeliveryServiceFactory(client client.Client, config NotificationDeliveryServiceConfig,
-	mailgunConfig MailgunConfiguration) *NotificationDeliveryServiceFactory {
+type NotificationDeliveryServiceFactoryConfig interface {
+	NotificationDeliveryServiceConfig
+	MailgunConfiguration
+}
+
+func NewNotificationDeliveryServiceFactory(client client.Client, config NotificationDeliveryServiceFactoryConfig) *NotificationDeliveryServiceFactory {
 	return &NotificationDeliveryServiceFactory{
-		Client:        client,
-		Config:        config,
-		MailgunConfig: mailgunConfig,
+		Client: client,
+		Config: config,
 	}
 }
 
 func (f *NotificationDeliveryServiceFactory) CreateNotificationDeliveryService() (NotificationDeliveryService, error) {
 	switch f.Config.GetNotificationDeliveryService() {
 	case configuration.NotificationDeliveryServiceMailgun:
-		return NewMailgunNotificationDeliveryService(f.MailgunConfig, &DefaultTemplateLoader{}), nil
+		return NewMailgunNotificationDeliveryService(f.Config, &DefaultTemplateLoader{}), nil
 	}
 	return nil, errors.New("invalid notification delivery service configuration")
 }
