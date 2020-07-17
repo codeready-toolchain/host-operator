@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
-
-	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
-
 	"text/template"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -38,7 +37,7 @@ type NotificationDeliveryServiceFactory struct {
 
 type NotificationDeliveryServiceFactoryConfig interface {
 	NotificationDeliveryServiceConfig
-	MailgunConfiguration
+	MailgunConfig
 }
 
 func NewNotificationDeliveryServiceFactory(client client.Client, config NotificationDeliveryServiceFactoryConfig) *NotificationDeliveryServiceFactory {

@@ -40,7 +40,7 @@ func (c *MockNotificationDeliveryServiceFactoryConfig) GetMailgunSenderEmail() s
 	return c.Mailgun.SenderEmail
 }
 
-func (c *MockNotificationDeliveryServiceFactoryConfig) NewMockMailgunConfiguration(domain, apikey, senderEmail string) MailgunConfiguration {
+func (c *MockNotificationDeliveryServiceFactoryConfig) NewMockMailgunConfiguration(domain, apikey, senderEmail string) MailgunConfig {
 	return c.NewMockMailgunConfiguration(domain, apikey, senderEmail)
 }
 

@@ -2,10 +2,12 @@ package notification
 
 import (
 	"context"
+	"testing"
+
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
+
 	"github.com/mailgun/mailgun-go/v4"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type MailgunAPIBaseOption struct {
@@ -26,7 +28,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	mockServerOption := NewMailgunAPIBaseOption(mgs.URL())
 	invalidServerOption := NewMailgunAPIBaseOption("https://127.0.0.1:60000/v3")
 
-	mgConfig := NewMockMailgunConfiguration("mg.foo.com", "abcd12345", "noreply@foo.com")
+	config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345", "noreply@foo.com", "mailgun")
 	notCtx := &NotificationContext{
 		UserID:      "jsmith123",
 		FirstName:   "John",
@@ -54,7 +56,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 
 	t.Run("test mailgun notification delivery service send", func(t *testing.T) {
 		// when
-		mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, mockServerOption)
+		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
 		err := mgds.Send(context.Background(), notCtx, "test")
 
 		// then
@@ -75,7 +77,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 
 	t.Run("test mailgun notification delivery service invalid template", func(t *testing.T) {
 		// when
-		mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, mockServerOption)
+		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
 		err := mgds.Send(context.Background(), notCtx, "bar")
 
 		// then
@@ -85,7 +87,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 
 	t.Run("test mailgun notification delivery invalid subject template", func(t *testing.T) {
 		// when
-		mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, mockServerOption)
+		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
 		err := mgds.Send(context.Background(), notCtx, "invalid_subject")
 
 		// then
@@ -95,7 +97,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 
 	t.Run("test mailgun notification delivery invalid content template", func(t *testing.T) {
 		// when
-		mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, mockServerOption)
+		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
 		err := mgds.Send(context.Background(), notCtx, "invalid_content")
 
 		// then
