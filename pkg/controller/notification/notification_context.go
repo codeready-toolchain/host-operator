@@ -2,9 +2,12 @@ package notification
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -45,9 +48,10 @@ func NewNotificationContext(client client.Client, userID, namespace string, conf
 		notificationCtx.UserEmail = emailLbl
 	}
 
-	if config != nil {
-		notificationCtx.RegistrationURL = config.GetRegistrationServiceURL()
+	if config == nil {
+		return nil, errors.New("configuration was not provided")
 	}
+	notificationCtx.RegistrationURL = config.GetRegistrationServiceURL()
 
 	return notificationCtx, nil
 }

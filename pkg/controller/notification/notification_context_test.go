@@ -3,8 +3,11 @@ package notification
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -64,11 +67,20 @@ func TestNotificationContext(t *testing.T) {
 
 	t.Run("full email address", func(t *testing.T) {
 		// when
-		notificationCtx, err := NewNotificationContext(client, userSignup.Name, operatorNamespace, nil)
+		notificationCtx, err := NewNotificationContext(client, userSignup.Name, operatorNamespace, config)
 
 		// then
 		require.NoError(t, err)
 		require.Equal(t, "John Smith<jsmith@redhat.com>", notificationCtx.FullEmailAddress())
+	})
+
+	t.Run("no configuration provided", func(t *testing.T) {
+		// when
+		_, err := NewNotificationContext(client, userSignup.Name, operatorNamespace, nil)
+
+		// then
+		require.Error(t, err)
+		assert.Equal(t, "configuration was not provided", err.Error())
 	})
 }
 

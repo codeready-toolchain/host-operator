@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mailgun/mailgun-go/v4"
 	"time"
+
+	"github.com/mailgun/mailgun-go/v4"
 )
 
 type MailgunDeliveryError struct {

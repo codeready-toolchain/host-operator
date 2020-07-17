@@ -162,8 +162,10 @@ func (r *ReconcileNotification) checkTransitionTimeAndDelete(log logr.Logger, no
 	return false, diff, nil
 }
 
+type statusUpdater func(notification *toolchainv1alpha1.Notification, message string) error
+
 func (r *ReconcileNotification) wrapErrorWithStatusUpdate(logger logr.Logger, notification *toolchainv1alpha1.Notification,
-	statusUpdater func(notification *toolchainv1alpha1.Notification, message string) error, err error, format string, args ...interface{}) error {
+	statusUpdater statusUpdater, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
@@ -228,7 +230,7 @@ func (r *ReconcileNotification) setStatusNotificationSent(notification *toolchai
 }
 
 func (r *ReconcileNotification) updateStatus(logger logr.Logger, notification *toolchainv1alpha1.Notification,
-	statusUpdater func(notification *toolchainv1alpha1.Notification, msg string) error) error {
+	statusUpdater statusUpdater) error {
 
 	if err := statusUpdater(notification, ""); err != nil {
 		logger.Error(err, "status update failed")
