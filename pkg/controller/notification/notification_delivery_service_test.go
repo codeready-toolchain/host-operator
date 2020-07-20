@@ -2,23 +2,24 @@ package notification
 
 import (
 	"errors"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"testing"
+
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
+
+type MockNotificationDeliveryServiceFactoryConfig struct {
+	Mailgun MockMailgunConfiguration
+	Service MockNotificationDeliveryServiceConfig
+}
 
 type MockNotificationDeliveryServiceConfig struct {
 	service string
 }
 
-func (c *MockNotificationDeliveryServiceConfig) GetNotificationDeliveryService() string {
-	return c.service
-}
-
-func NewMockNotificationDeliveryServiceConfig(service string) NotificationDeliveryServiceConfig {
-	return &MockNotificationDeliveryServiceConfig{service: service}
+func (c *MockNotificationDeliveryServiceFactoryConfig) GetNotificationDeliveryService() string {
+	return c.Service.service
 }
 
 type MockMailgunConfiguration struct {
@@ -27,24 +28,28 @@ type MockMailgunConfiguration struct {
 	SenderEmail string
 }
 
-func (c *MockMailgunConfiguration) GetMailgunDomain() string {
-	return c.Domain
+func (c *MockNotificationDeliveryServiceFactoryConfig) GetMailgunDomain() string {
+	return c.Mailgun.Domain
 }
 
-func (c *MockMailgunConfiguration) GetMailgunAPIKey() string {
-	return c.APIKey
+func (c *MockNotificationDeliveryServiceFactoryConfig) GetMailgunAPIKey() string {
+	return c.Mailgun.APIKey
 }
 
-func (c *MockMailgunConfiguration) GetMailgunSenderEmail() string {
-	return c.SenderEmail
+func (c *MockNotificationDeliveryServiceFactoryConfig) GetMailgunSenderEmail() string {
+	return c.Mailgun.SenderEmail
 }
 
-func NewMockMailgunConfiguration(domain, apikey, senderEmail string) MailgunConfiguration {
-	return &MockMailgunConfiguration{
-		Domain:      domain,
-		APIKey:      apikey,
-		SenderEmail: senderEmail,
+func (c *MockNotificationDeliveryServiceFactoryConfig) NewMockMailgunConfiguration(domain, apikey, senderEmail string) MailgunConfig {
+	return c.NewMockMailgunConfiguration(domain, apikey, senderEmail)
+}
+
+func NewNotificationDeliveryServiceFactoryConfig(domain, apiKey, senderEmail, service string) NotificationDeliveryServiceFactoryConfig {
+	return &MockNotificationDeliveryServiceFactoryConfig{
+		Mailgun: MockMailgunConfiguration{Domain: domain, APIKey: apiKey, SenderEmail: senderEmail},
+		Service: MockNotificationDeliveryServiceConfig{service: service},
 	}
+
 }
 
 type MockTemplateLoader struct {
@@ -78,9 +83,7 @@ func TestNotificationDeliveryServiceFactory(t *testing.T) {
 
 	t.Run("factory configured with mailgun delivery service", func(t *testing.T) {
 		// when
-		factory := NewNotificationDeliveryServiceFactory(client,
-			NewMockNotificationDeliveryServiceConfig(configuration.NotificationDeliveryServiceMailgun),
-			NewMockMailgunConfiguration("foo.com", "12345", "sender@foo.com"))
+		factory := NewNotificationDeliveryServiceFactory(client, NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345", "noreply@foo.com", "mailgun"))
 		svc, err := factory.CreateNotificationDeliveryService()
 
 		// then
@@ -89,10 +92,10 @@ func TestNotificationDeliveryServiceFactory(t *testing.T) {
 	})
 
 	t.Run("factory configured with invalid delivery service", func(t *testing.T) {
+
 		// when
 		factory := NewNotificationDeliveryServiceFactory(client,
-			NewMockNotificationDeliveryServiceConfig("invalid"),
-			nil)
+			NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345", "noreply@foo.com", ""))
 		_, err := factory.CreateNotificationDeliveryService()
 
 		// then
