@@ -9,9 +9,6 @@ APP_NAMESPACE ?= $(LOCAL_TEST_NAMESPACE)
 LOCAL_TEST_NAMESPACE ?= "toolchain-host-operator"
 ADD_CLUSTER_SCRIPT_PATH?=../toolchain-common/scripts/add-cluster.sh
 
-IS_OS_3 := $(shell curl -k -XGET -H "Authorization: Bearer $(shell oc whoami -t 2>/dev/null)" $(shell oc config view --minify -o jsonpath='{.clusters[0].cluster.server}')/version/openshift 2>/dev/null | grep paths)
-IS_CRC := $(shell oc config view --minify -o jsonpath='{.clusters[0].cluster.server}' 2>&1 | grep crc)
-
 .PHONY: up-local
 ## Run Operator locally
 up-local: login-as-admin create-namespace deploy-rbac build deploy-crd
@@ -21,6 +18,8 @@ up-local: login-as-admin create-namespace deploy-rbac build deploy-crd
 
 .PHONY: login-as-admin
 ## Log in as system:admin
+login-as-admin: IS_OS_3 ?= $(shell curl -k -XGET -H "Authorization: Bearer $(shell oc whoami -t 2>/dev/null)" $(shell oc config view --minify -o jsonpath='{.clusters[0].cluster.server}')/version/openshift 2>/dev/null | grep paths)
+login-as-admin: IS_CRC ?= $(shell oc config view --minify -o jsonpath='{.clusters[0].cluster.server}' 2>&1 | grep crc)
 login-as-admin:
 ifeq ($(IS_CRC),)
     ifneq ($(IS_OS_3),)

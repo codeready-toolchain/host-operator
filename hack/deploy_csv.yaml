@@ -653,7 +653,8 @@ data:
                 properties:
                   conditions:
                     description: 'Conditions is an array of current NSTemplateTier conditions
-                      Supported condition types: ConditionReady'
+                      Supported condition types: ConditionReady NSTemplateTierSuccessfulUpdatesCount
+                      NSTemplateTierFailedUpdatesCount'
                     items:
                       properties:
                         lastTransitionTime:
@@ -685,6 +686,43 @@ data:
                     type: array
                     x-kubernetes-list-map-keys:
                     - type
+                    x-kubernetes-list-type: map
+                  updates:
+                    description: Updates is an array of all NSTemplateTier updates
+                    items:
+                      description: NSTemplateTierHistory a track record of an update
+                      properties:
+                        completionTime:
+                          description: CompletionTime is the time when the last MasterUserRecord
+                            was updated
+                          format: date-time
+                          type: string
+                        failedAccounts:
+                          description: FailedAccounts
+                          items:
+                            type: string
+                          type: array
+                        failures:
+                          description: Failures is the number of MasterUserRecords which
+                            failed to be updated
+                          type: integer
+                        hash:
+                          description: Hash the hash matching on the templateRefs in the
+                            resource spec
+                          type: string
+                        startTime:
+                          description: StartTime is the time when the NSTemplateTier was
+                            updated
+                          format: date-time
+                          type: string
+                      required:
+                      - failures
+                      - hash
+                      - startTime
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - startTime
                     x-kubernetes-list-type: map
                 type: object
             x-kubernetes-preserve-unknown-fields: true

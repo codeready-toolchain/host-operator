@@ -1,20 +1,27 @@
-package templateupdaterequest
+package templateupdaterequest_test
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/templateupdaterequest"
 	turtest "github.com/codeready-toolchain/host-operator/test/templateupdaterequest"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -159,7 +166,7 @@ func TestReconcile(t *testing.T) {
 					AllUserAccountsHaveTier(newNSTemplateTier)
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
@@ -182,7 +189,7 @@ func TestReconcile(t *testing.T) {
 					AllUserAccountsHaveTier(newNSTemplateTier2)
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
@@ -211,7 +218,7 @@ func TestReconcile(t *testing.T) {
 
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
@@ -240,7 +247,7 @@ func TestReconcile(t *testing.T) {
 
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
@@ -269,11 +276,12 @@ func TestReconcile(t *testing.T) {
 
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
 			})
+
 			t.Run("when cluster resources do not exist in update then it should be removed", func(t *testing.T) {
 				// given
 				initObjs := []runtime.Object{&newNSTemplateTier3}
@@ -293,7 +301,7 @@ func TestReconcile(t *testing.T) {
 
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "1",
 					})
@@ -323,7 +331,7 @@ func TestReconcile(t *testing.T) {
 					UserAccountHasTier("cluster3", otherNSTemplateTier)
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-					HasConditions(toBeUpdating()).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
 					HasSyncIndexes(map[string]string{
 						"cluster1": "10",
 						"cluster2": "20",
@@ -340,7 +348,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier,
-				turtest.Condition(toBeUpdating()),
+				turtest.Condition(templateupdaterequest.ToBeUpdating()),
 				turtest.SyncIndexes{
 					"cluster1": "10",
 					"cluster2": "20",
@@ -352,11 +360,12 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
 			// when
 			res, err := r.Reconcile(req)
+			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 			// check that TemplateUpdateRequest is in "updating" condition
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-				HasConditions(toBeUpdating()).
+				HasConditions(templateupdaterequest.ToBeUpdating()).
 				HasSyncIndexes(map[string]string{
 					"cluster1": "10",
 					"cluster2": "20",
@@ -367,7 +376,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier,
-				turtest.Condition(toBeUpdating()),
+				turtest.Condition(templateupdaterequest.ToBeUpdating()),
 				turtest.SyncIndexes(map[string]string{
 					"cluster1": "10",
 					"cluster2": "20",
@@ -379,11 +388,12 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
 			// when
 			res, err := r.Reconcile(req)
+			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 			// check that TemplateUpdateRequest is in "updating" condition
 			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
-				HasConditions(toBeUpdating()).
+				HasConditions(templateupdaterequest.ToBeUpdating()).
 				HasSyncIndexes(map[string]string{
 					"cluster1": "10",
 					"cluster2": "20",
@@ -397,7 +407,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			initObjs := []runtime.Object{&newNSTemplateTier}
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier,
-				turtest.Condition(toBeUpdating()),
+				turtest.Condition(templateupdaterequest.ToBeUpdating()),
 				turtest.SyncIndexes(map[string]string{
 					"cluster1": "10",
 					"cluster2": "20",
@@ -415,6 +425,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
 			// when
 			res, err := r.Reconcile(req)
+			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // NSTemplateTier controller will reconcile when the TemplateUpdateRequest is updated
 			// check that TemplateUpdateRequest is in "complete" condition
@@ -437,6 +448,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
 			// when
 			res, err := r.Reconcile(req)
+			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 			// check that TemplateUpdateRequest is in "failed" condition
@@ -449,17 +461,141 @@ func TestReconcile(t *testing.T) {
 				})
 		})
 	})
+
+	t.Run("failures", func(t *testing.T) {
+
+		t.Run("unable to get TemplateUpdateRequest", func(t *testing.T) {
+
+			t.Run("tier not found", func(t *testing.T) {
+				// given
+				initObjs := []runtime.Object{&newNSTemplateTier}
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
+				r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
+						return errors.NewNotFound(schema.GroupResource{}, key.Name)
+					}
+					return cl.Client.Get(ctx, key, obj)
+				}
+				// when
+				res, err := r.Reconcile(req)
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
+			})
+
+			t.Run("other error", func(t *testing.T) {
+				// given
+				initObjs := []runtime.Object{&newNSTemplateTier}
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
+				r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
+						return fmt.Errorf("mock error!")
+					}
+					return cl.Client.Get(ctx, key, obj)
+				}
+				// when
+				res, err := r.Reconcile(req)
+				// then
+				require.Error(t, err)
+				assert.EqualError(t, err, "unable to get the current TemplateUpdateRequest: mock error!")
+				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
+			})
+		})
+
+		t.Run("unable to get associated MasterUserRecord", func(t *testing.T) {
+
+			t.Run("tier not found", func(t *testing.T) {
+				// given
+				initObjs := []runtime.Object{&newNSTemplateTier}
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
+				r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+					if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
+						return errors.NewNotFound(schema.GroupResource{}, key.Name)
+					}
+					return cl.Client.Get(ctx, key, obj)
+				}
+				// when
+				res, err := r.Reconcile(req)
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
+			})
+
+			t.Run("other error", func(t *testing.T) {
+				// given
+				initObjs := []runtime.Object{&newNSTemplateTier}
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
+				r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+					if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
+						return fmt.Errorf("mock error!")
+					}
+					return cl.Client.Get(ctx, key, obj)
+				}
+				// when
+				res, err := r.Reconcile(req)
+				// then
+				require.Error(t, err)
+				assert.EqualError(t, err, "unable to get the MasterUserRecord associated with the TemplateUpdateRequest: mock error!")
+				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
+			})
+		})
+
+		t.Run("unable to update the TemplateUpdateRequest status", func(t *testing.T) {
+			// given
+			initObjs := []runtime.Object{&newNSTemplateTier}
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
+			mur := murtest.NewMasterUserRecord(t, "user-1", murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("1")))
+			initObjs = append(initObjs, mur)
+			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+			cl.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+				if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
+					return fmt.Errorf("mock error!")
+				}
+				return cl.Client.Status().Update(ctx, obj, opts...)
+			}
+			// when
+			res, err := r.Reconcile(req)
+			// then
+			require.Error(t, err)
+			assert.EqualError(t, err, "unable to update the TemplateUpdateRequest status: mock error!")
+			assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
+		})
+
+		t.Run("unable to update the MasterUserRecord", func(t *testing.T) {
+			// given
+			initObjs := []runtime.Object{&newNSTemplateTier}
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", newNSTemplateTier))
+			mur := murtest.NewMasterUserRecord(t, "user-1", murtest.Account("cluster1", oldNSTemplateTier, murtest.SyncIndex("1")))
+			initObjs = append(initObjs, mur)
+			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+			cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+				if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
+					return fmt.Errorf("mock error!")
+				}
+				return cl.Client.Update(ctx, obj, opts...)
+			}
+			// when
+			res, err := r.Reconcile(req)
+			// then
+			require.Error(t, err)
+			assert.EqualError(t, err, "unable to update the MasterUserRecord associated with the TemplateUpdateRequest: mock error!")
+			assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
+		})
+
+	})
+
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileTemplateUpdateRequest, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, initObjs...)
-	r := &ReconcileTemplateUpdateRequest{
-		client: cl,
-		scheme: s,
-	}
+	r := templateupdaterequest.NewReconciler(cl, s)
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      name,
