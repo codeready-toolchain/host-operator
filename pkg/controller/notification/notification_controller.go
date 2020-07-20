@@ -56,7 +56,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, config *configuration.Config) (reconcile.Reconciler, error) {
-	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), config, config)
+	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), config)
 
 	svc, err := factory.CreateNotificationDeliveryService()
 	if err != nil {

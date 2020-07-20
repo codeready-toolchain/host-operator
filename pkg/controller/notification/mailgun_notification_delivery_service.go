@@ -33,7 +33,7 @@ type MailgunNotificationDeliveryService struct {
 	SenderEmail string
 }
 
-type MailgunConfiguration interface {
+type MailgunConfig interface {
 	GetMailgunDomain() string
 	GetMailgunAPIKey() string
 	GetMailgunSenderEmail() string
@@ -45,7 +45,7 @@ type MailgunOption interface {
 }
 
 // NewMailgunNotificationDeliveryService creates a delivery service that uses the Mailgun API to deliver email notifications
-func NewMailgunNotificationDeliveryService(config MailgunConfiguration, templateLoader TemplateLoader,
+func NewMailgunNotificationDeliveryService(config NotificationDeliveryServiceFactoryConfig, templateLoader TemplateLoader,
 	opts ...MailgunOption) NotificationDeliveryService {
 
 	mg := mailgun.NewMailgun(config.GetMailgunDomain(), config.GetMailgunAPIKey())

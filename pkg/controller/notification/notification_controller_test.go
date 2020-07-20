@@ -7,16 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
-	ntest "github.com/codeready-toolchain/host-operator/test/notification"
-	"github.com/mailgun/mailgun-go/v4"
-	events2 "github.com/mailgun/mailgun-go/v4/events"
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
+	ntest "github.com/codeready-toolchain/host-operator/test/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/mailgun/mailgun-go/v4"
+	events2 "github.com/mailgun/mailgun-go/v4/events"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
@@ -284,9 +283,9 @@ func mockDeliveryService(templateLoader TemplateLoader) (NotificationDeliverySer
 	mgs := mailgun.NewMockServer()
 	mockServerOption := NewMailgunAPIBaseOption(mgs.URL())
 
-	mgConfig := NewMockMailgunConfiguration("mg.foo.com", "abcd12345", "noreply@foo.com")
+	config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345", "noreply@foo.com", "mailgun")
 
-	mgds := NewMailgunNotificationDeliveryService(mgConfig, templateLoader, mockServerOption)
+	mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
 	return mgds, mgs
 }
 
