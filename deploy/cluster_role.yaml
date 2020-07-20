@@ -16,3 +16,9 @@ rules:
   verbs:
   - "get"
   - "create"
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - "*"
+  verbs:
+  - "*"

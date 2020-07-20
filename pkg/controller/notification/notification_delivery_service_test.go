@@ -109,7 +109,7 @@ func TestBaseNotificationDeliveryServiceGenerateContent(t *testing.T) {
 		UserID:      "jsmith",
 		FirstName:   "John",
 		LastName:    "Smith",
-		Email:       "jsmith@redhat.com",
+		UserEmail:   "jsmith@redhat.com",
 		CompanyName: "Red Hat",
 	}
 
@@ -135,7 +135,7 @@ func TestBaseNotificationDeliveryServiceGenerateContent(t *testing.T) {
 
 	t.Run("test content generation with notification context for full email", func(t *testing.T) {
 		// when
-		def := "{{.FirstName}} {{.LastName}}<{{.Email}}>"
+		def := "{{.FirstName}} {{.LastName}}<{{.UserEmail}}>"
 		content, err := baseService.GenerateContent(nCtx, def)
 
 		// then

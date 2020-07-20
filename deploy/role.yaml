@@ -56,12 +56,6 @@ rules:
   verbs:
   - "update"
 - apiGroups:
-  - toolchain.dev.openshift.com
-  resources:
-  - "*"
-  verbs:
-  - "*"
-- apiGroups:
   - rbac.authorization.k8s.io
   - authorization.openshift.io
   resources:

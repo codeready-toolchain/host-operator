@@ -1,11 +1,8 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/alecthomas/assert v0.0.0-20170929043011-405dbfeb8e38
-	github.com/alecthomas/colour v0.1.0 // indirect
-	github.com/alecthomas/repr v0.0.0-20200325044227-4184120f674c // indirect
 	github.com/codeready-toolchain/api v0.0.0-20200715195555-28ba37e37ddd
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200715201956-5cea174a453d
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200717175027-3b8c7e68e409
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
