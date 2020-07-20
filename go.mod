@@ -39,6 +39,6 @@ replace (
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200204173128-addea2498afe // avoids case-insensitive import collision: "github.com/googleapis/gnostic/openapiv2" and "github.com/googleapis/gnostic/OpenAPIv2"
 )
 
-replace github.com/codeready-toolchain/api => github.com/xcoulon/api v0.0.0-20200716080718-706f5ca40638
+replace github.com/codeready-toolchain/api => github.com/xcoulon/api v0.0.0-20200715195555-28ba37e37ddd
 
 go 1.13
