@@ -320,6 +320,8 @@ func (r *NSTemplateTierReconciler) incrementCounters(logger logr.Logger, tier *t
 	}
 	latest := tier.Status.Updates[len(tier.Status.Updates)-1]
 	if condition.IsFalseWithReason(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) {
+		c, _ := condition.FindConditionByType(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete)
+		logger.Info("incrementing failure counter after TemplateUpdateRequest failed", "reason", c.Reason)
 		latest.Failures++
 		latest.FailedAccounts = append(latest.FailedAccounts, tur.Name)
 	}

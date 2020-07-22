@@ -14,6 +14,7 @@ import (
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -155,7 +156,7 @@ func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (r
 		return reconcile.Result{}, nil
 	}
 	// otherwise, we should compare the sync indexes of the MasterUserRecord until all tier-related values changed
-	if !r.sameSyncIndexes(logger, *tur, *mur) && condition.IsTrue(mur.Status.Conditions, toolchainv1alpha1.ConditionReady) {
+	if r.allSyncIndexesChanged(logger, *tur, *mur) && condition.IsTrue(mur.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 		// once MasterUserRecord is up-to-date, we can delete this TemplateUpdateRequest
 		logger.Info("MasterUserRecord is up-to-date. Marking the TemplateUpdateRequest as complete")
 		return reconcile.Result{}, r.setCompleteStatusCondition(tur)
@@ -235,21 +236,21 @@ func (r ReconcileTemplateUpdateRequest) updateTemplateRefs(logger logr.Logger, t
 // templateRef format: `<tier>-<type>-<hash>`
 func namespaceType(templateRef string) string {
 	parts := strings.Split(templateRef, "-")
-	return parts[1]
+	return parts[1] // TODO: check for index out of range errors
 }
 
-// sameSyncIndexes compares the sync indexes in the given TemplateUpdateRequest status vs the given MasterUserRecord
-// returns `false` if ALL values are DIFFERENT, meaning that all user accounts were updated on the target clusters where the tier is in use
-func (r ReconcileTemplateUpdateRequest) sameSyncIndexes(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur toolchainv1alpha1.MasterUserRecord) bool {
+// allSyncIndexesChanged compares the sync indexes in the given TemplateUpdateRequest status vs the given MasterUserRecord
+// returns `true` if ALL values are DIFFERENT, meaning that all user accounts were updated on the target clusters where the tier is in use
+func (r ReconcileTemplateUpdateRequest) allSyncIndexesChanged(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur toolchainv1alpha1.MasterUserRecord) bool {
 	murIndexes := syncIndexes(tur.Spec.TierName, mur)
 	for targetCluster, syncIndex := range tur.Status.SyncIndexes {
 		if current, ok := murIndexes[targetCluster]; ok && current == syncIndex {
 			logger.Info("Sync index still unchanged", "target_cluster", targetCluster, "sync_index", syncIndex)
-			return true
+			return false
 		}
 	}
 	logger.Info("All sync indexes have been updated")
-	return false
+	return true
 }
 
 // --------------------------------------------------
@@ -269,25 +270,27 @@ func ToFailure(err error) toolchainv1alpha1.Condition {
 // ToBeUpdating condition when the update is in progress
 func ToBeUpdating() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.TemplateUpdateRequestComplete,
-		Status: corev1.ConditionFalse,
-		Reason: toolchainv1alpha1.TemplateUpdateRequestUpdatingReason,
+		Type:               toolchainv1alpha1.TemplateUpdateRequestComplete,
+		Status:             corev1.ConditionFalse,
+		Reason:             toolchainv1alpha1.TemplateUpdateRequestUpdatingReason,
+		LastTransitionTime: metav1.Now(),
 	}
 }
 
 // ToBeComplete condition when the update completed with success
 func ToBeComplete() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.TemplateUpdateRequestComplete,
-		Status: corev1.ConditionTrue,
-		Reason: toolchainv1alpha1.TemplateUpdateRequestUpdatedReason,
+		Type:               toolchainv1alpha1.TemplateUpdateRequestComplete,
+		Status:             corev1.ConditionTrue,
+		Reason:             toolchainv1alpha1.TemplateUpdateRequestUpdatedReason,
+		LastTransitionTime: metav1.Now(),
 	}
 }
 
 // addUpdatingStatusCondition sets the TemplateUpdateRequest status condition to `complete=false/reason=updating` and retains the sync indexes
 func (r *ReconcileTemplateUpdateRequest) addUpdatingStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest, syncIndexes map[string]string) error {
 	tur.Status.SyncIndexes = syncIndexes
-	tur.Status.Conditions = condition.SetStatusConditions(ToBeUpdating())
+	tur.Status.Conditions = []toolchainv1alpha1.Condition{ToBeUpdating()}
 	return r.client.Status().Update(context.TODO(), tur)
 }
 
@@ -299,7 +302,7 @@ func (r *ReconcileTemplateUpdateRequest) addFailureStatusCondition(tur *toolchai
 
 // setCompleteStatusCondition sets the TemplateUpdateRequest status condition to `complete=true/reason=updated` and clears all previous conditions of the same type
 func (r *ReconcileTemplateUpdateRequest) setCompleteStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest) error {
-	tur.Status.Conditions = condition.SetStatusConditions(ToBeComplete())
+	tur.Status.Conditions = []toolchainv1alpha1.Condition{ToBeComplete()}
 	return r.client.Status().Update(context.TODO(), tur)
 }
 
