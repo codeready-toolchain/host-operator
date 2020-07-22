@@ -186,6 +186,49 @@ spec:
                         x-kubernetes-list-map-keys:
                         - type
                         x-kubernetes-list-type: map
+                      host:
+                        description: Host is the status of the connection with the
+                          host cluster
+                        properties:
+                          conditions:
+                            description: 'Conditions is an array of current member
+                              operator status conditions Supported condition types:
+                              ConditionReady'
+                            items:
+                              properties:
+                                lastTransitionTime:
+                                  description: Last time the condition transit from
+                                    one status to another.
+                                  format: date-time
+                                  type: string
+                                lastUpdatedTime:
+                                  description: Last time the condition was updated
+                                  format: date-time
+                                  type: string
+                                message:
+                                  description: Human readable message indicating details
+                                    about last transition.
+                                  type: string
+                                reason:
+                                  description: (brief) reason for the condition's
+                                    last transition.
+                                  type: string
+                                status:
+                                  description: Status of the condition, one of True,
+                                    False, Unknown.
+                                  type: string
+                                type:
+                                  description: Type of condition
+                                  type: string
+                              required:
+                              - status
+                              - type
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - type
+                            x-kubernetes-list-type: map
+                        type: object
                       hostConnection:
                         description: HostConnection is the status of the connection
                           with the host cluster
