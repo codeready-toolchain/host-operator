@@ -489,7 +489,7 @@ func TestReconcile(t *testing.T) {
 				r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
 				cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
-						return fmt.Errorf("mock error")
+						return fmt.Errorf("mock error 2")
 					}
 					return cl.Client.Update(ctx, obj, opts...)
 				}
@@ -501,7 +501,7 @@ func TestReconcile(t *testing.T) {
 				// check that TemplateUpdateRequest is in "failed" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
 					// expect 2 occurrences of the "failure" in the status.conditions
-					HasConditions(toolchainv1alpha1.Condition{
+					HasSameConditions(toolchainv1alpha1.Condition{
 						Type:    toolchainv1alpha1.TemplateUpdateRequestComplete,
 						Status:  corev1.ConditionFalse,
 						Reason:  toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason,
@@ -510,7 +510,7 @@ func TestReconcile(t *testing.T) {
 						Type:    toolchainv1alpha1.TemplateUpdateRequestComplete,
 						Status:  corev1.ConditionFalse,
 						Reason:  toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason,
-						Message: `mock error`,
+						Message: `unable to update the MasterUserRecord associated with the TemplateUpdateRequest: mock error 2`,
 					})
 			})
 

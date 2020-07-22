@@ -285,7 +285,7 @@ func (r *NSTemplateTierReconciler) activeTemplateUpdateRequests(logger logr.Logg
 		// delete when in `complete=true` (reason=updated) or when in `complete=false/reason=failed` status conditions
 		if condition.IsTrue(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) ||
 			(condition.IsFalseWithReason(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) &&
-				maxUpdateFailuresReached(tur, r.config.GetMasterUserRecordUpdateRetries())) {
+				maxUpdateFailuresReached(tur, r.config.GetMasterUserRecordUpdateFailureThreshold())) {
 			if err := r.incrementCounters(logger, tier, tur); err != nil {
 				return -1, false, err
 			}
@@ -310,7 +310,7 @@ func maxUpdateFailuresReached(tur toolchainv1alpha1.TemplateUpdateRequest, thres
 	return condition.Count(tur.Status.Conditions,
 		toolchainv1alpha1.TemplateUpdateRequestComplete,
 		corev1.ConditionFalse,
-		toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) > threshod
+		toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) >= threshod
 }
 
 // incrementCounters looks-up the latest entry in the `status.updates` and increments the `Total` and `Failures` counters

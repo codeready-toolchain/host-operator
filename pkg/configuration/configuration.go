@@ -81,8 +81,8 @@ const (
 	// defaultEnvironment is the default host-operator environment
 	defaultEnvironment = "prod"
 
-	// varMasterUserRecordUpdateRetries specifies the number of retries before failing to update a MasterUserRecord
-	varMasterUserRecordUpdateRetries = "masteruserrecord.update.retries"
+	// varMasterUserRecordUpdateFailureThreshold specifies the number allowed failures before stopping trying to update a MasterUserRecord
+	varMasterUserRecordUpdateFailureThreshold = "masteruserrecord.update.failure.threshold"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -212,7 +212,7 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeDeletion)
 	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
-	c.host.SetDefault(varMasterUserRecordUpdateRetries, 1)
+	c.host.SetDefault(varMasterUserRecordUpdateFailureThreshold, 2) // allow 1 failure, try again and then give up if failed again
 }
 
 // GetToolchainStatusName returns the configured name of the member status resource
@@ -260,9 +260,9 @@ func (c *Config) GetEnvironment() string {
 	return c.host.GetString(varEnvironment)
 }
 
-// GetMasterUserRecordUpdateRetries returns the number of retries before failing to update a MasterUserRecord
-func (c *Config) GetMasterUserRecordUpdateRetries() int {
-	return c.host.GetInt(varMasterUserRecordUpdateRetries)
+// GetMasterUserRecordUpdateFailureThreshold returns the failure threshold for MUR updates. When a MUR update fails, we will re-try N times before giving up and stopping the entire tier update process.
+func (c *Config) GetMasterUserRecordUpdateFailureThreshold() int {
+	return c.host.GetInt(varMasterUserRecordUpdateFailureThreshold)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix

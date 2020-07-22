@@ -130,21 +130,20 @@ func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (r
 		syncIndexes := syncIndexes(tur.Spec.TierName, *mur)
 		if err = r.updateTemplateRefs(logger, *tur, mur); err != nil {
 			// we want to give ourselves a few chances before marking this MasterUserRecord update as "failed":
-			// 1. count the actual number of failures (ie, which occurred before)
 			logger.Error(err, "Unable to update the MasterUserRecord associated with the TemplateUpdateRequest")
 			err = errs.Wrap(err, "unable to update the MasterUserRecord associated with the TemplateUpdateRequest")
-			if !maxUpdateFailuresReached(*tur, r.config.GetMasterUserRecordUpdateRetries()) {
-				logger.Info("Retaining the failure in the TemplateUpdateRequest 'status.conditions'")
-				// log the failure in the status...
-				if err := r.addFailureStatusCondition(tur, err); err != nil {
-					return reconcile.Result{}, err
-				}
-				// ... then requeue with a delay (and cross fingers for the update to succeed next time)
-				return reconcile.Result{Requeue: true, RequeueAfter: 5 * time.Second}, err
+			// log the failure in the status...
+			if err2 := r.addFailureStatusCondition(tur, err); err2 != nil {
+				return reconcile.Result{}, err2
 			}
-			// otherwise, the failure in the status but don't requeue (unless the failure could not be added into the status)
-			// in other words, give up with the MasterUserRecord update :(
-			return reconcile.Result{}, r.addFailureStatusCondition(tur, err)
+			if maxUpdateFailuresReached(*tur, r.config.GetMasterUserRecordUpdateFailureThreshold()) {
+				// exit reconcile loop but don't requeue
+				// in other words, give up with the MasterUserRecord update :(
+				return reconcile.Result{}, nil
+			}
+			// requeue with a delay (and cross fingers for the update to succeed next time)
+			logger.Info("Retaining the failure in the TemplateUpdateRequest 'status.conditions'")
+			return reconcile.Result{Requeue: true, RequeueAfter: 5 * time.Second}, err
 		}
 		// update the TemplateUpdateRequest status and requeue to keep tracking the MUR changes
 		logger.Info("MasterUserRecord update started. Updating TemplateUpdateRequest status accordingly")
@@ -172,7 +171,7 @@ func maxUpdateFailuresReached(tur toolchainv1alpha1.TemplateUpdateRequest, thres
 	return condition.Count(tur.Status.Conditions,
 		toolchainv1alpha1.TemplateUpdateRequestComplete,
 		corev1.ConditionFalse,
-		toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) == threshod
+		toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) >= threshod
 }
 
 func (r ReconcileTemplateUpdateRequest) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur *toolchainv1alpha1.MasterUserRecord) error {
