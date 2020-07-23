@@ -88,32 +88,7 @@ func computeHash(refs []string) (string, error) {
 	}
 	md5hash := md5.New()
 	// Ignore the error, as this implementation cannot return one
-	md5hash.Write(m)
+	_, _ = md5hash.Write(m)
 	hash := hex.EncodeToString(md5hash.Sum(nil))
 	return hash, nil
-}
-
-func templateRefsFor(obj interface{}) []string {
-	switch obj := obj.(type) {
-	case toolchainv1alpha1.NSTemplateSetSpec:
-		templateRefs := []string{}
-		for _, ns := range obj.Namespaces {
-			templateRefs = append(templateRefs, ns.TemplateRef)
-		}
-		if obj.ClusterResources != nil {
-			templateRefs = append(templateRefs, obj.ClusterResources.TemplateRef)
-		}
-		return templateRefs
-	case toolchainv1alpha1.NSTemplateTierSpec:
-		templateRefs := []string{}
-		for _, ns := range obj.Namespaces {
-			templateRefs = append(templateRefs, ns.TemplateRef)
-		}
-		if obj.ClusterResources != nil {
-			templateRefs = append(templateRefs, obj.ClusterResources.TemplateRef)
-		}
-		return templateRefs
-	default:
-		return []string{}
-	}
 }

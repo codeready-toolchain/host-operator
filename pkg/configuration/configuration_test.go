@@ -199,7 +199,7 @@ func TestLoadFromConfigMap(t *testing.T) {
 	})
 }
 
-func TestGetDurationBeforeChangeRequestDeletion(t *testing.T) {
+func TestGetDurationBeforeChangeTierRequestDeletion(t *testing.T) {
 	key := configuration.HostEnvPrefix + "_" + "DURATION_BEFORE_CHANGE_REQUEST_DELETION"
 	resetFunc := test.UnsetEnvVarAndRestore(t, key)
 	defer resetFunc()
@@ -208,7 +208,7 @@ func TestGetDurationBeforeChangeRequestDeletion(t *testing.T) {
 		resetFunc := test.UnsetEnvVarAndRestore(t, key)
 		defer resetFunc()
 		config := getDefaultConfiguration(t)
-		assert.Equal(t, cast.ToDuration("24h"), config.GetDurationBeforeChangeRequestDeletion())
+		assert.Equal(t, cast.ToDuration("24h"), config.GetDurationBeforeChangeTierRequestDeletion())
 	})
 
 	t.Run("env overwrite", func(t *testing.T) {
@@ -218,7 +218,7 @@ func TestGetDurationBeforeChangeRequestDeletion(t *testing.T) {
 		restore = test.SetEnvVarAndRestore(t, configuration.HostEnvPrefix+"_"+"ANY_CONFIG", "20s")
 		defer restore()
 		config := getDefaultConfiguration(t)
-		assert.Equal(t, cast.ToDuration("10s"), config.GetDurationBeforeChangeRequestDeletion())
+		assert.Equal(t, cast.ToDuration("10s"), config.GetDurationBeforeChangeTierRequestDeletion())
 	})
 }
 
