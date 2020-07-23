@@ -184,9 +184,8 @@ func TestNewNSTemplateTier(t *testing.T) {
 			tierTmpls, err := newTierTemplates(s, namespace, assets)
 			require.NoError(t, err)
 			// when
-			nstmplTiers, err := newNSTemplateTiers(namespace, tierTmpls)
+			nstmplTiers := newNSTemplateTiers(namespace, tierTmpls)
 			// then
-			require.NoError(t, err)
 			require.NotEmpty(t, nstmplTiers)
 			// verify that each NSTemplateTier has the Namespaces and ClusterResources `TemplateRef` set as expected
 			for _, nstmplTier := range nstmplTiers {
@@ -240,9 +239,8 @@ func TestNewNSTemplateTier(t *testing.T) {
 					// given
 					tmpls := tierTmpls[tier]
 					// when
-					actual, err := newNSTemplateTier(namespace, tier, tmpls)
+					actual := newNSTemplateTier(namespace, tier, tmpls)
 					// then
-					require.NoError(t, err)
 					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, namespaceRevisions[tier], clusterResourceQuotaRevisions[tier])
 					require.NoError(t, err)
 					// here we don't compare objects because the generated NSTemplateTier
@@ -515,9 +513,8 @@ func TestNewNSTemplateTiers(t *testing.T) {
 		tierTmpls, err := newTierTemplates(s, namespace, assets)
 		require.NoError(t, err)
 		// when
-		tiers, err := newNSTemplateTiers(namespace, tierTmpls)
+		tiers := newNSTemplateTiers(namespace, tierTmpls)
 		// then
-		require.NoError(t, err)
 		require.Len(t, tiers, 4)
 		for _, name := range []string{"advanced", "basic", "team", "nocluster"} {
 			tier, found := tiers[name]

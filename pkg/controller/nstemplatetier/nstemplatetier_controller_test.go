@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alecthomas/assert"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -16,7 +17,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +39,7 @@ func TestReconcile(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 
-	t.Run("controller should add entry in status.updates", func(t *testing.T) {
+	t.Run("controller should add entry in tier.status.updates", func(t *testing.T) {
 
 		t.Run("without previous entry", func(t *testing.T) {
 			// given
@@ -316,6 +316,34 @@ func TestReconcile(t *testing.T) {
 					FailedAccounts: []string{"failed1", "failed2"},
 				})
 		})
+
+		// in this test, the controller can't create an extra TemplateUpdateRequest resource yet
+		// because one is in a "completed=true/reason=failed" status and has been deleted
+		t.Run("when maximum number of TemplateUpdateRequest is reached but one is failed once", func(t *testing.T) {
+			// given
+			previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
+			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
+			initObjs := []runtime.Object{basicTier}
+			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"))...)
+			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
+			// when
+			res, err := r.Reconcile(req)
+			// then
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
+			// check that no TemplateUpdateRequest was created
+			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize) // none created and one marked for deletion
+			turtest.AssertThatTemplateUpdateRequest(t, "user-0", cl).Exists()
+			tiertest.AssertThatNSTemplateTier(t, basicTier.Name, cl).
+				HasStatusUpdatesItems(1).
+				// at this point, all the counters are '0'
+				HasLatestUpdate(toolchainv1alpha1.NSTemplateTierHistory{
+					Hash:           basicTier.Labels["toolchain.dev.openshift.com/basic-tier-hash"],
+					Failures:       2,                              // not incremented (yet)
+					FailedAccounts: []string{"failed1", "failed2"}, // unchanged
+				})
+		})
 	})
 
 	// in these tests, the controller should NOT create a single TemplateUpdateRequest
@@ -376,13 +404,13 @@ func TestReconcile(t *testing.T) {
 
 		// in this test, the controller can't create an extra TemplateUpdateRequest resource yet
 		// because one is in a "completed=true/reason=failed" status and has been deleted
-		t.Run("when maximum number of TemplateUpdateRequest is reached but one is failed", func(t *testing.T) {
+		t.Run("when maximum number of TemplateUpdateRequest is reached but one is failed too many times", func(t *testing.T) {
 			// given
 			previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			initObjs := []runtime.Object{basicTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"), turtest.Failed("user-0"))...) // "user-0" failed twice
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -634,7 +662,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	}
 	config, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
-
 	r := nstemplatetier.NewReconciler(cl, s, config)
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{

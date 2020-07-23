@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -269,7 +270,8 @@ func (r *NSTemplateTierReconciler) activeTemplateUpdateRequests(logger logr.Logg
 
 		// delete when in `complete=true` (reason=updated) or when in `complete=false/reason=failed` status conditions
 		if condition.IsTrue(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) ||
-			condition.IsFalseWithReason(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) {
+			(condition.IsFalseWithReason(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) &&
+				maxUpdateFailuresReached(tur, r.config.GetMasterUserRecordUpdateFailureThreshold())) {
 			if err := r.incrementCounters(logger, tier, tur); err != nil {
 				return -1, false, err
 			}
@@ -289,6 +291,14 @@ func (r *NSTemplateTierReconciler) activeTemplateUpdateRequests(logger logr.Logg
 	return count, false, nil
 }
 
+// maxUpdateFailuresReached checks if the number of failure to update the MasterUserRecord is beyond the configured threshold
+func maxUpdateFailuresReached(tur toolchainv1alpha1.TemplateUpdateRequest, threshod int) bool {
+	return condition.Count(tur.Status.Conditions,
+		toolchainv1alpha1.TemplateUpdateRequestComplete,
+		corev1.ConditionFalse,
+		toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) >= threshod
+}
+
 // incrementCounters looks-up the latest entry in the `status.updates` and increments the `Total` and `Failures` counters
 func (r *NSTemplateTierReconciler) incrementCounters(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier, tur toolchainv1alpha1.TemplateUpdateRequest) error {
 	if len(tier.Status.Updates) == 0 {
@@ -296,6 +306,8 @@ func (r *NSTemplateTierReconciler) incrementCounters(logger logr.Logger, tier *t
 	}
 	latest := tier.Status.Updates[len(tier.Status.Updates)-1]
 	if condition.IsFalseWithReason(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) {
+		c, _ := condition.FindConditionByType(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete)
+		logger.Info("incrementing failure counter after TemplateUpdateRequest failed", "reason", c.Reason)
 		latest.Failures++
 		latest.FailedAccounts = append(latest.FailedAccounts, tur.Name)
 	}

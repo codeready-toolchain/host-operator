@@ -49,6 +49,21 @@ func (a *SingleTemplateUpdateRequestAssertion) HasConditions(expected ...toolcha
 	return a
 }
 
+// HasSameConditions verifies that the TemplateUpdateRequest has ALL the given conditions in its status
+// (even with duplicate types)
+func (a *SingleTemplateUpdateRequestAssertion) HasSameConditions(expected ...toolchainv1alpha1.Condition) *SingleTemplateUpdateRequestAssertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	require.Equal(a.t, len(expected), len(a.templateUpdateRequest.Status.Conditions))
+	for i, c := range expected {
+		assert.Equal(a.t, c.Type, a.templateUpdateRequest.Status.Conditions[i].Type)
+		assert.Equal(a.t, c.Status, a.templateUpdateRequest.Status.Conditions[i].Status)
+		assert.Equal(a.t, c.Reason, a.templateUpdateRequest.Status.Conditions[i].Reason)
+		assert.Equal(a.t, c.Message, a.templateUpdateRequest.Status.Conditions[i].Message)
+	}
+	return a
+}
+
 // HasSyncIndexes verifies that the TemplateUpdateRequest has the given sync indexes in its status
 func (a *SingleTemplateUpdateRequestAssertion) HasSyncIndexes(indexes map[string]string) *SingleTemplateUpdateRequestAssertion {
 	err := a.loadResource()
@@ -61,6 +76,7 @@ func (a *SingleTemplateUpdateRequestAssertion) HasSyncIndexes(indexes map[string
 func (a *SingleTemplateUpdateRequestAssertion) Exists() *SingleTemplateUpdateRequestAssertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
+	assert.Nil(a.t, a.templateUpdateRequest.DeletionTimestamp) // resource is not even marked for deletion
 	return a
 }
 

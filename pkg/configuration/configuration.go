@@ -89,6 +89,9 @@ const (
 
 	// defaultEnvironment is the default host-operator environment
 	defaultEnvironment = "prod"
+
+	// varMasterUserRecordUpdateFailureThreshold specifies the number allowed failures before stopping trying to update a MasterUserRecord
+	varMasterUserRecordUpdateFailureThreshold = "masteruserrecord.update.failure.threshold"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -109,6 +112,7 @@ func initConfig() *Config {
 	c.host.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	c.host.SetTypeByDefaultValue(true)
 	c.setConfigDefaults()
+
 	return &c
 }
 
@@ -218,6 +222,7 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeNotificationDeletion)
 	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
+	c.host.SetDefault(varMasterUserRecordUpdateFailureThreshold, 2) // allow 1 failure, try again and then give up if failed again
 }
 
 // GetToolchainStatusName returns the configured name of the member status resource
@@ -250,7 +255,7 @@ func (c *Config) GetMailgunDomain() string {
 	return c.host.GetString(varMailgunDomain)
 }
 
-// GetMailAPIKey returns the host operator mailgun api key
+// GetMailgunAPIKey returns the host operator mailgun api key
 func (c *Config) GetMailgunAPIKey() string {
 	return c.host.GetString(varMailgunAPIKey)
 }
@@ -268,6 +273,11 @@ func (c *Config) GetRegistrationServiceURL() string {
 // GetEnvironment returns the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
 func (c *Config) GetEnvironment() string {
 	return c.host.GetString(varEnvironment)
+}
+
+// GetMasterUserRecordUpdateFailureThreshold returns the number of allowed failures before stopping trying to update a MasterUserRecord
+func (c *Config) GetMasterUserRecordUpdateFailureThreshold() int {
+	return c.host.GetInt(varMasterUserRecordUpdateFailureThreshold)
 }
 
 // GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix

@@ -35,7 +35,9 @@ func NewTemplateUpdateRequest(name string, tier toolchainv1alpha1.NSTemplateTier
 			Namespaces:       tier.Spec.Namespaces,
 			ClusterResources: tier.Spec.ClusterResources,
 		},
-		Status: toolchainv1alpha1.TemplateUpdateRequestStatus{},
+		Status: toolchainv1alpha1.TemplateUpdateRequestStatus{
+			Conditions: []toolchainv1alpha1.Condition{},
+		},
 	}
 	coputil.AddFinalizer(tur, "tier.finalizer.toolchain.dev.openshift.com")
 	for _, opt := range options {
@@ -94,13 +96,12 @@ var _ Option = Failed("")
 
 func (f Failed) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdateRequest) {
 	if r.Name == string(f) {
-		r.Status.Conditions = []toolchainv1alpha1.Condition{
-			{
+		r.Status.Conditions = append(r.Status.Conditions,
+			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.TemplateUpdateRequestComplete,
 				Status: corev1.ConditionFalse,
 				Reason: toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason,
-			},
-		}
+			})
 	}
 }
 

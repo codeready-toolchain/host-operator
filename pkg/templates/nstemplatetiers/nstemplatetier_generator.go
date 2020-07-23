@@ -42,10 +42,7 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 		}
 	}
 	// create the NSTemplateTiers
-	nstmplTiersByTier, err := newNSTemplateTiers(namespace, tierTmplsByTier)
-	if err != nil {
-		return errors.Wrap(err, "unable to create or update NSTemplateTiers")
-	}
+	nstmplTiersByTier := newNSTemplateTiers(namespace, tierTmplsByTier)
 	cl := commonclient.NewApplyClient(client, s)
 
 	for _, nstmplTier := range nstmplTiersByTier {
@@ -217,16 +214,13 @@ func NewTierTemplateName(tier, kind, revision string) string {
 }
 
 // newNSTemplateTiers generates all NSTemplateTier resources, indexed by their associated tier
-func newNSTemplateTiers(namespace string, tierTmplsByTier map[string][]*toolchainv1alpha1.TierTemplate) (map[string]*toolchainv1alpha1.NSTemplateTier, error) {
+func newNSTemplateTiers(namespace string, tierTmplsByTier map[string][]*toolchainv1alpha1.TierTemplate) map[string]*toolchainv1alpha1.NSTemplateTier {
 	tiers := make(map[string]*toolchainv1alpha1.NSTemplateTier, len(tierTmplsByTier))
 	for tier, tmpls := range tierTmplsByTier {
-		tmpl, err := newNSTemplateTier(namespace, tier, tmpls)
-		if err != nil {
-			return nil, errors.Wrapf(err, "unable to generate NSTemplateTiers")
-		}
+		tmpl := newNSTemplateTier(namespace, tier, tmpls)
 		tiers[tier] = tmpl
 	}
-	return tiers, nil
+	return tiers
 }
 
 // NewNSTemplateTier initializes a complete NSTemplateTier object
@@ -258,7 +252,7 @@ func newNSTemplateTiers(namespace string, tierTmplsByTier map[string][]*toolchai
 //       template: >
 //         <yaml-ns-template>
 // ------
-func newNSTemplateTier(namespace, tier string, tierTmpls []*toolchainv1alpha1.TierTemplate) (*toolchainv1alpha1.NSTemplateTier, error) {
+func newNSTemplateTier(namespace, tier string, tierTmpls []*toolchainv1alpha1.TierTemplate) *toolchainv1alpha1.NSTemplateTier {
 	// retrieve the namespace types and order them, so we can compare
 	// with the expected templates during the tests
 	result := &toolchainv1alpha1.NSTemplateTier{
@@ -281,5 +275,5 @@ func newNSTemplateTier(namespace, tier string, tierTmpls []*toolchainv1alpha1.Ti
 			})
 		}
 	}
-	return result, nil
+	return result
 }
