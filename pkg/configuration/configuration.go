@@ -33,11 +33,17 @@ const (
 	// DefaultToolchainStatusName the default name for the toolchain status resource created during initialization of the operator
 	DefaultToolchainStatusName = "toolchain-status"
 
-	// VarDurationBeforeChangeRequestDeletion specifies the duration before a change request is deleted
-	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion"
+	// VarDurationBeforeChangeRequestDeletion specifies the duration before a ChangeTierRequest resource is deleted
+	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion" // TODO: add missing `tier` in `change.tier.request`?
 
-	// defaultDurationBeforeDeletion is the time before a resource is deleted
-	defaultDurationBeforeDeletion = "24h"
+	// defaultDurationBeforeChangeTierRequestDeletion is the time before a ChangeTierRequest resource is deleted
+	defaultDurationBeforeChangeTierRequestDeletion = "24h"
+
+	// varTemplateUpdateRequestMaxPoolSize specifies the maximum number of concurrent TemplateUpdateRequests when updating MasterUserRecords
+	varTemplateUpdateRequestMaxPoolSize = "template.update.request.max.poolsize"
+
+	// defaultTemplateUpdateRequestMaxPoolSize is default max poolsize for varTemplateUpdateRequestMaxPoolSize
+	defaultTemplateUpdateRequestMaxPoolSize = "5"
 
 	// ToolchainConfigMapUserApprovalPolicy is a key for a user approval policy that should be used
 	ToolchainConfigMapUserApprovalPolicy = "user-approval-policy"
@@ -59,6 +65,9 @@ const (
 
 	// varDurationBeforeNotificationDeletion specifies the duration before a notification will be deleted
 	varDurationBeforeNotificationDeletion = "duration.before.notification.deletion"
+
+	// defaultDurationBeforeNotificationDeletion is the time before a Notification resource is deleted
+	defaultDurationBeforeNotificationDeletion = "24h"
 
 	// varMailgunDomain specifies the host operator mailgun domain used for creating an instance of mailgun
 	varMailgunDomain = "mailgun.domain"
@@ -203,9 +212,10 @@ func createHostEnvVarKey(key string) string {
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(ToolchainStatusName, DefaultToolchainStatusName)
-	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, defaultDurationBeforeDeletion)
+	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, defaultDurationBeforeChangeTierRequestDeletion)
+	c.host.SetDefault(varTemplateUpdateRequestMaxPoolSize, defaultTemplateUpdateRequestMaxPoolSize)
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
-	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeDeletion)
+	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeNotificationDeletion)
 	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
 }
@@ -215,14 +225,19 @@ func (c *Config) GetToolchainStatusName() string {
 	return c.host.GetString(ToolchainStatusName)
 }
 
-// GetDurationBeforeChangeRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
-func (c *Config) GetDurationBeforeChangeRequestDeletion() time.Duration {
+// GetDurationBeforeChangeTierRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
+func (c *Config) GetDurationBeforeChangeTierRequestDeletion() time.Duration {
 	return c.host.GetDuration(VarDurationBeforeChangeRequestDeletion)
 }
 
 // GetNotificationDeliveryService returns the name of the notification delivery service to use for delivering user notifications
 func (c *Config) GetNotificationDeliveryService() string {
 	return c.host.GetString(varNotificationDeliveryService)
+}
+
+// GetTemplateUpdateRequestMaxPoolSize returns the maximum number of concurrent TemplateUpdateRequests when updating MasterUserRecords
+func (c *Config) GetTemplateUpdateRequestMaxPoolSize() int {
+	return c.host.GetInt(varTemplateUpdateRequestMaxPoolSize)
 }
 
 // GetDurationBeforeNotificationDeletion returns the timeout before a delivered notification will be deleted.

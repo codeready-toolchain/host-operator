@@ -9,6 +9,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	turtest "github.com/codeready-toolchain/host-operator/test/templateupdaterequest"
@@ -30,6 +31,7 @@ import (
 
 const (
 	operatorNamespace = "toolchain-host-operator"
+	maxPoolSize       = 5 // same as default in config
 )
 
 func TestReconcile(t *testing.T) {
@@ -124,7 +126,7 @@ func TestReconcile(t *testing.T) {
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			initObjs := []runtime.Object{basicTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(nstemplatetier.MaxPoolSize, "other-%d", *basicTier, turtest.TierName("other"))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "other-%d", *basicTier, turtest.TierName("other"))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -132,7 +134,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
-			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(nstemplatetier.MaxPoolSize + 1) // 1 resource was created, `MaxPoolSize` already existed
+			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize + 1) // 1 resource was created, `MaxPoolSize` already existed
 		})
 
 		// in this test, the controller can create an extra TemplateUpdateRequest resource
@@ -143,7 +145,7 @@ func TestReconcile(t *testing.T) {
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			initObjs := []runtime.Object{basicTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(nstemplatetier.MaxPoolSize, "user-%d", *basicTier, turtest.DeletionTimestamp("user-0"))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.DeletionTimestamp("user-0"))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -151,7 +153,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that a single TemplateUpdateRequest was created
-			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(nstemplatetier.MaxPoolSize + 1) // one more TemplateUpdateRequest
+			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize + 1) // one more TemplateUpdateRequest
 		})
 
 		// in this test, there are 20 MasterUserRecords on the same tier.
@@ -268,7 +270,7 @@ func TestReconcile(t *testing.T) {
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			initObjs := []runtime.Object{basicTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 20, "user-%d", murtest.Account("cluster1", *basicTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(nstemplatetier.MaxPoolSize, "user-%d", *basicTier)...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier)...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -276,7 +278,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 			// check that no TemplateUpdateRequest was created
-			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(nstemplatetier.MaxPoolSize) // size unchanged
+			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize) // size unchanged
 			tiertest.AssertThatNSTemplateTier(t, basicTier.Name, cl).
 				HasStatusUpdatesItems(1).
 				// at this point, all the counters are '0'
@@ -296,7 +298,7 @@ func TestReconcile(t *testing.T) {
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			initObjs := []runtime.Object{basicTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(nstemplatetier.MaxPoolSize, "user-%d", *basicTier)...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier)...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -304,7 +306,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 			// check that a single TemplateUpdateRequest was created
-			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(nstemplatetier.MaxPoolSize) // no increase
+			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize) // no increase
 			tiertest.AssertThatNSTemplateTier(t, basicTier.Name, cl).
 				HasStatusUpdatesItems(1).
 				// at this point, all the counters are '0'
@@ -327,7 +329,7 @@ func TestReconcile(t *testing.T) {
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			initObjs := []runtime.Object{basicTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(nstemplatetier.MaxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -335,7 +337,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that no TemplateUpdateRequest was created
-			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(nstemplatetier.MaxPoolSize) // none created and one marked for deletion
+			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize) // none created and one marked for deletion
 			turtest.AssertThatTemplateUpdateRequest(t, "user-0", cl).HasDeletionTimestamp()
 		})
 
@@ -347,7 +349,7 @@ func TestReconcile(t *testing.T) {
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			initObjs := []runtime.Object{basicTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(nstemplatetier.MaxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"), turtest.Complete("user-1"))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"), turtest.Complete("user-1"))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 				if tur, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
@@ -368,8 +370,8 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that no TemplateUpdateRequest was created
-			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(nstemplatetier.MaxPoolSize) // none created and one marked for deletion
-			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).HasDeletionTimestamp()        // "user-1" is the one marked for deletion
+			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize)         // none created and one marked for deletion
+			turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).HasDeletionTimestamp() // "user-1" is the one marked for deletion
 		})
 
 		// in this test, the controller can't create an extra TemplateUpdateRequest resource yet
@@ -380,7 +382,7 @@ func TestReconcile(t *testing.T) {
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			initObjs := []runtime.Object{basicTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(nstemplatetier.MaxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
@@ -388,7 +390,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 			// check that no TemplateUpdateRequest was created
-			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(nstemplatetier.MaxPoolSize) // none created and one marked for deletion
+			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize) // none created and one marked for deletion
 			turtest.AssertThatTemplateUpdateRequest(t, "user-0", cl).HasDeletionTimestamp()
 			tiertest.AssertThatNSTemplateTier(t, basicTier.Name, cl).
 				HasStatusUpdatesItems(1).
@@ -521,7 +523,7 @@ func TestReconcile(t *testing.T) {
 			initObjs := []runtime.Object{basicTier}
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d",
 				murtest.Account("cluster1", *previousBasicTier))...)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(nstemplatetier.MaxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
+			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
 
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
@@ -630,8 +632,10 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 		}
 		return fmt.Errorf("unexpected type of resource to delete: '%T'", obj)
 	}
+	config, err := configuration.LoadConfig(cl)
+	require.NoError(t, err)
 
-	r := nstemplatetier.NewReconciler(cl, s)
+	r := nstemplatetier.NewReconciler(cl, s, config)
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

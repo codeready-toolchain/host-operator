@@ -118,7 +118,7 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 
 	return reconcile.Result{
 		Requeue:      true,
-		RequeueAfter: r.config.GetDurationBeforeChangeRequestDeletion(),
+		RequeueAfter: r.config.GetDurationBeforeChangeTierRequestDeletion(),
 	}, nil
 }
 
@@ -130,17 +130,17 @@ func (r *ReconcileChangeTierRequest) checkTransitionTimeAndDelete(logger logr.Lo
 	logger.Info("the ChangeTierRequest is completed so we can deal with its deletion")
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
-	if timeSinceCompletion >= r.config.GetDurationBeforeChangeRequestDeletion() {
+	if timeSinceCompletion >= r.config.GetDurationBeforeChangeTierRequestDeletion() {
 		logger.Info("the ChangeTierRequest has been completed for a longer time than the 'durationBeforeChangeRequestDeletion', so it's ready to be deleted",
-			"durationBeforeChangeRequestDeletion", r.config.GetDurationBeforeChangeRequestDeletion().String())
+			"durationBeforeChangeRequestDeletion", r.config.GetDurationBeforeChangeTierRequestDeletion().String())
 		if err := r.client.Delete(context.TODO(), changeTierRequest, &client.DeleteOptions{}); err != nil {
 			return false, 0, errs.Wrapf(err, "unable to delete ChangeTierRequest object '%s'", changeTierRequest.Name)
 		}
 		return true, 0, nil
 	}
-	diff := r.config.GetDurationBeforeChangeRequestDeletion() - timeSinceCompletion
+	diff := r.config.GetDurationBeforeChangeTierRequestDeletion() - timeSinceCompletion
 	logger.Info("the ChangeTierRequest has been completed for shorter time than 'durationBeforeChangeRequestDeletion', so it's going to be reconciled again",
-		"durationBeforeChangeRequestDeletion", r.config.GetDurationBeforeChangeRequestDeletion().String(), "reconcileAfter", diff.String())
+		"durationBeforeChangeRequestDeletion", r.config.GetDurationBeforeChangeTierRequestDeletion().String(), "reconcileAfter", diff.String())
 	return false, diff, nil
 }
 
