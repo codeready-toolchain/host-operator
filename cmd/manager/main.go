@@ -283,7 +283,7 @@ func printConfig(cfg *configuration.Config) {
 
 	logWithValuesHost := log.WithValues(
 		"key", getHostEnvVarKey(configuration.VarDurationBeforeChangeRequestDeletion),
-		"value", cfg.GetDurationBeforeChangeRequestDeletion())
+		"value", cfg.GetDurationBeforeChangeTierRequestDeletion())
 
 	logWithValuesHost.Info("Host Operator configuration variables:")
 }
