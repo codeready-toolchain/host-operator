@@ -31,8 +31,8 @@ import (
 var log = logf.Log.WithName("controller_nstemplatetier")
 
 // Add creates a new NSTemplateTier Controller and adds it to the Manager.
-func Add(mgr manager.Manager, _ *configuration.Config) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, config *configuration.Config) error {
+	return add(mgr, NewReconciler(mgr.GetClient(), mgr.GetScheme(), config))
 }
 
 // ----------------------------------------------------------------------------------------------------------------------------
@@ -44,15 +44,6 @@ func Add(mgr manager.Manager, _ *configuration.Config) error {
 // .. creates or deletes subsequent TemplateUpdateRequest resources until all MasterUserRecords have been updated (or failed to)
 // .. if the MasterUserRecord failed to updated: increment the failure counter and retain the resource name
 // ----------------------------------------------------------------------------------------------------------------------------
-
-// newReconciler returns a new reconcile.Reconciler which deals with updates of NSTemplateTiers
-// and changes of TemplateUpdateRequests
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &NSTemplateTierReconciler{
-		client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
-	}
-}
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -100,11 +91,6 @@ type NSTemplateTierReconciler struct {
 	scheme *runtime.Scheme
 	config *configuration.Config
 }
-
-const (
-	// MaxPoolSize the maximum number of TemplateUpdateRequest resources that can exist at the same time
-	MaxPoolSize = 5
-)
 
 // Reconcile takes care of:
 // - inserting a new entry in the `status.updates` (and cleaning the 'failedAccounts` in the previous one)
@@ -190,7 +176,7 @@ func (r *NSTemplateTierReconciler) ensureTemplateUpdateRequest(logger logr.Logge
 		logger.Info("requeuing as a TemplateUpdateRequest was deleted")
 		// skip TemplateUpdateRequest creation in this reconcile loop since one was deleted
 		return false, nil
-	} else if activeTemplateUpdateRequests < MaxPoolSize {
+	} else if activeTemplateUpdateRequests < r.config.GetTemplateUpdateRequestMaxPoolSize() {
 		// create a TemplateUpdateRequest if active count < MaxPoolSize,
 		// ie, find a MasterUserRecord which is not already up-to-date
 		// and for which there is no TemplateUpdateRequest yet
@@ -203,7 +189,7 @@ func (r *NSTemplateTierReconciler) ensureTemplateUpdateRequest(logger logr.Logge
 		}
 		if err = r.client.List(context.Background(), &murs,
 			client.InNamespace(tier.Namespace),
-			client.Limit(MaxPoolSize+1),
+			client.Limit(r.config.GetTemplateUpdateRequestMaxPoolSize()+1),
 			matchingLabels,
 		); err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
