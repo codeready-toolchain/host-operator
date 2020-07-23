@@ -260,7 +260,7 @@ func (c *Config) GetEnvironment() string {
 	return c.host.GetString(varEnvironment)
 }
 
-// GetMasterUserRecordUpdateFailureThreshold returns the failure threshold for MUR updates. When a MUR update fails, we will re-try N times before giving up and stopping the entire tier update process.
+// GetMasterUserRecordUpdateFailureThreshold returns the number of allowed failures before stopping trying to update a MasterUserRecord
 func (c *Config) GetMasterUserRecordUpdateFailureThreshold() int {
 	return c.host.GetInt(varMasterUserRecordUpdateFailureThreshold)
 }
