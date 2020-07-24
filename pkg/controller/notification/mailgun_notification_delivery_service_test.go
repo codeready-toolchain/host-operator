@@ -71,7 +71,8 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 		// then
 		require.Error(t, err)
 		require.IsType(t, MailgunDeliveryError{}, err)
-		require.Equal(t, `error while delivering notification (ID: , Response: ) - while making http request: Post "https://127.0.0.1:60000/v3/mg.foo.com/messages": dial tcp 127.0.0.1:60000: connect: connection refused`, err.Error())
+		require.Equal(t, "error while delivering notification (ID: , Response: ) - while making http request: "+
+			"Post https://127.0.0.1:60000/v3/mg.foo.com/messages: dial tcp 127.0.0.1:60000: connect: connection refused", err.Error())
 	})
 
 	t.Run("test mailgun notification delivery service invalid template", func(t *testing.T) {
