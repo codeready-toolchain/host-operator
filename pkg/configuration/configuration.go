@@ -7,12 +7,10 @@ import (
 	"strings"
 	"time"
 
-	errs "k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/codeready-toolchain/toolchain-common/pkg/controller"
 
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/spf13/viper"
+	errs "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -118,12 +116,7 @@ func initConfig() *Config {
 }
 
 func LoadConfig(cl client.Client) (*Config, error) {
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		return nil, err
-	}
-
-	err = controller.LoadFromSecret(HostEnvPrefix, "HOST_OPERATOR_SECRET_NAME", namespace, cl)
+	err := controller.LoadFromSecret(HostEnvPrefix, "HOST_OPERATOR_SECRET_NAME", cl)
 	if err != nil {
 		if errs.IsNotFound(err) {
 			logf.Log.Info("secret is not found")
@@ -132,7 +125,7 @@ func LoadConfig(cl client.Client) (*Config, error) {
 		return nil, err
 	}
 
-	err = controller.LoadFromConfigMap(HostEnvPrefix, "HOST_OPERATOR_CONFIG_MAP_NAME", namespace, cl)
+	err = controller.LoadFromConfigMap(HostEnvPrefix, "HOST_OPERATOR_CONFIG_MAP_NAME", cl)
 	if err != nil {
 		if errs.IsNotFound(err) {
 			logf.Log.Info("configmap is not found")
