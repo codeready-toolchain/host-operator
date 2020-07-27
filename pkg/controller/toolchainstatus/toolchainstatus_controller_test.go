@@ -75,8 +75,6 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 }
 
 func TestNoToolchainStatusFound(t *testing.T) {
-	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
-	defer restore()
 	t.Run("No toolchainstatus resource found", func(t *testing.T) {
 		// given
 		requestName := "bad-name"
@@ -111,8 +109,6 @@ func TestNoToolchainStatusFound(t *testing.T) {
 
 func TestToolchainStatusConditions(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
-	restoreNamespace := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
-	defer restoreNamespace()
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	requestName := defaultToolchainStatusName

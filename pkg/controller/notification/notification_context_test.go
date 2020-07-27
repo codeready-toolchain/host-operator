@@ -26,8 +26,6 @@ const (
 )
 
 func TestNotificationContext(t *testing.T) {
-	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
-	defer restore()
 	// given
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("john", "jsmith@redhat.com"),

@@ -29,8 +29,6 @@ import (
 
 func TestChangeTierSuccess(t *testing.T) {
 	// given
-	restoreNamespace := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
-	defer restoreNamespace()
 	logf.SetLogger(logf.ZapLogger(true))
 	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_CHANGE_REQUEST_DELETION", "10s")
 	defer restore()
@@ -127,8 +125,6 @@ func TestChangeTierSuccess(t *testing.T) {
 }
 
 func TestChangeTierFailure(t *testing.T) {
-	restoreNamespace := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
-	defer restoreNamespace()
 	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_CHANGE_REQUEST_DELETION", "10s")
 	defer restore()
 
@@ -230,8 +226,6 @@ func TestChangeTierFailure(t *testing.T) {
 
 func TestUpdateStatus(t *testing.T) {
 	// given
-	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
-	defer restore()
 	changeTierRequest := newChangeTierRequest("johny", "team")
 	controller, _, _ := newController(t, changeTierRequest)
 	log := logf.Log.WithName("test")

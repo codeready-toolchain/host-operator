@@ -20,8 +20,6 @@ import (
 // please ensure to properly unset envionment variables using
 // UnsetEnvVarAndRestore().
 func getDefaultConfiguration(t *testing.T) *configuration.Config {
-	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
-	defer restore()
 	config, err := configuration.LoadConfig(test.NewFakeClient(t))
 	require.NoError(t, err)
 	return config
