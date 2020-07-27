@@ -3,15 +3,16 @@
 package configuration
 
 import (
-	"context"
 	"os"
 	"strings"
 	"time"
 
+	errs "k8s.io/apimachinery/pkg/api/errors"
+
+	"github.com/codeready-toolchain/toolchain-common/pkg/controller"
+
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/spf13/viper"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -117,100 +118,30 @@ func initConfig() *Config {
 }
 
 func LoadConfig(cl client.Client) (*Config, error) {
-	err := loadFromSecret(cl)
+	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
 		return nil, err
 	}
 
-	err = loadFromConfigMap(cl)
+	err = controller.LoadFromSecret(HostEnvPrefix, "HOST_OPERATOR_SECRET_NAME", namespace, cl)
 	if err != nil {
+		if errs.IsNotFound(err) {
+			logf.Log.Info("secret is not found")
+			return nil, nil
+		}
 		return nil, err
 	}
+
+	err = controller.LoadFromConfigMap(HostEnvPrefix, "HOST_OPERATOR_CONFIG_MAP_NAME", namespace, cl)
+	if err != nil {
+		if errs.IsNotFound(err) {
+			logf.Log.Info("configmap is not found")
+			return nil, nil
+		}
+		return nil, err
+	}
+
 	return initConfig(), nil
-}
-
-// loadFromSecret retrieves the host operator secret
-func loadFromSecret(cl client.Client) error {
-	// get the secret name
-	secretName := getResourceName("HOST_OPERATOR_SECRET_NAME")
-	if secretName == "" {
-		return nil
-	}
-
-	// get namespace
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		return err
-	}
-
-	// get the secret
-	secret := &v1.Secret{}
-	namespacedName := types.NamespacedName{Namespace: namespace, Name: secretName}
-	err = client.Client.Get(cl, context.TODO(), namespacedName, secret)
-	if err != nil {
-		return err
-	}
-
-	// get secrets and set environment variables
-	for key, value := range secret.Data {
-		secretKey := createHostEnvVarKey(key)
-		err := os.Setenv(secretKey, string(value))
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// loadFromConfigMap retrieves the host operator configMap
-func loadFromConfigMap(cl client.Client) error {
-	// get the configMap name
-	configMapName := getResourceName("HOST_OPERATOR_CONFIG_MAP_NAME")
-	if configMapName == "" {
-		return nil
-	}
-	// get namespace
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		return err
-	}
-
-	// get the configMap
-	configMap := &v1.ConfigMap{}
-	namespacedName := types.NamespacedName{Namespace: namespace, Name: configMapName}
-	err = client.Client.Get(cl, context.TODO(), namespacedName, configMap)
-	if err != nil {
-		return err
-	}
-
-	// get configMap data and set environment variables
-	for key, value := range configMap.Data {
-		configKey := createHostEnvVarKey(key)
-		err := os.Setenv(configKey, value)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// getResourceName gets the resource name via env var
-func getResourceName(key string) string {
-	// get the resource name
-	resourceName := os.Getenv(key)
-	if resourceName == "" {
-		log.Info(key + " is not set")
-		return ""
-	}
-
-	return resourceName
-}
-
-// createHostEnvVarKey creates env vars based on resource data
-func createHostEnvVarKey(key string) string {
-	return HostEnvPrefix + "_" + (strings.ToUpper(strings.ReplaceAll(strings.ReplaceAll(key, ".", "_"), "-", "_")))
 }
 
 func (c *Config) setConfigDefaults() {

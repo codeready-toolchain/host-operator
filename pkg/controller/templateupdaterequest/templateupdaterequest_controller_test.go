@@ -35,6 +35,8 @@ const (
 func TestReconcile(t *testing.T) {
 
 	// given
+	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
+	defer restore()
 	logf.SetLogger(logf.ZapLogger(true))
 	// a "basic" NSTemplateTier
 

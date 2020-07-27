@@ -20,6 +20,8 @@ import (
 // please ensure to properly unset envionment variables using
 // UnsetEnvVarAndRestore().
 func getDefaultConfiguration(t *testing.T) *configuration.Config {
+	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
+	defer restore()
 	config, err := configuration.LoadConfig(test.NewFakeClient(t))
 	require.NoError(t, err)
 	return config
@@ -134,8 +136,7 @@ func TestLoadFromSecret(t *testing.T) {
 		config, err := configuration.LoadConfig(cl)
 
 		// then
-		require.Error(t, err)
-		assert.Equal(t, "secrets \"test-secret\" not found", err.Error())
+		require.NoError(t, err)
 		assert.Nil(t, config)
 	})
 }
@@ -193,8 +194,7 @@ func TestLoadFromConfigMap(t *testing.T) {
 		config, err := configuration.LoadConfig(cl)
 
 		// then
-		require.Error(t, err)
-		assert.Equal(t, "configmaps \"test-config\" not found", err.Error())
+		require.NoError(t, err)
 		assert.Nil(t, config)
 	})
 }

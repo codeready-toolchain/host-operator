@@ -39,6 +39,8 @@ func (s *MockDeliveryService) Send(ctx context.Context, notificationCtx *Notific
 
 func TestNotificationSuccess(t *testing.T) {
 	// given
+	restoreNamespace := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
+	defer restoreNamespace()
 	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_NOTIFICATION_DELETION", "10s")
 	defer restore()
 
@@ -80,6 +82,8 @@ func TestNotificationSuccess(t *testing.T) {
 }
 
 func TestNotificationSentFailure(t *testing.T) {
+	restoreNamespace := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
+	defer restoreNamespace()
 	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_NOTIFICATION_DELETION", "10s")
 	defer restore()
 
@@ -109,6 +113,8 @@ func TestNotificationSentFailure(t *testing.T) {
 
 func TestNotificationDelivery(t *testing.T) {
 	// given
+	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
+	defer restore()
 	ds, mockServer := mockDeliveryService(defaultTemplateLoader())
 
 	mg := mailgun.NewMailgun("crt-test.com", "123")
