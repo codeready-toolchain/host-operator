@@ -5,7 +5,7 @@ require (
 	github.com/alecthomas/colour v0.1.0 // indirect
 	github.com/alecthomas/repr v0.0.0-20200325044227-4184120f674c // indirect
 	github.com/codeready-toolchain/api v0.0.0-20200723153455-d67a817098f1
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200723154738-66539924b7b6
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200727132335-45a8b65706a7
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
@@ -41,7 +41,5 @@ replace (
 	k8s.io/client-go => k8s.io/client-go v0.17.4 // Required by prometheus-operator
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200204173128-addea2498afe // avoids case-insensitive import collision: "github.com/googleapis/gnostic/openapiv2" and "github.com/googleapis/gnostic/OpenAPIv2"
 )
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20200724174544-dcc42a88fe4f
 
 go 1.13
