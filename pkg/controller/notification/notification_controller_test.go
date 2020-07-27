@@ -39,8 +39,6 @@ func (s *MockDeliveryService) Send(ctx context.Context, notificationCtx *Notific
 
 func TestNotificationSuccess(t *testing.T) {
 	// given
-	restoreNamespace := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
-	defer restoreNamespace()
 	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_NOTIFICATION_DELETION", "10s")
 	defer restore()
 
