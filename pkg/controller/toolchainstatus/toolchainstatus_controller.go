@@ -202,7 +202,8 @@ func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logge
 	operatorStatus.DeploymentName = hostOperatorDeploymentName
 
 	// check host operator deployment status
-	deploymentConditions, err := status.GetDeploymentStatusConditions(r.client, hostOperatorDeploymentName, toolchainStatus.Namespace)
+	deploymentConditions := status.GetDeploymentStatusConditions(r.client, hostOperatorDeploymentName, toolchainStatus.Namespace)
+	err = status.ValidateComponentConditionReady(deploymentConditions...)
 
 	// update toolchainStatus
 	operatorStatus.Conditions = deploymentConditions
@@ -372,9 +373,11 @@ func (s regServiceSubstatusHandler) addRegistrationServiceResourceStatus(reqLogg
 
 // addRegistrationServiceDeploymentStatus handles the RegistrationService.Deployment part of the toolchainstatus
 func (s regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
-	deploymentConditions, err := status.GetDeploymentStatusConditions(s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
+	deploymentConditions := status.GetDeploymentStatusConditions(s.controllerClient, registrationservice.ResourceName, toolchainStatus.Namespace)
 	toolchainStatus.Status.RegistrationService.Deployment.Name = registrationservice.ResourceName
 	toolchainStatus.Status.RegistrationService.Deployment.Conditions = deploymentConditions
+
+	err := status.ValidateComponentConditionReady(deploymentConditions...)
 	if err != nil {
 		err = errs.Wrap(err, "a problem was detected in the deployment status")
 		return err
