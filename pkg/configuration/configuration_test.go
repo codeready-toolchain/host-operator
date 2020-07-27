@@ -137,7 +137,7 @@ func TestLoadFromSecret(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Nil(t, config)
+		assert.NotNil(t, config)
 	})
 }
 
@@ -195,7 +195,7 @@ func TestLoadFromConfigMap(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Nil(t, config)
+		assert.NotNil(t, config)
 	})
 }
 

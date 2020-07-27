@@ -118,20 +118,18 @@ func initConfig() *Config {
 func LoadConfig(cl client.Client) (*Config, error) {
 	err := controller.LoadFromSecret(HostEnvPrefix, "HOST_OPERATOR_SECRET_NAME", cl)
 	if err != nil {
-		if errs.IsNotFound(err) {
-			logf.Log.Info("secret is not found")
-			return nil, nil
+		if !errs.IsNotFound(err) {
+			return nil, err
 		}
-		return nil, err
+		logf.Log.Info("secret is not found")
 	}
 
 	err = controller.LoadFromConfigMap(HostEnvPrefix, "HOST_OPERATOR_CONFIG_MAP_NAME", cl)
 	if err != nil {
-		if errs.IsNotFound(err) {
-			logf.Log.Info("configmap is not found")
-			return nil, nil
+		if !errs.IsNotFound(err) {
+			return nil, err
 		}
-		return nil, err
+		logf.Log.Info("configmap is not found")
 	}
 
 	return initConfig(), nil
