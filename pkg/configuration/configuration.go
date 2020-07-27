@@ -10,7 +10,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/controller"
 
 	"github.com/spf13/viper"
-	errs "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -118,18 +117,12 @@ func initConfig() *Config {
 func LoadConfig(cl client.Client) (*Config, error) {
 	err := controller.LoadFromSecret(HostEnvPrefix, "HOST_OPERATOR_SECRET_NAME", cl)
 	if err != nil {
-		if !errs.IsNotFound(err) {
-			return nil, err
-		}
-		logf.Log.Info("secret is not found")
+		return nil, err
 	}
 
 	err = controller.LoadFromConfigMap(HostEnvPrefix, "HOST_OPERATOR_CONFIG_MAP_NAME", cl)
 	if err != nil {
-		if !errs.IsNotFound(err) {
-			return nil, err
-		}
-		logf.Log.Info("configmap is not found")
+		return nil, err
 	}
 
 	return initConfig(), nil
