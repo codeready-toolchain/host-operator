@@ -5,7 +5,7 @@ require (
 	github.com/alecthomas/colour v0.1.0 // indirect
 	github.com/alecthomas/repr v0.0.0-20200325044227-4184120f674c // indirect
 	github.com/codeready-toolchain/api v0.0.0-20200723153455-d67a817098f1
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200723154738-66539924b7b6
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200727132335-45a8b65706a7
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
