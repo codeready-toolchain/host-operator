@@ -360,7 +360,11 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
-	assert.Len(t, actual.Objects, 1)
+	if tier == "team" {
+		assert.Len(t, actual.Objects, 3) // No Idler for -code namespace (there is no -code namespace in team tier)
+	} else {
+		assert.Len(t, actual.Objects, 4)
+	}
 	cpuLimit := "4000m"
 	cpuRequest := "1750m"
 	memoryLimit := "7Gi"
@@ -369,6 +373,11 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		memoryLimit = "15Gi"
 	}
 	containsObj(t, actual, clusterResourceQuotaObj(cpuLimit, cpuRequest, memoryLimit))
+	containsObj(t, actual, idlerObj("${USERNAME}-dev", "28800"))
+	if tier != "team" {
+		containsObj(t, actual, idlerObj("${USERNAME}-code", "28800"))
+	}
+	containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
 }
 
 func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
@@ -461,6 +470,10 @@ func limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest string
 
 func clusterResourceQuotaObj(cpuLimit, cpuRequest, memoryLimit string) string {
 	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","persistentvolumeclaims":"5","pods":"100","replicationcontrollers":"100","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"7Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
+}
+
+func idlerObj(name, timeout string) string {
+	return fmt.Sprintf(`{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"Idler","metadata":{"name":"%s"},"spec":{"timeoutSeconds":%s}}`, name, timeout)
 }
 
 func testClusterResourceQuotaObj(cpuLimit, memoryLimit string) string {
