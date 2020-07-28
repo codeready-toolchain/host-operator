@@ -88,12 +88,7 @@ func TestLoadFromSecret(t *testing.T) {
 	})
 	t.Run("env overwrite", func(t *testing.T) {
 		// given
-		restore := test.SetEnvVarsAndRestore(t,
-			test.Env("HOST_OPERATOR_SECRET_NAME", "test-secret"),
-			test.Env("HOST_OPERATOR_MAILGUN_API_KEY", ""),
-			test.Env("HOST_OPERATOR_MAILGUN_DOMAIN", ""),
-			test.Env("HOST_OPERATOR_MAILGUN_SENDER_EMAIL", ""))
-
+		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_SECRET_NAME", "test-secret")
 		defer restore()
 
 		secret := &v1.Secret{
@@ -118,14 +113,6 @@ func TestLoadFromSecret(t *testing.T) {
 		assert.Equal(t, "test-domain", config.GetMailgunDomain())
 		assert.Equal(t, "test-api-key", config.GetMailgunAPIKey())
 		assert.Equal(t, "test-sender-email", config.GetMailgunSenderEmail())
-
-		// test env vars are parsed and created correctly
-		apiKey := os.Getenv("HOST_OPERATOR_MAILGUN_API_KEY")
-		assert.Equal(t, apiKey, "test-api-key")
-		domain := os.Getenv("HOST_OPERATOR_MAILGUN_DOMAIN")
-		assert.Equal(t, domain, "test-domain")
-		senderEmail := os.Getenv("HOST_OPERATOR_MAILGUN_SENDER_EMAIL")
-		assert.Equal(t, senderEmail, "test-sender-email")
 	})
 
 	t.Run("secret not found", func(t *testing.T) {
