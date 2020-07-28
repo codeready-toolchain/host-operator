@@ -88,7 +88,12 @@ func TestLoadFromSecret(t *testing.T) {
 	})
 	t.Run("env overwrite", func(t *testing.T) {
 		// given
-		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_SECRET_NAME", "test-secret")
+		restore := test.SetEnvVarsAndRestore(t,
+			test.Env("HOST_OPERATOR_SECRET_NAME", "test-secret"),
+			test.Env("HOST_OPERATOR_MAILGUN_API_KEY", ""),
+			test.Env("HOST_OPERATOR_MAILGUN_DOMAIN", ""),
+			test.Env("HOST_OPERATOR_MAILGUN_SENDER_EMAIL", ""))
+
 		defer restore()
 
 		secret := &v1.Secret{
@@ -151,7 +156,10 @@ func TestLoadFromConfigMap(t *testing.T) {
 	})
 	t.Run("env overwrite", func(t *testing.T) {
 		// given
-		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_CONFIG_MAP_NAME", "test-config")
+		restore := test.SetEnvVarsAndRestore(t,
+			test.Env("HOST_OPERATOR_CONFIG_MAP_NAME", "test-config"),
+			test.Env("HOST_OPERATOR_REGISTRATION_SERVICE_URL", ""),
+			test.Env("HOST_OPERATOR_TEST_TEST", ""))
 		defer restore()
 
 		configMap := &v1.ConfigMap{
