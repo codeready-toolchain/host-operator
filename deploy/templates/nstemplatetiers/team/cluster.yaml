@@ -27,6 +27,18 @@ objects:
       annotations:
         openshift.io/requester: ${USERNAME}
       labels: null
+- apiVersion: toolchain.dev.openshift.com/v1alpha1
+  kind: Idler
+  metadata:
+    name: ${USERNAME}-dev
+  spec:
+    timeoutSeconds: 28800 # 8 hours
+- apiVersion: toolchain.dev.openshift.com/v1alpha1
+  kind: Idler
+  metadata:
+    name: ${USERNAME}-stage
+  spec:
+    timeoutSeconds: 28800 # 8 hours
 parameters:
 - name: USERNAME
   required: true
