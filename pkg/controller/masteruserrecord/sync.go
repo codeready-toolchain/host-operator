@@ -10,6 +10,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -23,11 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-)
-
-const (
-	consoleNamespace = "openshift-console"
-	cheNamespace     = "toolchain-che"
 )
 
 // consoleClient to be used to test connection to a public Web Console
@@ -46,6 +42,7 @@ type Synchronizer struct {
 	record            *toolchainv1alpha1.MasterUserRecord
 	scheme            *runtime.Scheme
 	logger            logr.Logger
+	config            *configuration.Config
 }
 
 // synchronizeSpec synhronizes the useraccount in the MasterUserRecord with the corresponding UserAccount on the member cluster.
@@ -147,7 +144,7 @@ func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountSt
 func (s *Synchronizer) withConsoleURL(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
 	if status.Cluster.ConsoleURL == "" {
 		route := &routev1.Route{}
-		namespacedName := types.NamespacedName{Namespace: consoleNamespace, Name: "console"}
+		namespacedName := types.NamespacedName{Namespace: s.config.GetConsoleNamespace(), Name: s.config.GetConsoleRouteName()}
 		if err := s.memberCluster.Client.Get(context.TODO(), namespacedName, route); err != nil {
 			if kuberrors.IsNotFound(err) {
 				// It can happen if running in old OpenShift version like 3.x (minishift) in dev environment
@@ -175,7 +172,7 @@ func (s *Synchronizer) withConsoleURL(status toolchainv1alpha1.UserAccountStatus
 func (s *Synchronizer) withCheDashboardURL(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
 	if status.Cluster.CheDashboardURL == "" {
 		route := &routev1.Route{}
-		namespacedName := types.NamespacedName{Namespace: cheNamespace, Name: "che"}
+		namespacedName := types.NamespacedName{Namespace: s.config.GetCheNamespace(), Name: s.config.GetCheRouteName()}
 		err := s.memberCluster.Client.Get(context.TODO(), namespacedName, route)
 		if err != nil {
 			if kuberrors.IsNotFound(err) {

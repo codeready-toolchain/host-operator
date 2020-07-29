@@ -84,6 +84,30 @@ const (
 	// defaultRegistrationServiceURL is the default location of the registration service
 	defaultRegistrationServiceURL = "https://registration.crt-placeholder.com"
 
+	// varConsoleNamespace is the console route namespace
+	varConsoleNamespace = "console.namespace"
+
+	// defaultConsoleNamespace is the default console route namespace
+	defaultConsoleNamespace = "openshift-console"
+
+	// varConsoleRouteName is the console route name
+	varConsoleRouteName = "console.route.name"
+
+	// defaultConsoleRouteName is the default console route name
+	defaultConsoleRouteName = "console"
+
+	// varCheNamespace is the che route namespace
+	varCheNamespace = "che.namespace"
+
+	// defaultCheNamespace is the default che route namespace
+	defaultCheNamespace = "toolchain-che"
+
+	// varCheRouteName is the che dashboard route
+	varCheRouteName = "che.route.name"
+
+	// defaultCheRouteName is the default che dashboard route
+	defaultCheRouteName = "che"
+
 	// varEnvironment specifies the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
 	varEnvironment = "environment"
 
@@ -221,6 +245,10 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeNotificationDeletion)
 	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
+	c.host.SetDefault(varConsoleNamespace, defaultConsoleNamespace)
+	c.host.SetDefault(varConsoleRouteName, defaultConsoleRouteName)
+	c.host.SetDefault(varCheNamespace, defaultCheNamespace)
+	c.host.SetDefault(varCheRouteName, defaultCheRouteName)
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
 	c.host.SetDefault(varMasterUserRecordUpdateFailureThreshold, 2) // allow 1 failure, try again and then give up if failed again
 }
@@ -268,6 +296,26 @@ func (c *Config) GetMailgunSenderEmail() string {
 // GetRegistrationServiceURL returns the URL of the registration service
 func (c *Config) GetRegistrationServiceURL() string {
 	return c.host.GetString(varRegistrationServiceURL)
+}
+
+// GetConsoleNamespace returns the console route namespace
+func (c *Config) GetConsoleNamespace() string {
+	return c.host.GetString(varConsoleNamespace)
+}
+
+// GetConsoleRouteName returns the console route name
+func (c *Config) GetConsoleRouteName() string {
+	return c.host.GetString(varConsoleRouteName)
+}
+
+// GetCheNamespace returns the Che route namespace
+func (c *Config) GetCheNamespace() string {
+	return c.host.GetString(varCheNamespace)
+}
+
+// GetCheRouteName returns the name of the Che dashboard route
+func (c *Config) GetCheRouteName() string {
+	return c.host.GetString(varCheRouteName)
 }
 
 // GetEnvironment returns the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
