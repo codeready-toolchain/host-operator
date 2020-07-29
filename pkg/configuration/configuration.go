@@ -95,13 +95,13 @@ const (
 // configuration data in-memory.
 type Config struct {
 	host         *viper.Viper
-	secretValues map[string]string
+	secretValues map[string][]byte
 }
 
 var log = logf.Log.WithName("configuration")
 
 // initConfig creates an initial, empty configuration.
-func initConfig(secret map[string]string) *Config {
+func initConfig(secret map[string][]byte) *Config {
 	c := Config{
 		host:         viper.New(),
 		secretValues: secret,
@@ -117,7 +117,7 @@ func initConfig(secret map[string]string) *Config {
 
 func LoadConfig(cl client.Client) (*Config, error) {
 
-	secret, err := configuration.LoadFromSecret(HostEnvPrefix, "HOST_OPERATOR_SECRET_NAME", cl)
+	secret, err := configuration.LoadFromSecret("HOST_OPERATOR_SECRET_NAME", cl)
 	if err != nil {
 		return nil, err
 	}
@@ -169,20 +169,17 @@ func (c *Config) GetDurationBeforeNotificationDeletion() time.Duration {
 
 // GetMailgunDomain returns the host operator mailgun domain
 func (c *Config) GetMailgunDomain() string {
-	key := configuration.CreateOperatorEnvVarKey(HostEnvPrefix, varMailgunDomain)
-	return c.secretValues[key]
+	return string(c.secretValues[varMailgunDomain])
 }
 
 // GetMailgunAPIKey returns the host operator mailgun api key
 func (c *Config) GetMailgunAPIKey() string {
-	key := configuration.CreateOperatorEnvVarKey(HostEnvPrefix, varMailgunAPIKey)
-	return c.secretValues[key]
+	return string(c.secretValues[varMailgunAPIKey])
 }
 
 // GetMailgunSenderEmail returns the host operator mailgun sender's email address
 func (c *Config) GetMailgunSenderEmail() string {
-	key := configuration.CreateOperatorEnvVarKey(HostEnvPrefix, varMailgunSenderEmail)
-	return c.secretValues[key]
+	return string(c.secretValues[varMailgunSenderEmail])
 }
 
 // GetRegistrationServiceURL returns the URL of the registration service

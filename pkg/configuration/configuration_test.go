@@ -98,8 +98,8 @@ func TestLoadFromSecret(t *testing.T) {
 			},
 			Data: map[string][]byte{
 				"mailgun.domain":       []byte("test-domain"),
-				"mailgun-api-key":      []byte("test-api-key"),
-				"mailgun-sender.email": []byte("test-sender-email"),
+				"mailgun.api.key":      []byte("test-api-key"),
+				"mailgun.sender.email": []byte("test-sender-email"),
 			},
 		}
 
