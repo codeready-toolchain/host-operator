@@ -149,6 +149,11 @@ func TestLoadFromConfigMap(t *testing.T) {
 
 		// then
 		assert.Equal(t, "https://registration.crt-placeholder.com", config.GetRegistrationServiceURL())
+		assert.Equal(t, "console", config.GetConsoleRouteName())
+		assert.Equal(t, "openshift-console", config.GetConsoleNamespace())
+		assert.Equal(t, "che", config.GetCheRouteName())
+		assert.Equal(t, "toolchain-che", config.GetCheNamespace())
+
 	})
 	t.Run("env overwrite", func(t *testing.T) {
 		// given
@@ -162,6 +167,10 @@ func TestLoadFromConfigMap(t *testing.T) {
 			},
 			Data: map[string]string{
 				"registration.service.url": "test-url",
+				"console.namespace":        "test-console-namespace",
+				"console.route.name":       "test-console",
+				"che.namespace":            "test-che",
+				"che.route.name":           "test-che-route-name",
 				"test-test":                "test-test",
 			},
 		}
@@ -178,6 +187,14 @@ func TestLoadFromConfigMap(t *testing.T) {
 		// test env vars are parsed and created correctly
 		regServiceURL := os.Getenv("HOST_OPERATOR_REGISTRATION_SERVICE_URL")
 		assert.Equal(t, regServiceURL, "test-url")
+		consoleNamespace := os.Getenv("HOST_OPERATOR_CONSOLE_NAMESPACE")
+		assert.Equal(t, consoleNamespace, "test-console-namespace")
+		consoleRouteName := os.Getenv("HOST_OPERATOR_CONSOLE_ROUTE_NAME")
+		assert.Equal(t, consoleRouteName, "test-console")
+		cheNamespace := os.Getenv("HOST_OPERATOR_CHE_NAMESPACE")
+		assert.Equal(t, cheNamespace, "test-che")
+		cheRouteName := os.Getenv("HOST_OPERATOR_CHE_ROUTE_NAME")
+		assert.Equal(t, cheRouteName, "test-che-route-name")
 		testTest := os.Getenv("HOST_OPERATOR_TEST_TEST")
 		assert.Equal(t, testTest, "test-test")
 	})
