@@ -237,6 +237,12 @@ spec:
       kind: TierTemplate
       name: tiertemplates.toolchain.dev.openshift.com
       version: v1alpha1
+    - description: ToolchainCluster configures Toolchain to be aware of a Kubernetes
+        cluster and encapsulates the details necessary to communicate with the cluster.
+      displayName: Toolchain Cluster
+      kind: ToolchainCluster
+      name: toolchainclusters.toolchain.dev.openshift.com
+      version: v1alpha1
     - description: ToolchainStatus is used to track overall toolchain status
       displayName: CodeReady Toolchain Status
       kind: ToolchainStatus
