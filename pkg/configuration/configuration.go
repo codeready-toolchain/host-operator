@@ -10,7 +10,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/spf13/viper"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 // prefixes
@@ -97,8 +96,6 @@ type Config struct {
 	host         *viper.Viper
 	secretValues map[string][]byte
 }
-
-var log = logf.Log.WithName("configuration")
 
 // initConfig creates an initial, empty configuration.
 func initConfig(secret map[string][]byte) *Config {
