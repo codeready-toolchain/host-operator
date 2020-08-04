@@ -281,11 +281,13 @@ func printConfig(cfg *configuration.Config) {
 	}
 	logWithValuesRegServ.Info("Registration Service configuration variables:")
 
-	logWithValuesHost := log.WithValues(
+	logWithValuesHost := log
+	logWithValuesHost = logWithValuesHost.WithValues(
 		"key", getHostEnvVarKey(configuration.VarDurationBeforeChangeRequestDeletion),
-		"value", cfg.GetDurationBeforeChangeTierRequestDeletion(),
-		"regURLKey", getHostEnvVarKey(configuration.VarRegistrationServiceURL),
-		"regURLValue", cfg.GetRegistrationServiceURL())
+		"value", cfg.GetDurationBeforeChangeTierRequestDeletion())
+
+	logWithValuesHost = logWithValuesHost.WithValues("key", getHostEnvVarKey(configuration.VarRegistrationServiceURL),
+		"value", cfg.GetRegistrationServiceURL())
 
 	logWithValuesHost.Info("Host Operator configuration variables:")
 }
