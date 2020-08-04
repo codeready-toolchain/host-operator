@@ -17,7 +17,7 @@ import (
 
 // getDefaultConfiguration returns a configuration registry without anything but
 // defaults set. Remember that environment variables can overwrite defaults, so
-// please ensure to properly unset envionment variables using
+// please ensure to properly unset environment variables using
 // UnsetEnvVarAndRestore().
 func getDefaultConfiguration(t *testing.T) *configuration.Config {
 	config, err := configuration.LoadConfig(test.NewFakeClient(t))
@@ -98,8 +98,8 @@ func TestLoadFromSecret(t *testing.T) {
 			},
 			Data: map[string][]byte{
 				"mailgun.domain":       []byte("test-domain"),
-				"mailgun-api-key":      []byte("test-api-key"),
-				"mailgun-sender.email": []byte("test-sender-email"),
+				"mailgun.api.key":      []byte("test-api-key"),
+				"mailgun.sender.email": []byte("test-sender-email"),
 			},
 		}
 
@@ -113,14 +113,6 @@ func TestLoadFromSecret(t *testing.T) {
 		assert.Equal(t, "test-domain", config.GetMailgunDomain())
 		assert.Equal(t, "test-api-key", config.GetMailgunAPIKey())
 		assert.Equal(t, "test-sender-email", config.GetMailgunSenderEmail())
-
-		// test env vars are parsed and created correctly
-		apiKey := os.Getenv("HOST_OPERATOR_MAILGUN_API_KEY")
-		assert.Equal(t, apiKey, "test-api-key")
-		domain := os.Getenv("HOST_OPERATOR_MAILGUN_DOMAIN")
-		assert.Equal(t, domain, "test-domain")
-		senderEmail := os.Getenv("HOST_OPERATOR_MAILGUN_SENDER_EMAIL")
-		assert.Equal(t, senderEmail, "test-sender-email")
 	})
 
 	t.Run("secret not found", func(t *testing.T) {
@@ -134,9 +126,8 @@ func TestLoadFromSecret(t *testing.T) {
 		config, err := configuration.LoadConfig(cl)
 
 		// then
-		require.Error(t, err)
-		assert.Equal(t, "secrets \"test-secret\" not found", err.Error())
-		assert.Nil(t, config)
+		require.NoError(t, err)
+		assert.NotNil(t, config)
 	})
 }
 
@@ -164,7 +155,8 @@ func TestLoadFromConfigMap(t *testing.T) {
 			test.Env("HOST_OPERATOR_CONSOLE_ROUTE_NAME", ""),
 			test.Env("HOST_OPERATOR_CHE_NAMESPACE", ""),
 			test.Env("HOST_OPERATOR_CHE_ROUTE_NAME", ""),
-			test.Env("MEMBER_OPERATOR_TEST_TEST", ""))
+			test.Env("MEMBER_OPERATOR_TEST_TEST", ""),
+			test.Env("HOST_OPERATOR_TEST_TEST", ""))
 		defer restore()
 
 		configMap := &v1.ConfigMap{
@@ -221,9 +213,8 @@ func TestLoadFromConfigMap(t *testing.T) {
 		config, err := configuration.LoadConfig(cl)
 
 		// then
-		require.Error(t, err)
-		assert.Equal(t, "configmaps \"test-config\" not found", err.Error())
-		assert.Nil(t, config)
+		require.NoError(t, err)
+		assert.NotNil(t, config)
 	})
 }
 
