@@ -194,7 +194,7 @@ func (c *Config) GetMasterUserRecordUpdateFailureThreshold() int {
 	return c.host.GetInt(varMasterUserRecordUpdateFailureThreshold)
 }
 
-// GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
+// GetAllRegistrationServiceParameters returns a map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
 func (c *Config) GetAllRegistrationServiceParameters() map[string]string {
 	vars := map[string]string{}
 
