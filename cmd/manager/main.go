@@ -283,7 +283,9 @@ func printConfig(cfg *configuration.Config) {
 
 	logWithValuesHost := log.WithValues(
 		"key", getHostEnvVarKey(configuration.VarDurationBeforeChangeRequestDeletion),
-		"value", cfg.GetDurationBeforeChangeTierRequestDeletion())
+		"value", cfg.GetDurationBeforeChangeTierRequestDeletion(),
+		"key", getHostEnvVarKey(configuration.VarRegistrationServiceURL),
+		"value", cfg.GetRegistrationServiceURL())
 
 	logWithValuesHost.Info("Host Operator configuration variables:")
 }

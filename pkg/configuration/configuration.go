@@ -35,6 +35,12 @@ const (
 	// defaultDurationBeforeChangeTierRequestDeletion is the time before a ChangeTierRequest resource is deleted
 	defaultDurationBeforeChangeTierRequestDeletion = "24h"
 
+	// VarRegistrationServiceURL is the URL used to access the registration service
+	VarRegistrationServiceURL = "registration.service.url"
+
+	// defaultRegistrationServiceURL is the default location of the registration service
+	defaultRegistrationServiceURL = "https://registration.crt-placeholder.com"
+
 	// varTemplateUpdateRequestMaxPoolSize specifies the maximum number of concurrent TemplateUpdateRequests when updating MasterUserRecords
 	varTemplateUpdateRequestMaxPoolSize = "template.update.request.max.poolsize"
 
@@ -73,12 +79,6 @@ const (
 
 	// varMailgunSenderEmail specifies the host operator mailgun senders email
 	varMailgunSenderEmail = "mailgun.sender.email"
-
-	// varRegistrationServiceURL is the URL used to access the registration service
-	varRegistrationServiceURL = "registration.service.url"
-
-	// defaultRegistrationServiceURL is the default location of the registration service
-	defaultRegistrationServiceURL = "https://registration.crt-placeholder.com"
 
 	// varEnvironment specifies the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
 	varEnvironment = "environment"
@@ -131,10 +131,10 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(ToolchainStatusName, DefaultToolchainStatusName)
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, defaultDurationBeforeChangeTierRequestDeletion)
+	c.host.SetDefault(VarRegistrationServiceURL, defaultRegistrationServiceURL)
 	c.host.SetDefault(varTemplateUpdateRequestMaxPoolSize, defaultTemplateUpdateRequestMaxPoolSize)
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeNotificationDeletion)
-	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
 	c.host.SetDefault(varMasterUserRecordUpdateFailureThreshold, 2) // allow 1 failure, try again and then give up if failed again
 }
@@ -147,6 +147,11 @@ func (c *Config) GetToolchainStatusName() string {
 // GetDurationBeforeChangeTierRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
 func (c *Config) GetDurationBeforeChangeTierRequestDeletion() time.Duration {
 	return c.host.GetDuration(VarDurationBeforeChangeRequestDeletion)
+}
+
+// GetRegistrationServiceURL returns the URL of the registration service
+func (c *Config) GetRegistrationServiceURL() string {
+	return c.host.GetString(VarRegistrationServiceURL)
 }
 
 // GetNotificationDeliveryService returns the name of the notification delivery service to use for delivering user notifications
@@ -177,11 +182,6 @@ func (c *Config) GetMailgunAPIKey() string {
 // GetMailgunSenderEmail returns the host operator mailgun sender's email address
 func (c *Config) GetMailgunSenderEmail() string {
 	return string(c.secretValues[varMailgunSenderEmail])
-}
-
-// GetRegistrationServiceURL returns the URL of the registration service
-func (c *Config) GetRegistrationServiceURL() string {
-	return c.host.GetString(varRegistrationServiceURL)
 }
 
 // GetEnvironment returns the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
