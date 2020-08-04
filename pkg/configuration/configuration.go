@@ -94,11 +94,11 @@ const (
 // configuration data in-memory.
 type Config struct {
 	host         *viper.Viper
-	secretValues map[string][]byte
+	secretValues map[string]string
 }
 
 // initConfig creates an initial, empty configuration.
-func initConfig(secret map[string][]byte) *Config {
+func initConfig(secret map[string]string) *Config {
 	c := Config{
 		host:         viper.New(),
 		secretValues: secret,
@@ -171,17 +171,17 @@ func (c *Config) GetDurationBeforeNotificationDeletion() time.Duration {
 
 // GetMailgunDomain returns the host operator mailgun domain
 func (c *Config) GetMailgunDomain() string {
-	return string(c.secretValues[varMailgunDomain])
+	return c.secretValues[varMailgunDomain]
 }
 
 // GetMailgunAPIKey returns the host operator mailgun api key
 func (c *Config) GetMailgunAPIKey() string {
-	return string(c.secretValues[varMailgunAPIKey])
+	return c.secretValues[varMailgunAPIKey]
 }
 
 // GetMailgunSenderEmail returns the host operator mailgun sender's email address
 func (c *Config) GetMailgunSenderEmail() string {
-	return string(c.secretValues[varMailgunSenderEmail])
+	return c.secretValues[varMailgunSenderEmail]
 }
 
 // GetEnvironment returns the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
