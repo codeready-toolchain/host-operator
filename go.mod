@@ -33,7 +33,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.5.2
 )
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/MatousJobanek/toolchain-common v0.0.0-20200803153939-6ae8beaa74ca
+replace github.com/codeready-toolchain/toolchain-common => github.com/MatousJobanek/toolchain-common v0.0.0-20200804075956-19d605945d02
 
 replace github.com/codeready-toolchain/api => github.com/MatousJobanek/api v0.0.0-20200803150704-20052fba4e3f
 

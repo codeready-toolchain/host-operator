@@ -59,6 +59,7 @@ github.com/Masterminds/sprig/v3 v3.0.2/go.mod h1:oesJ8kPONMONaZgtiHNzUShJbksypC5
 github.com/Masterminds/vcs v1.13.1/go.mod h1:N09YCmOQr6RLxC6UNHzuVwAdodYbbnycGHSmwVJjcKA=
 github.com/MatousJobanek/api v0.0.0-20200803150704-20052fba4e3f/go.mod h1:/tMojFnmqPoMCjgq1me9lC5jF5zCgcGhtoIp6Q+sRGw=
 github.com/MatousJobanek/toolchain-common v0.0.0-20200803153939-6ae8beaa74ca/go.mod h1:QAJ5OQCBcba749pMKWLEhy+5qPaeXIaTZg39b3mFgN4=
+github.com/MatousJobanek/toolchain-common v0.0.0-20200804075956-19d605945d02/go.mod h1:ke7ycWI9GHlMOezmSjBkzivdqkPtrjr9HBBBkpfSC6k=
 github.com/Microsoft/go-winio v0.4.11/go.mod h1:VhR8bwka0BXejwEJY73c50VrPtXAaKcyvVC4A4RozmA=
 github.com/Microsoft/go-winio v0.4.15-0.20190919025122-fc70bd9a86b5/go.mod h1:tTuCMEN+UleMWgg9dVx4Hu52b1bJo+59jBh3ajtinzw=
 github.com/Microsoft/hcsshim v0.8.7/go.mod h1:OHd7sQqRFrYd3RmSgbgji+ctCwkbq2wbEYNSzOYtcBQ=
