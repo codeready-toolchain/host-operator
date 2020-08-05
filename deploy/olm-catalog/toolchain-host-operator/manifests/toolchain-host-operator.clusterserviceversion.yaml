@@ -379,18 +379,6 @@ spec:
           - get
           - create
         - apiGroups:
-          - core.kubefed.io
-          resources:
-          - kubefedclusters
-          verbs:
-          - '*'
-        - apiGroups:
-          - core.kubefed.io
-          resources:
-          - kubefedclusters/status
-          verbs:
-          - update
-        - apiGroups:
           - rbac.authorization.k8s.io
           - authorization.openshift.io
           resources:
