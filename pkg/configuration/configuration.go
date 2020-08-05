@@ -3,17 +3,13 @@
 package configuration
 
 import (
-	"context"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/spf13/viper"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 // prefixes
@@ -38,6 +34,12 @@ const (
 
 	// defaultDurationBeforeChangeTierRequestDeletion is the time before a ChangeTierRequest resource is deleted
 	defaultDurationBeforeChangeTierRequestDeletion = "24h"
+
+	// VarRegistrationServiceURL is the URL used to access the registration service
+	VarRegistrationServiceURL = "registration.service.url"
+
+	// defaultRegistrationServiceURL is the default location of the registration service
+	defaultRegistrationServiceURL = "https://registration.crt-placeholder.com"
 
 	// varTemplateUpdateRequestMaxPoolSize specifies the maximum number of concurrent TemplateUpdateRequests when updating MasterUserRecords
 	varTemplateUpdateRequestMaxPoolSize = "template.update.request.max.poolsize"
@@ -78,11 +80,29 @@ const (
 	// varMailgunSenderEmail specifies the host operator mailgun senders email
 	varMailgunSenderEmail = "mailgun.sender.email"
 
-	// varRegistrationServiceURL is the URL used to access the registration service
-	varRegistrationServiceURL = "registration.service.url"
+	// varConsoleNamespace is the console route namespace
+	varConsoleNamespace = "console.namespace"
 
-	// defaultRegistrationServiceURL is the default location of the registration service
-	defaultRegistrationServiceURL = "https://registration.crt-placeholder.com"
+	// defaultConsoleNamespace is the default console route namespace
+	defaultConsoleNamespace = "openshift-console"
+
+	// varConsoleRouteName is the console route name
+	varConsoleRouteName = "console.route.name"
+
+	// defaultConsoleRouteName is the default console route name
+	defaultConsoleRouteName = "console"
+
+	// varCheNamespace is the che route namespace
+	varCheNamespace = "che.namespace"
+
+	// defaultCheNamespace is the default che route namespace
+	defaultCheNamespace = "toolchain-che"
+
+	// varCheRouteName is the che dashboard route
+	varCheRouteName = "che.route.name"
+
+	// defaultCheRouteName is the default che dashboard route
+	defaultCheRouteName = "che"
 
 	// varEnvironment specifies the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
 	varEnvironment = "environment"
@@ -97,15 +117,15 @@ const (
 // Config encapsulates the Viper configuration registry which stores the
 // configuration data in-memory.
 type Config struct {
-	host *viper.Viper
+	host         *viper.Viper
+	secretValues map[string]string
 }
 
-var log = logf.Log.WithName("configuration")
-
 // initConfig creates an initial, empty configuration.
-func initConfig() *Config {
+func initConfig(secret map[string]string) *Config {
 	c := Config{
-		host: viper.New(),
+		host:         viper.New(),
+		secretValues: secret,
 	}
 	c.host.SetEnvPrefix(HostEnvPrefix)
 	c.host.AutomaticEnv()
@@ -117,110 +137,32 @@ func initConfig() *Config {
 }
 
 func LoadConfig(cl client.Client) (*Config, error) {
-	err := loadFromSecret(cl)
+
+	secret, err := configuration.LoadFromSecret("HOST_OPERATOR_SECRET_NAME", cl)
 	if err != nil {
 		return nil, err
 	}
 
-	err = loadFromConfigMap(cl)
+	err = configuration.LoadFromConfigMap(HostEnvPrefix, "HOST_OPERATOR_CONFIG_MAP_NAME", cl)
 	if err != nil {
 		return nil, err
 	}
-	return initConfig(), nil
-}
 
-// loadFromSecret retrieves the host operator secret
-func loadFromSecret(cl client.Client) error {
-	// get the secret name
-	secretName := getResourceName("HOST_OPERATOR_SECRET_NAME")
-	if secretName == "" {
-		return nil
-	}
-
-	// get namespace
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		return err
-	}
-
-	// get the secret
-	secret := &v1.Secret{}
-	namespacedName := types.NamespacedName{Namespace: namespace, Name: secretName}
-	err = client.Client.Get(cl, context.TODO(), namespacedName, secret)
-	if err != nil {
-		return err
-	}
-
-	// get secrets and set environment variables
-	for key, value := range secret.Data {
-		secretKey := createHostEnvVarKey(key)
-		err := os.Setenv(secretKey, string(value))
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// loadFromConfigMap retrieves the host operator configMap
-func loadFromConfigMap(cl client.Client) error {
-	// get the configMap name
-	configMapName := getResourceName("HOST_OPERATOR_CONFIG_MAP_NAME")
-	if configMapName == "" {
-		return nil
-	}
-	// get namespace
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		return err
-	}
-
-	// get the configMap
-	configMap := &v1.ConfigMap{}
-	namespacedName := types.NamespacedName{Namespace: namespace, Name: configMapName}
-	err = client.Client.Get(cl, context.TODO(), namespacedName, configMap)
-	if err != nil {
-		return err
-	}
-
-	// get configMap data and set environment variables
-	for key, value := range configMap.Data {
-		configKey := createHostEnvVarKey(key)
-		err := os.Setenv(configKey, value)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// getResourceName gets the resource name via env var
-func getResourceName(key string) string {
-	// get the resource name
-	resourceName := os.Getenv(key)
-	if resourceName == "" {
-		log.Info(key + " is not set")
-		return ""
-	}
-
-	return resourceName
-}
-
-// createHostEnvVarKey creates env vars based on resource data
-func createHostEnvVarKey(key string) string {
-	return HostEnvPrefix + "_" + (strings.ToUpper(strings.ReplaceAll(strings.ReplaceAll(key, ".", "_"), "-", "_")))
+	return initConfig(secret), nil
 }
 
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(ToolchainStatusName, DefaultToolchainStatusName)
 	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, defaultDurationBeforeChangeTierRequestDeletion)
+	c.host.SetDefault(VarRegistrationServiceURL, defaultRegistrationServiceURL)
 	c.host.SetDefault(varTemplateUpdateRequestMaxPoolSize, defaultTemplateUpdateRequestMaxPoolSize)
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeNotificationDeletion)
-	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
+	c.host.SetDefault(varConsoleNamespace, defaultConsoleNamespace)
+	c.host.SetDefault(varConsoleRouteName, defaultConsoleRouteName)
+	c.host.SetDefault(varCheNamespace, defaultCheNamespace)
+	c.host.SetDefault(varCheRouteName, defaultCheRouteName)
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
 	c.host.SetDefault(varMasterUserRecordUpdateFailureThreshold, 2) // allow 1 failure, try again and then give up if failed again
 }
@@ -233,6 +175,11 @@ func (c *Config) GetToolchainStatusName() string {
 // GetDurationBeforeChangeTierRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
 func (c *Config) GetDurationBeforeChangeTierRequestDeletion() time.Duration {
 	return c.host.GetDuration(VarDurationBeforeChangeRequestDeletion)
+}
+
+// GetRegistrationServiceURL returns the URL of the registration service
+func (c *Config) GetRegistrationServiceURL() string {
+	return c.host.GetString(VarRegistrationServiceURL)
 }
 
 // GetNotificationDeliveryService returns the name of the notification delivery service to use for delivering user notifications
@@ -252,22 +199,37 @@ func (c *Config) GetDurationBeforeNotificationDeletion() time.Duration {
 
 // GetMailgunDomain returns the host operator mailgun domain
 func (c *Config) GetMailgunDomain() string {
-	return c.host.GetString(varMailgunDomain)
+	return c.secretValues[varMailgunDomain]
 }
 
 // GetMailgunAPIKey returns the host operator mailgun api key
 func (c *Config) GetMailgunAPIKey() string {
-	return c.host.GetString(varMailgunAPIKey)
+	return c.secretValues[varMailgunAPIKey]
 }
 
 // GetMailgunSenderEmail returns the host operator mailgun sender's email address
 func (c *Config) GetMailgunSenderEmail() string {
-	return c.host.GetString(varMailgunSenderEmail)
+	return c.secretValues[varMailgunSenderEmail]
 }
 
-// GetRegistrationServiceURL returns the URL of the registration service
-func (c *Config) GetRegistrationServiceURL() string {
-	return c.host.GetString(varRegistrationServiceURL)
+// GetConsoleNamespace returns the console route namespace
+func (c *Config) GetConsoleNamespace() string {
+	return c.host.GetString(varConsoleNamespace)
+}
+
+// GetConsoleRouteName returns the console route name
+func (c *Config) GetConsoleRouteName() string {
+	return c.host.GetString(varConsoleRouteName)
+}
+
+// GetCheNamespace returns the Che route namespace
+func (c *Config) GetCheNamespace() string {
+	return c.host.GetString(varCheNamespace)
+}
+
+// GetCheRouteName returns the name of the Che dashboard route
+func (c *Config) GetCheRouteName() string {
+	return c.host.GetString(varCheRouteName)
 }
 
 // GetEnvironment returns the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
@@ -280,7 +242,7 @@ func (c *Config) GetMasterUserRecordUpdateFailureThreshold() int {
 	return c.host.GetInt(varMasterUserRecordUpdateFailureThreshold)
 }
 
-// GetAllRegistrationServiceParameters returns the map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
+// GetAllRegistrationServiceParameters returns a map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix
 func (c *Config) GetAllRegistrationServiceParameters() map[string]string {
 	vars := map[string]string{}
 

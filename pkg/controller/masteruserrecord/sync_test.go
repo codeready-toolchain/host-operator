@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -358,6 +359,8 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		}
 		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.TierName("admin"))
 		hostClient := test.NewFakeClient(t, mur)
+		config, err := configuration.LoadConfig(hostClient)
+		require.NoError(t, err)
 
 		sync := Synchronizer{
 			record:            mur,
@@ -367,10 +370,11 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			recordSpecUserAcc: mur.Spec.UserAccounts[0],
 			logger:            l,
 			scheme:            scheme,
+			config:            config,
 		}
 
 		// when
-		err := sync.synchronizeSpec()
+		err = sync.synchronizeSpec()
 
 		// then
 		require.Error(t, err)
@@ -388,6 +392,8 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
+		config, err := configuration.LoadConfig(hostClient)
+		require.NoError(t, err)
 		sync := Synchronizer{
 			record:            provisionedMur,
 			hostClient:        hostClient,
@@ -396,6 +402,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			recordSpecUserAcc: provisionedMur.Spec.UserAccounts[0],
 			logger:            l,
 			scheme:            scheme,
+			config:            config,
 		}
 
 		t.Run("with empty set of UserAccounts statuses", func(t *testing.T) {
@@ -466,6 +473,8 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 
 			memberClient := test.NewFakeClient(t, userAccount)
 			hostClient := test.NewFakeClient(t, mur)
+			config, err := configuration.LoadConfig(hostClient)
+			require.NoError(t, err)
 			return Synchronizer{
 				record:            mur,
 				hostClient:        hostClient,
@@ -474,6 +483,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 				recordSpecUserAcc: mur.Spec.UserAccounts[0],
 				logger:            l,
 				scheme:            scheme,
+				config:            config,
 			}, memberClient
 		}
 
@@ -593,6 +603,8 @@ func TestCheURL(t *testing.T) {
 			memberClient = test.NewFakeClient(t, userAccount, consoleRoute())
 		}
 		hostClient := test.NewFakeClient(t, mur)
+		config, err := configuration.LoadConfig(hostClient)
+		require.NoError(t, err)
 		sync := Synchronizer{
 			record:            mur,
 			hostClient:        hostClient,
@@ -600,10 +612,11 @@ func TestCheURL(t *testing.T) {
 			memberUserAcc:     userAccount,
 			recordSpecUserAcc: mur.Spec.UserAccounts[0],
 			logger:            l,
+			config:            config,
 		}
 
 		// when
-		err := sync.synchronizeStatus()
+		err = sync.synchronizeStatus()
 		require.NoError(t, err)
 
 		// then
@@ -637,6 +650,9 @@ func TestCheURL(t *testing.T) {
 func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, hostClient *test.FakeClient) (Synchronizer, client.Client) {
 	copiedMur := mur.DeepCopy()
 	memberClient := test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute(false))
+	config, err := configuration.LoadConfig(hostClient)
+	require.NoError(t, err)
+
 	return Synchronizer{
 		record:            copiedMur,
 		hostClient:        hostClient,
@@ -645,6 +661,7 @@ func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccoun
 		recordSpecUserAcc: copiedMur.Spec.UserAccounts[0],
 		logger:            logf.ZapLogger(true),
 		scheme:            apiScheme(t),
+		config:            config,
 	}, memberClient
 }
 

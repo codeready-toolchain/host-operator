@@ -35,16 +35,17 @@ const (
 
 // Add creates a new MasterUserRecord Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, _ *configuration.Config) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, config *configuration.Config) error {
+	return add(mgr, newReconciler(mgr, config))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.Reconciler {
 	return &ReconcileMasterUserRecord{
 		client:                mgr.GetClient(),
 		scheme:                mgr.GetScheme(),
 		retrieveMemberCluster: cluster.GetCachedToolchainCluster,
+		config:                config,
 	}
 }
 
@@ -77,6 +78,7 @@ type ReconcileMasterUserRecord struct {
 	client                client.Client
 	scheme                *runtime.Scheme
 	retrieveMemberCluster func(name string) (*cluster.CachedToolchainCluster, bool)
+	config                *configuration.Config
 }
 
 // Reconcile reads that state of the cluster for a MasterUserRecord object and makes changes based on the state read
@@ -179,6 +181,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAcc
 		recordSpecUserAcc: murAccount,
 		logger:            logger,
 		scheme:            r.scheme,
+		config:            r.config,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
 		// note: if we got an error while sync'ing the spec, then we may not be able to update the MUR status it here neither.

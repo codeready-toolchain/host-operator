@@ -11,6 +11,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/test"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

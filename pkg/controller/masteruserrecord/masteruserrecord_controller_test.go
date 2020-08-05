@@ -7,12 +7,13 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
-	"github.com/go-logr/logr"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -28,7 +29,6 @@ import (
 type getMemberCluster func(clusters ...clientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool)
 
 func TestAddFinalizer(t *testing.T) {
-
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
@@ -37,7 +37,8 @@ func TestAddFinalizer(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "john")
 		memberClient := test.NewFakeClient(t)
 		hostClient := test.NewFakeClient(t, mur)
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
@@ -60,7 +61,8 @@ func TestAddFinalizer(t *testing.T) {
 		hostClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to add finalizer to MUR %s", mur.Name)
 		}
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
@@ -85,7 +87,8 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
 	memberClient := test.NewFakeClient(t)
 	hostClient := test.NewFakeClient(t, mur)
-	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+	cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient))
 
 	// when
@@ -109,7 +112,8 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	memberClient := test.NewFakeClient(t, consoleRoute())
 	memberClient2 := test.NewFakeClient(t, consoleRoute())
 	hostClient := test.NewFakeClient(t, mur)
-	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+	cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2))
 
 	// when reconciling
@@ -138,7 +142,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("when member cluster does not exist and UA hasn't been created yet", func(t *testing.T) {
 		// given
 		memberClient := test.NewFakeClient(t)
-		cntrl := newController(hostClient, s, newGetMemberCluster(false, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(false, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
@@ -158,7 +163,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("when member cluster does not exist and UA was already created", func(t *testing.T) {
 		// given
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
-		cntrl := newController(hostClient, s, newGetMemberCluster(false, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(false, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
@@ -176,7 +182,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("when member cluster is not ready and UA hasn't been created yet", func(t *testing.T) {
 		// given
 		memberClient := test.NewFakeClient(t)
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionFalse),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionFalse),
 			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
@@ -196,7 +203,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("when member cluster is not ready and UA was already created", func(t *testing.T) {
 		// given
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionFalse),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionFalse),
 			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
@@ -215,7 +223,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("status update of the MasterUserRecord failed", func(t *testing.T) {
 		// given
 		memberClient := test.NewFakeClient(t)
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 		statusUpdater := func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
 			return fmt.Errorf("unable to update status")
@@ -236,7 +245,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		memberClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 			return fmt.Errorf("unable to create user account %s", mur.Name)
 		}
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
@@ -262,7 +272,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		modifiedMur := murtest.NewMasterUserRecord(t, "john", murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 		murtest.ModifyUaInMur(modifiedMur, test.MemberClusterName, murtest.TierName("admin"))
 		hostClient := test.NewFakeClient(t, modifiedMur)
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
@@ -295,7 +306,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			hostClient.MockStatusUpdate = nil // mock only once
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
@@ -324,7 +336,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		hostClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to remove finalizer from MUR %s", mur.Name)
 		}
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
@@ -351,7 +364,8 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		memberClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("unable to delete user account %s", mur.Name)
 		}
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient))
 
 		// when
@@ -390,7 +404,7 @@ func TestModifyUserAccounts(t *testing.T) {
 	memberClient3 := test.NewFakeClient(t, userAccount3, consoleRoute())
 	hostClient := test.NewFakeClient(t, mur)
 
-	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+	cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2),
 		clusterClient("member3-cluster", memberClient3))
 
@@ -463,7 +477,8 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		memberClient3 := test.NewFakeClient(t, userAccount3, consoleRoute())
 
 		hostClient := test.NewFakeClient(t, mur)
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2),
 			clusterClient("member3-cluster", memberClient3))
 
@@ -520,7 +535,8 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 
 		memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
 		memberClient2 := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur), consoleRoute())
-		cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 			clusterClient(test.MemberClusterName, memberClient),
 			clusterClient("member2-cluster", memberClient2))
 
@@ -561,7 +577,8 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 	memberClient := test.NewFakeClient(t, userAcc)
 	hostClient := test.NewFakeClient(t, mur)
-	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+	cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient))
 
 	// when
@@ -588,7 +605,8 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 	memberClient := test.NewFakeClient(t, userAcc)
 	memberClient2 := test.NewFakeClient(t, userAcc)
 	hostClient := test.NewFakeClient(t, mur)
-	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+	cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient), clusterClient("member2-cluster", memberClient2))
 
 	// when
@@ -615,7 +633,8 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	userAccount := uatest.NewUserAccountFromMur(mur, uatest.DisabledUa(false))
 	memberClient := test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute(false))
 	hostClient := test.NewFakeClient(t, mur)
-	cntrl := newController(hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+
+	cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
 		clusterClient(test.MemberClusterName, memberClient))
 
 	// when
@@ -641,11 +660,14 @@ func apiScheme(t *testing.T) *runtime.Scheme {
 	return s
 }
 
-func newController(hostCl client.Client, s *runtime.Scheme, getMemberCluster getMemberCluster, memberCl ...clientForCluster) ReconcileMasterUserRecord {
+func newController(t *testing.T, hostCl client.Client, s *runtime.Scheme, getMemberCluster getMemberCluster, memberCl ...clientForCluster) ReconcileMasterUserRecord {
+	config, err := configuration.LoadConfig(hostCl)
+	require.NoError(t, err)
 	return ReconcileMasterUserRecord{
 		client:                hostCl,
 		scheme:                s,
 		retrieveMemberCluster: getMemberCluster(memberCl...),
+		config:                config,
 	}
 }
 
