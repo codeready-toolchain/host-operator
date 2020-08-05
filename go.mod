@@ -4,8 +4,8 @@ require (
 	github.com/alecthomas/assert v0.0.0-20170929043011-405dbfeb8e38
 	github.com/alecthomas/colour v0.1.0 // indirect
 	github.com/alecthomas/repr v0.0.0-20200325044227-4184120f674c // indirect
-	github.com/codeready-toolchain/api v0.0.0-20200723153455-d67a817098f1
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200804163151-9553506735a6
+	github.com/codeready-toolchain/api v0.0.0-20200805071634-c62858ce3204
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20200805073859-f231c3ee728e
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
@@ -14,7 +14,6 @@ require (
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/operator-framework/operator-sdk v0.17.1
-	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776
 	github.com/satori/go.uuid v1.2.0
@@ -31,9 +30,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.17.4
 	k8s.io/apimachinery v0.17.4
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/klog v1.0.0
 	sigs.k8s.io/controller-runtime v0.5.2
-	sigs.k8s.io/kubefed v0.3.0
 )
 
 replace (

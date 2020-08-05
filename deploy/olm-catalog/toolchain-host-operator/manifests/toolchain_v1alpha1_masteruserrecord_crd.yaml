@@ -214,7 +214,7 @@ spec:
                         description: ConsoleURL is the web console URL of the cluster
                         type: string
                       name:
-                        description: Name is the name of the corresponding KubeFedCluster
+                        description: Name is the name of the corresponding ToolchainCluster
                           resource
                         type: string
                     required:

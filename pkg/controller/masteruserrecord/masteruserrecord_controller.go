@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
 )
 
 var log = logf.Log.WithName("controller_masteruserrecord")
@@ -45,7 +44,7 @@ func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.
 	return &ReconcileMasterUserRecord{
 		client:                mgr.GetClient(),
 		scheme:                mgr.GetScheme(),
-		retrieveMemberCluster: cluster.GetFedCluster,
+		retrieveMemberCluster: cluster.GetCachedToolchainCluster,
 		config:                config,
 	}
 }
@@ -78,7 +77,7 @@ type ReconcileMasterUserRecord struct {
 	// that reads objects from the cache and writes to the apiserver
 	client                client.Client
 	scheme                *runtime.Scheme
-	retrieveMemberCluster func(name string) (*cluster.FedCluster, bool)
+	retrieveMemberCluster func(name string) (*cluster.CachedToolchainCluster, bool)
 	config                *configuration.Config
 }
 
@@ -199,16 +198,16 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAcc
 	return nil
 }
 
-func (r *ReconcileMasterUserRecord) getMemberCluster(targetCluster string) (*cluster.FedCluster, error) {
-	// get & check fed cluster
-	fedCluster, ok := r.retrieveMemberCluster(targetCluster)
+func (r *ReconcileMasterUserRecord) getMemberCluster(targetCluster string) (*cluster.CachedToolchainCluster, error) {
+	// get & check toolchain cluster
+	toolchainCluster, ok := r.retrieveMemberCluster(targetCluster)
 	if !ok {
 		return nil, fmt.Errorf("the member cluster %s not found in the registry", targetCluster)
 	}
-	if !util.IsClusterReady(fedCluster.ClusterStatus) {
+	if !cluster.IsReady(toolchainCluster.ClusterStatus) {
 		return nil, fmt.Errorf("the member cluster %s is not ready", targetCluster)
 	}
-	return fedCluster, nil
+	return toolchainCluster, nil
 }
 
 type statusUpdater func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error

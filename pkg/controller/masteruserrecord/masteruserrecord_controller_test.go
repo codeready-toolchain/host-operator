@@ -24,11 +24,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"sigs.k8s.io/kubefed/pkg/apis/core/common"
-	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 )
 
-type getMemberCluster func(clusters ...clientForCluster) func(name string) (*cluster.FedCluster, bool)
+type getMemberCluster func(clusters ...clientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool)
 
 func TestAddFinalizer(t *testing.T) {
 	// given
@@ -675,31 +673,31 @@ func newController(t *testing.T, hostCl client.Client, s *runtime.Scheme, getMem
 
 func newGetMemberCluster(ok bool, status v1.ConditionStatus) getMemberCluster {
 	if !ok {
-		return func(clusters ...clientForCluster) func(name string) (*cluster.FedCluster, bool) {
-			return func(name string) (*cluster.FedCluster, bool) {
+		return func(clusters ...clientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool) {
+			return func(name string) (*cluster.CachedToolchainCluster, bool) {
 				return nil, false
 			}
 		}
 	}
-	return func(clusters ...clientForCluster) func(name string) (*cluster.FedCluster, bool) {
+	return func(clusters ...clientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool) {
 		mapping := map[string]client.Client{}
 		for _, cluster := range clusters {
 			n, cl := cluster()
 			mapping[n] = cl
 		}
-		return func(name string) (*cluster.FedCluster, bool) {
+		return func(name string) (*cluster.CachedToolchainCluster, bool) {
 			cl, ok := mapping[name]
 			if !ok {
 				return nil, false
 			}
-			return &cluster.FedCluster{
+			return &cluster.CachedToolchainCluster{
 				Client:            cl,
 				Type:              cluster.Host,
 				OperatorNamespace: test.MemberOperatorNs,
 				OwnerClusterName:  test.HostClusterName,
-				ClusterStatus: &v1beta1.KubeFedClusterStatus{
-					Conditions: []v1beta1.ClusterCondition{{
-						Type:   common.ClusterReady,
+				ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
+					Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
+						Type:   toolchainv1alpha1.ToolchainClusterReady,
 						Status: status,
 					}},
 				},

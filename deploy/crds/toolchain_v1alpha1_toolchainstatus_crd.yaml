@@ -237,8 +237,8 @@ spec:
                             description: Conditions is an array of current cluster
                               conditions.
                             items:
-                              description: ClusterCondition describes current state
-                                of a cluster.
+                              description: ToolchainClusterCondition describes current
+                                state of a cluster.
                               properties:
                                 lastProbeTime:
                                   description: Last time the condition was checked.
@@ -271,6 +271,7 @@ spec:
                               - type
                               type: object
                             type: array
+                            x-kubernetes-list-type: atomic
                           region:
                             description: Region is the name of the region in which
                               all of the nodes in the cluster exist.  e.g. 'us-east1'.
@@ -281,6 +282,7 @@ spec:
                             items:
                               type: string
                             type: array
+                            x-kubernetes-list-type: set
                         required:
                         - conditions
                         type: object

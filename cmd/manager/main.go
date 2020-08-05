@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	api "github.com/codeready-toolchain/api/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -17,8 +18,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/version"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
-
+	"github.com/codeready-toolchain/toolchain-common/pkg/controller/toolchaincluster"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -29,7 +29,6 @@ import (
 	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -124,11 +123,6 @@ func main() {
 		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(namespace, ","))
 	}
 
-	if err := ensureKubeFedClusterCRD(cfg); err != nil {
-		log.Error(err, "Unable to ensure the existence of the KubeFedCluster CRD")
-		os.Exit(1)
-	}
-
 	// Create a new manager to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, options)
 	if err != nil {
@@ -155,18 +149,15 @@ func main() {
 
 	stopChannel := signals.SetupSignalHandler()
 
-	log.Info("Starting KubeFedCluster controllers.")
-	if err = controller.StartKubeFedClusterControllers(mgr, stopChannel); err != nil {
-		log.Error(err, "Unable to start the KubeFedCluster controllers")
-		os.Exit(1)
-	}
-
 	go func() {
-		log.Info("Creating/updating the NSTemplateTier resources once cache is sync'd")
+		log.Info("Starting cluster health checker & creating/updating the NSTemplateTier resources once cache is sync'd")
 		if !mgr.GetCache().WaitForCacheSync(stopChannel) {
 			log.Error(errors.New("timed out waiting for caches to sync"), "")
 			os.Exit(1)
 		}
+
+		log.Info("Starting ToolchainCluster health checks.")
+		toolchaincluster.StartHealthChecks(mgr, namespace, stopChannel, 10*time.Second)
 
 		// create or update Toolchain status during the operator deployment
 		log.Info("Creating/updating the ToolchainStatus resource")
@@ -291,29 +282,6 @@ func printConfig(cfg *configuration.Config) {
 func getHostEnvVarKey(key string) string {
 	envKey := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 	return configuration.HostEnvPrefix + "_" + envKey
-}
-
-// ensureKubeFedClusterCRD ensure that KubeFedCluster CRD exists in the cluster.
-// This function has to be created before creating/starting cache, the client and controllers
-func ensureKubeFedClusterCRD(config *rest.Config) error {
-	// setup Scheme for KubeFedCluster CRD creator
-	s := scheme.Scheme
-	if err := apis.AddToScheme(s); err != nil {
-		return err
-	}
-
-	// create client that will be used only for creating KubeFedCluster CRD
-	cl, err := client.New(config, client.Options{})
-	if err != nil {
-		return err
-	}
-
-	// create the KubeFedCluster CRD
-	if err := cluster.EnsureKubeFedClusterCRD(s, cl); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // getCRTConfiguration creates the client used for configuration and

@@ -31,8 +31,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	kubefed_common "sigs.k8s.io/kubefed/pkg/apis/core/common"
-	kubefed_v1beta1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 )
 
 var requeueResult = reconcile.Result{RequeueAfter: defaultRequeueTime}
@@ -504,35 +502,35 @@ func newToolchainStatus() *toolchainv1alpha1.ToolchainStatus {
 }
 
 func newGetMemberClustersFuncReady(fakeClient client.Client) cluster.GetMemberClustersFunc {
-	return func(conditions ...cluster.Condition) []*cluster.FedCluster {
-		clusters := []*cluster.FedCluster{memberCluster(fakeClient, corev1.ConditionTrue, metav1.Now())}
+	return func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
+		clusters := []*cluster.CachedToolchainCluster{memberCluster(fakeClient, corev1.ConditionTrue, metav1.Now())}
 		return clusters
 	}
 }
 
 func newGetMemberClustersFuncEmpty(fakeClient client.Client) cluster.GetMemberClustersFunc {
-	return func(conditions ...cluster.Condition) []*cluster.FedCluster {
-		clusters := []*cluster.FedCluster{}
+	return func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
+		clusters := []*cluster.CachedToolchainCluster{}
 		return clusters
 	}
 }
 
 func newGetMemberClustersFuncNoClient(_ client.Client) cluster.GetMemberClustersFunc {
-	return func(conditions ...cluster.Condition) []*cluster.FedCluster {
-		clusters := []*cluster.FedCluster{memberCluster(nil, corev1.ConditionFalse, metav1.Now())}
+	return func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
+		clusters := []*cluster.CachedToolchainCluster{memberCluster(nil, corev1.ConditionFalse, metav1.Now())}
 		return clusters
 	}
 }
 
-func memberCluster(cl client.Client, status corev1.ConditionStatus, lastProbeTime metav1.Time) *cluster.FedCluster {
-	return &cluster.FedCluster{
+func memberCluster(cl client.Client, status corev1.ConditionStatus, lastProbeTime metav1.Time) *cluster.CachedToolchainCluster {
+	return &cluster.CachedToolchainCluster{
 		Client:            cl,
 		Type:              cluster.Host,
 		OperatorNamespace: test.MemberOperatorNs,
 		OwnerClusterName:  test.MemberClusterName,
-		ClusterStatus: &kubefed_v1beta1.KubeFedClusterStatus{
-			Conditions: []kubefed_v1beta1.ClusterCondition{{
-				Type:          kubefed_common.ClusterReady,
+		ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
+			Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
+				Type:          toolchainv1alpha1.ToolchainClusterReady,
 				Status:        status,
 				LastProbeTime: lastProbeTime,
 			}},
