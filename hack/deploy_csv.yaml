@@ -381,6 +381,10 @@ data:
                     x-kubernetes-list-map-keys:
                     - type
                     x-kubernetes-list-type: map
+                  provisionedTime:
+                    description: The timestamp when the user was provisioned
+                    format: date-time
+                    type: string
                   userAccounts:
                     description: The status of user accounts in the member clusters which
                       belong to this MasterUserRecord
