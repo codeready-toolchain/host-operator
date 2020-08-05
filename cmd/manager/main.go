@@ -277,17 +277,13 @@ func serveCRMetrics(cfg *rest.Config, operatorNs string) error {
 func printConfig(cfg *configuration.Config) {
 	logWithValuesRegServ := log
 	for key, value := range cfg.GetAllRegistrationServiceParameters() {
-		logWithValuesRegServ = logWithValuesRegServ.WithValues("key", key, "value", value)
+		logWithValuesRegServ = logWithValuesRegServ.WithValues(key, value)
 	}
 	logWithValuesRegServ.Info("Registration Service configuration variables:")
 
-	logWithValuesHost := log
-	logWithValuesHost = logWithValuesHost.WithValues(
-		"key", getHostEnvVarKey(configuration.VarDurationBeforeChangeRequestDeletion),
-		"value", cfg.GetDurationBeforeChangeTierRequestDeletion())
-
-	logWithValuesHost = logWithValuesHost.WithValues("key", getHostEnvVarKey(configuration.VarRegistrationServiceURL),
-		"value", cfg.GetRegistrationServiceURL())
+	logWithValuesHost := log.WithValues(
+		getHostEnvVarKey(configuration.VarDurationBeforeChangeRequestDeletion), cfg.GetDurationBeforeChangeTierRequestDeletion(),
+		getHostEnvVarKey(configuration.VarRegistrationServiceURL), cfg.GetRegistrationServiceURL())
 
 	logWithValuesHost.Info("Host Operator configuration variables:")
 }
