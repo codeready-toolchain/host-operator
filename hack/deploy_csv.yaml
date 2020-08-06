@@ -1929,6 +1929,10 @@ data:
                   username:
                     description: The user's username, obtained from the identity provider.
                     type: string
+                  verificationRequired:
+                    description: VerificationRequired is used to determine if a user requires
+                      phone verification
+                    type: boolean
                 required:
                 - username
                 type: object
