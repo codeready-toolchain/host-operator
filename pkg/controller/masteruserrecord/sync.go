@@ -232,6 +232,13 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 	}
 
 	s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisioned())
+
+	// set ProvisionedTime if it is not already set, this information will be used for things like the start time for automatic user deactivation.
+	// the MUR status can change from provisioned to something else and back to provisioned but the time should only be set the first time.
+	if s.record.Status.ProvisionedTime == nil {
+		s.record.Status.ProvisionedTime = &v1.Time{Time: time.Now()}
+	}
+
 	if condition.IsNotTrue(s.record.Status.Conditions, toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated) {
 		notification := &toolchainv1alpha1.Notification{
 			ObjectMeta: v1.ObjectMeta{
