@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -165,8 +166,8 @@ func TestSynchronizeStatus(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		expectedProvisionedTime := metav1.Time{}
-		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, expectedProvisionedTime, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
+		require.Nil(t, sync.record.Status.ProvisionedTime)
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 	})
 
 	t.Run("failed on the host side", func(t *testing.T) {
@@ -215,8 +216,8 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		expectedProvisionedTime := metav1.Time{}
-		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, expectedProvisionedTime, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
+		require.Nil(t, sync.record.Status.ProvisionedTime)
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 	})
 
 	t.Run("failed on the host side", func(t *testing.T) {
@@ -264,8 +265,8 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		expectedProvisionedTime := metav1.Time{}
-		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, expectedProvisionedTime, toBeDisabled())
+		require.Nil(t, sync.record.Status.ProvisionedTime)
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeDisabled())
 	})
 
 	t.Run("failed on the host side", func(t *testing.T) {
@@ -309,34 +310,29 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
+		preSyncTime := metav1.Now()
 		err := sync.synchronizeStatus()
 
 		// then
 		require.NoError(t, err)
-		expectedProvisionedTime := metav1.Now()
-		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, expectedProvisionedTime, toBeProvisioned(), toBeProvisionedNotificationCreated())
+		require.True(t, preSyncTime.Time.Before(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
 	})
 
 	t.Run("ProvisionedTime should not be updated when synced more than once", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
-
+		provisionTime := metav1.NewTime(time.Now().Add(-time.Hour))
+		sync.record.Status.ProvisionedTime = &provisionTime
 		// when
-		err1 := sync.synchronizeStatus() // 1st sync should not change anything, including ProvisionedTime in MUR
-		initialProvisionedTime := sync.record.Status.ProvisionedTime
-
-		expectedProvisionedTime := metav1.Now()
-		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, expectedProvisionedTime, toBeProvisioned(), toBeProvisionedNotificationCreated())
-
-		// mock changed MUR before syncing again
-		murtest.Modify(mur, murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
-		err2 := sync.synchronizeStatus() // 2nd sync should update the status but not the ProvisionedTime in the MUR
-
+		preSyncTime := metav1.Now()
+		err := sync.synchronizeStatus()
 		// then
-		require.NoError(t, err1)
-		require.NoError(t, err2)
-		require.True(t, initialProvisionedTime.Time.Equal(sync.record.Status.ProvisionedTime.Time)) // timestamp should be the same
+		require.NoError(t, err)
+		require.True(t, preSyncTime.Time.After(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be after the ProvisionedTime because this is simulating the case where the record was already provisioned before")
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
+		assert.Equal(t, provisionTime.Time, sync.record.Status.ProvisionedTime.Time) // timestamp should be the same
 	})
 
 	t.Run("failed on the host side when doing update", func(t *testing.T) {
@@ -691,7 +687,7 @@ func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccoun
 	}, memberClient
 }
 
-func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostClient client.Client, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expectedProvisionedTime metav1.Time, expMurCon ...toolchainv1alpha1.Condition) {
+func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostClient client.Client, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, expMurCon ...toolchainv1alpha1.Condition) {
 	userAccountCondition := userAccount.Status.Conditions[0]
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
@@ -707,8 +703,7 @@ func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostCl
 			ConsoleURL:      "https://console.member-cluster/",
 			CheDashboardURL: "http://che-toolchain-che.member-cluster/",
 		}).
-		AllUserAccountsHaveCondition(userAccountCondition).
-		HasExpectedProvisionedTime(expectedProvisionedTime)
+		AllUserAccountsHaveCondition(userAccountCondition)
 }
 
 func newMemberCluster(cl client.Client) *cluster.CachedToolchainCluster {
