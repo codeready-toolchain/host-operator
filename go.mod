@@ -4,7 +4,7 @@ require (
 	github.com/alecthomas/assert v0.0.0-20170929043011-405dbfeb8e38
 	github.com/alecthomas/colour v0.1.0 // indirect
 	github.com/alecthomas/repr v0.0.0-20200325044227-4184120f674c // indirect
-	github.com/codeready-toolchain/api v0.0.0-20200805071634-c62858ce3204
+	github.com/codeready-toolchain/api v0.0.0-20200810164016-1a79a0101726
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20200805073859-f231c3ee728e
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
