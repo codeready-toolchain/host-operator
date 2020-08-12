@@ -343,6 +343,7 @@ spec:
           resources:
           - pods
           - services
+          - services/finalizers
           - endpoints
           - persistentvolumeclaims
           - events
@@ -363,6 +364,13 @@ spec:
           - deployments
           verbs:
           - '*'
+        - apiGroups:
+          - apps
+          resources:
+          - replicasets
+          verbs:
+          - get
+          - create
         - apiGroups:
           - apps
           resourceNames:
