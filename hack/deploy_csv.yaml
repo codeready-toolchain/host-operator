@@ -2344,6 +2344,7 @@ data:
                 resources:
                 - pods
                 - services
+                - services/finalizers
                 - endpoints
                 - persistentvolumeclaims
                 - events
@@ -2364,6 +2365,14 @@ data:
                 - deployments
                 verbs:
                 - '*'
+              - apiGroups:
+                - apps
+                resources:
+                - replicasets
+                verbs:
+                - get
+                - list
+                - create
               - apiGroups:
                 - apps
                 resourceNames:
