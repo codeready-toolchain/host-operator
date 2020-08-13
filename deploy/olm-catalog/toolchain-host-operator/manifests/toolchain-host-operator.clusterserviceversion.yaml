@@ -370,6 +370,7 @@ spec:
           - replicasets
           verbs:
           - get
+          - list
           - create
         - apiGroups:
           - apps
