@@ -35,6 +35,7 @@ rules:
   - replicasets
   verbs:
   - "get"
+  - "list"
   - "create"
 - apiGroups:
   - apps
