@@ -9,9 +9,12 @@ require (
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
+	github.com/golangci/golangci-lint v1.30.0 // indirect
+	github.com/google/go-cmp v0.5.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mailgun/mailgun-go/v4 v4.1.3
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	github.com/onsi/ginkgo v1.13.0 // indirect
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/operator-framework/operator-sdk v0.17.1
 	github.com/pkg/errors v0.9.1
@@ -19,13 +22,13 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cast v1.3.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.6.1
-	github.com/stretchr/testify v1.5.1
-	golang.org/x/tools v0.0.0-20200502202811-ed308ab3e770 // indirect
+	github.com/spf13/viper v1.7.0
+	github.com/stretchr/testify v1.6.1
+	golang.org/x/tools v0.0.0-20200724022722-7017fd6b1305 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/h2non/gock.v1 v1.0.14
-	gopkg.in/yaml.v2 v2.2.8
-	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
+	gopkg.in/yaml.v2 v2.3.0
+	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 	k8s.io/api v0.17.4
 	k8s.io/apiextensions-apiserver v0.17.4
 	k8s.io/apimachinery v0.17.4
