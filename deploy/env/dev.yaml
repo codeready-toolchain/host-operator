@@ -4,11 +4,19 @@ registration-service:
   auth-client:
     library-url: 'https://sso.prod-preview.openshift.io/auth/js/keycloak.js'
     public-keys-url: 'https://sso.prod-preview.openshift.io/auth/realms/toolchain-public/protocol/openid-connect/certs'
-    config-raw: '{
-                  "realm": "toolchain-public",
-                  "auth-server-url": "https://sso.prod-preview.openshift.io/auth",
-                  "ssl-required": "none",
-                  "resource": "crt",
-                  "clientId": "crt",
-                  "public-client": true
-                }'
+    config-raw:
+      realm: 'toolchain-public'
+      auth-server-url: 'https://sso.prod-preview.openshift.io/auth'
+      ssl_required: 'none'
+      resource: 'crt'
+      client-id: 'crt'
+      public-client: 'true'
+  verification.enabled: 'true'
+  verification.daily_limit: '3'
+  verification.attempts_allowed: '5'
+host-operator:
+  registration-service-url: 'https://sso.prod-preview.openshift.io/auth/realms/toolchain-public/protocol/openid-connect/certs'
+  console-namespace: "openshift-console"
+  console-route-name: "console"
+  che-namespace: "toolchain-che"
+  che-route-name: "che"
