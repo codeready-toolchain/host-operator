@@ -381,6 +381,10 @@ data:
                     x-kubernetes-list-map-keys:
                     - type
                     x-kubernetes-list-type: map
+                  provisionedTime:
+                    description: The timestamp when the user was provisioned
+                    format: date-time
+                    type: string
                   userAccounts:
                     description: The status of user accounts in the member clusters which
                       belong to this MasterUserRecord
@@ -1929,6 +1933,13 @@ data:
                   username:
                     description: The user's username, obtained from the identity provider.
                     type: string
+                  verificationRequired:
+                    description: VerificationRequired is used to determine if a user requires
+                      phone verification. The user should not be provisioned if VerificationRequired
+                      is set to true. VerificationRequired is set to false when the user
+                      is ether exempt from phone verification or has already successfully
+                      passed the verification. Default value is false.
+                    type: boolean
                 required:
                 - username
                 type: object
@@ -2333,6 +2344,7 @@ data:
                 resources:
                 - pods
                 - services
+                - services/finalizers
                 - endpoints
                 - persistentvolumeclaims
                 - events
@@ -2353,6 +2365,14 @@ data:
                 - deployments
                 verbs:
                 - '*'
+              - apiGroups:
+                - apps
+                resources:
+                - replicasets
+                verbs:
+                - get
+                - list
+                - create
               - apiGroups:
                 - apps
                 resourceNames:

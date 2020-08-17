@@ -139,8 +139,9 @@ github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMe
 github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c/go.mod h1:XGLbWH/ujMcbPbhZq52Nv6UrCghb1yGn//133kEsvDk=
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
-github.com/codeready-toolchain/api v0.0.0-20200805071634-c62858ce3204 h1:eI4iTTEW1YF3FUNVIHxZPYeCiAyFOQL4uxh3VI5TwVY=
 github.com/codeready-toolchain/api v0.0.0-20200805071634-c62858ce3204/go.mod h1:/tMojFnmqPoMCjgq1me9lC5jF5zCgcGhtoIp6Q+sRGw=
+github.com/codeready-toolchain/api v0.0.0-20200810164016-1a79a0101726 h1:u6rs73dgVnDlqo9aVd0G5e4J+fXsM67ZkjVrbe0lNlY=
+github.com/codeready-toolchain/api v0.0.0-20200810164016-1a79a0101726/go.mod h1:/tMojFnmqPoMCjgq1me9lC5jF5zCgcGhtoIp6Q+sRGw=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20200805073859-f231c3ee728e h1:Kcf3urGnhPCnneAAe9ewmikCtj/H5huxgdMBaDvlDs4=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20200805073859-f231c3ee728e/go.mod h1:gGWlFDAr0VScx9t8Prhz46LiYd0bAhNclraz6lGLV0Q=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=

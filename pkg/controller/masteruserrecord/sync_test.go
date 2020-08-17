@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -165,6 +166,7 @@ func TestSynchronizeStatus(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
+		require.Nil(t, sync.record.Status.ProvisionedTime)
 		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 	})
 
@@ -214,6 +216,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
+		require.Nil(t, sync.record.Status.ProvisionedTime)
 		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 	})
 
@@ -262,6 +265,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
+		require.Nil(t, sync.record.Status.ProvisionedTime)
 		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeDisabled())
 	})
 
@@ -306,11 +310,29 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
+		preSyncTime := metav1.Now()
 		err := sync.synchronizeStatus()
 
 		// then
 		require.NoError(t, err)
+		require.True(t, preSyncTime.Time.Before(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
 		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
+	})
+
+	t.Run("ProvisionedTime should not be updated when synced more than once", func(t *testing.T) {
+		// given
+		hostClient := test.NewFakeClient(t, mur)
+		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
+		provisionTime := metav1.NewTime(time.Now().Add(-time.Hour))
+		sync.record.Status.ProvisionedTime = &provisionTime
+		// when
+		preSyncTime := metav1.Now()
+		err := sync.synchronizeStatus()
+		// then
+		require.NoError(t, err)
+		require.True(t, preSyncTime.Time.After(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be after the ProvisionedTime because this is simulating the case where the record was already provisioned before")
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
+		assert.Equal(t, provisionTime.Time, sync.record.Status.ProvisionedTime.Time) // timestamp should be the same
 	})
 
 	t.Run("failed on the host side when doing update", func(t *testing.T) {
