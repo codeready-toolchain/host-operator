@@ -9,7 +9,6 @@ require (
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.2.0+incompatible
-	github.com/golangci/golangci-lint v1.30.0 // indirect
 	github.com/google/go-cmp v0.5.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mailgun/mailgun-go/v4 v4.1.3

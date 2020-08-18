@@ -128,36 +128,6 @@ objects:
                     configMapKeyRef:
                       name: registration-service
                       key: auth_client.public_keys_url
-                - name: REGISTRATION_AUTH_CLIENT_CONFIG_RAW_REALM
-                  valueFrom:
-                    configMapKeyRef:
-                      name: registration-service
-                      key: auth_client.config_raw.realm
-                - name: REGISTRATION_AUTH_CLIENT_CONFIG_RAW_AUTH_SERVER_URL
-                  valueFrom:
-                    configMapKeyRef:
-                      name: registration-service
-                      key: auth_client.config_raw.auth_server_url
-                - name: REGISTRATION_AUTH_CLIENT_CONFIG_RAW_SSL_REQUIRED
-                  valueFrom:
-                    configMapKeyRef:
-                      name: registration-service
-                      key: auth_client.config_raw.ssl_required
-                - name: REGISTRATION_AUTH_CLIENT_CONFIG_RAW_RESOURCE
-                  valueFrom:
-                    configMapKeyRef:
-                      name: registration-service
-                      key: auth_client.config_raw.resource
-                - name: REGISTRATION_AUTH_CLIENT_CONFIG_RAW_CLIENT_ID
-                  valueFrom:
-                    configMapKeyRef:
-                      name: registration-service
-                      key: auth_client.config_raw.client_id
-                - name: REGISTRATION_AUTH_CLIENT_CONFIG_RAW_PUBLIC_CLIENT
-                  valueFrom:
-                    configMapKeyRef:
-                      name: registration-service
-                      key: auth_client.config_raw.public_client
                 - name: REGISTRATION_VERIFICATION_ENABLED
                   valueFrom:
                     configMapKeyRef:
@@ -173,6 +143,11 @@ objects:
                     configMapKeyRef:
                       name: registration-service
                       key: verification.attempts_allowed
+                - name: REGISTRATION_AUTH_CLIENT_CONFIG_RAW
+                  valueFrom:
+                    configMapKeyRef:
+                      name: registration-service
+                      key: auth_client.config_raw
   - kind: Service
     apiVersion: v1
     metadata:
@@ -222,12 +197,7 @@ objects:
       environment: ${ENVIRONMENT}
       auth_client.library_url: ${AUTH_CLIENT_LIBRARY_URL}
       auth_client.public_keys_url: ${AUTH_CLIENT_PUBLIC_KEYS_URL}
-      auth_client.config_raw.realm: ${AUTH_CLIENT_CONFIG_RAW_REALM}
-      auth_client.config_raw.auth_server_url: ${AUTH_CLIENT_CONFIG_RAW_AUTH_SERVER_URL}
-      auth_client.config_raw.ssl_required: ${AUTH_CLIENT_CONFIG_RAW_SSL_REQUIRED}
-      auth_client.config_raw.resource: ${AUTH_CLIENT_CONFIG_RAW_RESOURCE}
-      auth_client.config_raw.client_id: ${AUTH_CLIENT_CONFIG_RAW_CLIENT_ID}
-      auth_client.config_raw.public_client: ${AUTH_CLIENT_CONFIG_RAW_PUBLIC_CLIENT}
+      auth_client.config_raw: ${AUTH_CLIENT_CONFIG_RAW}
       verification.enabled: ${VERIFICATION_ENABLED}
       verification.daily_limit: ${VERIFICATION_DAILY_LIMIT}
       verification.attempts_allowed: ${VERIFICATION_ATTEMPTS_ALLOWED}
@@ -248,18 +218,8 @@ parameters:
     value: '' #use default value from reg-service configuration
   - name: AUTH_CLIENT_PUBLIC_KEYS_URL
     value: '' #use default value from reg-service configuration
-  - name: AUTH_CLIENT_CONFIG_RAW_REALM
+  - name: AUTH_CLIENT_CONFIG_RAW
     value: '' #use default value from reg-service configuration
-  - name: AUTH_CLIENT_CONFIG_RAW_AUTH_SERVER_URL
-    value: ''
-  - name: AUTH_CLIENT_CONFIG_RAW_SSL_REQUIRED
-    value: ''
-  - name: AUTH_CLIENT_CONFIG_RAW_RESOURCE
-    value: ''
-  - name: AUTH_CLIENT_CONFIG_RAW_CLIENT_ID
-    value: ''
-  - name: AUTH_CLIENT_CONFIG_RAW_PUBLIC_CLIENT
-    value: ''
   - name: VERIFICATION_ENABLED
     value: ''
   - name: VERIFICATION_DAILY_LIMIT
