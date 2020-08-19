@@ -1,5 +1,3 @@
 registration-service:
   environment: 'dev'
   replicas: 2
-host-operator:
-  registration-service-url: 'https://sso.prod-preview.openshift.io/auth/realms/toolchain-public/protocol/openid-connect/certs'
