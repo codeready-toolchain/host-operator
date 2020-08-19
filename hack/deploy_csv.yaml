@@ -633,6 +633,8 @@ data:
                     required:
                     - templateRef
                     type: object
+                  deactivationTimeoutDays:
+                    type: integer
                   namespaces:
                     description: The namespace templates
                     items:
