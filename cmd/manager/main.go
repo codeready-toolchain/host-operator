@@ -266,6 +266,16 @@ func serveCRMetrics(cfg *rest.Config, operatorNs string) error {
 }
 
 func printConfig(cfg *configuration.Config) {
+	logWithValuesRegServ := log
+	for key, value := range cfg.GetAllRegistrationServiceParameters() {
+		logWithValuesRegServ = logWithValuesRegServ.WithValues(key, value)
+	}
+
+	logWithValuesRegServ.Info("Please note that these variables can be overridden by the registration-service and " +
+		"hence may differ from the actual values used in the registration-service.")
+
+	logWithValuesRegServ.Info("Registration Service configuration variables:")
+
 	logWithValuesHost := log.WithValues(
 		getHostEnvVarKey(configuration.VarDurationBeforeChangeRequestDeletion), cfg.GetDurationBeforeChangeTierRequestDeletion(),
 		getHostEnvVarKey(configuration.VarRegistrationServiceURL), cfg.GetRegistrationServiceURL())
