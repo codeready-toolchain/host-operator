@@ -3,7 +3,6 @@ package nstemplatetier
 import (
 	"context"
 	"fmt"
-	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -144,7 +143,7 @@ func (r *NSTemplateTierReconciler) ensureStatusUpdateRecord(logger logr.Logger, 
 	// if there was no previous status:
 	if len(tier.Status.Updates) == 0 {
 		tier.Status.Updates = append(tier.Status.Updates, toolchainv1alpha1.NSTemplateTierHistory{
-			StartTime: metav1.NewTime(time.Now()),
+			StartTime: metav1.Now(),
 			Hash:      hash,
 		})
 		return true, r.client.Status().Update(context.TODO(), tier)
@@ -159,7 +158,7 @@ func (r *NSTemplateTierReconciler) ensureStatusUpdateRecord(logger logr.Logger, 
 	tier.Status.Updates[len(tier.Status.Updates)-1].FailedAccounts = nil
 	logger.Info("Adding a new entry in tier.status.updates")
 	tier.Status.Updates = append(tier.Status.Updates, toolchainv1alpha1.NSTemplateTierHistory{
-		StartTime: metav1.NewTime(time.Now()),
+		StartTime: metav1.Now(),
 		Hash:      hash,
 	})
 	return true, r.client.Status().Update(context.TODO(), tier)

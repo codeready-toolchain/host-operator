@@ -3,14 +3,17 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/predicate"
 	errs "github.com/pkg/errors"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -113,9 +116,12 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 		}
 		logger.Info("ensuring user accounts")
 		for _, account := range mur.Spec.UserAccounts {
-			if err := r.ensureUserAccount(logger, account, mur); err != nil {
+			requeue, err := r.ensureUserAccount(logger, account, mur)
+			if err != nil {
 				logger.Error(err, "unable to synchronize with member UserAccount")
 				return reconcile.Result{}, err
+			} else if requeue {
+				return reconcile.Result{Requeue: true, RequeueAfter: 3 * time.Second}, err // waiting for a few seconds to give time to the member cluster to finish its deletions
 			}
 		}
 		// If the UserAccount is being deleted, delete the UserAccounts in members.
@@ -147,11 +153,12 @@ func (r *ReconcileMasterUserRecord) addFinalizer(logger logr.Logger, mur *toolch
 // ensureUserAccount ensures that there's a UserAccount resource on the member cluster for the given `murAccount`.
 // If the UserAccount resource already exists, then this latter is synchronized using the given `murAccount` and the associated `mur` status is also updated to reflect
 // the UserAccount specs.
-func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAccount toolchainv1alpha1.UserAccountEmbedded, mur *toolchainv1alpha1.MasterUserRecord) error {
+// Returns `true, nil` if there is a need for requeing (eg, if the remote UserAccount is being deleted and the controller should wait until the deletion is complete)
+func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAccount toolchainv1alpha1.UserAccountEmbedded, mur *toolchainv1alpha1.MasterUserRecord) (bool, error) {
 	// get & check member cluster
 	memberCluster, err := r.getMemberCluster(murAccount.TargetCluster)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason), err,
+		return false, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason), err,
 			"failed to get the member cluster '%s'", murAccount.TargetCluster)
 	}
 
@@ -163,14 +170,19 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAcc
 			// does not exist - should create
 			userAccount = newUserAccount(nsdName, murAccount.Spec, mur.Spec)
 			if err := memberCluster.Client.Create(context.TODO(), userAccount); err != nil {
-				return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
+				return false, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 					"failed to create UserAccount in the member cluster '%s'", murAccount.TargetCluster)
 			}
-			return updateStatusConditions(logger, r.client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
+			return false, updateStatusConditions(logger, r.client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 		}
 		// another/unexpected error occurred while trying to fetch the user account on the member cluster
-		return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToGetUserAccountReason), err,
+		return false, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToGetUserAccountReason), err,
 			"failed to get userAccount '%s' from cluster '%s'", mur.Name, murAccount.TargetCluster)
+	}
+	// if the UserAccount is being deleted (by accident?), then we should wait until is has been totally deleted, and this controller will recreate it again
+	if util.IsBeingDeleted(userAccount) {
+		logger.Info("UserAccount is being deleted. Waiting until deletion is complete", "member_cluster", memberCluster.Name)
+		return true, updateStatusConditions(logger, r.client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "recovering deleted UserAccount"))
 	}
 
 	sync := Synchronizer{
@@ -185,17 +197,17 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAcc
 	}
 	if err := sync.synchronizeSpec(); err != nil {
 		// note: if we got an error while sync'ing the spec, then we may not be able to update the MUR status it here neither.
-		return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason), err,
+		return false, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason), err,
 			"update of the UserAccount.spec in the cluster '%s' failed", murAccount.TargetCluster)
 	}
 	if err := sync.synchronizeStatus(); err != nil {
 		err = errs.Wrapf(err, "update of the MasterUserRecord failed while synchronizing with UserAccount status from the cluster '%s'", murAccount.TargetCluster)
 		// note: if we got an error while updating the status, then we probably can't update it here neither.
-		return r.wrapErrorWithStatusUpdate(logger, mur, r.useExistingConditionOfType(toolchainv1alpha1.ConditionReady), err, "")
+		return false, r.wrapErrorWithStatusUpdate(logger, mur, r.useExistingConditionOfType(toolchainv1alpha1.ConditionReady), err, "")
 	}
 	// nothing done and no error occurred
 	logger.Info("user account on member cluster was already in sync", "target_cluster", murAccount.TargetCluster)
-	return nil
+	return false, nil
 }
 
 func (r *ReconcileMasterUserRecord) getMemberCluster(targetCluster string) (*cluster.CachedToolchainCluster, error) {
