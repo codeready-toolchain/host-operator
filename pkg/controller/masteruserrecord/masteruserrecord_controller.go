@@ -182,7 +182,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAcc
 	// if the UserAccount is being deleted (by accident?), then we should wait until is has been totally deleted, and this controller will recreate it again
 	if util.IsBeingDeleted(userAccount) {
 		logger.Info("UserAccount is being deleted. Waiting until deletion is complete", "member_cluster", memberCluster.Name)
-		return true, updateStatusConditions(logger, r.client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
+		return true, updateStatusConditions(logger, r.client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "recovering deleted UserAccount"))
 	}
 
 	sync := Synchronizer{
