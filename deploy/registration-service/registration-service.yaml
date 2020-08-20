@@ -41,7 +41,6 @@ objects:
     - apiGroups:
       - ""
       resources:
-      - configmaps
       - secrets
       verbs:
       - get
