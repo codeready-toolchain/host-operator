@@ -92,7 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	printConfig(crtConfig)
+	crtConfig.PrintConfig()
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
@@ -263,25 +263,6 @@ func serveCRMetrics(cfg *rest.Config, operatorNs string) error {
 		return err
 	}
 	return nil
-}
-
-func printConfig(cfg *configuration.Config) {
-	logWithValuesRegServ := log
-	for key, value := range cfg.GetAllRegistrationServiceParameters() {
-		logWithValuesRegServ = logWithValuesRegServ.WithValues(key, value)
-	}
-	logWithValuesRegServ.Info("Registration Service configuration variables:")
-
-	logWithValuesHost := log.WithValues(
-		getHostEnvVarKey(configuration.VarDurationBeforeChangeRequestDeletion), cfg.GetDurationBeforeChangeTierRequestDeletion(),
-		getHostEnvVarKey(configuration.VarRegistrationServiceURL), cfg.GetRegistrationServiceURL())
-
-	logWithValuesHost.Info("Host Operator configuration variables:")
-}
-
-func getHostEnvVarKey(key string) string {
-	envKey := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
-	return configuration.HostEnvPrefix + "_" + envKey
 }
 
 // getCRTConfiguration creates the client used for configuration and

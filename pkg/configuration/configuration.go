@@ -8,9 +8,13 @@ import (
 	"time"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+
 	"github.com/spf13/viper"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
+
+var log = logf.Log.WithName("configuration")
 
 // prefixes
 const (
@@ -29,14 +33,14 @@ const (
 	// DefaultToolchainStatusName the default name for the toolchain status resource created during initialization of the operator
 	DefaultToolchainStatusName = "toolchain-status"
 
-	// VarDurationBeforeChangeRequestDeletion specifies the duration before a ChangeTierRequest resource is deleted
-	VarDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion" // TODO: add missing `tier` in `change.tier.request`?
+	// varDurationBeforeChangeRequestDeletion specifies the duration before a ChangeTierRequest resource is deleted
+	varDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion" // TODO: add missing `tier` in `change.tier.request`?
 
 	// defaultDurationBeforeChangeTierRequestDeletion is the time before a ChangeTierRequest resource is deleted
 	defaultDurationBeforeChangeTierRequestDeletion = "24h"
 
-	// VarRegistrationServiceURL is the URL used to access the registration service
-	VarRegistrationServiceURL = "registration.service.url"
+	// varRegistrationServiceURL is the URL used to access the registration service
+	varRegistrationServiceURL = "registration.service.url"
 
 	// defaultRegistrationServiceURL is the default location of the registration service
 	defaultRegistrationServiceURL = "https://registration.crt-placeholder.com"
@@ -151,11 +155,32 @@ func LoadConfig(cl client.Client) (*Config, error) {
 	return initConfig(secret), nil
 }
 
+func getHostEnvVarKey(key string) string {
+	envKey := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
+	return HostEnvPrefix + "_" + envKey
+}
+
+func (c *Config) PrintConfig() {
+	logWithValuesRegServ := log
+	for key, value := range c.GetAllRegistrationServiceParameters() {
+		logWithValuesRegServ = logWithValuesRegServ.WithValues(key, value)
+	}
+
+	logWithValuesRegServ.Info("Please note that these variables can be overridden by the registration-service and " +
+		"hence may differ from the actual values used in the registration-service. Registration Service configuration variables:")
+
+	logWithValuesHost := log.WithValues(
+		getHostEnvVarKey(varDurationBeforeChangeRequestDeletion), c.GetDurationBeforeChangeTierRequestDeletion(),
+		getHostEnvVarKey(varRegistrationServiceURL), c.GetRegistrationServiceURL())
+
+	logWithValuesHost.Info("Host Operator configuration variables:")
+}
+
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
 	c.host.SetDefault(ToolchainStatusName, DefaultToolchainStatusName)
-	c.host.SetDefault(VarDurationBeforeChangeRequestDeletion, defaultDurationBeforeChangeTierRequestDeletion)
-	c.host.SetDefault(VarRegistrationServiceURL, defaultRegistrationServiceURL)
+	c.host.SetDefault(varDurationBeforeChangeRequestDeletion, defaultDurationBeforeChangeTierRequestDeletion)
+	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
 	c.host.SetDefault(varTemplateUpdateRequestMaxPoolSize, defaultTemplateUpdateRequestMaxPoolSize)
 	c.host.SetDefault(varNotificationDeliveryService, NotificationDeliveryServiceMailgun)
 	c.host.SetDefault(varDurationBeforeNotificationDeletion, defaultDurationBeforeNotificationDeletion)
@@ -174,12 +199,12 @@ func (c *Config) GetToolchainStatusName() string {
 
 // GetDurationBeforeChangeTierRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.
 func (c *Config) GetDurationBeforeChangeTierRequestDeletion() time.Duration {
-	return c.host.GetDuration(VarDurationBeforeChangeRequestDeletion)
+	return c.host.GetDuration(varDurationBeforeChangeRequestDeletion)
 }
 
 // GetRegistrationServiceURL returns the URL of the registration service
 func (c *Config) GetRegistrationServiceURL() string {
-	return c.host.GetString(VarRegistrationServiceURL)
+	return c.host.GetString(varRegistrationServiceURL)
 }
 
 // GetNotificationDeliveryService returns the name of the notification delivery service to use for delivering user notifications
