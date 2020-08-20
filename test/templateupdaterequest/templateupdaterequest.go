@@ -2,7 +2,6 @@ package templateupdaterequest
 
 import (
 	"fmt"
-	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -67,7 +66,7 @@ var _ Option = DeletionTimestamp("")
 
 func (d DeletionTimestamp) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdateRequest) {
 	if r.Name == string(d) {
-		deletionTS := metav1.NewTime(time.Now())
+		deletionTS := metav1.Now()
 		r.DeletionTimestamp = &deletionTS
 	}
 }
