@@ -153,7 +153,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	assert.True(t, result.Requeue)
-
+	assert.Equal(t, 3 * time.Second, result.RequeueAfter)
 }
 
 func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
