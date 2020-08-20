@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -153,7 +154,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	assert.True(t, result.Requeue)
-	assert.Equal(t, 3 * time.Second, result.RequeueAfter)
+	assert.Equal(t, 3*time.Second, result.RequeueAfter)
 }
 
 func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
