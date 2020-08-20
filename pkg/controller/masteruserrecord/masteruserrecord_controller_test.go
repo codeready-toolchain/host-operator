@@ -26,8 +26,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
-type getMemberCluster func(clusters ...clientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool)
-
 func TestAddFinalizer(t *testing.T) {
 	// given
 	logf.SetLogger(logf.ZapLogger(true))
@@ -130,6 +128,32 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
+}
+
+func TestRequeueWhenUserAccountDeleted(t *testing.T) {
+	// given
+	logf.SetLogger(logf.ZapLogger(true))
+	s := apiScheme(t)
+	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts("member2-cluster"), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
+	userAccount1 := uatest.NewUserAccountFromMur(mur)
+	userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
+	userAccount3 := uatest.NewUserAccountFromMur(mur)
+	memberClient1 := test.NewFakeClient(t, userAccount1, consoleRoute())
+	memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
+	memberClient3 := test.NewFakeClient(t, userAccount3, consoleRoute())
+	hostClient := test.NewFakeClient(t, mur)
+
+	cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+		clusterClient(test.MemberClusterName, memberClient1),
+		clusterClient("member2-cluster", memberClient2),
+		clusterClient("member3-cluster", memberClient3))
+
+	// when reconciling
+	result, err := cntrl.Reconcile(newMurRequest(mur))
+	// then
+	require.NoError(t, err)
+	assert.True(t, result.Requeue)
+
 }
 
 func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
@@ -660,7 +684,9 @@ func apiScheme(t *testing.T) *runtime.Scheme {
 	return s
 }
 
-func newController(t *testing.T, hostCl client.Client, s *runtime.Scheme, getMemberCluster getMemberCluster, memberCl ...clientForCluster) ReconcileMasterUserRecord {
+type getMemberClusterFunc func(clusters ...clientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool)
+
+func newController(t *testing.T, hostCl client.Client, s *runtime.Scheme, getMemberCluster getMemberClusterFunc, memberCl ...clientForCluster) ReconcileMasterUserRecord {
 	config, err := configuration.LoadConfig(hostCl)
 	require.NoError(t, err)
 	return ReconcileMasterUserRecord{
@@ -671,7 +697,7 @@ func newController(t *testing.T, hostCl client.Client, s *runtime.Scheme, getMem
 	}
 }
 
-func newGetMemberCluster(ok bool, status v1.ConditionStatus) getMemberCluster {
+func newGetMemberCluster(ok bool, status v1.ConditionStatus) getMemberClusterFunc {
 	if !ok {
 		return func(clusters ...clientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool) {
 			return func(name string) (*cluster.CachedToolchainCluster, bool) {
