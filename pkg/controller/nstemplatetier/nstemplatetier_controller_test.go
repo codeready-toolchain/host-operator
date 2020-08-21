@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
-	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -195,7 +194,7 @@ func TestReconcile(t *testing.T) {
 			// check that no TemplateUpdateRequest was created
 			turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(0)
 			// also check that the tier `status.updates` was updated with a new entry
-			now := metav1.NewTime(time.Now())
+			now := metav1.Now()
 			tiertest.AssertThatNSTemplateTier(t, basicTier.Name, cl).
 				HasStatusUpdatesItems(1).
 				// at this point, all the counters are '0'
