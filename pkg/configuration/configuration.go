@@ -166,9 +166,6 @@ func (c *Config) PrintConfig() {
 		logWithValuesRegServ = logWithValuesRegServ.WithValues(key, value)
 	}
 
-	logWithValuesRegServ.Info("Please note that these variables can be overridden by the registration-service and " +
-		"hence may differ from the actual values used in the registration-service. Registration Service configuration variables:")
-
 	logWithValuesHost := log.WithValues(
 		getHostEnvVarKey(varDurationBeforeChangeRequestDeletion), c.GetDurationBeforeChangeTierRequestDeletion(),
 		getHostEnvVarKey(varRegistrationServiceURL), c.GetRegistrationServiceURL())
