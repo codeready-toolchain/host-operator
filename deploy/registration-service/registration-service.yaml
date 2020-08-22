@@ -113,11 +113,21 @@ objects:
                       fieldPath: metadata.namespace
                 - name: WATCH_NAMESPACE
                   value: ${NAMESPACE}
+                - name: REGISTRATION_ENVIRONMENT
+                  valueFrom:
+                    configMapKeyRef:
+                      name: registration-service
+                      key: environment
                 - name: REGISTRATION_AUTH_CLIENT_LIBRARY_URL
                   valueFrom:
                     configMapKeyRef:
                       name: registration-service
                       key: auth_client.library_url
+                - name: REGISTRATION_AUTH_CLIENT_CONFIG_RAW
+                  valueFrom:
+                    configMapKeyRef:
+                      name: registration-service
+                      key: auth_client.config_raw
                 - name: REGISTRATION_AUTH_CLIENT_PUBLIC_KEYS_URL
                   valueFrom:
                     configMapKeyRef:
@@ -138,11 +148,6 @@ objects:
                     configMapKeyRef:
                       name: registration-service
                       key: verification.attempts_allowed
-                - name: REGISTRATION_AUTH_CLIENT_CONFIG_RAW
-                  valueFrom:
-                    configMapKeyRef:
-                      name: registration-service
-                      key: auth_client.config_raw
   - kind: Service
     apiVersion: v1
     metadata:
@@ -191,8 +196,8 @@ objects:
     data:
       environment: ${ENVIRONMENT}
       auth_client.library_url: ${AUTH_CLIENT_LIBRARY_URL}
-      auth_client.public_keys_url: ${AUTH_CLIENT_PUBLIC_KEYS_URL}
       auth_client.config_raw: ${AUTH_CLIENT_CONFIG_RAW}
+      auth_client.public_keys_url: ${AUTH_CLIENT_PUBLIC_KEYS_URL}
       verification.enabled: ${VERIFICATION_ENABLED}
       verification.daily_limit: ${VERIFICATION_DAILY_LIMIT}
       verification.attempts_allowed: ${VERIFICATION_ATTEMPTS_ALLOWED}
@@ -207,9 +212,9 @@ parameters:
     value: 'prod' # prod, stage, e2e-tests, dev, etc
   - name: AUTH_CLIENT_LIBRARY_URL
     value: '' #use default value from reg-service configuration
-  - name: AUTH_CLIENT_PUBLIC_KEYS_URL
-    value: '' #use default value from reg-service configuration
   - name: AUTH_CLIENT_CONFIG_RAW
+    value: '' #use default value from reg-service configuration
+  - name: AUTH_CLIENT_PUBLIC_KEYS_URL
     value: '' #use default value from reg-service configuration
   - name: VERIFICATION_ENABLED
     value: ''
