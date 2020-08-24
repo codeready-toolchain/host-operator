@@ -633,6 +633,10 @@ data:
                     required:
                     - templateRef
                     type: object
+                  deactivationTimeoutDays:
+                    description: the period (in days) after which users within the tier
+                      will be deactivated
+                    type: integer
                   namespaces:
                     description: The namespace templates
                     items:

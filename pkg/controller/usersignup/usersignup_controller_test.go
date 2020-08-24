@@ -1156,6 +1156,46 @@ func TestUserSignupBanned(t *testing.T) {
 	require.Len(t, murs.Items, 0)
 }
 
+func TestUserSignupVerificationRequired(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			Username:             "foo@redhat.com",
+			VerificationRequired: true,
+		},
+	}
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+	// when
+	_, err := r.Reconcile(req)
+
+	// then
+	require.NoError(t, err)
+	err = r.client.Get(context.TODO(), test.NamespacedName(operatorNamespace, userSignup.Name), userSignup)
+	require.NoError(t, err)
+
+	// Confirm the status is set to VerificationRequired
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "VerificationRequired",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		})
+
+	// Confirm that no MUR is created
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 0)
+}
+
 func TestUserSignupBannedMURExists(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{
