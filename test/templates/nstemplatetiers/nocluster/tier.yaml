@@ -1,7 +1,7 @@
 kind: Template
 apiVersion: v1
 metadata:
-name: nocluster-tier
+  name: nocluster-tier
 objects:
 - kind: NSTemplateTier
   apiVersion: toolchain.dev.openshift.com/v1alpha1

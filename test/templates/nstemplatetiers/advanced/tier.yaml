@@ -1,7 +1,7 @@
 kind: Template
 apiVersion: v1
 metadata:
-name: advanced-tier
+  name: advanced-tier
 objects:
 - kind: NSTemplateTier
   apiVersion: toolchain.dev.openshift.com/v1alpha1
