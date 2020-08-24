@@ -340,6 +340,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 		}
 
+		// Check if the user requires phone verification, and do not proceed further if they do
+		if instance.Spec.VerificationRequired {
+			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusVerificationRequired)
+		}
+
 		var targetCluster string
 
 		// If a target cluster hasn't been selected, select one from the members
@@ -698,6 +703,17 @@ func (r *ReconcileUserSignup) setStatusInvalidEmailHash(userSignup *toolchainv1a
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupInvalidEmailHashLabelReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusVerificationRequired(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupVerificationRequiredReason,
 			Message: message,
 		})
 }
