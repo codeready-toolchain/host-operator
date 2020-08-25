@@ -3,6 +3,7 @@ package nstemplatetiers
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -66,7 +67,7 @@ type tierData struct {
 type templates struct {
 	namespaceTemplates map[string]template // namespace templates (including roles, etc.) indexed by type ("dev", "code", "stage")
 	clusterTemplate    *template           // other cluster-scoped resources, in a single template file
-	nsTemplateTier     *template           // NSTemplateTier resource with tier-scoped configuration and references to namespace and cluster templates in its spec, in a single template file
+	nsTemplateTier     template            // NSTemplateTier resource with tier-scoped configuration and references to namespace and cluster templates in its spec, in a single template file
 }
 
 // template: a template's content and its latest git revision
@@ -166,7 +167,7 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 		case filename == "cluster.yaml":
 			results[tier].rawTemplates.clusterTemplate = &tmpl
 		case filename == "tier.yaml":
-			results[tier].rawTemplates.nsTemplateTier = &tmpl
+			results[tier].rawTemplates.nsTemplateTier = tmpl
 		default:
 			return nil, errors.Errorf("unable to load templates: unknown scope for file '%s'", name)
 		}
@@ -320,7 +321,7 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 // ------
 func (t *tierGenerator) newNSTemplateTier(tierName string, contents *tierData) ([]commonclient.ToolchainObject, error) {
 	decoder := serializer.NewCodecFactory(t.scheme).UniversalDeserializer()
-	if contents.rawTemplates.nsTemplateTier == nil {
+	if reflect.DeepEqual(contents.rawTemplates.nsTemplateTier, template{}) {
 		return nil, fmt.Errorf("tier %s is missing a tier.yaml file", tierName)
 	}
 
