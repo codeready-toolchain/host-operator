@@ -91,8 +91,13 @@ func newTierGenerator(s *runtime.Scheme, client client.Client, namespace string,
 		templatesByTier: templatesByTier,
 	}
 
-	err = c.initTemplateData()
-	if err != nil {
+	// process tierTemplates
+	if err := c.initTierTemplates(); err != nil {
+		return nil, err
+	}
+
+	// process NSTemplateTiers
+	if err := c.initNSTemplateTiers(); err != nil {
 		return nil, err
 	}
 
@@ -174,19 +179,6 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 	}
 
 	return results, nil
-}
-
-func (t *tierGenerator) initTemplateData() error {
-	// process tierTemplates
-	if err := t.initTierTemplates(); err != nil {
-		return err
-	}
-
-	// process NSTemplateTiers
-	if err := t.initNSTemplateTiers(); err != nil {
-		return err
-	}
-	return nil
 }
 
 // initTierTemplates generates all TierTemplate resources, and adds them to the tier map indexed by tier name
