@@ -90,14 +90,7 @@ func newTierGenerator(s *runtime.Scheme, client client.Client, namespace string,
 		templatesByTier: templatesByTier,
 	}
 
-	// process tierTemplates
-	err = c.newTierTemplates()
-	if err != nil {
-		return nil, err
-	}
-
-	// process NSTemplateTiers
-	err = c.newNSTemplateTiers()
+	err = c.initTemplateData()
 	if err != nil {
 		return nil, err
 	}
@@ -182,8 +175,21 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 	return results, nil
 }
 
-// newTierTemplates generates all TierTemplate resources, and adds them to the tier map indexed by tier name
-func (t *tierGenerator) newTierTemplates() error {
+func (t *tierGenerator) initTemplateData() error {
+	// process tierTemplates
+	if err := t.initTierTemplates(); err != nil {
+		return err
+	}
+
+	// process NSTemplateTiers
+	if err := t.initNSTemplateTiers(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// initTierTemplates generates all TierTemplate resources, and adds them to the tier map indexed by tier name
+func (t *tierGenerator) initTierTemplates() error {
 	decoder := serializer.NewCodecFactory(t.scheme).UniversalDeserializer()
 
 	// process tiers in alphabetical order
@@ -267,7 +273,7 @@ func NewTierTemplateName(tier, kind, revision string) string {
 }
 
 // newNSTemplateTiers generates all NSTemplateTier resources and adds them to the tier map
-func (t *tierGenerator) newNSTemplateTiers() error {
+func (t *tierGenerator) initNSTemplateTiers() error {
 
 	for tierName, tierData := range t.templatesByTier {
 		tmpl, err := t.newNSTemplateTier(tierName, tierData)
