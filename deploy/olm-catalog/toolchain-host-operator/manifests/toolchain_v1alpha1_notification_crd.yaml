@@ -1,19 +1,8 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: (devel)
-  creationTimestamp: null
   name: notifications.toolchain.dev.openshift.com
 spec:
-  additionalPrinterColumns:
-  - JSONPath: .spec.userID
-    name: User ID
-    priority: 1
-    type: string
-  - JSONPath: .status.conditions[?(@.type=="Delivered")].status
-    name: Delivered
-    type: string
   group: toolchain.dev.openshift.com
   names:
     kind: Notification
@@ -21,90 +10,92 @@ spec:
     plural: notifications
     singular: notification
   scope: Namespaced
-  subresources:
-    status: {}
-  validation:
-    openAPIV3Schema:
-      description: Notification registers a notification in the CodeReady Toolchain
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: NotificationSpec defines the desired state of Notification
-          properties:
-            template:
-              description: Template is the name of the NotificationTemplate resource
-                that will be used to generate the notification
-              type: string
-            userID:
-              description: UserID is the user ID from RHD Identity Provider token
-                (“sub” claim).  The UserID is used by the notification service (i.e.
-                the NotificationController) to lookup the UserSignup resource for
-                the user, and extract from it the values required to generate the
-                notification content and to deliver the notification
-              type: string
-          required:
-          - template
-          - userID
-          type: object
-        status:
-          description: NotificationStatus defines the observed state of Notification
-          properties:
-            conditions:
-              description: 'Conditions is an array of current Notification conditions
-                Supported condition types: Delivered'
-              items:
-                properties:
-                  lastTransitionTime:
-                    description: Last time the condition transit from one status to
-                      another.
-                    format: date-time
-                    type: string
-                  lastUpdatedTime:
-                    description: Last time the condition was updated
-                    format: date-time
-                    type: string
-                  message:
-                    description: Human readable message indicating details about last
-                      transition.
-                    type: string
-                  reason:
-                    description: (brief) reason for the condition's last transition.
-                    type: string
-                  status:
-                    description: Status of the condition, one of True, False, Unknown.
-                    type: string
-                  type:
-                    description: Type of condition
-                    type: string
-                required:
-                - status
-                - type
-                type: object
-              type: array
-              x-kubernetes-list-map-keys:
-              - type
-              x-kubernetes-list-type: map
-          type: object
-      x-kubernetes-preserve-unknown-fields: true
-  version: v1alpha1
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.userID
+      name: User ID
+      priority: 1
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Delivered")].status
+      name: Delivered
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Notification registers a notification in the CodeReady Toolchain
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: NotificationSpec defines the desired state of Notification
+            properties:
+              template:
+                description: Template is the name of the NotificationTemplate resource
+                  that will be used to generate the notification
+                type: string
+              userID:
+                description: UserID is the user ID from RHD Identity Provider token
+                  (“sub” claim).  The UserID is used by the notification service (i.e.
+                  the NotificationController) to lookup the UserSignup resource for
+                  the user, and extract from it the values required to generate the
+                  notification content and to deliver the notification
+                type: string
+            required:
+            - template
+            - userID
+            type: object
+          status:
+            description: NotificationStatus defines the observed state of Notification
+            properties:
+              conditions:
+                description: 'Conditions is an array of current Notification conditions
+                  Supported condition types: Delivered'
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transit from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdatedTime:
+                      description: Last time the condition was updated
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        last transition.
+                      type: string
+                    reason:
+                      description: (brief) reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            type: object
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
     served: true
     storage: true
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
+    subresources:
+      status: {}
