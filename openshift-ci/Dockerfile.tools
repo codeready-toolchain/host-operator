@@ -8,7 +8,7 @@ ENV LANG=en_US.utf8 \
     GOCACHE=/tmp/.cache \
     GIT_COMMITTER_NAME=devtools \
     GIT_COMMITTER_EMAIL=devtools@redhat.com \
-    OPERATOR_SDK_VERSION=v0.17.1
+    OPERATOR_SDK_VERSION=v0.19.2
 
 ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 
@@ -41,21 +41,21 @@ WORKDIR /tmp
 
 # download, verify and install golang
 ENV PATH=$PATH:/usr/local/go/bin
-RUN curl -Lo go1.13.4.linux-amd64.tar.gz https://dl.google.com/go/go1.13.4.linux-amd64.tar.gz \
-    && echo "692d17071736f74be04a72a06dab9cac1cd759377bd85316e52b2227604c004c go1.13.4.linux-amd64.tar.gz" > go1.13.4.linux-amd64.sha256 \
-    && sha256sum -c go1.13.4.linux-amd64.sha256 \
-    && tar xzf go1.13.4.linux-amd64.tar.gz \
-    && tar -C /usr/local -xzf go1.13.4.linux-amd64.tar.gz \
-    && rm -f go1.13.4.linux-amd64.tar.gz \
+RUN curl -Lo go1.14.7.linux-amd64.tar.gz https://dl.google.com/go/go1.14.7.linux-amd64.tar.gz \
+    && echo "4a7fa60f323ee1416a4b1425aefc37ea359e9d64df19c326a58953a97ad41ea5 go1.14.7.linux-amd64.tar.gz" > go1.14.7.linux-amd64.sha256 \
+    && sha256sum -c go1.14.7.linux-amd64.sha256 \
+    && tar xzf go1.14.7.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.14.7.linux-amd64.tar.gz \
+    && rm -f go1.14.7.linux-amd64.tar.gz \
     && go version
 
 # download, verify and install openshift client tools (oc and kubectl)
-RUN curl -L -s https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz -o openshift-origin-client-tools.tar.gz \
-    && echo "4b0f07428ba854174c58d2e38287e5402964c9a9355f6c359d1242efd0990da3 openshift-origin-client-tools.tar.gz" > openshift-origin-client-tools.sha256 \
-    && sha256sum -c openshift-origin-client-tools.sha256 \
-    && tar xzf openshift-origin-client-tools.tar.gz \
-    && mv /tmp/openshift-origin-client-tools-*/oc /usr/bin/oc \
-    && mv /tmp/openshift-origin-client-tools-*/kubectl /usr/bin/kubectl \
+RUN curl -L -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.5.7/openshift-client-linux.tar.gz -o openshift-client-linux.tar.gz \
+    && echo "35bded1c9f96659e3b7fbc6d2ec3a1707b65e0e8ef7f3c7ecf7b32fdf47d91e5 openshift-client-linux.tar.gz" > openshift-client-linux.sha256 \
+    && sha256sum -c openshift-client-linux.sha256 \
+    && tar xzf openshift-client-linux.tar.gz \
+    && mv /tmp/openshift-client-linux-*/oc /usr/bin/oc \
+    && mv /tmp/openshift-client-linux-*/kubectl /usr/bin/kubectl \
     && rm -rf ./openshift* \
     && oc version
 
