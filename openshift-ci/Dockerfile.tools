@@ -54,9 +54,8 @@ RUN curl -L -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.5.7/o
     && echo "35bded1c9f96659e3b7fbc6d2ec3a1707b65e0e8ef7f3c7ecf7b32fdf47d91e5 openshift-client-linux.tar.gz" > openshift-client-linux.sha256 \
     && sha256sum -c openshift-client-linux.sha256 \
     && tar xzf openshift-client-linux.tar.gz \
-    && mv /tmp/openshift-client-linux-*/oc /usr/bin/oc \
-    && mv /tmp/openshift-client-linux-*/kubectl /usr/bin/kubectl \
-    && rm -rf ./openshift* \
+    && mv oc /usr/bin/oc \
+    && mv kubectl /usr/bin/kubectl \
     && oc version
 
 # download, verify and install operator-sdk
@@ -66,7 +65,8 @@ RUN curl -L -s https://github.com/operator-framework/operator-sdk/releases/downl
     && gpg --verify operator-sdk.asc \
     && chmod +x operator-sdk \
     && cp operator-sdk /usr/bin/operator-sdk \
-    && rm operator-sdk
+    && rm operator-sdk \
+    && operator-sdk version
 
 RUN mkdir -p ${GOPATH}/src/${GO_PACKAGE_PATH}/
 
