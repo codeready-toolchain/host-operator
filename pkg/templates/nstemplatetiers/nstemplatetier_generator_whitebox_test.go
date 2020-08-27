@@ -49,14 +49,14 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 								// not applicable
 								return
 							}
-							assert.NotEmpty(t, tmpls[tier].namespaceTemplates[kind].revision)
-							assert.NotEmpty(t, tmpls[tier].namespaceTemplates[kind].content)
+							assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
+							assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
 						})
 					}
 					t.Run("cluster", func(t *testing.T) {
-						require.NotNil(t, tmpls[tier].clusterTemplate)
-						assert.NotEmpty(t, tmpls[tier].clusterTemplate.revision)
-						assert.NotEmpty(t, tmpls[tier].clusterTemplate.content)
+						require.NotNil(t, tmpls[tier].rawTemplates.clusterTemplate)
+						assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.revision)
+						assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.content)
 					})
 				})
 			}
@@ -80,18 +80,18 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 								// not applicable
 								return
 							}
-							assert.Equal(t, ExpectedRevisions[tier][kind], tmpls[tier].namespaceTemplates[kind].revision)
-							assert.NotEmpty(t, tmpls[tier].namespaceTemplates[kind].content)
+							assert.Equal(t, ExpectedRevisions[tier][kind], tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
+							assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
 						})
 					}
 					t.Run("cluster", func(t *testing.T) {
 						if tier == "nocluster" {
-							assert.Nil(t, tmpls[tier].clusterTemplate)
+							assert.Nil(t, tmpls[tier].rawTemplates.clusterTemplate)
 							return
 						}
-						require.NotNil(t, tmpls[tier].clusterTemplate)
-						assert.Equal(t, ExpectedRevisions[tier]["cluster"], tmpls[tier].clusterTemplate.revision)
-						assert.NotEmpty(t, tmpls[tier].clusterTemplate.content)
+						require.NotNil(t, tmpls[tier].rawTemplates.clusterTemplate)
+						assert.Equal(t, ExpectedRevisions[tier]["cluster"], tmpls[tier].rawTemplates.clusterTemplate.revision)
+						assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.content)
 					})
 				})
 			}
@@ -180,35 +180,40 @@ func TestNewNSTemplateTier(t *testing.T) {
 			// given
 			namespace := "host-operator-" + uuid.NewV4().String()[:7]
 			assets := assets.NewAssets(AssetNames, Asset)
-			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
-			tierTmpls, err := newTierTemplates(s, namespace, assets)
-			require.NoError(t, err)
 			// when
-			nstmplTiers := newNSTemplateTiers(namespace, tierTmpls)
+			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
+			tc, err := newTierGenerator(s, nil, namespace, assets)
+			require.NoError(t, err)
 			// then
-			require.NotEmpty(t, nstmplTiers)
+			require.NotEmpty(t, tc.templatesByTier)
 			// verify that each NSTemplateTier has the Namespaces and ClusterResources `TemplateRef` set as expected
-			for _, nstmplTier := range nstmplTiers {
-				tier := nstmplTier.Name
-				assert.Equal(t, namespace, nstmplTier.Namespace)
-				require.Len(t, nstmplTier.Spec.Namespaces, len(tierTmpls[tier])-1) // exclude clusterresources TierTemplate here
-				expectedTierTmplNames := make([]string, 0, len(tierTmpls[tier])-1)
-				var clusterResourcesTemplateRef string
-				for _, tierTmpl := range tierTmpls[tier] {
-					if strings.Contains(tierTmpl.Name, "clusterresources") {
-						clusterResourcesTemplateRef = tierTmpl.Name
-						continue // skip
-					}
-					expectedTierTmplNames = append(expectedTierTmplNames, tierTmpl.Name)
-				}
-				actualTemplateRefs := make([]string, 0, len(nstmplTier.Spec.Namespaces))
-				for _, ns := range nstmplTier.Spec.Namespaces {
-					actualTemplateRefs = append(actualTemplateRefs, ns.TemplateRef)
-				}
-				assert.ElementsMatch(t, expectedTierTmplNames, actualTemplateRefs)
+			for _, tierData := range tc.templatesByTier {
 
-				require.NotNil(t, nstmplTier.Spec.ClusterResources)
-				assert.Equal(t, clusterResourcesTemplateRef, nstmplTier.Spec.ClusterResources.TemplateRef)
+				for _, nstmplTierObj := range tierData.nstmplTierObjs {
+					tierObj := nstmplTierObj.GetRuntimeObject()
+
+					nstmplTier := runtimeObjectToNSTemplateTier(t, s, tierObj)
+					require.NotNil(t, nstmplTier)
+					assert.Equal(t, namespace, nstmplTier.Namespace)
+					require.Len(t, nstmplTier.Spec.Namespaces, len(tierData.tierTemplates)-1) // exclude clusterresources TierTemplate here
+					expectedTierTmplNames := make([]string, 0, len(tierData.tierTemplates)-1)
+					var clusterResourcesTemplateRef string
+					for _, tierTmpl := range tierData.tierTemplates {
+						if strings.Contains(tierTmpl.Name, "clusterresources") {
+							clusterResourcesTemplateRef = tierTmpl.Name
+							continue // skip
+						}
+						expectedTierTmplNames = append(expectedTierTmplNames, tierTmpl.Name)
+					}
+					actualTemplateRefs := make([]string, 0, len(nstmplTier.Spec.Namespaces))
+					for _, ns := range nstmplTier.Spec.Namespaces {
+						actualTemplateRefs = append(actualTemplateRefs, ns.TemplateRef)
+					}
+					assert.ElementsMatch(t, expectedTierTmplNames, actualTemplateRefs)
+
+					require.NotNil(t, nstmplTier.Spec.ClusterResources)
+					assert.Equal(t, clusterResourcesTemplateRef, nstmplTier.Spec.ClusterResources.TemplateRef)
+				}
 			}
 		})
 
@@ -216,7 +221,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 			// given
 			namespace := "host-operator-" + uuid.NewV4().String()[:7]
 			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
-			tierTmpls, err := newTierTemplates(s, namespace, assets)
+			tc, err := newTierGenerator(s, nil, namespace, assets)
 			require.NoError(t, err)
 			namespaceRevisions := map[string]map[string]string{
 				"advanced": {
@@ -237,9 +242,11 @@ func TestNewNSTemplateTier(t *testing.T) {
 			for tier := range namespaceRevisions {
 				t.Run(tier, func(t *testing.T) {
 					// given
-					tmpls := tierTmpls[tier]
+					objects := tc.templatesByTier[tier].nstmplTierObjs
+					require.Len(t, objects, 1, "expected only 1 NSTemplateTier toolchain object")
 					// when
-					actual := newNSTemplateTier(namespace, tier, tmpls)
+					actual := runtimeObjectToNSTemplateTier(t, s, objects[0].GetRuntimeObject())
+
 					// then
 					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, namespaceRevisions[tier], clusterResourceQuotaRevisions[tier])
 					require.NoError(t, err)
@@ -268,16 +275,17 @@ func TestNewTierTemplate(t *testing.T) {
 			assets := assets.NewAssets(AssetNames, Asset)
 			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
 			// when
-			tierTmpls, err := newTierTemplates(s, namespace, assets)
+			tc, err := newTierGenerator(s, nil, namespace, assets)
+
 			// then
 			require.NoError(t, err)
 			decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
 
 			resourceNameRE, err := regexp.Compile(`[a-z0-9\.-]+`)
 			require.NoError(t, err)
-			for tier, tmpls := range tierTmpls {
+			for tier, tmpls := range tc.templatesByTier {
 				t.Run(tier, func(t *testing.T) {
-					for _, actual := range tmpls {
+					for _, actual := range tmpls.tierTemplates {
 						t.Run(actual.Name, func(t *testing.T) {
 							assert.Equal(t, namespace, actual.Namespace)
 							assert.True(t, resourceNameRE.MatchString(actual.Name)) // verifies that the TierTemplate name complies with the DNS-1123 spec
@@ -303,16 +311,17 @@ func TestNewTierTemplate(t *testing.T) {
 			// given
 			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 			// when
-			tierTmpls, err := newTierTemplates(s, namespace, assets)
+			tc, err := newTierGenerator(s, nil, namespace, assets)
+
 			// then
 			require.NoError(t, err)
 			decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
 
 			resourceNameRE, err := regexp.Compile(`[a-z0-9\.-]+`)
 			require.NoError(t, err)
-			for tier, tmpls := range tierTmpls {
+			for tier, tmpls := range tc.templatesByTier {
 				t.Run(tier, func(t *testing.T) {
-					for _, actual := range tmpls {
+					for _, actual := range tmpls.tierTemplates {
 						assert.Equal(t, namespace, actual.Namespace)
 						assert.True(t, resourceNameRE.MatchString(actual.Name)) // verifies that the TierTemplate name complies with the DNS-1123 spec
 						assert.NotEmpty(t, actual.Spec.Revision)
@@ -345,7 +354,8 @@ func TestNewTierTemplate(t *testing.T) {
 				return []byte("invalid"), nil // return an invalid YAML represention of a Template
 			})
 			// when
-			_, err = newTierTemplates(s, namespace, fakeAssets)
+			_, err := newTierGenerator(s, nil, namespace, fakeAssets)
+
 			// then
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "unable to generate 'advanced-code-123456a' TierTemplate manifest: couldn't get version/kind; json parse error")
@@ -523,19 +533,22 @@ func TestNewNSTemplateTiers(t *testing.T) {
 		// given
 		namespace := "host-operator-" + uuid.NewV4().String()[:7]
 		assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
-		tierTmpls, err := newTierTemplates(s, namespace, assets)
-		require.NoError(t, err)
 		// when
-		tiers := newNSTemplateTiers(namespace, tierTmpls)
+		tc, err := newTierGenerator(s, nil, namespace, assets)
+		require.NoError(t, err)
 		// then
-		require.Len(t, tiers, 4)
+		require.Len(t, tc.templatesByTier, 4)
 		for _, name := range []string{"advanced", "basic", "team", "nocluster"} {
-			tier, found := tiers[name]
+			tierData, found := tc.templatesByTier[name]
+			tierObjs := tierData.nstmplTierObjs
+			require.Len(t, tierObjs, 1, "expected only 1 NSTemplateTier toolchain object")
+			tier := runtimeObjectToNSTemplateTier(t, s, tierObjs[0].GetRuntimeObject())
+
 			require.True(t, found)
 			assert.Equal(t, name, tier.ObjectMeta.Name)
 			assert.Equal(t, namespace, tier.ObjectMeta.Namespace)
 			for _, ns := range tier.Spec.Namespaces {
-				assert.NotEmpty(t, ns.TemplateRef)
+				assert.NotEmpty(t, ns.TemplateRef, "expected namespace reference not empty for tier %v", name)
 			}
 			if name == "nocluster" {
 				assert.Nil(t, tier.Spec.ClusterResources)
@@ -659,4 +672,11 @@ spec:
 		return toolchainv1alpha1.NSTemplateTier{}, "", err
 	}
 	return *result, expected.String(), err
+}
+
+func runtimeObjectToNSTemplateTier(t *testing.T, s *runtime.Scheme, tierObj runtime.Object) *toolchainv1alpha1.NSTemplateTier {
+	tier := &toolchainv1alpha1.NSTemplateTier{}
+	err := s.Convert(tierObj, tier, nil)
+	require.NoError(t, err)
+	return tier
 }
