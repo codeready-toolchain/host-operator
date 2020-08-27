@@ -3,12 +3,14 @@ package nstemplatetiers
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
+	commonTemplate "github.com/codeready-toolchain/toolchain-common/pkg/template"
 
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/pkg/errors"
@@ -23,74 +25,108 @@ import (
 
 var log = logf.Log.WithName("templates")
 
-// CreateOrUpdateResources generates the NSTemplateTier resources from the namespace templates,
+// CreateOrUpdateResources generates the NSTemplateTier resources from the cluster resource template and namespace templates,
 // then uses the manager's client to create or update the resources on the cluster.
 func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) error {
 
-	// create the TierTemplates
-	tierTmplsByTier, err := newTierTemplates(s, namespace, assets)
+	// initialize tier generator, loads templates from assets
+	generator, err := newTierGenerator(s, client, namespace, assets)
 	if err != nil {
 		return errors.Wrap(err, "unable to create TierTemplates")
 	}
-	for _, tierTmpls := range tierTmplsByTier {
-		for _, tierTmpl := range tierTmpls {
-			// using the "standard" client since we don't need to support updates on such resources, they should be immutable
-			if err := client.Create(context.TODO(), tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
-				return errors.Wrapf(err, "unable to create the '%s' TierTemplate in namespace '%s'", tierTmpl.Name, tierTmpl.Namespace)
-			}
-			log.Info("TierTemplate resource created", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
-		}
-	}
-	// create the NSTemplateTiers
-	nstmplTiersByTier := newNSTemplateTiers(namespace, tierTmplsByTier)
-	cl := commonclient.NewApplyClient(client, s)
 
-	for _, nstmplTier := range nstmplTiersByTier {
-		createdOrUpdated, err := cl.CreateOrUpdateObject(nstmplTier, true, nil)
-		if err != nil {
-			return errors.Wrapf(err, "unable to create or update the '%s' NSTemplateTiers in namespace '%s'", nstmplTier.Name, nstmplTier.Namespace)
-		}
-		if createdOrUpdated {
-			log.Info("NSTemplateTier resource created/updated", "namespace", nstmplTier.Namespace, "name", nstmplTier.Name)
-		} else {
-			log.Info("NSTemplateTier resource was already up-to-date", "namespace", nstmplTier.Namespace, "name", nstmplTier.Name, "ResourceVersion", nstmplTier.ResourceVersion)
-		}
+	// create the TierTemplate resources
+	err = generator.createTierTemplates()
+	if err != nil {
+		return errors.Wrap(err, "unable to create TierTemplates")
 	}
+
+	// create the NSTemplateTier resources
+	err = generator.createNSTemplateTiers()
+	if err != nil {
+		return errors.Wrap(err, "unable to create NSTemplateTiers")
+	}
+
 	return nil
 }
 
-// templates: namespaces and other cluster-scoped resources belonging to a given tier ("advanced", "basic", "team", etc.)
+type tierGenerator struct {
+	client          client.Client
+	namespace       string
+	scheme          *runtime.Scheme
+	templatesByTier map[string]*tierData
+}
+
+type tierData struct {
+	rawTemplates   *templates
+	tierTemplates  []*toolchainv1alpha1.TierTemplate
+	nstmplTierObjs []commonclient.ToolchainObject
+}
+
+// templates: namespaces and other cluster-scoped resources belonging to a given tier ("advanced", "basic", "team", etc.) and the NSTemplateTier that combines them
 type templates struct {
 	namespaceTemplates map[string]template // namespace templates (including roles, etc.) indexed by type ("dev", "code", "stage")
 	clusterTemplate    *template           // other cluster-scoped resources, in a single template file
+	nsTemplateTier     template            // NSTemplateTier resource with tier-scoped configuration and references to namespace and cluster templates in its spec, in a single template file
 }
 
-// template: a template content and its latest git revision
+// template: a template's content and its latest git revision
 type template struct {
 	revision string
 	content  []byte
 }
 
-// loadAssetsByTiers loads the assets and dispatches them by tiers, assuming the given `assets` has the following structure:
+// newTierGenerator loads templates from the provided assets and processes the tierTemplates and NSTemplateTiers
+func newTierGenerator(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) (*tierGenerator, error) {
+	// load templates from assets
+	templatesByTier, err := loadTemplatesByTiers(assets)
+	if err != nil {
+		return nil, err
+	}
+
+	c := &tierGenerator{
+		client:          client,
+		namespace:       namespace,
+		scheme:          s,
+		templatesByTier: templatesByTier,
+	}
+
+	// process tierTemplates
+	if err := c.initTierTemplates(); err != nil {
+		return nil, err
+	}
+
+	// process NSTemplateTiers
+	if err := c.initNSTemplateTiers(); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+// loadTemplatesByTiers loads the assets and dispatches them by tiers, assuming the given `assets` has the following structure:
 //
 // metadata.yaml
 // advanced/
 //   cluster.yaml
 //   ns_code.yaml
 //   ns_xyz.yaml
+//   tier.yaml
 // basic/
 //   cluster.yaml
 //   ns_code.yaml
 //   ns_xyz.yaml
+//   tier.yaml
 // team/
-//   ns_code.yaml
+//   cluster.yaml
 //   ns_xyz.yaml
+//   tier.yaml
 //
-// The output is a map of `templates` indexed by tier.
-// Each `templates` object contains itself a map of `template` objects indexed by the namespace type (`namespaceTemplates`)
-// and an optional `template` for the cluster resources (`clusterTemplate`).
+// The output is a map of `tierData` indexed by tier.
+// Each `tierData` object contains itself a map of `template` objects indexed by the namespace type (`namespaceTemplates`);
+// an optional `template` for the cluster resources (`clusterTemplate`) and the NSTemplateTier resource object.
 // Each `template` object contains a `revision` (`string`) and the `content` of the template to apply (`[]byte`)
-func loadTemplatesByTiers(assets assets.Assets) (map[string]*templates, error) {
+func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 	metadataContent, err := assets.Asset("metadata.yaml")
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to load templates")
@@ -101,7 +137,7 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*templates, error) {
 		return nil, errors.Wrapf(err, "unable to load templates")
 	}
 
-	results := make(map[string]*templates)
+	results := make(map[string]*tierData)
 	for _, name := range assets.Names() {
 		if name == "metadata.yaml" {
 			continue
@@ -115,8 +151,10 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*templates, error) {
 		tier := parts[0]
 		filename := parts[1]
 		if _, exists := results[tier]; !exists {
-			results[tier] = &templates{
-				namespaceTemplates: map[string]template{},
+			results[tier] = &tierData{
+				rawTemplates: &templates{
+					namespaceTemplates: map[string]template{},
+				},
 			}
 		}
 		content, err := assets.Asset(name)
@@ -130,63 +168,77 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*templates, error) {
 		switch {
 		case strings.HasPrefix(filename, "ns_"):
 			kind := strings.TrimSuffix(strings.TrimPrefix(filename, "ns_"), ".yaml")
-			results[tier].namespaceTemplates[kind] = tmpl
+			results[tier].rawTemplates.namespaceTemplates[kind] = tmpl
 		case filename == "cluster.yaml":
-			results[tier].clusterTemplate = &tmpl
+			results[tier].rawTemplates.clusterTemplate = &tmpl
+		case filename == "tier.yaml":
+			results[tier].rawTemplates.nsTemplateTier = tmpl
 		default:
 			return nil, errors.Errorf("unable to load templates: unknown scope for file '%s'", name)
 		}
 	}
+
 	return results, nil
 }
 
-// newTierTemplates generates all TierTemplate resources, indexed by their tier
-func newTierTemplates(s *runtime.Scheme, namespace string, assets assets.Assets) (map[string][]*toolchainv1alpha1.TierTemplate, error) {
-	templatesByTier, err := loadTemplatesByTiers(assets)
-	if err != nil {
-		return nil, err
-	}
-	decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
-	result := map[string][]*toolchainv1alpha1.TierTemplate{}
-	// proceed tiers by alphabetical order
-	tiers := make([]string, 0, len(templatesByTier))
-	for tier := range templatesByTier {
+// initTierTemplates generates all TierTemplate resources, and adds them to the tier map indexed by tier name
+func (t *tierGenerator) initTierTemplates() error {
+	decoder := serializer.NewCodecFactory(t.scheme).UniversalDeserializer()
+
+	// process tiers in alphabetical order
+	tiers := make([]string, 0, len(t.templatesByTier))
+	for tier := range t.templatesByTier {
 		tiers = append(tiers, tier)
 	}
 	sort.Strings(tiers)
 	for _, tier := range tiers {
-		tmpls := templatesByTier[tier]
-		kinds := make([]string, 0, len(tmpls.namespaceTemplates))
-		for kind := range tmpls.namespaceTemplates {
+		tierTmpls := []*toolchainv1alpha1.TierTemplate{}
+		tierData := t.templatesByTier[tier]
+		// namespace templates
+		kinds := make([]string, 0, len(tierData.rawTemplates.namespaceTemplates))
+		for kind := range tierData.rawTemplates.namespaceTemplates {
 			kinds = append(kinds, kind)
 		}
 		sort.Strings(kinds)
-		// namespace templates
 		for _, kind := range kinds {
-			tmpl := tmpls.namespaceTemplates[kind]
-			tierTmpl, err := newTierTemplate(decoder, namespace, tier, kind, tmpl)
+			tmpl := tierData.rawTemplates.namespaceTemplates[kind]
+			tierTmpl, err := t.newTierTemplate(decoder, tier, kind, tmpl)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			if _, exists := result[tierTmpl.Spec.TierName]; !exists {
-				result[tierTmpl.Spec.TierName] = []*toolchainv1alpha1.TierTemplate{}
-			}
-			result[tierTmpl.Spec.TierName] = append(result[tierTmpl.Spec.TierName], tierTmpl)
+			tierTmpls = append(tierTmpls, tierTmpl)
 		}
 		// cluster resources templates
-		if tmpls.clusterTemplate != nil {
-			tierTmpl, err := newTierTemplate(decoder, namespace, tier, toolchainv1alpha1.ClusterResourcesTemplateType, *tmpls.clusterTemplate)
+		if tierData.rawTemplates.clusterTemplate != nil {
+			tierTmpl, err := t.newTierTemplate(decoder, tier, toolchainv1alpha1.ClusterResourcesTemplateType, *tierData.rawTemplates.clusterTemplate)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			result[tierTmpl.Spec.TierName] = append(result[tierTmpl.Spec.TierName], tierTmpl)
+			tierTmpls = append(tierTmpls, tierTmpl)
+		}
+		t.templatesByTier[tier].tierTemplates = tierTmpls
+	}
+	return nil
+}
+
+// createTierTemplates creates all TierTemplate resources from the tier map
+func (t *tierGenerator) createTierTemplates() error {
+
+	// create the templates
+	for _, tierTmpls := range t.templatesByTier {
+		for _, tierTmpl := range tierTmpls.tierTemplates {
+			// using the "standard" client since we don't need to support updates on such resources, they should be immutable
+			if err := t.client.Create(context.TODO(), tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
+				return errors.Wrapf(err, "unable to create the '%s' TierTemplate in namespace '%s'", tierTmpl.Name, tierTmpl.Namespace)
+			}
+			log.Info("TierTemplate resource created", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
 		}
 	}
-	return result, nil
+	return nil
 }
 
 // newTierTemplate generates a TierTemplate resource for a given tier and kind
-func newTierTemplate(decoder runtime.Decoder, namespace, tier, kind string, tmpl template) (*toolchainv1alpha1.TierTemplate, error) {
+func (t *tierGenerator) newTierTemplate(decoder runtime.Decoder, tier, kind string, tmpl template) (*toolchainv1alpha1.TierTemplate, error) {
 	name := NewTierTemplateName(tier, kind, tmpl.revision)
 	tmplObj := &templatev1.Template{}
 	_, _, err := decoder.Decode(tmpl.content, nil, tmplObj)
@@ -195,7 +247,7 @@ func newTierTemplate(decoder runtime.Decoder, namespace, tier, kind string, tmpl
 	}
 	return &toolchainv1alpha1.TierTemplate{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
+			Namespace: t.namespace,
 			Name:      name, // link to the TierTemplate resource, whose name is: `<tierName>-<nsType>-<revision>`,
 		},
 		Spec: toolchainv1alpha1.TierTemplateSpec{
@@ -213,67 +265,78 @@ func NewTierTemplateName(tier, kind, revision string) string {
 	return strings.ToLower(fmt.Sprintf("%s-%s-%s", tier, kind, revision))
 }
 
-// newNSTemplateTiers generates all NSTemplateTier resources, indexed by their associated tier
-func newNSTemplateTiers(namespace string, tierTmplsByTier map[string][]*toolchainv1alpha1.TierTemplate) map[string]*toolchainv1alpha1.NSTemplateTier {
-	tiers := make(map[string]*toolchainv1alpha1.NSTemplateTier, len(tierTmplsByTier))
-	for tier, tmpls := range tierTmplsByTier {
-		tmpl := newNSTemplateTier(namespace, tier, tmpls)
-		tiers[tier] = tmpl
+// newNSTemplateTiers generates all NSTemplateTier resources and adds them to the tier map
+func (t *tierGenerator) initNSTemplateTiers() error {
+
+	for tierName, tierData := range t.templatesByTier {
+		tmpl, err := t.newNSTemplateTier(tierName, tierData)
+		if err != nil {
+			return err
+		}
+		t.templatesByTier[tierName].nstmplTierObjs = tmpl
 	}
-	return tiers
+
+	return nil
 }
 
-// NewNSTemplateTier initializes a complete NSTemplateTier object
-// by embedding the `<tier>-code.yml`, `<tier>-dev.yml` and `<tier>-stage.yml`
-// file along with each one's git (short) commit as the revision associated with
-// the template.
+// createNSTemplateTiers creates the NSTemplateTier resources from the tier map
+func (t *tierGenerator) createNSTemplateTiers() error {
+
+	for tierName, tierData := range t.templatesByTier {
+
+		labels := map[string]string{
+			toolchainv1alpha1.ProviderLabelKey: toolchainv1alpha1.ProviderLabelValue,
+		}
+		_, err := commonclient.NewApplyClient(t.client, t.scheme).Apply(tierData.nstmplTierObjs, labels)
+		if err != nil {
+			return errors.Wrapf(err, "unable to create the '%s' NSTemplateTier", tierName)
+		}
+	}
+	return nil
+}
+
+// NewNSTemplateTier generates a complete NSTemplateTier object via Openshift Template based on the contents of tier.yaml and
+// by embedding the `<tier>-code.yaml`, `<tier>-dev.yaml` and `<tier>-stage.yaml` and cluster.yaml references.
 //
-// Something like:
+// After processing the Openshift Template the NSTemplateTier should look something like:
 // ------
 // kind: NSTemplateTier
 //   metadata:
 //     name: basic
 //   spec:
-//     namespaces:
-//     - type: code
-//       revision: "y8f907f6"
-//       template: >
-//         <yaml-ns-template>
-//     - type: dev
-//       revision: "f8q907f4"
-//       template: >
-//         <yaml-ns-template>
-//     - type: stage
-//       revision: "907fy8f6"
-//       template: >
-//         <yaml-ns-template>
 //     clusterResources:
-//       revision: "907fy8f6"
-//       template: >
-//         <yaml-ns-template>
+//       templateRef: basic-clusterresources-07cac69
+//     namespaces:
+//     - templateRef: basic-code-cb6fbd2
+//     - templateRef: basic-dev-4d49fe0
+//     - templateRef: basic-stage-4d49fe0
 // ------
-func newNSTemplateTier(namespace, tier string, tierTmpls []*toolchainv1alpha1.TierTemplate) *toolchainv1alpha1.NSTemplateTier {
-	// retrieve the namespace types and order them, so we can compare
-	// with the expected templates during the tests
-	result := &toolchainv1alpha1.NSTemplateTier{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      tier,
-			Namespace: namespace,
-		},
-		Spec: toolchainv1alpha1.NSTemplateTierSpec{},
+func (t *tierGenerator) newNSTemplateTier(tierName string, contents *tierData) ([]commonclient.ToolchainObject, error) {
+	decoder := serializer.NewCodecFactory(t.scheme).UniversalDeserializer()
+	if reflect.DeepEqual(contents.rawTemplates.nsTemplateTier, template{}) {
+		return nil, fmt.Errorf("tier %s is missing a tier.yaml file", tierName)
 	}
-	for _, tierTmpl := range tierTmpls {
+
+	tmplObj := &templatev1.Template{}
+	_, _, err := decoder.Decode(contents.rawTemplates.nsTemplateTier.content, nil, tmplObj)
+	if err != nil {
+		return nil, errors.Wrapf(err, "unable to generate '%s' NSTemplateTier manifest", tierName)
+	}
+
+	tmplProcessor := commonTemplate.NewProcessor(t.scheme)
+	params := map[string]string{"NAMESPACE": t.namespace}
+
+	for _, tierTmpl := range contents.tierTemplates {
 		switch tierTmpl.Spec.Type {
+		// ClusterResources
 		case toolchainv1alpha1.ClusterResourcesTemplateType:
-			result.Spec.ClusterResources = &toolchainv1alpha1.NSTemplateTierClusterResources{
-				TemplateRef: tierTmpl.Name,
-			}
+			params["CLUSTER_TEMPL_REF"] = tierTmpl.Name
+		// Namespaces
 		default:
-			// add it to the NSTemplateTier obj
-			result.Spec.Namespaces = append(result.Spec.Namespaces, toolchainv1alpha1.NSTemplateTierNamespace{
-				TemplateRef: tierTmpl.Name,
-			})
+			tmplType := strings.ToUpper(tierTmpl.Spec.Type) // code, dev, stage
+			key := tmplType + "_TEMPL_REF"                  // eg. CODE_TEMPL_REF
+			params[key] = tierTmpl.Name
 		}
 	}
-	return result
+	return tmplProcessor.Process(tmplObj.DeepCopy(), params)
 }
