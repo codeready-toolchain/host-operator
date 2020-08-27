@@ -92,15 +92,16 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			// then
 			require.NoError(t, err)
 
-			// verify that 14 TierTemplates were created (see `testnstemplatetiers.AssetNames`)
+			// verify that 18 TierTemplates were created, 14 TierTemplates and 4 templates for NSTemplateTier (see `testnstemplatetiers.AssetNames`)
 			tierTmpls = toolchainv1alpha1.TierTemplateList{}
 			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, len(testnstemplatetiers.AssetNames())-1) // exclude `metadata.yml` from the AssetNames, it does not result in a TemplateTier resource
-			names := make([]string, len(testnstemplatetiers.AssetNames())-1)
+			require.Len(t, tierTmpls.Items, len(testnstemplatetiers.AssetNames())-5) // exclude `metadata.yml` and `tier.yaml` from the AssetNames, they do not result in a TemplateTier resource
+			names := make([]string, len(testnstemplatetiers.AssetNames())-5)
 			for i, tierTmpl := range tierTmpls.Items {
 				names[i] = tierTmpl.Name
 			}
+			fmt.Printf("names: %v\n", names)
 			assert.ElementsMatch(t, []string{
 				"advanced-clusterresources-654321a",
 				"advanced-code-123456a",
@@ -158,7 +159,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			tierTmpls := toolchainv1alpha1.TierTemplateList{}
 			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, len(testnstemplatetiers.AssetNames())-1) // exclude `metadata.yml` from the AssetNames, it does not result in a TemplateTier resource
+			require.Len(t, tierTmpls.Items, len(testnstemplatetiers.AssetNames())-5) // exclude `metadata.yml` and `tier.yaml` from the AssetNames, it does not result in a TemplateTier resource
 			for _, tierTmpl := range tierTmpls.Items {
 				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
 			}
@@ -225,7 +226,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			tierTmpls := toolchainv1alpha1.TierTemplateList{}
 			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, 2*(len(testnstemplatetiers.AssetNames())-1)) // 2 sets of TierTemplates, but exclude the `metadata.yml`s from the AssetNames, they don't result in a TemplateTier resource
+			require.Len(t, tierTmpls.Items, 2*(len(testnstemplatetiers.AssetNames())-5)) // 2 sets of TierTemplates, but exclude the `metadata.yml`s and `tier.yaml`s from the AssetNames, they don't result in a TemplateTier resource
 			for _, tierTmpl := range tierTmpls.Items {
 				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
 			}
@@ -312,7 +313,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				// given
 				clt := testsupport.NewFakeClient(t)
 				clt.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
-					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
+					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
@@ -323,7 +324,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, assets)
 				// then
 				require.Error(t, err)
-				assert.Regexp(t, fmt.Sprintf("unable to create or update the '\\w+' NSTemplateTiers in namespace '%s'", namespace), err.Error())
+				assert.Regexp(t, fmt.Sprintf("unable to create NSTemplateTiers: unable to create the '\\w+' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: unable to create resource of kind: NSTemplateTier, version: v1alpha1: an error"), err.Error())
 			})
 
 			t.Run("failed to update nstemplatetiers", func(t *testing.T) {
@@ -336,7 +337,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					},
 				})
 				clt.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
+					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
 					}
@@ -347,7 +348,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
 				// then
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), fmt.Sprintf("unable to create or update the 'advanced' NSTemplateTiers in namespace '%s'", namespace))
+				assert.Contains(t, err.Error(), "unable to create NSTemplateTiers: unable to create the 'advanced' NSTemplateTier: unable to create resource of kind: NSTemplateTier, version: v1alpha1: unable to create resource of kind: NSTemplateTier, version: v1alpha1: unable to update the resource")
 			})
 		})
 
