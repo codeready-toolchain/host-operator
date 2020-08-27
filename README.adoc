@@ -10,7 +10,7 @@ This is the CodeReady Toolchain Host Operator repository. It contains the OpenSh
 
 == Build
 
-Requires Go version 1.13 - download for your development environment https://golang.org/dl/[here].
+Requires Go version 1.14 - download for your development environment https://golang.org/dl/[here].
 
 This repository uses https://github.com/golang/go/wiki/Modules[Go modules]. You may need to `export GO111MODULE=on` to turn modules support "on".
 
@@ -22,7 +22,7 @@ To run this operator locally you need to have at least one Minishift profile sta
 $ minishift start --profile host
 ```
 
-Then you can run the operator locally with the help of `operator-sdk` (you need version v0.17.1 or higher):
+Then you can run the operator locally with the help of `operator-sdk` (you need version v0.19.2):
 
 ```bash
 $ make up-local
