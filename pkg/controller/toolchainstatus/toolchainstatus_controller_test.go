@@ -8,17 +8,16 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
-	. "github.com/codeready-toolchain/host-operator/test"
-	"github.com/codeready-toolchain/host-operator/version"
-
 	"github.com/codeready-toolchain/api/pkg/apis"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
+	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	. "github.com/codeready-toolchain/host-operator/test"
+	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -501,10 +500,100 @@ func TestToolchainStatusConditions(t *testing.T) {
 			memberStatus := newMemberStatusReady()
 			toolchainStatus := newToolchainStatus()
 
-			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
-				ClusterName:  "removed-cluster",
-				MemberStatus: newMemberStatusReady().Status,
-			}}
+			t.Run("with non-zero counter", func(t *testing.T) {
+				// given
+				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
+					ClusterName:  "removed-cluster",
+					MemberStatus: newMemberStatusReady().Status,
+					CapacityUsage: toolchainv1alpha1.CapacityUsageMember{
+						UserAccountCount: 10,
+					},
+				}}
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+
+				// when
+				res, err := reconciler.Reconcile(req)
+
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, requeueResult, res)
+				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+					HasCondition(componentsNotReady(string(memberConnectionsTag))).
+					HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
+					HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady("removed-cluster", "MemberToolchainClusterRemoved",
+						"toolchainCluster not found for member cluster removed-cluster that was previously registered in the host")).
+					HasRegistrationServiceStatus(registrationServiceReady())
+			})
+
+			t.Run("with zero count", func(t *testing.T) {
+				// given
+				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
+					ClusterName:  "removed-cluster",
+					MemberStatus: newMemberStatusReady().Status,
+					CapacityUsage: toolchainv1alpha1.CapacityUsageMember{
+						UserAccountCount: 0,
+					},
+				}}
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+
+				// when
+				res, err := reconciler.Reconcile(req)
+
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, requeueResult, res)
+				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+					HasCondition(componentsReady()).
+					HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
+					HasMemberStatus(memberClusterSingleReady()).
+					HasRegistrationServiceStatus(registrationServiceReady())
+			})
+		})
+	})
+}
+
+func TestSynchronizationWithCounter(t *testing.T) {
+	// given
+	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
+	defer restore()
+	requestName := defaultToolchainStatusName
+	registrationService := newRegistrationServiceReady()
+	hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+	registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+	toolchainStatus := newToolchainStatus()
+	memberStatus := newMemberStatusReady()
+
+	t.Run("Load all current MURs & UAs", func(t *testing.T) {
+		// given
+		defer counter.Reset()
+		initObjects := append(CreateMultipleMurs(t, 10), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, initObjects...)
+
+		// when
+		res, err := reconciler.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, requeueResult, res)
+		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+			HasCondition(componentsReady()).
+			HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
+			HasMurCount(10).
+			HasMemberStatus(memberClusterSingleReady()).
+			HasUserAccountCount("member-cluster", 10).
+			HasRegistrationServiceStatus(registrationServiceReady())
+
+		t.Run("sync with newly added MURs & UAs", func(t *testing.T) {
+			// given
+			counter.IncrementMasterUserRecordCount()
+			counter.IncrementMasterUserRecordCount()
+			counter.IncrementUserAccountCount("member-cluster")
+			toolchainStatus := newToolchainStatus()
+			toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
+				CapacityUsage: toolchainv1alpha1.CapacityUsageHost{
+					MasterUserRecordCount: 1,
+				},
+			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
@@ -514,13 +603,48 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(memberConnectionsTag))).
+				HasCondition(componentsReady()).
 				HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
-				HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady( "removed-cluster", "MemberToolchainClusterRemoved",
-				"toolchainCluster not found for member cluster removed-cluster that was previously registered in the host")).
+				HasMurCount(12).
+				HasMemberStatus(memberClusterSingleReady()).
+				HasUserAccountCount("member-cluster", 11).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
+	})
 
+	t.Run("initialize the cache using the MURs & UAs from ToolchainStatus", func(t *testing.T) {
+		// given
+		defer counter.Reset()
+		counter.IncrementMasterUserRecordCount()
+		counter.IncrementUserAccountCount("member-cluster")
+		toolchainStatus := newToolchainStatus()
+		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
+			CapacityUsage: toolchainv1alpha1.CapacityUsageHost{
+				MasterUserRecordCount: 8,
+			},
+		}
+		toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
+			ClusterName: "member-cluster",
+			CapacityUsage: toolchainv1alpha1.CapacityUsageMember{
+				UserAccountCount: 6,
+			},
+		}}
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+
+		// when
+		res, err := reconciler.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, requeueResult, res)
+		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+			HasCondition(componentsReady()).
+			HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
+			HasMurCount(9).
+			HasMemberStatus(memberClusterSingleReady()).
+			HasUserAccountCount("member-cluster", 7).
+			HasRegistrationServiceStatus(registrationServiceReady())
+		AssertThatCounterHas(t, 9, UserAccountsForCluster("member-cluster", 7))
 	})
 }
 

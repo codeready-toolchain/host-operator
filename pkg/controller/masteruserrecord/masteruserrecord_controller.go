@@ -7,6 +7,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
@@ -173,6 +174,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAcc
 				return false, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 					"failed to create UserAccount in the member cluster '%s'", murAccount.TargetCluster)
 			}
+			counter.IncrementUserAccountCount(murAccount.TargetCluster)
 			return false, updateStatusConditions(logger, r.client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 		}
 		// another/unexpected error occurred while trying to fetch the user account on the member cluster
@@ -264,7 +266,7 @@ func (r *ReconcileMasterUserRecord) useExistingConditionOfType(condType toolchai
 
 func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) error {
 	for _, ua := range mur.Spec.UserAccounts {
-		if err := r.deleteUserAccount(ua.TargetCluster, mur.Name); err != nil {
+		if err := r.deleteUserAccount(logger, ua.TargetCluster, mur.Name); err != nil {
 			return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason), err,
 				"failed to delete UserAccount in the member cluster '%s'", ua.TargetCluster)
 		}
@@ -279,7 +281,7 @@ func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolc
 	return nil
 }
 
-func (r *ReconcileMasterUserRecord) deleteUserAccount(targetCluster, name string) error {
+func (r *ReconcileMasterUserRecord) deleteUserAccount(logger logr.Logger, targetCluster, name string) error {
 	// get & check member cluster
 	memberCluster, err := r.getMemberCluster(targetCluster)
 	if err != nil {
@@ -298,6 +300,7 @@ func (r *ReconcileMasterUserRecord) deleteUserAccount(targetCluster, name string
 	if err := memberCluster.Client.Delete(context.TODO(), userAcc); err != nil {
 		return err
 	}
+	counter.DecrementUserAccountCount(logger, targetCluster)
 	return nil
 }
 

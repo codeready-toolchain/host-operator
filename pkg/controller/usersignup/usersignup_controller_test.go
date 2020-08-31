@@ -10,7 +10,9 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
+	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -70,6 +72,8 @@ var basicNSTemplateTier = newNsTemplateTier("basic", "654321b", "code", "dev", "
 
 func TestUserSignupCreateMUROk(t *testing.T) {
 	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -79,8 +83,10 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 		},
 	}
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier)
+
 	// when
 	res, err := r.Reconcile(req)
+
 	// then verify that the MUR exists and is complete
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
@@ -106,17 +112,25 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	}, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces)
 	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
 	assert.Equal(t, "basic-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
+	AssertThatCounterHas(t, 2)
 }
 
 func TestReadUserApprovalPolicy(t *testing.T) {
+	// given
 	r, _, _ := prepareReconcile(t, "test", configMap(configuration.UserApprovalPolicyAutomatic))
 
+	// when
 	policy, err := r.ReadUserApprovalPolicyConfig(operatorNamespace)
+
+	// then
 	require.NoError(t, err)
 	require.Equal(t, configuration.UserApprovalPolicyAutomatic, policy)
 }
 
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -130,8 +144,10 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
-	// The first reconcile creates the MasterUserRecord
+	// when - The first reconcile creates the MasterUserRecord
 	res, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -168,10 +184,6 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
 	assert.Equal(t, "basic-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
 
-	// Lookup the user signup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-	require.NoError(t, err)
-
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupApproved,
@@ -179,29 +191,39 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			Reason: "ApprovedAutomatically",
 		})
 
-	// Reconcile again
-	res, err = r.Reconcile(req)
-	require.NoError(t, err)
-	require.Equal(t, reconcile.Result{}, res)
+	AssertThatCounterHas(t, 2)
 
-	// Lookup the userSignup one more and check the conditions are updated
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-	require.NoError(t, err)
-	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+	t.Run("second reconcile", func(t *testing.T) {
+		// when
+		res, err = r.Reconcile(req)
 
-	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedAutomatically",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupComplete,
-			Status: v1.ConditionTrue,
-		})
+		// then
+		require.NoError(t, err)
+		require.Equal(t, reconcile.Result{}, res)
+
+		// Lookup the userSignup one more and check the conditions are updated
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+			})
+	})
+	AssertThatCounterHas(t, 2)
 }
 
 func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userID := uuid.NewV4()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -219,8 +241,10 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
-	// Reconcile the UserSignup
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -234,9 +258,13 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "MissingUserEmailAnnotation",
 		})
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userID := uuid.NewV4()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -260,8 +288,10 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
-	// Reconcile the UserSignup
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -275,9 +305,13 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "InvalidEmailHashLabel",
 		})
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userID := uuid.NewV4()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -298,8 +332,10 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
-	// Reconcile the UserSignup
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -313,10 +349,13 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "MissingEmailHashLabel",
 		})
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -327,8 +366,10 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic)) // basicNSTemplateTier does not exist
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
+
 	// when
 	_, err := r.Reconcile(req)
+
 	// then
 	// error reported, and request is requeued and userSignup status was updated
 	require.Error(t, err)
@@ -342,10 +383,13 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 			Reason:  "NoTemplateTierAvailable",
 			Message: "nstemplatetiers.toolchain.dev.openshift.com \"basic\" not found",
 		})
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupFailedNoClusterReady(t *testing.T) {
 	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -357,8 +401,10 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", notReady)
 	createMemberCluster(t, r.client, "member2", notReady)
 	defer clearMemberClusters(r.client)
+
 	// when
 	res, err := r.Reconcile(req)
+
 	// then
 	// error reported, and request is requeued and userSignup status was updated
 	require.Error(t, err)
@@ -377,10 +423,13 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
 		})
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -392,8 +441,10 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready, capacityExhausted)
 	createMemberCluster(t, r.client, "member2", ready, capacityExhausted)
 	defer clearMemberClusters(r.client)
+
 	// when
 	res, err := r.Reconcile(req)
+
 	// then
 	// error reported, and request is NOT requeued and userSignup status was updated
 	require.Error(t, err)
@@ -412,9 +463,13 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
 		})
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -428,7 +483,10 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -453,31 +511,39 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		})
+	AssertThatCounterHas(t, 2)
 
-	// Reconcile again
-	res, err = r.Reconcile(req)
-	require.NoError(t, err)
-	require.Equal(t, reconcile.Result{}, res)
+	t.Run("second reconcile", func(t *testing.T) {
+		// when
+		res, err = r.Reconcile(req)
 
-	// Lookup the userSignup one more time and check the conditions are updated
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-	require.NoError(t, err)
-	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+		// then
+		require.NoError(t, err)
+		require.Equal(t, reconcile.Result{}, res)
 
-	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedByAdmin",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupComplete,
-			Status: v1.ConditionTrue,
-		})
+		// Lookup the userSignup one more time and check the conditions are updated
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedByAdmin",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+			})
+		AssertThatCounterHas(t, 2)
+	})
 }
 
 func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -491,7 +557,10 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -516,30 +585,39 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		})
+	AssertThatCounterHas(t, 2)
 
-	// Reconcile again
-	res, err = r.Reconcile(req)
-	require.NoError(t, err)
-	require.Equal(t, reconcile.Result{}, res)
+	t.Run("second reconcile", func(t *testing.T) {
+		// when
+		res, err = r.Reconcile(req)
 
-	// Lookup the userSignup one more and check the conditions are updated
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-	require.NoError(t, err)
-	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+		// then
+		require.NoError(t, err)
+		require.Equal(t, reconcile.Result{}, res)
 
-	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedByAdmin",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupComplete,
-			Status: v1.ConditionTrue,
-		})
+		// Lookup the userSignup one more and check the conditions are updated
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedByAdmin",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+			})
+		AssertThatCounterHas(t, 2)
+	})
 }
 
 func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -553,7 +631,10 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -578,9 +659,13 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
 		})
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -595,7 +680,10 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -621,30 +709,39 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		})
+	AssertThatCounterHas(t, 2)
 
-	// Reconcile again
-	res, err = r.Reconcile(req)
-	require.NoError(t, err)
-	require.Equal(t, reconcile.Result{}, res)
+	t.Run("second reconcile", func(t *testing.T) {
+		// when
+		res, err = r.Reconcile(req)
 
-	// Lookup the userSignup one more and check the conditions are updated
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-	require.NoError(t, err)
-	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+		// then
+		require.NoError(t, err)
+		require.Equal(t, reconcile.Result{}, res)
 
-	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedAutomatically",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupComplete,
-			Status: v1.ConditionTrue,
-		})
+		// Lookup the userSignup one more and check the conditions are updated
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+			})
+		AssertThatCounterHas(t, 2)
+	})
 }
 
 func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("bar", "bar@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -656,7 +753,10 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, emptyConfigMap(), basicNSTemplateTier)
 
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -675,9 +775,13 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
 		})
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupMURCreateFails(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -701,12 +805,19 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 		}
 	}
 
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupMURReadFails(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -730,11 +841,18 @@ func TestUserSignupMURReadFails(t *testing.T) {
 		}
 	}
 
+	// when
 	_, err := r.Reconcile(req)
+
+	// then
 	require.Error(t, err)
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -758,12 +876,19 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 		}
 	}
 
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -786,12 +911,19 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 		}
 	}
 
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -815,12 +947,19 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 		}
 	}
 
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.NewV4().String(),
@@ -852,7 +991,10 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
+	// when
 	_, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 
 	key := types.NamespacedName{
@@ -868,9 +1010,13 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		Type:   v1alpha1.UserSignupComplete,
 		Status: v1.ConditionTrue,
 	})
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -893,8 +1039,10 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
-	// First reconcile loop
+	// when
 	_, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 
 	// We should now have 2 MURs
@@ -902,40 +1050,49 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 2)
+	AssertThatCounterHas(t, 2)
 
-	// Second reconcile loop
-	_, err = r.Reconcile(req)
-	require.NoError(t, err)
+	t.Run("second reconcile", func(t *testing.T) {
+		// when
+		_, err = r.Reconcile(req)
 
-	key := types.NamespacedName{
-		Namespace: operatorNamespace,
-		Name:      userSignup.Name,
-	}
-	instance := &v1alpha1.UserSignup{}
-	err = r.client.Get(context.TODO(), key, instance)
-	require.NoError(t, err)
+		// then
+		require.NoError(t, err)
 
-	require.Equal(t, "foo-2", instance.Status.CompliantUsername)
-
-	// Confirm that the mur exists
-	mur = &v1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: operatorNamespace, Name: instance.Status.CompliantUsername}, mur)
-	require.NoError(t, err)
-	require.Equal(t, instance.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
-
-	var cond *v1alpha1.Condition
-	for _, condition := range instance.Status.Conditions {
-		if condition.Type == v1alpha1.UserSignupComplete {
-			cond = &condition
+		key := types.NamespacedName{
+			Namespace: operatorNamespace,
+			Name:      userSignup.Name,
 		}
-	}
+		instance := &v1alpha1.UserSignup{}
+		err = r.client.Get(context.TODO(), key, instance)
+		require.NoError(t, err)
 
-	require.Equal(t, mur.Name, instance.Status.CompliantUsername)
-	require.NotNil(t, cond)
-	require.Equal(t, v1.ConditionTrue, cond.Status)
+		require.Equal(t, "foo-2", instance.Status.CompliantUsername)
+
+		// Confirm that the mur exists
+		mur = &v1alpha1.MasterUserRecord{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: operatorNamespace, Name: instance.Status.CompliantUsername}, mur)
+		require.NoError(t, err)
+		require.Equal(t, instance.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+
+		var cond *v1alpha1.Condition
+		for _, condition := range instance.Status.Conditions {
+			if condition.Type == v1alpha1.UserSignupComplete {
+				cond = &condition
+			}
+		}
+
+		require.Equal(t, mur.Name, instance.Status.CompliantUsername)
+		require.NotNil(t, cond)
+		require.Equal(t, v1.ConditionTrue, cond.Status)
+		AssertThatCounterHas(t, 2)
+	})
 }
 
 func TestUserSignupWithSpecialCharOK(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -949,10 +1106,14 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
+	// when
 	_, err := r.Reconcile(req)
+
+	// then
 	require.NoError(t, err)
 
 	murtest.AssertThatMasterUserRecord(t, "foo-bar", r.client).HasNoConditions()
+	AssertThatCounterHas(t, 2)
 }
 
 func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
@@ -982,6 +1143,8 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
+		InitializeCounter(t, 2)
+		defer counter.Reset()
 		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(operatorNamespace))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
@@ -1014,11 +1177,13 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		err = r.client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
-
+		AssertThatCounterHas(t, 1)
 	})
 
 	t.Run("when MUR doesn't exist, then the condition should be set to Deactivated", func(t *testing.T) {
 		// given
+		InitializeCounter(t, 2)
+		defer counter.Reset()
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 		// when
@@ -1043,11 +1208,11 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				Status: v1.ConditionTrue,
 				Reason: "Deactivated",
 			})
+		AssertThatCounterHas(t, 2)
 	})
 }
 
 func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
-	// given
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "edward.jones@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -1074,6 +1239,8 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
+		InitializeCounter(t, 2)
+		defer counter.Reset()
 		mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(operatorNamespace))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
@@ -1106,11 +1273,14 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 		err = r.client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
+		AssertThatCounterHas(t, 1)
 	})
 }
 
 func TestUserSignupBanned(t *testing.T) {
 	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -1154,10 +1324,13 @@ func TestUserSignupBanned(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupVerificationRequired(t *testing.T) {
 	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -1194,10 +1367,13 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupBannedMURExists(t *testing.T) {
 	// given
+	InitializeCounter(t, 2)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -1263,35 +1439,41 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
+	AssertThatCounterHas(t, 1)
 
-	// Reconcile again
-	_, err = r.Reconcile(req)
-	require.NoError(t, err)
+	t.Run("second reconcile", func(t *testing.T) {
+		// when
+		_, err = r.Reconcile(req)
+		require.NoError(t, err)
 
-	err = r.client.Get(context.TODO(), key, userSignup)
-	require.NoError(t, err)
+		err = r.client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
 
-	// Confirm the status is now set to Banned
-	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupComplete,
-			Status: v1.ConditionTrue,
-			Reason: "Banned",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedAutomatically",
-		})
+		// Confirm the status is now set to Banned
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: "Banned",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			})
 
-	// Confirm that there is still no MUR
-	err = r.client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 0)
+		// Confirm that there is still no MUR
+		err = r.client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 0)
+		AssertThatCounterHas(t, 1)
+	})
 }
 
 func TestUserSignupListBannedUsersFails(t *testing.T) {
 	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -1310,10 +1492,13 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 
 	// then
 	require.Error(t, err)
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "alice.mayweather.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -1375,9 +1560,13 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			Reason:  "UnableToDeleteMUR",
 			Message: "unable to delete mur",
 		})
+	AssertThatCounterHas(t, 1)
 }
 
 func TestDeathBy100Signups(t *testing.T) {
+	// given
+	InitializeCounter(t, 100)
+	defer counter.Reset()
 	userID := uuid.NewV4().String()
 
 	userSignup := &v1alpha1.UserSignup{
@@ -1417,7 +1606,10 @@ func TestDeathBy100Signups(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
+	// when
 	res, err := r.Reconcile(req)
+
+	// then
 	require.Error(t, err)
 	assert.EqualError(t, err, "Error generating compliant username for foo@redhat.com: unable to transform username [foo@redhat.com] even after 100 attempts")
 	require.Equal(t, reconcile.Result{}, res)
@@ -1439,9 +1631,13 @@ func TestDeathBy100Signups(t *testing.T) {
 			Reason: "ApprovedByAdmin",
 		},
 	)
+	AssertThatCounterHas(t, 100)
 }
 
 func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -1473,7 +1669,10 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	createMemberCluster(t, r.client, "member1", ready)
 	defer clearMemberClusters(r.client)
 
+	// when
 	_, err := r.Reconcile(req)
+
+	// then
 	assert.EqualError(t, err, "Multiple MasterUserRecords found: multiple matching MasterUserRecord resources found")
 
 	key := types.NamespacedName{
@@ -1492,9 +1691,13 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 			Message: "multiple matching MasterUserRecord resources found",
 		},
 	)
+	AssertThatCounterHas(t, 1)
 }
 
 func TestUserSignupNoMembersAvailableFails(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -1506,13 +1709,17 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
+	// when
 	_, err := r.Reconcile(req)
+
+	// then
 	require.Error(t, err)
 	require.IsType(t, SignupError{}, err)
+	AssertThatCounterHas(t, 1)
 }
 
 func TestBannedUserToUserSignupMapper(t *testing.T) {
-	// when
+	// given
 	bannedUser := &toolchainv1alpha1.BannedUser{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{

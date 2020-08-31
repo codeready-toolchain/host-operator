@@ -11,6 +11,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
+	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -161,7 +162,7 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 	}
 
 	// track components that are not ready
-	unreadyComponents := []string{}
+	var unreadyComponents []string
 
 	// retrieve component statuses eg. ToolchainCluster, host deployment
 	for _, statusHandler := range statusHandlers {
@@ -169,6 +170,11 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 		if !isReady {
 			unreadyComponents = append(unreadyComponents, string(statusHandler.name))
 		}
+	}
+
+	if err := counter.Synchronize(r.client, toolchainStatus); err != nil {
+		reqLogger.Error(err, "unable to synchronize with the counter")
+		unreadyComponents = append(unreadyComponents, "MasterUserRecord counter")
 	}
 
 	// if any components were not ready then set the overall status to not ready
@@ -185,6 +191,9 @@ func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logge
 		Version:        version.Version,
 		Revision:       version.Commit,
 		BuildTimestamp: version.BuildTime,
+	}
+	if toolchainStatus.Status.HostOperator != nil {
+		operatorStatus.CapacityUsage.MasterUserRecordCount = toolchainStatus.Status.HostOperator.CapacityUsage.MasterUserRecordCount
 	}
 
 	// look up name of the host operator deployment
@@ -290,7 +299,7 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 		if ok {
 			toolchainStatus.Status.Members[index].MemberStatus = newMemberStatus
 			delete(members, memberStatus.ClusterName)
-		} else if memberStatus.ClusterName != "" {
+		} else if memberStatus.ClusterName != "" && memberStatus.CapacityUsage.UserAccountCount > 0 {
 			err := fmt.Errorf("toolchainCluster not found for member cluster %s that was previously registered in the host", memberStatus.ClusterName)
 			reqLogger.Error(err, "the member cluster seems to be removed")
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterRemovedReason, err.Error())
@@ -304,6 +313,7 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
 			ClusterName:   clusterName,
 			MemberStatus:  memberStatus,
+			CapacityUsage: toolchainv1alpha1.CapacityUsageMember{},
 		})
 	}
 	return allOk
