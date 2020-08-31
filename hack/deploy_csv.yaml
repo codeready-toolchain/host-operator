@@ -1364,6 +1364,9 @@ data:
                       - revision
                       - version
                       type: object
+                    masterUserRecordCount:
+                      description: Number of MasterUserRecords created within the host cluster
+                      type: integer
                     members:
                       description: Members is an array of member status objects
                       items:
@@ -1740,6 +1743,12 @@ data:
                       - deployment
                       - health
                       - registrationServiceResources
+                      type: object
+                    userAccountsPerClusterCounts:
+                      additionalProperties:
+                        type: integer
+                      description: A map of number of UserAccounts per cluster created within
+                        the member clusters
                       type: object
                   type: object
               type: object
