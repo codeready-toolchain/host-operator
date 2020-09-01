@@ -1312,6 +1312,14 @@ data:
                         buildTimestamp:
                           description: The timestamp of the host operator build
                           type: string
+                        capacityUsage:
+                          description: Capacity usage of the host cluster
+                          properties:
+                            masterUserRecordCount:
+                              description: Number of MasterUserRecords created within the
+                                host cluster
+                              type: integer
+                          type: object
                         conditions:
                           description: 'Conditions is an array of current host operator
                             status conditions Supported condition types: ConditionReady'
@@ -1364,14 +1372,19 @@ data:
                       - revision
                       - version
                       type: object
-                    masterUserRecordCount:
-                      description: Number of MasterUserRecords created within the host cluster
-                      type: integer
                     members:
                       description: Members is an array of member status objects
                       items:
                         description: Member contains the status of a member cluster
                         properties:
+                          capacityUsage:
+                            description: Capacity usage of the member cluster
+                            properties:
+                              userAccountCount:
+                                description: Number of UserAccounts created within the member
+                                  cluster
+                                type: integer
+                            type: object
                           clusterName:
                             description: The cluster identifier
                             type: string
@@ -1743,12 +1756,6 @@ data:
                       - deployment
                       - health
                       - registrationServiceResources
-                      type: object
-                    userAccountsPerClusterCounts:
-                      additionalProperties:
-                        type: integer
-                      description: A map of number of UserAccounts per cluster created within
-                        the member clusters
                       type: object
                   type: object
               type: object
