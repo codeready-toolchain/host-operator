@@ -83,6 +83,14 @@ spec:
                   buildTimestamp:
                     description: The timestamp of the host operator build
                     type: string
+                  capacityUsage:
+                    description: Capacity usage of the host cluster
+                    properties:
+                      masterUserRecordCount:
+                        description: Number of MasterUserRecords created within the
+                          host cluster
+                        type: integer
+                    type: object
                   conditions:
                     description: 'Conditions is an array of current host operator
                       status conditions Supported condition types: ConditionReady'
@@ -140,6 +148,14 @@ spec:
                 items:
                   description: Member contains the status of a member cluster
                   properties:
+                    capacityUsage:
+                      description: Capacity usage of the member cluster
+                      properties:
+                        userAccountCount:
+                          description: Number of UserAccounts created within the member
+                            cluster
+                          type: integer
+                      type: object
                     clusterName:
                       description: The cluster identifier
                       type: string
