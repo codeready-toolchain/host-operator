@@ -25,6 +25,7 @@ objects:
       verbs:
       - create
       - get
+      - update
     - apiGroups:
       - toolchain.dev.openshift.com
       resources:
