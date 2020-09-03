@@ -1,17 +1,6 @@
 registration-service:
   environment: 'e2e-tests'
   replicas: 2
-  auth-client:
-    library-url: 'https://sso.prod-preview.openshift.io/auth/js/keycloak.js'
-    public-keys-url: 'https://sso.prod-preview.openshift.io/auth/realms/toolchain-public/protocol/openid-connect/certs'
-    config-raw: '{
-                  "realm": "toolchain-public",
-                  "auth-server-url": "https://sso.prod-preview.openshift.io/auth",
-                  "ssl-required": "none",
-                  "resource": "crt",
-                  "clientId": "crt",
-                  "public-client": true
-                }'
 host-operator:
   duration-before-change-request-deletion: '5s'
   duration-before-notification-deletion: '5s'
