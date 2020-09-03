@@ -302,8 +302,8 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 	}
 	for clusterName, memberStatus := range members {
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
-			ClusterName:   clusterName,
-			MemberStatus:  memberStatus,
+			ClusterName:  clusterName,
+			MemberStatus: memberStatus,
 		})
 	}
 	return allOk

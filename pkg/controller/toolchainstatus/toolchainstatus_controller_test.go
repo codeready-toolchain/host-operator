@@ -516,8 +516,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasCondition(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
-				HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady( "removed-cluster", "MemberToolchainClusterRemoved",
-				"toolchainCluster not found for member cluster removed-cluster that was previously registered in the host")).
+				HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady("removed-cluster", "MemberToolchainClusterRemoved",
+					"toolchainCluster not found for member cluster removed-cluster that was previously registered in the host")).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
