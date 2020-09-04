@@ -25,6 +25,7 @@ objects:
       verbs:
       - create
       - get
+      - update
     - apiGroups:
       - toolchain.dev.openshift.com
       resources:
@@ -38,6 +39,13 @@ objects:
       verbs:
       - get
       - list
+    - apiGroups:
+        - ""
+      resources:
+        - secrets
+      verbs:
+        - get
+        - list
   - kind: RoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     metadata:
@@ -46,8 +54,8 @@ objects:
       name: registration-service
       namespace: ${NAMESPACE}
     subjects:
-    - kind: ServiceAccount
-      name: registration-service
+      - kind: ServiceAccount
+        name: registration-service
     roleRef:
       kind: Role
       name: registration-service
@@ -104,6 +112,8 @@ objects:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
+                - name: WATCH_NAMESPACE
+                  value: ${NAMESPACE}
                 - name: REGISTRATION_ENVIRONMENT
                   valueFrom:
                     configMapKeyRef:
@@ -124,6 +134,21 @@ objects:
                     configMapKeyRef:
                       name: registration-service
                       key: auth_client.public_keys_url
+                - name: REGISTRATION_VERIFICATION_ENABLED
+                  valueFrom:
+                    configMapKeyRef:
+                      name: registration-service
+                      key: verification.enabled
+                - name: REGISTRATION_VERIFICATION_DAILY_LIMIT
+                  valueFrom:
+                    configMapKeyRef:
+                      name: registration-service
+                      key: verification.daily_limit
+                - name: REGISTRATION_VERIFICATION_ATTEMPTS_ALLOWED
+                  valueFrom:
+                    configMapKeyRef:
+                      name: registration-service
+                      key: verification.attempts_allowed
   - kind: Service
     apiVersion: v1
     metadata:
@@ -174,6 +199,9 @@ objects:
       auth_client.library_url: ${AUTH_CLIENT_LIBRARY_URL}
       auth_client.config_raw: ${AUTH_CLIENT_CONFIG_RAW}
       auth_client.public_keys_url: ${AUTH_CLIENT_PUBLIC_KEYS_URL}
+      verification.enabled: ${VERIFICATION_ENABLED}
+      verification.daily_limit: ${VERIFICATION_DAILY_LIMIT}
+      verification.attempts_allowed: ${VERIFICATION_ATTEMPTS_ALLOWED}
 parameters:
   - name: NAMESPACE
     value: 'toolchain-host-operator'
@@ -189,3 +217,9 @@ parameters:
     value: '' #use default value from reg-service configuration
   - name: AUTH_CLIENT_PUBLIC_KEYS_URL
     value: '' #use default value from reg-service configuration
+  - name: VERIFICATION_ENABLED
+    value: ''
+  - name: VERIFICATION_DAILY_LIMIT
+    value: ''
+  - name: VERIFICATION_ATTEMPTS_ALLOWED
+    value: ''
