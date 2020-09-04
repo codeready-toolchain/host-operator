@@ -610,6 +610,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				HasUserAccountCount("member-cluster", 11).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
+
 	})
 
 	t.Run("initialize the cache using the MURs & UAs from ToolchainStatus", func(t *testing.T) {
