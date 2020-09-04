@@ -62,7 +62,6 @@ func TestAddFinalizer(t *testing.T) {
 		// given
 		defer counter.Reset()
 		InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
-		fmt.Println(counter.GetCounts())
 		mur := murtest.NewMasterUserRecord(t, "john")
 		hostClient := test.NewFakeClient(t, mur)
 		memberClient := test.NewFakeClient(t)
@@ -120,7 +119,6 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	// given
 	defer counter.Reset()
 	InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
-	fmt.Println(counter.GetCounts())
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts("member2-cluster"), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
@@ -145,7 +143,6 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
-	fmt.Println(counter.GetCounts())
 	AssertThatCounterHas(t, 1, UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 1))
 }
 
