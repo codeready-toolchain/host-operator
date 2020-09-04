@@ -48,7 +48,6 @@ func reset() {
 	cachedCounts.initialized = false
 }
 
-
 // IncrementMasterUserRecordCount increments the number of MasterUserRecord in the cached counter
 func IncrementMasterUserRecordCount() {
 	write(func() {
