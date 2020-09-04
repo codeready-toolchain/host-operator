@@ -106,6 +106,10 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	}, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces)
 	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
 	assert.Equal(t, "basic-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
+
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	require.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 }
 
 func TestReadUserApprovalPolicy(t *testing.T) {

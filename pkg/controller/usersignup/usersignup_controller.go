@@ -339,6 +339,13 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				return reconcile.Result{}, statusError
 			}
 		}
+		if instance.Labels[toolchainv1alpha1.UserSignupApprovedLabelKey] != toolchainv1alpha1.UserSignupApprovedLabelValueTrue {
+			instance.Labels[toolchainv1alpha1.UserSignupApprovedLabelKey] = toolchainv1alpha1.UserSignupApprovedLabelValueTrue
+			if err := r.client.Update(context.TODO(), instance); err != nil {
+				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToUpdateApprovedLabel, err,
+					"unable to update approved label at UserSignup resource")
+			}
+		}
 
 		// Check if the user requires phone verification, and do not proceed further if they do
 		if instance.Spec.VerificationRequired {
@@ -592,6 +599,17 @@ func (r *ReconcileUserSignup) setStatusFailedToDeleteMUR(userSignup *toolchainv1
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupUnableToDeleteMURReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileUserSignup) setStatusFailedToUpdateApprovedLabel(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return r.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupUnableToUpdateApprovedLabelReason,
 			Message: message,
 		})
 }
