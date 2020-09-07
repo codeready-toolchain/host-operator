@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -37,8 +36,6 @@ var log = logf.Log.WithName("controller_toolchainstatus")
 
 // general toolchainstatus constants
 const (
-	defaultRequeueTime = time.Second * 5
-
 	memberStatusName = "toolchain-member-status"
 
 	registrationServiceHealthEndpoint = "/api/v1/health"
@@ -114,6 +111,7 @@ type ReconcileToolchainStatus struct {
 func (r *ReconcileToolchainStatus) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ToolchainStatus")
+	requeueTime := r.config.GetToolchainStatusRefreshTime()
 
 	// fetch the ToolchainStatus
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
@@ -131,11 +129,11 @@ func (r *ReconcileToolchainStatus) Reconcile(request reconcile.Request) (reconci
 	err = r.aggregateAndUpdateStatus(reqLogger, toolchainStatus)
 	if err != nil {
 		reqLogger.Error(err, "Failed to update status")
-		return reconcile.Result{RequeueAfter: defaultRequeueTime}, err
+		return reconcile.Result{RequeueAfter: requeueTime}, err
 	}
 
-	reqLogger.Info(fmt.Sprintf("Finished updating ToolchainStatus, requeueing after %v", defaultRequeueTime))
-	return reconcile.Result{RequeueAfter: defaultRequeueTime}, nil
+	reqLogger.Info(fmt.Sprintf("Finished updating ToolchainStatus, requeueing after %v", requeueTime))
+	return reconcile.Result{RequeueAfter: requeueTime}, nil
 }
 
 type statusHandler struct {
