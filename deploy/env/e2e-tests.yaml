@@ -5,3 +5,4 @@ host-operator:
   duration-before-change-request-deletion: '5s'
   duration-before-notification-deletion: '5s'
   environment: 'e2e-tests'
+  toolchainstatus-refresh-time: '1s'

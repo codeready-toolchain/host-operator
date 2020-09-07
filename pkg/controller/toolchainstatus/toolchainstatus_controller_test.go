@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
@@ -33,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var requeueResult = reconcile.Result{RequeueAfter: defaultRequeueTime}
+var requeueResult = reconcile.Result{RequeueAfter: 5 * time.Second}
 
 const (
 	defaultHostOperatorName        = "host-operator"
