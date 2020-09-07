@@ -15,6 +15,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
@@ -148,31 +149,79 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 
 func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	// given
-	defer counter.Reset()
-	InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts("member2-cluster"), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	userAccount1 := uatest.NewUserAccountFromMur(mur)
-	userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
 	userAccount3 := uatest.NewUserAccountFromMur(mur)
 	memberClient1 := test.NewFakeClient(t, userAccount1, consoleRoute())
-	memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
 	memberClient3 := test.NewFakeClient(t, userAccount3, consoleRoute())
 	hostClient := test.NewFakeClient(t, mur)
 
-	cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
-		clusterClient(test.MemberClusterName, memberClient1),
-		clusterClient("member2-cluster", memberClient2),
-		clusterClient("member3-cluster", memberClient3))
+	t.Run("when deletion timestamp is less than 3 seconds old", func(t *testing.T) {
+		// given
+		defer counter.Reset()
+		InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 2))
+		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
+		memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient1),
+			clusterClient("member2-cluster", memberClient2),
+			clusterClient("member3-cluster", memberClient3))
 
-	// when reconciling
-	result, err := cntrl.Reconcile(newMurRequest(mur))
-	// then
-	require.NoError(t, err)
-	assert.True(t, result.Requeue)
-	assert.Equal(t, 3*time.Second, result.RequeueAfter)
-	AssertThatCounterHas(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
+		// when
+		result, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, result.Requeue)
+		assert.Equal(t, 3*time.Second, result.RequeueAfter)
+		AssertThatCounterHas(t, 1, UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 1))
+	})
+
+	t.Run("when deletion timestamp is more than 3 seconds old", func(t *testing.T) {
+		// given
+		defer counter.Reset()
+		InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 2))
+		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
+		userAccount2.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(-3 * time.Second)}
+		memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient1),
+			clusterClient("member2-cluster", memberClient2),
+			clusterClient("member3-cluster", memberClient3))
+
+		// when
+		result, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, result.Requeue)
+		assert.Equal(t, 3*time.Second, result.RequeueAfter)
+		AssertThatCounterHas(t, 1, UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 2))
+	})
+
+	t.Run("when deletion timestamp is in the future", func(t *testing.T) {
+		// given
+		defer counter.Reset()
+		InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 2))
+		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
+		userAccount2.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(2 * time.Second)}
+		memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
+		cntrl := newController(t, hostClient, s, newGetMemberCluster(true, v1.ConditionTrue),
+			clusterClient(test.MemberClusterName, memberClient1),
+			clusterClient("member2-cluster", memberClient2),
+			clusterClient("member3-cluster", memberClient3))
+
+		// when
+		result, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, result.Requeue)
+		assert.Greater(t, int64(result.RequeueAfter), int64(3*time.Second))
+		AssertThatCounterHas(t, 1, UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 1))
+	})
 }
 
 func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
