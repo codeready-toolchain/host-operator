@@ -20,9 +20,21 @@ func UserAccountsForCluster(clusterName string, number int) ExpectedNumberOfUser
 		return clusterName, number
 	}
 }
+
+func AssertThatUninitializedCounterHas(t *testing.T, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) {
+	counts, err := counter.GetCounts()
+	assert.EqualErrorf(t, err, "counter is not initialized", "should be error because counter hasn't been initialized yet")
+
+	verifyCounts(t, counts, numberOfMurs, numberOfUasPerCluster...)
+}
+
 func AssertThatCounterHas(t *testing.T, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) {
 	counts, err := counter.GetCounts()
 	assert.NoError(t, err)
+	verifyCounts(t, counts, numberOfMurs, numberOfUasPerCluster...)
+}
+
+func verifyCounts(t *testing.T, counts counter.Counts, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) {
 	assert.Equal(t, numberOfMurs, counts.MasterUserRecordCount)
 	assert.Len(t, counts.UserAccountsPerClusterCounts, len(numberOfUasPerCluster))
 	for _, userAccountsForCluster := range numberOfUasPerCluster {
@@ -41,10 +53,18 @@ func CreateMultipleMurs(t *testing.T, number int) []runtime.Object {
 
 func InitializeCounter(t *testing.T, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) *v1alpha1.ToolchainStatus {
 	counter.Reset()
-	return InitializeCounterWithClient(t, test.NewFakeClient(t), numberOfMurs, numberOfUasPerCluster...)
+	return InitializeCounterWithoutReset(t, numberOfMurs, numberOfUasPerCluster...)
+}
+func InitializeCounterWithClient(t *testing.T, cl *test.FakeClient, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) *v1alpha1.ToolchainStatus {
+	counter.Reset()
+	return initializeCounter(t, cl, numberOfMurs, numberOfUasPerCluster...)
 }
 
-func InitializeCounterWithClient(t *testing.T, cl *test.FakeClient, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) *v1alpha1.ToolchainStatus {
+func InitializeCounterWithoutReset(t *testing.T, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) *v1alpha1.ToolchainStatus {
+	return initializeCounter(t, test.NewFakeClient(t), numberOfMurs, numberOfUasPerCluster...)
+}
+
+func initializeCounter(t *testing.T, cl *test.FakeClient, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) *v1alpha1.ToolchainStatus {
 	if len(numberOfUasPerCluster) > 0 && numberOfMurs == 0 {
 		require.FailNow(t, "When specifying number of UserAccounts per member cluster, you need to specify a count of MURs that is higher than zero")
 	}

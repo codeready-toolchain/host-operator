@@ -49,6 +49,17 @@ func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	AssertThatCounterHas(t, 0)
 }
 
+func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
+	// given
+	defer counter.Reset()
+
+	// when
+	counter.DecrementMasterUserRecordCount(logger)
+
+	// then
+	AssertThatUninitializedCounterHas(t, -1)
+}
+
 func TestAddUserAccountToCounter(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
@@ -89,6 +100,18 @@ func TestRemoveUserAccountFromCounterWhenIsAlreadyZero(t *testing.T) {
 		UserAccountsForCluster("member2", 2))
 }
 
+func TestRemoveUserAccountFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
+	// given
+	defer counter.Reset()
+
+	// when
+	counter.DecrementUserAccountCount(logger, "member")
+
+	// then
+	AssertThatUninitializedCounterHas(t, 0,
+		UserAccountsForCluster("member", -1))
+}
+
 func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	// given
 	defer counter.Reset()
@@ -101,6 +124,23 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(13).
 		HasUserAccountCount("member", 10).
+		HasUserAccountCount("member2", 3)
+}
+
+func TestInitializeCounterFromToolchainClusterWithNegativeNumbersInCache(t *testing.T) {
+	// given
+	defer counter.Reset()
+	counter.DecrementUserAccountCount(logger, "member")
+	counter.DecrementMasterUserRecordCount(logger)
+
+	// when
+	toolchainStatus := InitializeCounterWithoutReset(t, 13, UserAccountsForCluster("member", 10), UserAccountsForCluster("member2", 3))
+
+	// then
+	AssertThatCounterHas(t, 12, UserAccountsForCluster("member", 9), UserAccountsForCluster("member2", 3))
+	AssertThatGivenToolchainStatus(t, toolchainStatus).
+		HasMurCount(12).
+		HasUserAccountCount("member", 9).
 		HasUserAccountCount("member2", 3)
 }
 

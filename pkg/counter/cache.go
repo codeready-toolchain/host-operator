@@ -58,7 +58,7 @@ func IncrementMasterUserRecordCount() {
 // DecrementMasterUserRecordCount decreases the number of MasterUserRecord in the cached counter
 func DecrementMasterUserRecordCount(log logr.Logger) {
 	write(func() {
-		if cachedCounts.MasterUserRecordCount != 0 {
+		if cachedCounts.MasterUserRecordCount != 0 || !cachedCounts.initialized {
 			cachedCounts.MasterUserRecordCount--
 		} else {
 			log.Error(fmt.Errorf("the count of MasterUserRecords is zero"),
@@ -77,7 +77,7 @@ func IncrementUserAccountCount(clusterName string) {
 // DecrementUserAccountCount decreases the number of UserAccount fo the given member cluster in the cached counter
 func DecrementUserAccountCount(log logr.Logger, clusterName string) {
 	write(func() {
-		if cachedCounts.UserAccountsPerClusterCounts[clusterName] != 0 {
+		if cachedCounts.UserAccountsPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized {
 			cachedCounts.UserAccountsPerClusterCounts[clusterName]--
 		} else {
 			log.Error(fmt.Errorf("the count of UserAccounts is zero"),
