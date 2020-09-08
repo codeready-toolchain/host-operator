@@ -491,7 +491,6 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, failedStatusUpdater, err,
 			"Error deleting MasterUserRecord")
 	}
-	counter.DecrementMasterUserRecordCount(logger)
 	logger.Info("Deleted MasterUserRecord", "Name", mur.Name)
 	return reconcile.Result{}, nil
 }

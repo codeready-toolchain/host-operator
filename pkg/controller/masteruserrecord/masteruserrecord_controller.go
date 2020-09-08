@@ -288,6 +288,7 @@ func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolc
 		return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason), err,
 			"failed to update MasterUserRecord while deleting finalizer")
 	}
+	counter.DecrementMasterUserRecordCount(logger)
 	log.Info("Finalizer removed from MasterUserRecord")
 	return nil
 }

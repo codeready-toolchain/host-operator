@@ -706,7 +706,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 	// given
 	defer counter.Reset()
-	InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 2))
+	InitializeCounter(t, 2, UserAccountsForCluster(test.MemberClusterName, 2))
 	logf.SetLogger(logf.ZapLogger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
@@ -736,7 +736,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T) {
 	// given
 	defer counter.Reset()
-	InitializeCounter(t, 1,
+	InitializeCounter(t, 2,
 		UserAccountsForCluster(test.MemberClusterName, 2),
 		UserAccountsForCluster("member2-cluster", 2),
 		UserAccountsForCluster("member3-cluster", 2))
