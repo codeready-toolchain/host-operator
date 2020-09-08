@@ -264,3 +264,26 @@ func TestGetToolchainStatusName(t *testing.T) {
 		assert.Equal(t, testName, config.GetToolchainStatusName())
 	})
 }
+
+func TestGetToolchainStatusRefreshTime(t *testing.T) {
+	key := configuration.HostEnvPrefix + "_" + "TOOLCHAINSTATUS_REFRESH_TIME"
+	resetFunc := test.UnsetEnvVarAndRestore(t, key)
+	defer resetFunc()
+
+	t.Run("default", func(t *testing.T) {
+		resetFunc := test.UnsetEnvVarAndRestore(t, key)
+		defer resetFunc()
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, cast.ToDuration("5s"), config.GetToolchainStatusRefreshTime())
+	})
+
+	t.Run("env overwrite", func(t *testing.T) {
+		restore := test.SetEnvVarAndRestore(t, key, "1s")
+		defer restore()
+
+		restore = test.SetEnvVarAndRestore(t, configuration.HostEnvPrefix+"_"+"ANY_CONFIG", "20s")
+		defer restore()
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, cast.ToDuration("1s"), config.GetToolchainStatusRefreshTime())
+	})
+}

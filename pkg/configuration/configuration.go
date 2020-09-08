@@ -116,6 +116,12 @@ const (
 
 	// varMasterUserRecordUpdateFailureThreshold specifies the number allowed failures before stopping trying to update a MasterUserRecord
 	varMasterUserRecordUpdateFailureThreshold = "masteruserrecord.update.failure.threshold"
+
+	// varToolchainStatusRefreshTime specifies how often the ToolchainStatus should load and refresh the current hosted-toolchain status
+	varToolchainStatusRefreshTime = "toolchainstatus.refresh.time"
+
+	// defaultToolchainStatusRefreshTime is the default refresh period for ToolchainStatus
+	defaultToolchainStatusRefreshTime = "5s"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -187,6 +193,7 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(varCheRouteName, defaultCheRouteName)
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
 	c.host.SetDefault(varMasterUserRecordUpdateFailureThreshold, 2) // allow 1 failure, try again and then give up if failed again
+	c.host.SetDefault(varToolchainStatusRefreshTime, defaultToolchainStatusRefreshTime)
 }
 
 // GetToolchainStatusName returns the configured name of the member status resource
@@ -262,6 +269,11 @@ func (c *Config) GetEnvironment() string {
 // GetMasterUserRecordUpdateFailureThreshold returns the number of allowed failures before stopping trying to update a MasterUserRecord
 func (c *Config) GetMasterUserRecordUpdateFailureThreshold() int {
 	return c.host.GetInt(varMasterUserRecordUpdateFailureThreshold)
+}
+
+// GetToolchainStatusRefreshTime returns the time how often the ToolchainStatus should load and refresh the current hosted-toolchain status
+func (c *Config) GetToolchainStatusRefreshTime() time.Duration {
+	return c.host.GetDuration(varToolchainStatusRefreshTime)
 }
 
 // GetAllRegistrationServiceParameters returns a map with key-values pairs of parameters that have REGISTRATION_SERVICE prefix

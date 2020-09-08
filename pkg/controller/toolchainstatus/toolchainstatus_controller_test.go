@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/codeready-toolchain/api/pkg/apis"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -32,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var requeueResult = reconcile.Result{RequeueAfter: defaultRequeueTime}
+var requeueResult = reconcile.Result{RequeueAfter: 5 * time.Second}
 
 const (
 	defaultHostOperatorName        = "host-operator"
