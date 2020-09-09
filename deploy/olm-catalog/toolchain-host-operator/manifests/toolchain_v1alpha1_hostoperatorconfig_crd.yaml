@@ -38,7 +38,7 @@ spec:
               of the host operator
             properties:
               automaticApproval:
-                description: Defines all parameters necessary for automatic approval
+                description: Keeps parameters necessary for automatic approval
                 properties:
                   activated:
                     description: Defines if the automatic approval is activated or
