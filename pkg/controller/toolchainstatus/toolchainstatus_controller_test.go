@@ -471,6 +471,27 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
+		t.Run("synchronization with the counter fails", func(t *testing.T) {
+			// given
+			memberStatus := newMemberStatusReady()
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			fakeClient.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+				return fmt.Errorf("some error")
+			}
+
+			// when
+			res, err := reconciler.Reconcile(req)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, requeueResult, res)
+			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+				HasCondition(componentsNotReady(string(counterTag))).
+				HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
+				HasMemberStatus(memberClusterSingleReady()).
+				HasRegistrationServiceStatus(registrationServiceReady())
+		})
+
 		t.Run("MemberStatus not ready is changed to ready", func(t *testing.T) {
 			// given
 			memberStatus := newMemberStatusReady()
