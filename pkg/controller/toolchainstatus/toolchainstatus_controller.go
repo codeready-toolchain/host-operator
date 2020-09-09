@@ -199,7 +199,7 @@ func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logge
 		BuildTimestamp: version.BuildTime,
 	}
 	if toolchainStatus.Status.HostOperator != nil {
-		operatorStatus.CapacityUsage.MasterUserRecordCount = toolchainStatus.Status.HostOperator.CapacityUsage.MasterUserRecordCount
+		operatorStatus.MasterUserRecordCount = toolchainStatus.Status.HostOperator.MasterUserRecordCount
 	}
 
 	// look up name of the host operator deployment
@@ -305,7 +305,7 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 		if ok {
 			toolchainStatus.Status.Members[index].MemberStatus = newMemberStatus
 			delete(members, memberStatus.ClusterName)
-		} else if memberStatus.ClusterName != "" && memberStatus.CapacityUsage.UserAccountCount > 0 {
+		} else if memberStatus.ClusterName != "" && memberStatus.UserAccountCount > 0 {
 			err := fmt.Errorf("toolchainCluster not found for member cluster %s that was previously registered in the host", memberStatus.ClusterName)
 			reqLogger.Error(err, "the member cluster seems to be removed")
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterRemovedReason, err.Error())
@@ -317,9 +317,8 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 	}
 	for clusterName, memberStatus := range members {
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
-			ClusterName:   clusterName,
-			MemberStatus:  memberStatus,
-			CapacityUsage: toolchainv1alpha1.CapacityUsageMember{},
+			ClusterName:  clusterName,
+			MemberStatus: memberStatus,
 		})
 	}
 	return allOk

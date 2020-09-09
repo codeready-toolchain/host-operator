@@ -525,11 +525,9 @@ func TestToolchainStatusConditions(t *testing.T) {
 			t.Run("with non-zero counter", func(t *testing.T) {
 				// given
 				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
-					ClusterName:  "removed-cluster",
-					MemberStatus: newMemberStatusReady().Status,
-					CapacityUsage: toolchainv1alpha1.CapacityUsageMember{
-						UserAccountCount: 10,
-					},
+					ClusterName:      "removed-cluster",
+					MemberStatus:     newMemberStatusReady().Status,
+					UserAccountCount: 10,
 				}}
 				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -550,11 +548,9 @@ func TestToolchainStatusConditions(t *testing.T) {
 			t.Run("with zero count", func(t *testing.T) {
 				// given
 				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
-					ClusterName:  "removed-cluster",
-					MemberStatus: newMemberStatusReady().Status,
-					CapacityUsage: toolchainv1alpha1.CapacityUsageMember{
-						UserAccountCount: 0,
-					},
+					ClusterName:      "removed-cluster",
+					MemberStatus:     newMemberStatusReady().Status,
+					UserAccountCount: 0,
 				}}
 				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -612,9 +608,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			counter.IncrementUserAccountCount("member-cluster")
 			toolchainStatus := newToolchainStatus()
 			toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
-				CapacityUsage: toolchainv1alpha1.CapacityUsageHost{
-					MasterUserRecordCount: 1,
-				},
+				MasterUserRecordCount: 1,
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -642,15 +636,11 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		counter.IncrementUserAccountCount("member-cluster")
 		toolchainStatus := newToolchainStatus()
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
-			CapacityUsage: toolchainv1alpha1.CapacityUsageHost{
-				MasterUserRecordCount: 8,
-			},
+			MasterUserRecordCount: 8,
 		}
 		toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
-			ClusterName: "member-cluster",
-			CapacityUsage: toolchainv1alpha1.CapacityUsageMember{
-				UserAccountCount: 6,
-			},
+			ClusterName:      "member-cluster",
+			UserAccountCount: 6,
 		}}
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 

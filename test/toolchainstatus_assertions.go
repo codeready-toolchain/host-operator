@@ -70,7 +70,7 @@ func (a *ToolchainStatusAssertion) HasMurCount(expectedCount int) *ToolchainStat
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
 	require.NotNil(a.t, *a.toolchainStatus.Status.HostOperator)
-	assert.Equal(a.t, expectedCount, a.toolchainStatus.Status.HostOperator.CapacityUsage.MasterUserRecordCount)
+	assert.Equal(a.t, expectedCount, a.toolchainStatus.Status.HostOperator.MasterUserRecordCount)
 	return a
 }
 
@@ -80,7 +80,7 @@ func (a *ToolchainStatusAssertion) HasUserAccountCount(memberClusterName string,
 	require.NotNil(a.t, *a.toolchainStatus.Status.HostOperator)
 	for _, member := range a.toolchainStatus.Status.Members {
 		if member.ClusterName == memberClusterName {
-			assert.Equal(a.t, expectedCount, member.CapacityUsage.UserAccountCount)
+			assert.Equal(a.t, expectedCount, member.UserAccountCount)
 			return a
 		}
 	}

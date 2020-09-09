@@ -71,9 +71,7 @@ func initializeCounter(t *testing.T, cl *test.FakeClient, numberOfMurs int, numb
 	toolchainStatus := &v1alpha1.ToolchainStatus{
 		Status: v1alpha1.ToolchainStatusStatus{
 			HostOperator: &v1alpha1.HostOperatorStatus{
-				CapacityUsage: v1alpha1.CapacityUsageHost{
-					MasterUserRecordCount: numberOfMurs,
-				},
+				MasterUserRecordCount: numberOfMurs,
 			},
 		},
 	}
@@ -81,10 +79,8 @@ func initializeCounter(t *testing.T, cl *test.FakeClient, numberOfMurs int, numb
 	for _, uaForCluster := range numberOfUasPerCluster {
 		clusterName, uaCount := uaForCluster()
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, v1alpha1.Member{
-			ClusterName: clusterName,
-			CapacityUsage: v1alpha1.CapacityUsageMember{
-				UserAccountCount: uaCount,
-			},
+			ClusterName:      clusterName,
+			UserAccountCount: uaCount,
 		})
 	}
 

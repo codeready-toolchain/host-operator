@@ -110,7 +110,7 @@ func GetCounts() (Counts, error) {
 func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) error {
 	cachedCounts.Lock()
 	defer cachedCounts.Unlock()
-	if toolchainStatus.Status.HostOperator == nil || toolchainStatus.Status.HostOperator.CapacityUsage.MasterUserRecordCount == 0 {
+	if toolchainStatus.Status.HostOperator == nil || toolchainStatus.Status.HostOperator.MasterUserRecordCount == 0 {
 		if err := loadCurrentNumbers(cl, toolchainStatus.Namespace); err != nil {
 			return err
 		}
@@ -119,27 +119,25 @@ func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) er
 		toolchainStatus.Status.HostOperator = &v1alpha1.HostOperatorStatus{}
 	}
 	if !cachedCounts.initialized {
-		cachedCounts.MasterUserRecordCount += toolchainStatus.Status.HostOperator.CapacityUsage.MasterUserRecordCount
+		cachedCounts.MasterUserRecordCount += toolchainStatus.Status.HostOperator.MasterUserRecordCount
 		for _, memberStatus := range toolchainStatus.Status.Members {
-			cachedCounts.UserAccountsPerClusterCounts[memberStatus.ClusterName] += memberStatus.CapacityUsage.UserAccountCount
+			cachedCounts.UserAccountsPerClusterCounts[memberStatus.ClusterName] += memberStatus.UserAccountCount
 		}
 		cachedCounts.initialized = true
 	}
 
-	toolchainStatus.Status.HostOperator.CapacityUsage.MasterUserRecordCount = cachedCounts.MasterUserRecordCount
+	toolchainStatus.Status.HostOperator.MasterUserRecordCount = cachedCounts.MasterUserRecordCount
 CachedCountsPerCluster:
 	for clusterName, count := range cachedCounts.UserAccountsPerClusterCounts {
 		for index, member := range toolchainStatus.Status.Members {
 			if clusterName == member.ClusterName {
-				toolchainStatus.Status.Members[index].CapacityUsage.UserAccountCount = count
+				toolchainStatus.Status.Members[index].UserAccountCount = count
 				continue CachedCountsPerCluster
 			}
 		}
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, v1alpha1.Member{
-			ClusterName: clusterName,
-			CapacityUsage: v1alpha1.CapacityUsageMember{
-				UserAccountCount: count,
-			},
+			ClusterName:      clusterName,
+			UserAccountCount: count,
 		})
 	}
 	return nil
