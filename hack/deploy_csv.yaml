@@ -169,6 +169,104 @@ data:
     - apiVersion: apiextensions.k8s.io/v1
       kind: CustomResourceDefinition
       metadata:
+        name: hostoperatorconfigs.toolchain.dev.openshift.com
+      spec:
+        group: toolchain.dev.openshift.com
+        names:
+          kind: HostOperatorConfig
+          listKind: HostOperatorConfigList
+          plural: hostoperatorconfigs
+          singular: hostoperatorconfig
+        scope: Namespaced
+        versions:
+        - additionalPrinterColumns:
+          - jsonPath: .spec.automaticApproval.activated
+            name: AutomaticApprovalActivated
+            type: bool
+          name: v1alpha1
+          schema:
+            openAPIV3Schema:
+              description: HostOperatorConfig keeps all configuration parameters needed
+                in host operator
+              properties:
+                apiVersion:
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  type: string
+                kind:
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  type: string
+                metadata:
+                  type: object
+                spec:
+                  description: HostOperatorConfigSpec contains all configuration parameters
+                    of the host operator
+                  properties:
+                    automaticApproval:
+                      description: Defines all parameters necessary for automatic approval
+                      properties:
+                        activated:
+                          description: Defines if the automatic approval is activated or
+                            not
+                          type: boolean
+                        maxNumberOfUsers:
+                          description: Defines what is the maximal number of users to be
+                            allowed for automatic approval. When the number is reached,
+                            then the automatic approval is stopped.
+                          properties:
+                            overall:
+                              description: It is the maximal number of users provisioned
+                                in the system overall - equals to max number of MasterUserRecords
+                                in host cluster
+                              type: integer
+                            specificPerMemberCluster:
+                              additionalProperties:
+                                type: integer
+                              description: Contains a map of maximal number of users provisioned
+                                per member cluster mapped by the cluster name - equals to
+                                max number of UserAccounts in member cluster
+                              type: object
+                          required:
+                          - overall
+                          type: object
+                        resourceCapacityThreshold:
+                          description: Contains threshold (in percentage of usage) that
+                            defines when the automatic approval should be stopped
+                          properties:
+                            defaultThreshold:
+                              description: It is the default capacity threshold (in percentage
+                                of usage) to be used for all member clusters if no special
+                                threshold is defined
+                              type: integer
+                            specificPerMemberCluster:
+                              additionalProperties:
+                                type: integer
+                              description: Contains a map of specific capacity thresholds
+                                (in percentage of usage) for particular member clusters
+                                mapped by their names
+                              type: object
+                          required:
+                          - defaultThreshold
+                          type: object
+                      required:
+                      - activated
+                      type: object
+                  type: object
+                status:
+                  description: HostOperatorConfigStatus defines the observed state of HostOperatorConfig
+                  type: object
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+          served: true
+          storage: true
+          subresources:
+            status: {}
+    - apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      metadata:
         name: masteruserrecords.toolchain.dev.openshift.com
       spec:
         group: toolchain.dev.openshift.com
@@ -2157,6 +2255,12 @@ data:
             displayName: Change Tier Request
             kind: ChangeTierRequest
             name: changetierrequests.toolchain.dev.openshift.com
+            version: v1alpha1
+          - description: HostOperatorConfig keeps all configuration parameters needed in
+              host operator
+            displayName: Host Operator Config
+            kind: HostOperatorConfig
+            name: hostoperatorconfigs.toolchain.dev.openshift.com
             version: v1alpha1
           - description: MasterUserRecord keeps all information about user, user accounts
               and namespaces provisioned in CodeReady Toolchain
