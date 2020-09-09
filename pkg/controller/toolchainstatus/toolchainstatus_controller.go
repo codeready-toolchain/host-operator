@@ -54,6 +54,7 @@ const (
 	registrationServiceTag statusComponentTag = "registrationService"
 	hostOperatorTag        statusComponentTag = "hostOperator"
 	memberConnectionsTag   statusComponentTag = "members"
+	counterTag             statusComponentTag = "MasterUserRecord and UserAccount counter"
 )
 
 // Add creates a new ToolchainStatus Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -152,11 +153,14 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 	hostOperatorStatusHandlerFunc := statusHandler{name: hostOperatorTag, handleStatus: r.hostOperatorHandleStatus}
 	registrationServiceStatusHandlerFunc := statusHandler{name: registrationServiceTag, handleStatus: r.registrationServiceHandleStatus}
 	memberStatusHandlerFunc := statusHandler{name: memberConnectionsTag, handleStatus: r.membersHandleStatus}
+	// should be executed as the last one
+	counterHandlerFunc := statusHandler{name: counterTag, handleStatus: r.synchronizeWithCounter}
 
 	statusHandlers := []statusHandler{
 		hostOperatorStatusHandlerFunc,
 		memberStatusHandlerFunc,
 		registrationServiceStatusHandlerFunc,
+		counterHandlerFunc,
 	}
 
 	// track components that are not ready
@@ -170,16 +174,20 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 		}
 	}
 
-	if err := counter.Synchronize(r.client, toolchainStatus); err != nil {
-		reqLogger.Error(err, "unable to synchronize with the counter")
-		unreadyComponents = append(unreadyComponents, "MasterUserRecord counter")
-	}
-
 	// if any components were not ready then set the overall status to not ready
 	if len(unreadyComponents) > 0 {
 		return r.setStatusNotReady(toolchainStatus, fmt.Sprintf("components not ready: %v", unreadyComponents))
 	}
 	return r.setStatusReady(toolchainStatus)
+}
+
+// synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter
+func (r *ReconcileToolchainStatus) synchronizeWithCounter(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+	if err := counter.Synchronize(r.client, toolchainStatus); err != nil {
+		reqLogger.Error(err, "unable to synchronize with the counter")
+		return false
+	}
+	return true
 }
 
 // hostOperatorHandleStatus retrieves the Deployment for the host operator and adds its status to ToolchainStatus. It returns false
