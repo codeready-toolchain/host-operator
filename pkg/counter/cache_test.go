@@ -1,12 +1,15 @@
 package counter_test
 
 import (
+	"context"
 	"sync"
 	"testing"
 
+	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	"github.com/stretchr/testify/require"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -156,6 +159,30 @@ func TestInitializeCounterByLoadingExistingMurs(t *testing.T) {
 
 	// when
 	toolchainStatus := InitializeCounterWithClient(t, fakeClient, 0)
+
+	// then
+	AssertThatCounterHas(t, 10, UserAccountsForCluster("member-cluster", 10))
+	AssertThatGivenToolchainStatus(t, toolchainStatus).
+		HasMurCount(10).
+		HasUserAccountCount("member-cluster", 10)
+}
+
+func TestShouldNotInitializeAgain(t *testing.T) {
+	// given
+	defer counter.Reset()
+	//this will be ignored by resetting when loading existing MURs
+	counter.IncrementMasterUserRecordCount()
+	counter.IncrementUserAccountCount("member")
+
+	murs := CreateMultipleMurs(t, 10)
+	fakeClient := test.NewFakeClient(t, murs...)
+	toolchainStatus := InitializeCounterWithClient(t, fakeClient, 0)
+	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-cluster")))
+	require.NoError(t, err)
+	toolchainStatus = &v1alpha1.ToolchainStatus{}
+
+	// when
+	err = counter.Synchronize(fakeClient, toolchainStatus)
 
 	// then
 	AssertThatCounterHas(t, 10, UserAccountsForCluster("member-cluster", 10))

@@ -398,6 +398,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("MemberStatus member clusters not found", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			memberStatus := newMemberStatusReady()
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncEmpty, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -416,6 +417,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("MemberStatus saying that there was no member cluster present should be removed", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			memberStatus := newMemberStatusReady()
 			toolchainStatus := newToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
@@ -438,6 +440,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("MemberStatus not found", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
@@ -455,6 +458,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("MemberStatus not ready", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			memberStatus := newMemberStatusNotReady("memberOperator")
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -473,6 +477,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("synchronization with the counter fails", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			memberStatus := newMemberStatusReady()
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 			fakeClient.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
@@ -494,6 +499,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("MemberStatus not ready is changed to ready", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			memberStatus := newMemberStatusReady()
 			toolchainStatus := newToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
@@ -524,6 +530,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 			t.Run("with non-zero counter", func(t *testing.T) {
 				// given
+				defer counter.Reset()
 				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
 					ClusterName:      "removed-cluster",
 					MemberStatus:     newMemberStatusReady().Status,
@@ -547,6 +554,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 			t.Run("with zero count", func(t *testing.T) {
 				// given
+				defer counter.Reset()
 				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
 					ClusterName:      "removed-cluster",
 					MemberStatus:     newMemberStatusReady().Status,
@@ -603,6 +611,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 
 		t.Run("sync with newly added MURs & UAs", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			counter.IncrementMasterUserRecordCount()
 			counter.IncrementMasterUserRecordCount()
 			counter.IncrementUserAccountCount("member-cluster")

@@ -110,8 +110,8 @@ func GetCounts() (Counts, error) {
 func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) error {
 	cachedCounts.Lock()
 	defer cachedCounts.Unlock()
-	if toolchainStatus.Status.HostOperator == nil || toolchainStatus.Status.HostOperator.MasterUserRecordCount == 0 {
-		if err := loadCurrentNumbers(cl, toolchainStatus.Namespace); err != nil {
+	if shouldLoadCurrentMURsAndUserAccounts(toolchainStatus) {
+		if err := loadCurrentMURsAndUserAccounts(cl, toolchainStatus.Namespace); err != nil {
 			return err
 		}
 	}
@@ -143,7 +143,13 @@ CachedCountsPerCluster:
 	return nil
 }
 
-func loadCurrentNumbers(cl client.Client, namespace string) error {
+func shouldLoadCurrentMURsAndUserAccounts(toolchainStatus *v1alpha1.ToolchainStatus) bool {
+	return (toolchainStatus.Status.HostOperator == nil ||
+		toolchainStatus.Status.HostOperator.MasterUserRecordCount == 0) &&
+		!cachedCounts.initialized
+}
+
+func loadCurrentMURsAndUserAccounts(cl client.Client, namespace string) error {
 	murs := &v1alpha1.MasterUserRecordList{}
 	if err := cl.List(context.TODO(), murs, client.InNamespace(namespace)); err != nil {
 		return err
