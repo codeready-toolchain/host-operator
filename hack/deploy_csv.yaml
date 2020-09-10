@@ -181,8 +181,8 @@ data:
         versions:
         - additionalPrinterColumns:
           - jsonPath: .spec.automaticApproval.activated
-            name: AutomaticApprovalActivated
-            type: bool
+            name: AutomaticApproval
+            type: boolean
           name: v1alpha1
           schema:
             openAPIV3Schema:
