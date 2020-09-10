@@ -186,6 +186,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAcc
 		logger.Info("UserAccount is being deleted. Waiting until deletion is complete", "member_cluster", memberCluster.Name)
 		deletionTimestamp := userAccount.GetDeletionTimestamp()
 
+		// this code block makes sure that we will requeue but only 3s after the deletion timestamp, and we should not update the counter twice
 		requeueTime := 3 * time.Second
 		timeUntilDeletion := time.Until(deletionTimestamp.Time)
 		if timeUntilDeletion+3*time.Second >= 0 {
