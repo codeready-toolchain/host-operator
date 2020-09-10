@@ -213,9 +213,9 @@ data:
                             not
                           type: boolean
                         maxNumberOfUsers:
-                          description: Defines what is the maximal number of users to be
-                            allowed for automatic approval. When the number is reached,
-                            then the automatic approval is stopped.
+                          description: Defines the maximal number of users to be allowed
+                            for automatic approval. When the number is reached, then the
+                            automatic approval is stopped.
                           properties:
                             overall:
                               description: It is the maximal number of users provisioned
@@ -229,6 +229,7 @@ data:
                                 per member cluster mapped by the cluster name - equals to
                                 max number of UserAccounts in member cluster
                               type: object
+                              x-kubernetes-map-type: atomic
                           required:
                           - overall
                           type: object
@@ -248,6 +249,7 @@ data:
                                 (in percentage of usage) for particular member clusters
                                 mapped by their names
                               type: object
+                              x-kubernetes-map-type: atomic
                           required:
                           - defaultThreshold
                           type: object
