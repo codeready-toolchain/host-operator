@@ -12,7 +12,7 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.automaticApproval.activated
+    - jsonPath: .spec.automaticApproval.enabled
       name: AutomaticApproval
       type: boolean
     name: v1alpha1
@@ -40,9 +40,8 @@ spec:
               automaticApproval:
                 description: Keeps parameters necessary for automatic approval
                 properties:
-                  activated:
-                    description: Defines if the automatic approval is activated or
-                      not
+                  enabled:
+                    description: Defines if the automatic approval is enabled or not
                     type: boolean
                   maxNumberOfUsers:
                     description: Defines the maximal number of users to be allowed
@@ -86,7 +85,7 @@ spec:
                     - defaultThreshold
                     type: object
                 required:
-                - activated
+                - enabled
                 type: object
             type: object
           status:
