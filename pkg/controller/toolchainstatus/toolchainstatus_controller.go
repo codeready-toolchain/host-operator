@@ -183,10 +183,15 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 
 // synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter
 func (r *ReconcileToolchainStatus) synchronizeWithCounter(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+	// this is temporal change for debugging
+	counts, _ := counter.GetCounts()
+	reqLogger.Info("synchronizing status %+v with counter %+v", *toolchainStatus, counts)
 	if err := counter.Synchronize(r.client, toolchainStatus); err != nil {
 		reqLogger.Error(err, "unable to synchronize with the counter")
 		return false
 	}
+
+	reqLogger.Info("after synchronizing status %+v with counter %+v", *toolchainStatus, counts)
 	return true
 }
 
