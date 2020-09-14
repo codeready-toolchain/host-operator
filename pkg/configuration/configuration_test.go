@@ -287,3 +287,27 @@ func TestGetToolchainStatusRefreshTime(t *testing.T) {
 		assert.Equal(t, cast.ToDuration("1s"), config.GetToolchainStatusRefreshTime())
 	})
 }
+
+func TestGetDeactivationDomainsExcludedList(t *testing.T) {
+	key := configuration.HostEnvPrefix + "_" + "DEACTIVATION_DOMAINS_EXCLUDED"
+	resetFunc := test.UnsetEnvVarAndRestore(t, key)
+	defer resetFunc()
+
+	t.Run("default", func(t *testing.T) {
+		resetFunc := test.UnsetEnvVarAndRestore(t, key)
+		defer resetFunc()
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, "@redhat.com", config.GetDeactivationDomainsExcludedList())
+	})
+
+	t.Run("env overwrite", func(t *testing.T) {
+		testDomains := "@foo.com @bar.com"
+		restore := test.SetEnvVarAndRestore(t, key, testDomains)
+		defer restore()
+
+		restore = test.SetEnvVarAndRestore(t, configuration.HostEnvPrefix+"_"+"ANY_CONFIG", "20s")
+		defer restore()
+		config := getDefaultConfiguration(t)
+		assert.Equal(t, testDomains, config.GetDeactivationDomainsExcludedList())
+	})
+}

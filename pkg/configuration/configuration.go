@@ -122,6 +122,12 @@ const (
 
 	// defaultToolchainStatusRefreshTime is the default refresh period for ToolchainStatus
 	defaultToolchainStatusRefreshTime = "5s"
+
+	// varDeactivationDomainsExcluded is a string of space-separated domains that should be excluded from automatic user deactivation
+	varDeactivationDomainsExcluded = "deactivation.domains.excluded"
+
+	// defaultDeactivationDomainsExcluded is the default set of domains that should be excluded from automatic user deactivation
+	defaultDeactivationDomainsExcluded = "@redhat.com"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -194,6 +200,7 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
 	c.host.SetDefault(varMasterUserRecordUpdateFailureThreshold, 2) // allow 1 failure, try again and then give up if failed again
 	c.host.SetDefault(varToolchainStatusRefreshTime, defaultToolchainStatusRefreshTime)
+	c.host.SetDefault(varDeactivationDomainsExcluded, defaultDeactivationDomainsExcluded)
 }
 
 // GetToolchainStatusName returns the configured name of the member status resource
@@ -290,4 +297,9 @@ func (c *Config) GetAllRegistrationServiceParameters() map[string]string {
 		}
 	}
 	return vars
+}
+
+// GetDeactivationDomainsExcludedList returns a string of space-separated domains that should be excluded from automatic user deactivation
+func (c *Config) GetDeactivationDomainsExcludedList() string {
+	return c.host.GetString(varDeactivationDomainsExcluded)
 }
