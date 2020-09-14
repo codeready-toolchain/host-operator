@@ -110,7 +110,7 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 
 	// Check the domain exclusion list, if the user's email matches then they cannot be automatically deactivated
 	if emailLbl, exists := usersignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
-		for _, domain := range strings.Split(r.config.GetDeactivationDomainsExcludedList(), " ") {
+		for _, domain := range r.config.GetDeactivationDomainsExcludedList() {
 			if strings.HasSuffix(emailLbl, domain) {
 				logger.Info("user cannot be automatically deactivated because they belong to the exclusion list", "domain", domain)
 				return reconcile.Result{}, nil

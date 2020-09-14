@@ -116,6 +116,8 @@ func TestReconcile(t *testing.T) {
 		// a user that belongs to the deactivation domain excluded list
 		t.Run("user deactivation excluded", func(t *testing.T) {
 			// given
+			restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DEACTIVATION_DOMAINS_EXCLUDED", "@redhat.com")
+			defer restore()
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupRedhat))
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupRedhat)
