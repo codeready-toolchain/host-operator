@@ -5,6 +5,7 @@ import (
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +20,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	userSignupOld := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userSignupName,
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Annotations: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
 			},
@@ -36,7 +37,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	userSignupNewNotChanged := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userSignupName,
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Annotations: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
 			},
@@ -53,7 +54,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	userSignupNewChanged := &v1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userSignupName,
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Annotations: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
 			},

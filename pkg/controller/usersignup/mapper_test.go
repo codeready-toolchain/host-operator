@@ -3,9 +3,9 @@ package usersignup
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
+	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
@@ -35,14 +35,14 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 
 	t.Run("test BannedUserToUserSignupMapper maps correctly", func(t *testing.T) {
 		userSignup := &v1alpha1.UserSignup{
-			ObjectMeta: newObjectMeta("", "foo@redhat.com"),
+			ObjectMeta: NewUserSignupObjectMeta("", "foo@redhat.com"),
 			Spec: v1alpha1.UserSignupSpec{
 				Username: "foo@redhat.com",
 			},
 		}
 
 		userSignup2 := &v1alpha1.UserSignup{
-			ObjectMeta: newObjectMeta("", "alice.mayweather.doe@redhat.com"),
+			ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 			Spec: v1alpha1.UserSignupSpec{
 				Username: "alice.mayweather.doe@redhat.com",
 			},
@@ -55,8 +55,8 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		}
 
 		// This is required for the mapper to function
-		os.Setenv(k8sutil.WatchNamespaceEnvVar, operatorNamespace)
-		defer os.Unsetenv(k8sutil.WatchNamespaceEnvVar)
+		restore := test.SetEnvVarAndRestore(t, k8sutil.WatchNamespaceEnvVar, test.HostOperatorNs)
+		defer restore()
 
 		req := mapper.Map(handler.MapObject{
 			Object: bannedUser,
