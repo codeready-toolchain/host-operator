@@ -140,8 +140,8 @@ github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE
 github.com/codeready-toolchain/api v0.0.0-20200827094533-2721a660825a/go.mod h1:K0M7N66c37ebaXi/uFEGY/H9oieYR8PYYnhjfueTdYs=
 github.com/codeready-toolchain/api v0.0.0-20200909202915-e74d6da8a04a h1:c3Dorc8F0aXIfVEQUWpNVusEeLIVIh9hhT6+K4jUNcQ=
 github.com/codeready-toolchain/api v0.0.0-20200909202915-e74d6da8a04a/go.mod h1:K0M7N66c37ebaXi/uFEGY/H9oieYR8PYYnhjfueTdYs=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200903074939-0e6cc580a886 h1:q+oeKCBgOij4NeO12YizGPOU/PNXPWNP39T8qXzOXzM=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20200903074939-0e6cc580a886/go.mod h1:eSq/DethrsL9Gv0uHP3gd5F1/IXebjFh437bQydL1zo=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200914140500-5543daea3180 h1:oEuHD1k6u4pEvQ6FinEcmFU1VY70hCVd/Y9clx/az1k=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200914140500-5543daea3180/go.mod h1:eSq/DethrsL9Gv0uHP3gd5F1/IXebjFh437bQydL1zo=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=
 github.com/containerd/console v0.0.0-20180822173158-c12b1e7919c1/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.2.7/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=
@@ -770,8 +770,6 @@ github.com/prometheus/prometheus v0.0.0-20180315085919-58e2a31db8de/go.mod h1:oA
 github.com/prometheus/prometheus v1.8.2-0.20200110114423-1e64d757f711/go.mod h1:7U90zPoLkWjEIQcy/rweQla82OCTUzxVHE51G3OhJbI=
 github.com/prometheus/prometheus v2.3.2+incompatible/go.mod h1:oAIUtOny2rjMX0OWN5vPR5/q/twIROJvdqnQKDdil/s=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
-github.com/rajivnathan/toolchain-common v0.0.0-20200911192942-a848038112a5 h1:PHiZQswjY3MRSY6I9jNIkoBo9hUTaBMWSWi7wjdtEjg=
-github.com/rajivnathan/toolchain-common v0.0.0-20200911192942-a848038112a5/go.mod h1:eSq/DethrsL9Gv0uHP3gd5F1/IXebjFh437bQydL1zo=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776 h1:b4BUvzMzkoRJvEbs1J3GaewlHzjxYYxVfuy8/DOU9zo=
 github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776/go.mod h1:K9f0vBA2bBiDyg9bsGDUojdwdhwUvHKX5QW0B+brWgo=
