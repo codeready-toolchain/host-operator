@@ -63,9 +63,7 @@ func TestReconcile(t *testing.T) {
 			actualTime := res.RequeueAfter
 			diff := expectedTime - actualTime
 			require.Truef(t, diff > 0 && diff < time.Second, "expectedTime: '%v' is not within 1 second of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
-			deactivated, err := isUserSignupDeactivated(cl, username)
-			require.NoError(t, err)
-			require.False(t, deactivated)
+			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 
 		// the time since the mur was provisioned is within the deactivation timeout period for the 'other' tier
@@ -83,9 +81,7 @@ func TestReconcile(t *testing.T) {
 			actualTime := res.RequeueAfter
 			diff := expectedTime - actualTime
 			require.Truef(t, diff > 0 && diff < time.Second, "expectedTime: '%v' is not within 1 second of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
-			deactivated, err := isUserSignupDeactivated(cl, username)
-			require.NoError(t, err)
-			require.False(t, deactivated)
+			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 
 		// the tier does not have a deactivationTimeoutDays set so the time since the mur was provisioned is irrelevant, the user should not be deactivated
@@ -100,9 +96,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
-			deactivated, err := isUserSignupDeactivated(cl, username)
-			require.NoError(t, err)
-			require.False(t, deactivated)
+			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 
 		// a mur that has not been provisioned yet
@@ -116,9 +110,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
-			deactivated, err := isUserSignupDeactivated(cl, username)
-			require.NoError(t, err)
-			require.False(t, deactivated)
+			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 
 		// a user that belongs to the deactivation domain excluded list
@@ -133,9 +125,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
-			deactivated, err := isUserSignupDeactivated(cl, username)
-			require.NoError(t, err)
-			require.False(t, deactivated)
+			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 	})
 
@@ -153,9 +143,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
-			deactivated, err := isUserSignupDeactivated(cl, username)
-			require.NoError(t, err)
-			require.True(t, deactivated)
+			assertThatUserSignupDeactivated(t, cl, username, true)
 		})
 
 		// the time since the mur was provisioned exceeds the deactivation timeout period for the 'other' tier
@@ -170,9 +158,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.True(t, res.RequeueAfter == 0, "requeue should not be set")
-			deactivated, err := isUserSignupDeactivated(cl, username)
-			require.NoError(t, err)
-			require.True(t, deactivated)
+			assertThatUserSignupDeactivated(t, cl, username, true)
 		})
 
 	})
@@ -190,9 +176,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.Error(t, err)
 			require.Contains(t, err.Error(), `nstemplatetiers.toolchain.dev.openshift.com "basic" not found`)
-			deactivated, err := isUserSignupDeactivated(cl, username)
-			require.NoError(t, err)
-			require.False(t, deactivated)
+			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 
 		// cannot find NSTemplateTier
@@ -207,9 +191,7 @@ func TestReconcile(t *testing.T) {
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.True(t, res.RequeueAfter == 0, "requeue should not be set")
-			deactivated, err := isUserSignupDeactivated(cl, username)
-			require.NoError(t, err)
-			require.False(t, deactivated)
+			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 
 		// cannot get UserSignup
@@ -259,9 +241,7 @@ func TestReconcile(t *testing.T) {
 			require.Contains(t, err.Error(), "usersignup update error")
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
-			deactivated, err := isUserSignupDeactivated(cl, username)
-			require.NoError(t, err)
-			require.False(t, deactivated)
+			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 	})
 
@@ -315,11 +295,9 @@ func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
 	}
 }
 
-func isUserSignupDeactivated(cl *test.FakeClient, name string) (bool, error) {
+func assertThatUserSignupDeactivated(t *testing.T, cl *test.FakeClient, name string, expected bool) {
 	userSignup := &toolchainv1alpha1.UserSignup{}
 	err := cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: operatorNamespace}, userSignup)
-	if err != nil {
-		return false, err
-	}
-	return userSignup.Spec.Deactivated, nil
+	require.NoError(t, err)
+	require.Equal(t, expected, userSignup.Spec.Deactivated)
 }
