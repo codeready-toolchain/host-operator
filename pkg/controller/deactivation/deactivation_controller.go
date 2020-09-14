@@ -122,7 +122,7 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	// The tier a mur belongs to is defined as part of its user account, since murs can in theory have multiple user accounts we will only consider the first one
+	// The tier is defined as part of its user account, since murs can in theory have multiple user accounts we will only consider the first one
 	account := mur.Spec.UserAccounts[0]
 
 	// Get the tier associated with the user account, we'll observe the deactivation timeout period from the tier spec
