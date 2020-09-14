@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -71,6 +72,7 @@ func DecrementMasterUserRecordCount(log logr.Logger) {
 func IncrementUserAccountCount(clusterName string) {
 	write(func() {
 		cachedCounts.UserAccountsPerClusterCounts[clusterName]++
+		metrics.UserSignupsGauge.Inc()
 	})
 }
 
@@ -79,6 +81,7 @@ func DecrementUserAccountCount(log logr.Logger, clusterName string) {
 	write(func() {
 		if cachedCounts.UserAccountsPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized {
 			cachedCounts.UserAccountsPerClusterCounts[clusterName]--
+			metrics.UserSignupsGauge.Dec()
 		} else {
 			log.Error(fmt.Errorf("the count of UserAccounts is zero"),
 				"unable to decrement the number of UserAccounts for the given cluster", "cluster", clusterName)
