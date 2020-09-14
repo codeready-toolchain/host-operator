@@ -2,6 +2,7 @@ package deactivation
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -118,7 +119,8 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	if len(mur.Spec.UserAccounts) == 0 {
-		logger.Error(err, "cannot determine deactivation timeout period because the mur has no associated user accounts")
+		err = fmt.Errorf("cannot determine deactivation timeout period because the mur has no associated user accounts")
+		logger.Error(err, "failed to process deactivation")
 		return reconcile.Result{}, err
 	}
 
