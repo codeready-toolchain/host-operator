@@ -28,6 +28,9 @@ import (
 
 const (
 	operatorNamespace = "toolchain-host-operator"
+
+	expectedDeactivationTimeoutBasicTier = 30
+	expectedDeactivationTimeoutOtherTier = 60
 )
 
 func TestReconcile(t *testing.T) {
@@ -36,31 +39,27 @@ func TestReconcile(t *testing.T) {
 	logf.SetLogger(logf.ZapLogger(true))
 	username := "test-user"
 
+	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
+	otherTier := tiertest.OtherTier()
+	noDeactivationTier := tiertest.TierWithoutDeactivationTimeout()
+
+	userSignupFoobar := userSignupWithEmail(username, "foo@bar.com")
+	userSignupRedhat := userSignupWithEmail(username, "foo@redhat.com")
+
 	t.Run("controller should not deactivate user", func(t *testing.T) {
 
 		// the time since the mur was provisioned is within the deactivation timeout period for the 'basic' tier
 		t.Run("usersignup should not be deactivated - basic tier (30 days)", func(t *testing.T) {
 			// given
-			expectedDeactivationTimeout := 30
-			userSignup := &toolchainv1alpha1.UserSignup{
-				ObjectMeta: newObjectMeta(username, "foo@bar.com"),
-				Spec: toolchainv1alpha1.UserSignupSpec{
-					Username:      "foo@bar.com",
-					Approved:      true,
-					TargetCluster: "east",
-				},
-			}
-			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			murProvisionedTime := &metav1.Time{Time: time.Now()}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignup))
-			initObjs := []runtime.Object{basicTier, mur, userSignup}
-			r, req, cl := prepareReconcile(t, mur.Name, initObjs...)
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
 			// when
 			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
 			res, err := r.Reconcile(req)
 			// then
 			require.NoError(t, err)
-			expectedTime := (time.Duration(expectedDeactivationTimeout*24) * time.Hour) - timeSinceProvisioned
+			expectedTime := (time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour) - timeSinceProvisioned
 			actualTime := res.RequeueAfter
 			diff := expectedTime - actualTime
 			require.Truef(t, diff > 0 && diff < time.Second, "expectedTime: '%v' is not within 1 second of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
@@ -72,26 +71,15 @@ func TestReconcile(t *testing.T) {
 		// the time since the mur was provisioned is within the deactivation timeout period for the 'other' tier
 		t.Run("usersignup should not be deactivated - other tier (60 days)", func(t *testing.T) {
 			// given
-			expectedDeactivationTimeout := 60
-			userSignup := &toolchainv1alpha1.UserSignup{
-				ObjectMeta: newObjectMeta(username, "foo@bar.com"),
-				Spec: toolchainv1alpha1.UserSignupSpec{
-					Username:      "foo@bar.com",
-					Approved:      true,
-					TargetCluster: "east",
-				},
-			}
-			otherTier := tiertest.OtherTier()
 			murProvisionedTime := &metav1.Time{Time: time.Now()}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignup))
-			initObjs := []runtime.Object{otherTier, mur, userSignup}
-			r, req, cl := prepareReconcile(t, mur.Name, initObjs...)
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar)
 			// when
 			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
 			res, err := r.Reconcile(req)
 			// then
 			require.NoError(t, err)
-			expectedTime := (time.Duration(expectedDeactivationTimeout*24) * time.Hour) - timeSinceProvisioned
+			expectedTime := (time.Duration(expectedDeactivationTimeoutOtherTier*24) * time.Hour) - timeSinceProvisioned
 			actualTime := res.RequeueAfter
 			diff := expectedTime - actualTime
 			require.Truef(t, diff > 0 && diff < time.Second, "expectedTime: '%v' is not within 1 second of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
@@ -103,19 +91,9 @@ func TestReconcile(t *testing.T) {
 		// the tier does not have a deactivationTimeoutDays set so the time since the mur was provisioned is irrelevant, the user should not be deactivated
 		t.Run("usersignup should not be deactivated - no deactivation tier", func(t *testing.T) {
 			// given
-			userSignup := &toolchainv1alpha1.UserSignup{
-				ObjectMeta: newObjectMeta(username, "foo@bar.com"),
-				Spec: toolchainv1alpha1.UserSignupSpec{
-					Username:      "foo@bar.com",
-					Approved:      true,
-					TargetCluster: "east",
-				},
-			}
-			noDeactivationTier := tiertest.TierWithoutDeactivationTimeout()
 			murProvisionedTime := &metav1.Time{Time: time.Now()}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignup))
-			initObjs := []runtime.Object{noDeactivationTier, mur, userSignup}
-			r, req, cl := prepareReconcile(t, mur.Name, initObjs...)
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			r, req, cl := prepareReconcile(t, mur.Name, noDeactivationTier, mur, userSignupFoobar)
 			// when
 			res, err := r.Reconcile(req)
 			// then
@@ -130,18 +108,8 @@ func TestReconcile(t *testing.T) {
 		// a mur that has not been provisioned yet
 		t.Run("mur without provisioned time", func(t *testing.T) {
 			// given
-			userSignup := &toolchainv1alpha1.UserSignup{
-				ObjectMeta: newObjectMeta(username, "foo@bar.com"),
-				Spec: toolchainv1alpha1.UserSignupSpec{
-					Username:      "foo@bar.com",
-					Approved:      true,
-					TargetCluster: "east",
-				},
-			}
-			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.UserIDFromUserSignup(userSignup))
-			initObjs := []runtime.Object{basicTier, mur, userSignup}
-			r, req, cl := prepareReconcile(t, mur.Name, initObjs...)
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.UserIDFromUserSignup(userSignupFoobar))
+			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
 			// when
 			res, err := r.Reconcile(req)
 			// then
@@ -156,20 +124,9 @@ func TestReconcile(t *testing.T) {
 		// a user that belongs to the deactivation domain excluded list
 		t.Run("user deactivation excluded", func(t *testing.T) {
 			// given
-			expectedDeactivationTimeout := 30
-			userSignup := &toolchainv1alpha1.UserSignup{
-				ObjectMeta: newObjectMeta(username, "foo@redhat.com"),
-				Spec: toolchainv1alpha1.UserSignupSpec{
-					Username:      "foo@redhat.com",
-					Approved:      true,
-					TargetCluster: "east",
-				},
-			}
-			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeout*24) * time.Hour)}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignup))
-			initObjs := []runtime.Object{basicTier, mur, userSignup}
-			r, req, cl := prepareReconcile(t, mur.Name, initObjs...)
+			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupRedhat))
+			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupRedhat)
 			// when
 			res, err := r.Reconcile(req)
 			// then
@@ -187,20 +144,9 @@ func TestReconcile(t *testing.T) {
 		// the time since the mur was provisioned exceeds the deactivation timeout period for the 'basic' tier
 		t.Run("usersignup should be deactivated - basic tier (30 days)", func(t *testing.T) {
 			// given
-			expectedDeactivationTimeout := 30
-			userSignup := &toolchainv1alpha1.UserSignup{
-				ObjectMeta: newObjectMeta(username, "foo@bar.com"),
-				Spec: toolchainv1alpha1.UserSignupSpec{
-					Username:      "foo@bar.com",
-					Approved:      true,
-					TargetCluster: "east",
-				},
-			}
-			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeout*24) * time.Hour)}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignup))
-			initObjs := []runtime.Object{basicTier, mur, userSignup}
-			r, req, cl := prepareReconcile(t, mur.Name, initObjs...)
+			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
 			// when
 			res, err := r.Reconcile(req)
 			// then
@@ -215,20 +161,9 @@ func TestReconcile(t *testing.T) {
 		// the time since the mur was provisioned exceeds the deactivation timeout period for the 'other' tier
 		t.Run("usersignup should be deactivated - other tier (60 days)", func(t *testing.T) {
 			// given
-			expectedDeactivationTimeout := 60
-			userSignup := &toolchainv1alpha1.UserSignup{
-				ObjectMeta: newObjectMeta(username, "foo@bar.com"),
-				Spec: toolchainv1alpha1.UserSignupSpec{
-					Username:      "foo@bar.com",
-					Approved:      true,
-					TargetCluster: "east",
-				},
-			}
-			otherTier := tiertest.OtherTier()
-			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeout*24) * time.Hour)}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignup))
-			initObjs := []runtime.Object{otherTier, mur, userSignup}
-			r, req, cl := prepareReconcile(t, mur.Name, initObjs...)
+			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutOtherTier*24) * time.Hour)}
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar)
 			// when
 			res, err := r.Reconcile(req)
 			// then
@@ -247,19 +182,9 @@ func TestReconcile(t *testing.T) {
 		// cannot find NSTemplateTier
 		t.Run("unable to get NSTemplateTier", func(t *testing.T) {
 			// given
-			userSignup := &toolchainv1alpha1.UserSignup{
-				ObjectMeta: newObjectMeta(username, "foo@bar.com"),
-				Spec: toolchainv1alpha1.UserSignupSpec{
-					Username:      "foo@bar.com",
-					Approved:      true,
-					TargetCluster: "east",
-				},
-			}
-			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			murProvisionedTime := &metav1.Time{Time: time.Now()}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignup))
-			initObjs := []runtime.Object{mur, userSignup}
-			r, req, cl := prepareReconcile(t, mur.Name, initObjs...)
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			r, req, cl := prepareReconcile(t, mur.Name, mur, userSignupFoobar)
 			// when
 			_, err := r.Reconcile(req)
 			// then
@@ -273,19 +198,9 @@ func TestReconcile(t *testing.T) {
 		// cannot find NSTemplateTier
 		t.Run("NSTemplateTier without deactivation timeout", func(t *testing.T) {
 			// given
-			userSignup := &toolchainv1alpha1.UserSignup{
-				ObjectMeta: newObjectMeta(username, "foo@bar.com"),
-				Spec: toolchainv1alpha1.UserSignupSpec{
-					Username:      "foo@bar.com",
-					Approved:      true,
-					TargetCluster: "east",
-				},
-			}
-			noDeactivationTier := tiertest.TierWithoutDeactivationTimeout()
 			murProvisionedTime := &metav1.Time{Time: time.Now()}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignup))
-			initObjs := []runtime.Object{noDeactivationTier, mur, userSignup}
-			r, req, cl := prepareReconcile(t, mur.Name, initObjs...)
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			r, req, cl := prepareReconcile(t, mur.Name, noDeactivationTier, mur, userSignupFoobar)
 			// when
 			res, err := r.Reconcile(req)
 			// then
@@ -300,20 +215,9 @@ func TestReconcile(t *testing.T) {
 		// cannot get UserSignup
 		t.Run("UserSignup get failure", func(t *testing.T) {
 			// given
-			expectedDeactivationTimeout := 30
-			userSignup := &toolchainv1alpha1.UserSignup{
-				ObjectMeta: newObjectMeta(username, "foo@bar.com"),
-				Spec: toolchainv1alpha1.UserSignupSpec{
-					Username:      "foo@bar.com",
-					Approved:      true,
-					TargetCluster: "east",
-				},
-			}
-			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeout*24) * time.Hour)}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignup))
-			initObjs := []runtime.Object{basicTier, mur, userSignup}
-			r, req, cl := prepareReconcile(t, mur.Name, initObjs...)
+			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
 			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				_, ok := obj.(*toolchainv1alpha1.UserSignup)
 				if ok {
@@ -338,20 +242,9 @@ func TestReconcile(t *testing.T) {
 		// cannot update UserSignup
 		t.Run("UserSignup update failure", func(t *testing.T) {
 			// given
-			expectedDeactivationTimeout := 30
-			userSignup := &toolchainv1alpha1.UserSignup{
-				ObjectMeta: newObjectMeta(username, "foo@bar.com"),
-				Spec: toolchainv1alpha1.UserSignupSpec{
-					Username:      "foo@bar.com",
-					Approved:      true,
-					TargetCluster: "east",
-				},
-			}
-			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeout*24) * time.Hour)}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignup))
-			initObjs := []runtime.Object{basicTier, mur, userSignup}
-			r, req, cl := prepareReconcile(t, mur.Name, initObjs...)
+			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
 			cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				_, ok := obj.(*toolchainv1alpha1.UserSignup)
 				if ok {
@@ -407,6 +300,17 @@ func newObjectMeta(name, email string) metav1.ObjectMeta {
 		},
 		Labels: map[string]string{
 			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
+		},
+	}
+}
+
+func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
+	return &toolchainv1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta(username, email),
+		Spec: toolchainv1alpha1.UserSignupSpec{
+			Username:      email,
+			Approved:      true,
+			TargetCluster: "east",
 		},
 	}
 }
