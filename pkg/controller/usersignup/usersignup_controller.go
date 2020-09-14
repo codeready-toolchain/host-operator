@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
@@ -477,6 +478,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord")
 	}
+	counter.IncrementMasterUserRecordCount()
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
 }
@@ -496,7 +498,6 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, failedStatusUpdater, err,
 			"Error deleting MasterUserRecord")
 	}
-
 	logger.Info("Deleted MasterUserRecord", "Name", mur.Name)
 	return reconcile.Result{}, nil
 }

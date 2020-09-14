@@ -7,18 +7,18 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
-
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
-	. "github.com/codeready-toolchain/host-operator/test"
-	"github.com/codeready-toolchain/host-operator/version"
+	"time"
 
 	"github.com/codeready-toolchain/api/pkg/apis"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
+	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	. "github.com/codeready-toolchain/host-operator/test"
+	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var requeueResult = reconcile.Result{RequeueAfter: defaultRequeueTime}
+var requeueResult = reconcile.Result{RequeueAfter: 5 * time.Second}
 
 const (
 	defaultHostOperatorName        = "host-operator"
@@ -398,6 +398,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("MemberStatus member clusters not found", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			memberStatus := newMemberStatusReady()
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncEmpty, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -416,6 +417,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("MemberStatus saying that there was no member cluster present should be removed", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			memberStatus := newMemberStatusReady()
 			toolchainStatus := newToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
@@ -438,6 +440,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("MemberStatus not found", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
@@ -455,6 +458,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("MemberStatus not ready", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			memberStatus := newMemberStatusNotReady("memberOperator")
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -471,8 +475,31 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
+		t.Run("synchronization with the counter fails", func(t *testing.T) {
+			// given
+			defer counter.Reset()
+			memberStatus := newMemberStatusReady()
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			fakeClient.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+				return fmt.Errorf("some error")
+			}
+
+			// when
+			res, err := reconciler.Reconcile(req)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, requeueResult, res)
+			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+				HasCondition(componentsNotReady(string(counterTag))).
+				HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
+				HasMemberStatus(memberClusterSingleReady()).
+				HasRegistrationServiceStatus(registrationServiceReady())
+		})
+
 		t.Run("MemberStatus not ready is changed to ready", func(t *testing.T) {
 			// given
+			defer counter.Reset()
 			memberStatus := newMemberStatusReady()
 			toolchainStatus := newToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
@@ -501,10 +528,97 @@ func TestToolchainStatusConditions(t *testing.T) {
 			memberStatus := newMemberStatusReady()
 			toolchainStatus := newToolchainStatus()
 
-			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
-				ClusterName:  "removed-cluster",
-				MemberStatus: newMemberStatusReady().Status,
-			}}
+			t.Run("with non-zero counter", func(t *testing.T) {
+				// given
+				defer counter.Reset()
+				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
+					ClusterName:      "removed-cluster",
+					MemberStatus:     newMemberStatusReady().Status,
+					UserAccountCount: 10,
+				}}
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+
+				// when
+				res, err := reconciler.Reconcile(req)
+
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, requeueResult, res)
+				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+					HasCondition(componentsNotReady(string(memberConnectionsTag))).
+					HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
+					HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady("removed-cluster", "MemberToolchainClusterRemoved",
+						"toolchainCluster not found for member cluster removed-cluster that was previously registered in the host")).
+					HasRegistrationServiceStatus(registrationServiceReady())
+			})
+
+			t.Run("with zero count", func(t *testing.T) {
+				// given
+				defer counter.Reset()
+				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
+					ClusterName:      "removed-cluster",
+					MemberStatus:     newMemberStatusReady().Status,
+					UserAccountCount: 0,
+				}}
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+
+				// when
+				res, err := reconciler.Reconcile(req)
+
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, requeueResult, res)
+				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+					HasCondition(componentsReady()).
+					HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
+					HasMemberStatus(memberClusterSingleReady()).
+					HasRegistrationServiceStatus(registrationServiceReady())
+			})
+		})
+	})
+}
+
+func TestSynchronizationWithCounter(t *testing.T) {
+	// given
+	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
+	defer restore()
+	requestName := defaultToolchainStatusName
+	registrationService := newRegistrationServiceReady()
+	hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+	registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+	toolchainStatus := newToolchainStatus()
+	memberStatus := newMemberStatusReady()
+
+	t.Run("Load all current MURs & UAs", func(t *testing.T) {
+		// given
+		defer counter.Reset()
+		initObjects := append(CreateMultipleMurs(t, 10), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, initObjects...)
+
+		// when
+		res, err := reconciler.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, requeueResult, res)
+		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+			HasCondition(componentsReady()).
+			HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
+			HasMurCount(10).
+			HasMemberStatus(memberClusterSingleReady()).
+			HasUserAccountCount("member-cluster", 10).
+			HasRegistrationServiceStatus(registrationServiceReady())
+
+		t.Run("sync with newly added MURs & UAs", func(t *testing.T) {
+			// given
+			defer counter.Reset()
+			counter.IncrementMasterUserRecordCount()
+			counter.IncrementMasterUserRecordCount()
+			counter.IncrementUserAccountCount("member-cluster")
+			toolchainStatus := newToolchainStatus()
+			toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
+				MasterUserRecordCount: 1,
+			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
@@ -514,13 +628,45 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(memberConnectionsTag))).
+				HasCondition(componentsReady()).
 				HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
-				HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady("removed-cluster", "MemberToolchainClusterRemoved",
-					"toolchainCluster not found for member cluster removed-cluster that was previously registered in the host")).
+				HasMurCount(12).
+				HasMemberStatus(memberClusterSingleReady()).
+				HasUserAccountCount("member-cluster", 11).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
+	})
+
+	t.Run("initialize the cache using the MURs & UAs from ToolchainStatus", func(t *testing.T) {
+		// given
+		defer counter.Reset()
+		counter.IncrementMasterUserRecordCount()
+		counter.IncrementUserAccountCount("member-cluster")
+		toolchainStatus := newToolchainStatus()
+		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
+			MasterUserRecordCount: 8,
+		}
+		toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
+			ClusterName:      "member-cluster",
+			UserAccountCount: 6,
+		}}
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+
+		// when
+		res, err := reconciler.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, requeueResult, res)
+		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+			HasCondition(componentsReady()).
+			HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
+			HasMurCount(9).
+			HasMemberStatus(memberClusterSingleReady()).
+			HasUserAccountCount("member-cluster", 7).
+			HasRegistrationServiceStatus(registrationServiceReady())
+		AssertThatCounterHas(t, 9, UserAccountsForCluster("member-cluster", 7))
 	})
 }
 
