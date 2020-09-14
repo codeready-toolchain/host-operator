@@ -92,20 +92,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 var _ reconcile.Reconciler = &ReconcileUserSignup{}
 
-// NewSignupError returns a new Signup error
-func NewSignupError(msg string) SignupError {
-	return SignupError{message: msg}
-}
-
-// SignupError an error that occurs during user signup
-type SignupError struct {
-	message string
-}
-
-func (err SignupError) Error() string {
-	return err.message
-}
-
 // ReconcileUserSignup reconciles a UserSignup object
 type ReconcileUserSignup struct {
 	*statusUpdater
@@ -219,7 +205,7 @@ func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, us
 	murs := murList.Items
 	// If we found more than one MasterUserRecord, then die
 	if len(murs) > 1 {
-		err := NewSignupError("multiple matching MasterUserRecord resources found")
+		err := fmt.Errorf("multiple matching MasterUserRecord resources found")
 		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "Multiple MasterUserRecords found")
 	} else if len(murs) == 1 {
 		mur := &murs[0]
@@ -300,8 +286,7 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 					return statusError
 				}
 
-				err = NewSignupError("no target clusters available")
-				return err
+				return fmt.Errorf("no target clusters available")
 			}
 		}
 
@@ -332,7 +317,7 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 	replaced := transformUsername(instance.Spec.Username)
 	validationErrors := validation.IsQualifiedName(replaced)
 	if len(validationErrors) > 0 {
-		return "", NewSignupError(fmt.Sprintf("transformed username [%s] is invalid", replaced))
+		return "", fmt.Errorf(fmt.Sprintf("transformed username [%s] is invalid", replaced))
 	}
 
 	transformed := replaced
@@ -351,13 +336,13 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] == instance.Name {
 			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
-			return "", NewSignupError(fmt.Sprintf("could not generate compliant username as MasterUserRecord [%s] already exists", mur.Name))
+			return "", fmt.Errorf(fmt.Sprintf("could not generate compliant username as MasterUserRecord [%s] already exists", mur.Name))
 		}
 
 		transformed = fmt.Sprintf("%s-%d", replaced, i)
 	}
 
-	return "", NewSignupError(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
+	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
 }
 
 func transformUsername(username string) string {

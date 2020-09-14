@@ -1714,8 +1714,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	_, err := r.Reconcile(req)
 
 	// then
-	require.Error(t, err)
-	require.IsType(t, SignupError{}, err)
+	assert.EqualError(t, err, "no target clusters available")
 	AssertThatCounterHas(t, 1)
 }
 
