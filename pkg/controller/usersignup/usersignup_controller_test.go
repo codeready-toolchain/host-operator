@@ -477,7 +477,9 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
 		})
+
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 	AssertThatCounterHas(t, 1)
 }
 
@@ -518,7 +520,9 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
 		})
+
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 	AssertThatCounterHas(t, 1)
 }
 
@@ -657,6 +661,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+
 		assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -784,6 +789,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+
 		assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -875,9 +881,11 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounterHas(t, 1)
+
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func TestUserSignupMURReadFails(t *testing.T) {
@@ -913,9 +921,11 @@ func TestUserSignupMURReadFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	AssertThatCounterHas(t, 1)
+
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
@@ -952,9 +962,11 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounterHas(t, 1)
+
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
@@ -990,9 +1002,11 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounterHas(t, 1)
+
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
@@ -1029,9 +1043,11 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounterHas(t, 1)
+
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {
@@ -1545,6 +1561,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 
 		err = r.client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
+
 		assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 		// Confirm the status is now set to Banned
@@ -1817,9 +1834,11 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, SignupError{}, err)
 	AssertThatCounterHas(t, 1)
+
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func TestBannedUserToUserSignupMapper(t *testing.T) {
