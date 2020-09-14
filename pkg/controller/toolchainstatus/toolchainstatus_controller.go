@@ -10,6 +10,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
+	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -53,6 +54,7 @@ const (
 	registrationServiceTag statusComponentTag = "registrationService"
 	hostOperatorTag        statusComponentTag = "hostOperator"
 	memberConnectionsTag   statusComponentTag = "members"
+	counterTag             statusComponentTag = "MasterUserRecord and UserAccount counter"
 )
 
 // Add creates a new ToolchainStatus Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -151,15 +153,18 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 	hostOperatorStatusHandlerFunc := statusHandler{name: hostOperatorTag, handleStatus: r.hostOperatorHandleStatus}
 	registrationServiceStatusHandlerFunc := statusHandler{name: registrationServiceTag, handleStatus: r.registrationServiceHandleStatus}
 	memberStatusHandlerFunc := statusHandler{name: memberConnectionsTag, handleStatus: r.membersHandleStatus}
+	// should be executed as the last one
+	counterHandlerFunc := statusHandler{name: counterTag, handleStatus: r.synchronizeWithCounter}
 
 	statusHandlers := []statusHandler{
 		hostOperatorStatusHandlerFunc,
 		memberStatusHandlerFunc,
 		registrationServiceStatusHandlerFunc,
+		counterHandlerFunc,
 	}
 
 	// track components that are not ready
-	unreadyComponents := []string{}
+	var unreadyComponents []string
 
 	// retrieve component statuses eg. ToolchainCluster, host deployment
 	for _, statusHandler := range statusHandlers {
@@ -176,6 +181,15 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 	return r.setStatusReady(toolchainStatus)
 }
 
+// synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter
+func (r *ReconcileToolchainStatus) synchronizeWithCounter(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+	if err := counter.Synchronize(r.client, toolchainStatus); err != nil {
+		reqLogger.Error(err, "unable to synchronize with the counter")
+		return false
+	}
+	return true
+}
+
 // hostOperatorHandleStatus retrieves the Deployment for the host operator and adds its status to ToolchainStatus. It returns false
 // if the deployment is not determined to be ready
 func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
@@ -183,6 +197,9 @@ func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logge
 		Version:        version.Version,
 		Revision:       version.Commit,
 		BuildTimestamp: version.BuildTime,
+	}
+	if toolchainStatus.Status.HostOperator != nil {
+		operatorStatus.MasterUserRecordCount = toolchainStatus.Status.HostOperator.MasterUserRecordCount
 	}
 
 	// look up name of the host operator deployment
@@ -288,7 +305,7 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 		if ok {
 			toolchainStatus.Status.Members[index].MemberStatus = newMemberStatus
 			delete(members, memberStatus.ClusterName)
-		} else if memberStatus.ClusterName != "" {
+		} else if memberStatus.ClusterName != "" && memberStatus.UserAccountCount > 0 {
 			err := fmt.Errorf("toolchainCluster not found for member cluster %s that was previously registered in the host", memberStatus.ClusterName)
 			reqLogger.Error(err, "the member cluster seems to be removed")
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterRemovedReason, err.Error())
