@@ -26,6 +26,7 @@ objects:
       - create
       - get
       - update
+      - list
     - apiGroups:
       - toolchain.dev.openshift.com
       resources:
