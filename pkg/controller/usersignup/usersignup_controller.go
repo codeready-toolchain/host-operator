@@ -291,6 +291,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			return r.DeleteMasterUserRecord(&mur, instance, reqLogger, r.setStatusDeactivating, r.setStatusFailedToDeleteMUR)
 		}
 
+		// if the UserSignup doesn't have the approved label set, then update it
+		if err := r.setApprovedLabel(reqLogger, instance, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
+			return reconcile.Result{}, err
+		}
+
 		// check if anything in the MUR chould be migrated/fixed
 		if changed, err := migrateOrFixMurIfNecessary(&mur, nstemplateTier); err != nil {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
@@ -340,13 +345,6 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				return reconcile.Result{}, statusError
 			}
 		}
-		if instance.Labels[toolchainv1alpha1.UserSignupApprovedLabelKey] != toolchainv1alpha1.UserSignupApprovedLabelValueTrue {
-			instance.Labels[toolchainv1alpha1.UserSignupApprovedLabelKey] = toolchainv1alpha1.UserSignupApprovedLabelValueTrue
-			if err := r.client.Update(context.TODO(), instance); err != nil {
-				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToUpdateApprovedLabel, err,
-					"unable to update approved label at UserSignup resource")
-			}
-		}
 
 		// Check if the user requires phone verification, and do not proceed further if they do
 		if instance.Spec.VerificationRequired {
@@ -374,6 +372,10 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			}
 		}
 
+		if err := r.setApprovedLabel(reqLogger, instance, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
+			return reconcile.Result{}, err
+		}
+
 		// Provision the MasterUserRecord
 		err = r.provisionMasterUserRecord(instance, targetCluster, nstemplateTier, reqLogger)
 		if err != nil {
@@ -384,6 +386,17 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileUserSignup) setApprovedLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
+	if userSignup.Labels[toolchainv1alpha1.UserSignupApprovedLabelKey] != value {
+		userSignup.Labels[toolchainv1alpha1.UserSignupApprovedLabelKey] = value
+		if err := r.client.Update(context.TODO(), userSignup); err != nil {
+			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateApprovedLabel, err,
+				"unable to update approved label at UserSignup resource")
+		}
+	}
+	return nil
 }
 
 func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchainv1alpha1.NSTemplateTier, error) {
@@ -491,6 +504,9 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 	err := r.updateStatus(logger, userSignup, inProgressStatusUpdater)
 	if err != nil {
 		return reconcile.Result{}, nil
+	}
+	if err := r.setApprovedLabel(logger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueFalse); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	err = r.client.Delete(context.TODO(), mur)
