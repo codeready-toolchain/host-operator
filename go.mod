@@ -30,7 +30,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.6.0
 )
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20200923090207-76fb069067fa
+replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20200923161014-eff5f8414aee
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
