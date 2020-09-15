@@ -108,6 +108,10 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	}, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces)
 	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
 	assert.Equal(t, "basic-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
+
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 	AssertThatCounterHas(t, 2)
 }
 
@@ -150,6 +154,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	// Lookup the user signup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
+	assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.client.List(context.TODO(), murs)
@@ -201,6 +206,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+		assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			v1alpha1.Condition{
@@ -225,6 +231,7 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userID.String(),
 			Namespace: operatorNamespace,
+			Labels:    map[string]string{"toolchain.dev.openshift.com/approved": "false"},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -246,7 +253,7 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 	// Lookup the user signup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
 			Type:    v1alpha1.UserSignupComplete,
@@ -271,6 +278,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 			},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "abcdef0123456789",
+				"toolchain.dev.openshift.com/approved":            "false",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -293,13 +301,57 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	// Lookup the user signup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
 			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "InvalidEmailHashLabel",
 			Message: "hash is invalid",
+		})
+	AssertThatCounterHas(t, 1)
+}
+
+func TestUpdateOfApprovedLabelFails(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+			Approved: false,
+		},
+	}
+
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	fakeClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		return fmt.Errorf("some error")
+	}
+
+	createMemberCluster(t, r.client, "member1", ready)
+	defer clearMemberClusters(r.client)
+
+	// when
+	_, err := r.Reconcile(req)
+
+	// then
+	require.Error(t, err)
+
+	// Lookup the user signup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "UnableToUpdateApprovedLabel",
+			Message: "some error",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -316,6 +368,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 			Annotations: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
 			},
+			Labels: map[string]string{"toolchain.dev.openshift.com/approved": "false"},
 		},
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
@@ -337,7 +390,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	// Lookup the user signup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
 			Type:    v1alpha1.UserSignupComplete,
@@ -384,6 +437,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 			Reason:  "NoTemplateTierAvailable",
 			Message: "nstemplatetiers.toolchain.dev.openshift.com \"basic\" not found",
 		})
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 	AssertThatCounterHas(t, 1)
 }
 
@@ -424,6 +478,9 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
 		})
+
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 	AssertThatCounterHas(t, 1)
 }
 
@@ -464,6 +521,9 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
 		})
+
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 	AssertThatCounterHas(t, 1)
 }
 
@@ -494,6 +554,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	// Lookup the userSignup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
+	assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.client.List(context.TODO(), murs)
@@ -526,7 +587,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
-
+		assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupApproved,
@@ -568,6 +629,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	// Lookup the userSignup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
+	assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.client.List(context.TODO(), murs)
@@ -600,6 +662,8 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+
+		assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			v1alpha1.Condition{
@@ -642,6 +706,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	// Lookup the userSignup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	// There should be no MasterUserRecords
 	murs := &v1alpha1.MasterUserRecordList{}
@@ -691,6 +756,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	// Lookup the userSignup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
+	assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.client.List(context.TODO(), murs)
@@ -724,6 +790,8 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+
+		assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			v1alpha1.Condition{
@@ -764,6 +832,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	// Lookup the userSignup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
@@ -813,6 +882,11 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounterHas(t, 1)
+
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func TestUserSignupMURReadFails(t *testing.T) {
@@ -848,6 +922,11 @@ func TestUserSignupMURReadFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	AssertThatCounterHas(t, 1)
+
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
@@ -884,6 +963,11 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounterHas(t, 1)
+
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
@@ -919,6 +1003,11 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounterHas(t, 1)
+
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
@@ -955,6 +1044,11 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounterHas(t, 1)
+
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {
@@ -970,6 +1064,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 			},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+				"toolchain.dev.openshift.com/approved":            "true",
 			},
 		},
 		Spec: v1alpha1.UserSignupSpec{
@@ -1005,6 +1100,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	instance := &v1alpha1.UserSignup{}
 	err = r.client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
+	assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	require.Equal(t, mur.Name, instance.Status.CompliantUsername)
 	test.AssertContainsCondition(t, instance.Status.Conditions, v1alpha1.Condition{
@@ -1031,7 +1127,10 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: operatorNamespace,
-			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
+			Labels: map[string]string{
+				v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String(),
+				"toolchain.dev.openshift.com/approved":  "true",
+			},
 		},
 	}
 
@@ -1053,6 +1152,15 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	require.Len(t, murs.Items, 2)
 	AssertThatCounterHas(t, 2)
 
+	key := types.NamespacedName{
+		Namespace: operatorNamespace,
+		Name:      userSignup.Name,
+	}
+	instance := &v1alpha1.UserSignup{}
+	err = r.client.Get(context.TODO(), key, instance)
+	require.NoError(t, err)
+	assert.Equal(t, "true", instance.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
 		_, err = r.Reconcile(req)
@@ -1060,13 +1168,9 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		key := types.NamespacedName{
-			Namespace: operatorNamespace,
-			Name:      userSignup.Name,
-		}
-		instance := &v1alpha1.UserSignup{}
 		err = r.client.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
+		assert.Equal(t, "true", instance.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 		require.Equal(t, "foo-2", instance.Status.CompliantUsername)
 
@@ -1140,6 +1244,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			CompliantUsername: "john-doe",
 		},
 	}
+	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 	key := test.NamespacedName(operatorNamespace, userSignup.Name)
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
@@ -1158,6 +1263,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.NoError(t, err)
 		err = r.client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
+		assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 		// Confirm the status is now set to Deactivating
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1196,6 +1302,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		// Lookup the UserSignup
 		err = r.client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
+		assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 		// Confirm the status has been set to Deactivated
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1236,6 +1343,7 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 			CompliantUsername: "edward-jones",
 		},
 	}
+	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 	key := test.NamespacedName(operatorNamespace, userSignup.Name)
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
@@ -1254,6 +1362,7 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 		require.NoError(t, err)
 		err = r.client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
+		assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 		// Confirm the status is still set to Deactivating
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1309,6 +1418,7 @@ func TestUserSignupBanned(t *testing.T) {
 	require.NoError(t, err)
 	err = r.client.Get(context.TODO(), test.NamespacedName(operatorNamespace, userSignup.Name), userSignup)
 	require.NoError(t, err)
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	// Confirm the status is set to Banned
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1349,6 +1459,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	require.NoError(t, err)
 	err = r.client.Get(context.TODO(), test.NamespacedName(operatorNamespace, userSignup.Name), userSignup)
 	require.NoError(t, err)
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	// Confirm the status is set to VerificationRequired
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1395,6 +1506,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 			CompliantUsername: "foo",
 		},
 	}
+	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 
 	bannedUser := &toolchainv1alpha1.BannedUser{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1420,6 +1532,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	key := test.NamespacedName(operatorNamespace, userSignup.Name)
 	err = r.client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	// Confirm the status is set to Banning
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1449,6 +1562,8 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 
 		err = r.client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
+
+		assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 		// Confirm the status is now set to Banned
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1521,6 +1636,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			CompliantUsername: "alice-mayweather",
 		},
 	}
+	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 
 	key := test.NamespacedName(operatorNamespace, userSignup.Name)
 
@@ -1547,6 +1663,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	// Lookup the UserSignup
 	err = r.client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	// Confirm the status is set to UnableToDeleteMUR
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1618,6 +1735,7 @@ func TestDeathBy100Signups(t *testing.T) {
 	// Lookup the user signup again
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
+	assert.Equal(t, "true", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
@@ -1716,6 +1834,11 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	// then
 	assert.EqualError(t, err, "no target clusters available")
 	AssertThatCounterHas(t, 1)
+
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request, *test.FakeClient) {
@@ -1870,6 +1993,7 @@ func newObjectMeta(name, email string) metav1.ObjectMeta {
 		},
 		Labels: map[string]string{
 			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
+			"toolchain.dev.openshift.com/approved":            "false",
 		},
 	}
 }

@@ -220,6 +220,17 @@ func (u *statusUpdater) setStatusVerificationRequired(userSignup *toolchainv1alp
 		})
 }
 
+func (u *statusUpdater) setStatusFailedToUpdateApprovedLabel(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupUnableToUpdateApprovedLabelReason,
+			Message: message,
+		})
+}
+
 func (u *statusUpdater) updateStatus(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error) error {
 

@@ -229,6 +229,11 @@ func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, us
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 		}
 
+		// if the UserSignup doesn't have the approved label set, then update it
+		if err := r.setApprovedLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
+			return true, err
+		}
+
 		// check if anything in the MUR chould be migrated/fixed
 		if changed, err := migrateOrFixMurIfNecessary(mur, nstemplateTier); err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
@@ -299,6 +304,9 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 		if err != nil {
 			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 		}
+		if err := r.setApprovedLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
+			return err
+		}
 
 		// Provision the MasterUserRecord
 		err = r.provisionMasterUserRecord(userSignup, targetCluster, nstemplateTier, reqLogger)
@@ -307,6 +315,17 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 		}
 	} else {
 		return r.updateStatus(reqLogger, userSignup, r.setStatusPendingApproval)
+	}
+	return nil
+}
+
+func (r *ReconcileUserSignup) setApprovedLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
+	if userSignup.Labels[toolchainv1alpha1.UserSignupApprovedLabelKey] != value {
+		userSignup.Labels[toolchainv1alpha1.UserSignupApprovedLabelKey] = value
+		if err := r.client.Update(context.TODO(), userSignup); err != nil {
+			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateApprovedLabel, err,
+				"unable to update approved label at UserSignup resource")
+		}
 	}
 	return nil
 }
@@ -416,6 +435,9 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 	err := r.updateStatus(logger, userSignup, inProgressStatusUpdater)
 	if err != nil {
 		return nil
+	}
+	if err := r.setApprovedLabel(logger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueFalse); err != nil {
+		return err
 	}
 
 	err = r.client.Delete(context.TODO(), mur)
