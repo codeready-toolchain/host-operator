@@ -193,6 +193,10 @@ func (r *ReconcileUserSignup) isUserBanned(reqLogger logr.Logger, userSignup *to
 	return banned, nil
 }
 
+// ensureMurIfAlreadyExists checks if there is already a MUR for the given UserSignup.
+// If there is already one then it returns 'true' as the first returned value, but before doing that it checks if the MUR should be deleted or not
+// or if the MUR requires some migration changes or additional fixes.
+// If no MUR for the given UserSignup is found, then it returns 'false' as the first returned value.
 func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, banned bool) (bool, error) {
 	// List all MasterUserRecord resources that have a UserID label equal to the UserSignup.Name
 	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
