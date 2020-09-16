@@ -5,7 +5,7 @@ registration-service:
     #enabled: 'true'
     enabled: 'false'
     excluded-email-domains: 'redhat.com,acme.com'
-  twilio:
+  #twilio:
     #account-sid: ''
     #auth-token: ''
     #from-number: ''
