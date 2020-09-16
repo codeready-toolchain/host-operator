@@ -12,6 +12,7 @@ import (
 
 // PreviousBasicTemplates previous templates for the "basic" tier
 var PreviousBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
+	DeactivationTimeoutDays: 30,
 	Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 		{
 			TemplateRef: "basic-code-123456old",
@@ -30,6 +31,7 @@ var PreviousBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 
 // CurrentBasicTemplates current templates for the "basic" tier
 var CurrentBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
+	DeactivationTimeoutDays: 30,
 	Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 		{
 			TemplateRef: "basic-code-123456new",
@@ -120,6 +122,7 @@ func OtherTier() *toolchainv1alpha1.NSTemplateTier {
 			Name:      "other",
 		},
 		Spec: toolchainv1alpha1.NSTemplateTierSpec{
+			DeactivationTimeoutDays: 60,
 			Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 				{
 					TemplateRef: "other-code-123456a",
@@ -133,6 +136,32 @@ func OtherTier() *toolchainv1alpha1.NSTemplateTier {
 			},
 			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
 				TemplateRef: "other-clusterresources-123456a",
+			},
+		},
+	}
+}
+
+// TierWithoutDeactivationTimeout returns a NSTemplateTier with no deactivation timeout set
+func TierWithoutDeactivationTimeout() *toolchainv1alpha1.NSTemplateTier {
+	return &toolchainv1alpha1.NSTemplateTier{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "toolchain-host-operator",
+			Name:      "no-deactivation",
+		},
+		Spec: toolchainv1alpha1.NSTemplateTierSpec{
+			Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
+				{
+					TemplateRef: "no-deactivation-code-123456a",
+				},
+				{
+					TemplateRef: "no-deactivation-dev-123456a",
+				},
+				{
+					TemplateRef: "no-deactivation-stage-123456a",
+				},
+			},
+			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+				TemplateRef: "no-deactivation-clusterresources-123456a",
 			},
 		},
 	}
