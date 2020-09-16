@@ -215,7 +215,7 @@ objects:
       auth_client.config_raw: ${AUTH_CLIENT_CONFIG_RAW}
       auth_client.public_keys_url: ${AUTH_CLIENT_PUBLIC_KEYS_URL}
       verification.enabled: ${VERIFICATION_ENABLED}
-      verification.excluded_email_domains: ${VERIFICATION_EMAIL_DOMAINS_EXCLUDED}
+      verification.excluded_email_domains: ${VERIFICATION_EXCLUDED_EMAIL_DOMAINS}
       verification.message_template: ${VERIFICATION_MESSAGE_TEMPLATE}
       verification.daily_limit: ${VERIFICATION_DAILY_LIMIT}
       verification.attempts_allowed: ${VERIFICATION_ATTEMPTS_ALLOWED}
