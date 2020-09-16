@@ -395,6 +395,10 @@ func TestToolchainStatusConditions(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
 		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		resourceUsage := map[string]int{
+			"worker": 60,
+			"master": 45,
+		}
 
 		t.Run("MemberStatus member clusters not found", func(t *testing.T) {
 			// given
@@ -411,7 +415,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasCondition(componentsNotReady(string(memberConnectionsTag))).Exists().
 				HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
-				HasMemberStatus(memberClusterSingleNotReady("", "NoMemberClustersFound", "no member clusters found")).
+				HasMemberStatus(memberClusterSingleNotReady("", "NoMemberClustersFound", "no member clusters found", nil)).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
@@ -421,7 +425,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			memberStatus := newMemberStatusReady()
 			toolchainStatus := newToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
-				memberClusterSingleNotReady("", "NoMemberClustersFound", "no member clusters found"),
+				memberClusterSingleNotReady("", "NoMemberClustersFound", "no member clusters found", nil),
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -452,7 +456,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasCondition(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
-				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")).
+				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found", nil)).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
@@ -471,7 +475,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasCondition(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
-				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "ComponentsNotReady", "components not ready: [memberOperator]")).
+				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "ComponentsNotReady", "components not ready: [memberOperator]", resourceUsage)).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
@@ -503,7 +507,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			memberStatus := newMemberStatusReady()
 			toolchainStatus := newToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
-				memberClusterSingleNotReady("member-cluster", "ComponentsNotReady", "some cool error"),
+				memberClusterSingleNotReady("member-cluster", "ComponentsNotReady", "some cool error", resourceUsage),
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -548,7 +552,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					HasCondition(componentsNotReady(string(memberConnectionsTag))).
 					HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
 					HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady("removed-cluster", "MemberToolchainClusterRemoved",
-						"toolchainCluster not found for member cluster removed-cluster that was previously registered in the host")).
+						"toolchainCluster not found for member cluster removed-cluster that was previously registered in the host", nil)).
 					HasRegistrationServiceStatus(registrationServiceReady())
 			})
 
@@ -757,6 +761,12 @@ func newMemberStatus(condition *toolchainv1alpha1.Condition) *toolchainv1alpha1.
 		Spec: toolchainv1alpha1.MemberStatusSpec{},
 		Status: toolchainv1alpha1.MemberStatusStatus{
 			Conditions: []toolchainv1alpha1.Condition{*condition},
+			ResourceUsage: toolchainv1alpha1.ResourceUsage{
+				MemoryUsagePerNodeRole: map[string]int{
+					"worker": 60,
+					"master": 45,
+				},
+			},
 		},
 	}
 }
@@ -904,11 +914,17 @@ func memberClusterSingleReady() toolchainv1alpha1.Member {
 					Reason: "AllComponentsReady",
 				},
 			},
+			ResourceUsage: toolchainv1alpha1.ResourceUsage{
+				MemoryUsagePerNodeRole: map[string]int{
+					"worker": 60,
+					"master": 45,
+				},
+			},
 		},
 	}
 }
 
-func memberClusterSingleNotReady(name, reason, msg string) toolchainv1alpha1.Member {
+func memberClusterSingleNotReady(name, reason, msg string, resourceUsage map[string]int) toolchainv1alpha1.Member {
 	return toolchainv1alpha1.Member{
 		ClusterName: name,
 		MemberStatus: toolchainv1alpha1.MemberStatusStatus{
@@ -919,6 +935,9 @@ func memberClusterSingleNotReady(name, reason, msg string) toolchainv1alpha1.Mem
 					Reason:  reason,
 					Message: msg,
 				},
+			},
+			ResourceUsage: toolchainv1alpha1.ResourceUsage{
+				MemoryUsagePerNodeRole: resourceUsage,
 			},
 		},
 	}
