@@ -122,6 +122,10 @@ const (
 
 	// defaultToolchainStatusRefreshTime is the default refresh period for ToolchainStatus
 	defaultToolchainStatusRefreshTime = "5s"
+
+	// varDeactivationDomainsExcluded is a string of comma-separated domains that should be excluded from automatic user deactivation
+	// For example: "@redhat.com,@ibm.com"
+	varDeactivationDomainsExcluded = "deactivation.domains.excluded"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -290,4 +294,11 @@ func (c *Config) GetAllRegistrationServiceParameters() map[string]string {
 		}
 	}
 	return vars
+}
+
+// GetDeactivationDomainsExcludedList returns a string of comma-separated user email domains that should be excluded from automatic user deactivation
+func (c *Config) GetDeactivationDomainsExcludedList() []string {
+	return strings.FieldsFunc(c.host.GetString(varDeactivationDomainsExcluded), func(c rune) bool {
+		return c == ','
+	})
 }
