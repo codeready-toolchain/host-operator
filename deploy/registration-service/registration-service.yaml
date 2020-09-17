@@ -140,6 +140,16 @@ objects:
                     configMapKeyRef:
                       name: registration-service
                       key: verification.enabled
+                - name: REGISTRATION_VERIFICATION_DAILY_LIMIT
+                  valueFrom:
+                    configMapKeyRef:
+                      name: registration-service
+                      key: verification.daily_limit
+                - name: REGISTRATION_VERIFICATION_ATTEMPTS_ALLOWED
+                  valueFrom:
+                    configMapKeyRef:
+                      name: registration-service
+                      key: verification.attempts_allowed
                 - name: REGISTRATION_VERIFICATION_CODE_EXPIRES_IN_MIN
                   valueFrom:
                     configMapKeyRef:
@@ -155,16 +165,6 @@ objects:
                     configMapKeyRef:
                       name: registration-service
                       key: verification.message_template
-                - name: REGISTRATION_VERIFICATION_DAILY_LIMIT
-                  valueFrom:
-                    configMapKeyRef:
-                      name: registration-service
-                      key: verification.daily_limit
-                - name: REGISTRATION_VERIFICATION_ATTEMPTS_ALLOWED
-                  valueFrom:
-                    configMapKeyRef:
-                      name: registration-service
-                      key: verification.attempts_allowed
                 - name: REGISTRATION_TWILIO_FROM_NUMBER
                   valueFrom:
                     configMapKeyRef:
@@ -221,11 +221,11 @@ objects:
       auth_client.config_raw: ${AUTH_CLIENT_CONFIG_RAW}
       auth_client.public_keys_url: ${AUTH_CLIENT_PUBLIC_KEYS_URL}
       verification.enabled: ${VERIFICATION_ENABLED}
+      verification.daily_limit: ${VERIFICATION_DAILY_LIMIT}
+      verification.attempts_allowed: ${VERIFICATION_ATTEMPTS_ALLOWED}
       verification.code_expiry: ${VERIFICATION_CODE_EXPIRES_IN_MIN}
       verification.excluded_email_domains: ${VERIFICATION_EXCLUDED_EMAIL_DOMAINS}
       verification.message_template: ${VERIFICATION_MESSAGE_TEMPLATE}
-      verification.daily_limit: ${VERIFICATION_DAILY_LIMIT}
-      verification.attempts_allowed: ${VERIFICATION_ATTEMPTS_ALLOWED}
       twilio.from_number: ${TWILIO_FROM_NUMBER}
 parameters:
   - name: NAMESPACE
@@ -255,4 +255,3 @@ parameters:
   - name: VERIFICATION_MESSAGE_TEMPLATE
     value: ''
   - name: TWILIO_FROM_NUMBER
-    value: ''
