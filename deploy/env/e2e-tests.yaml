@@ -2,8 +2,7 @@ registration-service:
   environment: 'e2e-tests'
   replicas: 2
   verification:
-    #enabled: 'true'
-    enabled: 'false'
+    enabled: 'true'
     excluded-email-domains: 'redhat.com,acme.com'
   #twilio:
     #account-sid: ''
