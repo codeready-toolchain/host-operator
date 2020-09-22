@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
@@ -21,6 +22,7 @@ import (
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -324,7 +326,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, simply set the status
 	// and return
 	if instance.Spec.Deactivated {
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
+		err := r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
+		if err == nil {
+			err = r.sendDeactivatedNotification(reqLogger, instance)
+		}
+		return reconcile.Result{}, err
 	}
 
 	// Check the user approval policy.
@@ -811,6 +817,29 @@ func (r *ReconcileUserSignup) updateStatusConditions(userSignup *toolchainv1alph
 		return nil
 	}
 	return r.client.Status().Update(context.TODO(), userSignup)
+}
+
+func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+	notification := &toolchainv1alpha1.Notification{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      userSignup.Spec.Username + "-deactivated",
+			Namespace: userSignup.Namespace,
+		},
+		Spec: toolchainv1alpha1.NotificationSpec{
+			UserID:   userSignup.Spec.Username,
+			Template: notificationtemplates.UserDeactivated.Name,
+		},
+	}
+
+	err := controllerutil.SetControllerReference(userSignup, notification, r.scheme)
+	if err != nil {
+		return err
+	}
+
+	if err := r.client.Create(context.TODO(), notification); err != nil {
+		return err
+	}
+	return nil
 }
 
 // validateEmailHash calculates an md5 hash value for the provided userEmail string, and compares it to the provided
