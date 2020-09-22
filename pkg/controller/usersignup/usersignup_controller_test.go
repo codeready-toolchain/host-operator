@@ -1284,6 +1284,12 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
 		AssertThatCounterHas(t, 1)
+
+		// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
+		notifications := &v1alpha1.NotificationList{}
+		err = r.client.List(context.TODO(), notifications)
+		require.NoError(t, err)
+		require.Len(t, notifications.Items, 0)
 	})
 
 	t.Run("when MUR doesn't exist, then the condition should be set to Deactivated", func(t *testing.T) {
@@ -1316,6 +1322,14 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				Reason: "Deactivated",
 			})
 		AssertThatCounterHas(t, 2)
+
+		// A deactivated notification should have been created
+		notification := &v1alpha1.Notification{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername + "-deactivated", Namespace: userSignup.Namespace}, notification)
+		require.NoError(t, err)
+		require.Equal(t, "john-doe-deactivated", notification.Name)
+		require.Equal(t, userSignup.Name, notification.Spec.UserID)
+		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
 }
 
@@ -1383,6 +1397,12 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
 		AssertThatCounterHas(t, 1)
+
+		// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
+		notifications := &v1alpha1.NotificationList{}
+		err = r.client.List(context.TODO(), notifications)
+		require.NoError(t, err)
+		require.Len(t, notifications.Items, 0)
 	})
 }
 
@@ -1678,6 +1698,14 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			Message: "unable to delete mur",
 		})
 	AssertThatCounterHas(t, 1)
+
+	// There should not be a notification created since the mur deletion failed even if reconciled again
+	_, err = r.Reconcile(req)
+	require.Error(t, err)
+	notifications := &v1alpha1.NotificationList{}
+	err = r.client.List(context.TODO(), notifications)
+	require.NoError(t, err)
+	require.Len(t, notifications.Items, 0)
 }
 
 func TestDeathBy100Signups(t *testing.T) {

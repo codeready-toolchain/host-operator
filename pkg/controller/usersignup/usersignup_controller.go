@@ -822,11 +822,11 @@ func (r *ReconcileUserSignup) updateStatusConditions(userSignup *toolchainv1alph
 func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      userSignup.Spec.Username + "-deactivated",
+			Name:      userSignup.Status.CompliantUsername + "-deactivated",
 			Namespace: userSignup.Namespace,
 		},
 		Spec: toolchainv1alpha1.NotificationSpec{
-			UserID:   userSignup.Spec.Username,
+			UserID:   userSignup.Name,
 			Template: notificationtemplates.UserDeactivated.Name,
 		},
 	}
