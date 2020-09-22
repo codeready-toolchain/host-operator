@@ -833,12 +833,16 @@ func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, us
 
 	err := controllerutil.SetControllerReference(userSignup, notification, r.scheme)
 	if err != nil {
+		logger.Error(err, "Failed to set owner reference for deactivation notification")
 		return err
 	}
 
 	if err := r.client.Create(context.TODO(), notification); err != nil {
+		logger.Error(err, "Failed create deactivation notification resource")
 		return err
 	}
+
+	logger.Info("Deactivation notification resource created")
 	return nil
 }
 
