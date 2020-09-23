@@ -190,6 +190,11 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 
 	AssertThatCounterHas(t, 2)
@@ -217,6 +222,11 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "NotificationCRNotCreated",
 			})
 	})
 	AssertThatCounterHas(t, 2)
@@ -260,6 +270,11 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 			Status:  v1.ConditionFalse,
 			Reason:  "MissingUserEmailAnnotation",
 			Message: "missing annotation at usersignup",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -308,6 +323,11 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 			Status:  v1.ConditionFalse,
 			Reason:  "InvalidEmailHashLabel",
 			Message: "hash is invalid",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -352,6 +372,11 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 			Status:  v1.ConditionFalse,
 			Reason:  "UnableToUpdateApprovedLabel",
 			Message: "some error",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -397,6 +422,11 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 			Status:  v1.ConditionFalse,
 			Reason:  "MissingEmailHashLabel",
 			Message: "missing label at usersignup",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -436,6 +466,11 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 			Status:  v1.ConditionFalse,
 			Reason:  "NoTemplateTierAvailable",
 			Message: "nstemplatetiers.toolchain.dev.openshift.com \"basic\" not found",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 	AssertThatCounterHas(t, 1)
@@ -477,6 +512,11 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
@@ -520,6 +560,11 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
@@ -572,6 +617,11 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 	AssertThatCounterHas(t, 2)
 
@@ -597,6 +647,11 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "NotificationCRNotCreated",
 			})
 		AssertThatCounterHas(t, 2)
 	})
@@ -647,6 +702,11 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 	AssertThatCounterHas(t, 2)
 
@@ -674,6 +734,11 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "NotificationCRNotCreated",
 			})
 		AssertThatCounterHas(t, 2)
 	})
@@ -724,6 +789,11 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -775,6 +845,11 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 	AssertThatCounterHas(t, 2)
 
@@ -802,6 +877,11 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "NotificationCRNotCreated",
 			})
 		AssertThatCounterHas(t, 2)
 	})
@@ -844,6 +924,11 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -967,7 +1052,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
-
+	assert.Empty(t, userSignup.Status.Conditions)
 }
 
 func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
@@ -1007,6 +1092,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+	assert.Empty(t, userSignup.Status.Conditions)
 
 }
 
@@ -1321,6 +1407,11 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 				Reason: "Deactivated",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionTrue,
+				Reason: "NotificationCRCreated",
 			})
 		AssertThatCounterHas(t, 2)
 
@@ -1331,6 +1422,212 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.Equal(t, "john-doe-deactivated", notification.Name)
 		require.Equal(t, userSignup.Name, notification.Spec.UserID)
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
+	})
+
+}
+
+func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("", "john.doe@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			Username:    "john.doe@redhat.com",
+			Deactivated: true,
+		},
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
+				{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+				},
+				{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "john-doe",
+		},
+	}
+	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+
+	t.Run("when the deactivation notification cannot be created", func(t *testing.T) {
+		// given
+		InitializeCounter(t, 2)
+		defer counter.Reset()
+		r, req, cl := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+		cl.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+			switch obj.(type) {
+			case *v1alpha1.Notification:
+				return errors.New("unable to create deactivation notification")
+			default:
+				return cl.Create(ctx, obj)
+			}
+		}
+
+		// when
+		_, err := r.Reconcile(req)
+
+		// then
+		require.Error(t, err)
+		require.Equal(t, "Failed to create user deactivation notification: unable to create deactivation notification", err.Error())
+
+		// Lookup the UserSignup
+		err = r.client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+
+		// Confirm the status has been set to Deactivated
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+			},
+			v1alpha1.Condition{
+				Type:    v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status:  v1.ConditionFalse,
+				Reason:  "NotificationCRCreationFailed",
+				Message: "unable to create deactivation notification",
+			})
+		AssertThatCounterHas(t, 2)
+
+		// A deactivated notification should have been created
+		notification := &v1alpha1.Notification{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername + "-deactivated", Namespace: userSignup.Namespace}, notification)
+		require.Error(t, err)
+		require.Equal(t, "notifications.toolchain.dev.openshift.com \"john-doe-deactivated\" not found", err.Error())
+	})
+}
+
+func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
+	// given
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: newObjectMeta("", "john.doe@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			Username:    "john.doe@redhat.com",
+			Deactivated: false,
+		},
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
+				{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+				},
+				{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+				{
+					Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+					Status: v1.ConditionTrue,
+					Reason: "NotificationCRCreated",
+				},
+			},
+			CompliantUsername: "john-doe",
+		},
+	}
+	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+
+	t.Run("when reactivating the usersignup successfully", func(t *testing.T) {
+		// given
+		InitializeCounter(t, 2)
+		defer counter.Reset()
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+		createMemberCluster(t, r.client, "member1", ready)
+		defer clearMemberClusters(r.client)
+
+		// when
+		_, err := r.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+
+		// Lookup the UserSignup
+		err = r.client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+
+		// Confirm the status has been set to Deactivated
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "NotificationCRNotCreated",
+			})
+		AssertThatCounterHas(t, 3)
+
+		// There should not be a notification created because the user was reactivated
+		notifications := &v1alpha1.NotificationList{}
+		err = r.client.List(context.TODO(), notifications)
+		require.NoError(t, err)
+		require.Len(t, notifications.Items, 0)
+	})
+
+	t.Run("when resetting the usersignup deactivation notification status fails", func(t *testing.T) {
+		// given
+		InitializeCounter(t, 2)
+		defer counter.Reset()
+		r, req, cl := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+
+		cl.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			switch obj.(type) {
+			case *v1alpha1.UserSignup:
+				return errors.New("failed to update UserSignup status")
+			default:
+				return cl.Client.Update(ctx, obj)
+			}
+		}
+
+		// when
+		_, err := r.Reconcile(req)
+
+		// then
+		require.Error(t, err)
+		require.Equal(t, "failed to update UserSignup status", err.Error())
+
+		// Lookup the UserSignup
+		err = r.client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+
+		// Confirm the status has been set to Deactivated
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "NotificationCRNotCreated",
+			})
+		AssertThatCounterHas(t, 2)
+
+		// A deactivation notification should not be created because this is the reactivation case
+		notifications := &v1alpha1.NotificationList{}
+		err = r.client.List(context.TODO(), notifications)
+		require.NoError(t, err)
+		require.Len(t, notifications.Items, 0)
 	})
 }
 
@@ -1404,6 +1701,33 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 		err = r.client.List(context.TODO(), notifications)
 		require.NoError(t, err)
 		require.Len(t, notifications.Items, 0)
+
+		// 2nd reconcile should handle creating the deactivation notification
+		res, err := r.Reconcile(req)
+		require.NoError(t, err)
+		require.Equal(t, reconcile.Result{}, res)
+
+		// lookup the userSignup and check the conditions
+		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+
+		// Confirm the status has been set to Deactivated and the deactivation notification is created
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: "Deactivated",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionTrue,
+				Reason: "NotificationCRCreated",
+			})
 	})
 }
 
@@ -1446,6 +1770,11 @@ func TestUserSignupBanned(t *testing.T) {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionTrue,
 			Reason: "Banned",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 
 	// Confirm that no MUR is created
@@ -1492,6 +1821,11 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 
 	// Confirm that no MUR is created
@@ -1565,6 +1899,11 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		})
 
 	murs := &v1alpha1.MasterUserRecordList{}
@@ -1596,6 +1935,11 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "NotificationCRNotCreated",
 			})
 
 		// Confirm that there is still no MUR
@@ -1777,6 +2121,11 @@ func TestDeathBy100Signups(t *testing.T) {
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
+		},
 	)
 	AssertThatCounterHas(t, 100)
 }
@@ -1836,6 +2185,11 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 			Status:  v1.ConditionFalse,
 			Reason:  "InvalidMURState",
 			Message: "multiple matching MasterUserRecord resources found",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "NotificationCRNotCreated",
 		},
 	)
 	AssertThatCounterHas(t, 1)
