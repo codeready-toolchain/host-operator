@@ -6,6 +6,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/changetierrequest"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/deactivation"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/notification"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
@@ -30,7 +31,7 @@ func init() {
 	addToManagerFuncs = append(addToManagerFuncs, toolchainstatus.Add)
 	addToManagerFuncs = append(addToManagerFuncs, templateupdaterequest.Add)
 	addToManagerFuncs = append(addToManagerFuncs, deactivation.Add)
-
+	addToManagerFuncs = append(addToManagerFuncs, hostoperatorconfig.Add)
 }
 
 // AddToManager adds all Controllers to the Manager

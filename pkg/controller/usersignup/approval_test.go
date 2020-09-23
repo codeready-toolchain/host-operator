@@ -30,7 +30,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("with one cluster and enough capacity", func(t *testing.T) {
 		// given
-		hostOperatorConfig := NewHostOperatorConfig(
+		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().
 				Enabled().
 				MaxUsersNumber(2000, PerMemberCluster("member1", 1000)).
@@ -49,7 +49,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("with two clusters and enough capacity in both of them so it returns the first one", func(t *testing.T) {
 		// given
-		hostOperatorConfig := NewHostOperatorConfig(
+		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().
 				Enabled().
 				MaxUsersNumber(2000, PerMemberCluster("member1", 1000), PerMemberCluster("member2", 1000)).
@@ -68,7 +68,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("with two clusters where the first one reaches resource threshold", func(t *testing.T) {
 		// given
-		hostOperatorConfig := NewHostOperatorConfig(
+		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().
 				Enabled().
 				MaxUsersNumber(2000, PerMemberCluster("member1", 1000), PerMemberCluster("member2", 1000)).
@@ -87,7 +87,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("with two clusters where the first one reaches max number of UserAccounts", func(t *testing.T) {
 		// given
-		hostOperatorConfig := NewHostOperatorConfig(
+		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().
 				Enabled().
 				MaxUsersNumber(2000, PerMemberCluster("member1", 6000), PerMemberCluster("member2", 1000)).
@@ -106,7 +106,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("with two clusters, none of them is returned since it reaches max number of MURs", func(t *testing.T) {
 		// given
-		hostOperatorConfig := NewHostOperatorConfig(
+		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().
 				Enabled().
 				MaxUsersNumber(1200, PerMemberCluster("member1", 6000), PerMemberCluster("member2", 1000)).
@@ -125,7 +125,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("with two clusters and enough capacity only in second one using the default values", func(t *testing.T) {
 		// given
-		hostOperatorConfig := NewHostOperatorConfig(
+		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().
 				Enabled().
 				MaxUsersNumber(2000).
@@ -144,7 +144,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("with two clusters and enough capacity in none of them using the default memory values", func(t *testing.T) {
 		// given
-		hostOperatorConfig := NewHostOperatorConfig(
+		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().
 				Enabled().
 				MaxUsersNumber(5000).
@@ -163,7 +163,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled and user not approved", func(t *testing.T) {
 		// given
-		fakeClient := NewFakeClient(t, toolchainStatus, NewHostOperatorConfig())
+		fakeClient := NewFakeClient(t, toolchainStatus, NewHostOperatorConfigWithReset(t))
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
@@ -206,7 +206,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user approved but no cluster has capacity", func(t *testing.T) {
 		// given
-		hostOperatorConfig := NewHostOperatorConfig(
+		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().ResourceCapThreshold(50))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
@@ -223,7 +223,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user approved and second cluster has capacity", func(t *testing.T) {
 		// given
-		hostOperatorConfig := NewHostOperatorConfig(
+		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().
 				MaxUsersNumber(2000).
 				ResourceCapThreshold(62))
@@ -242,7 +242,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled, user approved, no cluster has capacity but targetCluster is specified", func(t *testing.T) {
 		// given
-		hostOperatorConfig := NewHostOperatorConfig(
+		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().MaxUsersNumber(1000))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
@@ -259,7 +259,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("with two clusters and enough capacity in both of them but first one is not ready", func(t *testing.T) {
 		// given
-		hostOperatorConfig := NewHostOperatorConfig(
+		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().
 				Enabled().
 				MaxUsersNumber(2000, PerMemberCluster("member1", 1000), PerMemberCluster("member2", 1000)).
@@ -296,7 +296,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 		t.Run("unable to read ToolchainStatus", func(t *testing.T) {
 			// given
-			fakeClient := NewFakeClient(t, toolchainStatus, NewHostOperatorConfig(AutomaticApproval().Enabled()))
+			fakeClient := NewFakeClient(t, toolchainStatus, NewHostOperatorConfigWithReset(t, AutomaticApproval().Enabled()))
 			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				if _, ok := obj.(*v1alpha1.ToolchainStatus); ok {
 					return fmt.Errorf("some error")
@@ -322,7 +322,7 @@ func TestGetClusterIfApprovedWhenCounterIsNotInitialized(t *testing.T) {
 	require.NoError(t, err)
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
-	fakeClient := NewFakeClient(t, toolchainStatus, NewHostOperatorConfig(AutomaticApproval().Enabled()))
+	fakeClient := NewFakeClient(t, toolchainStatus, NewHostOperatorConfigWithReset(t, AutomaticApproval().Enabled()))
 	clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 	// when

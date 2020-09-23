@@ -1,6 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
+	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
 	github.com/codeready-toolchain/api v0.0.0-20201009115725-7795b1315bab
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20200930070243-e124e69e7a0d
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
