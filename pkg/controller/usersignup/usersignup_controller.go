@@ -8,18 +8,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
-	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
-
 	"github.com/go-logr/logr"
-	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	controllerPredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -44,87 +37,9 @@ var (
 	onlyNumbers       = regexp.MustCompile("^[0-9]*$")
 )
 
-type BannedUserToUserSignupMapper struct {
-	client client.Client
-}
-
 type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error
 
 const defaultTierName = "basic"
-
-func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Request {
-	if bu, ok := obj.Object.(*toolchainv1alpha1.BannedUser); ok {
-		// look-up any associated UserSignup using the BannedUser's "toolchain.dev.openshift.com/email-hash" label
-		if emailHashLbl, exists := bu.Labels[toolchainv1alpha1.BannedUserEmailHashLabelKey]; exists {
-
-			labels := map[string]string{toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHashLbl}
-			opts := client.MatchingLabels(labels)
-			userSignupList := &toolchainv1alpha1.UserSignupList{}
-			if err := b.client.List(context.TODO(), userSignupList, opts); err != nil {
-				log.Error(err, "Could not list UserSignup resources with label value", toolchainv1alpha1.UserSignupUserEmailHashLabelKey, emailHashLbl)
-				return nil
-			}
-
-			req := []reconcile.Request{}
-
-			ns, err := k8sutil.GetWatchNamespace()
-			if err != nil {
-				log.Error(err, "Could not determine watched namespace")
-				return nil
-			}
-
-			for _, userSignup := range userSignupList.Items {
-				req = append(req, reconcile.Request{
-					NamespacedName: types.NamespacedName{Namespace: ns, Name: userSignup.Name},
-				})
-			}
-
-			return req
-		}
-	}
-	// the obj was not a BannedUser or it did not have the required label.
-	return []reconcile.Request{}
-}
-
-var _ handler.Mapper = BannedUserToUserSignupMapper{}
-
-type UserSignupChangedPredicate struct {
-	controllerPredicate.Funcs
-}
-
-// Update implements default UpdateEvent filter for validating generation change
-func (p UserSignupChangedPredicate) Update(e event.UpdateEvent) bool {
-	if e.MetaOld == nil {
-		log.Error(nil, "Update event has no old metadata", "event", e)
-		return false
-	}
-	if e.ObjectOld == nil {
-		log.Error(nil, "Update event has no old runtime object to update", "event", e)
-		return false
-	}
-	if e.ObjectNew == nil {
-		log.Error(nil, "Update event has no new runtime object for update", "event", e)
-		return false
-	}
-	if e.MetaNew == nil {
-		log.Error(nil, "Update event has no new metadata", "event", e)
-		return false
-	}
-	if e.MetaNew.GetGeneration() == e.MetaOld.GetGeneration() &&
-		!p.AnnotationChanged(e, toolchainv1alpha1.UserSignupUserEmailAnnotationKey) &&
-		!p.LabelChanged(e, toolchainv1alpha1.UserSignupUserEmailHashLabelKey) {
-		return false
-	}
-	return true
-}
-
-func (p UserSignupChangedPredicate) AnnotationChanged(e event.UpdateEvent, annotationName string) bool {
-	return e.MetaOld.GetAnnotations()[annotationName] != e.MetaNew.GetAnnotations()[annotationName]
-}
-
-func (p UserSignupChangedPredicate) LabelChanged(e event.UpdateEvent, labelName string) bool {
-	return e.MetaOld.GetLabels()[labelName] != e.MetaNew.GetLabels()[labelName]
-}
 
 // Add creates a new UserSignup Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -134,7 +49,12 @@ func Add(mgr manager.Manager, _ *configuration.Config) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileUserSignup{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileUserSignup{
+		statusUpdater: &statusUpdater{
+			client: mgr.GetClient(),
+		},
+		scheme: mgr.GetScheme(),
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -174,25 +94,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 var _ reconcile.Reconciler = &ReconcileUserSignup{}
 
-// NewSignupError returns a new Signup error
-func NewSignupError(msg string) SignupError {
-	return SignupError{message: msg}
-}
-
-// SignupError an error that occurs during user signup
-type SignupError struct {
-	message string
-}
-
-func (err SignupError) Error() string {
-	return err.message
-}
-
 // ReconcileUserSignup reconciles a UserSignup object
 type ReconcileUserSignup struct {
-	// This client, initialized using mgr.Client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client client.Client
+	*statusUpdater
 	scheme *runtime.Scheme
 }
 
@@ -219,102 +123,14 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
-	// Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
-	// is based on the user's emailHash value - if there is a match, and the e-mail addresses are equal, then the
-	// user is banned.
-	banned := false
 
-	// Lookup the user email annotation
-	if emailLbl, exists := instance.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
-
-		// Lookup the email hash label
-		if emailHashLbl, exists := instance.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
-
-			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
-			opts := client.MatchingLabels(labels)
-			bannedUserList := &toolchainv1alpha1.BannedUserList{}
-
-			// Query BannedUser for resources that match the same email hash
-			if err = r.client.List(context.TODO(), bannedUserList, opts); err != nil {
-				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToReadBannedUsers, err, "Failed to query BannedUsers")
-			}
-
-			// One last check to confirm that the e-mail addresses match also (in case of the infinitesimal chance of a hash collision)
-			for _, bannedUser := range bannedUserList.Items {
-				if bannedUser.Spec.Email == emailLbl {
-					banned = true
-					break
-				}
-			}
-
-			hashIsValid := validateEmailHash(emailLbl, emailHashLbl)
-			if !hashIsValid {
-				return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidEmailHash)
-			}
-		} else {
-			// If there isn't an email-hash label, then the state is invalid
-			reqLogger.Info("missing label on usersignup", "label", toolchainv1alpha1.UserSignupUserEmailHashLabelKey)
-			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusMissingEmailHash)
-		}
-	} else {
-		reqLogger.Info("missing annotation on usersignup", "annotation", toolchainv1alpha1.UserSignupUserEmailAnnotationKey)
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusInvalidMissingUserEmailAnnotation)
-	}
-
-	// List all MasterUserRecord resources that have a UserID label equal to the UserSignup.Name
-	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: instance.Name}
-	opts := client.MatchingLabels(labels)
-	murList := &toolchainv1alpha1.MasterUserRecordList{}
-	if err = r.client.List(context.TODO(), murList, opts); err != nil {
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Failed to list MasterUserRecords")
-	}
-
-	// look-up the `basic` NSTemplateTier to get the NS templates
-	nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, request.Namespace)
+	banned, err := r.isUserBanned(reqLogger, instance)
 	if err != nil {
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusNoTemplateTierAvailable, err, "")
+		return reconcile.Result{}, err
 	}
 
-	murs := murList.Items
-	// If we found more than one MasterUserRecord, then die
-	if len(murs) > 1 {
-		err = NewSignupError("multiple matching MasterUserRecord resources found")
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "Multiple MasterUserRecords found")
-	} else if len(murs) == 1 {
-		mur := murs[0]
-
-		// If the user has been banned, then we need to delete the MUR
-		if banned {
-			return r.DeleteMasterUserRecord(&mur, instance, reqLogger, r.setStatusBanning, r.setStatusFailedToDeleteMUR)
-		}
-
-		// If the user has been deactivated, then we need to delete the MUR
-		if instance.Spec.Deactivated {
-			return r.DeleteMasterUserRecord(&mur, instance, reqLogger, r.setStatusDeactivating, r.setStatusFailedToDeleteMUR)
-		}
-
-		// if the UserSignup doesn't have the approved label set, then update it
-		if err := r.setApprovedLabel(reqLogger, instance, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// check if anything in the MUR chould be migrated/fixed
-		if changed, err := migrateOrFixMurIfNecessary(&mur, nstemplateTier); err != nil {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
-
-		} else if changed {
-			if err := r.client.Update(context.TODO(), &mur); err != nil {
-				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
-			}
-			return reconcile.Result{}, nil
-		}
-
-		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
-		// conditions to complete and set the compliant username and return
-		reqLogger.Info("MasterUserRecord exists, setting UserSignup status to 'Complete'")
-		// Use compliantUsernameUpdater to properly handle when the master user record is created or updated
-		c := completeStatusUpdater{CompliantUsername: mur.Name, R: r}
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, c.updateCompleteStatus)
+	if exists, err := r.ensureMurIfAlreadyExists(reqLogger, instance, banned); exists || err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is Banned, simply set the status
@@ -333,35 +149,147 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
+	return reconcile.Result{}, r.ensureNewMurIfApproved(reqLogger, instance)
+}
+
+// Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
+// is based on the user's emailHash value - if there is a match, and the e-mail addresses are equal, then the
+// user is banned.
+func (r *ReconcileUserSignup) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) (bool, error) {
+	banned := false
+	// Lookup the user email annotation
+	if emailLbl, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
+
+		// Lookup the email hash label
+		if emailHashLbl, exists := userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
+
+			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
+			opts := client.MatchingLabels(labels)
+			bannedUserList := &toolchainv1alpha1.BannedUserList{}
+
+			// Query BannedUser for resources that match the same email hash
+			if err := r.client.List(context.TODO(), bannedUserList, opts); err != nil {
+				return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToReadBannedUsers, err, "Failed to query BannedUsers")
+			}
+
+			// One last check to confirm that the e-mail addresses match also (in case of the infinitesimal chance of a hash collision)
+			for _, bannedUser := range bannedUserList.Items {
+				if bannedUser.Spec.Email == emailLbl {
+					banned = true
+					break
+				}
+			}
+
+			hashIsValid := validateEmailHash(emailLbl, emailHashLbl)
+			if !hashIsValid {
+				err := fmt.Errorf("hash is invalid")
+				return banned, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidEmailHash, err, "the email hash '%s' is invalid ", emailHashLbl)
+			}
+		} else {
+			// If there isn't an email-hash label, then the state is invalid
+			err := fmt.Errorf("missing label at usersignup")
+			return banned, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusMissingEmailHash, err,
+				"the required label '%s' is not present", toolchainv1alpha1.UserSignupUserEmailHashLabelKey)
+		}
+	} else {
+		err := fmt.Errorf("missing annotation at usersignup")
+		return banned, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMissingUserEmailAnnotation, err,
+			"the required annotation '%s' is not present", toolchainv1alpha1.UserSignupUserEmailAnnotationKey)
+	}
+	return banned, nil
+}
+
+// ensureMurIfAlreadyExists checks if there is already a MUR for the given UserSignup.
+// If there is already one then it returns 'true' as the first returned value, but before doing that it checks if the MUR should be deleted or not
+// or if the MUR requires some migration changes or additional fixes.
+// If no MUR for the given UserSignup is found, then it returns 'false' as the first returned value.
+func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, banned bool) (bool, error) {
+	// List all MasterUserRecord resources that have a UserID label equal to the UserSignup.Name
+	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+	opts := client.MatchingLabels(labels)
+	murList := &toolchainv1alpha1.MasterUserRecordList{}
+	if err := r.client.List(context.TODO(), murList, opts); err != nil {
+		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "Failed to list MasterUserRecords")
+	}
+
+	murs := murList.Items
+	// If we found more than one MasterUserRecord, then die
+	if len(murs) > 1 {
+		err := fmt.Errorf("multiple matching MasterUserRecord resources found")
+		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "Multiple MasterUserRecords found")
+	} else if len(murs) == 1 {
+		mur := &murs[0]
+		// If the user has been banned, then we need to delete the MUR
+		if banned {
+			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusBanning, r.setStatusFailedToDeleteMUR)
+		}
+
+		// If the user has been deactivated, then we need to delete the MUR
+		if userSignup.Spec.Deactivated {
+			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusDeactivating, r.setStatusFailedToDeleteMUR)
+		}
+
+		// look-up the `basic` NSTemplateTier to get the NS templates
+		nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, userSignup.Namespace)
+		if err != nil {
+			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
+		}
+
+		// if the UserSignup doesn't have the approved label set, then update it
+		if err := r.setApprovedLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
+			return true, err
+		}
+
+		// check if anything in the MUR chould be migrated/fixed
+		if changed, err := migrateOrFixMurIfNecessary(mur, nstemplateTier); err != nil {
+			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
+
+		} else if changed {
+			if err := r.client.Update(context.TODO(), mur); err != nil {
+				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
+			}
+			return true, nil
+		}
+
+		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
+		// conditions to complete and set the compliant username and return
+		reqLogger.Info("MasterUserRecord exists, setting UserSignup status to 'Complete'")
+		// Use compliantUsernameUpdater to properly handle when the master user record is created or updated
+		return true, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(mur.Name))
+	}
+	return false, nil
+}
+
+func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	// Check the user approval policy.
-	userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig(request.Namespace)
+	userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig(userSignup.Namespace)
 	if err != nil {
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusFailedToReadUserApprovalPolicy, err, "")
+		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToReadUserApprovalPolicy, err, "")
 	}
 
 	// If the signup has been explicitly approved (by an admin), or the user approval policy is set to automatic,
 	// then proceed with the signup
-	if instance.Spec.Approved || userApprovalPolicy == configuration.UserApprovalPolicyAutomatic {
-		if instance.Spec.Approved {
-			if statusError := r.updateStatus(reqLogger, instance, r.setStatusApprovedByAdmin); statusError != nil {
-				return reconcile.Result{}, statusError
+	if userSignup.Spec.Approved || userApprovalPolicy == configuration.UserApprovalPolicyAutomatic {
+		if userSignup.Spec.Approved {
+			if statusError := r.updateStatus(reqLogger, userSignup, r.setStatusApprovedByAdmin); statusError != nil {
+				return statusError
 			}
 		} else {
-			if statusError := r.updateStatus(reqLogger, instance, r.setStatusApprovedAutomatically); statusError != nil {
-				return reconcile.Result{}, statusError
+			if statusError := r.updateStatus(reqLogger, userSignup, r.setStatusApprovedAutomatically); statusError != nil {
+				return statusError
 			}
 		}
 
 		// Check if the user requires phone verification, and do not proceed further if they do
-		if instance.Spec.VerificationRequired {
-			return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusVerificationRequired)
+		if userSignup.Spec.VerificationRequired {
+			return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
 		}
 
 		var targetCluster string
 
 		// If a target cluster hasn't been selected, select one from the members
-		if instance.Spec.TargetCluster != "" {
-			targetCluster = instance.Spec.TargetCluster
+		if userSignup.Spec.TargetCluster != "" {
+			targetCluster = userSignup.Spec.TargetCluster
 		} else {
 			// Automatic cluster selection based on cluster readiness
 			members := cluster.GetMemberClusters(cluster.Ready, cluster.CapacityNotExhausted)
@@ -369,29 +297,32 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				targetCluster = members[0].Name
 			} else {
 				reqLogger.Error(err, "No member clusters found")
-				if statusError := r.updateStatus(reqLogger, instance, r.setStatusNoClustersAvailable); statusError != nil {
-					return reconcile.Result{}, statusError
+				if statusError := r.updateStatus(reqLogger, userSignup, r.setStatusNoClustersAvailable); statusError != nil {
+					return statusError
 				}
 
-				err = NewSignupError("no target clusters available")
-				return reconcile.Result{}, err
+				return fmt.Errorf("no target clusters available")
 			}
 		}
 
-		if err := r.setApprovedLabel(reqLogger, instance, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
-			return reconcile.Result{}, err
+		// look-up the `basic` NSTemplateTier to get the NS templates
+		nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, userSignup.Namespace)
+		if err != nil {
+			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
+		}
+		if err := r.setApprovedLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
+			return err
 		}
 
 		// Provision the MasterUserRecord
-		err = r.provisionMasterUserRecord(instance, targetCluster, nstemplateTier, reqLogger)
+		err = r.provisionMasterUserRecord(userSignup, targetCluster, nstemplateTier, reqLogger)
 		if err != nil {
-			return reconcile.Result{}, err
+			return err
 		}
 	} else {
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusPendingApproval)
+		return r.updateStatus(reqLogger, userSignup, r.setStatusPendingApproval)
 	}
-
-	return reconcile.Result{}, nil
+	return nil
 }
 
 func (r *ReconcileUserSignup) setApprovedLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
@@ -415,7 +346,7 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 	replaced := transformUsername(instance.Spec.Username)
 	validationErrors := validation.IsQualifiedName(replaced)
 	if len(validationErrors) > 0 {
-		return "", NewSignupError(fmt.Sprintf("transformed username [%s] is invalid", replaced))
+		return "", fmt.Errorf(fmt.Sprintf("transformed username [%s] is invalid", replaced))
 	}
 
 	transformed := replaced
@@ -434,13 +365,13 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] == instance.Name {
 			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
-			return "", NewSignupError(fmt.Sprintf("could not generate compliant username as MasterUserRecord [%s] already exists", mur.Name))
+			return "", fmt.Errorf(fmt.Sprintf("could not generate compliant username as MasterUserRecord [%s] already exists", mur.Name))
 		}
 
 		transformed = fmt.Sprintf("%s-%d", replaced, i)
 	}
 
-	return "", NewSignupError(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
+	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
 }
 
 func transformUsername(username string) string {
@@ -505,23 +436,23 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 // DeleteMasterUserRecord deletes the specified MasterUserRecord
 func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRecord,
 	userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger,
-	inProgressStatusUpdater, failedStatusUpdater StatusUpdater) (reconcile.Result, error) {
+	inProgressStatusUpdater, failedStatusUpdater StatusUpdater) error {
 
 	err := r.updateStatus(logger, userSignup, inProgressStatusUpdater)
 	if err != nil {
-		return reconcile.Result{}, nil
+		return nil
 	}
 	if err := r.setApprovedLabel(logger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueFalse); err != nil {
-		return reconcile.Result{}, err
+		return err
 	}
 
 	err = r.client.Delete(context.TODO(), mur)
 	if err != nil {
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, failedStatusUpdater, err,
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, failedStatusUpdater, err,
 			"Error deleting MasterUserRecord")
 	}
 	logger.Info("Deleted MasterUserRecord", "Name", mur.Name)
-	return reconcile.Result{}, nil
+	return nil
 }
 
 // ReadUserApprovalPolicyConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
@@ -541,282 +472,6 @@ func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig(namespace string) (st
 		return "", nil
 	}
 	return val, nil
-}
-
-func (r *ReconcileUserSignup) setStatusApprovedAutomatically(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupApproved,
-			Status:  corev1.ConditionTrue,
-			Reason:  toolchainv1alpha1.UserSignupApprovedAutomaticallyReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusApprovedByAdmin(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupApproved,
-			Status:  corev1.ConditionTrue,
-			Reason:  toolchainv1alpha1.UserSignupApprovedByAdminReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusPendingApproval(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupApproved,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupPendingApprovalReason,
-			Message: message,
-		},
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupPendingApprovalReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusFailedToReadUserApprovalPolicy(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupFailedToReadUserApprovalPolicyReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusInvalidMURState(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupInvalidMURStateReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusFailedToCreateMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupUnableToCreateMURReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusFailedToDeleteMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupUnableToDeleteMURReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusFailedToUpdateApprovedLabel(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupUnableToUpdateApprovedLabelReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusNoClustersAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupNoClusterAvailableReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusNoTemplateTierAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupNoTemplateTierAvailableReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusBanning(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupUserBanningReason,
-			Message: message,
-		})
-}
-
-// setStatusBanned sets the Complete status to True, as the banning operation has been successful (with a reason of "Banned")
-func (r *ReconcileUserSignup) setStatusBanned(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionTrue,
-			Reason:  toolchainv1alpha1.UserSignupUserBannedReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusDeactivating(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupUserDeactivatingReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusDeactivated(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionTrue,
-			Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusFailedToReadBannedUsers(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupFailedToReadBannedUsersReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusInvalidMissingUserEmailAnnotation(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupMissingUserEmailAnnotationReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusMissingEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupMissingEmailHashLabelReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusInvalidEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupInvalidEmailHashLabelReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) setStatusVerificationRequired(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return r.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupVerificationRequiredReason,
-			Message: message,
-		})
-}
-
-func (r *ReconcileUserSignup) updateStatus(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
-	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error) error {
-
-	if err := statusUpdater(userSignup, ""); err != nil {
-		logger.Error(err, "status update failed")
-		return err
-	}
-
-	return nil
-}
-
-type completeStatusUpdater struct {
-	CompliantUsername string
-	R                 *ReconcileUserSignup
-}
-
-// updateCompleteStatus updates the `CompliantUsername` and `Conditions` in the status, should only be invoked on completion because
-// both completion and the compliant username require the master user record to be created.
-func (u *completeStatusUpdater) updateCompleteStatus(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	usernameUpdated := userSignup.Status.CompliantUsername != u.CompliantUsername
-	userSignup.Status.CompliantUsername = u.CompliantUsername
-
-	var conditionUpdated bool
-	userSignup.Status.Conditions, conditionUpdated = commonCondition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionTrue,
-			Reason:  "",
-			Message: message,
-		})
-
-	if !usernameUpdated && !conditionUpdated {
-		// Nothing changed
-		return nil
-	}
-	return u.R.client.Status().Update(context.TODO(), userSignup)
-}
-
-// wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
-func (r *ReconcileUserSignup) wrapErrorWithStatusUpdate(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
-	statusUpdater StatusUpdater, err error, format string, args ...interface{}) error {
-	if err == nil {
-		return nil
-	}
-	if err := statusUpdater(userSignup, err.Error()); err != nil {
-		logger.Error(err, "Error updating UserSignup status")
-	}
-	return errs.Wrapf(err, format, args...)
-}
-
-func (r *ReconcileUserSignup) updateStatusConditions(userSignup *toolchainv1alpha1.UserSignup, newConditions ...toolchainv1alpha1.Condition) error {
-	var updated bool
-	userSignup.Status.Conditions, updated = commonCondition.AddOrUpdateStatusConditions(userSignup.Status.Conditions, newConditions...)
-	if !updated {
-		// Nothing changed
-		return nil
-	}
-	return r.client.Status().Update(context.TODO(), userSignup)
 }
 
 func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
