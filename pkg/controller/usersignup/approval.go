@@ -15,7 +15,7 @@ import (
 )
 
 // getClusterIfApproved checks if the user can be approved and provisioned to any member cluster.
-// It the user can be approved then the function returns true as the first returned value, the second value contains a cluster name the user should be provisioned to.
+// If the user can be approved then the function returns true as the first returned value, the second value contains a cluster name the user should be provisioned to.
 // If there is no suitable member cluster, then it returns empty string.
 //
 // If the user is approved manually then it tries to get member cluster with enough capacity if the target cluster is not already specified for UserSignup.
