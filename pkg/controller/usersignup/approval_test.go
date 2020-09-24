@@ -118,7 +118,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		approved, clusterName, err := getClusterIfApproved(fakeClient, config, signup, clusters)
 
 		// then
-		require.NoError(t, err)
+		require.EqualError(t, err, "no suitable member cluster found - capacity was reached")
 		assert.False(t, approved)
 		assert.Empty(t, clusterName)
 	})
@@ -197,8 +197,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 		approved, clusterName, err := getClusterIfApproved(fakeClient, config, signup, clusters)
 
 		// then
-		require.EqualError(t, err, "no suitable member cluster found")
-		assert.False(t, approved)
+		require.EqualError(t, err, "no suitable member cluster found - capacity was reached")
+		assert.True(t, approved)
 		assert.Empty(t, clusterName)
 	})
 

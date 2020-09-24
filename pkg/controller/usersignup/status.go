@@ -26,32 +26,30 @@ func (u *statusUpdater) setStatusApprovedAutomatically(userSignup *toolchainv1al
 		})
 }
 
-func (u *statusUpdater) setStatusApprovedByAdmin(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupApproved,
-			Status:  corev1.ConditionTrue,
-			Reason:  toolchainv1alpha1.UserSignupApprovedByAdminReason,
-			Message: message,
-		})
+var statusApprovedByAdmin = func(_ string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.UserSignupApproved,
+		Status: corev1.ConditionTrue,
+		Reason: toolchainv1alpha1.UserSignupApprovedByAdminReason,
+	}
 }
 
-func (u *statusUpdater) setStatusPendingApproval(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupApproved,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupPendingApprovalReason,
-			Message: message,
-		},
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupPendingApprovalReason,
-			Message: message,
-		})
+var statusPendingApproval = func(message string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.UserSignupApproved,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.UserSignupPendingApprovalReason,
+		Message: message,
+	}
+}
+
+var statusIncompletePendingApproval = func(message string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.UserSignupComplete,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.UserSignupPendingApprovalReason,
+		Message: message,
+	}
 }
 
 func (u *statusUpdater) setStatusFailedToReadUserApprovalPolicy(userSignup *toolchainv1alpha1.UserSignup, message string) error {
@@ -98,15 +96,23 @@ func (u *statusUpdater) setStatusFailedToDeleteMUR(userSignup *toolchainv1alpha1
 		})
 }
 
-func (u *statusUpdater) setStatusNoClustersAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupNoClusterAvailableReason,
-			Message: message,
-		})
+func (u *statusUpdater) set(conditionCreators ...func(message string) toolchainv1alpha1.Condition) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+		conditions := make([]toolchainv1alpha1.Condition, len(conditionCreators))
+		for index, createCondition := range conditionCreators {
+			conditions[index] = createCondition(message)
+		}
+		return u.updateStatusConditions(userSignup, conditions...)
+	}
+}
+
+var statusNoClustersAvailable = func(message string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.UserSignupComplete,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.UserSignupNoClusterAvailableReason,
+		Message: message,
+	}
 }
 
 func (u *statusUpdater) setStatusNoTemplateTierAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {

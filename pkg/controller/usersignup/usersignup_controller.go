@@ -266,19 +266,22 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 
 	approved, targetCluster, err := getClusterIfApproved(r.client, r.crtConfig, userSignup, r.getMemberClusters)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoClustersAvailable, err, "no target clusters available")
+		if userSignup.Spec.Approved {
+			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusApprovedByAdmin, statusNoClustersAvailable), err, "no target clusters available")
+		}
+		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusPendingApproval, statusNoClustersAvailable), err, "no target clusters available")
 	}
 	if !approved {
-		return r.updateStatus(reqLogger, userSignup, r.setStatusPendingApproval)
+		return r.updateStatus(reqLogger, userSignup, r.set(statusPendingApproval, statusIncompletePendingApproval))
 	}
 
 	if userSignup.Spec.Approved {
-		if statusError := r.updateStatus(reqLogger, userSignup, r.setStatusApprovedByAdmin); statusError != nil {
-			return statusError
+		if err := r.updateStatus(reqLogger, userSignup, r.set(statusApprovedByAdmin)); err != nil {
+			return err
 		}
 	} else {
-		if statusError := r.updateStatus(reqLogger, userSignup, r.setStatusApprovedAutomatically); statusError != nil {
-			return statusError
+		if err := r.updateStatus(reqLogger, userSignup, r.setStatusApprovedAutomatically); err != nil {
+			return err
 		}
 	}
 	// look-up the `basic` NSTemplateTier to get the NS templates

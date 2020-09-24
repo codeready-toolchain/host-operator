@@ -377,10 +377,16 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 	t.Logf("usersignup status: %+v", userSignup.Status)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupApproved,
+			Status:  v1.ConditionFalse,
+			Reason:  "PendingApproval",
+			Message: "no suitable member cluster found - capacity was reached",
+		},
+		v1alpha1.Condition{
 			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "NoClusterAvailable",
-			Message: "no suitable member cluster found",
+			Message: "no suitable member cluster found - capacity was reached",
 		})
 
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
@@ -411,10 +417,16 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	t.Logf("usersignup status: %+v", userSignup.Status)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupApproved,
+			Status:  v1.ConditionFalse,
+			Reason:  "PendingApproval",
+			Message: "no suitable member cluster found - capacity was reached",
+		},
+		v1alpha1.Condition{
 			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "NoClusterAvailable",
-			Message: "no suitable member cluster found",
+			Message: "no suitable member cluster found - capacity was reached",
 		})
 
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
@@ -1564,7 +1576,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	_, err := r.Reconcile(req)
 
 	// then
-	assert.EqualError(t, err, "no target clusters available: no suitable member cluster found")
+	assert.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
 	AssertThatCounterHas(t, 1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)

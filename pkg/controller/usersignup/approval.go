@@ -47,31 +47,18 @@ func getClusterIfApproved(cl client.Client, crtConfig *crtCfg.Config, userSignup
 
 	targetCluster := getOptimalTargetCluster(userSignup, getMemberClusters, hasNotReachedMaxNumberOfUsersThreshold(config, counts), hasEnoughResources(config, status))
 	if targetCluster == "" {
-		return false, "", fmt.Errorf("no suitable member cluster found")
-	}
-
-	// approved manually
-	if userSignup.Spec.Approved {
-		return true, targetCluster, nil
-	}
-
-	if config.Spec.AutomaticApproval.MaxNumberOfUsers.Overall != 0 {
-
-		if config.Spec.AutomaticApproval.MaxNumberOfUsers.Overall <= counts.MasterUserRecordCount {
-			return false, "", nil
-		}
-	}
-
-	if config.Spec.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold != 0 {
-		if config.Spec.AutomaticApproval.MaxNumberOfUsers.Overall <= counts.MasterUserRecordCount {
-			return false, "", nil
-		}
+		return userSignup.Spec.Approved, "", fmt.Errorf("no suitable member cluster found - capacity was reached")
 	}
 	return true, targetCluster, nil
 }
 
 func hasNotReachedMaxNumberOfUsersThreshold(config *toolchainv1alpha1.HostOperatorConfig, counts counter.Counts) cluster.Condition {
 	return func(cluster *cluster.CachedToolchainCluster) bool {
+		if config.Spec.AutomaticApproval.MaxNumberOfUsers.Overall != 0 {
+			if config.Spec.AutomaticApproval.MaxNumberOfUsers.Overall <= counts.MasterUserRecordCount {
+				return false
+			}
+		}
 		numberOfUserAccounts := counts.UserAccountsPerClusterCounts[cluster.Name]
 		threshold := config.Spec.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster[cluster.Name]
 		return threshold == 0 || numberOfUserAccounts <= threshold
