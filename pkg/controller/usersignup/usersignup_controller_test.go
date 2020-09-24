@@ -1527,6 +1527,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
+				Reason: "Deactivated",
 			},
 			{
 				Type:   v1alpha1.UserSignupApproved,
@@ -1555,7 +1556,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		err = r.client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 
-		// Confirm the status has been set to Deactivated
+		// Confirm the status shows the notification created condition is reset to active
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupApproved,
@@ -1565,12 +1566,15 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
+				Reason: "Deactivated",
 			},
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
+
+		// A mur should be created so the counter should be 3
 		AssertThatCounterHas(t, 3)
 
 		// There should not be a notification created because the user was reactivated
@@ -1587,6 +1591,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
+				Reason: "Deactivated",
 			},
 			{
 				Type:   v1alpha1.UserSignupApproved,
@@ -1633,6 +1638,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
+				Reason: "Deactivated",
 			},
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
