@@ -108,13 +108,12 @@ func getOptimalTargetCluster(userSignup *toolchainv1alpha1.UserSignup, getMember
 	// If a target cluster hasn't been selected, select one from the members
 	if userSignup.Spec.TargetCluster != "" {
 		return userSignup.Spec.TargetCluster
-	} else {
-		// Automatic cluster selection based on cluster readiness
-		members := getMemberClusters(append(conditions, cluster.Ready)...)
-
-		if len(members) > 0 {
-			return members[0].Name
-		}
-		return ""
 	}
+	// Automatic cluster selection based on cluster readiness
+	members := getMemberClusters(append(conditions, cluster.Ready)...)
+
+	if len(members) > 0 {
+		return members[0].Name
+	}
+	return ""
 }
