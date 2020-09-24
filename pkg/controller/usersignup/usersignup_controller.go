@@ -127,7 +127,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 	// If the usersignup is deactivated then ensure the deactivated notification status is set to false, this is especially important for cases when a user is deactivated and then reactivated
 	if !instance.Spec.Deactivated {
-		if err := r.updateStatus(reqLogger, instance, r.setStatusDeactivationNotificationNotCreated); err != nil {
+		if err := r.updateStatus(reqLogger, instance, r.setStatusDeactivationNotificationUserIsActive); err != nil {
 			return reconcile.Result{}, err
 		}
 	}

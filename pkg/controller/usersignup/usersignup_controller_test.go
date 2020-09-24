@@ -194,7 +194,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 
 	AssertThatCounterHas(t, 2)
@@ -226,7 +226,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
-				Reason: "NotificationCRNotCreated",
+				Reason: "UserIsActive",
 			})
 	})
 	AssertThatCounterHas(t, 2)
@@ -274,7 +274,7 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -327,7 +327,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -376,7 +376,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -426,7 +426,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -470,7 +470,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 	AssertThatCounterHas(t, 1)
@@ -516,7 +516,7 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
@@ -564,7 +564,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
@@ -621,7 +621,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 2)
 
@@ -651,7 +651,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
-				Reason: "NotificationCRNotCreated",
+				Reason: "UserIsActive",
 			})
 		AssertThatCounterHas(t, 2)
 	})
@@ -706,7 +706,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 2)
 
@@ -738,7 +738,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
-				Reason: "NotificationCRNotCreated",
+				Reason: "UserIsActive",
 			})
 		AssertThatCounterHas(t, 2)
 	})
@@ -793,7 +793,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -849,7 +849,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 2)
 
@@ -881,7 +881,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
-				Reason: "NotificationCRNotCreated",
+				Reason: "UserIsActive",
 			})
 		AssertThatCounterHas(t, 2)
 	})
@@ -928,7 +928,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -1568,7 +1568,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
-				Reason: "NotificationCRNotCreated",
+				Reason: "UserIsActive",
 			})
 		AssertThatCounterHas(t, 3)
 
@@ -1619,7 +1619,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
-				Reason: "NotificationCRNotCreated",
+				Reason: "UserIsActive",
 			})
 		AssertThatCounterHas(t, 2)
 
@@ -1774,7 +1774,7 @@ func TestUserSignupBanned(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 
 	// Confirm that no MUR is created
@@ -1825,7 +1825,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 
 	// Confirm that no MUR is created
@@ -1903,7 +1903,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		})
 
 	murs := &v1alpha1.MasterUserRecordList{}
@@ -1939,7 +1939,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
-				Reason: "NotificationCRNotCreated",
+				Reason: "UserIsActive",
 			})
 
 		// Confirm that there is still no MUR
@@ -2124,7 +2124,7 @@ func TestDeathBy100Signups(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		},
 	)
 	AssertThatCounterHas(t, 100)
@@ -2189,7 +2189,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
-			Reason: "NotificationCRNotCreated",
+			Reason: "UserIsActive",
 		},
 	)
 	AssertThatCounterHas(t, 1)
