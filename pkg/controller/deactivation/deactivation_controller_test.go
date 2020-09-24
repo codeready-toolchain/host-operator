@@ -51,8 +51,8 @@ func TestReconcile(t *testing.T) {
 		// the time since the mur was provisioned is within the deactivation timeout period for the 'basic' tier
 		t.Run("usersignup should not be deactivated - basic tier (30 days)", func(t *testing.T) {
 			// given
-			murProvisionedTime := &metav1.Time{Time: time.Now()}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			murProvisionedTime := metav1.Now()
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
 			// when
 			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
@@ -69,8 +69,8 @@ func TestReconcile(t *testing.T) {
 		// the time since the mur was provisioned is within the deactivation timeout period for the 'other' tier
 		t.Run("usersignup should not be deactivated - other tier (60 days)", func(t *testing.T) {
 			// given
-			murProvisionedTime := &metav1.Time{Time: time.Now()}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			murProvisionedTime := metav1.Now()
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar)
 			// when
 			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
@@ -87,8 +87,8 @@ func TestReconcile(t *testing.T) {
 		// the tier does not have a deactivationTimeoutDays set so the time since the mur was provisioned is irrelevant, the user should not be deactivated
 		t.Run("usersignup should not be deactivated - no deactivation tier", func(t *testing.T) {
 			// given
-			murProvisionedTime := &metav1.Time{Time: time.Now()}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			murProvisionedTime := metav1.Now()
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			r, req, cl := prepareReconcile(t, mur.Name, noDeactivationTier, mur, userSignupFoobar)
 			// when
 			res, err := r.Reconcile(req)
@@ -170,29 +170,14 @@ func TestReconcile(t *testing.T) {
 		// cannot find NSTemplateTier
 		t.Run("unable to get NSTemplateTier", func(t *testing.T) {
 			// given
-			murProvisionedTime := &metav1.Time{Time: time.Now()}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			murProvisionedTime := metav1.Now()
+			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			r, req, cl := prepareReconcile(t, mur.Name, mur, userSignupFoobar)
 			// when
 			_, err := r.Reconcile(req)
 			// then
 			require.Error(t, err)
 			require.Contains(t, err.Error(), `nstemplatetiers.toolchain.dev.openshift.com "basic" not found`)
-			assertThatUserSignupDeactivated(t, cl, username, false)
-		})
-
-		// cannot find NSTemplateTier
-		t.Run("NSTemplateTier without deactivation timeout", func(t *testing.T) {
-			// given
-			murProvisionedTime := &metav1.Time{Time: time.Now()}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
-			r, req, cl := prepareReconcile(t, mur.Name, noDeactivationTier, mur, userSignupFoobar)
-			// when
-			res, err := r.Reconcile(req)
-			// then
-			require.NoError(t, err)
-			require.False(t, res.Requeue, "requeue should not be set")
-			require.True(t, res.RequeueAfter == 0, "requeue should not be set")
 			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 
