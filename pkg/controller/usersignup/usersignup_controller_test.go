@@ -1478,7 +1478,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		err = r.client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 
-		// Confirm the status has been set to Deactivated
+		// Confirm the status shows the deactivation notification failure
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupApproved,
@@ -1514,22 +1514,6 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			Deactivated: false,
 		},
 		Status: v1alpha1.UserSignupStatus{
-			Conditions: []v1alpha1.Condition{
-				{
-					Type:   v1alpha1.UserSignupComplete,
-					Status: v1.ConditionTrue,
-				},
-				{
-					Type:   v1alpha1.UserSignupApproved,
-					Status: v1.ConditionTrue,
-					Reason: "ApprovedAutomatically",
-				},
-				{
-					Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
-					Status: v1.ConditionTrue,
-					Reason: "NotificationCRCreated",
-				},
-			},
 			CompliantUsername: "john-doe",
 		},
 	}
@@ -1538,6 +1522,23 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 
 	t.Run("when reactivating the usersignup successfully", func(t *testing.T) {
 		// given
+		// start with a usersignup that has the Notification Created status which signals an active user
+		userSignup.Status.Conditions = []v1alpha1.Condition{
+			{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+			},
+			{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionTrue,
+				Reason: "NotificationCRCreated",
+			},
+		}
 		InitializeCounter(t, 2)
 		defer counter.Reset()
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
@@ -1581,6 +1582,23 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 
 	t.Run("when resetting the usersignup deactivation notification status fails", func(t *testing.T) {
 		// given
+		// start with a usersignup that has the Notification Created status which signals an active user
+		userSignup.Status.Conditions = []v1alpha1.Condition{
+			{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+			},
+			{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionTrue,
+				Reason: "NotificationCRCreated",
+			},
+		}
 		InitializeCounter(t, 2)
 		defer counter.Reset()
 		r, req, cl := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
@@ -1605,7 +1623,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		err = r.client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 
-		// Confirm the status has been set to Deactivated
+		// Confirm the status shows the notification is unchanged because the status update failed
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupApproved,
@@ -1618,8 +1636,8 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			},
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
-				Status: v1.ConditionFalse,
-				Reason: "UserIsActive",
+				Status: v1.ConditionTrue,
+				Reason: "NotificationCRCreated",
 			})
 		AssertThatCounterHas(t, 2)
 
