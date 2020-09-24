@@ -1497,7 +1497,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			})
 		AssertThatCounterHas(t, 2)
 
-		// A deactivated notification should have been created
+		// A deactivated notification should not have been created
 		notification := &v1alpha1.Notification{}
 		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername + "-deactivated", Namespace: userSignup.Namespace}, notification)
 		require.Error(t, err)
