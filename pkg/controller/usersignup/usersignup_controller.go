@@ -125,16 +125,18 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
-	// If the usersignup is deactivated then ensure the deactivated notification status is set to false, this is especially important for cases when a user is deactivated and then reactivated
-	if !instance.Spec.Deactivated {
-		if err := r.updateStatus(reqLogger, instance, r.setStatusDeactivationNotificationUserIsActive); err != nil {
-			return reconcile.Result{}, err
-		}
-	}
-
 	banned, err := r.isUserBanned(reqLogger, instance)
 	if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	// If the usersignup is not banned and not deactivated then ensure the deactivated notification status is set to false.
+	// This is especially important for cases when a user is deactivated and then reactivated because the status is used to
+	// trigger sending of the notification. If a user is reactivated a notification should be sent to the user again.
+	if !banned && !instance.Spec.Deactivated {
+		if err := r.updateStatus(reqLogger, instance, r.setStatusDeactivationNotificationUserIsActive); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	if exists, err := r.ensureMurIfAlreadyExists(reqLogger, instance, banned); exists || err != nil {

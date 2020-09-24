@@ -270,11 +270,6 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 			Status:  v1.ConditionFalse,
 			Reason:  "MissingUserEmailAnnotation",
 			Message: "missing annotation at usersignup",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
-			Status: v1.ConditionFalse,
-			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -323,11 +318,6 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 			Status:  v1.ConditionFalse,
 			Reason:  "InvalidEmailHashLabel",
 			Message: "hash is invalid",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
-			Status: v1.ConditionFalse,
-			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -422,11 +412,6 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 			Status:  v1.ConditionFalse,
 			Reason:  "MissingEmailHashLabel",
 			Message: "missing label at usersignup",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
-			Status: v1.ConditionFalse,
-			Reason: "UserIsActive",
 		})
 	AssertThatCounterHas(t, 1)
 }
@@ -1794,11 +1779,6 @@ func TestUserSignupBanned(t *testing.T) {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionTrue,
 			Reason: "Banned",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
-			Status: v1.ConditionFalse,
-			Reason: "UserIsActive",
 		})
 
 	// Confirm that no MUR is created
@@ -1923,11 +1903,6 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
-		},
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
-			Status: v1.ConditionFalse,
-			Reason: "UserIsActive",
 		})
 
 	murs := &v1alpha1.MasterUserRecordList{}
@@ -1959,11 +1934,6 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
-			},
-			v1alpha1.Condition{
-				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
-				Status: v1.ConditionFalse,
-				Reason: "UserIsActive",
 			})
 
 		// Confirm that there is still no MUR
