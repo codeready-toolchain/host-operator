@@ -13,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 
 	. "github.com/codeready-toolchain/host-operator/test"
+	ntest "github.com/codeready-toolchain/host-operator/test/notification"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -1358,10 +1359,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		AssertThatCounterHas(t, 1)
 
 		// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
-		notifications := &v1alpha1.NotificationList{}
-		err = r.client.List(context.TODO(), notifications)
-		require.NoError(t, err)
-		require.Len(t, notifications.Items, 0)
+		ntest.AssertNoNotificationsExist(t, r.client)
 	})
 
 	t.Run("when MUR doesn't exist, then the condition should be set to Deactivated", func(t *testing.T) {
@@ -1563,10 +1561,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		AssertThatCounterHas(t, 3)
 
 		// There should not be a notification created because the user was reactivated
-		notifications := &v1alpha1.NotificationList{}
-		err = r.client.List(context.TODO(), notifications)
-		require.NoError(t, err)
-		require.Len(t, notifications.Items, 0)
+		ntest.AssertNoNotificationsExist(t, r.client)
 	})
 
 	t.Run("when resetting the usersignup deactivation notification status fails", func(t *testing.T) {
@@ -1633,10 +1628,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		AssertThatCounterHas(t, 2)
 
 		// A deactivation notification should not be created because this is the reactivation case
-		notifications := &v1alpha1.NotificationList{}
-		err = r.client.List(context.TODO(), notifications)
-		require.NoError(t, err)
-		require.Len(t, notifications.Items, 0)
+		ntest.AssertNoNotificationsExist(t, r.client)
 	})
 }
 
@@ -1707,10 +1699,7 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 			AssertThatCounterHas(t, 1)
 
 			// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
-			notifications := &v1alpha1.NotificationList{}
-			err = r.client.List(context.TODO(), notifications)
-			require.NoError(t, err)
-			require.Len(t, notifications.Items, 0)
+			ntest.AssertNoNotificationsExist(t, r.client)
 		})
 
 		t.Run("second reconcile - condition should be deactivated and deactivation notification created", func(t *testing.T) {
@@ -2015,39 +2004,39 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		}
 	}
 
-	// when
-	_, err := r.Reconcile(req)
-	require.Error(t, err)
+	t.Run("first reconcile - status should show message about mur deletion failure", func(t *testing.T) {
+		// when
+		_, err := r.Reconcile(req)
+		require.Error(t, err)
 
-	// then
+		// then
 
-	// Lookup the UserSignup
-	err = r.client.Get(context.TODO(), key, userSignup)
-	require.NoError(t, err)
-	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+		// Lookup the UserSignup
+		err = r.client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+		assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
-	// Confirm the status is set to UnableToDeleteMUR
-	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		v1alpha1.Condition{
-			Type:   v1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedAutomatically",
-		},
-		v1alpha1.Condition{
-			Type:    v1alpha1.UserSignupComplete,
-			Status:  v1.ConditionFalse,
-			Reason:  "UnableToDeleteMUR",
-			Message: "unable to delete mur",
-		})
-	AssertThatCounterHas(t, 1)
+		// Confirm the status is set to UnableToDeleteMUR
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:    v1alpha1.UserSignupComplete,
+				Status:  v1.ConditionFalse,
+				Reason:  "UnableToDeleteMUR",
+				Message: "unable to delete mur",
+			})
+		AssertThatCounterHas(t, 1)
+	})
 
-	// There should not be a notification created since the mur deletion failed even if reconciled again
-	_, err = r.Reconcile(req)
-	require.Error(t, err)
-	notifications := &v1alpha1.NotificationList{}
-	err = r.client.List(context.TODO(), notifications)
-	require.NoError(t, err)
-	require.Len(t, notifications.Items, 0)
+	t.Run("second reconcile - there should not be a notification created since the mur deletion failed even if reconciled again", func(t *testing.T) {
+		_, err := r.Reconcile(req)
+		require.Error(t, err)
+		ntest.AssertNoNotificationsExist(t, r.client)
+	})
 }
 
 func TestDeathBy100Signups(t *testing.T) {
