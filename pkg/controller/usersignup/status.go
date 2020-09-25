@@ -241,7 +241,7 @@ func (u *statusUpdater) setStatusDeactivationNotificationCreated(userSignup *too
 		})
 }
 
-func (u *statusUpdater) setStatusDeactivationNotificationUserIsActive(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusDeactivationNotificationUserIsActive(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
