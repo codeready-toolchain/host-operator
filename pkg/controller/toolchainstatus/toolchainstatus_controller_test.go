@@ -38,7 +38,6 @@ var requeueResult = reconcile.Result{RequeueAfter: 5 * time.Second}
 const (
 	defaultHostOperatorName        = "host-operator"
 	defaultRegistrationServiceName = "registration-service"
-	defaultToolchainStatusName     = configuration.DefaultToolchainStatusName
 )
 
 type fakeHTTPClient struct {
@@ -89,7 +88,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 	t.Run("No toolchainstatus resource found - right name but not found", func(t *testing.T) {
 		// given
 		expectedErrMsg := "get failed"
-		requestName := defaultToolchainStatusName
+		requestName := configuration.DefaultToolchainStatusName
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady)
 		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 			return fmt.Errorf(expectedErrMsg)
@@ -109,7 +108,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := defaultToolchainStatusName
+	requestName := configuration.DefaultToolchainStatusName
 
 	t.Run("All components ready", func(t *testing.T) {
 		// given
@@ -117,7 +116,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatusReady()
-		toolchainStatus := newToolchainStatus()
+		toolchainStatus := NewToolchainStatus()
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when
@@ -135,7 +134,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 	t.Run("HostOperator tests", func(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
-		toolchainStatus := newToolchainStatus()
+		toolchainStatus := NewToolchainStatus()
 		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatusReady()
 
@@ -214,7 +213,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 	t.Run("RegistrationService deployment tests", func(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
-		toolchainStatus := newToolchainStatus()
+		toolchainStatus := NewToolchainStatus()
 		memberStatus := newMemberStatusReady()
 		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
@@ -273,7 +272,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 	})
 
 	t.Run("RegistrationService resource tests", func(t *testing.T) {
-		toolchainStatus := newToolchainStatus()
+		toolchainStatus := NewToolchainStatus()
 		memberStatus := newMemberStatusReady()
 		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
@@ -319,7 +318,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatusReady()
-		toolchainStatus := newToolchainStatus()
+		toolchainStatus := NewToolchainStatus()
 
 		t.Run("Registration health endpoint - http client error", func(t *testing.T) {
 			// given
@@ -391,7 +390,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 	})
 
 	t.Run("MemberStatus tests", func(t *testing.T) {
-		toolchainStatus := newToolchainStatus()
+		toolchainStatus := NewToolchainStatus()
 		registrationService := newRegistrationServiceReady()
 		hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
@@ -423,7 +422,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatusReady()
-			toolchainStatus := newToolchainStatus()
+			toolchainStatus := NewToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberClusterSingleNotReady("", "NoMemberClustersFound", "no member clusters found", nil),
 			}
@@ -505,7 +504,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatusReady()
-			toolchainStatus := newToolchainStatus()
+			toolchainStatus := NewToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberClusterSingleNotReady("member-cluster", "ComponentsNotReady", "some cool error", resourceUsage),
 			}
@@ -530,7 +529,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 			registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 			memberStatus := newMemberStatusReady()
-			toolchainStatus := newToolchainStatus()
+			toolchainStatus := NewToolchainStatus()
 
 			t.Run("with non-zero counter", func(t *testing.T) {
 				// given
@@ -586,11 +585,11 @@ func TestSynchronizationWithCounter(t *testing.T) {
 	// given
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := defaultToolchainStatusName
+	requestName := configuration.DefaultToolchainStatusName
 	registrationService := newRegistrationServiceReady()
 	hostOperatorDeployment := newDeploymentWithConditions(t, defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 	registrationServiceDeployment := newDeploymentWithConditions(t, registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-	toolchainStatus := newToolchainStatus()
+	toolchainStatus := NewToolchainStatus()
 	memberStatus := newMemberStatusReady()
 
 	t.Run("Load all current MURs & UAs", func(t *testing.T) {
@@ -619,7 +618,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			counter.IncrementMasterUserRecordCount()
 			counter.IncrementMasterUserRecordCount()
 			counter.IncrementUserAccountCount("member-cluster")
-			toolchainStatus := newToolchainStatus()
+			toolchainStatus := NewToolchainStatus()
 			toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
 				MasterUserRecordCount: 1,
 			}
@@ -647,7 +646,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		defer counter.Reset()
 		counter.IncrementMasterUserRecordCount()
 		counter.IncrementUserAccountCount("member-cluster")
-		toolchainStatus := newToolchainStatus()
+		toolchainStatus := NewToolchainStatus()
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
 			MasterUserRecordCount: 8,
 		}
@@ -693,15 +692,6 @@ func newDeploymentWithConditions(t *testing.T, deploymentName string, deployment
 		},
 		Status: appsv1.DeploymentStatus{
 			Conditions: deploymentConditions,
-		},
-	}
-}
-
-func newToolchainStatus() *toolchainv1alpha1.ToolchainStatus {
-	return &toolchainv1alpha1.ToolchainStatus{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      defaultToolchainStatusName,
-			Namespace: test.HostOperatorNs,
 		},
 	}
 }
