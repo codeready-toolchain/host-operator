@@ -415,7 +415,7 @@ func (s regServiceSubstatusHandler) addRegistrationServiceDeploymentStatus(reqLo
 // addRegistrationServiceHealthStatus handles the RegistrationService.Health part of the toolchainstatus
 func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	// get the JSON payload from the health endpoint
-	registrationServiceHealthURL := "http://registration-service/" + registrationServiceHealthEndpoint
+	registrationServiceHealthURL := "http://registration-service" + registrationServiceHealthEndpoint
 	resp, err := s.httpClientImpl.Get(registrationServiceHealthURL)
 	if err != nil {
 		reqLogger.Error(err, errMsgRegistrationServiceNotReady)

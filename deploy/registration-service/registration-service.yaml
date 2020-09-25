@@ -25,6 +25,7 @@ objects:
       verbs:
       - create
       - get
+      - list
       - update
       - list
     - apiGroups:
