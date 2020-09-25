@@ -231,7 +231,7 @@ func (u *statusUpdater) setStatusFailedToUpdateApprovedLabel(userSignup *toolcha
 		})
 }
 
-func (u *statusUpdater) setStatusDeactivationNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusDeactivationNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
