@@ -1507,7 +1507,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 
 	t.Run("when reactivating the usersignup successfully", func(t *testing.T) {
 		// given
-		// start with a usersignup that has the Notification Created status which signals an active user
+		// start with a usersignup that has the Notification Created status set to "true" but Spec.Deactivated is set to "false" which signals a user which has been just reactivated.
 		userSignup.Status.Conditions = []v1alpha1.Condition{
 			{
 				Type:   v1alpha1.UserSignupComplete,
