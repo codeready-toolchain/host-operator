@@ -1675,68 +1675,71 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
-		// when
-		_, err := r.Reconcile(req)
+		t.Run("first reconcile - status should be deactivating and mur should be deleted", func(t *testing.T) {
+			// when
+			_, err := r.Reconcile(req)
 
-		// then
-		require.NoError(t, err)
-		err = r.client.Get(context.TODO(), key, userSignup)
-		require.NoError(t, err)
-		assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
+			// then
+			require.NoError(t, err)
+			err = r.client.Get(context.TODO(), key, userSignup)
+			require.NoError(t, err)
+			assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
-		// Confirm the status is still set to Deactivating
-		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			v1alpha1.Condition{
-				Type:   v1alpha1.UserSignupApproved,
-				Status: v1.ConditionTrue,
-				Reason: "ApprovedAutomatically",
-			},
-			v1alpha1.Condition{
-				Type:   v1alpha1.UserSignupComplete,
-				Status: v1.ConditionFalse,
-				Reason: "Deactivating",
-			})
+			// Confirm the status is still set to Deactivating
+			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionFalse,
+					Reason: "Deactivating",
+				})
 
-		murs := &v1alpha1.MasterUserRecordList{}
+			murs := &v1alpha1.MasterUserRecordList{}
 
-		// The MUR should have now been deleted
-		err = r.client.List(context.TODO(), murs)
-		require.NoError(t, err)
-		require.Len(t, murs.Items, 0)
-		AssertThatCounterHas(t, 1)
+			// The MUR should have now been deleted
+			err = r.client.List(context.TODO(), murs)
+			require.NoError(t, err)
+			require.Len(t, murs.Items, 0)
+			AssertThatCounterHas(t, 1)
 
-		// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
-		notifications := &v1alpha1.NotificationList{}
-		err = r.client.List(context.TODO(), notifications)
-		require.NoError(t, err)
-		require.Len(t, notifications.Items, 0)
+			// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
+			notifications := &v1alpha1.NotificationList{}
+			err = r.client.List(context.TODO(), notifications)
+			require.NoError(t, err)
+			require.Len(t, notifications.Items, 0)
+		})
 
-		// 2nd reconcile should handle creating the deactivation notification
-		res, err := r.Reconcile(req)
-		require.NoError(t, err)
-		require.Equal(t, reconcile.Result{}, res)
+		t.Run("second reconcile - condition should be deactivated and deactivation notification created", func(t *testing.T) {
+			res, err := r.Reconcile(req)
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res)
 
-		// lookup the userSignup and check the conditions
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-		require.NoError(t, err)
+			// lookup the userSignup and check the conditions
+			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			require.NoError(t, err)
 
-		// Confirm the status has been set to Deactivated and the deactivation notification is created
-		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			v1alpha1.Condition{
-				Type:   v1alpha1.UserSignupApproved,
-				Status: v1.ConditionTrue,
-				Reason: "ApprovedAutomatically",
-			},
-			v1alpha1.Condition{
-				Type:   v1alpha1.UserSignupComplete,
-				Status: v1.ConditionTrue,
-				Reason: "Deactivated",
-			},
-			v1alpha1.Condition{
-				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
-				Status: v1.ConditionTrue,
-				Reason: "NotificationCRCreated",
-			})
+			// Confirm the status has been set to Deactivated and the deactivation notification is created
+			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+					Reason: "Deactivated",
+				},
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+					Status: v1.ConditionTrue,
+					Reason: "NotificationCRCreated",
+				})
+		})
 	})
 }
 
