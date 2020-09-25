@@ -2,15 +2,14 @@ package usersignup
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"strconv"
 	"testing"
 
+	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 
 	. "github.com/codeready-toolchain/host-operator/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -18,15 +17,11 @@ import (
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
-	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/h2non/gock.v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,11 +29,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-)
-
-const (
-	operatorNamespace = "toolchain-host-operator"
 )
 
 func newNsTemplateTier(tierName, clusterRevision string, nsTypes ...string) *toolchainv1alpha1.NSTemplateTier {
@@ -52,7 +42,7 @@ func newNsTemplateTier(tierName, clusterRevision string, nsTypes ...string) *too
 
 	return &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Name:      tierName,
 		},
 		Spec: toolchainv1alpha1.NSTemplateTierSpec{
@@ -70,15 +60,8 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username:      "foo@redhat.com",
-			Approved:      true,
-			TargetCluster: "east",
-		},
-	}
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier)
+	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
 
 	// when
 	res, err := r.Reconcile(req)
@@ -91,7 +74,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 	mur := murs.Items[0]
-	require.Equal(t, operatorNamespace, mur.Namespace)
+	require.Equal(t, test.HostOperatorNs, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 	assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
@@ -115,34 +98,14 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	AssertThatCounterHas(t, 2)
 }
 
-func TestReadUserApprovalPolicy(t *testing.T) {
-	// given
-	r, _, _ := prepareReconcile(t, "test", configMap(configuration.UserApprovalPolicyAutomatic))
-
-	// when
-	policy, err := r.ReadUserApprovalPolicyConfig(operatorNamespace)
-
-	// then
-	require.NoError(t, err)
-	require.Equal(t, configuration.UserApprovalPolicyAutomatic, policy)
-}
-
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: false,
-		},
-	}
+	userSignup := NewUserSignup()
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when - The first reconcile creates the MasterUserRecord
 	res, err := r.Reconcile(req)
@@ -162,7 +125,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	require.Len(t, murs.Items, 1)
 
 	mur := murs.Items[0]
-	require.Equal(t, operatorNamespace, mur.Namespace)
+	require.Equal(t, test.HostOperatorNs, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 	assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
@@ -226,23 +189,11 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userID := uuid.NewV4()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      userID.String(),
-			Namespace: operatorNamespace,
-			Labels:    map[string]string{"toolchain.dev.openshift.com/approved": "false"},
-		},
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: false,
-		},
-	}
+	userSignup := NewUserSignup()
+	userSignup.Annotations = map[string]string{}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
@@ -268,29 +219,17 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userID := uuid.NewV4()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      userID.String(),
-			Namespace: operatorNamespace,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-			},
-			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "abcdef0123456789",
-				"toolchain.dev.openshift.com/approved":            "false",
-			},
-		},
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: false,
-		},
+	userSignup := NewUserSignup()
+	userSignup.Annotations = map[string]string{
+		toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+	}
+	userSignup.Labels = map[string]string{
+		toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "abcdef0123456789",
+		"toolchain.dev.openshift.com/approved":            "false",
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
@@ -316,21 +255,13 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: false,
-		},
-	}
+	userSignup := NewUserSignup()
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 	fakeClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		return fmt.Errorf("some error")
 	}
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
 
 	// when
 	_, err := r.Reconcile(req)
@@ -360,26 +291,14 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userID := uuid.NewV4()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      userID.String(),
-			Namespace: operatorNamespace,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-			},
-			Labels: map[string]string{"toolchain.dev.openshift.com/approved": "false"},
-		},
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: false,
-		},
+	userSignup := NewUserSignup()
+	userSignup.Annotations = map[string]string{
+		toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
 	}
+	userSignup.Labels = map[string]string{"toolchain.dev.openshift.com/approved": "false"}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
@@ -405,16 +324,9 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: false,
-		},
-	}
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic)) // basicNSTemplateTier does not exist
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	userSignup := NewUserSignup()
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, configMap(configuration.UserApprovalPolicyAutomatic)) // basicNSTemplateTier does not exist
 
 	// when
 	_, err := r.Reconcile(req)
@@ -443,19 +355,14 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 
 func TestUserSignupFailedNoClusterReady(t *testing.T) {
 	// given
-	InitializeCounter(t, 1)
+	InitializeCounter(t, 2)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: false,
-		},
-	}
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-	createMemberCluster(t, r.client, "member1", notReady)
-	createMemberCluster(t, r.client, "member2", notReady)
-	defer clearMemberClusters(r.client)
+	userSignup := NewUserSignup()
+
+	notReady := NewGetMemberClusters(
+		NewMemberCluster(t, "member1", v1.ConditionFalse),
+		NewMemberCluster(t, "member2", v1.ConditionFalse))
+	r, req, _ := prepareReconcile(t, userSignup.Name, notReady, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	res, err := r.Reconcile(req)
@@ -481,24 +388,20 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
-	AssertThatCounterHas(t, 1)
+	AssertThatCounterHas(t, 2)
 }
 
 func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: false,
-		},
-	}
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-	createMemberCluster(t, r.client, "member1", ready, capacityExhausted)
-	createMemberCluster(t, r.client, "member2", ready, capacityExhausted)
-	defer clearMemberClusters(r.client)
+	userSignup := NewUserSignup()
+	member1 := NewMemberCluster(t, "member1", v1.ConditionTrue)
+	member1.CapacityExhausted = true
+	member2 := NewMemberCluster(t, "member2", v1.ConditionTrue)
+	member2.CapacityExhausted = true
+	noCapacity := NewGetMemberClusters(member1, member2)
+	r, req, _ := prepareReconcile(t, userSignup.Name, noCapacity, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	res, err := r.Reconcile(req)
@@ -531,18 +434,10 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: true,
-		},
-	}
+	userSignup := NewUserSignup(Approved())
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyManual), basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	res, err := r.Reconcile(req)
@@ -563,7 +458,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 
 	mur := murs.Items[0]
 
-	require.Equal(t, operatorNamespace, mur.Namespace)
+	require.Equal(t, test.HostOperatorNs, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
@@ -606,18 +501,10 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: true,
-		},
-	}
+	userSignup := NewUserSignup(Approved())
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, basicNSTemplateTier)
 
 	// when
 	res, err := r.Reconcile(req)
@@ -638,7 +525,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 
 	mur := murs.Items[0]
 
-	require.Equal(t, operatorNamespace, mur.Namespace)
+	require.Equal(t, test.HostOperatorNs, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
@@ -683,18 +570,10 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: false,
-		},
-	}
+	userSignup := NewUserSignup()
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyManual), basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, configMap(configuration.UserApprovalPolicyManual), basicNSTemplateTier)
 
 	// when
 	res, err := r.Reconcile(req)
@@ -732,19 +611,10 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username:      "foo@redhat.com",
-			Approved:      false,
-			TargetCluster: "east",
-		},
-	}
+	userSignup := NewUserSignup(WithTargetCluster("east"))
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	res, err := r.Reconcile(req)
@@ -764,7 +634,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	require.Len(t, murs.Items, 1)
 
 	mur := murs.Items[0]
-	require.Equal(t, operatorNamespace, mur.Namespace)
+	require.Equal(t, test.HostOperatorNs, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 	assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
@@ -811,16 +681,9 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("bar", "bar@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username:      "bar@redhat.com",
-			Approved:      false,
-			TargetCluster: "east",
-		},
-	}
+	userSignup := NewUserSignup(WithTargetCluster("east"))
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, emptyConfigMap(), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
 
 	// when
 	res, err := r.Reconcile(req)
@@ -852,19 +715,10 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: true,
-		},
-	}
+	userSignup := NewUserSignup(Approved())
 
-	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier)
-
-	// Add some member clusters
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, clt := prepareReconcile(t, userSignup.Name, ready, userSignup, basicNSTemplateTier)
 
 	clt.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 		switch obj.(type) {
@@ -893,19 +747,10 @@ func TestUserSignupMURReadFails(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: true,
-		},
-	}
+	userSignup := NewUserSignup(Approved())
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
-
-	// Add some member clusters
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup)
 
 	fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 		switch obj.(type) {
@@ -933,19 +778,10 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: true,
-		},
-	}
+	userSignup := NewUserSignup(Approved())
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
-
-	// Add some member clusters
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup)
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj.(type) {
@@ -974,18 +810,10 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-		},
-	}
+	userSignup := NewUserSignup()
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic))
-
-	// Add some member clusters
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, configMap(configuration.UserApprovalPolicyAutomatic))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj.(type) {
@@ -1014,14 +842,9 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-		},
-	}
+	userSignup := NewUserSignup()
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic))
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, configMap(configuration.UserApprovalPolicyAutomatic))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj := obj.(type) {
@@ -1055,37 +878,26 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewV4().String(),
-			Namespace: operatorNamespace,
-			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-			},
-			Labels: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
-				"toolchain.dev.openshift.com/approved":            "true",
-			},
-		},
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: false,
-		},
+	userSignup := NewUserSignup()
+	userSignup.Annotations = map[string]string{
+		toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+	}
+	userSignup.Labels = map[string]string{
+		toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+		"toolchain.dev.openshift.com/approved":            "true",
 	}
 
 	// Create a MUR with the same UserID
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
@@ -1094,7 +906,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	require.NoError(t, err)
 
 	key := types.NamespacedName{
-		Namespace: operatorNamespace,
+		Namespace: test.HostOperatorNs,
 		Name:      userSignup.Name,
 	}
 	instance := &v1alpha1.UserSignup{}
@@ -1114,19 +926,13 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: true,
-		},
-	}
+	userSignup := NewUserSignup(Approved())
 
 	// Create a MUR with a different UserID
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
 				v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String(),
 				"toolchain.dev.openshift.com/approved":  "true",
@@ -1134,10 +940,8 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
@@ -1153,7 +957,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	AssertThatCounterHas(t, 2)
 
 	key := types.NamespacedName{
-		Namespace: operatorNamespace,
+		Namespace: test.HostOperatorNs,
 		Name:      userSignup.Name,
 	}
 	instance := &v1alpha1.UserSignup{}
@@ -1176,7 +980,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 		// Confirm that the mur exists
 		mur = &v1alpha1.MasterUserRecord{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: operatorNamespace, Name: instance.Status.CompliantUsername}, mur)
+		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: test.HostOperatorNs, Name: instance.Status.CompliantUsername}, mur)
 		require.NoError(t, err)
 		require.Equal(t, instance.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 
@@ -1198,18 +1002,10 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo#$%^bar@redhat.com",
-			Approved: false,
-		},
-	}
+	userSignup := NewUserSignup(WithUsername("foo#$%^bar@redhat.com"))
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
@@ -1223,38 +1019,33 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 
 func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 	// given
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", "john.doe@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username:    "john.doe@redhat.com",
-			Deactivated: true,
-		},
-		Status: v1alpha1.UserSignupStatus{
-			Conditions: []v1alpha1.Condition{
-				{
-					Type:   v1alpha1.UserSignupComplete,
-					Status: v1.ConditionTrue,
-				},
-				{
-					Type:   v1alpha1.UserSignupApproved,
-					Status: v1.ConditionTrue,
-					Reason: "ApprovedAutomatically",
-				},
+	userSignup := NewUserSignup(Deactivated())
+	userSignup.Status = v1alpha1.UserSignupStatus{
+		Conditions: []v1alpha1.Condition{
+			{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
 			},
-			CompliantUsername: "john-doe",
+			{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
 		},
+		CompliantUsername: "john-doe",
 	}
+
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
-	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
 		InitializeCounter(t, 1)
 		defer counter.Reset()
-		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(operatorNamespace))
+		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 		// when
 		_, err := r.Reconcile(req)
@@ -1291,7 +1082,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		// given
 		InitializeCounter(t, 2)
 		defer counter.Reset()
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 		// when
 		_, err := r.Reconcile(req)
@@ -1322,7 +1113,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", "edward.jones@redhat.com"),
+		ObjectMeta: NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username:    "edward.jones@redhat.com",
 			Deactivated: true,
@@ -1344,16 +1135,16 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 		},
 	}
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
-	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
 		InitializeCounter(t, 1)
 		defer counter.Reset()
-		mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(operatorNamespace))
+		mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(test.HostOperatorNs))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 		// when
 		_, err := r.Reconcile(req)
@@ -1391,12 +1182,7 @@ func TestUserSignupBanned(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-		},
-	}
+	userSignup := NewUserSignup()
 
 	bannedUser := &toolchainv1alpha1.BannedUser{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1409,14 +1195,14 @@ func TestUserSignupBanned(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, bannedUser, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, bannedUser, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
 
 	// then
 	require.NoError(t, err)
-	err = r.client.Get(context.TODO(), test.NamespacedName(operatorNamespace, userSignup.Name), userSignup)
+	err = r.client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
@@ -1442,22 +1228,16 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username:             "foo@redhat.com",
-			VerificationRequired: true,
-		},
-	}
+	userSignup := NewUserSignup(VerificationRequired())
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
 
 	// then
 	require.NoError(t, err)
-	err = r.client.Get(context.TODO(), test.NamespacedName(operatorNamespace, userSignup.Name), userSignup)
+	err = r.client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
 
@@ -1486,25 +1266,20 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-		},
-		Status: v1alpha1.UserSignupStatus{
-			Conditions: []v1alpha1.Condition{
-				{
-					Type:   v1alpha1.UserSignupComplete,
-					Status: v1.ConditionTrue,
-				},
-				{
-					Type:   v1alpha1.UserSignupApproved,
-					Status: v1.ConditionTrue,
-					Reason: "ApprovedAutomatically",
-				},
+	userSignup := NewUserSignup()
+	userSignup.Status = v1alpha1.UserSignupStatus{
+		Conditions: []v1alpha1.Condition{
+			{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
 			},
-			CompliantUsername: "foo",
+			{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
 		},
+		CompliantUsername: "foo",
 	}
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 
@@ -1519,17 +1294,17 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		},
 	}
 
-	mur := murtest.NewMasterUserRecord(t, "foo", murtest.MetaNamespace(operatorNamespace))
+	mur := murtest.NewMasterUserRecord(t, "foo", murtest.MetaNamespace(test.HostOperatorNs))
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, bannedUser, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, bannedUser, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
 
 	// then
 	require.NoError(t, err)
-	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 	err = r.client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "false", userSignup.Labels[v1alpha1.UserSignupApprovedLabelKey])
@@ -1590,14 +1365,9 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-		},
-	}
+	userSignup := NewUserSignup()
 
-	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, clt := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	clt.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 		return errors.New("err happened")
@@ -1616,7 +1386,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", "alice.mayweather.doe@redhat.com"),
+		ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username:    "alice.mayweather.doe@redhat.com",
 			Deactivated: true,
@@ -1638,12 +1408,12 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	}
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 
-	key := test.NamespacedName(operatorNamespace, userSignup.Name)
+	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
-	mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(operatorNamespace))
+	mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 
-	r, req, clt := prepareReconcile(t, userSignup.Name, userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, clt := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	clt.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 		switch obj.(type) {
@@ -1685,15 +1455,7 @@ func TestDeathBy100Signups(t *testing.T) {
 	// given
 	InitializeCounter(t, 100)
 	defer counter.Reset()
-	userID := uuid.NewV4().String()
-
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta(userID, "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: true,
-		},
-	}
+	userSignup := NewUserSignup(Approved())
 
 	args := make([]runtime.Object, 0)
 	args = append(args, userSignup)
@@ -1702,7 +1464,7 @@ func TestDeathBy100Signups(t *testing.T) {
 	args = append(args, &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
 		},
 	})
@@ -1711,7 +1473,7 @@ func TestDeathBy100Signups(t *testing.T) {
 		args = append(args, &v1alpha1.MasterUserRecord{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("foo-%d", i),
-				Namespace: operatorNamespace,
+				Namespace: test.HostOperatorNs,
 				Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
 			},
 		})
@@ -1719,10 +1481,8 @@ func TestDeathBy100Signups(t *testing.T) {
 
 	args = append(args, basicNSTemplateTier)
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, args...)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, args...)
 
 	// when
 	res, err := r.Reconcile(req)
@@ -1757,19 +1517,13 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
-			Approved: false,
-		},
-	}
+	userSignup := NewUserSignup()
 
 	// Create a MUR with the same UserID
 	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
 		},
 	}
@@ -1778,15 +1532,13 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	mur2 := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "bar",
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, mur, mur2, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
-
-	createMemberCluster(t, r.client, "member1", ready)
-	defer clearMemberClusters(r.client)
+	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, mur2, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
@@ -1795,7 +1547,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	assert.EqualError(t, err, "Multiple MasterUserRecords found: multiple matching MasterUserRecord resources found")
 
 	key := types.NamespacedName{
-		Namespace: operatorNamespace,
+		Namespace: test.HostOperatorNs,
 		Name:      userSignup.Name,
 	}
 	instance := &v1alpha1.UserSignup{}
@@ -1817,16 +1569,9 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
+	userSignup := NewUserSignup(Approved())
 
-			Approved: true,
-		},
-	}
-
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, configMap(configuration.UserApprovalPolicyAutomatic), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
@@ -1841,7 +1586,7 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMemberClustersFunc, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -1857,100 +1602,32 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 		},
 	}
 
-	initObjs = append(initObjs, secret)
+	toolchainStatus := NewToolchainStatus(
+		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
 
-	client := test.NewFakeClient(t, initObjs...)
+	initObjs = append(initObjs, secret, toolchainStatus)
+
+	fakeClient := test.NewFakeClient(t, initObjs...)
 
 	r := &ReconcileUserSignup{
 		statusUpdater: &statusUpdater{
-			client: client,
+			client: fakeClient,
 		},
-		scheme: s,
+		scheme:            s,
+		getMemberClusters: getMemberClusters,
 	}
-	return r, newReconcileRequest(name), client
+	return r, newReconcileRequest(name), fakeClient
 }
 
 func newReconcileRequest(name string) reconcile.Request {
 	return reconcile.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      name,
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 		},
 	}
 }
 
-// clusterOption an option to configure the cluster to use in the tests
-type clusterOption func(*toolchainv1alpha1.ToolchainCluster)
-
-// ready an option to state the cluster as "ready"
-var ready clusterOption = func(c *toolchainv1alpha1.ToolchainCluster) {
-	c.Status = toolchainv1alpha1.ToolchainClusterStatus{
-		Conditions: []toolchainv1alpha1.ToolchainClusterCondition{
-			{
-				Type:   toolchainv1alpha1.ToolchainClusterReady,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-}
-
-// notReady an option to state the cluster as "not ready"
-var notReady clusterOption = func(c *toolchainv1alpha1.ToolchainCluster) {
-	c.Status = toolchainv1alpha1.ToolchainClusterStatus{
-		Conditions: []toolchainv1alpha1.ToolchainClusterCondition{
-			{
-				Type:   toolchainv1alpha1.ToolchainClusterReady,
-				Status: v1.ConditionFalse,
-			},
-		},
-	}
-}
-
-// capacityExhausted an option to state that the cluster capacity has exhausted
-var capacityExhausted clusterOption = func(c *toolchainv1alpha1.ToolchainCluster) {
-	c.Labels["toolchain.dev.openshift.com/capacity-exhausted"] = strconv.FormatBool(true)
-}
-
-func createMemberCluster(t *testing.T, client client.Client, name string, options ...clusterOption) {
-	logf.SetLogger(zap.Logger())
-	gock.New("http://cluster.com").
-		Get("api").
-		Persist().
-		Reply(200).
-		BodyString("{}")
-	toolchainCluster := &toolchainv1alpha1.ToolchainCluster{
-		Spec: toolchainv1alpha1.ToolchainClusterSpec{
-			SecretRef: toolchainv1alpha1.LocalSecretReference{
-				Name: "secret",
-			},
-			APIEndpoint: "http://cluster.com",
-			CABundle:    "",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: "test-namespace",
-			Labels: map[string]string{
-				"type":             "member",
-				"ownerClusterName": "east",
-			},
-		},
-	}
-	for _, configure := range options {
-		configure(toolchainCluster)
-	}
-	service := cluster.NewToolchainClusterService(client, logf.Log, operatorNamespace, 0)
-	err := service.AddOrUpdateToolchainCluster(toolchainCluster)
-	require.NoError(t, err)
-}
-
-func clearMemberClusters(client client.Client) {
-	service := cluster.NewToolchainClusterService(client, logf.Log, operatorNamespace, 0)
-	clusters := cluster.GetMemberClusters()
-
-	for _, toolchainCluster := range clusters {
-		service.DeleteToolchainCluster(toolchainCluster.Name)
-	}
-}
 
 func configMap(approvalPolicy string) *v1.ConfigMap {
 	// Create a new ConfigMap
@@ -1960,42 +1637,8 @@ func configMap(approvalPolicy string) *v1.ConfigMap {
 		Data: cmValues,
 	}
 	cm.Name = configuration.ToolchainConfigMapName
-	cm.ObjectMeta.Namespace = operatorNamespace
+	cm.ObjectMeta.Namespace = test.HostOperatorNs
 	return cm
-}
-
-func emptyConfigMap() *v1.ConfigMap {
-	// Create a new ConfigMap
-	cmValues := make(map[string]string)
-	cm := &v1.ConfigMap{
-		Data: cmValues,
-	}
-	cm.Name = configuration.ToolchainConfigMapName
-	cm.ObjectMeta.Namespace = operatorNamespace
-	return cm
-}
-
-func newObjectMeta(name, email string) metav1.ObjectMeta {
-	if name == "" {
-		name = uuid.NewV4().String()
-	}
-
-	md5hash := md5.New()
-	// Ignore the error, as this implementation cannot return one
-	_, _ = md5hash.Write([]byte(email))
-	emailHash := hex.EncodeToString(md5hash.Sum(nil))
-
-	return metav1.ObjectMeta{
-		Name:      name,
-		Namespace: operatorNamespace,
-		Annotations: map[string]string{
-			toolchainv1alpha1.UserSignupUserEmailAnnotationKey: email,
-		},
-		Labels: map[string]string{
-			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
-			"toolchain.dev.openshift.com/approved":            "false",
-		},
-	}
 }
 
 func TestTransformUsername(t *testing.T) {
@@ -2034,42 +1677,34 @@ func assertName(t *testing.T, expected, username string) {
 
 // Test the scenario where the existing usersignup CompliantUsername becomes outdated eg. transformUsername func is changed
 func TestChangedCompliantUsername(t *testing.T) {
-	email := "foo@redhat.com"
 	// starting with a UserSignup that exists and was approved and has the now outdated CompliantUsername
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("", email),
-		Spec: v1alpha1.UserSignupSpec{
-			Username:      email,
-			Approved:      true,
-			TargetCluster: "east",
-		},
-		Status: v1alpha1.UserSignupStatus{
-			Conditions: []toolchainv1alpha1.Condition{
-				{
-					Type:   toolchainv1alpha1.UserSignupApproved,
-					Status: v1.ConditionTrue,
-					Reason: toolchainv1alpha1.UserSignupApprovedByAdminReason,
-				},
-				{
-					Status: v1.ConditionTrue,
-					Type:   toolchainv1alpha1.UserSignupComplete,
-				},
+	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
+	userSignup.Status = v1alpha1.UserSignupStatus{
+		Conditions: []toolchainv1alpha1.Condition{
+			{
+				Type:   toolchainv1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: toolchainv1alpha1.UserSignupApprovedByAdminReason,
 			},
-			CompliantUsername: "foo-old",
+			{
+				Status: v1.ConditionTrue,
+				Type:   toolchainv1alpha1.UserSignupComplete,
+			},
 		},
+		CompliantUsername: "foo-old",
 	}
 
 	// also starting with the old MUR whose name matches the outdated UserSignup CompliantUsername
 	oldMur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo-old",
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
 		},
 	}
 
 	// create the initial resources
-	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, oldMur, basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, oldMur, basicNSTemplateTier)
 
 	// 1st reconcile should effectively be a no op because the MUR name and UserSignup CompliantUsername match and status is all good
 	res, err := r.Reconcile(req)
@@ -2078,7 +1713,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 
 	// after the 1st reconcile verify that the MUR still exists and its name still matches the initial UserSignup CompliantUsername
 	murs := &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs, client.InNamespace(operatorNamespace))
+	err = r.client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 	mur := murs.Items[0]
@@ -2104,7 +1739,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 
 	// the MUR name should match the new CompliantUserName
 	assert.Equal(t, "foo", mur.Name)
-	require.Equal(t, operatorNamespace, mur.Namespace)
+	require.Equal(t, test.HostOperatorNs, mur.Namespace)
 	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 	assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
@@ -2130,15 +1765,8 @@ func TestChangedCompliantUsername(t *testing.T) {
 
 func TestMigrateMur(t *testing.T) {
 	// given
-	userSignup := &v1alpha1.UserSignup{
-		ObjectMeta: newObjectMeta("foo", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
-			Username:      "foo@redhat.com",
-			Approved:      true,
-			TargetCluster: "east",
-		},
-	}
-	mur, err := newMasterUserRecord(basicNSTemplateTier, "foo", operatorNamespace, "east", "foo")
+	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
+	mur, err := newMasterUserRecord(basicNSTemplateTier, "foo", test.HostOperatorNs, "east", "foo")
 	require.NoError(t, err)
 
 	// set NSLimit and NSTemplateSet to be empty
@@ -2167,7 +1795,7 @@ func TestMigrateMur(t *testing.T) {
 
 	t.Run("add missing tierName and nsLimit fields", func(t *testing.T) {
 		// given
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup, basicNSTemplateTier, mur)
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier, mur)
 
 		// when
 		_, err := r.Reconcile(req)

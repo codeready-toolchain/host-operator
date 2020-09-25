@@ -51,7 +51,8 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 		statusUpdater: &statusUpdater{
 			client: mgr.GetClient(),
 		},
-		scheme: mgr.GetScheme(),
+		scheme:            mgr.GetScheme(),
+		getMemberClusters: cluster.GetMemberClusters,
 	}
 }
 
@@ -95,7 +96,8 @@ var _ reconcile.Reconciler = &ReconcileUserSignup{}
 // ReconcileUserSignup reconciles a UserSignup object
 type ReconcileUserSignup struct {
 	*statusUpdater
-	scheme *runtime.Scheme
+	scheme            *runtime.Scheme
+	getMemberClusters cluster.GetMemberClustersFunc
 }
 
 // Reconcile reads that state of the cluster for a UserSignup object and makes changes based on the state read
@@ -286,7 +288,7 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 			targetCluster = userSignup.Spec.TargetCluster
 		} else {
 			// Automatic cluster selection based on cluster readiness
-			members := cluster.GetMemberClusters(cluster.Ready, cluster.CapacityNotExhausted)
+			members := r.getMemberClusters(cluster.Ready, cluster.CapacityNotExhausted)
 			if len(members) > 0 {
 				targetCluster = members[0].Name
 			} else {
