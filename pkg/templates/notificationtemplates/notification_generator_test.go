@@ -15,7 +15,18 @@ import (
 func TestGetNotificationTemplate(t *testing.T) {
 	logf.SetLogger(zap.Logger(true))
 	t.Run("ok", func(t *testing.T) {
-		t.Run("get notification templates", func(t *testing.T) {
+		t.Run("get userdeactivated notification template", func(t *testing.T) {
+			// when
+			defer resetNotificationTemplateCache()
+			template, found, err := GetNotificationTemplate("userdeactivated")
+			// then
+			require.NoError(t, err)
+			require.NotNil(t, template)
+			assert.True(t, found)
+			assert.Equal(t, "Notice: Your Red Hat CodeReady Toolchain account has been deactivated", template.Subject)
+			assert.Contains(t, template.Content, "Your <a href={{.RegistrationURL }}>Red Hat CodeReady Toolchain</a> account has been deactivated.")
+		})
+		t.Run("get userprovisioned notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
 			template, found, err := GetNotificationTemplate("userprovisioned")
@@ -24,7 +35,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NotNil(t, template)
 			assert.True(t, found)
 			assert.Equal(t, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned", template.Subject)
-			assert.Contains(t, template.Content, "You are receiving this email because you have an online <a href={{.RegistrationURL}}>Red Hat CodeReady Toolchain</a>")
+			assert.Contains(t, template.Content, "Your <a href={{.RegistrationURL }}>Red Hat CodeReady Toolchain</a> account has been provisioned and is ready to use.")
 		})
 		t.Run("ensure cache is used", func(t *testing.T) {
 			// when

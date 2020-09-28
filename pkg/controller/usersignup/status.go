@@ -231,6 +231,37 @@ func (u *statusUpdater) setStatusFailedToUpdateApprovedLabel(userSignup *toolcha
 		})
 }
 
+func (u *statusUpdater) setStatusDeactivationNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.UserSignupDeactivatedNotificationCRCreatedReason,
+		})
+}
+
+func (u *statusUpdater) setStatusDeactivationNotificationUserIsActive(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.UserSignupDeactivatedNotificationUserIsActiveReason,
+		})
+}
+
+func (u *statusUpdater) setStatusDeactivationNotificationCreationFailed(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupDeactivatedNotificationCRCreationFailedReason,
+			Message: message,
+		})
+}
+
 func (u *statusUpdater) updateStatus(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error) error {
 
