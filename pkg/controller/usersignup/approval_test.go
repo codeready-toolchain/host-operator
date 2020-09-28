@@ -142,6 +142,25 @@ func TestGetClusterIfApproved(t *testing.T) {
 		assert.Equal(t, "member2", clusterName)
 	})
 
+	t.Run("with two clusters and enough capacity in none of them using the default memory values", func(t *testing.T) {
+		// given
+		hostOperatorConfig := NewHostOperatorConfig(
+			AutomaticApproval().
+				Enabled().
+				MaxUsersNumber(5000).
+				ResourceCapThreshold(1))
+		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+
+		// when
+		approved, clusterName, err := getClusterIfApproved(fakeClient, config, signup, clusters)
+
+		// then
+		require.EqualError(t, err, "no suitable member cluster found - capacity was reached")
+		assert.False(t, approved)
+		assert.Empty(t, clusterName)
+	})
+
 	t.Run("automatic approval not enabled and user not approved", func(t *testing.T) {
 		// given
 		fakeClient := NewFakeClient(t, toolchainStatus, NewHostOperatorConfig())
