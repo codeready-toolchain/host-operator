@@ -180,6 +180,13 @@ func TestNewNSTemplateTier(t *testing.T) {
 			// given
 			namespace := "host-operator-" + uuid.NewV4().String()[:7]
 			assets := assets.NewAssets(AssetNames, Asset)
+
+			expectedDeactivationTimeoutsByTier := map[string]int{
+				"basic":    14,
+				"advanced": 14,
+				"team":     0,
+			}
+
 			// when
 			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
 			tc, err := newTierGenerator(s, nil, namespace, assets)
@@ -192,9 +199,15 @@ func TestNewNSTemplateTier(t *testing.T) {
 				for _, nstmplTierObj := range tierData.nstmplTierObjs {
 					tierObj := nstmplTierObj.GetRuntimeObject()
 
+					// verify tier configuration
 					nstmplTier := runtimeObjectToNSTemplateTier(t, s, tierObj)
 					require.NotNil(t, nstmplTier)
 					assert.Equal(t, namespace, nstmplTier.Namespace)
+					expectedDeactivationTimeout, ok := expectedDeactivationTimeoutsByTier[nstmplTier.Name]
+					require.True(t, ok, "encountered an unexpected tier")
+					assert.Equal(t, expectedDeactivationTimeout, nstmplTier.Spec.DeactivationTimeoutDays)
+
+					// verify tier templates
 					require.Len(t, nstmplTier.Spec.Namespaces, len(tierData.tierTemplates)-1) // exclude clusterresources TierTemplate here
 					expectedTierTmplNames := make([]string, 0, len(tierData.tierTemplates)-1)
 					var clusterResourcesTemplateRef string

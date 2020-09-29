@@ -126,7 +126,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
 				if tier.Name == "nocluster" {
-					assert.Nil(t, tier.Spec.ClusterResources) // "team" tier should not have cluster resources set
+					assert.Nil(t, tier.Spec.ClusterResources) // "nocluster" tier should not have cluster resources set
 				} else {
 					require.NotNil(t, tier.Spec.ClusterResources)
 					assert.Equal(t, expectedTemplateRefs[tierName]["clusterresources"][0], tier.Spec.ClusterResources.TemplateRef)

@@ -14,3 +14,4 @@ host-operator:
   duration-before-notification-deletion: '5s'
   environment: 'e2e-tests'
   toolchainstatus-refresh-time: '1s'
+  deactivation-domains-excluded: '@excluded.com'
