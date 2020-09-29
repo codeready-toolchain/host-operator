@@ -351,7 +351,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasCondition(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady(defaultHostOperatorName, "DeploymentReady")).
 				HasMemberStatus(memberClusterSingleReady()).
-				HasRegistrationServiceStatus(registrationServiceHealthNotReady("bad response from http://registration-service//api/v1/health : statusCode=500"))
+				HasRegistrationServiceStatus(registrationServiceHealthNotReady("bad response from http://registration-service/api/v1/health : statusCode=500"))
 		})
 
 		t.Run("Registration health endpoint - invalid JSON", func(t *testing.T) {
