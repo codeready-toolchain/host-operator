@@ -39,3 +39,10 @@ func (a *Assertion) HasConditions(expected ...toolchainv1alpha1.Condition) *Asse
 	test.AssertConditionsMatch(a.t, a.notification.Status.Conditions, expected...)
 	return a
 }
+
+func AssertNoNotificationsExist(t test.T, cl client.Client) {
+	notifications := &toolchainv1alpha1.NotificationList{}
+	err := cl.List(context.TODO(), notifications)
+	require.NoError(t, err)
+	require.Len(t, notifications.Items, 0)
+}
