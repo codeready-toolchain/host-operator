@@ -12,9 +12,12 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -131,6 +134,15 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
+	// If the usersignup is not banned and not deactivated then ensure the deactivated notification status is set to false.
+	// This is especially important for cases when a user is deactivated and then reactivated because the status is used to
+	// trigger sending of the notification. If a user is reactivated a notification should be sent to the user again.
+	if !banned && !instance.Spec.Deactivated {
+		if err := r.updateStatus(reqLogger, instance, r.setStatusDeactivationNotificationUserIsActive); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	if exists, err := r.ensureMurIfAlreadyExists(reqLogger, instance, banned); exists || err != nil {
 		return reconcile.Result{}, err
 	}
@@ -141,9 +153,22 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusBanned)
 	}
 
-	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, simply set the status
-	// and return
+	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
+	// send a notification to the user, and return
 	if instance.Spec.Deactivated {
+		if condition.IsNotTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
+			if err := r.sendDeactivatedNotification(reqLogger, instance); err != nil {
+				reqLogger.Error(err, "Failed to create user deactivation notification")
+
+				// set the failed to create notification status condition
+				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusDeactivationNotificationCreationFailed, err, "Failed to create user deactivation notification")
+			}
+
+			if err := r.updateStatus(reqLogger, instance, r.setStatusDeactivationNotificationCreated); err != nil {
+				reqLogger.Error(err, "Failed to update notification created status")
+				return reconcile.Result{}, err
+			}
+		}
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
 	}
 
@@ -238,7 +263,7 @@ func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, us
 			return true, err
 		}
 
-		// check if anything in the MUR chould be migrated/fixed
+		// check if anything in the MUR should be migrated/fixed
 		if changed, err := migrateOrFixMurIfNecessary(mur, nstemplateTier); err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
 
@@ -425,6 +450,32 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 			"Error deleting MasterUserRecord")
 	}
 	logger.Info("Deleted MasterUserRecord", "Name", mur.Name)
+	return nil
+}
+
+func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+	notification := &toolchainv1alpha1.Notification{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      userSignup.Status.CompliantUsername + "-deactivated",
+			Namespace: userSignup.Namespace,
+		},
+		Spec: toolchainv1alpha1.NotificationSpec{
+			UserID:   userSignup.Name,
+			Template: notificationtemplates.UserDeactivated.Name,
+		},
+	}
+
+	if err := controllerutil.SetControllerReference(userSignup, notification, r.scheme); err != nil {
+		logger.Error(err, "Failed to set owner reference for deactivation notification resource")
+		return err
+	}
+
+	if err := r.client.Create(context.TODO(), notification); err != nil {
+		logger.Error(err, "Failed to create deactivation notification resource")
+		return err
+	}
+
+	logger.Info("Deactivation notification resource created")
 	return nil
 }
 
