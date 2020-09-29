@@ -1,3 +1,5 @@
 registration-service:
   environment: 'dev'
   replicas: 2
+host-operator:
+  deactivation-domains-excluded: '@redhat.com'
