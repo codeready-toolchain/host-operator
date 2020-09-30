@@ -76,19 +76,23 @@ func hasEnoughResources(config *toolchainv1alpha1.HostOperatorConfig, status *to
 		}
 		for _, memberStatus := range status.Status.Members {
 			if memberStatus.ClusterName == cluster.Name {
-				if len(memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole) > 0 {
-					for _, usagePerNode := range memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole {
-						if usagePerNode >= threshold {
-							return false
-						}
-					}
-					return true
-				}
-				return false
+				return hasMemberEnoughResources(memberStatus, threshold)
 			}
 		}
 		return false
 	}
+}
+
+func hasMemberEnoughResources(memberStatus toolchainv1alpha1.Member, threshold int) bool {
+	if len(memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole) > 0 {
+		for _, usagePerNode := range memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole {
+			if usagePerNode >= threshold {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }
 
 func getOptimalTargetCluster(userSignup *toolchainv1alpha1.UserSignup, getMemberClusters cluster.GetMemberClustersFunc, conditions ...cluster.Condition) string {
