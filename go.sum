@@ -140,6 +140,8 @@ github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE
 github.com/codeready-toolchain/api v0.0.0-20200914140452-d2c86086863e/go.mod h1:K0M7N66c37ebaXi/uFEGY/H9oieYR8PYYnhjfueTdYs=
 github.com/codeready-toolchain/api v0.0.0-20200925000842-d2e82e080a5a h1:zdLP2nVrHV+pzx39GIdz9iAunjaFQzS7G1XfjeUDk14=
 github.com/codeready-toolchain/api v0.0.0-20200925000842-d2e82e080a5a/go.mod h1:K0M7N66c37ebaXi/uFEGY/H9oieYR8PYYnhjfueTdYs=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200930070243-e124e69e7a0d h1:sBJBRMtOtaVEuiI79AjUNkD7SP1JFWPaLvh4WX5Jurc=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20200930070243-e124e69e7a0d/go.mod h1:VhMZjATgVT/YrbXuEj+erSsxKCXoyF9uCHLs6hOt2VA=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=
 github.com/containerd/console v0.0.0-20180822173158-c12b1e7919c1/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.2.7/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=
@@ -581,8 +583,6 @@ github.com/mailru/easyjson v0.7.1 h1:mdxE1MF9o53iCb2Ghj1VfWvh7ZOwHpnVG/xwXrV90U8
 github.com/mailru/easyjson v0.7.1/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7ldAVICs=
 github.com/markbates/inflect v1.0.4/go.mod h1:1fR9+pO2KHEO9ZRtto13gDwwZaAKstQzferVeWqbgNs=
 github.com/marstr/guid v1.1.0/go.mod h1:74gB1z2wpxxInTG6yaqA7KrtM0NZ+RbrcqDvYHefzho=
-github.com/matousjobanek/toolchain-common v0.0.0-20200923161014-eff5f8414aee h1:19SkKdVMkCtCgFqNJDSnKLRdffJZZ77wTJXqSUDKltQ=
-github.com/matousjobanek/toolchain-common v0.0.0-20200923161014-eff5f8414aee/go.mod h1:VhMZjATgVT/YrbXuEj+erSsxKCXoyF9uCHLs6hOt2VA=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-colorable v0.1.2 h1:/bC9yWikZXAL9uJdulbSfyVNIR3n3trXl+v8+1sx8mU=
 github.com/mattn/go-colorable v0.1.2/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
