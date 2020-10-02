@@ -1,8 +1,6 @@
 package usersignup
 
 import (
-	"fmt"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -53,7 +51,6 @@ type UserSignupCreatedPredicate struct {
 
 // Create implements default CreateEvent filter, in this case we use it as a pass-through and only use it for metrics
 func (p UserSignupCreatedPredicate) Create(e event.CreateEvent) bool {
-	fmt.Printf("Generation %d", e.Meta.GetGeneration())
 	metrics.IncrementUserSignupCounter()
 	return true
 }
