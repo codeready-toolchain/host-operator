@@ -364,7 +364,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	AssertThatCounterHas(t, 1)
 }
 
-func TestUserSignupFailedNoClusterReady(t *testing.T) {
+func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	// given
 	InitializeCounter(t, 2)
 	defer counter.Reset()
@@ -380,24 +380,22 @@ func TestUserSignupFailedNoClusterReady(t *testing.T) {
 	res, err := r.Reconcile(req)
 
 	// then
-	// error reported, and request is requeued and userSignup status was updated
-	require.Error(t, err)
+	// it should not return an error but just wait for another reconcile triggered by updated ToolchainStatus
+	require.NoError(t, err)
 	assert.Equal(t, reconcile.Result{Requeue: false}, res)
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type:    v1alpha1.UserSignupApproved,
-			Status:  v1.ConditionFalse,
-			Reason:  "PendingApproval",
-			Message: "no suitable member cluster found - capacity was reached",
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionFalse,
+			Reason: "PendingApproval",
 		},
 		v1alpha1.Condition{
-			Type:    v1alpha1.UserSignupComplete,
-			Status:  v1.ConditionFalse,
-			Reason:  "NoClusterAvailable",
-			Message: "no suitable member cluster found - capacity was reached",
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "NoClusterAvailable",
 		},
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -425,24 +423,22 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	res, err := r.Reconcile(req)
 
 	// then
-	// error reported, and request is NOT requeued and userSignup status was updated
-	require.Error(t, err)
+	// it should not return an error but just wait for another reconcile triggered by updated ToolchainStatus
+	require.NoError(t, err)
 	assert.Equal(t, reconcile.Result{Requeue: false}, res)
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
-			Type:    v1alpha1.UserSignupApproved,
-			Status:  v1.ConditionFalse,
-			Reason:  "PendingApproval",
-			Message: "no suitable member cluster found - capacity was reached",
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionFalse,
+			Reason: "PendingApproval",
 		},
 		v1alpha1.Condition{
-			Type:    v1alpha1.UserSignupComplete,
-			Status:  v1.ConditionFalse,
-			Reason:  "NoClusterAvailable",
-			Message: "no suitable member cluster found - capacity was reached",
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionFalse,
+			Reason: "NoClusterAvailable",
 		},
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -1926,7 +1922,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	AssertThatCounterHas(t, 1)
 }
 
-func TestUserSignupNoMembersAvailableFails(t *testing.T) {
+func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 	// given
 	InitializeCounter(t, 1)
 	defer counter.Reset()
@@ -1943,8 +1939,24 @@ func TestUserSignupNoMembersAvailableFails(t *testing.T) {
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
-
+	assert.Equal(t, "pending", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedByAdmin",
+		},
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "NoClusterAvailable",
+			Message: "no suitable member cluster found - capacity was reached",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserIsActive",
+		})
 }
 
 func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMemberClustersFunc, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request, *test.FakeClient) {
@@ -2118,8 +2130,10 @@ func TestChangedCompliantUsername(t *testing.T) {
 
 func TestMigrateMur(t *testing.T) {
 	// given
+	InitializeCounter(t, 0)
+	defer counter.Reset()
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
-	mur, err := newMasterUserRecord(basicNSTemplateTier, "foo", test.HostOperatorNs, "east", "foo")
+	mur, err := newMasterUserRecord(basicNSTemplateTier, "foo", test.HostOperatorNs, "east", userSignup.Name)
 	require.NoError(t, err)
 
 	// set NSLimit and NSTemplateSet to be empty

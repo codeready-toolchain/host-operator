@@ -3,6 +3,7 @@ package test
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"time"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -42,11 +43,23 @@ func WithUsername(username string) UserSignupModifier {
 	}
 }
 
+func WithStateLabel(stateValue string) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = stateValue
+	}
+}
+
+func CreatedBefore(before time.Duration) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Now().Add(-before)}
+	}
+}
+
 type UserSignupModifier func(*v1alpha1.UserSignup)
 
 func NewUserSignup(modifiers ...UserSignupModifier) *v1alpha1.UserSignup {
 	signup := &v1alpha1.UserSignup{
-		ObjectMeta: NewUserSignupObjectMeta("foo", "foo@redhat.com"),
+		ObjectMeta: NewUserSignupObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 		},
@@ -75,7 +88,7 @@ func NewUserSignupObjectMeta(name, email string) metav1.ObjectMeta {
 		},
 		Labels: map[string]string{
 			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
-			"toolchain.dev.openshift.com/approved":            "false",
 		},
+		CreationTimestamp: metav1.Now(),
 	}
 }
