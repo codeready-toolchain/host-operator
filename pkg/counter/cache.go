@@ -67,14 +67,14 @@ func DecrementMasterUserRecordCount(log logr.Logger) {
 	})
 }
 
-// IncrementUserAccountCount increments the number of UserAccount fo the given member cluster in the cached counter
+// IncrementUserAccountCount increments the number of UserAccount for the given member cluster in the cached counter
 func IncrementUserAccountCount(clusterName string) {
 	write(func() {
 		cachedCounts.UserAccountsPerClusterCounts[clusterName]++
 	})
 }
 
-// DecrementUserAccountCount decreases the number of UserAccount fo the given member cluster in the cached counter
+// DecrementUserAccountCount decreases the number of UserAccount for the given member cluster in the cached counter
 func DecrementUserAccountCount(log logr.Logger, clusterName string) {
 	write(func() {
 		if cachedCounts.UserAccountsPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized {

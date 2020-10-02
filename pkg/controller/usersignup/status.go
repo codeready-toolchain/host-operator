@@ -4,6 +4,7 @@ import (
 	"context"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
@@ -133,6 +134,7 @@ func (u *statusUpdater) setStatusBanning(userSignup *toolchainv1alpha1.UserSignu
 
 // setStatusBanned sets the Complete status to True, as the banning operation has been successful (with a reason of "Banned")
 func (u *statusUpdater) setStatusBanned(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	metrics.IncrementUserSignupBannedCounter()
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -155,6 +157,7 @@ func (u *statusUpdater) setStatusDeactivating(userSignup *toolchainv1alpha1.User
 }
 
 func (u *statusUpdater) setStatusDeactivated(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	metrics.IncrementUserSignupDeactivatedCounter()
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
