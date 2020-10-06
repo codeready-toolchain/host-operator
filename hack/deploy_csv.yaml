@@ -2023,6 +2023,19 @@ data:
                       x-kubernetes-list-map-keys:
                       - type
                       x-kubernetes-list-type: map
+                    metrics:
+                      description: Metrics is used to track metrics-related data of this
+                        usersignup
+                      properties:
+                        metricKeyValues:
+                          additionalProperties:
+                            type: string
+                          description: MetricsRegistry uses metric names as keys. The values
+                            indicate whether this resource has been counted for the associated
+                            metric.
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      type: object
                   type: object
               type: object
               x-kubernetes-preserve-unknown-fields: true
