@@ -533,7 +533,7 @@ func validateEmailHash(userEmail, userEmailHash string) bool {
 
 func (r *ReconcileUserSignup) wrapStatusUpdateWithMetrics(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error, metricsFunc func()) error {
-	err := r.updateStatus(logger, userSignup, r.setStatusBanned)
+	err := r.updateStatus(logger, userSignup, statusUpdater)
 	// call the metrics function only if the update was successful
 	if err == nil {
 		metricsFunc()

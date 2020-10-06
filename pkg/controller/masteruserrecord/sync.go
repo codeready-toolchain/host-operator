@@ -11,7 +11,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -109,11 +108,6 @@ func (s *Synchronizer) synchronizeStatus() error {
 				s.record.Status.UserAccounts = s.record.Status.UserAccounts[:len(s.record.Status.UserAccounts)-1]
 			} else {
 				s.record.Status.UserAccounts[index] = originalStatusUserAcc
-			}
-		} else {
-			// handle metrics after successful status update
-			if condition.HasConditionReason(s.record.Status.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.MasterUserRecordProvisionedReason) {
-				metrics.IncrementUserSignupProvisionedTotal()
 			}
 		}
 		return err
