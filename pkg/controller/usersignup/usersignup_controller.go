@@ -70,7 +70,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to primary resource UserSignup
 	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.UserSignup{}}, &handler.EnqueueRequestForObject{},
-		UserSignupChangedPredicate{}, UserSignupCreatedPredicate{})
+		UserSignupChangedPredicate{})
 	if err != nil {
 		return err
 	}
