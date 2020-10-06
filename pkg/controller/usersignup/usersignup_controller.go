@@ -11,6 +11,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -148,7 +149,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// If there is no MasterUserRecord created, yet the UserSignup is Banned, simply set the status
 	// and return
 	if banned {
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusBanned)
+		return reconcile.Result{}, r.wrapStatusUpdateWithMetrics(reqLogger, instance, r.setStatusBanned, metrics.IncrementUserSignupBannedTotal)
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
@@ -167,7 +168,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				return reconcile.Result{}, err
 			}
 		}
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
+		return reconcile.Result{}, r.wrapStatusUpdateWithMetrics(reqLogger, instance, r.setStatusDeactivated, metrics.IncrementUserSignupDeactivatedTotal)
 	}
 
 	return reconcile.Result{}, r.ensureNewMurIfApproved(reqLogger, instance)
@@ -528,4 +529,14 @@ func validateEmailHash(userEmail, userEmailHash string) bool {
 	// Ignore the error, as this implementation cannot return one
 	_, _ = md5hash.Write([]byte(userEmail))
 	return hex.EncodeToString(md5hash.Sum(nil)) == userEmailHash
+}
+
+func (r *ReconcileUserSignup) wrapStatusUpdateWithMetrics(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error, metricsFunc func()) error {
+	err := r.updateStatus(logger, userSignup, r.setStatusBanned)
+	// call the metrics function only if the update was successful
+	if err == nil {
+		metricsFunc()
+	}
+	return err
 }

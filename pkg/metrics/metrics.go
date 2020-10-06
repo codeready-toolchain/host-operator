@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"sync"
+
 	"github.com/prometheus/client_golang/prometheus"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	k8smetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -8,103 +10,114 @@ import (
 
 var log = logf.Log.WithName("toolchain_metrics")
 
+type counter struct {
+	sync.RWMutex
+	Name              string
+	Help              string
+	prometheusCounter prometheus.Counter
+}
+
 // counters
-const (
-	userSignupTotal                string = "user_signups_total"
-	userSignupProvisionedTotal     string = "user_signups_provisioned_total"
-	userSignupBannedTotal          string = "user_signups_banned_total"
-	userSignupDeactivatedTotal     string = "user_signups_deactivated_total"
-	userSignupAutoDeactivatedTotal string = "user_signups_auto_deactivated_total"
+var (
+	UserSignupTotal = &counter{
+		Name: "user_signups_total",
+		Help: "Number of User Signups",
+	}
+
+	UserSignupProvisionedTotal = &counter{
+		Name: "user_signups_provisioned_total",
+		Help: "Number of Provisioned User Signups",
+	}
+
+	UserSignupBannedTotal = &counter{
+		Name: "user_signups_banned_total",
+		Help: "Number of Banned User Signups",
+	}
+
+	UserSignupDeactivatedTotal = &counter{
+		Name: "user_signups_deactivated_total",
+		Help: "Number of Deactivated User Signups",
+	}
+
+	UserSignupAutoDeactivatedTotal = &counter{
+		Name: "user_signups_auto_deactivated_total",
+		Help: "Number of Automatically Deactivated User Signups",
+	}
 )
 
-// userSignup counters
+// collections
 var (
-	userSignupCounter, userSignupProvisionedCounter, userSignupBannedCounter, userSignupDeactivatedCounter, userSignupAutoDeactivatedCounter prometheus.Counter
+	countersMap = make(map[string]*counter)
 )
+
+func initMetrics() {
+	newCounter(UserSignupTotal, UserSignupProvisionedTotal, UserSignupBannedTotal, UserSignupDeactivatedTotal, UserSignupAutoDeactivatedTotal)
+}
 
 // RegisterCustomMetrics registers the custom metrics
 func RegisterCustomMetrics() {
-	userSignupCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: userSignupTotal,
-		Help: "Number of User Signups",
-	})
-
-	userSignupProvisionedCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: userSignupProvisionedTotal,
-		Help: "Number of Provisioned User Signups",
-	})
-
-	userSignupBannedCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: userSignupBannedTotal,
-		Help: "Number of Banned User Signups",
-	})
-
-	userSignupDeactivatedCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: userSignupDeactivatedTotal,
-		Help: "Number of Deactivated User Signups",
-	})
-
-	userSignupAutoDeactivatedCounter = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: userSignupAutoDeactivatedTotal,
-		Help: "Number of Automatically Deactivated User Signups",
-	})
-
-	k8smetrics.Registry.MustRegister(userSignupCounter, userSignupProvisionedCounter, userSignupBannedCounter, userSignupDeactivatedCounter, userSignupAutoDeactivatedCounter)
+	initMetrics()
+	// register metrics
+	for _, ctr := range countersMap {
+		k8smetrics.Registry.MustRegister(ctr.prometheusCounter)
+	}
 	log.Info("custom metrics registered successfully")
 }
 
 // UnregisterCustomMetrics unregisters the custom metrics
 func UnregisterCustomMetrics() {
-	k8smetrics.Registry.Unregister(userSignupCounter)
+	for _, ctr := range countersMap {
+		k8smetrics.Registry.Unregister(ctr.prometheusCounter)
+	}
 	log.Info("custom metrics unregistered successfully")
 }
 
-// IncrementUserSignupCounter increments the userSignupCounter
-func IncrementUserSignupCounter() {
-	if userSignupCounter == nil {
-		log.Info("custom metrics not initialized")
-		return
-	}
-	log.Info("incremented metric", "metric_name", userSignupTotal)
-	userSignupCounter.Inc()
+// IncrementUserSignupTotal increments the counter for total user signups
+func IncrementUserSignupTotal() {
+	incrementCounter(UserSignupTotal.Name)
 }
 
-// IncrementUserSignupProvisionedCounter increments the userSignupProvisionedCounter
-func IncrementUserSignupProvisionedCounter() {
-	if userSignupProvisionedCounter == nil {
-		log.Info("custom metrics not initialized")
-		return
-	}
-	log.Info("incremented metric", "metric_name", userSignupProvisionedTotal)
-	userSignupProvisionedCounter.Inc()
+// IncrementUserSignupProvisionedTotal increments the counter for total provisioned user signups
+func IncrementUserSignupProvisionedTotal() {
+	incrementCounter(UserSignupProvisionedTotal.Name)
 }
 
-// IncrementUserSignupBannedCounter increments the userSignupBannedCounter
-func IncrementUserSignupBannedCounter() {
-	if userSignupBannedCounter == nil {
-		log.Info("custom metrics not initialized")
-		return
-	}
-	log.Info("incremented metric", "metric_name", userSignupBannedTotal)
-	userSignupBannedCounter.Inc()
+// IncrementUserSignupBannedTotal increments the counter for total banned user signups
+func IncrementUserSignupBannedTotal() {
+	incrementCounter(UserSignupBannedTotal.Name)
 }
 
-// IncrementUserSignupDeactivatedCounter increments the userSignupDeactivatedCounter
-func IncrementUserSignupDeactivatedCounter() {
-	if userSignupDeactivatedCounter == nil {
-		log.Info("custom metrics not initialized")
-		return
-	}
-	log.Info("incremented metric", "metric_name", userSignupDeactivatedTotal)
-	userSignupDeactivatedCounter.Inc()
+// IncrementUserSignupDeactivatedTotal increments the counter for total deactivated user signups
+func IncrementUserSignupDeactivatedTotal() {
+	incrementCounter(UserSignupDeactivatedTotal.Name)
 }
 
-// IncrementUserSignupAutoDeactivatedCounter increments the userSignupAutoDeactivatedCounter
-func IncrementUserSignupAutoDeactivatedCounter() {
-	if userSignupAutoDeactivatedCounter == nil {
-		log.Info("custom metrics not initialized")
+// IncrementUserSignupAutoDeactivatedTotal increments the counter for total automatically deactivated user signups
+func IncrementUserSignupAutoDeactivatedTotal() {
+	incrementCounter(UserSignupAutoDeactivatedTotal.Name)
+}
+
+func newCounter(metrics ...*counter) {
+	for _, m := range metrics {
+		ctr := prometheus.NewCounter(prometheus.CounterOpts{
+			Name: m.Name,
+			Help: m.Help,
+		})
+		m.prometheusCounter = ctr
+		countersMap[m.Name] = m
+	}
+}
+
+// IncrementCounter looks up the given counter and increments it
+func incrementCounter(name string) {
+	// check if counter was initialized
+	counter, ok := countersMap[name]
+	if !ok {
+		log.Info("custom metric is not initialized", "name", name)
 		return
 	}
-	log.Info("incremented metric", "metric_name", userSignupAutoDeactivatedTotal)
-	userSignupAutoDeactivatedCounter.Inc()
+	// increment counter
+	counter.Lock()
+	defer counter.Unlock()
+	counter.prometheusCounter.Inc()
 }

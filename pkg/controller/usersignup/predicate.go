@@ -51,6 +51,6 @@ type UserSignupCreatedPredicate struct {
 
 // Create implements default CreateEvent filter, in this case we use it as a pass-through and only use it for metrics
 func (p UserSignupCreatedPredicate) Create(e event.CreateEvent) bool {
-	metrics.IncrementUserSignupCounter()
+	metrics.IncrementUserSignupTotal()
 	return true
 }

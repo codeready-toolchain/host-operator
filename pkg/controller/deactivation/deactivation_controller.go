@@ -165,7 +165,7 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 		logger.Error(err, "failed to update usersignup")
 		return reconcile.Result{}, err
 	}
-	metrics.IncrementUserSignupAutoDeactivatedCounter()
+	metrics.IncrementUserSignupAutoDeactivatedTotal()
 
 	return reconcile.Result{}, nil
 }
