@@ -128,6 +128,12 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
+	// Ensure the usersignup is counted only once
+	err = UpdateMetricIfNotSet(r.client, reqLogger, instance, metrics.UserSignupUniqueTotal)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	banned, err := r.isUserBanned(reqLogger, instance)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -149,7 +155,12 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// If there is no MasterUserRecord created, yet the UserSignup is Banned, simply set the status
 	// and return
 	if banned {
-		return reconcile.Result{}, r.wrapStatusUpdateWithMetrics(reqLogger, instance, r.setStatusBanned, metrics.IncrementUserSignupBannedTotal)
+		err := r.updateStatus(reqLogger, instance, r.setStatusBanned)
+		if err == nil {
+			// update the metric for banned users once the status has been updated successfully
+			metrics.UserSignupBannedTotal.Increment()
+		}
+		return reconcile.Result{}, err
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
@@ -168,7 +179,13 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				return reconcile.Result{}, err
 			}
 		}
-		return reconcile.Result{}, r.wrapStatusUpdateWithMetrics(reqLogger, instance, r.setStatusDeactivated, metrics.IncrementUserSignupDeactivatedTotal)
+		err := r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
+		if err == nil {
+			// update the metric for deactivated users once the status has been updated successfully
+			metrics.UserSignupDeactivatedTotal.Increment()
+		}
+
+		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, r.ensureNewMurIfApproved(reqLogger, instance)
@@ -450,7 +467,18 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord")
 	}
+
+	// increment counter for cache
 	counter.IncrementMasterUserRecordCount()
+
+	// update gauge with latest master user record count from cache
+	if counts, err := counter.GetCounts(); err == nil {
+		metrics.MasterUserRecordGauge.Set(float64(counts.MasterUserRecordCount))
+	}
+
+	// update the metric for provisioned users
+	metrics.UserSignupProvisionedTotal.Increment()
+
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
 }
@@ -529,14 +557,4 @@ func validateEmailHash(userEmail, userEmailHash string) bool {
 	// Ignore the error, as this implementation cannot return one
 	_, _ = md5hash.Write([]byte(userEmail))
 	return hex.EncodeToString(md5hash.Sum(nil)) == userEmailHash
-}
-
-func (r *ReconcileUserSignup) wrapStatusUpdateWithMetrics(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
-	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error, metricsFunc func()) error {
-	err := r.updateStatus(logger, userSignup, statusUpdater)
-	// call the metrics function only if the update was successful
-	if err == nil {
-		metricsFunc()
-	}
-	return err
 }

@@ -1,8 +1,6 @@
 package metrics
 
 import (
-	"sync"
-
 	"github.com/prometheus/client_golang/prometheus"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	k8smetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -10,114 +8,129 @@ import (
 
 var log = logf.Log.WithName("toolchain_metrics")
 
-type counter struct {
-	sync.RWMutex
+// Counter is a wrapper of the prometheus counter type
+type Counter struct {
 	Name              string
 	Help              string
 	prometheusCounter prometheus.Counter
 }
 
+// Increment the counter if it has been initialized
+func (m Counter) Increment() {
+	if m.prometheusCounter == nil {
+		log.Info("metric has not been initialized", "name", m.Name)
+		return
+	}
+	m.prometheusCounter.Inc()
+}
+
+// Gauge is a wrapper of the prometheus gauge type
+type Gauge struct {
+	Name            string
+	Help            string
+	prometheusGauge prometheus.Gauge
+}
+
+// Set the gauge if it has been initialized
+func (m Gauge) Set(value float64) {
+	if m.prometheusGauge == nil {
+		log.Info("metric has not been initialized", "name", m.Name)
+		return
+	}
+	m.prometheusGauge.Set(value)
+}
+
 // counters
 var (
-	UserSignupTotal = &counter{
+	// MasterUserRecordGauge should reflect the current number of master user records in the system
+	MasterUserRecordGauge = &Gauge{
+		Name: "master_user_record_current",
+		Help: "Current number of Master User Records",
+	}
+
+	// UserSignupUniqueTotal should be incremented only the first time a user signup is created, there should be 1 for each unique user
+	UserSignupUniqueTotal = &Counter{
 		Name: "user_signups_total",
-		Help: "Number of User Signups",
+		Help: "Total number of unique User Signups",
 	}
 
-	UserSignupProvisionedTotal = &counter{
+	// UserSignupProvisionedTotal should be incremented each time a user signup is provisioned, can be multiple times per user if they reactivate multiple times
+	UserSignupProvisionedTotal = &Counter{
 		Name: "user_signups_provisioned_total",
-		Help: "Number of Provisioned User Signups",
+		Help: "Total number of Provisioned User Signups",
 	}
 
-	UserSignupBannedTotal = &counter{
+	// UserSignupProvisionedTotal should be incremented each time a user signup is banned
+	UserSignupBannedTotal = &Counter{
 		Name: "user_signups_banned_total",
-		Help: "Number of Banned User Signups",
+		Help: "Total number of Banned User Signups",
 	}
 
-	UserSignupDeactivatedTotal = &counter{
+	// UserSignupProvisionedTotal should be incremented each time a user signup is deactivated, can be multiple times per user if they reactivate multiple times
+	UserSignupDeactivatedTotal = &Counter{
 		Name: "user_signups_deactivated_total",
-		Help: "Number of Deactivated User Signups",
+		Help: "Total number of Deactivated User Signups",
 	}
 
-	UserSignupAutoDeactivatedTotal = &counter{
+	// UserSignupAutoDeactivatedTotal should be incremented each time a user signup is automatically deactivated, can be multiple times per user if they reactivate multiple times
+	UserSignupAutoDeactivatedTotal = &Counter{
 		Name: "user_signups_auto_deactivated_total",
-		Help: "Number of Automatically Deactivated User Signups",
+		Help: "Total number of Automatically Deactivated User Signups",
 	}
 )
 
 // collections
 var (
-	countersMap = make(map[string]*counter)
+	allCounters = []*Counter{}
+	allGauges   = []*Gauge{}
 )
 
-func initMetrics() {
-	newCounter(UserSignupTotal, UserSignupProvisionedTotal, UserSignupBannedTotal, UserSignupDeactivatedTotal, UserSignupAutoDeactivatedTotal)
+func init() {
+	initCounters(UserSignupUniqueTotal, UserSignupProvisionedTotal, UserSignupBannedTotal, UserSignupDeactivatedTotal, UserSignupAutoDeactivatedTotal)
+	initGauges(MasterUserRecordGauge)
 }
 
 // RegisterCustomMetrics registers the custom metrics
 func RegisterCustomMetrics() {
-	initMetrics()
 	// register metrics
-	for _, ctr := range countersMap {
-		k8smetrics.Registry.MustRegister(ctr.prometheusCounter)
+	for _, m := range allCounters {
+		k8smetrics.Registry.MustRegister(m.prometheusCounter)
+	}
+	for _, m := range allGauges {
+		k8smetrics.Registry.MustRegister(m.prometheusGauge)
 	}
 	log.Info("custom metrics registered successfully")
 }
 
 // UnregisterCustomMetrics unregisters the custom metrics
 func UnregisterCustomMetrics() {
-	for _, ctr := range countersMap {
-		k8smetrics.Registry.Unregister(ctr.prometheusCounter)
+	for _, m := range allCounters {
+		k8smetrics.Registry.Unregister(m.prometheusCounter)
+	}
+	for _, m := range allGauges {
+		k8smetrics.Registry.Unregister(m.prometheusGauge)
 	}
 	log.Info("custom metrics unregistered successfully")
 }
 
-// IncrementUserSignupTotal increments the counter for total user signups
-func IncrementUserSignupTotal() {
-	incrementCounter(UserSignupTotal.Name)
-}
-
-// IncrementUserSignupProvisionedTotal increments the counter for total provisioned user signups
-func IncrementUserSignupProvisionedTotal() {
-	incrementCounter(UserSignupProvisionedTotal.Name)
-}
-
-// IncrementUserSignupBannedTotal increments the counter for total banned user signups
-func IncrementUserSignupBannedTotal() {
-	incrementCounter(UserSignupBannedTotal.Name)
-}
-
-// IncrementUserSignupDeactivatedTotal increments the counter for total deactivated user signups
-func IncrementUserSignupDeactivatedTotal() {
-	incrementCounter(UserSignupDeactivatedTotal.Name)
-}
-
-// IncrementUserSignupAutoDeactivatedTotal increments the counter for total automatically deactivated user signups
-func IncrementUserSignupAutoDeactivatedTotal() {
-	incrementCounter(UserSignupAutoDeactivatedTotal.Name)
-}
-
-func newCounter(metrics ...*counter) {
-	for _, m := range metrics {
-		ctr := prometheus.NewCounter(prometheus.CounterOpts{
+func initCounters(ctrs ...*Counter) {
+	for _, m := range ctrs {
+		c := prometheus.NewCounter(prometheus.CounterOpts{
 			Name: m.Name,
 			Help: m.Help,
 		})
-		m.prometheusCounter = ctr
-		countersMap[m.Name] = m
+		m.prometheusCounter = c
+		allCounters = append(allCounters, m)
 	}
 }
 
-// IncrementCounter looks up the given counter and increments it
-func incrementCounter(name string) {
-	// check if counter was initialized
-	counter, ok := countersMap[name]
-	if !ok {
-		log.Info("custom metric is not initialized", "name", name)
-		return
+func initGauges(gauges ...*Gauge) {
+	for _, m := range gauges {
+		g := prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: m.Name,
+			Help: m.Help,
+		})
+		m.prometheusGauge = g
+		allGauges = append(allGauges, m)
 	}
-	// increment counter
-	counter.Lock()
-	defer counter.Unlock()
-	counter.prometheusCounter.Inc()
 }
