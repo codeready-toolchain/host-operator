@@ -23,8 +23,8 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			assert.True(t, found)
-			assert.Equal(t, "Notice: Your Red Hat CodeReady Toolchain account has been deactivated", template.Subject)
-			assert.Contains(t, template.Content, "Your <a href={{.RegistrationURL }}>Red Hat CodeReady Toolchain</a> account has been deactivated.")
+			assert.Equal(t, "Notice: Your account is deactivated for Red Hat OpenShift Dev Sandbox Beta", template.Subject)
+			assert.Contains(t, template.Content, "Your account is now deactivated and all your data on Red Hat OpenShift Dev Sandbox has been deleted. You can request new access by signing up again.")
 		})
 		t.Run("get userprovisioned notification template", func(t *testing.T) {
 			// when
@@ -34,8 +34,8 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			assert.True(t, found)
-			assert.Equal(t, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned", template.Subject)
-			assert.Contains(t, template.Content, "Your <a href={{.RegistrationURL }}>Red Hat CodeReady Toolchain</a> account has been provisioned and is ready to use.")
+			assert.Equal(t, "Notice: Your account is provisioned for Red Hat OpenShift Dev Sandbox Beta", template.Subject)
+			assert.Contains(t, template.Content, "Your account has been provisioned and is ready to use. Your account will be active for 14 days.")
 		})
 		t.Run("ensure cache is used", func(t *testing.T) {
 			// when
@@ -47,8 +47,8 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			require.NotEmpty(t, template["userprovisioned"])
-			assert.Equal(t, "Notice: Your Red Hat CodeReady Toolchain account has been provisioned", template["userprovisioned"].Subject)
-			assert.Contains(t, template["userprovisioned"].Content, "You are receiving this email because you have an online <a href={{.RegistrationURL}}>Red Hat CodeReady Toolchain</a>")
+			assert.Equal(t, "Notice: Your account is provisioned for Red Hat OpenShift Dev Sandbox Beta", template["userprovisioned"].Subject)
+			assert.Contains(t, template["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 14 days.")
 			assert.Equal(t, template["userprovisioned"], *UserProvisioned)
 		})
 	})

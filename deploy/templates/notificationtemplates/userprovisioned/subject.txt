@@ -1,1 +1,1 @@
-Notice: Your Red Hat CodeReady Toolchain account has been provisioned
+Notice: Your account is provisioned for Red Hat OpenShift Dev Sandbox Beta
