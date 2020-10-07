@@ -51,18 +51,6 @@ const (
 	// defaultTemplateUpdateRequestMaxPoolSize is default max poolsize for varTemplateUpdateRequestMaxPoolSize
 	defaultTemplateUpdateRequestMaxPoolSize = "5"
 
-	// ToolchainConfigMapUserApprovalPolicy is a key for a user approval policy that should be used
-	ToolchainConfigMapUserApprovalPolicy = "user-approval-policy"
-
-	// ToolchainConfigMapName specifies a name of a ConfigMap that keeps toolchain configuration
-	ToolchainConfigMapName = "toolchain-saas-config"
-
-	// UserApprovalPolicyManual defines that the new users should be approved manually
-	UserApprovalPolicyManual = "manual"
-
-	// UserApprovalPolicyAutomatic defines that the new users should be approved automatically
-	UserApprovalPolicyAutomatic = "automatic"
-
 	// NotificationDeliveryServiceMailgun is the notification delivery service to use during production
 	NotificationDeliveryServiceMailgun = "mailgun"
 

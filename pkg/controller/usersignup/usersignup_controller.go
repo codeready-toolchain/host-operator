@@ -10,12 +10,12 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,17 +44,18 @@ const defaultTierName = "basic"
 
 // Add creates a new UserSignup Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, _ *configuration.Config) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, crtConfig *configuration.Config) error {
+	return add(mgr, newReconciler(mgr, crtConfig))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) reconcile.Reconciler {
 	return &ReconcileUserSignup{
 		statusUpdater: &statusUpdater{
 			client: mgr.GetClient(),
 		},
 		scheme:            mgr.GetScheme(),
+		crtConfig:         crtConfig,
 		getMemberClusters: cluster.GetMemberClusters,
 	}
 }
@@ -100,6 +101,7 @@ var _ reconcile.Reconciler = &ReconcileUserSignup{}
 type ReconcileUserSignup struct {
 	*statusUpdater
 	scheme            *runtime.Scheme
+	crtConfig         *crtCfg.Config
 	getMemberClusters cluster.GetMemberClustersFunc
 }
 
@@ -282,68 +284,43 @@ func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, us
 }
 
 func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
-	// Check the user approval policy.
-	userApprovalPolicy, err := r.ReadUserApprovalPolicyConfig(userSignup.Namespace)
-	if err != nil {
-		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToReadUserApprovalPolicy, err, "")
+	// Check if the user requires phone verification, and do not proceed further if they do
+	if userSignup.Spec.VerificationRequired {
+		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
 	}
 
-	// If the signup has been explicitly approved (by an admin), or the user approval policy is set to automatic,
-	// then proceed with the signup
-	if userSignup.Spec.Approved || userApprovalPolicy == configuration.UserApprovalPolicyAutomatic {
+	approved, targetCluster, err := getClusterIfApproved(r.client, r.crtConfig, userSignup, r.getMemberClusters)
+	if err != nil {
 		if userSignup.Spec.Approved {
-			if statusError := r.updateStatus(reqLogger, userSignup, r.setStatusApprovedByAdmin); statusError != nil {
-				return statusError
-			}
-		} else {
-			if statusError := r.updateStatus(reqLogger, userSignup, r.setStatusApprovedAutomatically); statusError != nil {
-				return statusError
-			}
+			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusApprovedByAdmin, statusNoClustersAvailable), err, "no target clusters available")
 		}
+		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusPendingApproval, statusNoClustersAvailable), err, "no target clusters available")
+	}
+	if !approved {
+		return r.updateStatus(reqLogger, userSignup, r.set(statusPendingApproval, statusIncompletePendingApproval))
+	}
 
-		// Check if the user requires phone verification, and do not proceed further if they do
-		if userSignup.Spec.VerificationRequired {
-			return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
-		}
-
-		var targetCluster string
-
-		// If a target cluster hasn't been selected, select one from the members
-		if userSignup.Spec.TargetCluster != "" {
-			targetCluster = userSignup.Spec.TargetCluster
-		} else {
-			// Automatic cluster selection based on cluster readiness
-			members := r.getMemberClusters(cluster.Ready, cluster.CapacityNotExhausted)
-			if len(members) > 0 {
-				targetCluster = members[0].Name
-			} else {
-				reqLogger.Error(err, "No member clusters found")
-				if statusError := r.updateStatus(reqLogger, userSignup, r.setStatusNoClustersAvailable); statusError != nil {
-					return statusError
-				}
-
-				return fmt.Errorf("no target clusters available")
-			}
-		}
-
-		// look-up the `basic` NSTemplateTier to get the NS templates
-		nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, userSignup.Namespace)
-		if err != nil {
-			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
-		}
-		if err := r.setApprovedLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
-			return err
-		}
-
-		// Provision the MasterUserRecord
-		err = r.provisionMasterUserRecord(userSignup, targetCluster, nstemplateTier, reqLogger)
-		if err != nil {
+	if userSignup.Spec.Approved {
+		if err := r.updateStatus(reqLogger, userSignup, r.set(statusApprovedByAdmin)); err != nil {
 			return err
 		}
 	} else {
-		return r.updateStatus(reqLogger, userSignup, r.setStatusPendingApproval)
+		if err := r.updateStatus(reqLogger, userSignup, r.setStatusApprovedAutomatically); err != nil {
+			return err
+		}
 	}
-	return nil
+	// look-up the `basic` NSTemplateTier to get the NS templates
+	nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, userSignup.Namespace)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
+	}
+
+	if err := r.setApprovedLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
+		return err
+	}
+
+	// Provision the MasterUserRecord
+	return r.provisionMasterUserRecord(userSignup, targetCluster, nstemplateTier, reqLogger)
 }
 
 func (r *ReconcileUserSignup) setApprovedLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
@@ -474,25 +451,6 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 	}
 	logger.Info("Deleted MasterUserRecord", "Name", mur.Name)
 	return nil
-}
-
-// ReadUserApprovalPolicyConfig reads the ConfigMap for the toolchain configuration in the operator namespace, and returns
-// the config map value for the user approval policy (which will either be "manual" or "automatic")
-func (r *ReconcileUserSignup) ReadUserApprovalPolicyConfig(namespace string) (string, error) {
-	cm := &corev1.ConfigMap{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: configuration.ToolchainConfigMapName}, cm)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return configuration.UserApprovalPolicyManual, nil
-		}
-		return "", err
-	}
-
-	val, ok := cm.Data[configuration.ToolchainConfigMapUserApprovalPolicy]
-	if !ok {
-		return "", nil
-	}
-	return val, nil
 }
 
 func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
