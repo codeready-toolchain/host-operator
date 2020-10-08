@@ -131,8 +131,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
 	// Ensure the usersignup is counted only once
-	err = UpdateMetricIfNotSet(r.client, reqLogger, instance, metrics.UserSignupUniqueTotal)
-	if err != nil {
+	if err = UpdateMetricAndStatus(r.client, reqLogger, instance, metrics.UserSignupUniqueTotal.Name, UpdateUserSignupUniqueTotalStatus, metrics.UserSignupUniqueTotal.Increment); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -157,17 +156,21 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// If there is no MasterUserRecord created, yet the UserSignup is Banned, simply set the status
 	// and return
 	if banned {
-		err := r.updateStatus(reqLogger, instance, r.setStatusBanned)
-		if err == nil {
-			// update the metric for banned users once the status has been updated successfully
-			metrics.UserSignupBannedTotal.Increment()
+		// update the metric for banned users
+		if err = UpdateMetricAndStatus(r.client, reqLogger, instance, metrics.UserSignupUniqueTotal.Name, UpdateUserSignupUniqueTotalStatus, metrics.UserSignupBannedTotal.Increment); err != nil {
+			return reconcile.Result{}, err
 		}
-		return reconcile.Result{}, err
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusBanned)
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
 	// send a notification to the user, and return
 	if instance.Spec.Deactivated {
+		// update the metric for deactivated users
+		if err = UpdateMetricAndStatus(r.client, reqLogger, instance, metrics.UserSignupDeactivatedTotal.Name, UpdateUserSignupDeactivatedTotalStatus, metrics.UserSignupDeactivatedTotal.Increment); err != nil {
+			return reconcile.Result{}, err
+		}
+
 		if condition.IsNotTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
 			if err := r.sendDeactivatedNotification(reqLogger, instance); err != nil {
 				reqLogger.Error(err, "Failed to create user deactivation notification")
@@ -181,13 +184,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 				return reconcile.Result{}, err
 			}
 		}
-		err := r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
-		if err == nil {
-			// update the metric for deactivated users once the status has been updated successfully
-			metrics.UserSignupDeactivatedTotal.Increment()
-		}
-
-		return reconcile.Result{}, err
+		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
 	}
 
 	return reconcile.Result{}, r.ensureNewMurIfApproved(reqLogger, instance)
@@ -420,6 +417,11 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	// TODO Update the MasterUserRecord with NSTemplateTier values
 	// SEE https://jira.coreos.com/browse/CRT-74
 
+	// update the metric for provisioned users
+	if err := UpdateMetricAndStatus(r.client, logger, userSignup, metrics.UserSignupProvisionedTotal.Name, UpdateUserSignupProvisionedTotalStatus, metrics.UserSignupProvisionedTotal.Increment); err != nil {
+		return err
+	}
+
 	compliantUsername, err := r.generateCompliantUsername(userSignup)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
@@ -452,9 +454,6 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	if counts, err := counter.GetCounts(); err == nil {
 		metrics.MasterUserRecordGauge.Set(float64(counts.MasterUserRecordCount))
 	}
-
-	// update the metric for provisioned users
-	metrics.UserSignupProvisionedTotal.Increment()
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil

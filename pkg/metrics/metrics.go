@@ -40,10 +40,10 @@ var (
 	// UserSignupProvisionedTotal should be incremented each time a user signup is provisioned, can be multiple times per user if they reactivate multiple times
 	UserSignupProvisionedTotal = initCounter("user_signups_provisioned_total", "Total number of Provisioned User Signups")
 
-	// UserSignupProvisionedTotal should be incremented each time a user signup is banned
+	// UserSignupBannedTotal should be incremented each time a user signup is banned
 	UserSignupBannedTotal = initCounter("user_signups_banned_total", "Total number of Banned User Signups")
 
-	// UserSignupProvisionedTotal should be incremented each time a user signup is deactivated, can be multiple times per user if they reactivate multiple times
+	// UserSignupDeactivatedTotal should be incremented each time a user signup is deactivated, can be multiple times per user if they reactivate multiple times
 	UserSignupDeactivatedTotal = initCounter("user_signups_deactivated_total", "Total number of Deactivated User Signups")
 
 	// UserSignupAutoDeactivatedTotal should be incremented each time a user signup is automatically deactivated, can be multiple times per user if they reactivate multiple times

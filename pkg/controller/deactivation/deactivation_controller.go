@@ -10,6 +10,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	userSignupPkg "github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/pkg/predicate"
 
@@ -166,8 +167,6 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	// update the metric for auto deactivation
-	metrics.UserSignupAutoDeactivatedTotal.Increment()
-
-	return reconcile.Result{}, nil
+	// Finally, update the metric for auto deactivation
+	return reconcile.Result{}, userSignupPkg.UpdateMetricAndStatus(r.client, logger, usersignup, metrics.UserSignupUniqueTotal.Name, userSignupPkg.UpdateUserSignupAutoDeactivatedTotalStatus, metrics.UserSignupAutoDeactivatedTotal.Increment)
 }
