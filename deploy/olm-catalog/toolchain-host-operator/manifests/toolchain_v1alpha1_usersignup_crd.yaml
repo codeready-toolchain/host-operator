@@ -160,7 +160,7 @@ spec:
                 description: Metrics is used to track metrics-related data of this
                   usersignup
                 properties:
-                  metricKeyValues:
+                  metricsRegistry:
                     additionalProperties:
                       type: string
                     description: MetricsRegistry uses metric names as keys. The values
