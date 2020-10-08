@@ -30,6 +30,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.6.0
 )
 
+replace github.com/codeready-toolchain/api => github.com/matousjobanek/api v0.0.0-20201008102715-afd628dfa930
+
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20200821140346-b94c46af3f2b // Using 'github.com/openshift/api@release-4.5'
