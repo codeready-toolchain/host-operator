@@ -138,8 +138,8 @@ github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c/go.mod h1
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
 github.com/codeready-toolchain/api v0.0.0-20200914140452-d2c86086863e/go.mod h1:K0M7N66c37ebaXi/uFEGY/H9oieYR8PYYnhjfueTdYs=
-github.com/codeready-toolchain/api v0.0.0-20200925000842-d2e82e080a5a h1:zdLP2nVrHV+pzx39GIdz9iAunjaFQzS7G1XfjeUDk14=
-github.com/codeready-toolchain/api v0.0.0-20200925000842-d2e82e080a5a/go.mod h1:K0M7N66c37ebaXi/uFEGY/H9oieYR8PYYnhjfueTdYs=
+github.com/codeready-toolchain/api v0.0.0-20201009115725-7795b1315bab h1:xkdNLLzT9GPN+ptFOU+3ZPP7a6AI0Dt7TtH2ExpuzAU=
+github.com/codeready-toolchain/api v0.0.0-20201009115725-7795b1315bab/go.mod h1:K0M7N66c37ebaXi/uFEGY/H9oieYR8PYYnhjfueTdYs=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20200930070243-e124e69e7a0d h1:sBJBRMtOtaVEuiI79AjUNkD7SP1JFWPaLvh4WX5Jurc=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20200930070243-e124e69e7a0d/go.mod h1:VhMZjATgVT/YrbXuEj+erSsxKCXoyF9uCHLs6hOt2VA=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=

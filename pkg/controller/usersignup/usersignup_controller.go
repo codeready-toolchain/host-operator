@@ -128,6 +128,11 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
+	if instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
+		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
 
 	banned, err := r.isUserBanned(reqLogger, instance)
 	if err != nil {
@@ -150,12 +155,20 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// If there is no MasterUserRecord created, yet the UserSignup is Banned, simply set the status
 	// and return
 	if banned {
+		// if the UserSignup doesn't have the state=banned label set, then update it
+		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusBanned)
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
 	// send a notification to the user, and return
 	if instance.Spec.Deactivated {
+		// if the UserSignup doesn't have the state=deactivated label set, then update it
+		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
+			return reconcile.Result{}, err
+		}
 		if condition.IsNotTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
 			if err := r.sendDeactivatedNotification(reqLogger, instance); err != nil {
 				reqLogger.Error(err, "Failed to create user deactivation notification")
@@ -244,23 +257,31 @@ func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, us
 		mur := &murs[0]
 		// If the user has been banned, then we need to delete the MUR
 		if banned {
+			// set the state label to banned
+			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
+				return true, err
+			}
 			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusBanning, r.setStatusFailedToDeleteMUR)
 		}
 
 		// If the user has been deactivated, then we need to delete the MUR
 		if userSignup.Spec.Deactivated {
+			// set the state label to deactivated
+			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
+				return true, err
+			}
 			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusDeactivating, r.setStatusFailedToDeleteMUR)
+		}
+
+		// if the UserSignup doesn't have the state=approved label set, then update it
+		if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
+			return true, err
 		}
 
 		// look-up the `basic` NSTemplateTier to get the NS templates
 		nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, userSignup.Namespace)
 		if err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
-		}
-
-		// if the UserSignup doesn't have the approved label set, then update it
-		if err := r.setApprovedLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
-			return true, err
 		}
 
 		// check if anything in the MUR should be migrated/fixed
@@ -292,11 +313,23 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 	approved, targetCluster, err := getClusterIfApproved(r.client, r.crtConfig, userSignup, r.getMemberClusters)
 	if err != nil {
 		if userSignup.Spec.Approved {
+			// set the state label to approved
+			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
+				return err
+			}
 			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusApprovedByAdmin, statusNoClustersAvailable), err, "no target clusters available")
+		}
+		// set the state label to pending
+		if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
+			return err
 		}
 		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusPendingApproval, statusNoClustersAvailable), err, "no target clusters available")
 	}
 	if !approved {
+		// set the state label to pending
+		if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
+			return err
+		}
 		return r.updateStatus(reqLogger, userSignup, r.set(statusPendingApproval, statusIncompletePendingApproval))
 	}
 
@@ -309,27 +342,29 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 			return err
 		}
 	}
+	// set the state label to approved
+	if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
+		return err
+	}
+
 	// look-up the `basic` NSTemplateTier to get the NS templates
 	nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, userSignup.Namespace)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 	}
 
-	if err := r.setApprovedLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueTrue); err != nil {
-		return err
-	}
-
 	// Provision the MasterUserRecord
 	return r.provisionMasterUserRecord(userSignup, targetCluster, nstemplateTier, reqLogger)
 }
 
-func (r *ReconcileUserSignup) setApprovedLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
-	if userSignup.Labels[toolchainv1alpha1.UserSignupApprovedLabelKey] != value {
-		userSignup.Labels[toolchainv1alpha1.UserSignupApprovedLabelKey] = value
+func (r *ReconcileUserSignup) setStateLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
+	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] != value {
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = value
 		if err := r.client.Update(context.TODO(), userSignup); err != nil {
-			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateApprovedLabel, err,
-				"unable to update approved label at UserSignup resource")
+			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
+				"unable to update state label at UserSignup resource")
 		}
+		return nil
 	}
 	return nil
 }
@@ -439,9 +474,6 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 	err := r.updateStatus(logger, userSignup, inProgressStatusUpdater)
 	if err != nil {
 		return nil
-	}
-	if err := r.setApprovedLabel(logger, userSignup, toolchainv1alpha1.UserSignupApprovedLabelValueFalse); err != nil {
-		return err
 	}
 
 	err = r.client.Delete(context.TODO(), mur)
