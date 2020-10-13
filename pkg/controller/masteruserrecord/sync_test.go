@@ -22,7 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 func TestIsSynchronized(t *testing.T) {
@@ -368,7 +369,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 func TestSynchronizeUserAccountFailed(t *testing.T) {
 	// given
-	l := logf.ZapLogger(false)
+	l := zap.Logger(false)
 	scheme := apiScheme(t)
 
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
@@ -606,7 +607,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 
 func TestCheURL(t *testing.T) {
 	// given
-	l := logf.ZapLogger(true)
+	l := zap.Logger(true)
 	logf.SetLogger(l)
 	apiScheme(t)
 
@@ -681,7 +682,7 @@ func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccoun
 		memberCluster:     newMemberCluster(memberClient),
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: copiedMur.Spec.UserAccounts[0],
-		logger:            logf.ZapLogger(true),
+		logger:            zap.Logger(true),
 		scheme:            apiScheme(t),
 		config:            config,
 	}, memberClient

@@ -1,7 +1,6 @@
 package notification
 
 import (
-	"context"
 	"testing"
 
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
@@ -57,7 +56,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery service send", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(context.Background(), notCtx, "test")
+		err := mgds.Send(notCtx, "test")
 
 		// then
 		require.NoError(t, err)
@@ -66,7 +65,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery service send fails", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, invalidServerOption)
-		err := mgds.Send(context.Background(), notCtx, "test")
+		err := mgds.Send(notCtx, "test")
 
 		// then
 		require.Error(t, err)
@@ -79,7 +78,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery service invalid template", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(context.Background(), notCtx, "bar")
+		err := mgds.Send(notCtx, "bar")
 
 		// then
 		require.Error(t, err)
@@ -89,7 +88,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery invalid subject template", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(context.Background(), notCtx, "invalid_subject")
+		err := mgds.Send(notCtx, "invalid_subject")
 
 		// then
 		require.Error(t, err)
@@ -99,7 +98,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery invalid content template", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(context.Background(), notCtx, "invalid_content")
+		err := mgds.Send(notCtx, "invalid_content")
 
 		// then
 		require.Error(t, err)
