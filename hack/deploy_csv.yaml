@@ -1693,8 +1693,6 @@ data:
                                       is used per node role (eg. worker, master)
                                     type: object
                                 type: object
-                            required:
-                            - consoleURL
                             type: object
                           userAccountCount:
                             description: Number of UserAccounts created within the member
