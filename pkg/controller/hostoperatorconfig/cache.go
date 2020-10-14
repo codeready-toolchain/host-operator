@@ -8,9 +8,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var configCache = &cache{}
+
+var cacheLog = logf.Log.WithName("cache_hostoperatorconfig")
 
 type cache struct {
 	sync.RWMutex
@@ -37,6 +40,7 @@ func loadLatest(cl client.Client, namespace string) error {
 	config := &v1alpha1.HostOperatorConfig{}
 	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "config"}, config); err != nil {
 		if apierrors.IsNotFound(err) {
+			cacheLog.Error(err, "HostOperatorConfig resource with the name 'config' wasn't found", "namespace", namespace)
 			return nil
 		}
 		return err

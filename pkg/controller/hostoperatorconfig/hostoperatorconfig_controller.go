@@ -68,6 +68,7 @@ func (r *ReconcileHostOperatorConfig) Reconcile(request reconcile.Request) (reco
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
+			log.Error(err, "it looks like the HostOperatorConfig resource with the name 'config' was removed - the cache will use the latest version of the resource")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
