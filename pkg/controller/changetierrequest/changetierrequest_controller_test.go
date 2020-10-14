@@ -23,13 +23,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 func TestChangeTierSuccess(t *testing.T) {
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_CHANGE_REQUEST_DELETION", "10s")
 	defer restore()
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")

@@ -2,7 +2,6 @@ package notification
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"text/template"
 
@@ -27,7 +26,7 @@ func (l *DefaultTemplateLoader) GetNotificationTemplate(name string) (*notificat
 }
 
 type NotificationDeliveryService interface {
-	Send(ctx context.Context, notificationCtx *NotificationContext, templateName string) error
+	Send(notificationCtx *NotificationContext, templateName string) error
 }
 
 type NotificationDeliveryServiceFactory struct {

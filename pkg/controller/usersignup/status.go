@@ -52,17 +52,6 @@ var statusIncompletePendingApproval = func(message string) toolchainv1alpha1.Con
 	}
 }
 
-func (u *statusUpdater) setStatusFailedToReadUserApprovalPolicy(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupFailedToReadUserApprovalPolicyReason,
-			Message: message,
-		})
-}
-
 func (u *statusUpdater) setStatusInvalidMURState(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,

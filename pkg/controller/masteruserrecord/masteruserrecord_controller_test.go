@@ -14,24 +14,25 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	apierros "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 func TestAddFinalizer(t *testing.T) {
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	s := apiScheme(t)
 
 	t.Run("ok", func(t *testing.T) {
@@ -91,7 +92,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	// given
 	defer counter.Reset()
 	InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john")
 	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
@@ -119,7 +120,7 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	// given
 	defer counter.Reset()
 	InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts("member2-cluster"), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	memberClient := test.NewFakeClient(t, consoleRoute())
@@ -148,7 +149,7 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 
 func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts("member2-cluster"), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	userAccount1 := uatest.NewUserAccountFromMur(mur)
@@ -225,7 +226,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 
 func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	hostClient := test.NewFakeClient(t, mur)
@@ -511,7 +512,7 @@ func TestModifyUserAccounts(t *testing.T) {
 		UserAccountsForCluster(test.MemberClusterName, 1),
 		UserAccountsForCluster("member2-cluster", 1),
 		UserAccountsForCluster("member3-cluster", 1))
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
@@ -566,7 +567,7 @@ func TestModifyUserAccounts(t *testing.T) {
 }
 
 func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	s := apiScheme(t)
 
 	t.Run("mur status synced with updated user account statuses", func(t *testing.T) {
@@ -706,7 +707,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 	// given
 	defer counter.Reset()
 	InitializeCounter(t, 2, UserAccountsForCluster(test.MemberClusterName, 2))
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
@@ -739,7 +740,7 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 		UserAccountsForCluster(test.MemberClusterName, 2),
 		UserAccountsForCluster("member2-cluster", 2),
 		UserAccountsForCluster("member3-cluster", 2))
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
@@ -775,7 +776,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	// given
 	defer counter.Reset()
 	InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),

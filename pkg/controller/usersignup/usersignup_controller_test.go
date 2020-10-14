@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func newNsTemplateTier(tierName, clusterRevision string, nsTypes ...string) *v1alpha1.NSTemplateTier {
+func newNsTemplateTier(tierName string, nsTypes ...string) *v1alpha1.NSTemplateTier {
 	namespaces := make([]v1alpha1.NSTemplateTierNamespace, len(nsTypes))
 	for i, nsType := range nsTypes {
 		revision := fmt.Sprintf("123abc%d", i+1)
@@ -48,13 +48,13 @@ func newNsTemplateTier(tierName, clusterRevision string, nsTypes ...string) *v1a
 		Spec: v1alpha1.NSTemplateTierSpec{
 			Namespaces: namespaces,
 			ClusterResources: &v1alpha1.NSTemplateTierClusterResources{
-				TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, "clusterresources", clusterRevision),
+				TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, "clusterresources", "654321b"),
 			},
 		},
 	}
 }
 
-var basicNSTemplateTier = newNsTemplateTier("basic", "654321b", "code", "dev", "stage")
+var basicNSTemplateTier = newNsTemplateTier("basic", "code", "dev", "stage")
 
 func TestUserSignupCreateMUROk(t *testing.T) {
 	// given
