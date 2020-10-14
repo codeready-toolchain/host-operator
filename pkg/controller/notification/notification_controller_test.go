@@ -33,7 +33,7 @@ import (
 type MockDeliveryService struct {
 }
 
-func (s *MockDeliveryService) Send(ctx context.Context, notificationCtx *NotificationContext, templateName string) error {
+func (s *MockDeliveryService) Send(notificationCtx *NotificationContext, templateName string) error {
 	return errors.New("delivery error")
 }
 
@@ -333,9 +333,7 @@ func deletionCond(msg string) v1alpha1.Condition {
 	}
 }
 
-type notificationOption func(*v1alpha1.Notification)
-
-func newNotification(userID, template string, options ...notificationOption) *v1alpha1.Notification {
+func newNotification(userID, template string) *v1alpha1.Notification {
 	notification := &v1alpha1.Notification{
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: test.HostOperatorNs,
@@ -345,9 +343,6 @@ func newNotification(userID, template string, options ...notificationOption) *v1
 			UserID:   userID,
 			Template: template,
 		},
-	}
-	for _, set := range options {
-		set(notification)
 	}
 	return notification
 }

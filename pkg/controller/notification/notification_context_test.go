@@ -37,7 +37,7 @@ func TestNotificationContext(t *testing.T) {
 			GivenName:     "John",
 		},
 	}
-	client := prepareReconcile(t, userSignup.Name, userSignup)
+	client := prepareReconcile(t, userSignup)
 	config, err := configuration.LoadConfig(test.NewFakeClient(t))
 	require.NoError(t, err)
 
@@ -106,14 +106,9 @@ func newObjectMeta(name, email string) metav1.ObjectMeta {
 	}
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) *test.FakeClient {
+func prepareReconcile(t *testing.T, initObjs ...runtime.Object) *test.FakeClient {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-
-	initObjs = append(initObjs)
-
-	client := test.NewFakeClient(t, initObjs...)
-
-	return client
+	return test.NewFakeClient(t, initObjs...)
 }

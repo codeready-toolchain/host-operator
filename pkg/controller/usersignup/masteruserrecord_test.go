@@ -15,7 +15,7 @@ func TestNewMasterUserRecord(t *testing.T) {
 
 	t.Run("when clusterResources template is specified", func(t *testing.T) {
 		// given
-		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 
 		// when
 		mur, err := newMasterUserRecord(nsTemplateTier, "johny", test.HostOperatorNs, test.MemberClusterName, "123456789")
@@ -27,7 +27,7 @@ func TestNewMasterUserRecord(t *testing.T) {
 
 	t.Run("when clusterResources template is NOT specified", func(t *testing.T) {
 		// given
-		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 		nsTemplateTier.Spec.ClusterResources = nil
 
 		// when
@@ -44,7 +44,7 @@ func TestNewMasterUserRecord(t *testing.T) {
 func TestNewNsTemplateSetSpec(t *testing.T) {
 	t.Run("when clusterResources template is specified", func(t *testing.T) {
 		// given
-		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 
 		// when
 		setSpec := NewNSTemplateSetSpec(nsTemplateTier)
@@ -55,7 +55,7 @@ func TestNewNsTemplateSetSpec(t *testing.T) {
 
 	t.Run("when clusterResources template is NOT specified", func(t *testing.T) {
 		// given
-		nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+		nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 		nsTemplateTier.Spec.ClusterResources = nil
 
 		// when
@@ -74,7 +74,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		t.Run("when mur is the same", func(t *testing.T) {
 			// given
-			nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(nsTemplateTier, "johny", test.HostOperatorNs, test.MemberClusterName, "123456789")
 			require.NoError(t, err)
 
@@ -89,7 +89,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		t.Run("when one namespace is missing and one is extra, but rest is fine, then doesn't change", func(t *testing.T) {
 			// given
-			nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(nsTemplateTier, "johny", test.HostOperatorNs, test.MemberClusterName, "123456789")
 			require.NoError(t, err)
 			mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces[0].TemplateRef = "advanced-cicd-123abc1"
@@ -109,7 +109,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		t.Run("when mur is missing NsLimit", func(t *testing.T) {
 			// given
-			nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(nsTemplateTier, "johny", test.HostOperatorNs, test.MemberClusterName, "123456789")
 			require.NoError(t, err)
 			mur.Spec.UserAccounts[0].Spec.NSLimit = ""
@@ -125,7 +125,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		t.Run("when whole NSTemplateSet is missing", func(t *testing.T) {
 			// given
-			nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(nsTemplateTier, "johny", test.HostOperatorNs, test.MemberClusterName, "123456789")
 			require.NoError(t, err)
 			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = v1alpha1.NSTemplateSetSpec{}
@@ -141,7 +141,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		t.Run("when tier labels are missing", func(t *testing.T) {
 			// given
-			nsTemplateTier := newNsTemplateTier("advanced", "654321b", "dev", "stage", "extra")
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(nsTemplateTier, "johny", test.HostOperatorNs, test.MemberClusterName, "123456789")
 			delete(mur.Labels, "toolchain.dev.openshift.com/advanced-tier-hash") // removed for the purpose of this test
 			require.NoError(t, err)

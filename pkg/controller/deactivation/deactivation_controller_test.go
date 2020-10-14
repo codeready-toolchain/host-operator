@@ -22,8 +22,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 const (
@@ -36,7 +37,7 @@ const (
 func TestReconcile(t *testing.T) {
 
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	username := "test-user"
 
 	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
@@ -240,6 +241,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, initObjs...)
 	cfg, err := configuration.LoadConfig(cl)
+	require.NoError(t, err)
 	r := &ReconcileDeactivation{client: cl, scheme: s, config: cfg}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{

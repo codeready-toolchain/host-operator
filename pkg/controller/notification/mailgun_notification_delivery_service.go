@@ -2,7 +2,6 @@ package notification
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -61,7 +60,7 @@ func NewMailgunNotificationDeliveryService(config NotificationDeliveryServiceFac
 	}
 }
 
-func (s *MailgunNotificationDeliveryService) Send(ctx context.Context, notificationCtx *NotificationContext, templateName string) error {
+func (s *MailgunNotificationDeliveryService) Send(notificationCtx *NotificationContext, templateName string) error {
 
 	template, found, err := s.base.TemplateLoader.GetNotificationTemplate(templateName)
 	if err != nil {
@@ -69,7 +68,7 @@ func (s *MailgunNotificationDeliveryService) Send(ctx context.Context, notificat
 	}
 
 	if !found {
-		return errors.New(fmt.Sprintf("notification template [%s] not found", templateName))
+		return fmt.Errorf("notification template [%s] not found", templateName)
 	}
 
 	subject, err := s.base.GenerateContent(notificationCtx, template.Subject)
