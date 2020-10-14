@@ -176,15 +176,16 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 
 	murs := CreateMultipleMurs(t, 10)
 	fakeClient := test.NewFakeClient(t, murs...)
-	toolchainStatus := InitializeCounterWithClient(t, fakeClient, 0)
+	InitializeCounterWithClient(t, fakeClient, 0)
 	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-cluster")))
 	require.NoError(t, err)
-	toolchainStatus = &v1alpha1.ToolchainStatus{}
+	toolchainStatus := &v1alpha1.ToolchainStatus{}
 
 	// when
 	err = counter.Synchronize(fakeClient, toolchainStatus)
 
 	// then
+	require.NoError(t, err)
 	AssertThatCounterHas(t, 10, UserAccountsForCluster("member-cluster", 10))
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(10).
@@ -242,8 +243,8 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	}
 
 	for i := 0; i < 102; i++ {
+		waitForFinished.Add(1)
 		go func() {
-			waitForFinished.Add(1)
 			defer waitForFinished.Done()
 			latch.Wait()
 			err := counter.Synchronize(fakeClient, toolchainStatus)

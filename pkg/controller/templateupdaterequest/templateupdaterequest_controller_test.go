@@ -24,8 +24,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 const (
@@ -35,7 +36,7 @@ const (
 func TestReconcile(t *testing.T) {
 
 	// given
-	logf.SetLogger(logf.ZapLogger(true))
+	logf.SetLogger(zap.Logger(true))
 	// a "basic" NSTemplateTier
 
 	t.Run("controller should update the MasterUserRecord", func(t *testing.T) {
@@ -50,7 +51,7 @@ func TestReconcile(t *testing.T) {
 				initObjs = append(initObjs, murtest.NewMasterUserRecord(t, "user-1",
 					murtest.Account("cluster1", *previousBasicTier, murtest.SyncIndex("1"))))
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				r, req, cl := prepareReconcile(t, initObjs...)
 				// when
 				res, err := r.Reconcile(req)
 				// then
@@ -77,7 +78,7 @@ func TestReconcile(t *testing.T) {
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier,
 					turtest.Condition(templateupdaterequest.ToFailure(fmt.Errorf("mock error"))), // an error occurred during the previous attempt
 				))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				r, req, cl := prepareReconcile(t, initObjs...)
 				// when
 				res, err := r.Reconcile(req)
 				// then
@@ -103,7 +104,7 @@ func TestReconcile(t *testing.T) {
 				initObjs = append(initObjs, murtest.NewMasterUserRecord(t, "user-1",
 					murtest.Account("cluster1", *previousBasicTier, murtest.SyncIndex("1"))))
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				r, req, cl := prepareReconcile(t, initObjs...)
 				// when
 				res, err := r.Reconcile(req)
 				// then
@@ -131,7 +132,7 @@ func TestReconcile(t *testing.T) {
 					))
 				initObjs = append(initObjs, mur)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				r, req, cl := prepareReconcile(t, initObjs...)
 				// when
 				res, err := r.Reconcile(req)
 				// then
@@ -161,7 +162,7 @@ func TestReconcile(t *testing.T) {
 					))
 				initObjs = append(initObjs, mur)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				r, req, cl := prepareReconcile(t, initObjs...)
 				// when
 				res, err := r.Reconcile(req)
 				// then
@@ -191,7 +192,7 @@ func TestReconcile(t *testing.T) {
 					))
 				initObjs = append(initObjs, mur)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				r, req, cl := prepareReconcile(t, initObjs...)
 				// when
 				res, err := r.Reconcile(req)
 				// then
@@ -219,7 +220,7 @@ func TestReconcile(t *testing.T) {
 					murtest.Account("cluster1", *previousBasicTier, murtest.SyncIndex("1")))
 				initObjs = append(initObjs, mur)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				r, req, cl := prepareReconcile(t, initObjs...)
 				// when
 				res, err := r.Reconcile(req)
 				// then
@@ -250,7 +251,7 @@ func TestReconcile(t *testing.T) {
 					murtest.AdditionalAccount("cluster2", *previousBasicTier, murtest.SyncIndex("20")),
 					murtest.AdditionalAccount("cluster3", *otherTier, murtest.SyncIndex("100")))) // this account is not affected by the update
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				r, req, cl := prepareReconcile(t, initObjs...)
 				// when
 				res, err := r.Reconcile(req)
 				// then
@@ -292,7 +293,7 @@ func TestReconcile(t *testing.T) {
 				murtest.Account("cluster1", *previousBasicTier, murtest.SyncIndex("11")),           // here the sync index changed
 				murtest.AdditionalAccount("cluster2", *previousBasicTier, murtest.SyncIndex("20")), // here the sync index did not change
 				murtest.AdditionalAccount("cluster3", *otherTier, murtest.SyncIndex("100"))))       // this account is not affected by the update
-			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+			r, req, cl := prepareReconcile(t, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
 			// then
@@ -323,7 +324,7 @@ func TestReconcile(t *testing.T) {
 				murtest.Account("cluster1", *previousBasicTier, murtest.SyncIndex("11")),           // here the sync index changed
 				murtest.AdditionalAccount("cluster2", *previousBasicTier, murtest.SyncIndex("21")), // here the sync index changed too
 				murtest.AdditionalAccount("cluster3", *otherTier, murtest.SyncIndex("100"))))       // this account is not affected by the update
-			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+			r, req, cl := prepareReconcile(t, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
 			// then
@@ -363,7 +364,7 @@ func TestReconcile(t *testing.T) {
 					Reason: toolchainv1alpha1.MasterUserRecordProvisionedReason,
 				}),
 			)) // this account is not affected by the update
-			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+			r, req, cl := prepareReconcile(t, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
 			// then
@@ -401,7 +402,7 @@ func TestReconcile(t *testing.T) {
 					Reason: toolchainv1alpha1.MasterUserRecordProvisionedReason,
 				}),
 			)) // this account is not affected by the update
-			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+			r, req, cl := prepareReconcile(t, initObjs...)
 			// when
 			res, err := r.Reconcile(req)
 			// then
@@ -427,7 +428,7 @@ func TestReconcile(t *testing.T) {
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			initObjs := []runtime.Object{basicTier}
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-			r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
+			r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
 			// when
 			res, err := r.Reconcile(req)
 			// then
@@ -452,7 +453,7 @@ func TestReconcile(t *testing.T) {
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, murtest.NewMasterUserRecord(t, "user-1", murtest.Account("cluster1", *previousBasicTier, murtest.SyncIndex("1"))))
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+				r, req, cl := prepareReconcile(t, initObjs...)
 				cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
 						return fmt.Errorf("mock error")
@@ -486,7 +487,7 @@ func TestReconcile(t *testing.T) {
 						Reason:  toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason,
 						Message: `mock error`,
 					}))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
+				r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
 				cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
 						return fmt.Errorf("mock error 2")
@@ -527,7 +528,7 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
+				r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
 						return errors.NewNotFound(schema.GroupResource{}, key.Name)
@@ -546,7 +547,7 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
+				r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
 						return fmt.Errorf("mock error!")
@@ -569,7 +570,7 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
+				r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
 						return errors.NewNotFound(schema.GroupResource{}, key.Name)
@@ -588,7 +589,7 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, "user-1", initObjs...) // there is no associated MasterUserRecord
+				r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
 						return fmt.Errorf("mock error!")
@@ -612,7 +613,7 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
 			mur := murtest.NewMasterUserRecord(t, "user-1", murtest.Account("cluster1", *previousBasicTier, murtest.SyncIndex("1")))
 			initObjs = append(initObjs, mur)
-			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+			r, req, cl := prepareReconcile(t, initObjs...)
 			cl.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
 					return fmt.Errorf("mock error!")
@@ -635,7 +636,7 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
 			mur := murtest.NewMasterUserRecord(t, "user-1", murtest.Account("cluster1", *previousBasicTier, murtest.SyncIndex("1")))
 			initObjs = append(initObjs, mur)
-			r, req, cl := prepareReconcile(t, "user-1", initObjs...)
+			r, req, cl := prepareReconcile(t, initObjs...)
 			cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
 					return fmt.Errorf("mock error!")
@@ -661,7 +662,7 @@ func TestReconcile(t *testing.T) {
 
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -671,7 +672,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	r := templateupdaterequest.NewReconciler(cl, s, config)
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{
-			Name:      name,
+			Name:      "user-1",
 			Namespace: operatorNamespace,
 		},
 	}, cl
