@@ -1,16 +1,12 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20201009115725-7795b1315bab
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20200930070243-e124e69e7a0d
+	github.com/codeready-toolchain/api v0.0.0-20201014170554-ba7a98533167
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20201014231429-a44cccb4b2b5
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.3.0+incompatible
-	github.com/google/go-cmp v0.5.2 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/mailgun/mailgun-go/v4 v4.1.3
-	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
-	github.com/onsi/ginkgo v1.13.0 // indirect
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/operator-framework/operator-sdk v0.19.2
 	github.com/pkg/errors v0.9.1
@@ -20,12 +16,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
-	golang.org/x/tools v0.0.0-20200812195022-5ae4c3c160a0 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/h2non/gock.v1 v1.0.14
 	gopkg.in/yaml.v2 v2.3.0
-	honnef.co/go/tools v0.0.1-2020.1.5 // indirect
 	k8s.io/api v0.18.3
 	k8s.io/apiextensions-apiserver v0.18.3
 	k8s.io/apimachinery v0.18.3
