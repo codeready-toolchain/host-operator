@@ -12,10 +12,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.userID
-      name: User ID
-      priority: 1
-      type: string
     - jsonPath: .spec.username
       name: Username
       type: string
@@ -35,7 +31,7 @@ spec:
       name: TargetCluster
       priority: 1
       type: string
-    - jsonPath: .metadata.labels["toolchain.dev.openshift.com/state"]
+    - jsonPath: .metadata.labels.toolchain\.dev\.openshift.com/state
       name: State
       type: string
     - jsonPath: .status.conditions[?(@.type=="Complete")].status
