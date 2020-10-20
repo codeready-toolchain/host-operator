@@ -8,6 +8,7 @@ import (
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 
@@ -2161,3 +2162,64 @@ func TestMigrateMur(t *testing.T) {
 		assert.Equal(t, *expectedMur, murs.Items[0])
 	})
 }
+
+func TestUpdateMetricsByState(t *testing.T) {
+	metrics.Reset()
+	t.Run("old value is not ready", func(t *testing.T) {
+		updateMetricsByState("not-ready", "")
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupProvisionedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	})
+
+	t.Run("old value is empty - increment UserSignupUniqueTotal", func(t *testing.T) {
+		updateMetricsByState("", "")
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupProvisionedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	})
+
+	t.Run("new value is pending - no change", func(t *testing.T) {
+		updateMetricsByState("any-value", "pending")
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupProvisionedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	})
+
+	t.Run("new value is approved - increment UserSignupProvisionedTotal", func(t *testing.T) {
+		updateMetricsByState("any-value", "approved")
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupProvisionedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	})
+
+	t.Run("new value is deactivated - increment UserSignupDeactivatedTotal", func(t *testing.T) {
+		updateMetricsByState("any-value", "deactivated")
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupProvisionedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	})
+
+	t.Run("new value is banned - increment UserSignupBannedTotal", func(t *testing.T) {
+		updateMetricsByState("any-value", "banned")
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupProvisionedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	})
+}
+
+// func AssertThatCounterHas(t *testing.T, numberOfMurs int) {
+// 	AssertThatCounterHas(t, numberOfMurs)
+// }

@@ -11,6 +11,8 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -147,6 +149,7 @@ func TestReconcile(t *testing.T) {
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
 			assertThatUserSignupDeactivated(t, cl, username, true)
+			AssertMetricsCounterEquals(t, 1, metrics.UserSignupAutoDeactivatedTotal)
 		})
 
 		// the time since the mur was provisioned exceeds the deactivation timeout period for the 'other' tier
@@ -162,6 +165,7 @@ func TestReconcile(t *testing.T) {
 			require.False(t, res.Requeue, "requeue should not be set")
 			require.True(t, res.RequeueAfter == 0, "requeue should not be set")
 			assertThatUserSignupDeactivated(t, cl, username, true)
+			AssertMetricsCounterEquals(t, 2, metrics.UserSignupAutoDeactivatedTotal)
 		})
 
 	})

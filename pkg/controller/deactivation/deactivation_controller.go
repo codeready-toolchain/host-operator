@@ -10,6 +10,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/pkg/predicate"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -164,6 +165,8 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 		logger.Error(err, "failed to update usersignup")
 		return reconcile.Result{}, err
 	}
+
+	metrics.UserSignupAutoDeactivatedTotal.Increment()
 
 	return reconcile.Result{}, nil
 }
