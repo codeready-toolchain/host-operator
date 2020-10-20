@@ -17,7 +17,13 @@ type UserSignupChangedPredicate struct {
 	controllerPredicate.Funcs
 }
 
-// Update implements default UpdateEvent filter for validating generation change
+// Update filters update events and let the reconcile loop to be triggered when any of the following conditions is met:
+//
+// * generation number has changed
+//
+// * annotation toolchain.dev.openshift.com/user-email has changed
+//
+// * label toolchain.dev.openshift.com/email-hash has changed
 func (p UserSignupChangedPredicate) Update(e event.UpdateEvent) bool {
 	if !checkMetaObjects(changedLog, e) {
 		return false
