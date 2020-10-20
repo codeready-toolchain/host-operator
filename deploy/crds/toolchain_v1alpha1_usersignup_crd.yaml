@@ -31,9 +31,6 @@ spec:
       name: TargetCluster
       priority: 1
       type: string
-    - jsonPath: .metadata.labels.toolchain\.dev\.openshift.com/state
-      name: State
-      type: string
     - jsonPath: .status.conditions[?(@.type=="Complete")].status
       name: Complete
       type: string
