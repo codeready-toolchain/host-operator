@@ -11,6 +11,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup/unapproved"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -69,26 +70,43 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource UserSignup
-	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.UserSignup{}}, &handler.EnqueueRequestForObject{},
-		UserSignupChangedPredicate{})
-	if err != nil {
+	if err := c.Watch(
+		&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
+		&handler.EnqueueRequestForObject{},
+		UserSignupChangedPredicate{}); err != nil {
 		return err
 	}
 
 	// Watch for changes to the secondary resource MasterUserRecord and requeue the owner UserSignup
-	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.MasterUserRecord{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &toolchainv1alpha1.UserSignup{},
-	})
-	if err != nil {
+	if err := c.Watch(
+		&source.Kind{Type: &toolchainv1alpha1.MasterUserRecord{}},
+		&handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &toolchainv1alpha1.UserSignup{},
+		}); err != nil {
 		return err
 	}
 
-	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.BannedUser{}}, &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: BannedUserToUserSignupMapper{client: mgr.GetClient()},
-	})
+	if err := c.Watch(
+		&source.Kind{Type: &toolchainv1alpha1.BannedUser{}},
+		&handler.EnqueueRequestsFromMapFunc{
+			ToRequests: BannedUserToUserSignupMapper{client: mgr.GetClient()},
+		}); err != nil {
+		return err
+	}
 
-	if err != nil {
+	mapToOldestUnapproved := &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: unapproved.NewUserSignupMapper(mgr.GetClient()),
+	}
+	whenAutomaticApprovalIsEnabled := &OnlyWhenAutomaticApprovalIsEnabled{
+		client: mgr.GetClient(),
+	}
+
+	// Watch for updates in ToolchainStatus CR to check if there is any member cluster with free capacity
+	if err := c.Watch(
+		&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
+		mapToOldestUnapproved,
+		whenAutomaticApprovalIsEnabled); err != nil {
 		return err
 	}
 
@@ -311,20 +329,28 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 	}
 
 	approved, targetCluster, err := getClusterIfApproved(r.client, r.crtConfig, userSignup, r.getMemberClusters)
-	if err != nil {
-		if userSignup.Spec.Approved {
-			// set the state label to approved
-			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
-				return err
-			}
-			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusApprovedByAdmin, statusNoClustersAvailable), err, "no target clusters available")
-		}
+	// if error was returned or no available cluster found
+	if err != nil || targetCluster == notFound {
 		// set the state label to pending
 		if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
 			return err
 		}
-		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusPendingApproval, statusNoClustersAvailable), err, "no target clusters available")
+		// if user was approved manually
+		if userSignup.Spec.Approved {
+			if err == nil {
+				err = fmt.Errorf("no suitable member cluster found - capacity was reached")
+			}
+			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusApprovedByAdmin, statusNoClustersAvailable), err, "no target clusters available")
+		}
+
+		// if an error was returned, then log it, set the status and return an error
+		if err != nil {
+			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusPendingApproval, statusNoClustersAvailable), err, "getting target clusters failed")
+		}
+		// in case no error was returned which means that no cluster was found, then just wait for next reconcile triggered by ToolchainStatus update
+		return r.updateStatus(reqLogger, userSignup, r.set(statusPendingApproval, statusNoClustersAvailable))
 	}
+
 	if !approved {
 		// set the state label to pending
 		if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
@@ -354,7 +380,7 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 	}
 
 	// Provision the MasterUserRecord
-	return r.provisionMasterUserRecord(userSignup, targetCluster, nstemplateTier, reqLogger)
+	return r.provisionMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, reqLogger)
 }
 
 func (r *ReconcileUserSignup) setStateLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {

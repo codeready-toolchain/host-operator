@@ -2,7 +2,6 @@ package usersignup
 
 import (
 	"context"
-	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -14,37 +13,49 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type targetCluster string
+
+var (
+	unknown  targetCluster = "unknown"
+	notFound targetCluster = "not-found"
+)
+
+func (c targetCluster) getClusterName() string {
+	return string(c)
+}
+
 // getClusterIfApproved checks if the user can be approved and provisioned to any member cluster.
 // If the user can be approved then the function returns true as the first returned value, the second value contains a cluster name the user should be provisioned to.
-// If there is no suitable member cluster, then it returns empty string.
+// If there is no suitable member cluster, then it returns notFound as the second returned value.
 //
 // If the user is approved manually then it tries to get member cluster with enough capacity if the target cluster is not already specified for UserSignup.
 // If the user is not approved manually, then it loads HostOperatorConfig to check if automatic approval is enabled or not. If it is then it checks
-// capacity thresholds and the actual use if there is any suitable member cluster.
-func getClusterIfApproved(cl client.Client, crtConfig *crtCfg.Config, userSignup *toolchainv1alpha1.UserSignup, getMemberClusters cluster.GetMemberClustersFunc) (bool, string, error) {
+// capacity thresholds and the actual use if there is any suitable member cluster. If it is not then it returns false as the first value and
+// targetCluster unknown as the second value.
+func getClusterIfApproved(cl client.Client, crtConfig *crtCfg.Config, userSignup *toolchainv1alpha1.UserSignup, getMemberClusters cluster.GetMemberClustersFunc) (bool, targetCluster, error) {
 	config, err := hostoperatorconfig.GetConfig(cl, userSignup.Namespace)
 	if err != nil {
-		return false, "", errors.Wrapf(err, "unable to read HostOperatorConfig resource")
+		return false, unknown, errors.Wrapf(err, "unable to read HostOperatorConfig resource")
 	}
 
 	if !userSignup.Spec.Approved && !config.AutomaticApproval.Enabled {
-		return false, "", nil
+		return false, unknown, nil
 	}
 
 	status := &toolchainv1alpha1.ToolchainStatus{}
 	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: crtConfig.GetToolchainStatusName()}, status); err != nil {
-		return false, "", errors.Wrapf(err, "unable to read ToolchainStatus resource")
+		return false, unknown, errors.Wrapf(err, "unable to read ToolchainStatus resource")
 	}
 	counts, err := counter.GetCounts()
 	if err != nil {
-		return false, "", errors.Wrapf(err, "unable to get the number of provisioned users")
+		return false, unknown, errors.Wrapf(err, "unable to get the number of provisioned users")
 	}
 
-	targetCluster := getOptimalTargetCluster(userSignup, getMemberClusters, hasNotReachedMaxNumberOfUsersThreshold(config, counts), hasEnoughResources(config, status))
-	if targetCluster == "" {
-		return userSignup.Spec.Approved, "", fmt.Errorf("no suitable member cluster found - capacity was reached")
+	clusterName := getOptimalTargetCluster(userSignup, getMemberClusters, hasNotReachedMaxNumberOfUsersThreshold(config, counts), hasEnoughResources(config, status))
+	if clusterName == "" {
+		return userSignup.Spec.Approved, notFound, nil
 	}
-	return true, targetCluster, nil
+	return true, targetCluster(clusterName), nil
 }
 
 func hasNotReachedMaxNumberOfUsersThreshold(config toolchainv1alpha1.HostOperatorConfigSpec, counts counter.Counts) cluster.Condition {

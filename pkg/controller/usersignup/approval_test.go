@@ -44,7 +44,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Equal(t, "member1", clusterName)
+		assert.Equal(t, "member1", clusterName.getClusterName())
 	})
 
 	t.Run("with two clusters and enough capacity in both of them so it returns the first one", func(t *testing.T) {
@@ -63,7 +63,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Equal(t, "member1", clusterName)
+		assert.Equal(t, "member1", clusterName.getClusterName())
 	})
 
 	t.Run("with two clusters where the first one reaches resource threshold", func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Equal(t, "member2", clusterName)
+		assert.Equal(t, "member2", clusterName.getClusterName())
 	})
 
 	t.Run("with two clusters where the first one reaches max number of UserAccounts", func(t *testing.T) {
@@ -101,7 +101,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Equal(t, "member2", clusterName)
+		assert.Equal(t, "member2", clusterName.getClusterName())
 	})
 
 	t.Run("with two clusters, none of them is returned since it reaches max number of MURs", func(t *testing.T) {
@@ -118,9 +118,9 @@ func TestGetClusterIfApproved(t *testing.T) {
 		approved, clusterName, err := getClusterIfApproved(fakeClient, config, signup, clusters)
 
 		// then
-		require.EqualError(t, err, "no suitable member cluster found - capacity was reached")
+		require.NoError(t, err)
 		assert.False(t, approved)
-		assert.Empty(t, clusterName)
+		assert.Equal(t, notFound, clusterName)
 	})
 
 	t.Run("with two clusters and enough capacity only in second one using the default values", func(t *testing.T) {
@@ -139,7 +139,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Equal(t, "member2", clusterName)
+		assert.Equal(t, "member2", clusterName.getClusterName())
 	})
 
 	t.Run("with two clusters and enough capacity in none of them using the default memory values", func(t *testing.T) {
@@ -156,9 +156,9 @@ func TestGetClusterIfApproved(t *testing.T) {
 		approved, clusterName, err := getClusterIfApproved(fakeClient, config, signup, clusters)
 
 		// then
-		require.EqualError(t, err, "no suitable member cluster found - capacity was reached")
+		require.NoError(t, err)
 		assert.False(t, approved)
-		assert.Empty(t, clusterName)
+		assert.Equal(t, notFound, clusterName)
 	})
 
 	t.Run("automatic approval not enabled and user not approved", func(t *testing.T) {
@@ -172,7 +172,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.False(t, approved)
-		assert.Empty(t, clusterName)
+		assert.Equal(t, unknown, clusterName)
 	})
 
 	t.Run("HostOperatorConfig not found and user not approved", func(t *testing.T) {
@@ -186,7 +186,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.False(t, approved)
-		assert.Empty(t, clusterName)
+		assert.Equal(t, unknown, clusterName)
 	})
 
 	t.Run("HostOperatorConfig not found and user approved without target cluster", func(t *testing.T) {
@@ -201,7 +201,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Equal(t, "member1", clusterName)
+		assert.Equal(t, "member1", clusterName.getClusterName())
 	})
 
 	t.Run("automatic approval not enabled, user approved but no cluster has capacity", func(t *testing.T) {
@@ -216,9 +216,9 @@ func TestGetClusterIfApproved(t *testing.T) {
 		approved, clusterName, err := getClusterIfApproved(fakeClient, config, signup, clusters)
 
 		// then
-		require.EqualError(t, err, "no suitable member cluster found - capacity was reached")
+		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Empty(t, clusterName)
+		assert.Equal(t, notFound, clusterName)
 	})
 
 	t.Run("automatic approval not enabled, user approved and second cluster has capacity", func(t *testing.T) {
@@ -237,7 +237,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Equal(t, "member2", clusterName)
+		assert.Equal(t, "member2", clusterName.getClusterName())
 	})
 
 	t.Run("automatic approval not enabled, user approved, no cluster has capacity but targetCluster is specified", func(t *testing.T) {
@@ -254,7 +254,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Equal(t, "member1", clusterName)
+		assert.Equal(t, "member1", clusterName.getClusterName())
 	})
 
 	t.Run("with two clusters and enough capacity in both of them but first one is not ready", func(t *testing.T) {
@@ -273,7 +273,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Equal(t, "member2", clusterName)
+		assert.Equal(t, "member2", clusterName.getClusterName())
 	})
 
 	t.Run("failures", func(t *testing.T) {
@@ -291,7 +291,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			// then
 			require.EqualError(t, err, "unable to read HostOperatorConfig resource: some error")
 			assert.False(t, approved)
-			assert.Empty(t, clusterName)
+			assert.Equal(t, unknown, clusterName)
 		})
 
 		t.Run("unable to read ToolchainStatus", func(t *testing.T) {
@@ -311,7 +311,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			// then
 			require.EqualError(t, err, "unable to read ToolchainStatus resource: some error")
 			assert.False(t, approved)
-			assert.Empty(t, clusterName)
+			assert.Equal(t, unknown, clusterName)
 		})
 	})
 }
@@ -331,5 +331,5 @@ func TestGetClusterIfApprovedWhenCounterIsNotInitialized(t *testing.T) {
 	// then
 	require.EqualError(t, err, "unable to get the number of provisioned users: counter is not initialized")
 	assert.False(t, approved)
-	assert.Empty(t, clusterName)
+	assert.Equal(t, unknown, clusterName)
 }
