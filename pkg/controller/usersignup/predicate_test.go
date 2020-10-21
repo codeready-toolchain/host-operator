@@ -5,8 +5,10 @@ import (
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	uuid "github.com/satori/go.uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -121,5 +123,173 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			ObjectNew: userSignupNewChanged,
 		}
 		require.True(t, pred.Update(e))
+	})
+}
+
+func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
+	// given
+	cl := test.NewFakeClient(t, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()))
+	predicate := OnlyWhenAutomaticApprovalIsEnabled{
+		client: cl,
+	}
+	toolchainStatus := NewToolchainStatus()
+
+	t.Run("update", func(t *testing.T) {
+		t.Run("when all fields are set", func(t *testing.T) {
+			// given
+			updateEvent := event.UpdateEvent{
+				MetaOld:   toolchainStatus.GetObjectMeta(),
+				ObjectOld: toolchainStatus,
+				MetaNew:   toolchainStatus.GetObjectMeta(),
+				ObjectNew: toolchainStatus,
+			}
+
+			// when
+			shouldTriggerReconcile := predicate.Update(updateEvent)
+
+			// then
+			assert.True(t, shouldTriggerReconcile)
+		})
+
+		t.Run("when MetaOld field is missing", func(t *testing.T) {
+			// given
+			updateEvent := event.UpdateEvent{
+				ObjectOld: toolchainStatus,
+				MetaNew:   toolchainStatus.GetObjectMeta(),
+				ObjectNew: toolchainStatus,
+			}
+
+			// when
+			shouldTriggerReconcile := predicate.Update(updateEvent)
+
+			// then
+			assert.False(t, shouldTriggerReconcile)
+		})
+
+		t.Run("when ObjectOld is missing", func(t *testing.T) {
+			// given
+			updateEvent := event.UpdateEvent{
+				MetaOld:   toolchainStatus.GetObjectMeta(),
+				MetaNew:   toolchainStatus.GetObjectMeta(),
+				ObjectNew: toolchainStatus,
+			}
+
+			// when
+			shouldTriggerReconcile := predicate.Update(updateEvent)
+
+			// then
+			assert.False(t, shouldTriggerReconcile)
+		})
+
+		t.Run("when MetaNew is missing", func(t *testing.T) {
+			// given
+			updateEvent := event.UpdateEvent{
+				MetaOld:   toolchainStatus.GetObjectMeta(),
+				ObjectOld: toolchainStatus,
+				ObjectNew: toolchainStatus,
+			}
+
+			// when
+			shouldTriggerReconcile := predicate.Update(updateEvent)
+
+			// then
+			assert.False(t, shouldTriggerReconcile)
+		})
+
+		t.Run("when ObjectNew is missing", func(t *testing.T) {
+			// given
+			updateEvent := event.UpdateEvent{
+				MetaOld:   toolchainStatus.GetObjectMeta(),
+				ObjectOld: toolchainStatus,
+				MetaNew:   toolchainStatus.GetObjectMeta(),
+			}
+
+			// when
+			shouldTriggerReconcile := predicate.Update(updateEvent)
+
+			// then
+			assert.False(t, shouldTriggerReconcile)
+		})
+	})
+
+	t.Run("create", func(t *testing.T) {
+		// given
+		createEvent := event.CreateEvent{
+			Meta:   toolchainStatus.GetObjectMeta(),
+			Object: toolchainStatus,
+		}
+
+		// when
+		shouldTriggerReconcile := predicate.Create(createEvent)
+
+		// then
+		assert.False(t, shouldTriggerReconcile)
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		// given
+		deleteEvent := event.DeleteEvent{
+			Meta:   toolchainStatus.GetObjectMeta(),
+			Object: toolchainStatus,
+		}
+
+		// when
+		shouldTriggerReconcile := predicate.Delete(deleteEvent)
+
+		// then
+		assert.False(t, shouldTriggerReconcile)
+	})
+
+	t.Run("generic", func(t *testing.T) {
+		// given
+		genericEvent := event.GenericEvent{
+			Meta:   toolchainStatus.GetObjectMeta(),
+			Object: toolchainStatus,
+		}
+
+		// when
+		shouldTriggerReconcile := predicate.Generic(genericEvent)
+
+		// then
+		assert.True(t, shouldTriggerReconcile)
+	})
+}
+
+func TestAutomaticApprovalPredicateWhenApprovalIsNotEnabled(t *testing.T) {
+	// given
+	cl := test.NewFakeClient(t, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Disabled()))
+	predicate := OnlyWhenAutomaticApprovalIsEnabled{
+		client: cl,
+	}
+	toolchainStatus := NewToolchainStatus()
+
+	t.Run("update", func(t *testing.T) {
+		// given
+		updateEvent := event.UpdateEvent{
+			MetaOld:   toolchainStatus.GetObjectMeta(),
+			ObjectOld: toolchainStatus,
+			MetaNew:   toolchainStatus.GetObjectMeta(),
+			ObjectNew: toolchainStatus,
+		}
+
+		// when
+		shouldTriggerReconcile := predicate.Update(updateEvent)
+
+		// then
+		assert.False(t, shouldTriggerReconcile)
+	})
+
+	t.Run("generic", func(t *testing.T) {
+		// given
+		genericEvent := event.GenericEvent{
+			Meta:   toolchainStatus.GetObjectMeta(),
+			Object: toolchainStatus,
+		}
+
+		// when
+		shouldTriggerReconcile := predicate.Generic(genericEvent)
+
+		// then
+		assert.False(t, shouldTriggerReconcile)
 	})
 }
