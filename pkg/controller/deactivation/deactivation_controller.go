@@ -158,6 +158,10 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Deactivate the user
+	if usersignup.Spec.Deactivated == true {
+		// The UserSignup is already set for deactivation, nothing left to do
+		return reconcile.Result{}, nil
+	}
 	usersignup.Spec.Deactivated = true
 
 	logger.Info("deactivating the user")

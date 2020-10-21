@@ -386,12 +386,12 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 func (r *ReconcileUserSignup) setStateLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
 	oldValue := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
 	if oldValue != value {
-		updateMetricsByState(oldValue, value)
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = value
 		if err := r.client.Update(context.TODO(), userSignup); err != nil {
 			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
 				"unable to update state label at UserSignup resource")
 		}
+		updateMetricsByState(oldValue, value)
 		return nil
 	}
 	return nil

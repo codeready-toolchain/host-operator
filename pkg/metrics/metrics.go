@@ -10,8 +10,8 @@ var log = logf.Log.WithName("toolchain_metrics")
 
 // Counter is a wrapper of the prometheus counter type
 type Counter struct {
-	Name              string
-	Help              string
+	name              string
+	help              string
 	prometheusCounter prometheus.Counter
 }
 
@@ -34,8 +34,8 @@ func (m Counter) ConditionalIncrement(condition bool) {
 
 // Gauge is a wrapper of the prometheus gauge type
 type Gauge struct {
-	Name            string
-	Help            string
+	name            string
+	help            string
 	prometheusGauge prometheus.Gauge
 }
 
@@ -85,8 +85,8 @@ func initCounter(name, help string) *Counter {
 		Help: help,
 	})
 	m := &Counter{
-		Name:              name,
-		Help:              help,
+		name:              name,
+		help:              help,
 		prometheusCounter: c,
 	}
 	allCounters = append(allCounters, m)
@@ -99,8 +99,8 @@ func initGauge(name, help string) *Gauge {
 		Help: help,
 	})
 	m := &Gauge{
-		Name:            name,
-		Help:            help,
+		name:            name,
+		help:            help,
 		prometheusGauge: g,
 	}
 	allGauges = append(allGauges, m)
@@ -134,14 +134,14 @@ func UnregisterCustomMetrics() {
 func Reset() {
 	for _, m := range allCounters {
 		m.prometheusCounter = prometheus.NewCounter(prometheus.CounterOpts{
-			Name: m.Name,
-			Help: m.Help,
+			Name: m.name,
+			Help: m.help,
 		})
 	}
 	for _, m := range allGauges {
 		m.prometheusGauge = prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: m.Name,
-			Help: m.Help,
+			Name: m.name,
+			Help: m.help,
 		})
 	}
 }
