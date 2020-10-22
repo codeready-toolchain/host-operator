@@ -32,7 +32,7 @@ import (
 
 func TestAddFinalizer(t *testing.T) {
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 
 	t.Run("ok", func(t *testing.T) {
@@ -92,7 +92,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	// given
 	defer counter.Reset()
 	InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john")
 	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
@@ -120,12 +120,15 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	// given
 	defer counter.Reset()
 	InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts("member2-cluster"), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
-	memberClient := test.NewFakeClient(t, consoleRoute())
-	memberClient2 := test.NewFakeClient(t, consoleRoute())
-	hostClient := test.NewFakeClient(t, mur)
+	toolchainStatus := NewToolchainStatus(
+		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember("member2-cluster", WithRoutes("https://console.member-cluster/", "", ToBeReady())))
+	memberClient := test.NewFakeClient(t)
+	memberClient2 := test.NewFakeClient(t)
+	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 
 	cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
 		ClusterClient(test.MemberClusterName, memberClient), ClusterClient("member2-cluster", memberClient2))
@@ -149,21 +152,25 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 
 func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts("member2-cluster"), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	userAccount1 := uatest.NewUserAccountFromMur(mur)
 	userAccount3 := uatest.NewUserAccountFromMur(mur)
-	memberClient1 := test.NewFakeClient(t, userAccount1, consoleRoute())
-	memberClient3 := test.NewFakeClient(t, userAccount3, consoleRoute())
-	hostClient := test.NewFakeClient(t, mur)
+	toolchainStatus := NewToolchainStatus(
+		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember("member2-cluster", WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember("member3-cluster", WithRoutes("https://console.member-cluster/", "", ToBeReady())))
+	memberClient1 := test.NewFakeClient(t, userAccount1)
+	memberClient3 := test.NewFakeClient(t, userAccount3)
+	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 
 	t.Run("when deletion timestamp is less than 3 seconds old", func(t *testing.T) {
 		// given
 		defer counter.Reset()
 		InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 2))
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
-		memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
+		memberClient2 := test.NewFakeClient(t, userAccount2)
 		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
 			ClusterClient(test.MemberClusterName, memberClient1),
 			ClusterClient("member2-cluster", memberClient2),
@@ -185,7 +192,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 		InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 2))
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
 		userAccount2.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(-3 * time.Second)}
-		memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
+		memberClient2 := test.NewFakeClient(t, userAccount2)
 		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
 			ClusterClient(test.MemberClusterName, memberClient1),
 			ClusterClient("member2-cluster", memberClient2),
@@ -207,7 +214,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 		InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 2))
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
 		userAccount2.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(2 * time.Second)}
-		memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
+		memberClient2 := test.NewFakeClient(t, userAccount2)
 		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
 			ClusterClient(test.MemberClusterName, memberClient1),
 			ClusterClient("member2-cluster", memberClient2),
@@ -226,7 +233,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 
 func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	hostClient := test.NewFakeClient(t, mur)
@@ -413,9 +420,10 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 			murtest.StatusCondition(updatingCond))
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(provisionedMur,
-			uatest.StatusCondition(toBeNotReady("somethingFailed", ""))), consoleRoute())
-
-		hostClient := test.NewFakeClient(t, provisionedMur)
+			uatest.StatusCondition(toBeNotReady("somethingFailed", ""))))
+		toolchainStatus := NewToolchainStatus(
+			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())))
+		hostClient := test.NewFakeClient(t, provisionedMur, toolchainStatus)
 
 		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			hostClient.MockStatusUpdate = nil // mock only once
@@ -512,7 +520,7 @@ func TestModifyUserAccounts(t *testing.T) {
 		UserAccountsForCluster(test.MemberClusterName, 1),
 		UserAccountsForCluster("member2-cluster", 1),
 		UserAccountsForCluster("member3-cluster", 1))
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
@@ -526,10 +534,15 @@ func TestModifyUserAccounts(t *testing.T) {
 	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"), murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
 	murtest.ModifyUaInMur(mur, "member2-cluster", murtest.NsLimit("admin"), murtest.TierName("basic"))
 
-	memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
-	memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
-	memberClient3 := test.NewFakeClient(t, userAccount3, consoleRoute())
-	hostClient := test.NewFakeClient(t, mur)
+	toolchainStatus := NewToolchainStatus(
+		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember("member2-cluster", WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember("member3-cluster", WithRoutes("https://console.member-cluster/", "", ToBeReady())))
+
+	memberClient := test.NewFakeClient(t, userAccount)
+	memberClient2 := test.NewFakeClient(t, userAccount2)
+	memberClient3 := test.NewFakeClient(t, userAccount3)
+	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 
 	cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
 		ClusterClient(test.MemberClusterName, memberClient), ClusterClient("member2-cluster", memberClient2),
@@ -567,8 +580,12 @@ func TestModifyUserAccounts(t *testing.T) {
 }
 
 func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
+	toolchainStatus := NewToolchainStatus(
+		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember("member2-cluster", WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember("member3-cluster", WithRoutes("https://console.member-cluster/", "", ToBeReady())))
 
 	t.Run("mur status synced with updated user account statuses", func(t *testing.T) {
 		// given
@@ -605,11 +622,11 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			},
 		}
 
-		memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
-		memberClient2 := test.NewFakeClient(t, userAccount2, consoleRoute())
-		memberClient3 := test.NewFakeClient(t, userAccount3, consoleRoute())
+		memberClient := test.NewFakeClient(t, userAccount)
+		memberClient2 := test.NewFakeClient(t, userAccount2)
+		memberClient3 := test.NewFakeClient(t, userAccount3)
 
-		hostClient := test.NewFakeClient(t, mur)
+		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 
 		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
 			ClusterClient(test.MemberClusterName, memberClient), ClusterClient("member2-cluster", memberClient2),
@@ -667,10 +684,10 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			},
 		}
 
-		hostClient := test.NewFakeClient(t, mur)
+		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 
-		memberClient := test.NewFakeClient(t, userAccount, consoleRoute())
-		memberClient2 := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur), consoleRoute())
+		memberClient := test.NewFakeClient(t, userAccount)
+		memberClient2 := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
 
 		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
 			ClusterClient(test.MemberClusterName, memberClient),
@@ -707,7 +724,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 	// given
 	defer counter.Reset()
 	InitializeCounter(t, 2, UserAccountsForCluster(test.MemberClusterName, 2))
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
@@ -740,7 +757,7 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 		UserAccountsForCluster(test.MemberClusterName, 2),
 		UserAccountsForCluster("member2-cluster", 2),
 		UserAccountsForCluster("member3-cluster", 2))
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
@@ -776,14 +793,16 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	// given
 	defer counter.Reset()
 	InitializeCounter(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 		murtest.DisabledMur(true))
 	userAccount := uatest.NewUserAccountFromMur(mur, uatest.DisabledUa(false))
-	memberClient := test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute(false))
-	hostClient := test.NewFakeClient(t, mur)
+	memberClient := test.NewFakeClient(t, userAccount)
+	toolchainStatus := NewToolchainStatus(
+		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())))
+	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 
 	cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
 		ClusterClient(test.MemberClusterName, memberClient))

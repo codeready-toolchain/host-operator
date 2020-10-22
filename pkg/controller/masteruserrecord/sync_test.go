@@ -8,16 +8,13 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
-	"github.com/pkg/errors"
-
-	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/h2non/gock.v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,6 +22,9 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
+
+var readyToolchainStatus = NewToolchainStatus(
+	WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "http://che-toolchain-che.member-cluster/", ToBeReady())))
 
 func TestIsSynchronized(t *testing.T) {
 
@@ -159,7 +159,7 @@ func TestSynchronizeStatus(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur)
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
@@ -173,7 +173,7 @@ func TestSynchronizeStatus(t *testing.T) {
 
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur)
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
@@ -209,7 +209,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur)
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
@@ -258,7 +258,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur)
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
@@ -307,7 +307,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur)
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
@@ -322,7 +322,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 	t.Run("ProvisionedTime should not be updated when synced more than once", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur)
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 		provisionTime := metav1.NewTime(time.Now().Add(-time.Hour))
 		sync.record.Status.ProvisionedTime = &provisionTime
@@ -369,19 +369,19 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 func TestSynchronizeUserAccountFailed(t *testing.T) {
 	// given
-	l := zap.Logger(false)
+	l := zap.New(zap.UseDevMode(true))
 	scheme := apiScheme(t)
 
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "john")
 		userAcc := uatest.NewUserAccountFromMur(mur)
-		memberClient := test.NewFakeClient(t, userAcc, consoleRoute())
+		memberClient := test.NewFakeClient(t, userAcc)
 		memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
 		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.TierName("admin"))
-		hostClient := test.NewFakeClient(t, mur)
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 		config, err := configuration.LoadConfig(hostClient)
 		require.NoError(t, err)
 
@@ -410,8 +410,8 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			murtest.StatusCondition(toBeProvisioned()))
 		userAcc := uatest.NewUserAccountFromMur(provisionedMur,
 			uatest.StatusCondition(toBeNotReady("somethingFailed", "")))
-		memberClient := test.NewFakeClient(t, userAcc, consoleRoute())
-		hostClient := test.NewFakeClient(t, provisionedMur)
+		memberClient := test.NewFakeClient(t, userAcc)
+		hostClient := test.NewFakeClient(t, provisionedMur, readyToolchainStatus)
 		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
@@ -477,7 +477,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			assert.Contains(t, provisionedMur.Status.UserAccounts, toBeModified)
 		})
 
-		prepareSync := func() (Synchronizer, *test.FakeClient) {
+		t.Run("when routes are not set", func(t *testing.T) {
 			mur := murtest.NewMasterUserRecord(t, "john",
 				murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
 
@@ -494,138 +494,96 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 
 			uatest.Modify(userAccount, uatest.StatusCondition(toBeProvisioned()))
 
-			memberClient := test.NewFakeClient(t, userAccount)
-			hostClient := test.NewFakeClient(t, mur)
-			config, err := configuration.LoadConfig(hostClient)
-			require.NoError(t, err)
-			return Synchronizer{
-				record:            mur,
-				hostClient:        hostClient,
-				memberCluster:     newMemberCluster(memberClient),
-				memberUserAcc:     userAccount,
-				recordSpecUserAcc: mur.Spec.UserAccounts[0],
-				logger:            l,
-				scheme:            scheme,
-				config:            config,
-			}, memberClient
-		}
-
-		t.Run("when unable to get console route", func(t *testing.T) {
-			t.Run("no OpenShift 3.11 console available", func(t *testing.T) {
+			t.Run("condition is not ready", func(t *testing.T) {
 				// given
-				sync, _ := prepareSync()
-
-				// when
-				err := sync.synchronizeStatus()
-
-				// then
-				assert.EqualError(t, err, `unable to get web console route for cluster member-cluster: routes.route.openshift.io "console" not found`)
-			})
-
-			t.Run("OpenShift 3.11 console available", func(t *testing.T) {
-				// given
-				sync, _ := prepareSync()
-				defer gock.OffAll()
-				gock.InterceptClient(consoleClient)
-				gock.
-					New(fmt.Sprintf("https://api.%s:6433", test.MemberClusterName)).
-					Get("console").
-					Reply(200)
-
-				// when
-				err := sync.synchronizeStatus()
-				require.NoError(t, err)
-
-				// then
-				require.Len(t, sync.record.Status.UserAccounts, 1)
-				murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-					AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
-						Name:        test.MemberClusterName,
-						APIEndpoint: "https://api.member-cluster:6433",
-						ConsoleURL:  "https://api.member-cluster:6433/console",
-					})
-			})
-
-			t.Run("OpenShift 3.11 console returns status other than 200", func(t *testing.T) {
-				// given
-				sync, _ := prepareSync()
-				defer gock.OffAll()
-				gock.InterceptClient(consoleClient)
-				gock.
-					New(fmt.Sprintf("https://api.%s:6433", test.MemberClusterName)).
-					Get("console").
-					Reply(404)
-
-				// when
-				err := sync.synchronizeStatus()
-
-				// then
-				assert.EqualError(t, err, `unable to get web console route for cluster member-cluster: routes.route.openshift.io "console" not found`)
-			})
-
-			t.Run("get route fails with error other than 404", func(t *testing.T) {
-				// given
-				sync, memberClient := prepareSync()
-				memberClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-					if key.Name == "console" {
-						return errors.New("something went wrong")
+				for _, toolchainStatus := range []*toolchainv1alpha1.ToolchainStatus{
+					NewToolchainStatus(WithMember(test.MemberClusterName, WithRoutes("", "", ToBeNotReady()))),
+					NewToolchainStatus(WithMember(test.MemberClusterName)),
+				} {
+					memberClient := test.NewFakeClient(t, userAccount)
+					hostClient := test.NewFakeClient(t, mur, toolchainStatus)
+					config, err := configuration.LoadConfig(hostClient)
+					require.NoError(t, err)
+					sync := Synchronizer{
+						record:            mur,
+						hostClient:        hostClient,
+						memberCluster:     newMemberCluster(memberClient),
+						memberUserAcc:     userAccount,
+						recordSpecUserAcc: mur.Spec.UserAccounts[0],
+						logger:            l,
+						scheme:            scheme,
+						config:            config,
 					}
-					return memberClient.Client.Get(ctx, key, obj)
+
+					// when
+					err = sync.synchronizeStatus()
+
+					// then
+					assert.EqualError(t, err, "routes are not properly set in ToolchainStatus resource")
 				}
-
-				// when
-				err := sync.synchronizeStatus()
-
-				// then
-				assert.EqualError(t, err, "something went wrong")
-			})
-		})
-
-		t.Run("when unable to get che route", func(t *testing.T) {
-			t.Run("get route fails with error other than 404", func(t *testing.T) {
-				// given
-				sync, memberClient := prepareSync()
-				memberClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-					if key.Name == "che" {
-						return errors.New("something went wrong")
-					}
-					if key.Name == "console" {
-						return nil
-					}
-					return memberClient.Client.Get(ctx, key, obj)
-				}
-
-				// when
-				err := sync.synchronizeStatus()
-
-				// then
-				assert.EqualError(t, err, "something went wrong")
 			})
 		})
 	})
 }
 
-func TestCheURL(t *testing.T) {
+func TestRoutes(t *testing.T) {
 	// given
-	l := zap.Logger(true)
+	l := zap.New(zap.UseDevMode(true))
 	logf.SetLogger(l)
 	apiScheme(t)
 
-	testConsoleURL := func(cheRoute *routev1.Route, expectedConsoleURL string) {
-		// given
-		mur := murtest.NewMasterUserRecord(t, "john",
-			murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
-		userAccount := uatest.NewUserAccountFromMur(mur,
-			uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
-		condition := userAccount.Status.Conditions[0]
+	masterUserRec := murtest.NewMasterUserRecord(t, "john",
+		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
+	userAccount := uatest.NewUserAccountFromMur(masterUserRec,
+		uatest.StatusCondition(toBeNotReady("Provisioning", "")), uatest.ResourceVersion("123abc"))
+	condition := userAccount.Status.Conditions[0]
+	memberClient := test.NewFakeClient(t, userAccount)
 
-		var memberClient *test.FakeClient
-		if cheRoute != nil {
-			memberClient = test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute)
-		} else {
-			memberClient = test.NewFakeClient(t, userAccount, consoleRoute())
+	t.Run("routes are set", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(
+			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "https://che-toolchain-che.member-cluster/", ToBeReady())))
+		mur := masterUserRec.DeepCopy()
+
+		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
+		config, err := configuration.LoadConfig(hostClient)
+		require.NoError(t, err)
+		sync := Synchronizer{
+			record:            mur.DeepCopy(),
+			hostClient:        hostClient,
+			memberCluster:     newMemberCluster(memberClient),
+			memberUserAcc:     userAccount,
+			recordSpecUserAcc: mur.Spec.UserAccounts[0],
+			logger:            l,
+			config:            config,
 		}
-		hostClient := test.NewFakeClient(t, mur)
+
+		// when
+		err = sync.synchronizeStatus()
+
+		// then
+		require.NoError(t, err)
+		uatest.AssertThatUserAccount(t, "john", memberClient).
+			Exists().
+			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+			HasConditions(condition)
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
+				Name:            test.MemberClusterName,
+				APIEndpoint:     "https://api.member-cluster:6433",
+				ConsoleURL:      "https://console.member-cluster/",
+				CheDashboardURL: "https://che-toolchain-che.member-cluster/",
+			}).
+			AllUserAccountsHaveCondition(condition)
+	})
+
+	t.Run("che route is missing but condition is ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(
+			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())))
+		mur := masterUserRec.DeepCopy()
+
+		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 		config, err := configuration.LoadConfig(hostClient)
 		require.NoError(t, err)
 		sync := Synchronizer{
@@ -640,9 +598,9 @@ func TestCheURL(t *testing.T) {
 
 		// when
 		err = sync.synchronizeStatus()
-		require.NoError(t, err)
 
 		// then
+		require.NoError(t, err)
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			Exists().
 			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
@@ -652,27 +610,55 @@ func TestCheURL(t *testing.T) {
 				Name:            test.MemberClusterName,
 				APIEndpoint:     "https://api.member-cluster:6433",
 				ConsoleURL:      "https://console.member-cluster/",
-				CheDashboardURL: expectedConsoleURL,
+				CheDashboardURL: "",
 			}).
 			AllUserAccountsHaveCondition(condition)
-	}
-
-	t.Run("tls enabled", func(t *testing.T) {
-		testConsoleURL(cheRoute(true), "https://che-toolchain-che.member-cluster/")
 	})
 
-	t.Run("tls disabled", func(t *testing.T) {
-		testConsoleURL(cheRoute(false), "http://che-toolchain-che.member-cluster/")
-	})
+	t.Run("condition is not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(
+			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeNotReady())))
+		mur := masterUserRec.DeepCopy()
 
-	t.Run("no route", func(t *testing.T) {
-		testConsoleURL(nil, "")
+		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
+		config, err := configuration.LoadConfig(hostClient)
+		require.NoError(t, err)
+		sync := Synchronizer{
+			record:            mur,
+			hostClient:        hostClient,
+			memberCluster:     newMemberCluster(memberClient),
+			memberUserAcc:     userAccount,
+			recordSpecUserAcc: mur.Spec.UserAccounts[0],
+			logger:            l,
+			config:            config,
+		}
+
+		// when
+		err = sync.synchronizeStatus()
+
+		// then
+		require.Error(t, err)
+		uatest.AssertThatUserAccount(t, "john", memberClient).
+			Exists().
+			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+			HasConditions(condition)
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
+				Name:            test.MemberClusterName,
+				APIEndpoint:     "https://api.member-cluster:6433",
+				ConsoleURL:      "",
+				CheDashboardURL: "",
+			}).
+			AllUserAccountsHaveCondition(condition)
 	})
 }
 
 func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, hostClient *test.FakeClient) (Synchronizer, client.Client) {
 	copiedMur := mur.DeepCopy()
-	memberClient := test.NewFakeClient(t, userAccount, consoleRoute(), cheRoute(false))
+	toolchainStatus := NewToolchainStatus(
+		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "http://che-toolchain-che.member-cluster/", ToBeReady())))
+	memberClient := test.NewFakeClient(t, userAccount, toolchainStatus)
 	config, err := configuration.LoadConfig(hostClient)
 	require.NoError(t, err)
 
@@ -682,7 +668,7 @@ func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccoun
 		memberCluster:     newMemberCluster(memberClient),
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: copiedMur.Spec.UserAccounts[0],
-		logger:            zap.Logger(true),
+		logger:            zap.New(zap.UseDevMode(true)),
 		scheme:            apiScheme(t),
 		config:            config,
 	}, memberClient
@@ -722,28 +708,4 @@ func newMemberCluster(cl client.Client) *cluster.CachedToolchainCluster {
 			}},
 		},
 	}
-}
-
-func consoleRoute() *routev1.Route {
-	return &routev1.Route{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "console",
-			Namespace: "openshift-console",
-		},
-		Spec: routev1.RouteSpec{Host: fmt.Sprintf("console.%s", test.MemberClusterName)},
-	}
-}
-
-func cheRoute(tls bool) *routev1.Route {
-	r := &routev1.Route{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "che",
-			Namespace: "toolchain-che",
-		},
-		Spec: routev1.RouteSpec{Host: fmt.Sprintf("che-toolchain-che.%s", test.MemberClusterName)},
-	}
-	if tls {
-		r.Spec.TLS = &routev1.TLSConfig{Termination: "edge"}
-	}
-	return r
 }
