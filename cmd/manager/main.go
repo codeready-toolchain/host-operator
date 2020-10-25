@@ -149,7 +149,6 @@ func main() {
 	addMetrics(ctx, cfg)
 
 	metrics.RegisterCustomMetrics()
-	defer metrics.UnregisterCustomMetrics()
 
 	stopChannel := signals.SetupSignalHandler()
 

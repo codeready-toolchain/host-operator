@@ -6,6 +6,8 @@ import (
 	k8smetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
+const metricsPrefix = "sandbox_"
+
 var log = logf.Log.WithName("toolchain_metrics")
 
 // Counter is a wrapper of the prometheus counter type
@@ -81,11 +83,11 @@ var (
 
 func initCounter(name, help string) *Counter {
 	c := prometheus.NewCounter(prometheus.CounterOpts{
-		Name: name,
+		Name: metricsPrefix + name,
 		Help: help,
 	})
 	m := &Counter{
-		name:              name,
+		name:              metricsPrefix + name,
 		help:              help,
 		prometheusCounter: c,
 	}
@@ -95,11 +97,11 @@ func initCounter(name, help string) *Counter {
 
 func initGauge(name, help string) *Gauge {
 	g := prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: name,
+		Name: metricsPrefix + name,
 		Help: help,
 	})
 	m := &Gauge{
-		name:            name,
+		name:            metricsPrefix + name,
 		help:            help,
 		prometheusGauge: g,
 	}
@@ -117,17 +119,6 @@ func RegisterCustomMetrics() {
 		k8smetrics.Registry.MustRegister(m.prometheusGauge)
 	}
 	log.Info("custom metrics registered successfully")
-}
-
-// UnregisterCustomMetrics unregisters the custom metrics
-func UnregisterCustomMetrics() {
-	for _, m := range allCounters {
-		k8smetrics.Registry.Unregister(m.prometheusCounter)
-	}
-	for _, m := range allGauges {
-		k8smetrics.Registry.Unregister(m.prometheusGauge)
-	}
-	log.Info("custom metrics unregistered successfully")
 }
 
 // Reset function for use in tests only
