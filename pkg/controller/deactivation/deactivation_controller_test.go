@@ -139,7 +139,6 @@ func TestReconcile(t *testing.T) {
 		// the time since the mur was provisioned exceeds the deactivation timeout period for the 'basic' tier
 		t.Run("usersignup should be deactivated - basic tier (30 days)", func(t *testing.T) {
 			// given
-			defer metrics.Reset()
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
@@ -156,7 +155,6 @@ func TestReconcile(t *testing.T) {
 		// the time since the mur was provisioned exceeds the deactivation timeout period for the 'other' tier
 		t.Run("usersignup should be deactivated - other tier (60 days)", func(t *testing.T) {
 			// given
-			defer metrics.Reset()
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutOtherTier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar)
@@ -242,6 +240,7 @@ func TestReconcile(t *testing.T) {
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *test.FakeClient) {
+	metrics.ResetCounters()
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)

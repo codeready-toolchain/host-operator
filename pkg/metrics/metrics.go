@@ -121,16 +121,10 @@ func RegisterCustomMetrics() {
 	log.Info("custom metrics registered successfully")
 }
 
-// Reset function for use in tests only
-func Reset() {
+// ResetCounters function for use in tests only
+func ResetCounters() {
 	for _, m := range allCounters {
 		m.prometheusCounter = prometheus.NewCounter(prometheus.CounterOpts{
-			Name: m.name,
-			Help: m.help,
-		})
-	}
-	for _, m := range allGauges {
-		m.prometheusGauge = prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: m.name,
 			Help: m.help,
 		})

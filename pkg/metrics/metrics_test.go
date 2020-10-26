@@ -51,7 +51,7 @@ func TestRegisterCustomMetrics(t *testing.T) {
 	}
 }
 
-func TestReset(t *testing.T) {
+func TestResetCounters(t *testing.T) {
 	// given
 	c := initCounter("test_counter", "test counter description")
 	g := initGauge("test_gauge", "test gauge description")
@@ -59,9 +59,9 @@ func TestReset(t *testing.T) {
 	// when
 	c.Increment()
 	g.Set(22)
-	Reset()
+	ResetCounters()
 
 	// then
 	assert.Equal(t, float64(0), prom_testutil.ToFloat64(c.prometheusCounter))
-	assert.Equal(t, float64(0), prom_testutil.ToFloat64(g.prometheusGauge))
+	assert.Equal(t, float64(22), prom_testutil.ToFloat64(g.prometheusGauge))
 }

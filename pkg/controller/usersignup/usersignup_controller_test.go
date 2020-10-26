@@ -59,7 +59,6 @@ var basicNSTemplateTier = newNsTemplateTier("basic", "code", "dev", "stage")
 
 func TestUserSignupCreateMUROk(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
@@ -105,7 +104,6 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -213,7 +211,6 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 
 func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -246,7 +243,6 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 
 func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -285,7 +281,6 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 
 func TestUpdateOfApprovedLabelFails(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -319,7 +314,6 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 
 func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -355,7 +349,6 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 
 func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -396,7 +389,6 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 
 func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 2)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -443,7 +435,6 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 
 func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -489,7 +480,6 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
@@ -571,7 +561,6 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 
 func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
@@ -655,7 +644,6 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 
 func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -704,7 +692,6 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 
 func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(WithTargetCluster("east"))
@@ -789,7 +776,6 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 
 func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(WithTargetCluster("east"))
@@ -831,7 +817,6 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 
 func TestUserSignupMURCreateFails(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
@@ -866,7 +851,6 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 
 func TestUserSignupMURReadFails(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
@@ -900,7 +884,6 @@ func TestUserSignupMURReadFails(t *testing.T) {
 
 func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
@@ -936,7 +919,6 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 
 func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -972,7 +954,6 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 
 func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -1011,7 +992,6 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -1062,7 +1042,6 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 
 func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
@@ -1143,7 +1122,6 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(WithUsername("foo#$%^bar@redhat.com"))
@@ -1186,7 +1164,6 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
-		metrics.Reset()
 		InitializeCounter(t, 1)
 		defer counter.Reset()
 		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
@@ -1233,7 +1210,6 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 	t.Run("when MUR doesn't exist, then the condition should be set to Deactivated", func(t *testing.T) {
 		// given
-		metrics.Reset()
 		InitializeCounter(t, 2)
 		defer counter.Reset()
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), basicNSTemplateTier)
@@ -1311,7 +1287,6 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 
 	t.Run("when the deactivation notification cannot be created", func(t *testing.T) {
 		// given
-		metrics.Reset()
 		InitializeCounter(t, 2)
 		defer counter.Reset()
 		r, req, cl := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), basicNSTemplateTier)
@@ -1403,7 +1378,6 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 				Reason: "NotificationCRCreated",
 			},
 		}
-		metrics.Reset()
 		InitializeCounter(t, 2)
 		defer counter.Reset()
 		ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
@@ -1471,7 +1445,6 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 				Reason: "NotificationCRCreated",
 			},
 		}
-		metrics.Reset()
 		InitializeCounter(t, 2)
 		defer counter.Reset()
 		r, req, cl := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), basicNSTemplateTier)
@@ -1555,7 +1528,6 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
-		metrics.Reset()
 		InitializeCounter(t, 1)
 		defer counter.Reset()
 		mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(test.HostOperatorNs))
@@ -1640,7 +1612,6 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 
 func TestUserSignupBanned(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -1693,7 +1664,6 @@ func TestUserSignupBanned(t *testing.T) {
 
 func TestUserSignupVerificationRequired(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(VerificationRequired())
@@ -1736,7 +1706,6 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 
 func TestUserSignupBannedMURExists(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -1846,7 +1815,6 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 
 func TestUserSignupListBannedUsersFails(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -1867,7 +1835,6 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 
 func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
@@ -1955,7 +1922,6 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 // TestDeathBy100Signups tests the logic of generateCompliantUsername() which allows no more than 100 attempts to find a vacant name
 func TestDeathBy100Signups(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 100)
 	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
@@ -2027,7 +1993,6 @@ func TestDeathBy100Signups(t *testing.T) {
 
 func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup()
@@ -2088,7 +2053,6 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 
 func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 	// given
-	metrics.Reset()
 	InitializeCounter(t, 1)
 	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
@@ -2130,6 +2094,8 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 }
 
 func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMemberClustersFunc, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request, *test.FakeClient) {
+	metrics.ResetCounters()
+
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -2349,7 +2315,7 @@ func TestMigrateMur(t *testing.T) {
 func TestUpdateMetricsByState(t *testing.T) {
 	t.Run("common state changes", func(t *testing.T) {
 		t.Run("empty -> not-ready - increment UserSignupUniqueTotal", func(t *testing.T) {
-			metrics.Reset()
+			metrics.ResetCounters()
 			updateMetricsByState("", "not-ready")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -2359,7 +2325,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 		})
 
 		t.Run("not-ready -> pending - no change", func(t *testing.T) {
-			metrics.Reset()
+			metrics.ResetCounters()
 			updateMetricsByState("not-ready", "pending")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -2369,7 +2335,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 		})
 
 		t.Run("pending -> approved - increment UserSignupProvisionedTotal", func(t *testing.T) {
-			metrics.Reset()
+			metrics.ResetCounters()
 			updateMetricsByState("pending", "approved")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -2379,7 +2345,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 		})
 
 		t.Run("approved -> deactivated - increment UserSignupDeactivatedTotal", func(t *testing.T) {
-			metrics.Reset()
+			metrics.ResetCounters()
 			updateMetricsByState("approved", "deactivated")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -2389,7 +2355,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 		})
 
 		t.Run("deactivated -> banned - increment UserSignupBannedTotal", func(t *testing.T) {
-			metrics.Reset()
+			metrics.ResetCounters()
 			updateMetricsByState("deactivated", "banned")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
@@ -2401,7 +2367,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 
 	t.Run("uncommon state changes", func(t *testing.T) {
 		t.Run("old value is not empty", func(t *testing.T) {
-			metrics.Reset()
+			metrics.ResetCounters()
 			updateMetricsByState("any-value", "")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -2411,7 +2377,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 		})
 
 		t.Run("new value is not-ready - no change", func(t *testing.T) {
-			metrics.Reset()
+			metrics.ResetCounters()
 			updateMetricsByState("any-value", "not-ready")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -2421,7 +2387,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 		})
 
 		t.Run("new value is not a valid state - no change", func(t *testing.T) {
-			metrics.Reset()
+			metrics.ResetCounters()
 			updateMetricsByState("any-value", "x")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
