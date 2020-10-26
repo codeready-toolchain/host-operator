@@ -150,6 +150,15 @@ func TestReconcile(t *testing.T) {
 			require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
 			assertThatUserSignupDeactivated(t, cl, username, true)
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupAutoDeactivatedTotal)
+
+			t.Run("usersignup already deactivated", func(t *testing.T) {
+				// additional reconciles should find the usersignup is already deactivated
+				res, err := r.Reconcile(req)
+				// then
+				require.NoError(t, err)
+				require.False(t, res.Requeue, "requeue should not be set")
+				require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
+			})
 		})
 
 		// the time since the mur was provisioned exceeds the deactivation timeout period for the 'other' tier
