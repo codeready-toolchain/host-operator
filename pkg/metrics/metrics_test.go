@@ -3,8 +3,7 @@ package metrics
 import (
 	"testing"
 
-	// . "github.com/codeready-toolchain/host-operator/test"
-	prom_testutil "github.com/prometheus/client_golang/prometheus/testutil"
+	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
 
 	"github.com/stretchr/testify/assert"
 	k8smetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -20,7 +19,7 @@ func TestInitCounter(t *testing.T) {
 	// then
 	assert.Equal(t, "sandbox_test_counter", m.name)
 	assert.Equal(t, "test counter description", m.help)
-	assert.Equal(t, float64(1), prom_testutil.ToFloat64(m.prometheusCounter))
+	assert.Equal(t, float64(1), promtestutil.ToFloat64(m.prometheusCounter))
 }
 
 func TestInitGauge(t *testing.T) {
@@ -33,7 +32,7 @@ func TestInitGauge(t *testing.T) {
 	// then
 	assert.Equal(t, "sandbox_test_gauge", m.name)
 	assert.Equal(t, "test gauge description", m.help)
-	assert.Equal(t, float64(22), prom_testutil.ToFloat64(m.prometheusGauge))
+	assert.Equal(t, float64(22), promtestutil.ToFloat64(m.prometheusGauge))
 }
 
 func TestRegisterCustomMetrics(t *testing.T) {
@@ -62,6 +61,6 @@ func TestResetCounters(t *testing.T) {
 	ResetCounters()
 
 	// then
-	assert.Equal(t, float64(0), prom_testutil.ToFloat64(c.prometheusCounter))
-	assert.Equal(t, float64(22), prom_testutil.ToFloat64(g.prometheusGauge))
+	assert.Equal(t, float64(0), promtestutil.ToFloat64(c.prometheusCounter))
+	assert.Equal(t, float64(22), promtestutil.ToFloat64(g.prometheusGauge))
 }
