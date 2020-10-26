@@ -6,6 +6,7 @@ import (
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	"github.com/stretchr/testify/assert"
@@ -29,6 +30,7 @@ func AssertThatUninitializedCounterHas(t *testing.T, numberOfMurs int, numberOfU
 }
 
 func AssertThatCounterHas(t *testing.T, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) {
+	AssertMetricsGaugeEquals(t, numberOfMurs, metrics.MasterUserRecordGauge)
 	counts, err := counter.GetCounts()
 	assert.NoError(t, err)
 	verifyCounts(t, counts, numberOfMurs, numberOfUasPerCluster...)
@@ -65,6 +67,7 @@ func InitializeCounterWithoutReset(t *testing.T, numberOfMurs int, numberOfUasPe
 }
 
 func initializeCounter(t *testing.T, cl *test.FakeClient, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) *v1alpha1.ToolchainStatus {
+	metrics.MasterUserRecordGauge.Set(float64(numberOfMurs))
 	if len(numberOfUasPerCluster) > 0 && numberOfMurs == 0 {
 		require.FailNow(t, "When specifying number of UserAccounts per member cluster, you need to specify a count of MURs that is higher than zero")
 	}

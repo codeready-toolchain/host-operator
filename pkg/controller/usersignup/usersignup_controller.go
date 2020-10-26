@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup/unapproved"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -45,7 +45,7 @@ const defaultTierName = "basic"
 
 // Add creates a new UserSignup Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, crtConfig *configuration.Config) error {
+func Add(mgr manager.Manager, crtConfig *crtCfg.Config) error {
 	return add(mgr, newReconciler(mgr, crtConfig))
 }
 
@@ -384,15 +384,24 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 }
 
 func (r *ReconcileUserSignup) setStateLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
-	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] != value {
+	oldValue := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
+	if oldValue != value {
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = value
 		if err := r.client.Update(context.TODO(), userSignup); err != nil {
 			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
 				"unable to update state label at UserSignup resource")
 		}
+		updateMetricsByState(oldValue, value)
 		return nil
 	}
 	return nil
+}
+
+func updateMetricsByState(oldState, newState string) {
+	metrics.UserSignupUniqueTotal.ConditionalIncrement(oldState == "")
+	metrics.UserSignupProvisionedTotal.ConditionalIncrement(newState == toolchainv1alpha1.UserSignupStateLabelValueApproved)
+	metrics.UserSignupDeactivatedTotal.ConditionalIncrement(newState == toolchainv1alpha1.UserSignupStateLabelValueDeactivated)
+	metrics.UserSignupBannedTotal.ConditionalIncrement(newState == toolchainv1alpha1.UserSignupStateLabelValueBanned)
 }
 
 func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchainv1alpha1.NSTemplateTier, error) {
@@ -488,6 +497,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			"Error creating MasterUserRecord")
 	}
 	counter.IncrementMasterUserRecordCount()
+
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
 }
