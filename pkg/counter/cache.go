@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -52,6 +53,7 @@ func reset() {
 func IncrementMasterUserRecordCount() {
 	write(func() {
 		cachedCounts.MasterUserRecordCount++
+		metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 	})
 }
 
@@ -64,17 +66,18 @@ func DecrementMasterUserRecordCount(log logr.Logger) {
 			log.Error(fmt.Errorf("the count of MasterUserRecords is zero"),
 				"unable to decrement the number of MasterUserRecords")
 		}
+		metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 	})
 }
 
-// IncrementUserAccountCount increments the number of UserAccount fo the given member cluster in the cached counter
+// IncrementUserAccountCount increments the number of UserAccount for the given member cluster in the cached counter
 func IncrementUserAccountCount(clusterName string) {
 	write(func() {
 		cachedCounts.UserAccountsPerClusterCounts[clusterName]++
 	})
 }
 
-// DecrementUserAccountCount decreases the number of UserAccount fo the given member cluster in the cached counter
+// DecrementUserAccountCount decreases the number of UserAccount for the given member cluster in the cached counter
 func DecrementUserAccountCount(log logr.Logger, clusterName string) {
 	write(func() {
 		if cachedCounts.UserAccountsPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized {
@@ -140,6 +143,7 @@ CachedCountsPerCluster:
 			UserAccountCount: count,
 		})
 	}
+	metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 	return nil
 }
 
