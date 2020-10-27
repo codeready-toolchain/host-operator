@@ -519,7 +519,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 					err = sync.synchronizeStatus()
 
 					// then
-					assert.EqualError(t, err, "routes are not properly set in ToolchainStatus resource")
+					assert.Error(t, err)
 				}
 			})
 		})

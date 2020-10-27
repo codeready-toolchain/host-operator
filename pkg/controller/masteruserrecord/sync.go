@@ -135,8 +135,12 @@ func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountSt
 
 		for _, memberStatus := range toolchainStatus.Status.Members {
 			if memberStatus.ClusterName == status.Cluster.Name {
-				if memberStatus.MemberStatus.Routes == nil || condition.IsNotTrue(memberStatus.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady) {
-					return status, fmt.Errorf("routes are not properly set in ToolchainStatus resource")
+				if memberStatus.MemberStatus.Routes == nil {
+					return status, fmt.Errorf("routes are not set in ToolchainStatus resource")
+				}
+				if condition.IsNotTrue(memberStatus.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady) {
+					ready, _ := condition.FindConditionByType(memberStatus.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady)
+					return status, fmt.Errorf("routes are not properly set in ToolchainStatus - the reason is: `%s` with message: `%s`", ready.Reason, ready.Message)
 				}
 				status.Cluster.ConsoleURL = memberStatus.MemberStatus.Routes.ConsoleURL
 				status.Cluster.CheDashboardURL = memberStatus.MemberStatus.Routes.CheDashboardURL
