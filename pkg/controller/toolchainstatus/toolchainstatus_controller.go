@@ -282,12 +282,13 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 			continue
 		}
 
-		// take only the overall conditions and resource usage from the MemberStatus
+		// take only the overall conditions, resource usage and routes from the MemberStatus
 		// (ie. don't include status of member operator, host connection, etc.) in order to keep readability.
 		// member status details can be viewed on the member cluster directly.
 		memberStatus := toolchainv1alpha1.MemberStatusStatus{
 			Conditions:    memberStatusObj.Status.Conditions,
 			ResourceUsage: memberStatusObj.Status.ResourceUsage,
+			Routes:        memberStatusObj.Status.Routes,
 		}
 		if condition.IsNotTrue(memberStatusObj.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 			// the memberstatus is not ready so set the component error to bubble up the error to the overall toolchain status

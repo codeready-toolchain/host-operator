@@ -4,6 +4,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -32,6 +33,17 @@ func WithNodeRoleUsage(role string, usage int) MemberToolchainStatusOption {
 	}
 }
 
+func WithRoutes(consoleURL, cheURL string, condition toolchainv1alpha1.Condition) MemberToolchainStatusOption {
+	return func(status *toolchainv1alpha1.Member) {
+		if status.MemberStatus.Routes == nil {
+			status.MemberStatus.Routes = &toolchainv1alpha1.Routes{}
+		}
+		status.MemberStatus.Routes.ConsoleURL = consoleURL
+		status.MemberStatus.Routes.CheDashboardURL = cheURL
+		status.MemberStatus.Routes.Conditions = []toolchainv1alpha1.Condition{condition}
+	}
+}
+
 func NewToolchainStatus(options ...func(*toolchainv1alpha1.ToolchainStatus)) *toolchainv1alpha1.ToolchainStatus {
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{
 		ObjectMeta: metav1.ObjectMeta{
@@ -43,4 +55,18 @@ func NewToolchainStatus(options ...func(*toolchainv1alpha1.ToolchainStatus)) *to
 		modify(toolchainStatus)
 	}
 	return toolchainStatus
+}
+
+func ToBeReady() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: v1.ConditionTrue,
+	}
+}
+
+func ToBeNotReady() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: v1.ConditionFalse,
+	}
 }

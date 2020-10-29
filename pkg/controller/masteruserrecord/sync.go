@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"time"
@@ -14,14 +13,12 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
-	routev1 "github.com/openshift/api/route/v1"
-	"github.com/pkg/errors"
-	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -126,88 +123,34 @@ func (s *Synchronizer) synchronizeStatus() error {
 // withClusterDetails returns the given user account status with additional information about
 // the target cluster such as API endpoint and Console URL if not set yet
 func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
-	var err error
 	if status.Cluster.Name != "" {
+		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
+		if err := s.hostClient.Get(context.TODO(), types.NamespacedName{Namespace: s.record.Namespace, Name: s.config.GetToolchainStatusName()}, toolchainStatus); err != nil {
+			return status, errors.Wrapf(err, "unable to read ToolchainStatus resource")
+		}
+
 		if status.Cluster.APIEndpoint == "" {
 			status.Cluster.APIEndpoint = s.memberCluster.APIEndpoint
 		}
-		status, err = s.withConsoleURL(status)
-		if err != nil {
-			return status, err
-		}
-		status, err = s.withCheDashboardURL(status)
-	}
-	return status, err
-}
 
-// withConsoleURL returns the given user account status with Console URL set if it's not already set yet
-func (s *Synchronizer) withConsoleURL(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
-	if status.Cluster.ConsoleURL == "" {
-		route := &routev1.Route{}
-		namespacedName := types.NamespacedName{Namespace: s.config.GetConsoleNamespace(), Name: s.config.GetConsoleRouteName()}
-		if err := s.memberCluster.Client.Get(context.TODO(), namespacedName, route); err != nil {
-			if kuberrors.IsNotFound(err) {
-				// It can happen if running in old OpenShift version like 3.x (minishift) in dev environment
-				// TODO do this only if run in dev environment
-				consoleURL, consoleErr := s.openShift3XConsoleURL(s.memberCluster.APIEndpoint)
-				if consoleErr != nil {
-					// Log the openShift3XConsoleURL() error but return the original missing route error
-					s.logger.Error(err, "OpenShit 3.x web console unreachable", "url", consoleURL)
-					return status, errors.Wrapf(err, "unable to get web console route for cluster %s", s.memberCluster.Name)
+		for _, memberStatus := range toolchainStatus.Status.Members {
+			if memberStatus.ClusterName == status.Cluster.Name {
+				if memberStatus.MemberStatus.Routes == nil {
+					return status, fmt.Errorf("routes are not set in ToolchainStatus resource")
 				}
-				s.logger.Info("OpenShit 3.x web console URL used", "url", consoleURL)
-				status.Cluster.ConsoleURL = consoleURL
+				if condition.IsNotTrue(memberStatus.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady) {
+					ready, _ := condition.FindConditionByType(memberStatus.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady)
+					return status, fmt.Errorf("routes are not properly set in ToolchainStatus - the reason is: `%s` with message: `%s`", ready.Reason, ready.Message)
+				}
+				status.Cluster.ConsoleURL = memberStatus.MemberStatus.Routes.ConsoleURL
+				status.Cluster.CheDashboardURL = memberStatus.MemberStatus.Routes.CheDashboardURL
 				return status, nil
 			}
-			s.logger.Error(err, "unable to get console route")
-			return status, err
 		}
-
-		status.Cluster.ConsoleURL = fmt.Sprintf("https://%s/%s", route.Spec.Host, route.Spec.Path)
+		return status, fmt.Errorf("the appropriate status of the member cluster '%s' wasn't found in ToolchainCluster CR - the present member statuses: %v",
+			status.Cluster.Name, toolchainStatus.Status.Members)
 	}
 	return status, nil
-}
-
-// withCheDashboardURL returns the given user account status with Che Dashboard URL set if it's not already set yet
-func (s *Synchronizer) withCheDashboardURL(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
-	if status.Cluster.CheDashboardURL == "" {
-		route := &routev1.Route{}
-		namespacedName := types.NamespacedName{Namespace: s.config.GetCheNamespace(), Name: s.config.GetCheRouteName()}
-		err := s.memberCluster.Client.Get(context.TODO(), namespacedName, route)
-		if err != nil {
-			if kuberrors.IsNotFound(err) {
-				// It can happen if Che Operator is not installed
-				s.logger.Info("unable to get che dashboard route (operator not installed?)")
-				return status, nil
-			}
-			s.logger.Error(err, "unable to get che dashboard route")
-			return status, err
-		}
-		scheme := "https"
-		if route.Spec.TLS == nil || *route.Spec.TLS == (routev1.TLSConfig{}) {
-			scheme = "http"
-		}
-		status.Cluster.CheDashboardURL = fmt.Sprintf("%s://%s/%s", scheme, route.Spec.Host, route.Spec.Path)
-	}
-	return status, nil
-}
-
-// openShift3XConsoleURL checks if <apiEndpoint>/console URL is reachable.
-// This URL is used by web console in OpenShift 3.x
-func (s *Synchronizer) openShift3XConsoleURL(apiEndpoint string) (string, error) {
-	url := fmt.Sprintf("%s/console", apiEndpoint)
-	resp, err := consoleClient.Get(url)
-	if err != nil {
-		return url, err
-	}
-	defer func() {
-		_, _ = ioutil.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-	}()
-	if resp.StatusCode != http.StatusOK {
-		return url, errors.Errorf("status is not 200 OK: %s", resp.Status)
-	}
-	return url, nil
 }
 
 // alignDisabled updates the status to Disabled if all all the embedded UserAccounts have Disabled status

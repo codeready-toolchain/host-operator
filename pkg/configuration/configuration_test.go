@@ -140,10 +140,6 @@ func TestLoadFromConfigMap(t *testing.T) {
 
 		// then
 		assert.Equal(t, "https://registration.crt-placeholder.com", config.GetRegistrationServiceURL())
-		assert.Equal(t, "console", config.GetConsoleRouteName())
-		assert.Equal(t, "openshift-console", config.GetConsoleNamespace())
-		assert.Equal(t, "che", config.GetCheRouteName())
-		assert.Equal(t, "toolchain-che", config.GetCheNamespace())
 
 	})
 	t.Run("env overwrite", func(t *testing.T) {
@@ -151,10 +147,6 @@ func TestLoadFromConfigMap(t *testing.T) {
 		restore := test.SetEnvVarsAndRestore(t,
 			test.Env("HOST_OPERATOR_CONFIG_MAP_NAME", "test-config"),
 			test.Env("HOST_OPERATOR_REGISTRATION_SERVICE_URL", ""),
-			test.Env("HOST_OPERATOR_CONSOLE_NAMESPACE", ""),
-			test.Env("HOST_OPERATOR_CONSOLE_ROUTE_NAME", ""),
-			test.Env("HOST_OPERATOR_CHE_NAMESPACE", ""),
-			test.Env("HOST_OPERATOR_CHE_ROUTE_NAME", ""),
 			test.Env("MEMBER_OPERATOR_TEST_TEST", ""),
 			test.Env("HOST_OPERATOR_TEST_TEST", ""))
 		defer restore()
@@ -166,10 +158,6 @@ func TestLoadFromConfigMap(t *testing.T) {
 			},
 			Data: map[string]string{
 				"registration.service.url": "test-url",
-				"console.namespace":        "test-console-namespace",
-				"console.route.name":       "test-console-route-name",
-				"che.namespace":            "test-che-namespace",
-				"che.route.name":           "test-che-route-name",
 				"test-test":                "test-test",
 			},
 		}
@@ -182,22 +170,10 @@ func TestLoadFromConfigMap(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, "test-url", config.GetRegistrationServiceURL())
-		assert.Equal(t, "test-console-namespace", config.GetConsoleNamespace())
-		assert.Equal(t, "test-console-route-name", config.GetConsoleRouteName())
-		assert.Equal(t, "test-che-namespace", config.GetCheNamespace())
-		assert.Equal(t, "test-che-route-name", config.GetCheRouteName())
 
 		// test env vars are parsed and created correctly
 		regServiceURL := os.Getenv("HOST_OPERATOR_REGISTRATION_SERVICE_URL")
 		assert.Equal(t, regServiceURL, "test-url")
-		consoleNamespace := os.Getenv("HOST_OPERATOR_CONSOLE_NAMESPACE")
-		assert.Equal(t, consoleNamespace, "test-console-namespace")
-		consoleRouteName := os.Getenv("HOST_OPERATOR_CONSOLE_ROUTE_NAME")
-		assert.Equal(t, consoleRouteName, "test-console-route-name")
-		cheNamespace := os.Getenv("HOST_OPERATOR_CHE_NAMESPACE")
-		assert.Equal(t, cheNamespace, "test-che-namespace")
-		cheRouteName := os.Getenv("HOST_OPERATOR_CHE_ROUTE_NAME")
-		assert.Equal(t, cheRouteName, "test-che-route-name")
 		testTest := os.Getenv("HOST_OPERATOR_TEST_TEST")
 		assert.Equal(t, testTest, "test-test")
 	})
