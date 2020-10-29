@@ -757,6 +757,11 @@ func newMemberStatus(condition *toolchainv1alpha1.Condition) *toolchainv1alpha1.
 					"master": 45,
 				},
 			},
+			Routes: &toolchainv1alpha1.Routes{
+				ConsoleURL:      "http://console.openshift.com/url",
+				CheDashboardURL: "http://console.openshift.com/url",
+				Conditions:      []toolchainv1alpha1.Condition{ToBeReady()},
+			},
 		},
 	}
 }
@@ -910,6 +915,11 @@ func memberClusterSingleReady() toolchainv1alpha1.Member {
 					"master": 45,
 				},
 			},
+			Routes: &toolchainv1alpha1.Routes{
+				ConsoleURL:      "http://console.openshift.com/url",
+				CheDashboardURL: "http://console.openshift.com/url",
+				Conditions:      []toolchainv1alpha1.Condition{ToBeReady()},
+			},
 		},
 	}
 }
@@ -928,6 +938,11 @@ func memberClusterSingleNotReady(name, reason, msg string, resourceUsage map[str
 			},
 			ResourceUsage: toolchainv1alpha1.ResourceUsage{
 				MemoryUsagePerNodeRole: resourceUsage,
+			},
+			Routes: &toolchainv1alpha1.Routes{
+				ConsoleURL:      "http://console.openshift.com/url",
+				CheDashboardURL: "http://console.openshift.com/url",
+				Conditions:      []toolchainv1alpha1.Condition{ToBeReady()},
 			},
 		},
 	}
