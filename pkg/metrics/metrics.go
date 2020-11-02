@@ -56,8 +56,8 @@ var (
 	// UserSignupUniqueTotal should be incremented only the first time a user signup is created, there should be 1 for each unique user
 	UserSignupUniqueTotal = initCounter("user_signups_total", "Total number of unique User Signups")
 
-	// UserSignupProvisionedTotal should be incremented each time a user signup is provisioned, can be multiple times per user if they reactivate multiple times
-	UserSignupProvisionedTotal = initCounter("user_signups_provisioned_total", "Total number of Provisioned User Signups")
+	// UserSignupApprovedTotal should be incremented each time a user signup is approved, can be multiple times per user if they reactivate multiple times
+	UserSignupApprovedTotal = initCounter("user_signups_approved_total", "Total number of Approved User Signups")
 
 	// UserSignupBannedTotal should be incremented each time a user signup is banned
 	UserSignupBannedTotal = initCounter("user_signups_banned_total", "Total number of Banned User Signups")
