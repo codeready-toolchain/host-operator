@@ -399,7 +399,7 @@ func (r *ReconcileUserSignup) setStateLabel(reqLogger logr.Logger, userSignup *t
 
 func updateMetricsByState(oldState, newState string) {
 	metrics.UserSignupUniqueTotal.ConditionalIncrement(oldState == "")
-	metrics.UserSignupProvisionedTotal.ConditionalIncrement(newState == toolchainv1alpha1.UserSignupStateLabelValueApproved)
+	metrics.UserSignupApprovedTotal.ConditionalIncrement(newState == toolchainv1alpha1.UserSignupStateLabelValueApproved)
 	metrics.UserSignupDeactivatedTotal.ConditionalIncrement(newState == toolchainv1alpha1.UserSignupStateLabelValueDeactivated)
 	metrics.UserSignupBannedTotal.ConditionalIncrement(newState == toolchainv1alpha1.UserSignupStateLabelValueBanned)
 }
