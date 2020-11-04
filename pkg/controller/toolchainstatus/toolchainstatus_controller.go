@@ -271,8 +271,10 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 	}
 	for _, memberCluster := range memberClusters {
 		memberStatusObj := &toolchainv1alpha1.MemberStatus{}
-		err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: memberStatusName}, memberStatusObj)
-		if err != nil {
+		if err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: memberCluster.OperatorNamespace,
+			Name:      memberStatusName,
+		}, memberStatusObj); err != nil {
 			// couldn't find the memberstatus resource on the member cluster, create a status condition and add it to this member's status
 			reqLogger.Error(err, fmt.Sprintf("cannot find memberstatus resource in namespace %s in cluster %s", memberCluster.OperatorNamespace, memberCluster.Name))
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberStatusNotFoundReason, err.Error())

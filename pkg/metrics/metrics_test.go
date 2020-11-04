@@ -11,7 +11,7 @@ import (
 
 func TestInitCounter(t *testing.T) {
 	// given
-	m := initCounter("test_counter", "test counter description")
+	m := newCounter("test_counter", "test counter description")
 
 	// when
 	m.Increment()
@@ -19,12 +19,12 @@ func TestInitCounter(t *testing.T) {
 	// then
 	assert.Equal(t, "sandbox_test_counter", m.name)
 	assert.Equal(t, "test counter description", m.help)
-	assert.Equal(t, float64(1), promtestutil.ToFloat64(m.prometheusCounter))
+	assert.Equal(t, float64(1), promtestutil.ToFloat64(m.counter))
 }
 
 func TestInitGauge(t *testing.T) {
 	// given
-	m := initGauge("test_gauge", "test gauge description")
+	m := newGauge("test_gauge", "test gauge description")
 
 	// when
 	m.Set(22)
@@ -32,7 +32,7 @@ func TestInitGauge(t *testing.T) {
 	// then
 	assert.Equal(t, "sandbox_test_gauge", m.name)
 	assert.Equal(t, "test gauge description", m.help)
-	assert.Equal(t, float64(22), promtestutil.ToFloat64(m.prometheusGauge))
+	assert.Equal(t, float64(22), promtestutil.ToFloat64(m.gauge))
 }
 
 func TestRegisterCustomMetrics(t *testing.T) {
@@ -41,26 +41,22 @@ func TestRegisterCustomMetrics(t *testing.T) {
 
 	// then
 	// verify all metrics were registered successfully
-	for _, m := range allCounters {
-		assert.True(t, k8smetrics.Registry.Unregister(m.prometheusCounter))
-	}
-
-	for _, m := range allGauges {
-		assert.True(t, k8smetrics.Registry.Unregister(m.prometheusGauge))
+	for _, m := range collectors {
+		assert.True(t, k8smetrics.Registry.Unregister(m.Collector()))
 	}
 }
 
 func TestResetCounters(t *testing.T) {
 	// given
-	c := initCounter("test_counter", "test counter description")
-	g := initGauge("test_gauge", "test gauge description")
+	c := newCounter("test_counter", "test counter description")
+	c.Increment()
+	g := newGauge("test_gauge", "test gauge description")
+	g.Set(22)
 
 	// when
-	c.Increment()
-	g.Set(22)
-	ResetCounters()
+	Reset()
 
 	// then
-	assert.Equal(t, float64(0), promtestutil.ToFloat64(c.prometheusCounter))
-	assert.Equal(t, float64(22), promtestutil.ToFloat64(g.prometheusGauge))
+	assert.Equal(t, float64(0), promtestutil.ToFloat64(c.counter))
+	assert.Equal(t, float64(0), promtestutil.ToFloat64(g.gauge))
 }

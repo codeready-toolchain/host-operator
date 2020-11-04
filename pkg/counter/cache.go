@@ -8,8 +8,12 @@ import (
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/go-logr/logr"
+	"github.com/prometheus/client_golang/prometheus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+var log = logf.Log.WithName("counter_cache")
 
 var cachedCounts = cache{
 	Counts: Counts{
@@ -113,6 +117,7 @@ func GetCounts() (Counts, error) {
 func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) error {
 	cachedCounts.Lock()
 	defer cachedCounts.Unlock()
+	log.Info("synchronizing the content of the ToolchainStatus with the cached counter")
 	if shouldLoadCurrentMURsAndUserAccounts(toolchainStatus) {
 		if err := loadCurrentMURsAndUserAccounts(cl, toolchainStatus.Namespace); err != nil {
 			return err
@@ -142,6 +147,8 @@ CachedCountsPerCluster:
 			ClusterName:      clusterName,
 			UserAccountCount: count,
 		})
+		// update the Gauge for this particular member cluster
+		metrics.UserAccountsPerClusterGauge.Set(prometheus.Labels{metrics.ClusterNameLabel: clusterName}, float64(count))
 	}
 	metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 	return nil
