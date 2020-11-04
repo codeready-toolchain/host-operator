@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"io/ioutil"
 	"net/http"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -55,6 +58,7 @@ const (
 	hostOperatorTag        statusComponentTag = "hostOperator"
 	memberConnectionsTag   statusComponentTag = "members"
 	counterTag             statusComponentTag = "MasterUserRecord and UserAccount counter"
+	minutesAfterUnready    time.Duration      = 10
 )
 
 // Add creates a new ToolchainStatus Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -176,6 +180,35 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 
 	// if any components were not ready then set the overall status to not ready
 	if len(unreadyComponents) > 0 {
+		// If the current ToolchainStatus:
+		// a) Is currently not ready,
+		// b) has not been ready for longer than the configured threshold, and
+		// c) no notification has been already sent, then
+		// send a notification to the admin mailing list
+		c, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
+		if found && c.Status == corev1.ConditionFalse {
+			threshold := time.Now().Add(-minutesAfterUnready * time.Minute)
+			if c.LastUpdatedTime.Before(&metav1.Time{threshold}) {
+				c, found = condition.FindConditionByType(toolchainStatus.Status.Conditions,
+					toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated)
+				if !found {
+					if err := r.sendToolchainStatusUnreadyNotification(reqLogger, toolchainStatus); err != nil {
+						reqLogger.Error(err, "Failed to create toolchain status unready notification")
+
+						// set the failed to create notification status condition
+						return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
+							r.setStatusUnreadyNotificationCreationFailed, err,
+							"Failed to create user deactivation notification")
+					}
+
+					if err := r.setStatusToolchainStatusUnreadyNotificationCreated(toolchainStatus); err != nil {
+						reqLogger.Error(err, "Failed to update notification created status")
+						return err
+					}
+				}
+			}
+		}
+
 		return r.setStatusNotReady(toolchainStatus, fmt.Sprintf("components not ready: %v", unreadyComponents))
 	}
 	return r.setStatusReady(toolchainStatus)
@@ -303,6 +336,31 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 	return ready
 }
 
+func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+	notification := &toolchainv1alpha1.Notification{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "toolchainstatus-unready",
+			Namespace: toolchainStatus.Namespace,
+		},
+		Spec: toolchainv1alpha1.NotificationSpec{
+			Template: notificationtemplates.ToolchainStatusUnready.Name,
+		},
+	}
+
+	if err := controllerutil.SetControllerReference(toolchainStatus, notification, r.scheme); err != nil {
+		logger.Error(err, "Failed to set owner reference for toolchain status unready notification resource")
+		return err
+	}
+
+	if err := r.client.Create(context.TODO(), notification); err != nil {
+		logger.Error(err, "Failed to create toolchain status unready notification resource")
+		return err
+	}
+
+	logger.Info("Toolchain status unready notification resource created")
+	return nil
+}
+
 func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, members map[string]toolchainv1alpha1.MemberStatusStatus) bool {
 	allOk := true
 	for index, memberStatus := range toolchainStatus.Status.Members {
@@ -361,6 +419,30 @@ func (r *ReconcileToolchainStatus) setStatusNotReady(toolchainStatus *toolchainv
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason,
 			Message: message,
+		})
+}
+
+func (r *ReconcileToolchainStatus) setStatusToolchainStatusUnreadyNotificationCreated(
+	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+
+	return r.updateStatusConditions(
+		toolchainStatus,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreatedReason,
+		})
+}
+
+func (r *ReconcileToolchainStatus) setStatusUnreadyNotificationCreationFailed(
+	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+
+	return r.updateStatusConditions(
+		toolchainStatus,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ConditionReady,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.ToolchainStatusUnreadyNotificationCRCreationFailedReason,
 		})
 }
 
