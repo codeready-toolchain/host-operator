@@ -18,9 +18,9 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
-
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -401,6 +401,19 @@ func (r *ReconcileToolchainStatus) updateStatusConditions(memberStatus *toolchai
 	return r.client.Status().Update(context.TODO(), memberStatus)
 }
 
+// wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
+func (u *ReconcileToolchainStatus) wrapErrorWithStatusUpdate(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus,
+	statusUpdater func(userAcc *toolchainv1alpha1.ToolchainStatus, message string) error, err error, format string,
+	args ...interface{}) error {
+	if err == nil {
+		return nil
+	}
+	if err := statusUpdater(toolchainStatus, err.Error()); err != nil {
+		logger.Error(err, "Error updating ToolchainStatus status")
+	}
+	return errs.Wrapf(err, format, args...)
+}
+
 func (r *ReconcileToolchainStatus) setStatusReady(toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	return r.updateStatusConditions(
 		toolchainStatus,
@@ -430,19 +443,20 @@ func (r *ReconcileToolchainStatus) setStatusToolchainStatusUnreadyNotificationCr
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated,
 			Status: corev1.ConditionTrue,
-			Reason: toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreatedReason,
+			Reason: toolchainv1alpha1.ToolchainStatusUnreadyNotificationCRCreatedReason,
 		})
 }
 
 func (r *ReconcileToolchainStatus) setStatusUnreadyNotificationCreationFailed(
-	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+	toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
 
 	return r.updateStatusConditions(
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.ConditionReady,
-			Status: corev1.ConditionFalse,
-			Reason: toolchainv1alpha1.ToolchainStatusUnreadyNotificationCRCreationFailedReason,
+			Type:    toolchainv1alpha1.ConditionReady,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.ToolchainStatusUnreadyNotificationCRCreationFailedReason,
+			Message: message,
 		})
 }
 
