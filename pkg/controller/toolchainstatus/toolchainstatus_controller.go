@@ -343,7 +343,8 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger
 			Namespace: toolchainStatus.Namespace,
 		},
 		Spec: toolchainv1alpha1.NotificationSpec{
-			Template: notificationtemplates.ToolchainStatusUnready.Name,
+			Template:  notificationtemplates.ToolchainStatusUnready.Name,
+			Recipient: r.config.GetAdminEmail(),
 		},
 	}
 

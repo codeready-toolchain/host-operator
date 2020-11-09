@@ -28,7 +28,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	invalidServerOption := NewMailgunAPIBaseOption("https://127.0.0.1:60000/v3")
 
 	config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345", "noreply@foo.com", "mailgun")
-	notCtx := &NotificationContext{
+	notCtx := &UserNotificationContext{
 		UserID:      "jsmith123",
 		FirstName:   "John",
 		LastName:    "Smith",

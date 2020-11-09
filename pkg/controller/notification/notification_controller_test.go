@@ -33,7 +33,7 @@ import (
 type MockDeliveryService struct {
 }
 
-func (s *MockDeliveryService) Send(notificationCtx *NotificationContext, templateName string) error {
+func (s *MockDeliveryService) Send(notificationCtx *UserNotificationContext, templateName string) error {
 	return errors.New("delivery error")
 }
 

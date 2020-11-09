@@ -26,7 +26,7 @@ func (l *DefaultTemplateLoader) GetNotificationTemplate(name string) (*notificat
 }
 
 type NotificationDeliveryService interface {
-	Send(notificationCtx *NotificationContext, templateName string) error
+	Send(notificationCtx NotificationContext, templateName string) error
 }
 
 type NotificationDeliveryServiceFactory struct {
@@ -58,7 +58,7 @@ type BaseNotificationDeliveryService struct {
 	TemplateLoader TemplateLoader
 }
 
-func (s *BaseNotificationDeliveryService) GenerateContent(notificationCtx *NotificationContext,
+func (s *BaseNotificationDeliveryService) GenerateContent(notificationCtx interface{},
 	templateDefinition string) (string, error) {
 
 	tmpl, err := template.New("template").Parse(templateDefinition)

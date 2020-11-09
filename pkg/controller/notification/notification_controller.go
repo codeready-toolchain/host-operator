@@ -112,15 +112,13 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 		}, nil
 	}
 
-	var notCtx *NotificationContext
+	var notCtx NotificationContext
 	// Send the notification - first create the notification context
 	if notification.Spec.Recipient != "" {
 		// Confirm that the recipient is a valid email address
-		notCtx = &NotificationContext{
-			UserEmail: notification.Spec.Recipient,
-		}
+		notCtx, err = NewToolchainStatusNotificationContext(r.client, notification.Spec.Recipient, "")
 	} else {
-		notCtx, err = NewNotificationContext(r.client, notification.Spec.UserID, request.Namespace, r.config)
+		notCtx, err = NewUserNotificationContext(r.client, notification.Spec.UserID, request.Namespace, r.config)
 		if err != nil {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
 				r.setStatusNotificationContextError, err, "failed to create notification context")

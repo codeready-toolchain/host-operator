@@ -60,7 +60,7 @@ func NewMailgunNotificationDeliveryService(config NotificationDeliveryServiceFac
 	}
 }
 
-func (s *MailgunNotificationDeliveryService) Send(notificationCtx *NotificationContext, templateName string) error {
+func (s *MailgunNotificationDeliveryService) Send(notificationCtx NotificationContext, templateName string) error {
 
 	template, found, err := s.base.TemplateLoader.GetNotificationTemplate(templateName)
 	if err != nil {
@@ -82,7 +82,7 @@ func (s *MailgunNotificationDeliveryService) Send(notificationCtx *NotificationC
 	}
 
 	// The message object allows you to add attachments and Bcc recipients
-	message := s.Mailgun.NewMessage(s.SenderEmail, subject, "", notificationCtx.FullEmailAddress())
+	message := s.Mailgun.NewMessage(s.SenderEmail, subject, "", notificationCtx.DeliveryEmail())
 	message.SetHtml(body)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
