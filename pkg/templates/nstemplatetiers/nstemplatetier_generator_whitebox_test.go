@@ -438,15 +438,10 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	containsObj(t, actual, allowFromOpenshiftIngressPolicyObj(kind))
 	containsObj(t, actual, allowFromOpenshiftMonitoringPolicyObj(kind))
 
-	// All templates in the "team" tier and "-code" templates in other tiers should also have additional RoleBinding and Role
-	if kind == "code" || tier == "team" || tier == "advanced" {
-		require.Len(t, actual.Objects, 8)
-		// Role & RoleBinding with additional permissions to edit roles/rolebindings
-		containsObj(t, actual, rbacEditRoleObj(kind))
-		containsObj(t, actual, userRbacEditRoleBindingObj(kind))
-	} else {
-		require.Len(t, actual.Objects, 6)
-	}
+	// Role & RoleBinding with additional permissions to edit roles/rolebindings
+	require.Len(t, actual.Objects, 8)
+	containsObj(t, actual, rbacEditRoleObj(kind))
+	containsObj(t, actual, userRbacEditRoleBindingObj(kind))
 }
 
 func assertTestClusteResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
@@ -490,7 +485,7 @@ func limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest string
 }
 
 func clusterResourceQuotaObj(cpuLimit, cpuRequest, memoryLimit string) string {
-	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","persistentvolumeclaims":"5","pods":"100","replicationcontrollers":"100","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"7Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
+	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","persistentvolumeclaims":"5","pods":"100","replicationcontrollers":"100","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"15Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
 }
 
 func idlerObj(name, timeout string) string {
@@ -648,7 +643,7 @@ spec:
             hard:
               limits.cpu: 4000m
               limits.memory: 7Gi
-              requests.storage: 7Gi
+              requests.storage: 15Gi
               persistentvolumeclaims: "5"
           selector:
             annotations:
