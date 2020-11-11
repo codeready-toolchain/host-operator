@@ -15,7 +15,7 @@ objects:
         limits.ephemeral-storage: 7Gi
         requests.cpu: 2000m
         requests.memory: 15Gi
-        requests.storage: 7Gi
+        requests.storage: 15Gi
         requests.ephemeral-storage: 7Gi
         persistentvolumeclaims: "5"
         pods: "100"

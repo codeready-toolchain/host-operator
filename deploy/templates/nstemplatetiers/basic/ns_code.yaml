@@ -34,18 +34,6 @@ objects:
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
-    name: user-edit
-    namespace: ${USERNAME}-code
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: edit
-  subjects:
-  - kind: User
-    name: ${USERNAME}
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
     name: user-rbac-edit
     namespace: ${USERNAME}-code
   roleRef:
@@ -55,6 +43,18 @@ objects:
   subjects:
     - kind: User
       name: ${USERNAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: user-edit
+    namespace: ${USERNAME}-code
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: edit
+  subjects:
+  - kind: User
+    name: ${USERNAME}
 - apiVersion: v1
   kind: LimitRange
   metadata:
