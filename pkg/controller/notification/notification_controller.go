@@ -115,7 +115,7 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 	var notCtx NotificationContext
 	// Send the notification - first create the notification context
 	if notification.Spec.Recipient != "" {
-		notCtx, err = NewAdminNotificationContext(r.client, notification.Spec.Recipient)
+		notCtx, err = NewAdminNotificationContext(notification.Spec.Recipient)
 	} else {
 		notCtx, err = NewUserNotificationContext(r.client, notification.Spec.UserID, request.Namespace, r.config)
 	}
