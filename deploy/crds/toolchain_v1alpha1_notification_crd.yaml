@@ -39,9 +39,19 @@ spec:
           spec:
             description: NotificationSpec defines the desired state of Notification
             properties:
+              content:
+                description: Content is used when no template value is specified,
+                  in cases where the complete notification content is specified at
+                  notification creation time
+                type: string
               recipient:
                 description: Recipient may be used as an alternative to UserID to
                   specify an email address where the notification will be delivered.
+                type: string
+              subject:
+                description: Subject is used when no template value is specified,
+                  in cases where the complete notification subject is specified at
+                  notification creation time
                 type: string
               template:
                 description: Template is the name of the NotificationTemplate resource
@@ -54,8 +64,6 @@ spec:
                   the user, and extract from it the values required to generate the
                   notification content and to deliver the notification
                 type: string
-            required:
-            - template
             type: object
           status:
             description: NotificationStatus defines the observed state of Notification
