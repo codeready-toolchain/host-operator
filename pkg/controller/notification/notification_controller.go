@@ -115,20 +115,20 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 	var notCtx NotificationContext
 	// Send the notification - first create the notification context
 	if notification.Spec.Recipient != "" {
-		// Confirm that the recipient is a valid email address
-		notCtx, err = NewToolchainStatusNotificationContext(r.client, notification.Spec.Recipient, "")
+		notCtx, err = NewAdminNotificationContext(r.client, notification.Spec.Recipient)
 	} else {
 		notCtx, err = NewUserNotificationContext(r.client, notification.Spec.UserID, request.Namespace, r.config)
-		if err != nil {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
-				r.setStatusNotificationContextError, err, "failed to create notification context")
-		}
+	}
+
+	if err != nil {
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
+			r.setStatusNotificationContextError, err, "failed to create notification context")
 	}
 
 	// if the environment is set to e2e do not attempt sending via mailgun
 	if r.config.GetEnvironment() != "e2e-tests" {
 		// Send the notification via the configured delivery service
-		err = r.deliveryService.Send(notCtx, notification.Spec.Template)
+		err = r.deliveryService.Send(notCtx, notification)
 		if err != nil {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
 				r.setStatusNotificationDeliveryError, err, "failed to send notification")

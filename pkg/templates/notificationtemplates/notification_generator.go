@@ -11,7 +11,6 @@ import (
 var notificationTemplates map[string]NotificationTemplate
 var UserProvisioned, _, _ = GetNotificationTemplate("userprovisioned")
 var UserDeactivated, _, _ = GetNotificationTemplate("userdeactivated")
-var ToolchainStatusUnready, _, _ = GetNotificationTemplate("toolchainstatusunready")
 
 // NotificationTemplate contains the template subject and content
 type NotificationTemplate struct {

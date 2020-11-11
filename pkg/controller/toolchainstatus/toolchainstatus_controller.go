@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
+	"github.com/ghodss/yaml"
 	"io/ioutil"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -59,6 +59,10 @@ const (
 	memberConnectionsTag   statusComponentTag = "members"
 	counterTag             statusComponentTag = "MasterUserRecord and UserAccount counter"
 	minutesAfterUnready    time.Duration      = 10
+)
+
+const (
+	adminUnreadyNotificationSubject = "ToolchainStatus has been in an unready status for an extended period"
 )
 
 // Add creates a new ToolchainStatus Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -336,15 +340,23 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 	return ready
 }
 
-func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger logr.Logger,
+	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+
+	statusYaml, err := yaml.Marshal(toolchainStatus)
+	if err != nil {
+		return err
+	}
+
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "toolchainstatus-unready",
 			Namespace: toolchainStatus.Namespace,
 		},
 		Spec: toolchainv1alpha1.NotificationSpec{
-			Template:  notificationtemplates.ToolchainStatusUnready.Name,
 			Recipient: r.config.GetAdminEmail(),
+			Subject:   adminUnreadyNotificationSubject,
+			Content:   string(statusYaml),
 		},
 	}
 
