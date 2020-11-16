@@ -33,7 +33,7 @@ import (
 type MockDeliveryService struct {
 }
 
-func (s *MockDeliveryService) Send(notificationCtx *UserNotificationContext, templateName string) error {
+func (s *MockDeliveryService) Send(notificationCtx NotificationContext, notification *v1alpha1.Notification) error {
 	return errors.New("delivery error")
 }
 
@@ -163,6 +163,50 @@ func TestNotificationDelivery(t *testing.T) {
 		require.Equal(t, "Foo Bar<foo@redhat.com>", accepted.Recipient)
 		require.Equal(t, "redhat.com", accepted.RecipientDomain)
 		require.Equal(t, "foo", accepted.Message.Headers.Subject)
+		require.Equal(t, "noreply@foo.com", accepted.Message.Headers.From)
+	})
+
+	t.Run("test admin notification delivery ok", func(t *testing.T) {
+		// given
+		notification := newAdminNotification("sandbox-admin@developers.redhat.com", "Alert",
+			"Something bad happened")
+		controller, request, client := newController(t, notification, ds)
+
+		// when
+		result, err := controller.Reconcile(request)
+
+		// then
+		require.NoError(t, err)
+		require.True(t, result.Requeue)
+
+		// Load the reconciled notification
+		key := types.NamespacedName{
+			Namespace: operatorNamespace,
+			Name:      notification.Name,
+		}
+		instance := &v1alpha1.Notification{}
+		err = client.Get(context.TODO(), key, instance)
+		require.NoError(t, err)
+
+		test.AssertConditionsMatch(t, instance.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.NotificationSent,
+				Status: corev1.ConditionTrue,
+				Reason: v1alpha1.NotificationSentReason,
+			},
+		)
+
+		iter := mg.ListEvents(&mailgun.ListEventOptions{Limit: 1})
+		var events []mailgun.Event
+		require.True(t, iter.First(context.Background(), &events))
+		require.True(t, iter.Last(context.Background(), &events))
+		require.Len(t, events, 1)
+		e := events[0]
+		require.IsType(t, &events2.Accepted{}, e)
+		accepted := e.(*events2.Accepted)
+		require.Equal(t, "sandbox-admin@developers.redhat.com", accepted.Recipient)
+		require.Equal(t, "developers.redhat.com", accepted.RecipientDomain)
+		require.Equal(t, "Alert", accepted.Message.Headers.Subject)
 		require.Equal(t, "noreply@foo.com", accepted.Message.Headers.From)
 	})
 
@@ -345,6 +389,20 @@ func newNotification(userID, template string) *v1alpha1.Notification {
 		},
 	}
 	return notification
+}
+
+func newAdminNotification(recipient, subject, content string) *v1alpha1.Notification {
+	return &v1alpha1.Notification{
+		ObjectMeta: v1.ObjectMeta{
+			Namespace: test.HostOperatorNs,
+			Name:      "notification-name",
+		},
+		Spec: v1alpha1.NotificationSpec{
+			Recipient: recipient,
+			Subject:   subject,
+			Content:   content,
+		},
+	}
 }
 
 func newController(t *testing.T, notification *v1alpha1.Notification, deliveryService NotificationDeliveryService,

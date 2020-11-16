@@ -71,7 +71,7 @@ func TestNotificationContext(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		require.Equal(t, "John Smith<jsmith@redhat.com>", notificationCtx.FullEmailAddress())
+		require.Equal(t, "John Smith<jsmith@redhat.com>", notificationCtx.DeliveryEmail())
 	})
 
 	t.Run("no configuration provided", func(t *testing.T) {
