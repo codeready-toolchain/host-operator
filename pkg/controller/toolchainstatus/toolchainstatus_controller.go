@@ -407,8 +407,8 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 	return allOk
 }
 
-// updateStatusConditions updates Member status conditions with the new conditions
-func (r *ReconcileToolchainStatus) updateStatusConditions(memberStatus *toolchainv1alpha1.ToolchainStatus, newConditions ...toolchainv1alpha1.Condition) error {
+// replaceStatusConditions replaces Member status conditions with the new conditions
+func (r *ReconcileToolchainStatus) replaceStatusConditions(memberStatus *toolchainv1alpha1.ToolchainStatus, newConditions ...toolchainv1alpha1.Condition) error {
 	// the controller should always update at least the last updated timestamp of the status so the status should be updated regardless of whether
 	// any specific fields were updated. This way a problem with the controller can be indicated if the last updated timestamp was not updated.
 	conditionsWithTimestamps := []toolchainv1alpha1.Condition{}
@@ -435,7 +435,7 @@ func (u *ReconcileToolchainStatus) wrapErrorWithStatusUpdate(logger logr.Logger,
 }
 
 func (r *ReconcileToolchainStatus) setStatusReady(toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
-	return r.updateStatusConditions(
+	return r.replaceStatusConditions(
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
@@ -445,7 +445,7 @@ func (r *ReconcileToolchainStatus) setStatusReady(toolchainStatus *toolchainv1al
 }
 
 func (r *ReconcileToolchainStatus) setStatusNotReady(toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
-	return r.updateStatusConditions(
+	return r.replaceStatusConditions(
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
@@ -458,7 +458,7 @@ func (r *ReconcileToolchainStatus) setStatusNotReady(toolchainStatus *toolchainv
 func (r *ReconcileToolchainStatus) setStatusToolchainStatusUnreadyNotificationCreated(
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 
-	return r.updateStatusConditions(
+	return r.replaceStatusConditions(
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated,
@@ -470,7 +470,7 @@ func (r *ReconcileToolchainStatus) setStatusToolchainStatusUnreadyNotificationCr
 func (r *ReconcileToolchainStatus) setStatusUnreadyNotificationCreationFailed(
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
 
-	return r.updateStatusConditions(
+	return r.replaceStatusConditions(
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
