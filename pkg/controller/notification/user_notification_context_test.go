@@ -58,7 +58,7 @@ func TestNotificationContext(t *testing.T) {
 
 	t.Run("user not found", func(t *testing.T) {
 		// when
-		_, err := NewUserNotificationContext(client, "other", operatorNamespace, nil)
+		_, err := NewUserNotificationContext(client, "other", operatorNamespace, config)
 
 		// then
 		require.Error(t, err)

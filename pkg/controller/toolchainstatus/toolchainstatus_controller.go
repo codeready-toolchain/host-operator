@@ -184,38 +184,45 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 
 	// if any components were not ready then set the overall status to not ready
 	if len(unreadyComponents) > 0 {
-		// If the current ToolchainStatus:
-		// a) Is currently not ready,
-		// b) has not been ready for longer than the configured threshold, and
-		// c) no notification has been already sent, then
-		// send a notification to the admin mailing list
-		c, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
-		if found && c.Status == corev1.ConditionFalse {
-			threshold := time.Now().Add(-minutesAfterUnready * time.Minute)
-			if c.LastUpdatedTime.Before(&metav1.Time{threshold}) {
-				c, found = condition.FindConditionByType(toolchainStatus.Status.Conditions,
-					toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated)
-				if !found {
-					if err := r.sendToolchainStatusUnreadyNotification(reqLogger, toolchainStatus); err != nil {
-						reqLogger.Error(err, "Failed to create toolchain status unready notification")
-
-						// set the failed to create notification status condition
-						return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
-							r.setStatusUnreadyNotificationCreationFailed, err,
-							"Failed to create user deactivation notification")
-					}
-
-					if err := r.setStatusToolchainStatusUnreadyNotificationCreated(toolchainStatus); err != nil {
-						reqLogger.Error(err, "Failed to update notification created status")
-						return err
-					}
-				}
-			}
+		err := r.notificationCheck(reqLogger, toolchainStatus)
+		if err != nil {
+			return err
 		}
 
 		return r.setStatusNotReady(toolchainStatus, fmt.Sprintf("components not ready: %v", unreadyComponents))
 	}
 	return r.setStatusReady(toolchainStatus)
+}
+
+func (r *ReconcileToolchainStatus) notificationCheck(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+	// If the current ToolchainStatus:
+	// a) Is currently not ready,
+	// b) has not been ready for longer than the configured threshold, and
+	// c) no notification has been already sent, then
+	// send a notification to the admin mailing list
+	c, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	if found && c.Status == corev1.ConditionFalse {
+		threshold := time.Now().Add(-minutesAfterUnready * time.Minute)
+		if c.LastTransitionTime.Before(&metav1.Time{threshold}) {
+			if !condition.IsTrue(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated) {
+				if err := r.sendToolchainStatusUnreadyNotification(reqLogger, toolchainStatus); err != nil {
+					reqLogger.Error(err, "Failed to create toolchain status unready notification")
+
+					// set the failed to create notification status condition
+					return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
+						r.setStatusUnreadyNotificationCreationFailed, err,
+						"Failed to create user deactivation notification")
+				}
+
+				if err := r.setStatusToolchainStatusUnreadyNotificationCreated(toolchainStatus); err != nil {
+					reqLogger.Error(err, "Failed to update notification created status")
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter

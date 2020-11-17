@@ -90,6 +90,10 @@ func (s *MailgunNotificationDeliveryService) Send(notificationCtx NotificationCo
 		body = notification.Spec.Content
 	}
 
+	if subject == "" && body == "" {
+		return fmt.Errorf("no subject or body specified for notification")
+	}
+
 	// The message object allows you to add attachments and Bcc recipients
 	message := s.Mailgun.NewMessage(s.SenderEmail, subject, "", notificationCtx.DeliveryEmail())
 	message.SetHtml(body)

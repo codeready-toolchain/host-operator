@@ -26,6 +26,10 @@ type UserNotificationContext struct {
 // NewUserNotificationContext creates a new UserNotificationContext by looking up the UserSignup with the specified userID
 // and using it to populate the context fields
 func NewUserNotificationContext(client client.Client, userID, namespace string, config *configuration.Config) (*UserNotificationContext, error) {
+	if config == nil {
+		return nil, errors.New("configuration was not provided")
+	}
+
 	// Lookup the UserSignup resource with the specified userID
 	instance := &toolchainv1alpha1.UserSignup{}
 	err := client.Get(context.TODO(), types.NamespacedName{
@@ -48,9 +52,6 @@ func NewUserNotificationContext(client client.Client, userID, namespace string, 
 		notificationCtx.UserEmail = emailLbl
 	}
 
-	if config == nil {
-		return nil, errors.New("configuration was not provided")
-	}
 	notificationCtx.RegistrationURL = config.GetRegistrationServiceURL()
 
 	return notificationCtx, nil
