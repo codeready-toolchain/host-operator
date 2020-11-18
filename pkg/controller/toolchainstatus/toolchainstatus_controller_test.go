@@ -594,62 +594,6 @@ func TestToolchainStatusNotifications(t *testing.T) {
 	registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName,
 		status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
-	t.Run("Notification created when host operator deployment not ready beyond threshold", func(t *testing.T) {
-		// given
-		defer counter.Reset()
-		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
-			status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
-
-		os.Setenv("HOST_OPERATOR_CONFIG_MAP_NAME", "notification_test_config")
-		os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
-		config := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "notification_test_config",
-				Namespace: test.HostOperatorNs,
-			},
-			Data: map[string]string{
-				"admin.email": "admin@dev.sandbox.com",
-			},
-		}
-
-		toolchainStatus.Status.Conditions = []toolchainv1alpha1.Condition{
-			{
-				Type:               toolchainv1alpha1.ConditionReady,
-				Status:             corev1.ConditionFalse,
-				LastTransitionTime: metav1.Time{time.Now().Add(-time.Duration(24) * time.Hour)},
-				Reason:             toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason,
-			},
-		}
-		defer func() { toolchainStatus.Status.Conditions = nil }()
-
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-			newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-			registrationService, toolchainStatus, config)
-
-		// when
-		res, err := reconciler.Reconcile(req)
-
-		// then
-		require.NoError(t, err)
-		assert.Equal(t, requeueResult, res)
-
-		// Lookup the notification
-		var notification toolchainv1alpha1.Notification
-		err = fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs, "toolchainstatus-unready"),
-			&notification)
-		require.NoError(t, err)
-
-		require.NotNil(t, notification)
-		require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
-		require.Equal(t, notification.Spec.Recipient, "admin@dev.sandbox.com")
-
-		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-			HasCondition(componentsNotReady(string(hostOperatorTag))).
-			HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorName, "DeploymentNotReady", "deployment has unready status conditions: Available")).
-			HasMemberStatus(memberClusterSingleReady()).
-			HasRegistrationServiceStatus(registrationServiceReady())
-	})
-
 	t.Run("Notification not created when host operator deployment ready", func(t *testing.T) {
 		// given
 		defer counter.Reset()
@@ -737,6 +681,62 @@ func TestToolchainStatusNotifications(t *testing.T) {
 		require.Error(t, err)
 		require.IsType(t, &errors.StatusError{}, err)
 		require.Equal(t, string(err.(*errors.StatusError).ErrStatus.Reason), "NotFound")
+
+		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+			HasCondition(componentsNotReady(string(hostOperatorTag))).
+			HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorName, "DeploymentNotReady", "deployment has unready status conditions: Available")).
+			HasMemberStatus(memberClusterSingleReady()).
+			HasRegistrationServiceStatus(registrationServiceReady())
+	})
+
+	t.Run("Notification created when host operator deployment not ready beyond threshold", func(t *testing.T) {
+		// given
+		defer counter.Reset()
+		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+			status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
+
+		os.Setenv("HOST_OPERATOR_CONFIG_MAP_NAME", "notification_test_config")
+		os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
+		config := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "notification_test_config",
+				Namespace: test.HostOperatorNs,
+			},
+			Data: map[string]string{
+				"admin.email": "admin@dev.sandbox.com",
+			},
+		}
+
+		toolchainStatus.Status.Conditions = []toolchainv1alpha1.Condition{
+			{
+				Type:               toolchainv1alpha1.ConditionReady,
+				Status:             corev1.ConditionFalse,
+				LastTransitionTime: metav1.Time{time.Now().Add(-time.Duration(24) * time.Hour)},
+				Reason:             toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason,
+			},
+		}
+		defer func() { toolchainStatus.Status.Conditions = nil }()
+
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
+			newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+			registrationService, toolchainStatus, config)
+
+		// when
+		res, err := reconciler.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, requeueResult, res)
+
+		// Lookup the notification
+		var notification toolchainv1alpha1.Notification
+		err = fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs, "toolchainstatus-unready"),
+			&notification)
+		require.NoError(t, err)
+
+		require.NotNil(t, notification)
+		require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
+		require.Equal(t, notification.Spec.Recipient, "admin@dev.sandbox.com")
 
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 			HasCondition(componentsNotReady(string(hostOperatorTag))).
