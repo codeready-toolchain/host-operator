@@ -433,7 +433,7 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] == instance.Name {
 			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
-			return "", fmt.Errorf(fmt.Sprintf("could not generate compliant username as MasterUserRecord [%s] already exists", mur.Name))
+			return "", fmt.Errorf(fmt.Sprintf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up.", mur.Name, instance.Name))
 		}
 
 		transformed = fmt.Sprintf("%s-%d", replaced, i)
