@@ -33,3 +33,10 @@ spec:
           value: "host-operator"
         - name: REGISTRATION_SERVICE_IMAGE
           value: REPLACE_REGISTRATION_SERVICE_IMAGE
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "250M"
+          limits:
+            cpu: "1000m"
+            memory: "1000M"
