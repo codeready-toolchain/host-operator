@@ -340,7 +340,13 @@ spec:
                 image: REPLACE_IMAGE
                 imagePullPolicy: IfNotPresent
                 name: host-operator
-                resources: {}
+                resources:
+                  limits:
+                    cpu: "1"
+                    memory: 1G
+                  requests:
+                    cpu: 100m
+                    memory: 250M
               serviceAccountName: host-operator
       permissions:
       - rules:
