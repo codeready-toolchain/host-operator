@@ -1,8 +1,9 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20201014170554-ba7a98533167
+	github.com/codeready-toolchain/api v0.0.0-20201111002557-384eb4d46f9c
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20201014231429-a44cccb4b2b5
+	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.3.0+incompatible
@@ -17,6 +18,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
+	golang.org/dl v0.0.0-20201105230244-7f2637f4aae3 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.3
 	k8s.io/apiextensions-apiserver v0.18.3
