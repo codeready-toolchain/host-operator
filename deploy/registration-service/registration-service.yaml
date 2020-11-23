@@ -31,6 +31,7 @@ objects:
       - toolchain.dev.openshift.com
       resources:
       - masteruserrecords
+      - toolchainstatuses
       verbs:
       - get
     - apiGroups:
