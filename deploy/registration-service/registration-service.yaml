@@ -170,6 +170,11 @@ objects:
                     configMapKeyRef:
                       name: registration-service
                       key: twilio.from_number
+                - name: REGISTRATION_WOOPRA_DOMAIN
+                  valueFrom:
+                    configMapKeyRef:
+                      name: registration-service
+                      key: woopra.domain
   - kind: Service
     apiVersion: v1
     metadata:
@@ -227,6 +232,7 @@ objects:
       verification.excluded_email_domains: ${VERIFICATION_EXCLUDED_EMAIL_DOMAINS}
       verification.message_template: ${VERIFICATION_MESSAGE_TEMPLATE}
       twilio.from_number: ${TWILIO_FROM_NUMBER}
+      woopra.domain: ${WOOPRA_DOMAIN}
 parameters:
   - name: NAMESPACE
     value: 'toolchain-host-operator'
@@ -255,4 +261,6 @@ parameters:
   - name: VERIFICATION_MESSAGE_TEMPLATE
     value: ''
   - name: TWILIO_FROM_NUMBER
+    value: ''
+  - name: WOOPRA_DOMAIN
     value: ''
