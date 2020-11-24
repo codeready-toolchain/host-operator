@@ -63,6 +63,9 @@ const (
 	// defaultDurationBeforeNotificationDeletion is the time before a Notification resource is deleted
 	defaultDurationBeforeNotificationDeletion = "24h"
 
+	// varAdminEmail specifies the administrator email address for system notifications
+	varAdminEmail = "admin.email"
+
 	// varMailgunDomain specifies the host operator mailgun domain used for creating an instance of mailgun
 	varMailgunDomain = "mailgun.domain"
 
@@ -183,6 +186,11 @@ func (c *Config) GetNotificationDeliveryService() string {
 // GetTemplateUpdateRequestMaxPoolSize returns the maximum number of concurrent TemplateUpdateRequests when updating MasterUserRecords
 func (c *Config) GetTemplateUpdateRequestMaxPoolSize() int {
 	return c.host.GetInt(varTemplateUpdateRequestMaxPoolSize)
+}
+
+// GetAdminEmail returns the email address for administrative notifications
+func (c *Config) GetAdminEmail() string {
+	return c.host.GetString(varAdminEmail)
 }
 
 // GetDurationBeforeNotificationDeletion returns the timeout before a delivered notification will be deleted.
