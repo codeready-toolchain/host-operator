@@ -439,7 +439,12 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	containsObj(t, actual, allowFromOpenshiftMonitoringPolicyObj(kind))
 
 	// Role & RoleBinding with additional permissions to edit roles/rolebindings
-	require.Len(t, actual.Objects, 8)
+	if kind == "code" {
+		require.Len(t, actual.Objects, 9)
+		containsObj(t, actual, allowFromCRWPolicyObj(kind))
+	} else {
+		require.Len(t, actual.Objects, 8)
+	}
 	containsObj(t, actual, rbacEditRoleObj(kind))
 	containsObj(t, actual, userRbacEditRoleBindingObj(kind))
 }
@@ -522,6 +527,10 @@ func allowFromOpenshiftMonitoringPolicyObj(kind string) string {
 
 func allowFromOpenshiftIngressPolicyObj(kind string) string {
 	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-ingress","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"ingress"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
+}
+
+func allowFromCRWPolicyObj(kind string) string {
+	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-codeready-workspaces-operator","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"codeready-workspaces"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
 }
 
 func allowSameNamespacePolicyObj(kind string) string {
