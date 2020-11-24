@@ -175,7 +175,7 @@ objects:
                   valueFrom:
                     configMapKeyRef:
                       name: registration-service
-                      key: woopra.domain
+                      key: woopra-domain
                 - name: REGISTRATION_SEGMENT_WRITE_KEY
                   valueFrom:
                     configMapKeyRef:
