@@ -176,6 +176,11 @@ objects:
                     configMapKeyRef:
                       name: registration-service
                       key: woopra.domain
+                - name: REGISTRATION_SEGMENT_WRITE_KEY
+                  valueFrom:
+                    configMapKeyRef:
+                      name: registration-service
+                      key: segment-write-key
   - kind: Service
     apiVersion: v1
     metadata:
@@ -234,6 +239,7 @@ objects:
       verification.message_template: ${VERIFICATION_MESSAGE_TEMPLATE}
       twilio.from_number: ${TWILIO_FROM_NUMBER}
       woopra.domain: ${WOOPRA_DOMAIN}
+      segment-write-key: ${SEGMENT_WRITE_KEY}
 parameters:
   - name: NAMESPACE
     value: 'toolchain-host-operator'
@@ -264,4 +270,6 @@ parameters:
   - name: TWILIO_FROM_NUMBER
     value: ''
   - name: WOOPRA_DOMAIN
+    value: ''
+  - name: SEGMENT_WRITE_KEY
     value: ''
