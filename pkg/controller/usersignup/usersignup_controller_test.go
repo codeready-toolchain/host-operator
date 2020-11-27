@@ -2174,6 +2174,35 @@ func assertName(t *testing.T, expected, username string) {
 	assert.Equal(t, expected, transformUsername(username))
 }
 
+func TestUsernameWithForbiddenPrefix(t *testing.T) {
+	// given
+	InitializeCounter(t, 1)
+	defer counter.Reset()
+	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
+	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "not-ready"
+
+	userSignup.Spec.Username = "openshift-Bob"
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
+
+	// when
+	_, err := r.Reconcile(req)
+	require.NoError(t, err)
+
+	// then verify that the username has been prefixed - first lookup the UserSignup again
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	// Lookup the MUR
+	murs := &v1alpha1.MasterUserRecordList{}
+	err = r.client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 1)
+	mur := murs.Items[0]
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Equal(t, "crt-openshift-Bob", mur.Name)
+}
+
 // Test the scenario where the existing usersignup CompliantUsername becomes outdated eg. transformUsername func is changed
 func TestChangedCompliantUsername(t *testing.T) {
 	// starting with a UserSignup that exists and was approved and has the now outdated CompliantUsername
