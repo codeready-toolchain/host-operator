@@ -11,6 +11,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commonTemplate "github.com/codeready-toolchain/toolchain-common/pkg/template"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/pkg/errors"
@@ -281,15 +282,43 @@ func (t *tierGenerator) initNSTemplateTiers() error {
 
 // createNSTemplateTiers creates the NSTemplateTier resources from the tier map
 func (t *tierGenerator) createNSTemplateTiers() error {
+	applyCl := commonclient.NewApplyClient(t.client, t.scheme)
 
 	for tierName, tierData := range t.templatesByTier {
-
-		labels := map[string]string{
-			toolchainv1alpha1.ProviderLabelKey: toolchainv1alpha1.ProviderLabelValue,
+		if len(tierData.nstmplTierObjs) != 1 {
+			return fmt.Errorf("there is an unexpected number of NSTemplateTier object to be applied for tier name '%s'; expected: 1; actual: %d", tierName, len(tierData.nstmplTierObjs))
 		}
-		_, err := commonclient.NewApplyClient(t.client, t.scheme).Apply(tierData.nstmplTierObjs, labels)
+
+		unstructuredObj, ok := tierData.nstmplTierObjs[0].GetRuntimeObject().(*unstructured.Unstructured)
+		if !ok {
+			return fmt.Errorf("unable to cast NSTemplateTier '%s' to Unstructured object '%+v'", tierName, tierData.nstmplTierObjs[0].GetRuntimeObject())
+		}
+		tier := &toolchainv1alpha1.NSTemplateTier{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, tier); err != nil {
+			return err
+		}
+
+		labels := tier.GetLabels()
+		if labels == nil {
+			labels = make(map[string]string)
+		}
+		labels[toolchainv1alpha1.ProviderLabelKey] = toolchainv1alpha1.ProviderLabelValue
+
+		updated, err := applyCl.CreateOrUpdateObject(tier, true, nil)
 		if err != nil {
-			return errors.Wrapf(err, "unable to create the '%s' NSTemplateTier", tierName)
+			return errors.Wrapf(err, "unable to create or update the '%s' NSTemplateTier", tierName)
+		}
+		tierLog := log.WithValues("name", tierName)
+		for i, nsTemplate := range tier.Spec.Namespaces {
+			tierLog = tierLog.WithValues(fmt.Sprintf("namespaceTemplate-%d", i), nsTemplate.TemplateRef)
+		}
+		if tier.Spec.ClusterResources != nil {
+			tierLog = tierLog.WithValues("clusterResourcesTemplate", tier.Spec.ClusterResources.TemplateRef)
+		}
+		if updated {
+			tierLog.Info("NSTemplateTier was either updated or created")
+		} else {
+			tierLog.Info("NSTemplateTier wasn't updated nor created - the expected spec was already there")
 		}
 	}
 	return nil
