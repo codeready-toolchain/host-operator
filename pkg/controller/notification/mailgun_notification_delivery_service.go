@@ -3,6 +3,7 @@ package notification
 import (
 	"context"
 	"fmt"
+	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"time"
 
 	"github.com/mailgun/mailgun-go/v4"
@@ -60,29 +61,41 @@ func NewMailgunNotificationDeliveryService(config NotificationDeliveryServiceFac
 	}
 }
 
-func (s *MailgunNotificationDeliveryService) Send(notificationCtx *NotificationContext, templateName string) error {
+func (s *MailgunNotificationDeliveryService) Send(notificationCtx NotificationContext, notification *v1alpha1.Notification) error {
 
-	template, found, err := s.base.TemplateLoader.GetNotificationTemplate(templateName)
-	if err != nil {
-		return err
+	var subject, body string
+
+	if notification.Spec.Template != "" {
+		template, found, err := s.base.TemplateLoader.GetNotificationTemplate(notification.Spec.Template)
+		if err != nil {
+			return err
+		}
+
+		if !found {
+			return fmt.Errorf("notification template [%s] not found", notification.Spec.Template)
+		}
+
+		subject, err = s.base.GenerateContent(notificationCtx, template.Subject)
+		if err != nil {
+			return err
+		}
+
+		body, err = s.base.GenerateContent(notificationCtx, template.Content)
+		if err != nil {
+			return err
+		}
+	} else {
+		// If there is no template specified then simply use the subject and content provided by the notification
+		subject = notification.Spec.Subject
+		body = notification.Spec.Content
 	}
 
-	if !found {
-		return fmt.Errorf("notification template [%s] not found", templateName)
-	}
-
-	subject, err := s.base.GenerateContent(notificationCtx, template.Subject)
-	if err != nil {
-		return err
-	}
-
-	body, err := s.base.GenerateContent(notificationCtx, template.Content)
-	if err != nil {
-		return err
+	if subject == "" && body == "" {
+		return fmt.Errorf("no subject or body specified for notification")
 	}
 
 	// The message object allows you to add attachments and Bcc recipients
-	message := s.Mailgun.NewMessage(s.SenderEmail, subject, "", notificationCtx.FullEmailAddress())
+	message := s.Mailgun.NewMessage(s.SenderEmail, subject, "", notificationCtx.DeliveryEmail())
 	message.SetHtml(body)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)

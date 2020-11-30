@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"testing"
 
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
@@ -28,7 +29,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	invalidServerOption := NewMailgunAPIBaseOption("https://127.0.0.1:60000/v3")
 
 	config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345", "noreply@foo.com", "mailgun")
-	notCtx := &NotificationContext{
+	notCtx := &UserNotificationContext{
 		UserID:      "jsmith123",
 		FirstName:   "John",
 		LastName:    "Smith",
@@ -56,7 +57,12 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery service send", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(notCtx, "test")
+		err := mgds.Send(notCtx, &v1alpha1.Notification{
+			Spec: v1alpha1.NotificationSpec{
+				Subject: "test",
+				Content: "abc",
+			},
+		})
 
 		// then
 		require.NoError(t, err)
@@ -65,7 +71,12 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery service send fails", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, invalidServerOption)
-		err := mgds.Send(notCtx, "test")
+		err := mgds.Send(notCtx, &v1alpha1.Notification{
+			Spec: v1alpha1.NotificationSpec{
+				Subject: "test",
+				Content: "abc",
+			},
+		})
 
 		// then
 		require.Error(t, err)
@@ -78,7 +89,11 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery service invalid template", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(notCtx, "bar")
+		err := mgds.Send(notCtx, &v1alpha1.Notification{
+			Spec: v1alpha1.NotificationSpec{
+				Template: "bar",
+			},
+		})
 
 		// then
 		require.Error(t, err)
@@ -88,7 +103,11 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery invalid subject template", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(notCtx, "invalid_subject")
+		err := mgds.Send(notCtx, &v1alpha1.Notification{
+			Spec: v1alpha1.NotificationSpec{
+				Template: "invalid_subject",
+			},
+		})
 
 		// then
 		require.Error(t, err)
@@ -98,7 +117,11 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery invalid content template", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(notCtx, "invalid_content")
+		err := mgds.Send(notCtx, &v1alpha1.Notification{
+			Spec: v1alpha1.NotificationSpec{
+				Template: "invalid_content",
+			},
+		})
 
 		// then
 		require.Error(t, err)

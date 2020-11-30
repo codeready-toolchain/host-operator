@@ -104,7 +104,7 @@ func TestBaseNotificationDeliveryServiceGenerateContent(t *testing.T) {
 	// given
 	baseService := &BaseNotificationDeliveryService{}
 
-	nCtx := &NotificationContext{
+	nCtx := &UserNotificationContext{
 		UserID:      "jsmith",
 		FirstName:   "John",
 		LastName:    "Smith",
