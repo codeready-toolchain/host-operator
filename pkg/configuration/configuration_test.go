@@ -288,3 +288,14 @@ func TestGetDeactivationDomainsExcludedList(t *testing.T) {
 		assert.Equal(t, expected, config.GetDeactivationDomainsExcludedList())
 	})
 }
+
+func TestForbiddenUsernamePrefixesHaveCorrectDefaults(t *testing.T) {
+	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
+	defer restore()
+
+	config := getDefaultConfiguration(t)
+	require.Len(t, config.GetForbiddenUsernamePrefixes(), 3)
+	require.Contains(t, config.GetForbiddenUsernamePrefixes(), "openshift")
+	require.Contains(t, config.GetForbiddenUsernamePrefixes(), "kubernetes")
+	require.Contains(t, config.GetForbiddenUsernamePrefixes(), "kube-")
+}
