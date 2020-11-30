@@ -412,6 +412,15 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 
 func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
 	replaced := transformUsername(instance.Spec.Username)
+
+	// Check for any forbidden prefixes
+	for _, prefix := range r.crtConfig.GetForbiddenUsernamePrefixes() {
+		if strings.HasPrefix(replaced, prefix) {
+			replaced = fmt.Sprintf("%s%s", "crt-", replaced)
+			break
+		}
+	}
+
 	validationErrors := validation.IsQualifiedName(replaced)
 	if len(validationErrors) > 0 {
 		return "", fmt.Errorf(fmt.Sprintf("transformed username [%s] is invalid", replaced))
