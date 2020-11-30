@@ -98,7 +98,7 @@ const (
 	// username has a forbidden prefix, then the username compliance prefix is added to the username
 	varForbiddenUsernamePrefixes = "username.forbidden.prefixes"
 
-	DefaultForbiddenUsernamePrefixes = "openshift,kubernetes"
+	DefaultForbiddenUsernamePrefixes = "openshift,kubernetes,kube-"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -120,12 +120,6 @@ func initConfig(secret map[string]string) *Config {
 	c.host.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	c.host.SetTypeByDefaultValue(true)
 	c.setConfigDefaults()
-
-	if c.host.GetString(varForbiddenUsernamePrefixes) != "" {
-		c.forbiddenUsernamePrefixes = strings.FieldsFunc(c.host.GetString(varForbiddenUsernamePrefixes), func(c rune) bool {
-			return c == ','
-		})
-	}
 
 	return &c
 }
@@ -174,7 +168,9 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
 	c.host.SetDefault(varMasterUserRecordUpdateFailureThreshold, 2) // allow 1 failure, try again and then give up if failed again
 	c.host.SetDefault(varToolchainStatusRefreshTime, defaultToolchainStatusRefreshTime)
-	c.host.SetDefault(varForbiddenUsernamePrefixes, DefaultForbiddenUsernamePrefixes)
+	c.host.SetDefault(varForbiddenUsernamePrefixes, strings.FieldsFunc(DefaultForbiddenUsernamePrefixes, func(c rune) bool {
+		return c == ','
+	}))
 }
 
 // GetToolchainStatusName returns the configured name of the member status resource
@@ -266,5 +262,5 @@ func (c *Config) GetDeactivationDomainsExcludedList() []string {
 }
 
 func (c *Config) GetForbiddenUsernamePrefixes() []string {
-	return c.forbiddenUsernamePrefixes
+	return c.host.GetStringSlice(varForbiddenUsernamePrefixes)
 }
