@@ -45,6 +45,7 @@ objects:
       - ""
       resources:
       - secrets
+      - configmaps
       verbs:
       - get
       - list
@@ -171,16 +172,6 @@ objects:
                     configMapKeyRef:
                       name: registration-service
                       key: twilio.from_number
-                - name: REGISTRATION_WOOPRA_DOMAIN
-                  valueFrom:
-                    configMapKeyRef:
-                      name: registration-service
-                      key: woopra_domain
-                - name: REGISTRATION_SEGMENT_WRITE_KEY
-                  valueFrom:
-                    configMapKeyRef:
-                      name: registration-service
-                      key: segment_write_key
   - kind: Service
     apiVersion: v1
     metadata:
@@ -238,8 +229,6 @@ objects:
       verification.excluded_email_domains: ${VERIFICATION_EXCLUDED_EMAIL_DOMAINS}
       verification.message_template: ${VERIFICATION_MESSAGE_TEMPLATE}
       twilio.from_number: ${TWILIO_FROM_NUMBER}
-      woopra_domain: ${WOOPRA_DOMAIN}
-      segment_write_key: ${SEGMENT_WRITE_KEY}
 parameters:
   - name: NAMESPACE
     value: 'toolchain-host-operator'
@@ -268,8 +257,4 @@ parameters:
   - name: VERIFICATION_MESSAGE_TEMPLATE
     value: ''
   - name: TWILIO_FROM_NUMBER
-    value: ''
-  - name: WOOPRA_DOMAIN
-    value: ''
-  - name: SEGMENT_WRITE_KEY
     value: ''
