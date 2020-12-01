@@ -63,6 +63,9 @@ const (
 	// defaultDurationBeforeNotificationDeletion is the time before a Notification resource is deleted
 	defaultDurationBeforeNotificationDeletion = "24h"
 
+	// varAdminEmail specifies the administrator email address for system notifications
+	varAdminEmail = "admin.email"
+
 	// varMailgunDomain specifies the host operator mailgun domain used for creating an instance of mailgun
 	varMailgunDomain = "mailgun.domain"
 
@@ -90,13 +93,20 @@ const (
 	// varDeactivationDomainsExcluded is a string of comma-separated domains that should be excluded from automatic user deactivation
 	// For example: "@redhat.com,@ibm.com"
 	varDeactivationDomainsExcluded = "deactivation.domains.excluded"
+
+	// varForbiddenUsernamePrefixes defines the prefixes that a username may not have when signing up.  If a
+	// username has a forbidden prefix, then the username compliance prefix is added to the username
+	varForbiddenUsernamePrefixes = "username.forbidden.prefixes"
+
+	DefaultForbiddenUsernamePrefixes = "openshift,kubernetes,kube-"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
 // configuration data in-memory.
 type Config struct {
-	host         *viper.Viper
-	secretValues map[string]string
+	host                      *viper.Viper
+	secretValues              map[string]string
+	forbiddenUsernamePrefixes []string
 }
 
 // initConfig creates an initial, empty configuration.
@@ -158,6 +168,9 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(varEnvironment, defaultEnvironment)
 	c.host.SetDefault(varMasterUserRecordUpdateFailureThreshold, 2) // allow 1 failure, try again and then give up if failed again
 	c.host.SetDefault(varToolchainStatusRefreshTime, defaultToolchainStatusRefreshTime)
+	c.host.SetDefault(varForbiddenUsernamePrefixes, strings.FieldsFunc(DefaultForbiddenUsernamePrefixes, func(c rune) bool {
+		return c == ','
+	}))
 }
 
 // GetToolchainStatusName returns the configured name of the member status resource
@@ -183,6 +196,11 @@ func (c *Config) GetNotificationDeliveryService() string {
 // GetTemplateUpdateRequestMaxPoolSize returns the maximum number of concurrent TemplateUpdateRequests when updating MasterUserRecords
 func (c *Config) GetTemplateUpdateRequestMaxPoolSize() int {
 	return c.host.GetInt(varTemplateUpdateRequestMaxPoolSize)
+}
+
+// GetAdminEmail returns the email address for administrative notifications
+func (c *Config) GetAdminEmail() string {
+	return c.host.GetString(varAdminEmail)
 }
 
 // GetDurationBeforeNotificationDeletion returns the timeout before a delivered notification will be deleted.
@@ -241,4 +259,8 @@ func (c *Config) GetDeactivationDomainsExcludedList() []string {
 	return strings.FieldsFunc(c.host.GetString(varDeactivationDomainsExcluded), func(c rune) bool {
 		return c == ','
 	})
+}
+
+func (c *Config) GetForbiddenUsernamePrefixes() []string {
+	return c.host.GetStringSlice(varForbiddenUsernamePrefixes)
 }

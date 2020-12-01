@@ -43,7 +43,7 @@ func TestNotificationContext(t *testing.T) {
 
 	t.Run("user found", func(t *testing.T) {
 		// when
-		notificationCtx, err := NewNotificationContext(client, userSignup.Name, operatorNamespace, config)
+		notificationCtx, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace, config)
 
 		// then
 		require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestNotificationContext(t *testing.T) {
 
 	t.Run("user not found", func(t *testing.T) {
 		// when
-		_, err := NewNotificationContext(client, "other", operatorNamespace, nil)
+		_, err := NewUserNotificationContext(client, "other", operatorNamespace, config)
 
 		// then
 		require.Error(t, err)
@@ -67,16 +67,16 @@ func TestNotificationContext(t *testing.T) {
 
 	t.Run("full email address", func(t *testing.T) {
 		// when
-		notificationCtx, err := NewNotificationContext(client, userSignup.Name, operatorNamespace, config)
+		notificationCtx, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace, config)
 
 		// then
 		require.NoError(t, err)
-		require.Equal(t, "John Smith<jsmith@redhat.com>", notificationCtx.FullEmailAddress())
+		require.Equal(t, "John Smith<jsmith@redhat.com>", notificationCtx.DeliveryEmail())
 	})
 
 	t.Run("no configuration provided", func(t *testing.T) {
 		// when
-		_, err := NewNotificationContext(client, userSignup.Name, operatorNamespace, nil)
+		_, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace, nil)
 
 		// then
 		require.Error(t, err)
