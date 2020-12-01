@@ -182,7 +182,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 			assets := assets.NewAssets(AssetNames, Asset)
 
 			expectedDeactivationTimeoutsByTier := map[string]int{
-				"basic":                 14,
+				"basic":                 1,
 				"basic-no-deactivation": 0,
 				"advanced":              14,
 				"team":                  0,
@@ -503,6 +503,9 @@ func testClusterResourceQuotaObj(cpuLimit, memoryLimit string) string {
 }
 
 func namespaceObj(kind string) string {
+	if kind == "code" {
+		return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"che.eclipse.org/openshift-username":"${USERNAME}","openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"name":"${USERNAME}-%[1]s"}}`, kind)
+	}
 	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"name":"${USERNAME}-%[1]s"}}`, kind)
 }
 

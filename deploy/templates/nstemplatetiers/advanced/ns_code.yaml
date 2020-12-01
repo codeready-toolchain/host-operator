@@ -7,6 +7,7 @@ objects:
   kind: Namespace
   metadata:
     annotations:
+      che.eclipse.org/openshift-username: ${USERNAME}
       openshift.io/description: ${USERNAME}-code
       openshift.io/display-name: ${USERNAME}-code
       openshift.io/requester: ${USERNAME}
