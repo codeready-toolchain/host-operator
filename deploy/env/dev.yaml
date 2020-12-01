@@ -1,7 +1,5 @@
 registration-service:
   environment: 'dev'
-  woopra-domain: "testing woopra domain"
-  segment-write-key: "testing segment write key"
   replicas: 2
 host-operator:
   deactivation-domains-excluded: '@redhat.com'
