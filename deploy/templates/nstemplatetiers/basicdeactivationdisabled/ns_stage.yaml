@@ -1,21 +1,21 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: basic-no-deactivation-dev
+  name: basicdeactivationdisabled-stage
 objects:
 - apiVersion: v1
   kind: Namespace
   metadata:
     annotations:
-      openshift.io/description: ${USERNAME}-dev
-      openshift.io/display-name: ${USERNAME}-dev
+      openshift.io/description: ${USERNAME}-stage
+      openshift.io/display-name: ${USERNAME}-stage
       openshift.io/requester: ${USERNAME}
-    name: ${USERNAME}-dev
+    name: ${USERNAME}-stage
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
   metadata:
     name: rbac-edit
-    namespace: ${USERNAME}-dev
+    namespace: ${USERNAME}-stage
   rules:
     - apiGroups:
         - authorization.openshift.io
@@ -35,7 +35,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: user-rbac-edit
-    namespace: ${USERNAME}-dev
+    namespace: ${USERNAME}-stage
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
@@ -47,7 +47,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: user-edit
-    namespace: ${USERNAME}-dev
+    namespace: ${USERNAME}-stage
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
@@ -59,13 +59,13 @@ objects:
   kind: LimitRange
   metadata:
     name: resource-limits
-    namespace: ${USERNAME}-dev
+    namespace: ${USERNAME}-stage
   spec:
     limits:
     - type: "Container"
       default:
         cpu: 150m
-        memory: 750Mi
+        memory: 512Mi
       defaultRequest:
         cpu: 10m
         memory: 64Mi
@@ -73,7 +73,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-same-namespace
-    namespace: ${USERNAME}-dev
+    namespace: ${USERNAME}-stage
   spec:
     podSelector: {}
     ingress:
@@ -83,7 +83,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-ingress
-    namespace: ${USERNAME}-dev
+    namespace: ${USERNAME}-stage
   spec:
     ingress:
     - from:
@@ -97,7 +97,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-monitoring
-    namespace: ${USERNAME}-dev
+    namespace: ${USERNAME}-stage
   spec:
     ingress:
     - from:

@@ -41,7 +41,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, tmpls, 4)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "basic", "team", "basic-no-deactivation"} {
+			for _, tier := range []string{"advanced", "basic", "team", "basicdeactivationdisabled"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"code", "dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
@@ -182,10 +182,10 @@ func TestNewNSTemplateTier(t *testing.T) {
 			assets := assets.NewAssets(AssetNames, Asset)
 
 			expectedDeactivationTimeoutsByTier := map[string]int{
-				"basic":                 1,
-				"basic-no-deactivation": 0,
-				"advanced":              14,
-				"team":                  0,
+				"basic":                     1,
+				"basicdeactivationdisabled": 0,
+				"advanced":                  14,
+				"team":                      0,
 			}
 
 			// when
