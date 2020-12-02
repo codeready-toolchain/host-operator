@@ -24,7 +24,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NotNil(t, template)
 			assert.True(t, found)
 			assert.Equal(t, "Notice: Your account is deactivated for Red Hat OpenShift Dev Sandbox Beta", template.Subject)
-			assert.Contains(t, template.Content, "Your account is now deactivated and all your data on Red Hat OpenShift Dev Sandbox has been deleted. You can request new access by signing up again.")
+			assert.Contains(t, template.Content, "Your account is now deactivated and all your data on Red Hat OpenShift Dev Sandbox has been deleted.")
 		})
 		t.Run("get userprovisioned notification template", func(t *testing.T) {
 			// when
