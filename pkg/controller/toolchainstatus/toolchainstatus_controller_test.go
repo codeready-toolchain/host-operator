@@ -956,7 +956,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 
 	})
 
-	t.Run("initialize the cache using the MURs & UAs from toolchainStatus", func(t *testing.T) {
+	t.Run("initialize the cache using the MURs & UAs from ToolchainStatus", func(t *testing.T) {
 		// given
 		defer counter.Reset()
 		counter.IncrementMasterUserRecordCount()
