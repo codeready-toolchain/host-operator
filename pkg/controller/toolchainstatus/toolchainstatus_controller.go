@@ -413,10 +413,8 @@ func (r *ReconcileToolchainStatus) replaceStatusConditions(status *toolchainv1al
 	// the controller should always update at least the last updated timestamp of the status so the status should be updated regardless of whether
 	// any specific fields were updated. This way a problem with the controller can be indicated if the last updated timestamp was not updated.
 	var conditionsWithTimestamps []toolchainv1alpha1.Condition
-	now := metav1.Now()
 	for _, newCondition := range newConditions {
-		condition := copyConditionWithLastTransitionTimeSet(status, newCondition)
-		condition.LastUpdatedTime = &now
+		condition := copyConditionWithTimestampSet(status, newCondition)
 		conditionsWithTimestamps = append(conditionsWithTimestamps, condition)
 	}
 	status.Status.Conditions = conditionsWithTimestamps
@@ -457,14 +455,16 @@ func (r *ReconcileToolchainStatus) setStatusNotReady(toolchainStatus *toolchainv
 		})
 }
 
-// copyConditionWithLastTransitionTimeSet generates a copy of the condition
-// and sets its LastTransitionTime timestamp accordingly to the existing condition with the same type.
-func copyConditionWithLastTransitionTimeSet(toolchainStatus *toolchainv1alpha1.ToolchainStatus, fromCondition toolchainv1alpha1.Condition) toolchainv1alpha1.Condition {
+// copyConditionWithTimestampSet generates a copy of the condition
+// and sets its LastUpdateTime and LastTransitionTime timestamps accordingly to the existing condition with the same type.
+func copyConditionWithTimestampSet(toolchainStatus *toolchainv1alpha1.ToolchainStatus, fromCondition toolchainv1alpha1.Condition) toolchainv1alpha1.Condition {
+	now := metav1.Now()
 	newCondition := toolchainv1alpha1.Condition{
-		Type:    fromCondition.Type,
-		Status:  fromCondition.Status,
-		Reason:  fromCondition.Reason,
-		Message: fromCondition.Message,
+		Type:            fromCondition.Type,
+		Status:          fromCondition.Status,
+		Reason:          fromCondition.Reason,
+		Message:         fromCondition.Message,
+		LastUpdatedTime: &now,
 	}
 	existing, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, fromCondition.Type)
 	if found {
@@ -477,7 +477,7 @@ func copyConditionWithLastTransitionTimeSet(toolchainStatus *toolchainv1alpha1.T
 		}
 	} else {
 		// New condition. Set the transition timestamp to now.
-		newCondition.LastTransitionTime = metav1.Now()
+		newCondition.LastTransitionTime = now
 	}
 	return newCondition
 }
