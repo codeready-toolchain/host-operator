@@ -39,9 +39,9 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			require.NoError(t, err)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 3)
+			require.Len(t, tmpls, 4)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "basic", "team"} {
+			for _, tier := range []string{"advanced", "basic", "team", "basicdeactivationdisabled"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"code", "dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
@@ -182,9 +182,10 @@ func TestNewNSTemplateTier(t *testing.T) {
 			assets := assets.NewAssets(AssetNames, Asset)
 
 			expectedDeactivationTimeoutsByTier := map[string]int{
-				"basic":    14,
-				"advanced": 14,
-				"team":     0,
+				"basic":                     1,
+				"basicdeactivationdisabled": 0,
+				"advanced":                  0,
+				"team":                      0,
 			}
 
 			// when
@@ -502,6 +503,9 @@ func testClusterResourceQuotaObj(cpuLimit, memoryLimit string) string {
 }
 
 func namespaceObj(kind string) string {
+	if kind == "code" {
+		return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"che.eclipse.org/openshift-username":"${USERNAME}","openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"name":"${USERNAME}-%[1]s"}}`, kind)
+	}
 	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"name":"${USERNAME}-%[1]s"}}`, kind)
 }
 

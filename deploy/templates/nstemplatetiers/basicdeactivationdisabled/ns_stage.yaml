@@ -1,22 +1,21 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: advanced-code
+  name: basicdeactivationdisabled-stage
 objects:
 - apiVersion: v1
   kind: Namespace
   metadata:
     annotations:
-      che.eclipse.org/openshift-username: ${USERNAME}
-      openshift.io/description: ${USERNAME}-code
-      openshift.io/display-name: ${USERNAME}-code
+      openshift.io/description: ${USERNAME}-stage
+      openshift.io/display-name: ${USERNAME}-stage
       openshift.io/requester: ${USERNAME}
-    name: ${USERNAME}-code
+    name: ${USERNAME}-stage
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
   metadata:
     name: rbac-edit
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-stage
   rules:
     - apiGroups:
         - authorization.openshift.io
@@ -36,7 +35,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: user-rbac-edit
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-stage
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
@@ -48,7 +47,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: user-edit
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-stage
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
@@ -60,21 +59,21 @@ objects:
   kind: LimitRange
   metadata:
     name: resource-limits
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-stage
   spec:
     limits:
     - type: "Container"
       default:
-        cpu: 1000m
+        cpu: 150m
         memory: 512Mi
       defaultRequest:
-        cpu: 60m
-        memory: 307Mi
+        cpu: 10m
+        memory: 64Mi
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
     name: allow-same-namespace
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-stage
   spec:
     podSelector: {}
     ingress:
@@ -84,7 +83,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-ingress
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-stage
   spec:
     ingress:
     - from:
@@ -98,7 +97,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-monitoring
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-stage
   spec:
     ingress:
     - from:
@@ -108,20 +107,6 @@ objects:
     podSelector: {}
     policyTypes:
     - Ingress
-- apiVersion: networking.k8s.io/v1
-  kind: NetworkPolicy
-  metadata:
-    name: allow-from-codeready-workspaces-operator
-    namespace: ${USERNAME}-code
-  spec:
-    ingress:
-      - from:
-          - namespaceSelector:
-              matchLabels:
-                network.openshift.io/policy-group: codeready-workspaces
-    podSelector: {}
-    policyTypes:
-      - Ingress
 parameters:
 - name: USERNAME
   required: true

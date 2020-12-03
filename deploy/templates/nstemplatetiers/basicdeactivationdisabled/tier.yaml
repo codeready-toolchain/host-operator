@@ -1,12 +1,12 @@
 kind: Template
 apiVersion: v1
 metadata:
-  name: advanced-tier
+  name: basicdeactivationdisabled-tier
 objects:
 - kind: NSTemplateTier
   apiVersion: toolchain.dev.openshift.com/v1alpha1
   metadata:
-    name: advanced
+    name: basicdeactivationdisabled
     namespace: ${NAMESPACE}
   spec:
     clusterResources:
