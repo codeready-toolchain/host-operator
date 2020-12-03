@@ -77,8 +77,7 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 
 func prepareReconcileWithStatusConditions(t *testing.T, requestName string, httpTestClient *fakeHTTPClient,
 	getMemberClustersFunc func(fakeClient client.Client) cluster.GetMemberClustersFunc, conditions []toolchainv1alpha1.Condition, initObjs ...runtime.Object) (*ReconcileToolchainStatus, reconcile.Request, *test.FakeClient) {
-	reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-		newGetMemberClustersFuncReady, initObjs...)
+	reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, initObjs...)
 
 	// explicitly set the conditions, so they are not empty/unknown
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
