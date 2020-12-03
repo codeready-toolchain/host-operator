@@ -104,9 +104,8 @@ const (
 // Config encapsulates the Viper configuration registry which stores the
 // configuration data in-memory.
 type Config struct {
-	host                      *viper.Viper
-	secretValues              map[string]string
-	forbiddenUsernamePrefixes []string
+	host         *viper.Viper
+	secretValues map[string]string
 }
 
 // initConfig creates an initial, empty configuration.
