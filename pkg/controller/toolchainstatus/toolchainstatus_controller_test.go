@@ -75,8 +75,7 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }
 
-func prepareReconcileWithStatusConditions(t *testing.T, requestName string, httpTestClient *fakeHTTPClient,
-	getMemberClustersFunc func(fakeClient client.Client) cluster.GetMemberClustersFunc, conditions []toolchainv1alpha1.Condition, initObjs ...runtime.Object) (*ReconcileToolchainStatus, reconcile.Request, *test.FakeClient) {
+func prepareReconcileWithStatusConditions(t *testing.T, requestName string, conditions []toolchainv1alpha1.Condition, initObjs ...runtime.Object) (*ReconcileToolchainStatus, reconcile.Request, *test.FakeClient) {
 	reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, initObjs...)
 
 	// explicitly set the conditions, so they are not empty/unknown
@@ -654,9 +653,8 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		ready.LastTransitionTime = before
 		ready.LastUpdatedTime = &before
 		conditions := []toolchainv1alpha1.Condition{ready}
-		reconciler, req, fakeClient := prepareReconcileWithStatusConditions(t, requestName, newResponseGood(),
-			newGetMemberClustersFuncReady, conditions, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-			registrationService, toolchainStatus)
+		reconciler, req, fakeClient := prepareReconcileWithStatusConditions(t, requestName, conditions,
+			hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when no ready condition changed
 		_, err := reconciler.Reconcile(req)
@@ -679,9 +677,8 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		conditions := []toolchainv1alpha1.Condition{ready}
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
 			status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
-		reconciler, req, fakeClient := prepareReconcileWithStatusConditions(t, requestName, newResponseGood(),
-			newGetMemberClustersFuncReady, conditions, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-			registrationService, toolchainStatus)
+		reconciler, req, fakeClient := prepareReconcileWithStatusConditions(t, requestName, conditions,
+			hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when the ready condition becomes not-ready
 		_, err := reconciler.Reconcile(req)
