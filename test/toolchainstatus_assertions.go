@@ -5,10 +5,12 @@ import (
 	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/stretchr/testify/assert"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -99,5 +101,68 @@ func (a *ToolchainStatusAssertion) HasRegistrationServiceStatus(expected toolcha
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
 	test.AssertRegistrationServiceStatusMatch(a.t, *a.toolchainStatus.Status.RegistrationService, expected)
+	return a
+}
+
+func (a *ToolchainStatusAssertion) ReadyConditionLastTransitionTimeEqual(expected metav1.Time) *ToolchainStatusAssertion {
+	return a.readyConditionLastTransitionTimeEqual(expected, true)
+}
+
+func (a *ToolchainStatusAssertion) ReadyConditionLastTransitionTimeNotEqual(expected metav1.Time) *ToolchainStatusAssertion {
+	return a.readyConditionLastTransitionTimeEqual(expected, false)
+}
+
+func (a *ToolchainStatusAssertion) readyConditionLastTransitionTimeEqual(expected metav1.Time, equal bool) *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+
+	ready, found := condition.FindConditionByType(a.toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	require.True(a.t, found)
+	if equal {
+		assert.Equal(a.t, expected.Unix(), ready.LastTransitionTime.Unix())
+	} else {
+		assert.NotEqual(a.t, expected.Unix(), ready.LastTransitionTime.Unix())
+	}
+	return a
+}
+
+func (a *ToolchainStatusAssertion) ReadyConditionLastUpdatedTimeEqual(expected metav1.Time) *ToolchainStatusAssertion {
+	return a.readyConditionLastUpdatedTimeEqual(expected, true)
+}
+
+func (a *ToolchainStatusAssertion) ReadyConditionLastUpdatedTimeNotEqual(expected metav1.Time) *ToolchainStatusAssertion {
+	return a.readyConditionLastUpdatedTimeEqual(expected, false)
+}
+
+func (a *ToolchainStatusAssertion) readyConditionLastUpdatedTimeEqual(expected metav1.Time, equal bool) *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+
+	ready, found := condition.FindConditionByType(a.toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	require.True(a.t, found)
+	if equal {
+		assert.Equal(a.t, expected.Unix(), ready.LastUpdatedTime.Unix())
+	} else {
+		assert.NotEqual(a.t, expected.Unix(), ready.LastUpdatedTime.Unix())
+	}
+	return a
+}
+func (a *ToolchainStatusAssertion) ReadyConditionLastUpdatedTimeNotEmpty() *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+
+	ready, found := condition.FindConditionByType(a.toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	require.True(a.t, found)
+	assert.NotEmpty(a.t, ready.LastUpdatedTime)
+	return a
+}
+
+func (a *ToolchainStatusAssertion) ReadyConditionLastTransitionTimeNotEmpty() *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+
+	ready, found := condition.FindConditionByType(a.toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	require.True(a.t, found)
+	assert.NotEmpty(a.t, ready.LastTransitionTime)
 	return a
 }

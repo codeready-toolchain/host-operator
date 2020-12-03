@@ -5,11 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"net/http"
 	"os"
 	"testing"
 	"time"
+
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/codeready-toolchain/api/pkg/apis"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -72,6 +73,34 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 		config:         hostConfig,
 	}
 	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
+}
+
+func prepareReconcileWithStatusConditions(t *testing.T, requestName string, httpTestClient *fakeHTTPClient,
+	getMemberClustersFunc func(fakeClient client.Client) cluster.GetMemberClustersFunc, conditions []toolchainv1alpha1.Condition, initObjs ...runtime.Object) (*ReconcileToolchainStatus, reconcile.Request, *test.FakeClient) {
+	reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
+		newGetMemberClustersFuncReady, initObjs...)
+
+	// explicitly set the conditions, so they are not empty/unknown
+	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
+	err := fakeClient.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, requestName), toolchainStatus)
+	require.NoError(t, err)
+	toolchainStatus.Status.Conditions = conditions
+	require.NoError(t, fakeClient.Status().Update(nil, toolchainStatus))
+
+	return reconciler, req, fakeClient
+}
+
+func readyCondition(status bool) toolchainv1alpha1.Condition {
+	ready := toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Reason: "SomeReason",
+	}
+	if status {
+		ready.Status = corev1.ConditionTrue
+	} else {
+		ready.Status = corev1.ConditionFalse
+	}
+	return ready
 }
 
 func TestNoToolchainStatusFound(t *testing.T) {
@@ -583,6 +612,91 @@ func TestToolchainStatusConditions(t *testing.T) {
 		})
 	})
 }
+
+func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
+	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
+	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
+	defer restore()
+	defer counter.Reset()
+	requestName := configuration.DefaultToolchainStatusName
+
+	registrationService := newRegistrationServiceReady()
+	toolchainStatus := NewToolchainStatus()
+	memberStatus := newMemberStatusReady()
+	registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName,
+		status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+	hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+		status.DeploymentAvailableCondition())
+
+	t.Run("Timestamp set for new status object", func(t *testing.T) {
+		// given a status with unknown (new) ready condition
+		defer counter.Reset()
+
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
+			newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+			registrationService, toolchainStatus)
+
+		// when
+		_, err := reconciler.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+
+		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+			HasCondition(componentsReady()).
+			ReadyConditionLastUpdatedTimeNotEmpty().
+			ReadyConditionLastTransitionTimeNotEmpty()
+	})
+
+	t.Run("ready condition status has not changed", func(t *testing.T) {
+		// given a status with a ready condition with timestamp set
+		ready := readyCondition(true)
+		before := metav1.NewTime(time.Now().Add(-10 * time.Second))
+		ready.LastTransitionTime = before
+		ready.LastUpdatedTime = &before
+		conditions := []toolchainv1alpha1.Condition{ready}
+		reconciler, req, fakeClient := prepareReconcileWithStatusConditions(t, requestName, newResponseGood(),
+			newGetMemberClustersFuncReady, conditions, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+			registrationService, toolchainStatus)
+
+		// when no ready condition changed
+		_, err := reconciler.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+
+		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+			HasCondition(componentsReady()).
+			ReadyConditionLastUpdatedTimeNotEqual(before). // Last update timestamp updated
+			ReadyConditionLastTransitionTimeEqual(before)  // Last transition timestamp is not updated
+	})
+
+	t.Run("ready condition status has changed", func(t *testing.T) {
+		// given a status with a ready condition with timestamp set
+		ready := readyCondition(true)
+		before := metav1.NewTime(time.Now().Add(-10 * time.Second))
+		ready.LastTransitionTime = before
+		ready.LastUpdatedTime = &before
+		conditions := []toolchainv1alpha1.Condition{ready}
+		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+			status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
+		reconciler, req, fakeClient := prepareReconcileWithStatusConditions(t, requestName, newResponseGood(),
+			newGetMemberClustersFuncReady, conditions, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+			registrationService, toolchainStatus)
+
+		// when the ready condition becomes not-ready
+		_, err := reconciler.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+
+		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+			HasCondition(componentsNotReady(string(hostOperatorTag))).
+			ReadyConditionLastUpdatedTimeNotEqual(before).   // Last update timestamp updated
+			ReadyConditionLastTransitionTimeNotEqual(before) // Last transition timestamp is updated
+	})
+}
+
 func TestToolchainStatusNotifications(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
@@ -842,7 +956,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 
 	})
 
-	t.Run("initialize the cache using the MURs & UAs from ToolchainStatus", func(t *testing.T) {
+	t.Run("initialize the cache using the MURs & UAs from toolchainStatus", func(t *testing.T) {
 		// given
 		defer counter.Reset()
 		counter.IncrementMasterUserRecordCount()
