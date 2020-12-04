@@ -385,20 +385,20 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
 	switch tier {
-	case "basic":
+	case "basic", "basicdeactivationdisabled":
 		assert.Len(t, actual.Objects, 4)
-		containsObj(t, actual, clusterResourceQuotaObj("4000m", "1750m", "7Gi"))
+		containsObj(t, actual, clusterResourceQuotaObj("10000m", "1750m", "7Gi"))
 		containsObj(t, actual, idlerObj("${USERNAME}-dev", "28800"))
 		containsObj(t, actual, idlerObj("${USERNAME}-code", "28800"))
 		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
 	case "team":
 		assert.Len(t, actual.Objects, 3) // No Idler for -code namespace (there is no -code namespace in team tier)
-		containsObj(t, actual, clusterResourceQuotaObj("4000m", "2000m", "15Gi"))
+		containsObj(t, actual, clusterResourceQuotaObj("10000m", "2000m", "15Gi"))
 		containsObj(t, actual, idlerObj("${USERNAME}-dev", "28800"))
 		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
 	case "advanced":
 		assert.Len(t, actual.Objects, 1) // No Idlers
-		containsObj(t, actual, clusterResourceQuotaObj("4000m", "1750m", "7Gi"))
+		containsObj(t, actual, clusterResourceQuotaObj("10000m", "1750m", "7Gi"))
 	}
 }
 
@@ -418,7 +418,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	containsObj(t, actual, userEditRoleBindingObj(kind))
 
 	// LimitRange
-	cpuLimit := "150m"
+	cpuLimit := "500m"
 	memoryLimit := "512Mi"
 	memoryRequest := "64Mi"
 	cpuRequest := "10m"
@@ -654,7 +654,7 @@ spec:
         spec:
           quota: 
             hard:
-              limits.cpu: 4000m
+              limits.cpu: 10000m
               limits.memory: 7Gi
               requests.storage: 15Gi
               persistentvolumeclaims: "5"
