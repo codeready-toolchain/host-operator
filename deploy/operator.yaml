@@ -37,6 +37,3 @@ spec:
           requests:
             cpu: "100m"
             memory: "250M"
-          limits:
-            cpu: "1000m"
-            memory: "1000M"
