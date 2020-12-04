@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/ghodss/yaml"
 	"io/ioutil"
 	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
+
+	"github.com/ghodss/yaml"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -408,21 +409,20 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 }
 
 // replaceStatusConditions replaces Member status conditions with the new conditions
-func (r *ReconcileToolchainStatus) replaceStatusConditions(memberStatus *toolchainv1alpha1.ToolchainStatus, newConditions ...toolchainv1alpha1.Condition) error {
+func (r *ReconcileToolchainStatus) replaceStatusConditions(status *toolchainv1alpha1.ToolchainStatus, newConditions ...toolchainv1alpha1.Condition) error {
 	// the controller should always update at least the last updated timestamp of the status so the status should be updated regardless of whether
 	// any specific fields were updated. This way a problem with the controller can be indicated if the last updated timestamp was not updated.
-	conditionsWithTimestamps := []toolchainv1alpha1.Condition{}
-	for _, condition := range newConditions {
-		condition.LastTransitionTime = metav1.Now()
-		condition.LastUpdatedTime = &metav1.Time{Time: condition.LastTransitionTime.Time}
+	var conditionsWithTimestamps []toolchainv1alpha1.Condition
+	for _, newCondition := range newConditions {
+		condition := copyConditionWithTimestampSet(status, newCondition)
 		conditionsWithTimestamps = append(conditionsWithTimestamps, condition)
 	}
-	memberStatus.Status.Conditions = conditionsWithTimestamps
-	return r.client.Status().Update(context.TODO(), memberStatus)
+	status.Status.Conditions = conditionsWithTimestamps
+	return r.client.Status().Update(context.TODO(), status)
 }
 
 // wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
-func (u *ReconcileToolchainStatus) wrapErrorWithStatusUpdate(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus,
+func (r *ReconcileToolchainStatus) wrapErrorWithStatusUpdate(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus,
 	statusUpdater func(userAcc *toolchainv1alpha1.ToolchainStatus, message string) error, err error, format string,
 	args ...interface{}) error {
 	if err == nil {
@@ -453,6 +453,33 @@ func (r *ReconcileToolchainStatus) setStatusNotReady(toolchainStatus *toolchainv
 			Reason:  toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason,
 			Message: message,
 		})
+}
+
+// copyConditionWithTimestampSet generates a copy of the condition
+// and sets its LastUpdateTime and LastTransitionTime timestamps accordingly to the existing condition with the same type.
+func copyConditionWithTimestampSet(toolchainStatus *toolchainv1alpha1.ToolchainStatus, fromCondition toolchainv1alpha1.Condition) toolchainv1alpha1.Condition {
+	now := metav1.Now()
+	newCondition := toolchainv1alpha1.Condition{
+		Type:            fromCondition.Type,
+		Status:          fromCondition.Status,
+		Reason:          fromCondition.Reason,
+		Message:         fromCondition.Message,
+		LastUpdatedTime: &now,
+	}
+	existing, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, fromCondition.Type)
+	if found {
+		if existing.Status != fromCondition.Status {
+			// The status has changed. Update the transition timestamp.
+			newCondition.LastTransitionTime = metav1.Now()
+		} else {
+			// Status has not changed. Do not change the transition timestamp.
+			newCondition.LastTransitionTime = existing.LastTransitionTime
+		}
+	} else {
+		// New condition. Set the transition timestamp to now.
+		newCondition.LastTransitionTime = now
+	}
+	return newCondition
 }
 
 func (r *ReconcileToolchainStatus) setStatusToolchainStatusUnreadyNotificationCreated(
