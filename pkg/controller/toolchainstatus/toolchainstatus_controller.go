@@ -364,9 +364,11 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger
 		return err
 	}
 
+	tsValue := time.Now().Format("20060102150405")
+
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "toolchainstatus-unready",
+			Name:      fmt.Sprintf("toolchainstatus-unready-%s", tsValue),
 			Namespace: toolchainStatus.Namespace,
 		},
 		Spec: toolchainv1alpha1.NotificationSpec{
