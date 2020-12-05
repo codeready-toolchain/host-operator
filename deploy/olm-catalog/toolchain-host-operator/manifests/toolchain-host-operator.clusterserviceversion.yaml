@@ -341,9 +341,6 @@ spec:
                 imagePullPolicy: IfNotPresent
                 name: host-operator
                 resources:
-                  limits:
-                    cpu: "1"
-                    memory: 1G
                   requests:
                     cpu: 100m
                     memory: 250M
