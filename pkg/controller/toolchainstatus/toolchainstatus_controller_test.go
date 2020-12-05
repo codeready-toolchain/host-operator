@@ -793,7 +793,47 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 				// then
 				require.Error(t, err)
-				require.Equal(t, "Failed to create user deactivation notification: cannot create notification due to configuration error - admin.email is invalid or not set",
+				require.Equal(t, "Failed to create user deactivation notification: cannot create notification "+
+					"due to configuration error - admin.email [] is invalid or not set",
+					err.Error())
+				assert.Equal(t, requeueResult, res)
+
+				// Confirm there is no notification
+				assertToolchainStatusNotificationNotCreated(t, fakeClient)
+			})
+
+			t.Run("Notification not created when admin.email invalid", func(t *testing.T) {
+				invalidConfig := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "notification_test_config",
+						Namespace: test.HostOperatorNs,
+					},
+					Data: map[string]string{
+						"admin.email": "admin#foo.com",
+					},
+				}
+
+				// given
+				hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+					status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
+
+				// Reload the toolchain status
+				require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
+					toolchainStatus.Name), toolchainStatus))
+
+				overrideLastTransitionTime(t, toolchainStatus, metav1.Time{time.Now().Add(-time.Duration(24) * time.Hour)})
+
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
+					newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+					registrationService, toolchainStatus, invalidConfig)
+
+				// when
+				res, err := reconciler.Reconcile(req)
+
+				// then
+				require.Error(t, err)
+				require.Equal(t, "Failed to create user deactivation notification: cannot create notification "+
+					"due to configuration error - admin.email [admin#foo.com] is invalid or not set",
 					err.Error())
 				assert.Equal(t, requeueResult, res)
 

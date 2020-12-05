@@ -355,7 +355,8 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 
 	if !isValidEmailAddress(r.config.GetAdminEmail()) {
-		return errs.New("cannot create notification due to configuration error - admin.email is invalid or not set")
+		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
+			r.config.GetAdminEmail()))
 	}
 
 	statusYaml, err := yaml.Marshal(toolchainStatus)
