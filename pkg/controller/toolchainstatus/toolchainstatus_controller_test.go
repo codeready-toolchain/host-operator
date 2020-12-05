@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -832,10 +833,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 				assert.Equal(t, requeueResult, res)
 
 				// Confirm the notification has been created
-				var notification toolchainv1alpha1.Notification
-				err = fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs, "toolchainstatus-unready"),
-					&notification)
-				require.NoError(t, err)
+				notification := assertToolchainStatusNotificationCreated(t, fakeClient)
+				require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
 
 				require.NotNil(t, notification)
 				require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
@@ -899,10 +898,9 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						assert.Equal(t, requeueResult, res)
 
 						// Confirm the notification has been created
-						var notification toolchainv1alpha1.Notification
-						err = fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs, "toolchainstatus-unready"),
-							&notification)
-						require.NoError(t, err)
+						notification := assertToolchainStatusNotificationCreated(t, fakeClient)
+						require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
+						require.Len(t, notification.ObjectMeta.Name, 38)
 
 						require.NotNil(t, notification)
 						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
@@ -927,6 +925,16 @@ func overrideLastTransitionTime(t *testing.T, toolchainStatus *toolchainv1alpha1
 	}
 
 	require.True(t, found)
+}
+
+func assertToolchainStatusNotificationCreated(t *testing.T, fakeClient *test.FakeClient) *toolchainv1alpha1.Notification {
+	notifications := &toolchainv1alpha1.NotificationList{}
+	err := fakeClient.List(context.Background(), notifications, &client.ListOptions{
+		Namespace: test.HostOperatorNs,
+	})
+	require.NoError(t, err)
+	require.Len(t, notifications.Items, 1)
+	return &notifications.Items[0]
 }
 
 func assertToolchainStatusNotificationNotCreated(t *testing.T, fakeClient *test.FakeClient) {
