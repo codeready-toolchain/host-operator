@@ -900,6 +900,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						// Confirm the notification has been created
 						notification := assertToolchainStatusNotificationCreated(t, fakeClient)
 						require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
+						require.Len(t, notification.ObjectMeta.Name, 38)
 
 						require.NotNil(t, notification)
 						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
