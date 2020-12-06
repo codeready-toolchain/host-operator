@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/ghodss/yaml"
@@ -65,6 +66,8 @@ const (
 const (
 	adminUnreadyNotificationSubject = "ToolchainStatus has been in an unready status for an extended period"
 )
+
+var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
 // Add creates a new ToolchainStatus Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -351,14 +354,21 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 
+	if !isValidEmailAddress(r.config.GetAdminEmail()) {
+		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
+			r.config.GetAdminEmail()))
+	}
+
 	statusYaml, err := yaml.Marshal(toolchainStatus)
 	if err != nil {
 		return err
 	}
 
+	tsValue := time.Now().Format("20060102150405")
+
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "toolchainstatus-unready",
+			Name:      fmt.Sprintf("toolchainstatus-unready-%s", tsValue),
 			Namespace: toolchainStatus.Namespace,
 		},
 		Spec: toolchainv1alpha1.NotificationSpec{
@@ -617,4 +627,11 @@ func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger
 	componentReadyCondition := status.NewComponentReadyCondition(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason)
 	toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*componentReadyCondition}
 	return true
+}
+
+func isValidEmailAddress(email string) bool {
+	if len(email) < 3 && len(email) > 254 {
+		return false
+	}
+	return emailRegex.MatchString(email)
 }

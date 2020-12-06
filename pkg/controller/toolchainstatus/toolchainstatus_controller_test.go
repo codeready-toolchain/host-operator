@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -763,6 +764,52 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			// Confirm there is no notification
 			assertToolchainStatusNotificationNotCreated(t, fakeClient)
 
+			t.Run("Notification not created when admin.email not configured", func(t *testing.T) {
+
+				assertInvalidEmailReturnErr := func(email string) {
+					invalidConfig := &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "notification_test_config",
+							Namespace: test.HostOperatorNs,
+						},
+						Data: map[string]string{
+							"admin.email": email,
+						},
+					}
+
+					// given
+					hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+						status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
+
+					// Reload the toolchain status
+					require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
+						toolchainStatus.Name), toolchainStatus))
+
+					overrideLastTransitionTime(t, toolchainStatus, metav1.Time{time.Now().Add(-time.Duration(24) * time.Hour)})
+
+					reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
+						newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+						registrationService, toolchainStatus, invalidConfig)
+
+					// when
+					res, err := reconciler.Reconcile(req)
+
+					// then
+					require.Error(t, err)
+					require.Equal(t, fmt.Sprintf("Failed to create user deactivation notification: cannot create notification "+
+						"due to configuration error - admin.email [%s] is invalid or not set", email),
+						err.Error())
+					assert.Equal(t, requeueResult, res)
+
+					// Confirm there is no notification
+					assertToolchainStatusNotificationNotCreated(t, fakeClient)
+				}
+
+				assertInvalidEmailReturnErr("")
+				assertInvalidEmailReturnErr("   ")
+				assertInvalidEmailReturnErr("foo#bar.com")
+			})
+
 			t.Run("Notification created when host operator deployment not ready beyond threshold", func(t *testing.T) {
 				// given
 				hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
@@ -786,10 +833,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 				assert.Equal(t, requeueResult, res)
 
 				// Confirm the notification has been created
-				var notification toolchainv1alpha1.Notification
-				err = fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs, "toolchainstatus-unready"),
-					&notification)
-				require.NoError(t, err)
+				notification := assertToolchainStatusNotificationCreated(t, fakeClient)
+				require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
 
 				require.NotNil(t, notification)
 				require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
@@ -853,10 +898,9 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						assert.Equal(t, requeueResult, res)
 
 						// Confirm the notification has been created
-						var notification toolchainv1alpha1.Notification
-						err = fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs, "toolchainstatus-unready"),
-							&notification)
-						require.NoError(t, err)
+						notification := assertToolchainStatusNotificationCreated(t, fakeClient)
+						require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
+						require.Len(t, notification.ObjectMeta.Name, 38)
 
 						require.NotNil(t, notification)
 						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
@@ -881,6 +925,16 @@ func overrideLastTransitionTime(t *testing.T, toolchainStatus *toolchainv1alpha1
 	}
 
 	require.True(t, found)
+}
+
+func assertToolchainStatusNotificationCreated(t *testing.T, fakeClient *test.FakeClient) *toolchainv1alpha1.Notification {
+	notifications := &toolchainv1alpha1.NotificationList{}
+	err := fakeClient.List(context.Background(), notifications, &client.ListOptions{
+		Namespace: test.HostOperatorNs,
+	})
+	require.NoError(t, err)
+	require.Len(t, notifications.Items, 1)
+	return &notifications.Items[0]
 }
 
 func assertToolchainStatusNotificationNotCreated(t *testing.T, fakeClient *test.FakeClient) {
