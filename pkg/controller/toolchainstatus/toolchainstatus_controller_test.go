@@ -157,7 +157,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, requeueResult, res)
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-			HasCondition(componentsReady()).
+			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMemberStatus(memberClusterSingleReady()).
 			HasRegistrationServiceStatus(registrationServiceReady())
@@ -182,7 +182,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(hostOperatorTag))).
+				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady("", "DeploymentNotFound", "unable to get the deployment: OPERATOR_NAME must be set")).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceReady())
@@ -199,7 +199,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(hostOperatorTag))).
+				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorName, "DeploymentNotFound", "unable to get the deployment: deployments.apps \"host-operator\" not found")).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceReady())
@@ -217,7 +217,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(hostOperatorTag))).
+				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorName, "DeploymentNotReady", "deployment has unready status conditions: Available")).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceReady())
@@ -235,7 +235,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(hostOperatorTag))).
+				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorName, "DeploymentNotReady", "deployment has unready status conditions: Progressing")).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceReady())
@@ -259,7 +259,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(registrationServiceTag))).
+				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceDeploymentNotReady("DeploymentNotFound", "unable to get the deployment: deployments.apps \"registration-service\" not found"))
@@ -277,7 +277,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(registrationServiceTag))).
+				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceDeploymentNotReady("DeploymentNotReady", "deployment has unready status conditions: Available"))
@@ -295,7 +295,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(registrationServiceTag))).
+				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceDeploymentNotReady("DeploymentNotReady", "deployment has unready status conditions: Progressing"))
@@ -319,7 +319,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(registrationServiceTag))).
+				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceResourcesNotReady("RegServiceResourceNotFound", "registrationservices.toolchain.dev.openshift.com \"registration-service\" not found"))
@@ -337,7 +337,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(registrationServiceTag))).
+				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceResourcesNotReady("RegServiceNotReady", "registration service resource not ready"))
@@ -362,7 +362,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(registrationServiceTag))).
+				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("http client error"))
@@ -379,7 +379,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(registrationServiceTag))).
+				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("bad response from http://registration-service//api/v1/health : statusCode=500"))
@@ -396,7 +396,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(registrationServiceTag))).
+				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("invalid character '}' after object key"))
@@ -413,7 +413,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(registrationServiceTag))).
+				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("the registration service health endpoint is reporting an unhealthy status"))
@@ -443,7 +443,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(memberConnectionsTag))).Exists().
+				HasConditions(componentsNotReady(string(memberConnectionsTag))).Exists().
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleNotReady("", "NoMemberClustersFound", "no member clusters found", nil)).
 				HasRegistrationServiceStatus(registrationServiceReady())
@@ -466,7 +466,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsReady()).
+				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceReady())
@@ -484,7 +484,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(memberConnectionsTag))).
+				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found", nil)).
 				HasRegistrationServiceStatus(registrationServiceReady())
@@ -503,7 +503,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(memberConnectionsTag))).
+				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "ComponentsNotReady", "components not ready: [memberOperator]", resourceUsage)).
 				HasRegistrationServiceStatus(registrationServiceReady())
@@ -525,7 +525,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsNotReady(string(counterTag))).
+				HasConditions(componentsNotReady(string(counterTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceReady())
@@ -548,7 +548,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsReady()).
+				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
 				HasRegistrationServiceStatus(registrationServiceReady())
@@ -579,7 +579,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, requeueResult, res)
 				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-					HasCondition(componentsNotReady(string(memberConnectionsTag))).
+					HasConditions(componentsNotReady(string(memberConnectionsTag))).
 					HasHostOperatorStatus(hostOperatorStatusReady()).
 					HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady("removed-cluster", "MemberToolchainClusterRemoved",
 						"toolchainCluster not found for member cluster removed-cluster that was previously registered in the host", nil)).
@@ -603,7 +603,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, requeueResult, res)
 				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-					HasCondition(componentsReady()).
+					HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 					HasHostOperatorStatus(hostOperatorStatusReady()).
 					HasMemberStatus(memberClusterSingleReady()).
 					HasRegistrationServiceStatus(registrationServiceReady())
@@ -642,7 +642,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		require.NoError(t, err)
 
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-			HasCondition(componentsReady()).
+			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			ReadyConditionLastUpdatedTimeNotEmpty().
 			ReadyConditionLastTransitionTimeNotEmpty()
 	})
@@ -664,7 +664,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		require.NoError(t, err)
 
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-			HasCondition(componentsReady()).
+			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			ReadyConditionLastUpdatedTimeNotEqual(before). // Last update timestamp updated
 			ReadyConditionLastTransitionTimeEqual(before)  // Last transition timestamp is not updated
 	})
@@ -688,7 +688,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		require.NoError(t, err)
 
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-			HasCondition(componentsNotReady(string(hostOperatorTag))).
+			HasConditions(componentsNotReady(string(hostOperatorTag))).
 			ReadyConditionLastUpdatedTimeNotEqual(before).   // Last update timestamp updated
 			ReadyConditionLastTransitionTimeNotEqual(before) // Last transition timestamp is updated
 	})
@@ -737,7 +737,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 		assert.Equal(t, requeueResult, res)
 
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-			HasCondition(componentsReady()).
+			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMemberStatus(memberClusterSingleReady()).
 			HasRegistrationServiceStatus(registrationServiceReady())
@@ -970,7 +970,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, requeueResult, res)
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-			HasCondition(componentsReady()).
+			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMurCount(10).
 			HasMemberStatus(memberClusterSingleReady()).
@@ -996,7 +996,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasCondition(componentsReady()).
+				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMurCount(12).
 				HasMemberStatus(memberClusterSingleReady()).
@@ -1028,7 +1028,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, requeueResult, res)
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-			HasCondition(componentsReady()).
+			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMurCount(9).
 			HasMemberStatus(memberClusterSingleReady()).
@@ -1218,6 +1218,14 @@ func componentsReady() toolchainv1alpha1.Condition {
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionTrue,
 		Reason: toolchainv1alpha1.ToolchainStatusAllComponentsReadyReason,
+	}
+}
+
+func unreadyNotificationNotCreated() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated,
+		Status: corev1.ConditionFalse,
+		Reason: "",
 	}
 }
 

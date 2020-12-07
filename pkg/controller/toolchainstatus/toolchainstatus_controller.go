@@ -193,9 +193,9 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 			return err
 		}
 
-		return r.setStatusNotReady(toolchainStatus, fmt.Sprintf("components not ready: %v", unreadyComponents))
+		return r.setStatusNotReady(reqLogger, toolchainStatus, fmt.Sprintf("components not ready: %v", unreadyComponents))
 	}
-	return r.setStatusReady(toolchainStatus)
+	return r.setStatusReady(reqLogger, toolchainStatus)
 }
 
 func (r *ReconcileToolchainStatus) notificationCheck(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
@@ -218,7 +218,7 @@ func (r *ReconcileToolchainStatus) notificationCheck(reqLogger logr.Logger, tool
 						"Failed to create user deactivation notification")
 				}
 
-				if err := r.setStatusToolchainStatusUnreadyNotificationCreated(toolchainStatus); err != nil {
+				if err := r.setStatusToolchainStatusUnreadyNotificationCreated(reqLogger, toolchainStatus); err != nil {
 					reqLogger.Error(err, "Failed to update notification created status")
 					return err
 				}
@@ -418,44 +418,65 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 	return allOk
 }
 
-// replaceStatusConditions replaces Member status conditions with the new conditions
-func (r *ReconcileToolchainStatus) replaceStatusConditions(status *toolchainv1alpha1.ToolchainStatus, newConditions ...toolchainv1alpha1.Condition) error {
-	// the controller should always update at least the last updated timestamp of the status so the status should be updated regardless of whether
-	// any specific fields were updated. This way a problem with the controller can be indicated if the last updated timestamp was not updated.
+// updateStatusConditions updates ToolchainStatus status conditions with new conditions
+// the controller should always update at least the last updated timestamp of the status so the status should be updated
+// regardless of whether any specific fields were updated. This way a problem with the controller can be indicated if
+// the last updated timestamp was not updated.
+func (r *ReconcileToolchainStatus) updateStatusConditions(logger logr.Logger, status *toolchainv1alpha1.ToolchainStatus,
+	newConditions ...toolchainv1alpha1.Condition) error {
+
+	var updated bool
+
 	var conditionsWithTimestamps []toolchainv1alpha1.Condition
 	for _, newCondition := range newConditions {
 		condition := copyConditionWithTimestampSet(status, newCondition)
 		conditionsWithTimestamps = append(conditionsWithTimestamps, condition)
 	}
-	status.Status.Conditions = conditionsWithTimestamps
-	return r.client.Status().Update(context.TODO(), status)
+
+	status.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(status.Status.Conditions, conditionsWithTimestamps...)
+	if !updated {
+		// Nothing changed
+		logger.Info("ToolchainStatus status conditions unchanged")
+		return nil
+	}
+	logger.Info("updating ToolchainStatus status conditions", "generation", status.Generation, "resource_version", status.ResourceVersion)
+	err := r.client.Status().Update(context.TODO(), status)
+	logger.Info("updated ToolchainStatus status conditions", "generation", status.Generation, "resource_version", status.ResourceVersion)
+	return err
 }
 
 // wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
 func (r *ReconcileToolchainStatus) wrapErrorWithStatusUpdate(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus,
-	statusUpdater func(userAcc *toolchainv1alpha1.ToolchainStatus, message string) error, err error, format string,
+	statusUpdater func(reqLogger logr.Logger, userAcc *toolchainv1alpha1.ToolchainStatus, message string) error, err error, format string,
 	args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
-	if err := statusUpdater(toolchainStatus, err.Error()); err != nil {
+	if err := statusUpdater(logger, toolchainStatus, err.Error()); err != nil {
 		logger.Error(err, "Error updating ToolchainStatus status")
 	}
 	return errs.Wrapf(err, format, args...)
 }
 
-func (r *ReconcileToolchainStatus) setStatusReady(toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
-	return r.replaceStatusConditions(
+func (r *ReconcileToolchainStatus) setStatusReady(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+	return r.updateStatusConditions(
+		reqLogger,
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionTrue,
 			Reason: toolchainv1alpha1.ToolchainStatusAllComponentsReadyReason,
+		},
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated,
+			Status: corev1.ConditionFalse,
+			Reason: "",
 		})
 }
 
-func (r *ReconcileToolchainStatus) setStatusNotReady(toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
-	return r.replaceStatusConditions(
+func (r *ReconcileToolchainStatus) setStatusNotReady(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
+	return r.updateStatusConditions(
+		reqLogger,
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
@@ -492,10 +513,11 @@ func copyConditionWithTimestampSet(toolchainStatus *toolchainv1alpha1.ToolchainS
 	return newCondition
 }
 
-func (r *ReconcileToolchainStatus) setStatusToolchainStatusUnreadyNotificationCreated(
+func (r *ReconcileToolchainStatus) setStatusToolchainStatusUnreadyNotificationCreated(reqLogger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 
-	return r.replaceStatusConditions(
+	return r.updateStatusConditions(
+		reqLogger,
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated,
@@ -504,10 +526,11 @@ func (r *ReconcileToolchainStatus) setStatusToolchainStatusUnreadyNotificationCr
 		})
 }
 
-func (r *ReconcileToolchainStatus) setStatusUnreadyNotificationCreationFailed(
+func (r *ReconcileToolchainStatus) setStatusUnreadyNotificationCreationFailed(reqLogger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
 
-	return r.replaceStatusConditions(
+	return r.updateStatusConditions(
+		reqLogger,
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
