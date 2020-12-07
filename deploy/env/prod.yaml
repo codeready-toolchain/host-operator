@@ -20,4 +20,3 @@ host-operator:
     name: host-operator-secret
   config-map:
     name: host-operator-config
-  deactivation-domains-excluded: '@redhat.com'
