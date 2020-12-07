@@ -425,23 +425,16 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 func (r *ReconcileToolchainStatus) updateStatusConditions(logger logr.Logger, status *toolchainv1alpha1.ToolchainStatus,
 	newConditions ...toolchainv1alpha1.Condition) error {
 
-	var updated bool
-
 	var conditionsWithTimestamps []toolchainv1alpha1.Condition
 	for _, newCondition := range newConditions {
 		condition := copyConditionWithTimestampSet(status, newCondition)
 		conditionsWithTimestamps = append(conditionsWithTimestamps, condition)
 	}
 
-	status.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(status.Status.Conditions, conditionsWithTimestamps...)
-	if !updated {
-		// Nothing changed
-		logger.Info("ToolchainStatus status conditions unchanged")
-		return nil
-	}
-	logger.Info("updating ToolchainStatus status conditions", "generation", status.Generation, "resource_version", status.ResourceVersion)
+	status.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(status.Status.Conditions, conditionsWithTimestamps...)
+	logger.Info("updating ToolchainStatus status conditions", "resource_version", status.ResourceVersion)
 	err := r.client.Status().Update(context.TODO(), status)
-	logger.Info("updated ToolchainStatus status conditions", "generation", status.Generation, "resource_version", status.ResourceVersion)
+	logger.Info("updated ToolchainStatus status conditions", "resource_version", status.ResourceVersion)
 	return err
 }
 
