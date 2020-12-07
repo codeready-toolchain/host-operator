@@ -4,8 +4,6 @@ registration-service:
   verification:
     enabled: 'true'
     excluded-email-domains: 'redhat.com,acme.com'
-  twilio:
-    from-number: '+15005550006'
 host-operator:
   duration-before-change-request-deletion: '5s'
   duration-before-notification-deletion: '5s'
