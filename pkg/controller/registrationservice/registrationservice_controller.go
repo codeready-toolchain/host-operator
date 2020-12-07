@@ -2,6 +2,8 @@ package registrationservice
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -137,15 +139,21 @@ func (r *ReconcileRegistrationService) Reconcile(request reconcile.Request) (rec
 	}
 
 	// create all objects that are within the template, and update only when the object has changed.
-	// if the object was either created or updated, then return and wait for another reconcile
+	var updated []string
 	for _, toolchainObject := range toolchainObjects {
 		createdOrUpdated, err := cl.CreateOrUpdateObject(toolchainObject.GetRuntimeObject(), false, regService)
 		if err != nil {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, regService, r.setStatusFailed(toolchainv1alpha1.RegistrationServiceDeployingFailedReason), err, "cannot deploy registration service template")
 		}
 		if createdOrUpdated {
-			return reconcile.Result{}, updateStatusConditions(r.client, regService, toBeNotReady(toolchainv1alpha1.RegistrationServiceDeployingReason, ""))
+			updated = append(updated, fmt.Sprintf("%s: %s", toolchainObject.GetGvk().Kind, toolchainObject.GetName()))
 		}
+	}
+	if len(updated) > 0 {
+		return reconcile.Result{
+			Requeue:      true,
+			RequeueAfter: time.Second, // le't put one second there in case it wasn't re-queued by some resource change
+		}, updateStatusConditions(r.client, regService, toBeNotReady(toolchainv1alpha1.RegistrationServiceDeployingReason, fmt.Sprintf("updated resources: %s", updated)))
 	}
 
 	reqLogger.Info("All objects in registration service template has been created and are up-to-date")
