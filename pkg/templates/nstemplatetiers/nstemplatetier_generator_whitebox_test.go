@@ -182,7 +182,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 			assets := assets.NewAssets(AssetNames, Asset)
 
 			expectedDeactivationTimeoutsByTier := map[string]int{
-				"basic":                     1,
+				"basic":                     30,
 				"basicdeactivationdisabled": 0,
 				"advanced":                  0,
 				"team":                      0,
