@@ -424,14 +424,7 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 // the last updated timestamp was not updated.
 func (r *ReconcileToolchainStatus) updateStatusConditions(logger logr.Logger, status *toolchainv1alpha1.ToolchainStatus,
 	newConditions ...toolchainv1alpha1.Condition) error {
-
-	var conditionsWithTimestamps []toolchainv1alpha1.Condition
-	for _, newCondition := range newConditions {
-		condition := copyConditionWithTimestampSet(status, newCondition)
-		conditionsWithTimestamps = append(conditionsWithTimestamps, condition)
-	}
-
-	status.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(status.Status.Conditions, conditionsWithTimestamps...)
+	status.Status.Conditions = condition.AddOrUpdateStatusConditionsWithLastUpdatedTimestamp(status.Status.Conditions, newConditions...)
 	logger.Info("updating ToolchainStatus status conditions", "resource_version", status.ResourceVersion)
 	err := r.client.Status().Update(context.TODO(), status)
 	logger.Info("updated ToolchainStatus status conditions", "resource_version", status.ResourceVersion)
@@ -463,7 +456,7 @@ func (r *ReconcileToolchainStatus) setStatusReady(reqLogger logr.Logger, toolcha
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated,
 			Status: corev1.ConditionFalse,
-			Reason: "",
+			Reason: toolchainv1alpha1.ToolchainStatusAllComponentsReadyReason,
 		})
 }
 
@@ -477,33 +470,6 @@ func (r *ReconcileToolchainStatus) setStatusNotReady(reqLogger logr.Logger, tool
 			Reason:  toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason,
 			Message: message,
 		})
-}
-
-// copyConditionWithTimestampSet generates a copy of the condition
-// and sets its LastUpdateTime and LastTransitionTime timestamps accordingly to the existing condition with the same type.
-func copyConditionWithTimestampSet(toolchainStatus *toolchainv1alpha1.ToolchainStatus, fromCondition toolchainv1alpha1.Condition) toolchainv1alpha1.Condition {
-	now := metav1.Now()
-	newCondition := toolchainv1alpha1.Condition{
-		Type:            fromCondition.Type,
-		Status:          fromCondition.Status,
-		Reason:          fromCondition.Reason,
-		Message:         fromCondition.Message,
-		LastUpdatedTime: &now,
-	}
-	existing, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, fromCondition.Type)
-	if found {
-		if existing.Status != fromCondition.Status {
-			// The status has changed. Update the transition timestamp.
-			newCondition.LastTransitionTime = metav1.Now()
-		} else {
-			// Status has not changed. Do not change the transition timestamp.
-			newCondition.LastTransitionTime = existing.LastTransitionTime
-		}
-	} else {
-		// New condition. Set the transition timestamp to now.
-		newCondition.LastTransitionTime = now
-	}
-	return newCondition
 }
 
 func (r *ReconcileToolchainStatus) setStatusToolchainStatusUnreadyNotificationCreated(reqLogger logr.Logger,
