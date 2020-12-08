@@ -92,7 +92,7 @@ func prepareReconcileWithStatusConditions(t *testing.T, requestName string, cond
 func readyCondition(status bool) toolchainv1alpha1.Condition {
 	ready := toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
-		Reason: "SomeReason",
+		Reason: toolchainv1alpha1.ToolchainStatusAllComponentsReadyReason,
 	}
 	if status {
 		ready.Status = corev1.ConditionTrue
