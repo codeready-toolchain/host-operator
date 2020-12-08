@@ -466,7 +466,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).Exists().
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "MemberToolchainClusterRemoved",
+				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "MemberToolchainClusterMissing",
 					"ToolchainCluster CR wasn't found for member cluster `member-cluster` that was previously registered in the host", nil)).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
@@ -603,7 +603,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 					HasConditions(componentsNotReady(string(memberConnectionsTag))).
 					HasHostOperatorStatus(hostOperatorStatusReady()).
-					HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady("removed-cluster", "MemberToolchainClusterRemoved",
+					HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady("removed-cluster", "MemberToolchainClusterMissing",
 						"ToolchainCluster CR wasn't found for member cluster `removed-cluster` that was previously registered in the host", nil)).
 					HasRegistrationServiceStatus(registrationServiceReady())
 			})

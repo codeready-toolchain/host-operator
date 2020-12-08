@@ -399,7 +399,7 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 		} else if memberStatus.UserAccountCount > 0 {
 			err := fmt.Errorf("ToolchainCluster CR wasn't found for member cluster `%s` that was previously registered in the host", memberStatus.ClusterName)
 			reqLogger.Error(err, "the member cluster seems to be removed")
-			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterRemovedReason, err.Error())
+			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterMissingReason, err.Error())
 			toolchainStatus.Status.Members[index].MemberStatus = customMemberStatus(*memberStatusNotFoundCondition)
 			allOk = false
 		} else {
