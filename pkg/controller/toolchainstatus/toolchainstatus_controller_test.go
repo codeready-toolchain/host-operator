@@ -448,7 +448,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
-		t.Run("ToolchainClustre CR of member clusters was removed", func(t *testing.T) {
+		t.Run("ToolchainCluster CR of member clusters was removed", func(t *testing.T) {
 			// given
 			defer counter.Reset()
 			toolchainStatus := NewToolchainStatus()
