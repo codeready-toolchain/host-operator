@@ -312,9 +312,6 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 	if len(memberClusters) == 0 {
 		err := fmt.Errorf("no member clusters found")
 		reqLogger.Error(err, "number of member clusters is zero")
-		memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberStatusNoClustersFoundReason, err.Error())
-		noMemberStatus := customMemberStatus(*memberStatusNotFoundCondition)
-		members[""] = noMemberStatus
 		ready = false
 	}
 	for _, memberCluster := range memberClusters {
@@ -399,8 +396,8 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 		if ok {
 			toolchainStatus.Status.Members[index].MemberStatus = newMemberStatus
 			delete(members, memberStatus.ClusterName)
-		} else if memberStatus.ClusterName != "" && memberStatus.UserAccountCount > 0 {
-			err := fmt.Errorf("toolchainCluster not found for member cluster %s that was previously registered in the host", memberStatus.ClusterName)
+		} else if memberStatus.UserAccountCount > 0 {
+			err := fmt.Errorf("ToolchainCluster CR wasn't found for member cluster `%s` that was previously registered in the host", memberStatus.ClusterName)
 			reqLogger.Error(err, "the member cluster seems to be removed")
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterRemovedReason, err.Error())
 			toolchainStatus.Status.Members[index].MemberStatus = customMemberStatus(*memberStatusNotFoundCondition)
