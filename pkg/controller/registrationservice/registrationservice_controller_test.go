@@ -16,7 +16,7 @@ import (
 	tmplv1 "github.com/openshift/api/template/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -197,7 +197,7 @@ func assertObjectExists(t *testing.T, cl client.Client, obj runtime.Object) {
 	assert.NoError(t, err)
 }
 
-func assertObjectDoesNotExist(t *testing.T, cl client.Client, obj runtime.Object) {
+func assertObjectDoesNotExist(t *testing.T, cl client.Client, obj runtime.Object) { //nolint:unused,deadcode
 	err := cl.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, "registration-service"), obj)
 	require.Error(t, err)
 	assert.True(t, errors.IsNotFound(err))

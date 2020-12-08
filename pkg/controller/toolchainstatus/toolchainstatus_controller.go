@@ -207,7 +207,7 @@ func (r *ReconcileToolchainStatus) notificationCheck(reqLogger logr.Logger, tool
 	c, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	if found && c.Status == corev1.ConditionFalse {
 		threshold := time.Now().Add(-minutesAfterUnready * time.Minute)
-		if c.LastTransitionTime.Before(&metav1.Time{threshold}) {
+		if c.LastTransitionTime.Before(&metav1.Time{Time: threshold}) {
 			if !condition.IsTrue(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated) {
 				if err := r.sendToolchainStatusUnreadyNotification(reqLogger, toolchainStatus); err != nil {
 					reqLogger.Error(err, "Failed to create toolchain status unready notification")

@@ -10,7 +10,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var log = logf.Log.WithName("unapproved_usersignup_cache")
@@ -32,7 +32,7 @@ func (c *cache) getOldestPendingApproval(namespace string) *toolchainv1alpha1.Us
 	return oldest
 }
 
-func (c *cache) loadLatest(namespace string) {
+func (c *cache) loadLatest(namespace string) { //nolint:unparam
 	labels := map[string]string{toolchainv1alpha1.UserSignupStateLabelKey: toolchainv1alpha1.UserSignupStateLabelValuePending}
 	opts := client.MatchingLabels(labels)
 	userSignupList := &toolchainv1alpha1.UserSignupList{}
