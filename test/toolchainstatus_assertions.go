@@ -53,10 +53,10 @@ func (a *ToolchainStatusAssertion) Exists() *ToolchainStatusAssertion {
 	return a
 }
 
-func (a *ToolchainStatusAssertion) HasCondition(expected toolchainv1alpha1.Condition) *ToolchainStatusAssertion {
+func (a *ToolchainStatusAssertion) HasConditions(expected ...toolchainv1alpha1.Condition) *ToolchainStatusAssertion {
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
-	test.AssertConditionsMatch(a.t, a.toolchainStatus.Status.Conditions, expected)
+	test.AssertConditionsMatch(a.t, a.toolchainStatus.Status.Conditions, expected...)
 	return a
 }
 
