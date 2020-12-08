@@ -146,7 +146,10 @@ func main() {
 	}
 
 	// Add the Metrics Service
-	addMetrics(ctx, cfg)
+	if err := addMetrics(ctx, cfg); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
 
 	metrics.RegisterCustomMetrics()
 
@@ -200,18 +203,18 @@ func main() {
 
 // addMetrics will create the Services and Service Monitors to allow the operator export the metrics by using
 // the Prometheus operator
-func addMetrics(ctx context.Context, cfg *rest.Config) {
+func addMetrics(ctx context.Context, cfg *rest.Config) error {
 	// Get the namespace the operator is currently deployed in.
 	operatorNs, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
 		if errors.Is(err, k8sutil.ErrRunLocal) {
 			log.Info("Skipping CR metrics server creation; not running in a cluster.")
-			return
+			return nil
 		}
 	}
 
 	if err := serveCRMetrics(cfg, operatorNs); err != nil {
-		log.Info("Could not generate and serve custom resource metrics", "error", err.Error())
+		return errors.Wrapf(err, "Could not generate and serve custom resource metrics")
 	}
 
 	// Add to the below struct any other metrics ports you want to expose.
@@ -223,7 +226,7 @@ func addMetrics(ctx context.Context, cfg *rest.Config) {
 	// Create Service object to expose the metrics port(s).
 	service, err := sdkmetrics.CreateMetricsService(ctx, cfg, servicePorts)
 	if err != nil {
-		log.Info("Could not create metrics Service", "error", err.Error())
+		return errors.Wrapf(err, "Could not create metrics Service")
 	}
 
 	// CreateServiceMonitors will automatically create the prometheus-operator ServiceMonitor resources
@@ -240,6 +243,7 @@ func addMetrics(ctx context.Context, cfg *rest.Config) {
 			log.Info("Install prometheus-operator in your cluster to create ServiceMonitor objects", "error", err.Error())
 		}
 	}
+	return nil
 }
 
 // serveCRMetrics gets the Operator/CustomResource GVKs and generates metrics based on those types.
