@@ -157,7 +157,7 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Deactivate the user
-	if usersignup.Spec.Deactivated == true {
+	if usersignup.Spec.Deactivated {
 		// The UserSignup is already set for deactivation, nothing left to do
 		return reconcile.Result{}, nil
 	}

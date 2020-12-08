@@ -104,12 +104,12 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 			assert.NotEmpty(t, configSpec.AutomaticApproval.MaxNumberOfUsers)
 			assert.NotEmpty(t, configSpec.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster)
 		}()
-		go func() {
+		go func(i int) {
 			defer waitForFinished.Done()
 			latch.Wait()
 			config := newHostOperatorConfigWithReset(t, AutomaticApproval().MaxUsersNumber(i+1, PerMemberCluster(fmt.Sprintf("member%d", i), i)))
 			updateConfig(config)
-		}()
+		}(i)
 	}
 
 	// when

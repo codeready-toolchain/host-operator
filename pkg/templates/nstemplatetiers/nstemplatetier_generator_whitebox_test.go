@@ -494,7 +494,7 @@ func clusterResourceQuotaObj(cpuLimit, cpuRequest, memoryLimit string) string {
 	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","persistentvolumeclaims":"5","pods":"100","replicationcontrollers":"100","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"15Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
 }
 
-func idlerObj(name, timeout string) string {
+func idlerObj(name, timeout string) string { //nolint:unparam
 	return fmt.Sprintf(`{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"Idler","metadata":{"name":"%s"},"spec":{"timeoutSeconds":%s}}`, name, timeout)
 }
 

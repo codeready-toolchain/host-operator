@@ -7,8 +7,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	controllerPredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var changedLog = logf.Log.WithName("user_signup_changed_predicate")
