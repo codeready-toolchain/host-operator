@@ -213,10 +213,6 @@ func addMetrics(ctx context.Context, cfg *rest.Config) error {
 		}
 	}
 
-	if err := serveCRMetrics(cfg, operatorNs); err != nil {
-		return errors.Wrapf(err, "Could not generate and serve custom resource metrics")
-	}
-
 	// Add to the below struct any other metrics ports you want to expose.
 	servicePorts := []v1.ServicePort{
 		{Port: metricsPort, Name: sdkmetrics.OperatorPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: metricsPort}},
@@ -248,7 +244,11 @@ func addMetrics(ctx context.Context, cfg *rest.Config) error {
 
 // serveCRMetrics gets the Operator/CustomResource GVKs and generates metrics based on those types.
 // It serves those metrics on "http://metricsHost:operatorMetricsPort".
-func serveCRMetrics(cfg *rest.Config, operatorNs string) error {
+//
+// Note: not used for now: by default, this function wants to use all out CRDs, but when we have a "host-only"
+// cluster, this metrics server fails to load the CRDs from etcd, which causes CrashLoops.
+// If we really need this metrics server, then we should taylor the list of CRDs to expose.
+func serveCRMetrics(cfg *rest.Config, operatorNs string) error { //nolint:unused,deadcode
 	// The function below returns a list of filtered operator/CR specific GVKs. For more control, override the GVK list below
 	// with your own custom logic. Note that if you are adding third party API schemas, probably you will need to
 	// customize this implementation to avoid permissions issues.

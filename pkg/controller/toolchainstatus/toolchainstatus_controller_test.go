@@ -84,7 +84,7 @@ func prepareReconcileWithStatusConditions(t *testing.T, requestName string, cond
 	err := fakeClient.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, requestName), toolchainStatus)
 	require.NoError(t, err)
 	toolchainStatus.Status.Conditions = conditions
-	require.NoError(t, fakeClient.Status().Update(nil, toolchainStatus))
+	require.NoError(t, fakeClient.Status().Update(context.TODO(), toolchainStatus))
 
 	return reconciler, req, fakeClient
 }
@@ -807,7 +807,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 					require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
 						toolchainStatus.Name), toolchainStatus))
 
-					overrideLastTransitionTime(t, toolchainStatus, metav1.Time{time.Now().Add(-time.Duration(24) * time.Hour)})
+					overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
 					reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 						newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
@@ -841,7 +841,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 				require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
 					toolchainStatus.Name), toolchainStatus))
 
-				overrideLastTransitionTime(t, toolchainStatus, metav1.Time{time.Now().Add(-time.Duration(24) * time.Hour)})
+				overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
 				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 					newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
@@ -895,8 +895,9 @@ func TestToolchainStatusNotifications(t *testing.T) {
 							registrationService, toolchainStatus, config)
 
 						// when
-						res, err := reconciler.Reconcile(req)
+						_, err := reconciler.Reconcile(req)
 
+						require.NoError(t, err)
 						// Confirm there is no notification
 						assertToolchainStatusNotificationNotCreated(t, fakeClient)
 
@@ -905,7 +906,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 							toolchainStatus.Name), toolchainStatus))
 
 						// Now override the last transition time again
-						overrideLastTransitionTime(t, toolchainStatus, metav1.Time{time.Now().Add(-time.Duration(24) * time.Hour)})
+						overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
 						// Reconcile once more
 						reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(),

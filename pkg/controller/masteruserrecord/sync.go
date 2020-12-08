@@ -24,7 +24,7 @@ import (
 )
 
 // consoleClient to be used to test connection to a public Web Console
-var consoleClient = &http.Client{
+var consoleClient = &http.Client{ //nolint:deadcode,unused,varcheck
 	Timeout: time.Duration(1 * time.Second),
 	Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
