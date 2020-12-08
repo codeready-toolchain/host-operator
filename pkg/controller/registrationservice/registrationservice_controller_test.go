@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/codeready-toolchain/api/pkg/apis"
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -38,33 +39,19 @@ func TestReconcileRegistrationService(t *testing.T) {
 	objs, err := p.Process(tmpl, getVars(reqService))
 	require.NoError(t, err)
 
-	t.Run("reconcile first object and add rolebinding", func(t *testing.T) {
+	t.Run("create both objects", func(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder, reqService)
 
 		// when
-		_, err := service.Reconcile(request)
+		result, err := service.Reconcile(request)
 
 		// then
 		require.NoError(t, err)
+		assert.True(t, result.Requeue)
+		assert.Equal(t, time.Second, result.RequeueAfter)
 		assertObjectExists(t, service.client, &v1.ServiceAccount{})
-		assertObjectDoesNotExist(t, service.client, &v1.ConfigMap{})
-		AssertThatRegistrationService(t, "registration-service", service.client).
-			HasConditions(toBeNotReady("Deploying", ""))
-	})
 
-	t.Run("reconcile second object and add configmap when SA is already present", func(t *testing.T) {
-		// given
-		service, request := prepareServiceAndRequest(t, s, decoder, reqService)
-		client := commonclient.NewApplyClient(service.client, service.scheme)
-		_, err := client.CreateOrUpdateObject(objs[0].GetRuntimeObject().DeepCopyObject(), false, nil)
-		require.NoError(t, err)
-
-		// when
-		_, err = service.Reconcile(request)
-
-		// then
-		require.NoError(t, err)
 		assertObjectExists(t, service.client, &v1.ServiceAccount{})
 		cm := &v1.ConfigMap{}
 		assertObjectExists(t, service.client, cm)
@@ -72,7 +59,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 		assert.Equal(t, "dev", cm.Data["reg-service-env"])
 
 		AssertThatRegistrationService(t, "registration-service", service.client).
-			HasConditions(toBeNotReady("Deploying", ""))
+			HasConditions(toBeNotReady("Deploying", "updated resources: [ServiceAccount: registration-service ConfigMap: registration-service]"))
 	})
 
 	t.Run("reconcile when both objects are present and don't update nor create anything", func(t *testing.T) {
@@ -92,10 +79,11 @@ func TestReconcileRegistrationService(t *testing.T) {
 		}
 
 		// when
-		_, err = service.Reconcile(request)
+		result, err := service.Reconcile(request)
 
 		// then
 		require.NoError(t, err)
+		assert.False(t, result.Requeue)
 		assertObjectExists(t, service.client, &v1.ServiceAccount{})
 		cm := &v1.ConfigMap{}
 		assertObjectExists(t, service.client, cm)
@@ -119,10 +107,12 @@ func TestReconcileRegistrationService(t *testing.T) {
 		require.NoError(t, err)
 
 		// when
-		_, err = service.Reconcile(request)
+		result, err := service.Reconcile(request)
 
 		// then
 		require.NoError(t, err)
+		assert.True(t, result.Requeue)
+		assert.Equal(t, time.Second, result.RequeueAfter)
 		assertObjectExists(t, service.client, &v1.ServiceAccount{})
 		cm := &v1.ConfigMap{}
 		assertObjectExists(t, service.client, cm)
@@ -130,7 +120,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 		assert.Equal(t, "prod", cm.Data["reg-service-env"])
 
 		AssertThatRegistrationService(t, "registration-service", service.client).
-			HasConditions(toBeNotReady("Deploying", ""))
+			HasConditions(toBeNotReady("Deploying", "updated resources: [ConfigMap: registration-service]"))
 	})
 
 	t.Run("when cannot create, then it should set appropriate condition", func(t *testing.T) {

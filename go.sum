@@ -141,10 +141,6 @@ github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:z
 github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
 github.com/codeready-toolchain/api v0.0.0-20201014170554-ba7a98533167 h1:SpP0O1myYOMZieSwPh9/wy3OeYnO+rOphpZahdrB3NA=
 github.com/codeready-toolchain/api v0.0.0-20201014170554-ba7a98533167/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
-github.com/codeready-toolchain/api v0.0.0-20201103091609-6c5b954770ee h1:8jPsXenllwy6U8s7+F8m7mdKnHenFPhXfFYmnDHSd1A=
-github.com/codeready-toolchain/api v0.0.0-20201103091609-6c5b954770ee/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
-github.com/codeready-toolchain/api v0.0.0-20201104101845-0c8d71aa1b4f h1:UWX4ZvcFRkiT3eBLNofA0BYwW34793G84VmjfqwynW8=
-github.com/codeready-toolchain/api v0.0.0-20201104101845-0c8d71aa1b4f/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
 github.com/codeready-toolchain/api v0.0.0-20201111002557-384eb4d46f9c h1:J72Q1Cpb6JANXIuNLu88bSNx0H2jiw02u8694vhI3WA=
 github.com/codeready-toolchain/api v0.0.0-20201111002557-384eb4d46f9c/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20201014231429-a44cccb4b2b5 h1:Z+oKsj4+0WWY0+Zlvc46NX7syYN1uZekjZWPhFFkfIA=
@@ -954,8 +950,6 @@ go.uber.org/zap v0.0.0-20180814183419-67bc79d13d15/go.mod h1:vwi/ZaCAaUcBkycHslx
 go.uber.org/zap v1.10.0/go.mod h1:vwi/ZaCAaUcBkycHslxD9B2zi4UTXhF60s6SWpuDF0Q=
 go.uber.org/zap v1.14.1 h1:nYDKopTbvAPq/NrUVZwT15y2lpROBiLLyoRTbXOYWOo=
 go.uber.org/zap v1.14.1/go.mod h1:Mb2vm2krFEG5DV0W9qcHBYFtp/Wku1cvYaqPsS/WYfc=
-golang.org/dl v0.0.0-20201105230244-7f2637f4aae3 h1:QIiQZUW3hKrc6j1oaJ+THVwVbi8H1FTVq6Pw+UdOBwM=
-golang.org/dl v0.0.0-20201105230244-7f2637f4aae3/go.mod h1:IUMfjQLJQd4UTqG1Z90tenwKoCX93Gn3MAQJMOSBsDQ=
 golang.org/x/crypto v0.0.0-20171113213409-9f005a07e0d3/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20181029021203-45a5f77698d3/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
