@@ -433,8 +433,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("MemberStatus member clusters not found", func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			memberStatus := newMemberStatusReady()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncEmpty, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncEmpty, hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -445,7 +444,30 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).Exists().
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleNotReady("", "NoMemberClustersFound", "no member clusters found", nil)).
+				HasMemberStatus().
+				HasRegistrationServiceStatus(registrationServiceReady())
+		})
+
+		t.Run("ToolchainCluster CR of member clusters was removed", func(t *testing.T) {
+			// given
+			defer counter.Reset()
+			toolchainStatus := NewToolchainStatus()
+			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
+				memberClusterSingleReady(),
+			}
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncEmpty, hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
+
+			// when
+			res, err := reconciler.Reconcile(req)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, requeueResult, res)
+			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+				HasConditions(componentsNotReady(string(memberConnectionsTag))).Exists().
+				HasHostOperatorStatus(hostOperatorStatusReady()).
+				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "MemberToolchainClusterMissing",
+					"ToolchainCluster CR wasn't found for member cluster `member-cluster` that was previously registered in the host", nil)).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
@@ -581,8 +603,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 					HasConditions(componentsNotReady(string(memberConnectionsTag))).
 					HasHostOperatorStatus(hostOperatorStatusReady()).
-					HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady("removed-cluster", "MemberToolchainClusterRemoved",
-						"toolchainCluster not found for member cluster removed-cluster that was previously registered in the host", nil)).
+					HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady("removed-cluster", "MemberToolchainClusterMissing",
+						"ToolchainCluster CR wasn't found for member cluster `removed-cluster` that was previously registered in the host", nil)).
 					HasRegistrationServiceStatus(registrationServiceReady())
 			})
 
@@ -666,7 +688,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			ReadyConditionLastUpdatedTimeNotEqual(before). // Last update timestamp updated
-			ReadyConditionLastTransitionTimeEqual(before)  // Last transition timestamp is not updated
+			ReadyConditionLastTransitionTimeEqual(before) // Last transition timestamp is not updated
 	})
 
 	t.Run("ready condition status has changed", func(t *testing.T) {
@@ -689,7 +711,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 			HasConditions(componentsNotReady(string(hostOperatorTag))).
-			ReadyConditionLastUpdatedTimeNotEqual(before).   // Last update timestamp updated
+			ReadyConditionLastUpdatedTimeNotEqual(before). // Last update timestamp updated
 			ReadyConditionLastTransitionTimeNotEqual(before) // Last transition timestamp is updated
 	})
 }
@@ -1295,6 +1317,7 @@ func memberClusterSingleReady() toolchainv1alpha1.Member {
 				Conditions:      []toolchainv1alpha1.Condition{ToBeReady()},
 			},
 		},
+		UserAccountCount: 10,
 	}
 }
 
