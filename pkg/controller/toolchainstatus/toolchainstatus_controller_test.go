@@ -382,7 +382,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberStatus(memberClusterSingleReady()).
-				HasRegistrationServiceStatus(registrationServiceHealthNotReady("bad response from http://registration-service//api/v1/health : statusCode=500"))
+				HasRegistrationServiceStatus(registrationServiceHealthNotReady("bad response from http://registration-service/api/v1/health : statusCode=500"))
 		})
 
 		t.Run("Registration health endpoint - invalid JSON", func(t *testing.T) {
@@ -688,7 +688,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			ReadyConditionLastUpdatedTimeNotEqual(before). // Last update timestamp updated
-			ReadyConditionLastTransitionTimeEqual(before) // Last transition timestamp is not updated
+			ReadyConditionLastTransitionTimeEqual(before)  // Last transition timestamp is not updated
 	})
 
 	t.Run("ready condition status has changed", func(t *testing.T) {
@@ -711,7 +711,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 			HasConditions(componentsNotReady(string(hostOperatorTag))).
-			ReadyConditionLastUpdatedTimeNotEqual(before). // Last update timestamp updated
+			ReadyConditionLastUpdatedTimeNotEqual(before).   // Last update timestamp updated
 			ReadyConditionLastTransitionTimeNotEqual(before) // Last transition timestamp is updated
 	})
 }
