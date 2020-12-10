@@ -1,1 +1,1 @@
-Notice: Your account is deactivated for Developer Sandbox for Red Hat OpenShift Beta
+Notice: Your Developer Sandbox for Red Hat OpenShift Beta account is deactivated
