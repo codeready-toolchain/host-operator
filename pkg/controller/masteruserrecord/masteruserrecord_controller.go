@@ -128,7 +128,7 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 		// If the UserAccount is being deleted, delete the UserAccounts in members.
 	} else if coputil.HasFinalizer(mur, murFinalizerName) {
 		if err = r.manageCleanUp(logger, mur); err != nil {
-			logger.Error(err, "unable to clean up MasterUserRecord as part of deletion")
+			logger.Error(err, "unable to clean up MasterUserRecord as part of deletion, sometimes this can happen because the deletion has not completed yet")
 			return reconcile.Result{}, err
 		}
 	}
@@ -303,18 +303,31 @@ func (r *ReconcileMasterUserRecord) deleteUserAccount(logger logr.Logger, target
 	// Get the User associated with the UserAccount
 	userAcc := &toolchainv1alpha1.UserAccount{}
 	namespacedName := types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: name}
-	err = memberCluster.Client.Get(context.TODO(), namespacedName, userAcc)
-	if err != nil {
+	if err = memberCluster.Client.Get(context.TODO(), namespacedName, userAcc); err != nil {
 		if errors.IsNotFound(err) {
 			return nil
 		}
 		return err
 	}
+
+	if coputil.IsBeingDeleted(userAcc) {
+		return fmt.Errorf("UserAccount deletion in progress")
+	}
+
 	if err := memberCluster.Client.Delete(context.TODO(), userAcc); err != nil {
 		return err
 	}
 	counter.DecrementUserAccountCount(logger, targetCluster)
-	return nil
+
+	// Verify the UserAccount is deleted
+	userAcc = &toolchainv1alpha1.UserAccount{}
+	if err = memberCluster.Client.Get(context.TODO(), namespacedName, userAcc); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	return fmt.Errorf("waiting for UserAccount deletion") // return error to reconcile again and wait for deletion
 }
 
 func toBeProvisioned() toolchainv1alpha1.Condition {
