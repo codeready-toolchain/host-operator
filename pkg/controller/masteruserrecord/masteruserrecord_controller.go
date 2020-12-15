@@ -296,7 +296,7 @@ func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolc
 			"failed to update MasterUserRecord while deleting finalizer")
 	}
 	counter.DecrementMasterUserRecordCount(logger)
-	log.Info("Finalizer removed from MasterUserRecord")
+	logger.Info("Finalizer removed from MasterUserRecord")
 	return 0, nil
 }
 
