@@ -283,7 +283,6 @@ func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolc
 	for _, ua := range mur.Spec.UserAccounts {
 		requeueTime, err := r.deleteUserAccount(logger, ua.TargetCluster, mur.Name)
 		if err != nil {
-			logger.Error(err, "unable to clean up MasterUserRecord as part of deletion")
 			return 0, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason), err,
 				"failed to delete UserAccount in the member cluster '%s'", ua.TargetCluster)
 		} else if requeueTime > 0 {
