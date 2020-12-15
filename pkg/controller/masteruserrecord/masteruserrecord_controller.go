@@ -328,7 +328,7 @@ func (r *ReconcileMasterUserRecord) deleteUserAccount(logger logr.Logger, target
 	}
 
 	if err := memberCluster.Client.Delete(context.TODO(), userAcc); err != nil {
-		return requeueTime, err
+		return 0, err
 	}
 	counter.DecrementUserAccountCount(logger, targetCluster)
 
