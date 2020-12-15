@@ -313,7 +313,7 @@ func (r *ReconcileMasterUserRecord) deleteUserAccount(logger logr.Logger, target
 	namespacedName := types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: name}
 	if err = memberCluster.Client.Get(context.TODO(), namespacedName, userAcc); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("UserAccount deleted")
+			logger.Info("UserAccount deleted")
 			return 0, nil
 		}
 		return 0, err
