@@ -127,9 +127,12 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 		}
 		// If the UserAccount is being deleted, delete the UserAccounts in members.
 	} else if coputil.HasFinalizer(mur, murFinalizerName) {
-		if err = r.manageCleanUp(logger, mur); err != nil {
+		requeueTime, err := r.manageCleanUp(logger, mur)
+		if err != nil {
 			logger.Error(err, "unable to clean up MasterUserRecord as part of deletion")
 			return reconcile.Result{}, err
+		} else if requeueTime > 0 {
+			return reconcile.Result{Requeue: true, RequeueAfter: requeueTime}, err
 		}
 	}
 
@@ -276,45 +279,60 @@ func (r *ReconcileMasterUserRecord) useExistingConditionOfType(condType toolchai
 	}
 }
 
-func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) error {
+func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
 	for _, ua := range mur.Spec.UserAccounts {
-		if err := r.deleteUserAccount(logger, ua.TargetCluster, mur.Name); err != nil {
-			return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason), err,
+		requeueTime, err := r.deleteUserAccount(logger, ua.TargetCluster, mur.Name)
+		if err != nil {
+			return 0, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason), err,
 				"failed to delete UserAccount in the member cluster '%s'", ua.TargetCluster)
+		} else if requeueTime > 0 {
+			return requeueTime, nil
 		}
 	}
 	// Remove finalizer from MasterUserRecord
 	coputil.RemoveFinalizer(mur, murFinalizerName)
 	if err := r.client.Update(context.Background(), mur); err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason), err,
+		return 0, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason), err,
 			"failed to update MasterUserRecord while deleting finalizer")
 	}
 	counter.DecrementMasterUserRecordCount(logger)
-	log.Info("Finalizer removed from MasterUserRecord")
-	return nil
+	logger.Info("Finalizer removed from MasterUserRecord")
+	return 0, nil
 }
 
-func (r *ReconcileMasterUserRecord) deleteUserAccount(logger logr.Logger, targetCluster, name string) error {
+func (r *ReconcileMasterUserRecord) deleteUserAccount(logger logr.Logger, targetCluster, name string) (time.Duration, error) {
+	requeueTime := 10 * time.Second
 	// get & check member cluster
 	memberCluster, err := r.getMemberCluster(targetCluster)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	// Get the User associated with the UserAccount
 	userAcc := &toolchainv1alpha1.UserAccount{}
 	namespacedName := types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: name}
-	err = memberCluster.Client.Get(context.TODO(), namespacedName, userAcc)
-	if err != nil {
+	if err = memberCluster.Client.Get(context.TODO(), namespacedName, userAcc); err != nil {
 		if errors.IsNotFound(err) {
-			return nil
+			logger.Info("UserAccount deleted")
+			return 0, nil
 		}
-		return err
+		return 0, err
 	}
+
+	if coputil.IsBeingDeleted(userAcc) {
+		// if the UserAccount is being deleted, allow up to 1 minute of retries before reporting an error
+		deletionTimestamp := userAcc.GetDeletionTimestamp()
+		if time.Since(deletionTimestamp.Time) > 60*time.Second {
+			return 0, fmt.Errorf("UserAccount deletion has not completed in over 1 minute")
+		}
+		return requeueTime, nil
+	}
+
 	if err := memberCluster.Client.Delete(context.TODO(), userAcc); err != nil {
-		return err
+		return 0, err
 	}
 	counter.DecrementUserAccountCount(logger, targetCluster)
-	return nil
+
+	return requeueTime, nil
 }
 
 func toBeProvisioned() toolchainv1alpha1.Condition {

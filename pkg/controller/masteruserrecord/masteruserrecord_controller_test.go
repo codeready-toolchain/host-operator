@@ -467,12 +467,18 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
+		result1, err1 := cntrl.Reconcile(newMurRequest(mur)) // first reconcile will be requeued to wait for UserAccount deletion
+		require.NoError(t, err1)
+		assert.True(t, result1.Requeue)
+		assert.Equal(t, int64(result1.RequeueAfter), int64(10*time.Second))
+
+		result2, err2 := cntrl.Reconcile(newMurRequest(mur)) // second reconcile
 
 		// then
-		require.Error(t, err)
+		require.Empty(t, result2)
+		require.Error(t, err2)
 		msg := "failed to update MasterUserRecord while deleting finalizer"
-		assert.Contains(t, err.Error(), msg)
+		assert.Contains(t, err2.Error(), msg)
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
@@ -721,33 +727,109 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 }
 
 func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
-	// given
-	defer counter.Reset()
-	InitializeCounter(t, 2, UserAccountsForCluster(test.MemberClusterName, 2))
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	s := apiScheme(t)
-	mur := murtest.NewMasterUserRecord(t, "john",
-		murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
-		murtest.ToBeDeleted())
-	userAcc := uatest.NewUserAccountFromMur(mur)
+	t.Run("success", func(t *testing.T) {
+		// given
+		defer counter.Reset()
+		InitializeCounter(t, 2, UserAccountsForCluster(test.MemberClusterName, 2))
+		logf.SetLogger(zap.New(zap.UseDevMode(true)))
+		s := apiScheme(t)
+		mur := murtest.NewMasterUserRecord(t, "john",
+			murtest.ToBeDeleted())
+		userAcc := uatest.NewUserAccountFromMur(mur)
 
-	memberClient := test.NewFakeClient(t, userAcc)
-	hostClient := test.NewFakeClient(t, mur)
+		memberClient := test.NewFakeClient(t, userAcc)
+		hostClient := test.NewFakeClient(t, mur)
 
-	cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-		ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
+			ClusterClient(test.MemberClusterName, memberClient))
 
-	// when
-	_, err := cntrl.Reconcile(newMurRequest(mur))
+		// when
+		result1, err1 := cntrl.Reconcile(newMurRequest(mur))
+		require.NoError(t, err1)
+		assert.True(t, result1.Requeue)
+		assert.Equal(t, int64(result1.RequeueAfter), int64(10*time.Second))
 
-	// then
-	require.NoError(t, err)
+		result2, err2 := cntrl.Reconcile(newMurRequest(mur))
 
-	uatest.AssertThatUserAccount(t, "john", memberClient).
-		DoesNotExist()
-	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-		DoesNotHaveFinalizer()
-	AssertThatCounterHas(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
+		// then
+		require.Empty(t, result2)
+		require.NoError(t, err2)
+
+		uatest.AssertThatUserAccount(t, "john", memberClient).
+			DoesNotExist()
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			DoesNotHaveFinalizer()
+		AssertThatCounterHas(t, 1, UserAccountsForCluster(test.MemberClusterName, 1))
+	})
+
+	t.Run("test wait for UserAccount deletion in progress before removing MUR finalizer", func(t *testing.T) {
+		// given
+		defer counter.Reset()
+		InitializeCounter(t, 2, UserAccountsForCluster(test.MemberClusterName, 2))
+		logf.SetLogger(zap.New(zap.UseDevMode(true)))
+		s := apiScheme(t)
+		mur := murtest.NewMasterUserRecord(t, "john-wait-for-ua",
+			murtest.ToBeDeleted())
+		userAcc := uatest.NewUserAccountFromMur(mur)
+		// set deletion timestamp to indicate UserAccount deletion is in progress
+		userAcc.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(-5 * time.Second)}
+
+		hostClient := test.NewFakeClient(t, mur)
+		memberClient := test.NewFakeClient(t, userAcc)
+
+		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
+			ClusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		result1, err := cntrl.Reconcile(newMurRequest(mur))
+		require.NoError(t, err)
+		assert.True(t, result1.Requeue)
+		assert.Equal(t, int64(result1.RequeueAfter), int64(10*time.Second))
+
+		memberClient.Delete(nil, userAcc)
+		result2, err2 := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.Empty(t, result2)
+		require.NoError(t, err2)
+		uatest.AssertThatUserAccount(t, "john-wait-for-ua", memberClient).
+			DoesNotExist()
+		murtest.AssertThatMasterUserRecord(t, "john-wait-for-ua", hostClient).
+			DoesNotHaveFinalizer()
+		AssertThatCounterHas(t, 1, UserAccountsForCluster(test.MemberClusterName, 2))
+	})
+
+	t.Run("test wait for UserAccount deletion takes too long", func(t *testing.T) {
+		// given
+		defer counter.Reset()
+		InitializeCounter(t, 2, UserAccountsForCluster(test.MemberClusterName, 2))
+		logf.SetLogger(zap.New(zap.UseDevMode(true)))
+		s := apiScheme(t)
+		mur := murtest.NewMasterUserRecord(t, "john-wait-for-ua",
+			murtest.ToBeDeleted())
+		userAcc := uatest.NewUserAccountFromMur(mur)
+		// set deletion timestamp to indicate UserAccount deletion is in progress
+		userAcc.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(-60 * time.Second)}
+
+		hostClient := test.NewFakeClient(t, mur)
+		memberClient := test.NewFakeClient(t, userAcc)
+
+		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
+			ClusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		result, err := cntrl.Reconcile(newMurRequest(mur))
+
+		// then
+		require.Empty(t, result)
+		require.Error(t, err)
+		require.Equal(t, `failed to delete UserAccount in the member cluster 'member-cluster': UserAccount deletion has not completed in over 1 minute`, err.Error())
+		uatest.AssertThatUserAccount(t, "john-wait-for-ua", memberClient).
+			Exists()
+		murtest.AssertThatMasterUserRecord(t, "john-wait-for-ua", hostClient).
+			HasFinalizer()
+		AssertThatCounterHas(t, 2, UserAccountsForCluster(test.MemberClusterName, 2))
+	})
 }
 
 func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T) {
@@ -772,10 +854,21 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 		ClusterClient(test.MemberClusterName, memberClient), ClusterClient("member2-cluster", memberClient2))
 
 	// when
-	_, err := cntrl.Reconcile(newMurRequest(mur))
+	result1, err1 := cntrl.Reconcile(newMurRequest(mur)) // first reconcile will wait for first useraccount to be deleted
+	require.NoError(t, err1)
+	assert.True(t, result1.Requeue)
+	assert.Equal(t, int64(result1.RequeueAfter), int64(10*time.Second))
+
+	result2, err2 := cntrl.Reconcile(newMurRequest(mur)) // second reconcile will wait for second useraccount to be deleted
+	require.NoError(t, err2)
+	assert.True(t, result2.Requeue)
+	assert.Equal(t, int64(result2.RequeueAfter), int64(10*time.Second))
+
+	result3, err3 := cntrl.Reconcile(newMurRequest(mur))
 
 	// then
-	require.NoError(t, err)
+	require.Empty(t, result3)
+	require.NoError(t, err3)
 
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		DoesNotExist()
