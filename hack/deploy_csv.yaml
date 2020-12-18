@@ -1486,9 +1486,8 @@ data:
                                   and whether the member configuration is correct
                                 properties:
                                   conditions:
-                                    description: 'Conditions is an array of current member
-                                      operator status conditions Supported condition types:
-                                      ConditionReady'
+                                    description: 'Conditions is an array of current Che
+                                      status conditions Supported condition types: ConditionReady'
                                     items:
                                       properties:
                                         lastTransitionTime:
