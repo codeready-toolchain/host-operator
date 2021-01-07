@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -533,7 +534,7 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      userSignup.Status.CompliantUsername + "-deactivated",
+			Name:      userSignup.Status.CompliantUsername + "-" + strconv.FormatInt(v1.Now().UnixNano(), 10) + "-deactivated",
 			Namespace: userSignup.Namespace,
 		},
 		Spec: toolchainv1alpha1.NotificationSpec{

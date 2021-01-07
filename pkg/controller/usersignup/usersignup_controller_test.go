@@ -1248,10 +1248,13 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		AssertThatCounterHas(t, 2)
 
 		// A deactivated notification should have been created
-		notification := &v1alpha1.Notification{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername + "-deactivated", Namespace: userSignup.Namespace}, notification)
+		notifications := &v1alpha1.NotificationList{}
+		err = r.client.List(context.TODO(), notifications)
 		require.NoError(t, err)
-		require.Equal(t, "john-doe-deactivated", notification.Name)
+		require.Len(t, notifications.Items, 1)
+		notification := notifications.Items[0]
+		require.Contains(t, notification.Name, "john-doe")
+		require.Contains(t, notification.Name, "-deactivated")
 		require.Equal(t, userSignup.Name, notification.Spec.UserID)
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
