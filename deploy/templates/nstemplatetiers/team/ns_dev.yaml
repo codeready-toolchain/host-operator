@@ -10,6 +10,8 @@ objects:
       openshift.io/description: ${USERNAME}-dev
       openshift.io/display-name: ${USERNAME}-dev
       openshift.io/requester: ${USERNAME}
+    labels:
+      name: ${USERNAME}-dev
     name: ${USERNAME}-dev
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
@@ -107,6 +109,20 @@ objects:
     podSelector: {}
     policyTypes:
     - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-stage-namespace
+    namespace: ${USERNAME}-dev
+  spec:
+    podSelector: {}
+    ingress:
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ${USERNAME}-stage
+    policyTypes:
+      - Ingress
 parameters:
 - name: USERNAME
   required: true
