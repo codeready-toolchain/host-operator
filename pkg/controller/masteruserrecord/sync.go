@@ -188,6 +188,9 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 			ObjectMeta: v1.ObjectMeta{
 				Name:      s.record.Name + "-provisioned" + "-" + strconv.FormatInt(v1.Now().UnixNano(), 10),
 				Namespace: s.record.Namespace,
+				Labels: map[string]string{
+					toolchainv1alpha1.NotificationUserNameLabelKey: s.record.Name,
+				},
 			},
 			Spec: toolchainv1alpha1.NotificationSpec{
 				UserID:   s.record.Spec.UserID,

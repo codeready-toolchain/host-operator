@@ -1285,6 +1285,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 	}
 	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "deactivated"
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+	userSignup.Labels[v1alpha1.NotificationUserNameLabelKey] = "john-doe"
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	t.Run("when the deactivation notification cannot be created", func(t *testing.T) {
@@ -1337,10 +1338,13 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// A deactivated notification should not have been created
-		notification := &v1alpha1.Notification{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername + "-deactivated", Namespace: userSignup.Namespace}, notification)
-		require.Error(t, err)
-		require.Equal(t, "notifications.toolchain.dev.openshift.com \"john-doe-deactivated\" not found", err.Error())
+		labels := map[string]string{v1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername}
+		opts := client.MatchingLabels(labels)
+
+		notificationList := &v1alpha1.NotificationList{}
+		err = r.client.List(context.TODO(), notificationList, opts)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(notificationList.Items))
 	})
 }
 
