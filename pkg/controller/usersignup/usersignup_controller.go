@@ -532,10 +532,14 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 }
 
 func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+	//timestamp := strconv.FormatInt(v1.Now().UnixNano(), 10)
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      userSignup.Status.CompliantUsername + "-deactivated" + "-" + strconv.FormatInt(v1.Now().UnixNano(), 10),
+			Name:      userSignup.Status.CompliantUsername + "-deactivated" + "-" + "-",
 			Namespace: userSignup.Namespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
+			},
 		},
 		Spec: toolchainv1alpha1.NotificationSpec{
 			UserID:   userSignup.Name,
