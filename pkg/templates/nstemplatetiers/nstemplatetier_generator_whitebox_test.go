@@ -410,10 +410,22 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
 	// Assert expected objects in the template
-	// Each template should have one Namespace, one RoleBinding, one LimitRange and three NetworkPolicy objects
+	// Each template should have one Namespace, one RoleBinding, one LimitRange and a verying number of NetworkPolicy objects depending on the namespace kind
+
+	// Template objects count
+	if tier == "team" {
+		require.Len(t, actual.Objects, 9)
+	} else {
+		if kind == "code" {
+			require.Len(t, actual.Objects, 11)
+		} else {
+			require.Len(t, actual.Objects, 10)
+		}
+	}
 
 	// Namespace
 	containsObj(t, actual, namespaceObj(kind))
+
 	// RoleBinding "user-edit"
 	containsObj(t, actual, userEditRoleBindingObj(kind))
 
@@ -439,11 +451,12 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	containsObj(t, actual, allowFromOpenshiftIngressPolicyObj(kind))
 	containsObj(t, actual, allowFromOpenshiftMonitoringPolicyObj(kind))
 
-	// Shared Networking
+	// User Namespaces Network Policies
 	switch tier {
 	case "advanced", "basic", "basicdeactivationdisabled":
 		switch kind {
 		case "code":
+			containsObj(t, actual, allowFromCRWPolicyObj(kind))
 			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "dev"))
 			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "stage"))
 		case "dev":
@@ -469,17 +482,6 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	}
 
 	// Role & RoleBinding with additional permissions to edit roles/rolebindings
-	if tier == "team" {
-		require.Len(t, actual.Objects, 9)
-	} else {
-		if kind == "code" {
-			require.Len(t, actual.Objects, 11)
-			containsObj(t, actual, allowFromCRWPolicyObj(kind))
-		} else {
-			require.Len(t, actual.Objects, 10)
-		}
-	}
-
 	containsObj(t, actual, rbacEditRoleObj(kind))
 	containsObj(t, actual, userRbacEditRoleBindingObj(kind))
 }
