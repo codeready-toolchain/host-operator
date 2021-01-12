@@ -439,13 +439,47 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	containsObj(t, actual, allowFromOpenshiftIngressPolicyObj(kind))
 	containsObj(t, actual, allowFromOpenshiftMonitoringPolicyObj(kind))
 
-	// Role & RoleBinding with additional permissions to edit roles/rolebindings
-	if kind == "code" {
-		require.Len(t, actual.Objects, 9)
-		containsObj(t, actual, allowFromCRWPolicyObj(kind))
-	} else {
-		require.Len(t, actual.Objects, 8)
+	// Shared Networking
+	switch tier {
+	case "advanced", "basic", "basicdeactivationdisabled":
+		switch kind {
+		case "code":
+			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "dev"))
+			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "stage"))
+		case "dev":
+			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "code"))
+			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "stage"))
+		case "stage":
+			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "code"))
+			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "dev"))
+		default:
+			t.Errorf("unexpected kind: '%s'", kind)
+		}
+	case "team":
+		switch kind {
+		case "dev":
+			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "stage"))
+		case "stage":
+			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "dev"))
+		default:
+			t.Errorf("unexpected kind: '%s'", kind)
+		}
+	default:
+		t.Errorf("unexpected tier: '%s'", tier)
 	}
+
+	// Role & RoleBinding with additional permissions to edit roles/rolebindings
+	if tier == "team" {
+		require.Len(t, actual.Objects, 9)
+	} else {
+		if kind == "code" {
+			require.Len(t, actual.Objects, 11)
+			containsObj(t, actual, allowFromCRWPolicyObj(kind))
+		} else {
+			require.Len(t, actual.Objects, 10)
+		}
+	}
+
 	containsObj(t, actual, rbacEditRoleObj(kind))
 	containsObj(t, actual, userRbacEditRoleBindingObj(kind))
 }
@@ -504,13 +538,13 @@ func testClusterResourceQuotaObj(cpuLimit, memoryLimit string) string {
 
 func namespaceObj(kind string) string {
 	if kind == "code" {
-		return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"che.eclipse.org/openshift-username":"${USERNAME}","openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"name":"${USERNAME}-%[1]s"}}`, kind)
+		return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"che.eclipse.org/openshift-username":"${USERNAME}","openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"name":"${USERNAME}-%[1]s"},"name":"${USERNAME}-%[1]s"}}`, kind)
 	}
-	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"name":"${USERNAME}-%[1]s"}}`, kind)
+	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"name":"${USERNAME}-%[1]s"},"name":"${USERNAME}-%[1]s"}}`, kind)
 }
 
 func testNamespaceObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"${USERNAME}-%[1]s"}}`, kind)
+	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"name":"${USERNAME}-%[1]s","toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"${USERNAME}-%[1]s"}}`, kind)
 }
 
 func userEditRoleBindingObj(kind string) string {
@@ -539,6 +573,10 @@ func allowFromCRWPolicyObj(kind string) string {
 
 func allowSameNamespacePolicyObj(kind string) string {
 	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, kind)
+}
+
+func allowOtherNamespacePolicyObj(kind, otherNamespaceKind string) string {
+	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-%[2]s-namespace","namespace":"${USERNAME}-%[1]s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"name":"${USERNAME}-%[2]s"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind, otherNamespaceKind)
 }
 
 func TestNewNSTemplateTiers(t *testing.T) {
