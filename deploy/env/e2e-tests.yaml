@@ -6,7 +6,7 @@ registration-service:
     excluded-email-domains: 'redhat.com,acme.com'
 host-operator:
   duration-before-change-request-deletion: '5s'
-  duration-before-notification-deletion: '35s'
+  duration-before-notification-deletion: '5s'
   environment: 'e2e-tests'
   toolchainstatus-refresh-time: '1s'
   deactivation-domains-excluded: '@excluded.com'
