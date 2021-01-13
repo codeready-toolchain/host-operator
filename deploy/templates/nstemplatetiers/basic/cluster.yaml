@@ -18,9 +18,19 @@ objects:
         requests.storage: 15Gi
         requests.ephemeral-storage: 7Gi
         persistentvolumeclaims: "5"
-        pods: "100"
-        replicationcontrollers: "100"
-        services: "100"
+        pods: "30"
+        apps/replicasets: "30"
+        replicationcontrollers: "30"
+        apps/deployments: "30"
+        apps/deploymentconfigs: "30"
+        apps/daemonsets: "30"
+        apps/statefulsets: "30"
+        batch/jobs: "30"
+        batch/cronjobs: "30"
+        build.openshift.io/buildconfigs: "10"
+        route.openshift.io/routes: "10"
+        extensions/ingresses: "10"
+        services: "10"
         secrets: "100"
         configmaps: "100"
     selector:
