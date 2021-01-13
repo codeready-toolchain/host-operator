@@ -410,7 +410,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
 	// Assert expected objects in the template
-	// Each template should have one Namespace, one RoleBinding, one LimitRange and a verying number of NetworkPolicy objects depending on the namespace kind
+	// Each template should have one Namespace, one RoleBinding, one LimitRange and a varying number of NetworkPolicy objects depending on the namespace kind
 
 	// Template objects count
 	if tier == "team" {
