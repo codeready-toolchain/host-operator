@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strconv"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -186,7 +185,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 	if condition.IsNotTrue(s.record.Status.Conditions, toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated) {
 		notification := &toolchainv1alpha1.Notification{
 			ObjectMeta: v1.ObjectMeta{
-				Name:      s.record.Name + "-provisioned" + "-" + strconv.FormatInt(v1.Now().UnixNano(), 10),
+				GenerateName:      s.record.Name + "-provisioned-",
 				Namespace: s.record.Namespace,
 				Labels: map[string]string{
 					toolchainv1alpha1.NotificationUserNameLabelKey: s.record.Name,
