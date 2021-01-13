@@ -1286,6 +1286,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "deactivated"
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 	userSignup.Labels[v1alpha1.NotificationUserNameLabelKey] = "john-doe"
+	userSignup.Labels[v1alpha1.NotificationReasonLabelKey] = "deactivated"
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	t.Run("when the deactivation notification cannot be created", func(t *testing.T) {
@@ -1338,7 +1339,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// A deactivated notification should not have been created
-		labels := map[string]string{v1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername}
+		labels := map[string]string{v1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername, v1alpha1.NotificationReasonLabelKey: "deactivated"}
 		opts := client.MatchingLabels(labels)
 
 		notificationList := &v1alpha1.NotificationList{}

@@ -537,6 +537,7 @@ func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, us
 			Namespace: userSignup.Namespace,
 			Labels: map[string]string{
 				toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
+				toolchainv1alpha1.NotificationReasonLabelKey: "deactivated",
 			},
 		},
 		Spec: toolchainv1alpha1.NotificationSpec{
