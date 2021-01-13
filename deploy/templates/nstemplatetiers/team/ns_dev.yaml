@@ -115,12 +115,12 @@ objects:
     name: allow-from-stage-namespace
     namespace: ${USERNAME}-dev
   spec:
-    podSelector: {}
     ingress:
       - from:
         - namespaceSelector:
             matchLabels:
               name: ${USERNAME}-stage
+    podSelector: {}
     policyTypes:
       - Ingress
 parameters:
