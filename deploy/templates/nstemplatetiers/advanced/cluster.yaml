@@ -17,22 +17,22 @@ objects:
         requests.memory: 7Gi
         requests.storage: 15Gi
         requests.ephemeral-storage: 7Gi
-        persistentvolumeclaims: "5"
-        pods: "30"
-        apps/replicasets: "30"
-        replicationcontrollers: "30"
-        apps/deployments: "30"
-        apps/deploymentconfigs: "30"
-        apps/daemonsets: "30"
-        apps/statefulsets: "30"
-        batch/jobs: "30"
-        batch/cronjobs: "30"
-        build.openshift.io/buildconfigs: "10"
-        route.openshift.io/routes: "10"
-        extensions/ingresses: "10"
-        services: "10"
-        secrets: "100"
-        configmaps: "100"
+        count/persistentvolumeclaims: "5"
+        count/pods: "30"
+        count/replicasets.apps: "30"
+        count/replicationcontrollers: "30"
+        count/deployments.apps: "30"
+        count/deploymentconfigs.apps: "30"
+        count/daemonsets.apps: "30"
+        count/statefulsets.apps: "30"
+        count/jobs.batch: "30"
+        count/cronjobs.batch: "30"
+        count/buildconfigs.build.openshift.io: "10"
+        count/routes.route.openshift.io: "10"
+        count/ingresses.extensions: "10"
+        count/services: "10"
+        count/secrets: "100"
+        count/configmaps: "100"
     selector:
       annotations:
         openshift.io/requester: ${USERNAME}
