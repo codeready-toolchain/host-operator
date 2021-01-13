@@ -189,7 +189,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 				Namespace: s.record.Namespace,
 				Labels: map[string]string{
 					toolchainv1alpha1.NotificationUserNameLabelKey: s.record.Name,
-					toolchainv1alpha1.NotificationReasonLabelKey: "provisioned",
+					toolchainv1alpha1.NotificationTypeLabelKey: "provisioned",
 				},
 			},
 			Spec: toolchainv1alpha1.NotificationSpec{
