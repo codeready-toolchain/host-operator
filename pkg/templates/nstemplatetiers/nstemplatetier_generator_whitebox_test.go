@@ -413,14 +413,17 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	// Each template should have one Namespace, one RoleBinding, one LimitRange and a varying number of NetworkPolicy objects depending on the namespace kind
 
 	// Template objects count
-	if tier == "team" {
+	switch tier {
+	case "team":
 		require.Len(t, actual.Objects, 9)
-	} else {
+	case "basic", "basicdeactivationdisabled", "advanced":
 		if kind == "code" {
 			require.Len(t, actual.Objects, 11)
 		} else {
 			require.Len(t, actual.Objects, 10)
 		}
+	default:
+		require.Fail(t, "unexpected tier: '%s'", tier)
 	}
 
 	// Namespace
