@@ -418,9 +418,9 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 		require.Len(t, actual.Objects, 9)
 	case "basic", "basicdeactivationdisabled", "advanced":
 		if kind == "code" {
-			require.Len(t, actual.Objects, 11)
-		} else {
 			require.Len(t, actual.Objects, 10)
+		} else {
+			require.Len(t, actual.Objects, 9)
 		}
 	default:
 		require.Fail(t, "unexpected tier: '%s'", tier)
@@ -460,14 +460,11 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 		switch kind {
 		case "code":
 			containsObj(t, actual, allowFromCRWPolicyObj(kind))
-			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "dev"))
-			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "stage"))
+			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "dev", "stage"))
 		case "dev":
-			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "code"))
-			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "stage"))
+			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "code", "stage"))
 		case "stage":
-			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "code"))
-			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "dev"))
+			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "code", "dev"))
 		default:
 			t.Errorf("unexpected kind: '%s'", kind)
 		}
@@ -580,8 +577,16 @@ func allowSameNamespacePolicyObj(kind string) string {
 	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, kind)
 }
 
-func allowOtherNamespacePolicyObj(kind, otherNamespaceKind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-%[2]s-namespace","namespace":"${USERNAME}-%[1]s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"name":"${USERNAME}-%[2]s"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind, otherNamespaceKind)
+func allowOtherNamespacePolicyObj(kind string, otherNamespaceKinds ...string) string {
+	nsSelectorTmpl := `{"namespaceSelector":{"matchLabels":{"name":"${USERNAME}-%s"}}}`
+	var selectors strings.Builder
+	for _, other := range otherNamespaceKinds {
+		if selectors.Len() > 0 {
+			selectors.WriteRune(',')
+		}
+		selectors.WriteString(fmt.Sprintf(nsSelectorTmpl, other))
+	}
+	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-other-user-namespaces","namespace":"${USERNAME}-%[1]s"},"spec":{"ingress":[{"from":[%[2]s]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind, selectors.String())
 }
 
 func TestNewNSTemplateTiers(t *testing.T) {

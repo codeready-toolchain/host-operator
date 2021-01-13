@@ -112,7 +112,7 @@ objects:
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
-    name: allow-from-dev-namespace
+    name: allow-from-other-user-namespaces
     namespace: ${USERNAME}-stage
   spec:
     ingress:
