@@ -98,7 +98,7 @@ const (
 	// username has a forbidden prefix, then the username compliance prefix is added to the username
 	varForbiddenUsernamePrefixes = "username.forbidden.prefixes"
 
-	DefaultForbiddenUsernamePrefixes = "openshift,kubernetes,kube-"
+	DefaultForbiddenUsernamePrefixes = "openshift,kube,default,redhat"
 )
 
 // Config encapsulates the Viper configuration registry which stores the
