@@ -1339,11 +1339,8 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// A deactivated notification should not have been created
-		labels := map[string]string{v1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername, v1alpha1.NotificationTypeLabelKey: "deactivated"}
-		opts := client.MatchingLabels(labels)
-
 		notificationList := &v1alpha1.NotificationList{}
-		err = r.client.List(context.TODO(), notificationList, opts)
+		err = r.client.List(context.TODO(), notificationList)
 		require.NoError(t, err)
 		require.Equal(t, 0, len(notificationList.Items))
 	})
