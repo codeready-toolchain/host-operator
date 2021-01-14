@@ -1283,12 +1283,12 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			CompliantUsername: "john-doe",
 		},
 	}
-	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "deactivated"
+	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = v1alpha1.NotificationTypeDeactivated
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 	// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
 	userSignup.Labels[v1alpha1.NotificationUserNameLabelKey] = "john-doe"
 	// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
-	userSignup.Labels[v1alpha1.NotificationTypeLabelKey] = "deactivated"
+	userSignup.Labels[v1alpha1.NotificationTypeLabelKey] = v1alpha1.NotificationTypeDeactivated
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	t.Run("when the deactivation notification cannot be created", func(t *testing.T) {
