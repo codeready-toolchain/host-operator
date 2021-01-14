@@ -491,7 +491,7 @@ func limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest string
 }
 
 func clusterResourceQuotaObj(cpuLimit, cpuRequest, memoryLimit string) string {
-	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"configmaps":"100","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","persistentvolumeclaims":"5","pods":"100","replicationcontrollers":"100","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"15Gi","secrets":"100","services":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
+	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"count/buildconfigs.build.openshift.io":"10","count/configmaps":"100","count/cronjobs.batch":"30","count/daemonsets.apps":"30","count/deploymentconfigs.apps":"30","count/deployments.apps":"30","count/ingresses.extensions":"10","count/jobs.batch":"30","count/persistentvolumeclaims":"5","count/pods":"30","count/replicasets.apps":"30","count/replicationcontrollers":"30","count/routes.route.openshift.io":"10","count/secrets":"100","count/services":"10","count/statefulsets.apps":"30","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"15Gi"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
 }
 
 func idlerObj(name, timeout string) string { //nolint:unparam
