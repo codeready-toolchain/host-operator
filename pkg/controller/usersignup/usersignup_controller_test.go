@@ -1285,7 +1285,9 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 	}
 	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "deactivated"
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+	// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
 	userSignup.Labels[v1alpha1.NotificationUserNameLabelKey] = "john-doe"
+	// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
 	userSignup.Labels[v1alpha1.NotificationTypeLabelKey] = "deactivated"
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 

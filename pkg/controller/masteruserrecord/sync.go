@@ -188,7 +188,9 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 				GenerateName:      s.record.Name + "-provisioned-",
 				Namespace: s.record.Namespace,
 				Labels: map[string]string{
+					// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
 					toolchainv1alpha1.NotificationUserNameLabelKey: s.record.Name,
+					// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
 					toolchainv1alpha1.NotificationTypeLabelKey: "provisioned",
 				},
 			},

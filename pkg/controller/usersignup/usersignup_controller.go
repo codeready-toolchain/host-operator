@@ -536,7 +536,9 @@ func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, us
 			GenerateName:      userSignup.Status.CompliantUsername + "-deactivated-",
 			Namespace: userSignup.Namespace,
 			Labels: map[string]string{
+				// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
 				toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
+				// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
 				toolchainv1alpha1.NotificationTypeLabelKey: "deactivated",
 			},
 		},
