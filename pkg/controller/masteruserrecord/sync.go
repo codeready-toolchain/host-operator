@@ -185,7 +185,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 	if condition.IsNotTrue(s.record.Status.Conditions, toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated) {
 		notification := &toolchainv1alpha1.Notification{
 			ObjectMeta: v1.ObjectMeta{
-				GenerateName:      s.record.Name + "-" + toolchainv1alpha1.NotificationTypeProvisioned + "-",
+				GenerateName: fmt.Sprintf("%s-%s-", s.record.Name, toolchainv1alpha1.NotificationTypeProvisioned),
 				Namespace: s.record.Namespace,
 				Labels: map[string]string{
 					// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests

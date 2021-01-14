@@ -533,7 +533,7 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: v1.ObjectMeta{
-			GenerateName:      userSignup.Status.CompliantUsername + "-" + toolchainv1alpha1.NotificationTypeDeactivated + "-",
+			GenerateName:fmt.Sprintf("%s-%s-", userSignup.Status.CompliantUsername, toolchainv1alpha1.NotificationTypeDeactivated),
 			Namespace: userSignup.Namespace,
 			Labels: map[string]string{
 				// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
