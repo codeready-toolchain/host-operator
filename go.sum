@@ -140,6 +140,8 @@ github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c/go.mod h1
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
 github.com/codeready-toolchain/api v0.0.0-20201014170554-ba7a98533167/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
+github.com/codeready-toolchain/api v0.0.0-20210115184740-77f08aa35c87 h1:jUqvvFYZYeD6Hcs4zEv5+oppXaxeIgGQn3YJd1DQDg0=
+github.com/codeready-toolchain/api v0.0.0-20210115184740-77f08aa35c87/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20201208090743-91c4f9716eff h1:vBNOeBFLOFJm8Eb3KTGNUqMHUPF/TBPF6ZT2y+izHTs=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20201208090743-91c4f9716eff/go.mod h1:TC5Q5FtNUwzpHNMLAkJXaxkifHwPJlZtrvnTWKIY+2M=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=
@@ -885,8 +887,6 @@ github.com/syndtr/gocapability v0.0.0-20170704070218-db04d3cc01c8/go.mod h1:hkRG
 github.com/thanos-io/thanos v0.11.0/go.mod h1:N/Yes7J68KqvmY+xM6J5CJqEvWIvKSR5sqGtmuD6wDc=
 github.com/tidwall/pretty v0.0.0-20180105212114-65a9db5fad51/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tinakurian/api v0.0.0-20210114191541-6f2eed8aebca h1:X1FWLZ4T4deQV0mX8OpK2R6V7MkNIcj/eiRrrUe9cng=
-github.com/tinakurian/api v0.0.0-20210114191541-6f2eed8aebca/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
