@@ -2049,6 +2049,10 @@ data:
                       description: The cluster in which the user is provisioned in If not
                         set then the target cluster will be picked automatically
                       type: string
+                    userid:
+                      description: The user's user ID, obtained from the identity provider
+                        from the 'sub' (subject) claim
+                      type: string
                     username:
                       description: The user's username, obtained from the identity provider.
                       type: string
