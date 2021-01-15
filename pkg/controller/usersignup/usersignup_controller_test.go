@@ -1248,10 +1248,13 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		AssertThatCounterHas(t, 2)
 
 		// A deactivated notification should have been created
-		notification := &v1alpha1.Notification{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername + "-deactivated", Namespace: userSignup.Namespace}, notification)
+		notifications := &v1alpha1.NotificationList{}
+		err = r.client.List(context.TODO(), notifications)
 		require.NoError(t, err)
-		require.Equal(t, "john-doe-deactivated", notification.Name)
+		require.Len(t, notifications.Items, 1)
+		notification := notifications.Items[0]
+		require.Contains(t, notification.Name, "john-doe-deactivated-")
+		assert.True(t, len(notification.Name) > len("john-doe-deactivated-"))
 		require.Equal(t, userSignup.Name, notification.Spec.UserID)
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
@@ -1281,8 +1284,12 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			CompliantUsername: "john-doe",
 		},
 	}
-	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "deactivated"
+	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = v1alpha1.NotificationTypeDeactivated
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+	// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
+	userSignup.Labels[v1alpha1.NotificationUserNameLabelKey] = "john-doe"
+	// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
+	userSignup.Labels[v1alpha1.NotificationTypeLabelKey] = v1alpha1.NotificationTypeDeactivated
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	t.Run("when the deactivation notification cannot be created", func(t *testing.T) {
@@ -1335,10 +1342,10 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// A deactivated notification should not have been created
-		notification := &v1alpha1.Notification{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Status.CompliantUsername + "-deactivated", Namespace: userSignup.Namespace}, notification)
-		require.Error(t, err)
-		require.Equal(t, "notifications.toolchain.dev.openshift.com \"john-doe-deactivated\" not found", err.Error())
+		notificationList := &v1alpha1.NotificationList{}
+		err = r.client.List(context.TODO(), notificationList)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(notificationList.Items))
 	})
 }
 
