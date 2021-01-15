@@ -2191,33 +2191,35 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 	defer counter.Reset()
 
 	// Confirm we have 3 forbidden prefixes by default
-	require.Len(t, config.GetForbiddenUsernamePrefixes(), 3)
-	names := []string{"-Bob", "-Dave", "Linda"}
+	require.Len(t, config.GetForbiddenUsernamePrefixes(), 4)
+	names := []string{"-Bob", "-Dave", "Linda", ""}
 
-	for i, prefix := range config.GetForbiddenUsernamePrefixes() {
+	for _, prefix := range config.GetForbiddenUsernamePrefixes() {
 		userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
 		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "not-ready"
 
-		userSignup.Spec.Username = fmt.Sprintf("%s%s", prefix, names[i])
+		for _, name := range names {
+			userSignup.Spec.Username = fmt.Sprintf("%s%s", prefix, name)
 
-		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
+			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
 
-		// when
-		_, err := r.Reconcile(req)
-		require.NoError(t, err)
+			// when
+			_, err := r.Reconcile(req)
+			require.NoError(t, err)
 
-		// then verify that the username has been prefixed - first lookup the UserSignup again
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-		require.NoError(t, err)
+			// then verify that the username has been prefixed - first lookup the UserSignup again
+			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			require.NoError(t, err)
 
-		// Lookup the MUR
-		murs := &v1alpha1.MasterUserRecordList{}
-		err = r.client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
-		require.NoError(t, err)
-		require.Len(t, murs.Items, 1)
-		mur := murs.Items[0]
-		require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
-		require.Equal(t, fmt.Sprintf("crt-%s%s", prefix, names[i]), mur.Name)
+			// Lookup the MUR
+			murs := &v1alpha1.MasterUserRecordList{}
+			err = r.client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
+			require.NoError(t, err)
+			require.Len(t, murs.Items, 1)
+			mur := murs.Items[0]
+			require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+			require.Equal(t, fmt.Sprintf("crt-%s%s", prefix, name), mur.Name)
+		}
 
 	}
 }
