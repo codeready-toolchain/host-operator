@@ -257,13 +257,25 @@ func (r *ReconcileUserSignup) isUserBanned(reqLogger logr.Logger, userSignup *to
 // If there is already one then it returns 'true' as the first returned value, but before doing that it checks if the MUR should be deleted or not
 // or if the MUR requires some migration changes or additional fixes.
 // If no MUR for the given UserSignup is found, then it returns 'false' as the first returned value.
-func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, banned bool) (bool, error) {
+func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+	banned bool) (bool, error) {
 	// List all MasterUserRecord resources that have a UserID label equal to the UserSignup.Name
 	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 	opts := client.MatchingLabels(labels)
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
 	if err := r.client.List(context.TODO(), murList, opts); err != nil {
-		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "Failed to list MasterUserRecords")
+		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err,
+			"Failed to list MasterUserRecords by user-id")
+	}
+
+	// If we didn't find any resources, it could be that we're using the new 'owner' label. Query using that instead.
+	if len(murList.Items) == 0 {
+		labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+		opts = client.MatchingLabels(labels)
+		if err := r.client.List(context.TODO(), murList, opts); err != nil {
+			return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err,
+				"Failed to list MasterUserRecords by owner")
+		}
 	}
 
 	murs := murList.Items
@@ -439,7 +451,8 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 			}
 			// If there was a NotFound error looking up the mur, it means we found an available name
 			return transformed, nil
-		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] == instance.Name {
+		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey] == instance.Name ||
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] == instance.Name {
 			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
 			return "", fmt.Errorf(fmt.Sprintf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up.", mur.Name, instance.Name))
@@ -533,8 +546,8 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: v1.ObjectMeta{
-			GenerateName:fmt.Sprintf("%s-%s-", userSignup.Status.CompliantUsername, toolchainv1alpha1.NotificationTypeDeactivated),
-			Namespace: userSignup.Namespace,
+			GenerateName: fmt.Sprintf("%s-%s-", userSignup.Status.CompliantUsername, toolchainv1alpha1.NotificationTypeDeactivated),
+			Namespace:    userSignup.Namespace,
 			Labels: map[string]string{
 				// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
 				toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
