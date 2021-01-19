@@ -260,6 +260,8 @@ func (r *ReconcileUserSignup) isUserBanned(reqLogger logr.Logger, userSignup *to
 func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	banned bool) (bool, error) {
 	// List all MasterUserRecord resources that have a UserID label equal to the UserSignup.Name
+	// TODO remove this section (and leave the next section) once we can confirm there are no MUR resources using
+	// this deprecated label
 	labels := map[string]string{toolchainv1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
 	opts := client.MatchingLabels(labels)
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
