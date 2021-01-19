@@ -77,7 +77,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	require.Len(t, murs.Items, 1)
 	mur := murs.Items[0]
 	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 	assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
 	assert.Equal(t, []v1alpha1.NSTemplateSetNamespace{
@@ -135,7 +135,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 
 	mur := murs.Items[0]
 	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 	assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
 	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 3)
@@ -217,7 +217,8 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 	userSignup.Annotations = map[string]string{}
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), basicNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t,
+		test.AutomaticApproval().Enabled()), basicNSTemplateTier)
 
 	// when
 	_, err := r.Reconcile(req)
@@ -509,7 +510,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	mur := murs.Items[0]
 
 	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -590,7 +591,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	mur := murs.Items[0]
 
 	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -720,7 +721,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 
 	mur := murs.Items[0]
 	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 	assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
 	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 3)
@@ -1008,7 +1009,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
+			Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
 		},
 	}
 
@@ -1104,7 +1105,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		mur = &v1alpha1.MasterUserRecord{}
 		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: test.HostOperatorNs, Name: instance.Status.CompliantUsername}, mur)
 		require.NoError(t, err)
-		require.Equal(t, instance.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+		require.Equal(t, instance.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 
 		var cond *v1alpha1.Condition
 		for _, condition := range instance.Status.Conditions {
@@ -1167,7 +1168,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		InitializeCounter(t, 1)
 		defer counter.Reset()
 		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
-		mur.Labels = map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+		mur.Labels = map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), basicNSTemplateTier)
 
@@ -2217,7 +2218,7 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, murs.Items, 1)
 			mur := murs.Items[0]
-			require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+			require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 			require.Equal(t, fmt.Sprintf("crt-%s%s", prefix, name), mur.Name)
 		}
 
@@ -2250,7 +2251,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo-old",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
+			Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
 		},
 	}
 
@@ -2268,7 +2269,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 	mur := murs.Items[0]
-	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Equal(t, mur.Name, "foo-old")
 	require.Equal(t, userSignup.Status.CompliantUsername, "foo-old")
 
@@ -2291,7 +2292,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	// the MUR name should match the new CompliantUserName
 	assert.Equal(t, "foo", mur.Name)
 	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordUserIDLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 	assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
 	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 3)

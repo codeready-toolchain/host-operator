@@ -185,7 +185,7 @@ func newExpectedMur(tier v1alpha1.NSTemplateTier) v1alpha1.MasterUserRecord {
 			Name:      "johny",
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
-				"toolchain.dev.openshift.com/user-id":              "123456789",
+				"toolchain.dev.openshift.com/owner":                "123456789",
 				nstemplatetier.TemplateTierHashLabelKey(tier.Name): hash,
 			},
 		},
