@@ -56,7 +56,7 @@ func newMasterUserRecord(nstemplateTier *toolchainv1alpha1.NSTemplateTier, name,
 		return nil, err
 	}
 	labels := map[string]string{
-		toolchainv1alpha1.MasterUserRecordUserIDLabelKey:             userSignupName,
+		toolchainv1alpha1.MasterUserRecordOwnerLabelKey:              userSignupName,
 		nstemplatetier.TemplateTierHashLabelKey(nstemplateTier.Name): hash,
 	}
 

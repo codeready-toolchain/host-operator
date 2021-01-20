@@ -108,6 +108,7 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 		logger.Error(err, "unable to get MasterUserRecord")
 		return reconcile.Result{}, err
 	}
+
 	// If the UserAccount is not being deleted, create or synchronize UserAccounts.
 	if !coputil.IsBeingDeleted(mur) {
 		// Add the finalizer if it is not present
