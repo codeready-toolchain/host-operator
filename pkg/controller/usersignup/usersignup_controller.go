@@ -270,14 +270,31 @@ func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, us
 			"Failed to list MasterUserRecords by user-id")
 	}
 
-	// If we didn't find any resources, it could be that we're using the new 'owner' label. Query using that instead.
-	if len(murList.Items) == 0 {
-		labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
-		opts = client.MatchingLabels(labels)
-		if err := r.client.List(context.TODO(), murList, opts); err != nil {
-			return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err,
-				"Failed to list MasterUserRecords by owner")
+	// For each mur found...
+	for _, mur := range murList.Items {
+		// If the MUR contains the old label...
+		if val, ok := mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey]; ok {
+			// And doesn't contain the new label...
+			if _, ok := mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey]; !ok {
+				// Then copy the old label value to the new label and delete the old label
+				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = val
+				delete(mur.Labels, toolchainv1alpha1.MasterUserRecordUserIDLabelKey)
+
+				err := r.client.Update(context.TODO(), &mur)
+				if err != nil {
+					return false, err
+				}
+				return true, nil
+			}
 		}
+	}
+
+	// Now query with the new 'owner' label
+	labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+	opts = client.MatchingLabels(labels)
+	if err := r.client.List(context.TODO(), murList, opts); err != nil {
+		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err,
+			"Failed to list MasterUserRecords by owner")
 	}
 
 	murs := murList.Items

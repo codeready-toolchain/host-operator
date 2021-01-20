@@ -109,20 +109,6 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
-	// TODO remove this code block once all MUR resources have had their labels updated
-	migrated, err := r.migrateLabels(mur)
-	if err != nil {
-		// I think it's overkill to define a new status reason here?  At least log the error for now
-		logger.Error(err, "unable to migrate deprecated MUR labels")
-		return reconcile.Result{}, err
-	}
-
-	if migrated {
-		return reconcile.Result{
-			Requeue: true,
-		}, nil
-	}
-
 	// If the UserAccount is not being deleted, create or synchronize UserAccounts.
 	if !coputil.IsBeingDeleted(mur) {
 		// Add the finalizer if it is not present
@@ -152,23 +138,6 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 	}
 
 	return reconcile.Result{}, nil
-}
-
-// migrateLabels is a temporary function that will replace deprecated labels with non-deprecated labels
-// Deprecated: Remove this function once all deprecated labels have been migrated
-func (r *ReconcileMasterUserRecord) migrateLabels(mur *toolchainv1alpha1.MasterUserRecord) (bool, error) {
-	if val, ok := mur.Labels[toolchainv1alpha1.MasterUserRecordUserIDLabelKey]; ok {
-		mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = val
-		delete(mur.Labels, toolchainv1alpha1.MasterUserRecordUserIDLabelKey)
-
-		err := r.client.Update(context.TODO(), mur)
-		if err != nil {
-			return false, err
-		}
-		return true, nil
-	}
-
-	return false, nil
 }
 
 func (r *ReconcileMasterUserRecord) addFinalizer(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, finalizer string) error {

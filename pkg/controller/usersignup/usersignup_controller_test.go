@@ -1053,8 +1053,8 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
-				v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String(),
-				"toolchain.dev.openshift.com/approved":  "true",
+				v1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String(),
+				"toolchain.dev.openshift.com/approved": "true",
 			},
 		},
 	}
@@ -1540,8 +1540,8 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 		defer counter.Reset()
 		mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(test.HostOperatorNs))
 		mur.Labels = map[string]string{
-			v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name,
-			v1alpha1.UserSignupStateLabelKey:        "approved",
+			v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
+			v1alpha1.UserSignupStateLabelKey:       "approved",
 		}
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), basicNSTemplateTier)
@@ -1746,7 +1746,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	}
 
 	mur := murtest.NewMasterUserRecord(t, "foo", murtest.MetaNamespace(test.HostOperatorNs))
-	mur.Labels = map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+	mur.Labels = map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, bannedUser, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), basicNSTemplateTier)
 
@@ -1872,7 +1872,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
-	mur.Labels = map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name}
+	mur.Labels = map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 	r, req, clt := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), basicNSTemplateTier)
 
@@ -1943,7 +1943,7 @@ func TestDeathBy100Signups(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
+			Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String()},
 		},
 	})
 
@@ -1952,7 +1952,7 @@ func TestDeathBy100Signups(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("foo-%d", i),
 				Namespace: test.HostOperatorNs,
-				Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: uuid.NewV4().String()},
+				Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String()},
 			},
 		})
 	}
@@ -2010,7 +2010,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
+			Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
 		},
 	}
 
@@ -2019,7 +2019,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "bar",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{v1alpha1.MasterUserRecordUserIDLabelKey: userSignup.Name},
+			Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
 		},
 	}
 
