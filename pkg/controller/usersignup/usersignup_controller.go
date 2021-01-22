@@ -145,6 +145,15 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+
+	// #### TEMPORARY CODE ####
+	// TODO remove this section once all of the UserSignup.Spec.UserID values have been populated
+	if instance.Spec.UserID == "" {
+		// If the UserID is not set, set it to the resource name and update, to cause another reconcile
+		instance.Spec.UserID = instance.Name
+		return reconcile.Result{}, r.client.Update(context.TODO(), instance)
+	}
+
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 	if instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
@@ -519,7 +528,8 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			"Error generating compliant username for %s", userSignup.Spec.Username)
 	}
 
-	mur, err := newMasterUserRecord(nstemplateTier, compliantUsername, userSignup.Namespace, targetCluster, userSignup.Name)
+	mur, err := newMasterUserRecord(nstemplateTier, compliantUsername, userSignup.Namespace, targetCluster,
+		userSignup.Name, userSignup.Spec.UserID)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord %s", mur.Name)

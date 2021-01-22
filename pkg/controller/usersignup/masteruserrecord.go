@@ -39,7 +39,8 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 	return changed, nil
 }
 
-func newMasterUserRecord(nstemplateTier *toolchainv1alpha1.NSTemplateTier, name, namespace, targetCluster, userSignupName string) (*toolchainv1alpha1.MasterUserRecord, error) {
+func newMasterUserRecord(nstemplateTier *toolchainv1alpha1.NSTemplateTier, name, namespace, targetCluster,
+	userSignupName, userID string) (*toolchainv1alpha1.MasterUserRecord, error) {
 	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 		{
 			TargetCluster: targetCluster,
@@ -68,7 +69,7 @@ func newMasterUserRecord(nstemplateTier *toolchainv1alpha1.NSTemplateTier, name,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserAccounts: userAccounts,
-			UserID:       userSignupName,
+			UserID:       userID,
 		},
 	}
 	return mur, nil
