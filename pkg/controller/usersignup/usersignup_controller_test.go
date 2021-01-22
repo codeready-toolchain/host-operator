@@ -1267,6 +1267,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "john.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
+			UserID:      "UserID123",
 			Username:    "john.doe@redhat.com",
 			Deactivated: true,
 		},
@@ -1297,7 +1298,8 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		// given
 		InitializeCounter(t, 2)
 		defer counter.Reset()
-		r, req, cl := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), basicNSTemplateTier)
+		r, req, cl := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup,
+			NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), basicNSTemplateTier)
 
 		cl.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 			switch obj.(type) {
@@ -1355,6 +1357,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "john.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
+			UserID:      "UserID123",
 			Username:    "john.doe@redhat.com",
 			Deactivated: false,
 		},
@@ -1511,6 +1514,7 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
+			UserID:      "UserID123",
 			Username:    "edward.jones@redhat.com",
 			Deactivated: true,
 		},
@@ -1848,6 +1852,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
+			UserID:      "UserID123",
 			Username:    "alice.mayweather.doe@redhat.com",
 			Deactivated: true,
 		},
@@ -2320,7 +2325,8 @@ func TestMigrateMur(t *testing.T) {
 	InitializeCounter(t, 0)
 	defer counter.Reset()
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
-	mur, err := newMasterUserRecord(basicNSTemplateTier, "foo", test.HostOperatorNs, "east", userSignup.Name)
+	mur, err := newMasterUserRecord(basicNSTemplateTier, "foo", test.HostOperatorNs, "east",
+		userSignup.Name, userSignup.Spec.UserID)
 	require.NoError(t, err)
 
 	// set NSLimit and NSTemplateSet to be empty

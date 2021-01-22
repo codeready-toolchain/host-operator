@@ -61,6 +61,7 @@ func NewUserSignup(modifiers ...UserSignupModifier) *v1alpha1.UserSignup {
 	signup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "foo@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
+			UserID:   "UserID123",
 			Username: "foo@redhat.com",
 		},
 	}
