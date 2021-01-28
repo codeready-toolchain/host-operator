@@ -17,7 +17,6 @@ objects:
         requests.memory: 7Gi
         requests.storage: 15Gi
         requests.ephemeral-storage: 7Gi
-        count/persistentvolumeclaims: "5"
         count/pods: "30"
         count/replicasets.apps: "30"
     selector:

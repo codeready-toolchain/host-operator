@@ -385,15 +385,9 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
 	switch tier {
-	case "basic":
+	case "basic", "basicdeactivationdisabled":
 		assert.Len(t, actual.Objects, 4)
 		containsObj(t, actual, clusterResourceQuotaObjBasic("10000m", "1750m", "7Gi"))
-		containsObj(t, actual, idlerObj("${USERNAME}-dev", "28800"))
-		containsObj(t, actual, idlerObj("${USERNAME}-code", "28800"))
-		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
-	case "basicdeactivationdisabled":
-		assert.Len(t, actual.Objects, 4)
-		containsObj(t, actual, clusterResourceQuotaObj("10000m", "1750m", "7Gi"))
 		containsObj(t, actual, idlerObj("${USERNAME}-dev", "28800"))
 		containsObj(t, actual, idlerObj("${USERNAME}-code", "28800"))
 		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
@@ -537,7 +531,7 @@ func clusterResourceQuotaObj(cpuLimit, cpuRequest, memoryLimit string) string {
 }
 
 func clusterResourceQuotaObjBasic(cpuLimit, cpuRequest, memoryLimit string) string {
-	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"count/persistentvolumeclaims":"5","count/pods":"30","count/replicasets.apps":"30","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"15Gi"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
+	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"count/pods":"30","count/replicasets.apps":"30","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"15Gi"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
 }
 
 func idlerObj(name, timeout string) string { //nolint:unparam
