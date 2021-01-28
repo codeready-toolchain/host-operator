@@ -20,19 +20,6 @@ objects:
         count/persistentvolumeclaims: "5"
         count/pods: "30"
         count/replicasets.apps: "30"
-        count/replicationcontrollers: "30"
-        count/deployments.apps: "30"
-        count/deploymentconfigs.apps: "30"
-        count/daemonsets.apps: "30"
-        count/statefulsets.apps: "30"
-        count/jobs.batch: "30"
-        count/cronjobs.batch: "30"
-        count/buildconfigs.build.openshift.io: "10"
-        count/routes.route.openshift.io: "10"
-        count/ingresses.extensions: "10"
-        count/services: "10"
-        count/secrets: "100"
-        count/configmaps: "100"
     selector:
       annotations:
         openshift.io/requester: ${USERNAME}
