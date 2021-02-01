@@ -392,10 +392,8 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		containsObj(t, actual, idlerObj("${USERNAME}-code", "28800"))
 		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
 	case "team":
-		assert.Len(t, actual.Objects, 3) // No Idler for -code namespace (there is no -code namespace in team tier)
+		assert.Len(t, actual.Objects, 1) // No Idlers
 		containsObj(t, actual, clusterResourceQuotaObj("10000m", "2000m", "15Gi"))
-		containsObj(t, actual, idlerObj("${USERNAME}-dev", "28800"))
-		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
 	case "advanced":
 		assert.Len(t, actual.Objects, 1) // No Idlers
 		containsObj(t, actual, clusterResourceQuotaObj("10000m", "1750m", "7Gi"))
