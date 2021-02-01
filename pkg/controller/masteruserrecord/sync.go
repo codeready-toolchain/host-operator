@@ -186,7 +186,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 		notification := &toolchainv1alpha1.Notification{
 			ObjectMeta: v1.ObjectMeta{
 				GenerateName: fmt.Sprintf("%s-%s-", s.record.Name, toolchainv1alpha1.NotificationTypeProvisioned),
-				Namespace: s.record.Namespace,
+				Namespace:    s.record.Namespace,
 				Labels: map[string]string{
 					// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
 					toolchainv1alpha1.NotificationUserNameLabelKey: s.record.Name,
