@@ -65,7 +65,7 @@ func TestReconcile(t *testing.T) {
 			expectedTime := (time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour) - timeSinceProvisioned
 			actualTime := res.RequeueAfter
 			diff := expectedTime - actualTime
-			require.Truef(t, diff > 0 && diff < time.Second, "expectedTime: '%v' is not within 1 second of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
+			require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
 			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 
@@ -83,7 +83,7 @@ func TestReconcile(t *testing.T) {
 			expectedTime := (time.Duration(expectedDeactivationTimeoutOtherTier*24) * time.Hour) - timeSinceProvisioned
 			actualTime := res.RequeueAfter
 			diff := expectedTime - actualTime
-			require.Truef(t, diff > 0 && diff < time.Second, "expectedTime: '%v' is not within 1 second of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
+			require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
 			assertThatUserSignupDeactivated(t, cl, username, false)
 		})
 
