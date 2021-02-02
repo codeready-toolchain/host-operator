@@ -2197,8 +2197,8 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 	defer counter.Reset()
 
 	// Confirm we have 3 forbidden prefixes by default
-	require.Len(t, config.GetForbiddenUsernamePrefixes(), 4)
-	names := []string{"-Bob", "-Dave", "Linda", ""}
+	require.Len(t, config.GetForbiddenUsernamePrefixes(), 5)
+	names := []string{"-Bob", "-Dave", "Linda", "admin", ""}
 
 	for _, prefix := range config.GetForbiddenUsernamePrefixes() {
 		userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
