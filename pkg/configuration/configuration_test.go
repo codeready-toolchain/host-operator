@@ -294,9 +294,10 @@ func TestForbiddenUsernamePrefixesHaveCorrectDefaults(t *testing.T) {
 	defer restore()
 
 	config := getDefaultConfiguration(t)
-	require.Len(t, config.GetForbiddenUsernamePrefixes(), 4)
+	require.Len(t, config.GetForbiddenUsernamePrefixes(), 5)
 	require.Contains(t, config.GetForbiddenUsernamePrefixes(), "openshift")
 	require.Contains(t, config.GetForbiddenUsernamePrefixes(), "kube")
 	require.Contains(t, config.GetForbiddenUsernamePrefixes(), "default")
 	require.Contains(t, config.GetForbiddenUsernamePrefixes(), "redhat")
+	require.Contains(t, config.GetForbiddenUsernamePrefixes(), "sandbox")
 }
