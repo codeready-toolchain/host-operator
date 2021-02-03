@@ -20,7 +20,7 @@ push-to-quay-staging: generate-cd-release-manifests push-bundle-and-index-image 
 .PHONY: generate-cd-release-manifests
 ## Generates a new version of operator manifests
 generate-cd-release-manifests:
-	$(eval CD_GENERATE_PARAMS = -pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service/ -qn ${QUAY_NAMESPACE} -td ${TMP_DIR})
+	$(eval CD_GENERATE_PARAMS = -pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service -qn ${QUAY_NAMESPACE} -td ${TMP_DIR})
 ifneq ("$(wildcard ../api/$(PATH_TO_CD_GENERATE_FILE))","")
 	@echo "generating manifests for CD using script from local api repo..."
 	../api/${PATH_TO_CD_GENERATE_FILE} ${CD_GENERATE_PARAMS}
@@ -32,7 +32,7 @@ endif
 .PHONY: push-manifests-as-app
 ## Pushes generated manifests as an application to quay
 push-manifests-as-app:
-	$(eval PUSH_APP_PARAMS = -pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service/ -qn ${QUAY_NAMESPACE} -ch nightly -td ${TMP_DIR})
+	$(eval PUSH_APP_PARAMS = -pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service -qn ${QUAY_NAMESPACE} -ch nightly -td ${TMP_DIR})
 ifneq ("$(wildcard ../api/$(PATH_TO_PUSH_APP_FILE))","")
 	@echo "pushing to quay in nightly channel using script from local api repo..."
 	../api/${PATH_TO_PUSH_APP_FILE} ${PUSH_APP_PARAMS}
@@ -44,7 +44,7 @@ endif
 .PHONY: push-bundle-and-index-image
 ## Pushes generated manifests as a bundle image to quay and adds is to the image index
 push-bundle-and-index-image:
-	$(eval PUSH_BUNDLE_PARAMS = -pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service/ -qn ${QUAY_NAMESPACE} -ch staging -td ${TMP_DIR} -ib ${IMAGE_BUILDER} -im ${INDEX_IMAGE})
+	$(eval PUSH_BUNDLE_PARAMS = -pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service -qn ${QUAY_NAMESPACE} -ch staging -td ${TMP_DIR} -ib ${IMAGE_BUILDER} -im ${INDEX_IMAGE})
 ifneq ("$(wildcard ../api/$(PATH_TO_BUNDLE_FILE))","")
 	@echo "pushing to quay in staging channel using script from local api repo..."
 	../api/${PATH_TO_BUNDLE_FILE} ${PUSH_BUNDLE_PARAMS}
