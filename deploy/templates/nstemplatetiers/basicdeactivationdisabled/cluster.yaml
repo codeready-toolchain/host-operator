@@ -17,7 +17,7 @@ objects:
         requests.memory: 7Gi
         requests.storage: 15Gi
         requests.ephemeral-storage: 7Gi
-        count/pods: "30"
+        count/pods: "50"
         count/replicasets.apps: "30"
     selector:
       annotations:
