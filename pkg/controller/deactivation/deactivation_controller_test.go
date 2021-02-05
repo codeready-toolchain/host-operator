@@ -56,6 +56,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			murProvisionedTime := metav1.Now()
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
 			// when
 			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
@@ -74,6 +75,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			murProvisionedTime := metav1.Now()
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar)
 			// when
 			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
@@ -92,6 +94,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			murProvisionedTime := metav1.Now()
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, noDeactivationTier, mur, userSignupFoobar)
 			// when
 			res, err := r.Reconcile(req)
@@ -123,6 +126,7 @@ func TestReconcile(t *testing.T) {
 			defer restore()
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupRedhat))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupRedhat.Name
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupRedhat)
 			// when
 			res, err := r.Reconcile(req)
@@ -141,6 +145,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
 			// when
 			res, err := r.Reconcile(req)
@@ -166,6 +171,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutOtherTier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar)
 			// when
 			res, err := r.Reconcile(req)
@@ -186,6 +192,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			murProvisionedTime := metav1.Now()
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, mur, userSignupFoobar)
 			// when
 			_, err := r.Reconcile(req)
@@ -200,6 +207,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
 			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				_, ok := obj.(*toolchainv1alpha1.UserSignup)
@@ -227,6 +235,7 @@ func TestReconcile(t *testing.T) {
 			// given
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
 			cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				_, ok := obj.(*toolchainv1alpha1.UserSignup)
@@ -294,6 +303,7 @@ func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
 			Username:      email,
 			Approved:      true,
 			TargetCluster: "east",
+			UserID:        username,
 		},
 	}
 }
