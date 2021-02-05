@@ -195,7 +195,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 				},
 			},
 			Spec: toolchainv1alpha1.NotificationSpec{
-				UserID:   s.record.Spec.UserID,
+				UserID:   s.record.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
 				Template: notificationtemplates.UserProvisioned.Name,
 			},
 		}
