@@ -195,6 +195,8 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 				},
 			},
 			Spec: toolchainv1alpha1.NotificationSpec{
+				// The UserID property actually refers to the UserSignup resource name.  This will be renamed
+				// (or removed) in a future PR
 				UserID:   s.record.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
 				Template: notificationtemplates.UserProvisioned.Name,
 			},
