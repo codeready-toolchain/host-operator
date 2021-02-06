@@ -3,6 +3,7 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
+	"github.com/gofrs/uuid"
 	"testing"
 	"time"
 
@@ -677,6 +678,9 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			murtest.AdditionalAccounts("member2-cluster"))
 		userAccount := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
+		owner, err := uuid.NewV4()
+		require.NoError(t, err)
+		mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = owner.String()
 		mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
 			{
 				Cluster:           toolchainv1alpha1.Cluster{Name: test.MemberClusterName},
@@ -700,7 +704,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			ClusterClient("member2-cluster", memberClient2))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
+		_, err = cntrl.Reconcile(newMurRequest(mur))
 
 		// then
 		// the original error status should be cleaned
@@ -718,7 +722,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		require.Len(t, notifications.Items, 1)
 		notification := notifications.Items[0]
 		require.NoError(t, err)
-		assert.Equal(t, userAccount.Spec.UserID, notification.Spec.UserID)
+		assert.Equal(t, owner.String(), notification.Spec.UserID)
 		assert.Equal(t, "userprovisioned", notification.Spec.Template)
 		assert.Contains(t, notification.Name, userAccount.Name+"-provisioned-")
 		assert.True(t, len(notification.Name) > len(userAccount.Name+"-provisioned-"))

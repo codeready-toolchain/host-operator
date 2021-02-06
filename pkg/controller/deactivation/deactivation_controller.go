@@ -103,7 +103,7 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 	usersignup := &toolchainv1alpha1.UserSignup{}
 	if err := r.client.Get(context.TODO(), types.NamespacedName{
 		Namespace: mur.Namespace,
-		Name:      mur.Spec.UserID,
+		Name:      mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
 	}, usersignup); err != nil {
 		// Error getting usersignup - requeue the request.
 		return reconcile.Result{}, err
