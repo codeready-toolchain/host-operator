@@ -6,7 +6,7 @@ objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}
+    name: for-${USERNAME}-kube
   spec:
     quota:
       hard:
@@ -17,8 +17,44 @@ objects:
         requests.memory: 7Gi
         requests.storage: 15Gi
         requests.ephemeral-storage: 7Gi
-        count/pods: "50"
+        count/persistentvolumeclaims: "5"
+        count/pods: "30"
+        count/replicationcontrollers: "30"
+        count/deployments.apps: "30"
+        count/daemonsets.apps: "30"
+        count/statefulsets.apps: "30"
+        count/jobs.batch: "30"
+        count/cronjobs.batch: "30"
+        count/ingresses.extensions: "10"
+        count/services: "10"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-openshift
+  spec:
+    quota:
+      hard:
+        count/deploymentconfigs.apps: "30"
+        count/buildconfigs.build.openshift.io: "10"
+        count/routes.route.openshift.io: "10"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-common
+  spec:
+    quota:
+      hard:
         count/replicasets.apps: "30"
+        count/secrets: "100"
+        count/configmaps: "100"
     selector:
       annotations:
         openshift.io/requester: ${USERNAME}
