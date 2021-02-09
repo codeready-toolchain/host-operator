@@ -304,7 +304,7 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 		}
 		labels[toolchainv1alpha1.ProviderLabelKey] = toolchainv1alpha1.ProviderLabelValue
 
-		updated, err := applyCl.CreateOrUpdateObject(tier, true, nil)
+		updated, err := applyCl.ApplyObject(tier, commonclient.ForceUpdate(true))
 		if err != nil {
 			return errors.Wrapf(err, "unable to create or update the '%s' NSTemplateTier", tierName)
 		}
