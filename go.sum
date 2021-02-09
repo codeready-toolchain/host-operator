@@ -142,6 +142,8 @@ github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE
 github.com/codeready-toolchain/api v0.0.0-20201014170554-ba7a98533167/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
 github.com/codeready-toolchain/api v0.0.0-20210203025716-45f19e752101 h1:oKHlw3jQXcMX8AbAlCdzn8ZS58jnGtjT7ItG5oaistM=
 github.com/codeready-toolchain/api v0.0.0-20210203025716-45f19e752101/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20210209125948-7a9e8c9e4ee6 h1:WyhQHwHbn1owc2kQHdujtUvUCALF1rqrWVt7s6z7rWg=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20210209125948-7a9e8c9e4ee6/go.mod h1:F5agtgfX0aEhhLwQC9l3kdpUiaWovOaSouhabpeIxzo=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=
 github.com/containerd/console v0.0.0-20180822173158-c12b1e7919c1/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.2.7/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=
