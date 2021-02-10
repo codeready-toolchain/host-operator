@@ -141,7 +141,7 @@ func (r *ReconcileRegistrationService) Reconcile(request reconcile.Request) (rec
 	// create all objects that are within the template, and update only when the object has changed.
 	var updated []string
 	for _, toolchainObject := range toolchainObjects {
-		createdOrUpdated, err := cl.ApplyObject(toolchainObject.GetRuntimeObject())
+		createdOrUpdated, err := cl.ApplyObject(toolchainObject.GetRuntimeObject(), applycl.SetOwner(regService))
 		if err != nil {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, regService, r.setStatusFailed(toolchainv1alpha1.RegistrationServiceDeployingFailedReason), err, "cannot deploy registration service template")
 		}
