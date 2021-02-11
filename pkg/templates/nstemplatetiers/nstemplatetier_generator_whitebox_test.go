@@ -435,18 +435,17 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// LimitRange
 	cpuLimit := "500m"
-	memoryLimit := "512Mi"
+	memoryLimit := "750Mi"
 	memoryRequest := "64Mi"
 	cpuRequest := "10m"
 	if kind == "code" {
 		cpuLimit = "1000m"
 		cpuRequest = "60m"
 		memoryRequest = "307Mi"
+		memoryLimit = "512Mi"
 	}
 	if tier == "team" {
 		memoryLimit = "1Gi"
-	} else if kind == "dev" {
-		memoryLimit = "750Mi"
 	}
 	containsObj(t, actual, limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest))
 
