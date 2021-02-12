@@ -39,9 +39,9 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			require.NoError(t, err)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 4)
+			require.Len(t, tmpls, 5)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "basic", "team", "basicdeactivationdisabled"} {
+			for _, tier := range []string{"advanced", "basic", "team", "basicdeactivationdisabled", "test"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"code", "dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
@@ -186,6 +186,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 				"basicdeactivationdisabled": 0,
 				"advanced":                  0,
 				"team":                      0,
+				"test":                      30,
 			}
 
 			// when
@@ -420,8 +421,10 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 		} else {
 			require.Len(t, actual.Objects, 9)
 		}
+	case "test":
+		return // Don't care what objects are defined in the test tier
 	default:
-		require.Fail(t, "unexpected tier: '%s'", tier)
+		require.Fail(t, fmt.Sprintf("unexpected tier: %s", tier))
 	}
 
 	// Namespace
@@ -432,18 +435,17 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// LimitRange
 	cpuLimit := "500m"
-	memoryLimit := "512Mi"
+	memoryLimit := "750Mi"
 	memoryRequest := "64Mi"
 	cpuRequest := "10m"
 	if kind == "code" {
 		cpuLimit = "1000m"
 		cpuRequest = "60m"
 		memoryRequest = "307Mi"
+		memoryLimit = "512Mi"
 	}
 	if tier == "team" {
 		memoryLimit = "1Gi"
-	} else if kind == "dev" {
-		memoryLimit = "750Mi"
 	}
 	containsObj(t, actual, limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest))
 
