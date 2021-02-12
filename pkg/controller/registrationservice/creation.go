@@ -29,6 +29,6 @@ func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace 
 			EnvironmentVariables: envs,
 		}}
 	commonclient := commonclient.NewApplyClient(client, s)
-	_, err := commonclient.CreateOrUpdateObject(regService, false, nil)
+	_, err := commonclient.ApplyObject(regService)
 	return err
 }
