@@ -11,6 +11,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 
 	. "github.com/codeready-toolchain/host-operator/test"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
@@ -2183,8 +2184,8 @@ func TestTransformUsername(t *testing.T) {
 var dnsRegExp = "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
 
 func assertName(t *testing.T, expected, username string) {
-	assert.Regexp(t, dnsRegExp, transformUsername(username))
-	assert.Equal(t, expected, transformUsername(username))
+	assert.Regexp(t, dnsRegExp, usersignup.TransformUsername(username))
+	assert.Equal(t, expected, usersignup.TransformUsername(username))
 }
 
 func TestUsernameWithForbiddenPrefix(t *testing.T) {

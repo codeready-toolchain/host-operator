@@ -19,6 +19,6 @@ func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace,
 		Spec: v1alpha1.ToolchainStatusSpec{},
 	}
 	cl := commonclient.NewApplyClient(client, s)
-	_, err := cl.CreateOrUpdateObject(toolchainStatus, false, nil)
+	_, err := cl.ApplyObject(toolchainStatus, commonclient.ForceUpdate(false))
 	return err
 }

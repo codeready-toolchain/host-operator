@@ -66,9 +66,9 @@ func TestReconcileRegistrationService(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder, reqService)
 		cclient := commonclient.NewApplyClient(service.client, service.scheme)
-		_, err := cclient.CreateOrUpdateObject(objs[0].GetRuntimeObject().DeepCopyObject(), false, nil)
+		_, err := cclient.ApplyObject(objs[0].GetRuntimeObject().DeepCopyObject(), commonclient.ForceUpdate(false))
 		require.NoError(t, err)
-		_, err = cclient.CreateOrUpdateObject(objs[1].GetRuntimeObject().DeepCopyObject(), false, nil)
+		_, err = cclient.ApplyObject(objs[1].GetRuntimeObject().DeepCopyObject(), commonclient.ForceUpdate(false))
 		require.NoError(t, err)
 		fakeClient := service.client.(*test.FakeClient)
 		fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
@@ -98,12 +98,12 @@ func TestReconcileRegistrationService(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder)
 		client := commonclient.NewApplyClient(service.client, service.scheme)
-		_, err := client.CreateOrUpdateObject(objs[0].GetRuntimeObject().DeepCopyObject(), false, nil)
+		_, err := client.ApplyObject(objs[0].GetRuntimeObject().DeepCopyObject(), commonclient.ForceUpdate(false))
 		require.NoError(t, err)
-		_, err = client.CreateOrUpdateObject(objs[1].GetRuntimeObject().DeepCopyObject(), false, nil)
+		_, err = client.ApplyObject(objs[1].GetRuntimeObject().DeepCopyObject(), commonclient.ForceUpdate(false))
 		require.NoError(t, err)
 		reqService := newRegistrationService(test.HostOperatorNs, "quay.io/rh/registration-service:v0.1", "", 1)
-		_, err = client.CreateOrUpdateObject(reqService, false, nil)
+		_, err = client.ApplyObject(reqService, commonclient.ForceUpdate(false))
 		require.NoError(t, err)
 
 		// when
