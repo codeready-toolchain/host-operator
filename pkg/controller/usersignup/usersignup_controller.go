@@ -5,6 +5,8 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
+	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -14,13 +16,12 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -407,6 +408,47 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 	return nstemplateTier, err
 }
 
+func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
+	replaced := usersignup.TransformUsername(instance.Spec.Username)
+
+	// Check for any forbidden prefixes
+	for _, prefix := range r.crtConfig.GetForbiddenUsernamePrefixes() {
+		if strings.HasPrefix(replaced, prefix) {
+			replaced = fmt.Sprintf("%s%s", "crt-", replaced)
+			break
+		}
+	}
+
+	validationErrors := validation.IsQualifiedName(replaced)
+	if len(validationErrors) > 0 {
+		return "", fmt.Errorf(fmt.Sprintf("transformed username [%s] is invalid", replaced))
+	}
+
+	transformed := replaced
+
+	for i := 2; i < 101; i++ { // No more than 100 attempts to find a vacant name
+		mur := &toolchainv1alpha1.MasterUserRecord{}
+		// Check if a MasterUserRecord exists with the same transformed name
+		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: transformed}
+		err := r.client.Get(context.TODO(), namespacedMurName, mur)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return "", err
+			}
+			// If there was a NotFound error looking up the mur, it means we found an available name
+			return transformed, nil
+		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] == instance.Name {
+			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
+			// Return an error here and allow the reconcile() function to pick it up on the next loop
+			return "", fmt.Errorf(fmt.Sprintf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up.", mur.Name, instance.Name))
+		}
+
+		transformed = fmt.Sprintf("%s-%d", replaced, i)
+	}
+
+	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
+}
+
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
 func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string,
 	nstemplateTier *toolchainv1alpha1.NSTemplateTier, logger logr.Logger) error {
@@ -414,7 +456,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	// TODO Update the MasterUserRecord with NSTemplateTier values
 	// SEE https://jira.coreos.com/browse/CRT-74
 
-	compliantUsername, err := usersignup.GenerateCompliantUsername(userSignup,  r.client, r.crtConfig.GetForbiddenUsernamePrefixes())
+	compliantUsername, err := r.generateCompliantUsername(userSignup)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error generating compliant username for %s", userSignup.Spec.Username)
