@@ -64,6 +64,9 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 
 func newRegistrationService(namespace, image, env string, replicas int) *v1alpha1.RegistrationService {
 	return &v1alpha1.RegistrationService{
+		TypeMeta: metav1.TypeMeta{
+			Kind: "RegistrationService",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "registration-service",

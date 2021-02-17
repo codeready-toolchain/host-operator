@@ -16,7 +16,6 @@ import (
 	tmplv1 "github.com/openshift/api/template/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -50,14 +49,12 @@ func TestReconcileRegistrationService(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.Requeue)
 		assert.Equal(t, time.Second, result.RequeueAfter)
-		assertObjectExists(t, service.client, &v1.ServiceAccount{})
-
-		assertObjectExists(t, service.client, &v1.ServiceAccount{})
-		cm := &v1.ConfigMap{}
-		assertObjectExists(t, service.client, cm)
-		assert.Equal(t, imageDef, cm.Data["reg-service-image"])
-		assert.Equal(t, "dev", cm.Data["reg-service-env"])
-
+		AssertThatServiceAccount(t, test.HostOperatorNs, "registration-service", service.client).HasOwner(reqService)
+		AssertThatConfigMap(t, test.HostOperatorNs, "registration-service", service.client).HasOwner(reqService).
+			HasData(map[string]string{
+				"reg-service-image": imageDef,
+				"reg-service-env":   "dev",
+			})
 		AssertThatRegistrationService(t, "registration-service", service.client).
 			HasConditions(toBeNotReady("Deploying", "updated resources: [ServiceAccount: registration-service ConfigMap: registration-service]"))
 	})
@@ -66,9 +63,9 @@ func TestReconcileRegistrationService(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder, reqService)
 		cclient := commonclient.NewApplyClient(service.client, service.scheme)
-		_, err := cclient.CreateOrUpdateObject(objs[0].GetRuntimeObject().DeepCopyObject(), false, nil)
+		_, err := cclient.ApplyObject(objs[0].GetRuntimeObject().DeepCopyObject())
 		require.NoError(t, err)
-		_, err = cclient.CreateOrUpdateObject(objs[1].GetRuntimeObject().DeepCopyObject(), false, nil)
+		_, err = cclient.ApplyObject(objs[1].GetRuntimeObject().DeepCopyObject())
 		require.NoError(t, err)
 		fakeClient := service.client.(*test.FakeClient)
 		fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
@@ -84,11 +81,11 @@ func TestReconcileRegistrationService(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.False(t, result.Requeue)
-		assertObjectExists(t, service.client, &v1.ServiceAccount{})
-		cm := &v1.ConfigMap{}
-		assertObjectExists(t, service.client, cm)
-		assert.Equal(t, imageDef, cm.Data["reg-service-image"])
-		assert.Equal(t, "dev", cm.Data["reg-service-env"])
+		AssertThatServiceAccount(t, test.HostOperatorNs, "registration-service", service.client).Exists()
+		AssertThatConfigMap(t, test.HostOperatorNs, "registration-service", service.client).HasData(map[string]string{
+			"reg-service-image": imageDef,
+			"reg-service-env":   "dev",
+		})
 
 		AssertThatRegistrationService(t, "registration-service", service.client).
 			HasConditions(toBeDeployed())
@@ -98,12 +95,12 @@ func TestReconcileRegistrationService(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder)
 		client := commonclient.NewApplyClient(service.client, service.scheme)
-		_, err := client.CreateOrUpdateObject(objs[0].GetRuntimeObject().DeepCopyObject(), false, nil)
+		_, err := client.ApplyObject(objs[0].GetRuntimeObject().DeepCopyObject())
 		require.NoError(t, err)
-		_, err = client.CreateOrUpdateObject(objs[1].GetRuntimeObject().DeepCopyObject(), false, nil)
+		_, err = client.ApplyObject(objs[1].GetRuntimeObject().DeepCopyObject())
 		require.NoError(t, err)
 		reqService := newRegistrationService(test.HostOperatorNs, "quay.io/rh/registration-service:v0.1", "", 1)
-		_, err = client.CreateOrUpdateObject(reqService, false, nil)
+		_, err = client.ApplyObject(reqService)
 		require.NoError(t, err)
 
 		// when
@@ -113,11 +110,11 @@ func TestReconcileRegistrationService(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.Requeue)
 		assert.Equal(t, time.Second, result.RequeueAfter)
-		assertObjectExists(t, service.client, &v1.ServiceAccount{})
-		cm := &v1.ConfigMap{}
-		assertObjectExists(t, service.client, cm)
-		assert.Equal(t, "quay.io/rh/registration-service:v0.1", cm.Data["reg-service-image"])
-		assert.Equal(t, "prod", cm.Data["reg-service-env"])
+		AssertThatServiceAccount(t, test.HostOperatorNs, "registration-service", service.client).Exists()
+		AssertThatConfigMap(t, test.HostOperatorNs, "registration-service", service.client).Exists().HasData(map[string]string{
+			"reg-service-image": "quay.io/rh/registration-service:v0.1",
+			"reg-service-env":   "prod",
+		})
 
 		AssertThatRegistrationService(t, "registration-service", service.client).
 			HasConditions(toBeNotReady("Deploying", "updated resources: [ConfigMap: registration-service]"))
@@ -190,17 +187,6 @@ func TestGetVarsWhenAuthClientIsSpecifiedButNotEnv(t *testing.T) {
 	assert.Equal(t, "location/of/library", vars["AUTH_CLIENT_LIBRARY_URL"])
 	assert.Equal(t, `{"my":"cool-config"}`, vars["AUTH_CLIENT_CONFIG_RAW"])
 	assert.Equal(t, "location/of/public/key", vars["AUTH_CLIENT_PUBLIC_KEYS_URL"])
-}
-
-func assertObjectExists(t *testing.T, cl client.Client, obj runtime.Object) {
-	err := cl.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, "registration-service"), obj)
-	assert.NoError(t, err)
-}
-
-func assertObjectDoesNotExist(t *testing.T, cl client.Client, obj runtime.Object) { //nolint:unused,deadcode
-	err := cl.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, "registration-service"), obj)
-	require.Error(t, err)
-	assert.True(t, errors.IsNotFound(err))
 }
 
 func prepareServiceAndRequest(t *testing.T, s *runtime.Scheme, decoder runtime.Decoder, initObjs ...runtime.Object) (*ReconcileRegistrationService, reconcile.Request) {

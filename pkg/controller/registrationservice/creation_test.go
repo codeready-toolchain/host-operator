@@ -61,7 +61,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			},
 		}
 		client := commonclient.NewApplyClient(cl, s)
-		_, err := client.CreateOrUpdateObject(regService, false, nil)
+		_, err := client.ApplyObject(regService)
 		require.NoError(t, err)
 		restore := SetEnvVarsAndRestore(t,
 			Env("REGISTRATION_SERVICE_IMAGE", "quay.io/rh/registration-service:v0.1"),
