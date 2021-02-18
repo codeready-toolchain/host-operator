@@ -347,7 +347,7 @@ func TestNewTierTemplate(t *testing.T) {
 						case "dev", "code", "stage":
 							assertTestNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
 						case "clusterresources":
-							assertTestClusteResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
+							assertTestClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
 						default:
 							t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
 						}
@@ -510,7 +510,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	containsObj(t, actual, userRbacEditRoleBindingObj(kind))
 }
 
-func assertTestClusteResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
+func assertTestClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
 	content, err := testnstemplatetiers.Asset(fmt.Sprintf("%s/cluster.yaml", tier))
 	require.NoError(t, err)
 	expected := templatev1.Template{}
