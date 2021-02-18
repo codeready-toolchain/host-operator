@@ -924,11 +924,12 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						notification := assertToolchainStatusNotificationCreated(t, fakeClient)
 						require.True(t, strings.HasPrefix(notification.ObjectMeta.Name, "toolchainstatus-unready-"))
 						require.Len(t, notification.ObjectMeta.Name, 38)
-
 						require.NotNil(t, notification)
-						require.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
-						require.Equal(t, notification.Spec.Recipient, "admin@dev.sandbox.com")
-
+						assert.Equal(t, notification.Spec.Subject, "ToolchainStatus has been in an unready status for an extended period")
+						assert.Equal(t, notification.Spec.Recipient, "admin@dev.sandbox.com")
+						assert.True(t, strings.HasPrefix(notification.Spec.Content, "<div><pre><code>"))
+						assert.True(t, strings.HasSuffix(notification.Spec.Content, "</code></pre></div>"))
+						assert.NotContains(t, notification.Spec.Content, "managedFields")
 					})
 				})
 			})

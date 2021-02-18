@@ -355,7 +355,8 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger
 		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
 			r.config.GetAdminEmail()))
 	}
-
+	toolchainStatus = toolchainStatus.DeepCopy()
+	toolchainStatus.ManagedFields = nil // we don't need these managed fields in the notification
 	statusYaml, err := yaml.Marshal(toolchainStatus)
 	if err != nil {
 		return err
@@ -371,7 +372,7 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger
 		Spec: toolchainv1alpha1.NotificationSpec{
 			Recipient: r.config.GetAdminEmail(),
 			Subject:   adminUnreadyNotificationSubject,
-			Content:   string(statusYaml),
+			Content:   "<div><pre><code>" + string(statusYaml) + "</code></pre></div>", // wrap with div/pre/code tags so the formatting remains intact in the delivered mail
 		},
 	}
 
