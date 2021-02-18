@@ -387,17 +387,41 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	assert.Equal(t, expected, actual)
 	switch tier {
 	case "basic", "basicdeactivationdisabled":
-		assert.Len(t, actual.Objects, 4)
-		containsObj(t, actual, clusterResourceQuotaObjBasic("10000m", "1750m", "7Gi"))
+		assert.Len(t, actual.Objects, 12)
+		containsObj(t, actual, clusterResourceQuotaComputeObj("10000m", "1750m", "7Gi"))
+		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
+		containsObj(t, actual, clusterResourceQuotaReplicasObj())
+		containsObj(t, actual, clusterResourceQuotaRoutesObj())
+		containsObj(t, actual, clusterResourceQuotaJobsObj())
+		containsObj(t, actual, clusterResourceQuotaServicesObj())
+		containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
+		containsObj(t, actual, clusterResourceQuotaSecretsObj())
+		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
 		containsObj(t, actual, idlerObj("${USERNAME}-dev", "28800"))
 		containsObj(t, actual, idlerObj("${USERNAME}-code", "28800"))
 		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
 	case "team":
-		assert.Len(t, actual.Objects, 1) // No Idlers
-		containsObj(t, actual, clusterResourceQuotaObj("10000m", "2000m", "15Gi"))
+		assert.Len(t, actual.Objects, 9) // No Idlers
+		containsObj(t, actual, clusterResourceQuotaComputeObj("10000m", "2000m", "15Gi"))
+		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
+		containsObj(t, actual, clusterResourceQuotaReplicasObj())
+		containsObj(t, actual, clusterResourceQuotaRoutesObj())
+		containsObj(t, actual, clusterResourceQuotaJobsObj())
+		containsObj(t, actual, clusterResourceQuotaServicesObj())
+		containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
+		containsObj(t, actual, clusterResourceQuotaSecretsObj())
+		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
 	case "advanced":
-		assert.Len(t, actual.Objects, 1) // No Idlers
-		containsObj(t, actual, clusterResourceQuotaObj("10000m", "1750m", "7Gi"))
+		assert.Len(t, actual.Objects, 9) // No Idlers
+		containsObj(t, actual, clusterResourceQuotaComputeObj("10000m", "1750m", "7Gi"))
+		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
+		containsObj(t, actual, clusterResourceQuotaReplicasObj())
+		containsObj(t, actual, clusterResourceQuotaRoutesObj())
+		containsObj(t, actual, clusterResourceQuotaJobsObj())
+		containsObj(t, actual, clusterResourceQuotaServicesObj())
+		containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
+		containsObj(t, actual, clusterResourceQuotaSecretsObj())
+		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
 	}
 }
 
@@ -526,12 +550,40 @@ func limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest string
 	return fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"%s","memory":"%s"},"type":"Container"}]}}`, kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest)
 }
 
-func clusterResourceQuotaObj(cpuLimit, cpuRequest, memoryLimit string) string {
-	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"count/buildconfigs.build.openshift.io":"10","count/configmaps":"100","count/cronjobs.batch":"30","count/daemonsets.apps":"30","count/deploymentconfigs.apps":"30","count/deployments.apps":"30","count/ingresses.extensions":"10","count/jobs.batch":"30","count/persistentvolumeclaims":"5","count/pods":"50","count/replicasets.apps":"30","count/replicationcontrollers":"30","count/routes.route.openshift.io":"10","count/secrets":"100","count/services":"10","count/statefulsets.apps":"30","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"15Gi"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
+func clusterResourceQuotaComputeObj(cpuLimit, cpuRequest, memoryLimit string) string {
+	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-compute"},"spec":{"quota":{"hard":{"count/persistentvolumeclaims":"5","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"15Gi"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
 }
 
-func clusterResourceQuotaObjBasic(cpuLimit, cpuRequest, memoryLimit string) string {
-	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"count/pods":"50","count/replicasets.apps":"30","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"15Gi"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit)
+func clusterResourceQuotaDeploymentsObj() string {
+	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-deployments"},"spec":{"quota":{"hard":{"count/deploymentconfigs.apps":"30","count/deployments.apps":"30","count/pods":"50"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
+}
+
+func clusterResourceQuotaReplicasObj() string {
+	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-replicas"},"spec":{"quota":{"hard":{"count/replicasets.apps":"30","count/replicationcontrollers":"30"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
+}
+
+func clusterResourceQuotaRoutesObj() string {
+	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-routes"},"spec":{"quota":{"hard":{"count/ingresses.extensions":"10","count/routes.route.openshift.io":"10"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
+}
+
+func clusterResourceQuotaJobsObj() string {
+	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-jobs"},"spec":{"quota":{"hard":{"count/cronjobs.batch":"30","count/daemonsets.apps":"30","count/jobs.batch":"30","count/statefulsets.apps":"30"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
+}
+
+func clusterResourceQuotaServicesObj() string {
+	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-services"},"spec":{"quota":{"hard":{"count/services":"10"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
+}
+
+func clusterResourceQuotaBuildConfigObj() string {
+	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-bc"},"spec":{"quota":{"hard":{"count/buildconfigs.build.openshift.io":"10"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
+}
+
+func clusterResourceQuotaSecretsObj() string {
+	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-secrets"},"spec":{"quota":{"hard":{"count/secrets":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
+}
+
+func clusterResourceQuotaConfigMapObj() string {
+	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-cm"},"spec":{"quota":{"hard":{"count/configmaps":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
 }
 
 func idlerObj(name, timeout string) string { //nolint:unparam
