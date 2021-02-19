@@ -5,9 +5,9 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"regexp"
 	"strings"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup/unapproved"
@@ -16,6 +16,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,11 +34,6 @@ import (
 )
 
 var log = logf.Log.WithName("controller_usersignup")
-
-var (
-	specialCharRegexp = regexp.MustCompile("[^A-Za-z0-9]")
-	onlyNumbers       = regexp.MustCompile("^[0-9]*$")
-)
 
 type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error
 
@@ -414,7 +410,7 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 }
 
 func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
-	replaced := transformUsername(instance.Spec.Username)
+	replaced := usersignup.TransformUsername(instance.Spec.Username)
 
 	// Check for any forbidden prefixes
 	for _, prefix := range r.crtConfig.GetForbiddenUsernamePrefixes() {
@@ -452,29 +448,6 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 	}
 
 	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
-}
-
-func transformUsername(username string) string {
-	newUsername := specialCharRegexp.ReplaceAllString(strings.Split(username, "@")[0], "-")
-	if len(newUsername) == 0 {
-		newUsername = strings.ReplaceAll(username, "@", "at-")
-	}
-	newUsername = specialCharRegexp.ReplaceAllString(newUsername, "-")
-
-	matched := onlyNumbers.MatchString(newUsername)
-	if matched {
-		newUsername = "crt-" + newUsername
-	}
-	for strings.Contains(newUsername, "--") {
-		newUsername = strings.ReplaceAll(newUsername, "--", "-")
-	}
-	if strings.HasPrefix(newUsername, "-") {
-		newUsername = "crt" + newUsername
-	}
-	if strings.HasSuffix(newUsername, "-") {
-		newUsername = newUsername + "crt"
-	}
-	return newUsername
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
