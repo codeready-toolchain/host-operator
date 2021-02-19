@@ -575,7 +575,7 @@ func clusterResourceQuotaServicesObj() string {
 }
 
 func clusterResourceQuotaBuildConfigObj() string {
-	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-bc"},"spec":{"quota":{"hard":{"count/buildconfigs.build.openshift.io":"10"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
+	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-bc"},"spec":{"quota":{"hard":{"count/buildconfigs.build.openshift.io":"30"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
 }
 
 func clusterResourceQuotaSecretsObj() string {

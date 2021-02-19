@@ -96,7 +96,7 @@ objects:
   spec:
     quota:
       hard:
-        count/buildconfigs.build.openshift.io: "10"
+        count/buildconfigs.build.openshift.io: "30"
     selector:
       annotations:
         openshift.io/requester: ${USERNAME}
