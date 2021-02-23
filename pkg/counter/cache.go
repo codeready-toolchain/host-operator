@@ -9,7 +9,10 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+var log = logf.Log.WithName("counter_cache")
 
 var cachedCounts = cache{
 	Counts: Counts{
@@ -53,6 +56,7 @@ func reset() {
 func IncrementMasterUserRecordCount() {
 	write(func() {
 		cachedCounts.MasterUserRecordCount++
+		log.Info("incrementing MasterUserRecordGauge", "value", cachedCounts.MasterUserRecordCount)
 		metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 	})
 }
@@ -66,6 +70,7 @@ func DecrementMasterUserRecordCount(log logr.Logger) {
 			log.Error(fmt.Errorf("the count of MasterUserRecords is zero"),
 				"unable to decrement the number of MasterUserRecords")
 		}
+		log.Info("decrementing MasterUserRecordGauge", "value", cachedCounts.MasterUserRecordCount)
 		metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 	})
 }

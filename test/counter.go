@@ -9,6 +9,8 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+
+	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,7 +34,7 @@ func AssertThatUninitializedCounterHas(t *testing.T, numberOfMurs int, numberOfU
 func AssertThatCounterHas(t *testing.T, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) {
 	AssertMetricsGaugeEquals(t, numberOfMurs, metrics.MasterUserRecordGauge)
 	counts, err := counter.GetCounts()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	verifyCounts(t, counts, numberOfMurs, numberOfUasPerCluster...)
 }
 
@@ -89,5 +91,6 @@ func initializeCounter(t *testing.T, cl *test.FakeClient, numberOfMurs int, numb
 
 	err := counter.Synchronize(cl, toolchainStatus)
 	require.NoError(t, err)
+	t.Logf("MasterUserRecordGauge=%.0f", promtestutil.ToFloat64(metrics.MasterUserRecordGauge))
 	return toolchainStatus
 }

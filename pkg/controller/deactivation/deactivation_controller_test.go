@@ -258,7 +258,7 @@ func TestReconcile(t *testing.T) {
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *test.FakeClient) {
-	metrics.ResetCounters()
+	metrics.Reset()
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
