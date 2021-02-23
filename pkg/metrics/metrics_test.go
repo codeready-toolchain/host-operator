@@ -44,6 +44,10 @@ func TestRegisterCustomMetrics(t *testing.T) {
 	for _, m := range allGauges {
 		assert.True(t, k8smetrics.Registry.Unregister(m))
 	}
+
+	// for _, m := range allGaugeVecs {
+	// 	assert.True(t, k8smetrics.Registry.Unregister(m))
+	// }
 }
 
 func TestResetMetrics(t *testing.T) {
