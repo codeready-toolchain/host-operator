@@ -27,12 +27,10 @@ func UserAccountsForCluster(clusterName string, number int) ExpectedNumberOfUser
 func AssertThatUninitializedCounterHas(t *testing.T, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) {
 	counts, err := counter.GetCounts()
 	assert.EqualErrorf(t, err, "counter is not initialized", "should be error because counter hasn't been initialized yet")
-
 	verifyCounts(t, counts, numberOfMurs, numberOfUasPerCluster...)
 }
 
 func AssertThatCounterHas(t *testing.T, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) {
-	AssertMetricsGaugeEquals(t, numberOfMurs, metrics.MasterUserRecordGauge)
 	counts, err := counter.GetCounts()
 	require.NoError(t, err)
 	verifyCounts(t, counts, numberOfMurs, numberOfUasPerCluster...)
@@ -40,10 +38,12 @@ func AssertThatCounterHas(t *testing.T, numberOfMurs int, numberOfUasPerCluster 
 
 func verifyCounts(t *testing.T, counts counter.Counts, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) {
 	assert.Equal(t, numberOfMurs, counts.MasterUserRecordCount)
+	AssertMetricsGaugeEquals(t, numberOfMurs, metrics.MasterUserRecordGauge)
 	assert.Len(t, counts.UserAccountsPerClusterCounts, len(numberOfUasPerCluster))
 	for _, userAccountsForCluster := range numberOfUasPerCluster {
 		clusterName, count := userAccountsForCluster()
 		assert.Equal(t, count, counts.UserAccountsPerClusterCounts[clusterName])
+		AssertMetricsGaugeEquals(t, count, metrics.MasterUserRecordGaugeVec.WithLabelValues(clusterName))
 	}
 }
 

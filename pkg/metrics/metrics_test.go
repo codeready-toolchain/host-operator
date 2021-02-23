@@ -45,6 +45,9 @@ func TestRegisterCustomMetrics(t *testing.T) {
 		assert.True(t, k8smetrics.Registry.Unregister(m))
 	}
 
+	for _, m := range allGaugeVecs {
+		assert.True(t, k8smetrics.Registry.Unregister(m))
+	}
 }
 
 func TestResetMetrics(t *testing.T) {
@@ -52,10 +55,12 @@ func TestResetMetrics(t *testing.T) {
 	// when
 	UserSignupUniqueTotal.Inc()
 	MasterUserRecordGauge.Set(22)
+	MasterUserRecordGaugeVec.WithLabelValues("member-1").Set(20)
 
 	Reset()
 
 	// then
 	assert.Equal(t, float64(0), promtestutil.ToFloat64(UserSignupUniqueTotal))
 	assert.Equal(t, float64(0), promtestutil.ToFloat64(MasterUserRecordGauge))
+	assert.Equal(t, float64(0), promtestutil.ToFloat64(MasterUserRecordGaugeVec.WithLabelValues("member-1")))
 }

@@ -28,14 +28,22 @@ var (
 
 // gauges
 var (
+	// DEPRECATED - See MasterUserRecordGaugeVec
 	// MasterUserRecordGauge should reflect the current number of master user records in the system
 	MasterUserRecordGauge prometheus.Gauge
 )
 
+// gauge vectors
+var (
+	// MasterUserRecordGauge should reflect the current number of master user records in the system, with a label to partition per member cluster
+	MasterUserRecordGaugeVec *prometheus.GaugeVec
+)
+
 // collections
 var (
-	allCounters = []prometheus.Counter{}
-	allGauges   = []prometheus.Gauge{}
+	allCounters  = []prometheus.Counter{}
+	allGauges    = []prometheus.Gauge{}
+	allGaugeVecs = []*prometheus.GaugeVec{}
 )
 
 func init() {
@@ -54,6 +62,8 @@ func initMetrics() {
 	UserSignupAutoDeactivatedTotal = newCounter("user_signups_auto_deactivated_total", "Total number of Automatically Deactivated User Signups")
 	// Gauges
 	MasterUserRecordGauge = newGauge("master_user_record_current", "Current number of Master User Records")
+	// GaugeVecs
+	MasterUserRecordGaugeVec = newGaugeVec("master_user_records_current", "Current number of Master User Records", "cluster_name")
 	log.Info("custom metrics initialized")
 }
 
@@ -80,6 +90,15 @@ func newGauge(name, help string) prometheus.Gauge {
 	return g
 }
 
+func newGaugeVec(name, help string, labels ...string) *prometheus.GaugeVec {
+	v := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: metricsPrefix + name,
+		Help: help,
+	}, labels)
+	allGaugeVecs = append(allGaugeVecs, v)
+	return v
+}
+
 // RegisterCustomMetrics registers the custom metrics
 func RegisterCustomMetrics() {
 	// register metrics
@@ -88,6 +107,9 @@ func RegisterCustomMetrics() {
 	}
 	for _, g := range allGauges {
 		k8smetrics.Registry.MustRegister(g)
+	}
+	for _, v := range allGaugeVecs {
+		k8smetrics.Registry.MustRegister(v)
 	}
 	log.Info("custom metrics registered")
 }
