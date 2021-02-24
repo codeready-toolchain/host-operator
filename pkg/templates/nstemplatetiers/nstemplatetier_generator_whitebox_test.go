@@ -37,8 +37,6 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			// then
-			require.NoError(t, err)
 			require.Len(t, tmpls, 5)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 			for _, tier := range []string{"advanced", "basic", "team", "basicdeactivationdisabled", "test"} {
