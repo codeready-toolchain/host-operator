@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup/unapproved"
@@ -16,6 +15,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -397,10 +397,17 @@ func (r *ReconcileUserSignup) setStateLabel(reqLogger logr.Logger, userSignup *t
 }
 
 func updateMetricsByState(oldState, newState string) {
-	metrics.UserSignupUniqueTotal.ConditionalIncrement(oldState == "")
-	metrics.UserSignupApprovedTotal.ConditionalIncrement(newState == toolchainv1alpha1.UserSignupStateLabelValueApproved)
-	metrics.UserSignupDeactivatedTotal.ConditionalIncrement(newState == toolchainv1alpha1.UserSignupStateLabelValueDeactivated)
-	metrics.UserSignupBannedTotal.ConditionalIncrement(newState == toolchainv1alpha1.UserSignupStateLabelValueBanned)
+	if oldState == "" {
+		metrics.UserSignupUniqueTotal.Inc()
+	}
+	switch newState {
+	case toolchainv1alpha1.UserSignupStateLabelValueApproved:
+		metrics.UserSignupApprovedTotal.Inc()
+	case toolchainv1alpha1.UserSignupStateLabelValueDeactivated:
+		metrics.UserSignupDeactivatedTotal.Inc()
+	case toolchainv1alpha1.UserSignupStateLabelValueBanned:
+		metrics.UserSignupBannedTotal.Inc()
+	}
 }
 
 func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchainv1alpha1.NSTemplateTier, error) {

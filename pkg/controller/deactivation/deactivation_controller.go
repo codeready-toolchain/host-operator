@@ -169,7 +169,7 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
-	metrics.UserSignupAutoDeactivatedTotal.Increment()
+	metrics.UserSignupAutoDeactivatedTotal.Inc()
 
 	return reconcile.Result{}, nil
 }

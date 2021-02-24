@@ -9,9 +9,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/ghodss/yaml"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
@@ -20,6 +17,8 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
+
+	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	errs "github.com/pkg/errors"
@@ -30,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
