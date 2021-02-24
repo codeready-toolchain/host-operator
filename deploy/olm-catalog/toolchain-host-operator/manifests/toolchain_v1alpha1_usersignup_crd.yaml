@@ -112,6 +112,7 @@ spec:
                   passed the verification. Default value is false.
                 type: boolean
             required:
+            - userid
             - username
             type: object
           status:
