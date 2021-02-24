@@ -140,6 +140,29 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			assert.Contains(t, err.Error(), "unable to load templates: an error occurred")
 		})
 
+		t.Run("invalid name format", func(t *testing.T) {
+			// given
+			fakeAssetNames := func() []string {
+				return []string{`.DS_Store`, `metadata.yaml`} // '/advanced/foo.yaml' is not a valid filename
+			}
+			fakeAssets := func(name string) ([]byte, error) {
+				switch name {
+				case "metadata.yaml":
+					return []byte(`advanced/foo.yaml: "123456a"`), nil // just make sure the asset exists
+				case ".DS_Store":
+					return []byte(`foo:bar`), nil // just make sure the asset exists
+				default:
+					return testnstemplatetiers.Asset(name)
+				}
+			}
+			assets := assets.NewAssets(fakeAssetNames, fakeAssets)
+			// when
+			_, err := loadTemplatesByTiers(assets)
+			// then
+			require.Error(t, err)
+			assert.EqualError(t, err, "unable to load templates: invalid name format for file '.DS_Store'")
+		})
+
 		t.Run("invalid filename scope", func(t *testing.T) {
 			// given
 			fakeAssetNames := func() []string {
