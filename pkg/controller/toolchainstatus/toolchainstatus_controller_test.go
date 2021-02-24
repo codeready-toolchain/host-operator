@@ -11,8 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/codeready-toolchain/api/pkg/apis"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -23,17 +21,20 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -146,7 +147,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-		memberStatus := newMemberStatusReady()
+		memberStatus := newMemberStatus(ready())
 		toolchainStatus := NewToolchainStatus()
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -159,7 +160,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
-			HasMemberStatus(memberClusterSingleReady()).
+			HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 			HasRegistrationServiceStatus(registrationServiceReady())
 	})
 
@@ -167,7 +168,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
 		toolchainStatus := NewToolchainStatus()
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-		memberStatus := newMemberStatusReady()
+		memberStatus := newMemberStatus(ready())
 
 		t.Run("Host operator deployment not found - deployment env var not set", func(t *testing.T) {
 			// given
@@ -184,7 +185,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady("", "DeploymentNotFound", "unable to get the deployment: OPERATOR_NAME must be set")).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
@@ -201,7 +202,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorName, "DeploymentNotFound", "unable to get the deployment: deployments.apps \"host-operator\" not found")).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
@@ -219,7 +220,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorName, "DeploymentNotReady", "deployment has unready status conditions: Available")).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
@@ -237,7 +238,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorName, "DeploymentNotReady", "deployment has unready status conditions: Progressing")).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 	})
@@ -245,7 +246,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 	t.Run("RegistrationService deployment tests", func(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
 		toolchainStatus := NewToolchainStatus()
-		memberStatus := newMemberStatusReady()
+		memberStatus := newMemberStatus(ready())
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
 		t.Run("Registration service deployment not found", func(t *testing.T) {
@@ -261,7 +262,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceDeploymentNotReady("DeploymentNotFound", "unable to get the deployment: deployments.apps \"registration-service\" not found"))
 		})
 
@@ -279,7 +280,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceDeploymentNotReady("DeploymentNotReady", "deployment has unready status conditions: Available"))
 		})
 
@@ -297,14 +298,14 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceDeploymentNotReady("DeploymentNotReady", "deployment has unready status conditions: Progressing"))
 		})
 	})
 
 	t.Run("RegistrationService resource tests", func(t *testing.T) {
 		toolchainStatus := NewToolchainStatus()
-		memberStatus := newMemberStatusReady()
+		memberStatus := newMemberStatus(ready())
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
@@ -321,7 +322,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceResourcesNotReady("RegServiceResourceNotFound", "registrationservices.toolchain.dev.openshift.com \"registration-service\" not found"))
 		})
 
@@ -339,7 +340,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceResourcesNotReady("RegServiceNotReady", "registration service resource not ready"))
 		})
 	})
@@ -348,7 +349,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-		memberStatus := newMemberStatusReady()
+		memberStatus := newMemberStatus(ready())
 		toolchainStatus := NewToolchainStatus()
 
 		t.Run("Registration health endpoint - http client error", func(t *testing.T) {
@@ -364,7 +365,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("http client error"))
 		})
 
@@ -381,7 +382,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("bad response from http://registration-service/api/v1/health : statusCode=500"))
 		})
 
@@ -398,7 +399,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("invalid character '}' after object key"))
 		})
 
@@ -415,7 +416,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceHealthNotReady("the registration service health endpoint is reporting an unhealthy status"))
 		})
 	})
@@ -425,10 +426,6 @@ func TestToolchainStatusConditions(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-		resourceUsage := map[string]int{
-			"worker": 60,
-			"master": 45,
-		}
 
 		t.Run("MemberStatus member clusters not found", func(t *testing.T) {
 			// given
@@ -444,7 +441,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).Exists().
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus().
+				HasMemberClusterStatus().
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
@@ -453,7 +450,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			defer counter.Reset()
 			toolchainStatus := NewToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
-				memberClusterSingleReady(),
+				memberCluster("member-1", ready(), userAccountCount(10)),
+				// memberCluster("member-2", ready()),
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncEmpty, hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -464,20 +462,21 @@ func TestToolchainStatusConditions(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasConditions(componentsNotReady(string(memberConnectionsTag))).Exists().
+				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "MemberToolchainClusterMissing",
-					"ToolchainCluster CR wasn't found for member cluster `member-cluster` that was previously registered in the host", nil)).
+				HasMemberClusterStatus(
+					memberCluster("member-1", userAccountCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
+				).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
 		t.Run("MemberStatus saying that there was no member cluster present should be removed", func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			memberStatus := newMemberStatusReady()
+			memberStatus := newMemberStatus(ready())
 			toolchainStatus := NewToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
-				memberClusterSingleNotReady("", "NoMemberClustersFound", "no member clusters found", nil),
+				memberCluster("member-1", userAccountCount(0), notReady("NoMemberClustersFound", "no member clusters found")),
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -490,7 +489,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
@@ -508,14 +507,17 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found", nil)).
+				HasMemberClusterStatus(
+					memberCluster("member-1", noResourceUsage(), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
+					memberCluster("member-2", noResourceUsage(), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
+				).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
 		t.Run("MemberStatus not ready", func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			memberStatus := newMemberStatusNotReady("memberOperator")
+			memberStatus := newMemberStatus(notReady(toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason, "components not ready: [memberOperator]"))
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
@@ -527,14 +529,17 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleNotReady("member-cluster", "ComponentsNotReady", "components not ready: [memberOperator]", resourceUsage)).
+				HasMemberClusterStatus(
+					memberCluster("member-1", notReady("ComponentsNotReady", "components not ready: [memberOperator]")),
+					memberCluster("member-2", notReady("ComponentsNotReady", "components not ready: [memberOperator]")),
+				).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
 		t.Run("synchronization with the counter fails", func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			memberStatus := newMemberStatusReady()
+			memberStatus := newMemberStatus(ready())
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 			fakeClient.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 				return fmt.Errorf("some error")
@@ -549,17 +554,18 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(counterTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
 		t.Run("MemberStatus not ready is changed to ready", func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			memberStatus := newMemberStatusReady()
+			memberStatus := newMemberStatus(ready())
 			toolchainStatus := NewToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
-				memberClusterSingleNotReady("member-cluster", "ComponentsNotReady", "some cool error", resourceUsage),
+				memberCluster("member-1", notReady("ComponentsNotReady", "some cool error")),
+				memberCluster("member-2", ready()),
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -572,26 +578,25 @@ func TestToolchainStatusConditions(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberStatus(memberClusterSingleReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
-		t.Run("All components ready, but one member is missing", func(t *testing.T) {
+		t.Run("All components ready but one member is missing", func(t *testing.T) {
 			// given
 			registrationService := newRegistrationServiceReady()
 			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 			registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-			memberStatus := newMemberStatusReady()
+			memberStatus := newMemberStatus(ready())
 			toolchainStatus := NewToolchainStatus()
 
-			t.Run("with non-zero counter", func(t *testing.T) {
+			t.Run("with non-zero user accounts", func(t *testing.T) {
 				// given
 				defer counter.Reset()
-				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
-					ClusterName:      "removed-cluster",
-					MemberStatus:     newMemberStatusReady().Status,
-					UserAccountCount: 10,
-				}}
+				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
+					// member-1 and member-2 will be added since there are MemberStatus resources for each one of them
+					memberCluster("member-3", ready(), userAccountCount(10)), // will move to `NotReady` since there is no CachedToolchainCluster for this member
+				}
 				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 				// when
@@ -603,19 +608,20 @@ func TestToolchainStatusConditions(t *testing.T) {
 				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 					HasConditions(componentsNotReady(string(memberConnectionsTag))).
 					HasHostOperatorStatus(hostOperatorStatusReady()).
-					HasMemberStatus(memberClusterSingleReady(), memberClusterSingleNotReady("removed-cluster", "MemberToolchainClusterMissing",
-						"ToolchainCluster CR wasn't found for member cluster `removed-cluster` that was previously registered in the host", nil)).
+					HasMemberClusterStatus(
+						memberCluster("member-1", ready()),
+						memberCluster("member-2", ready()),
+						memberCluster("member-3", noResourceUsage(), userAccountCount(10), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-3` that was previously registered in the host")),
+					).
 					HasRegistrationServiceStatus(registrationServiceReady())
 			})
 
-			t.Run("with zero count", func(t *testing.T) {
+			t.Run("with zero user accounts", func(t *testing.T) {
 				// given
 				defer counter.Reset()
-				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
-					ClusterName:      "removed-cluster",
-					MemberStatus:     newMemberStatusReady().Status,
-					UserAccountCount: 0,
-				}}
+				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
+					memberCluster("removed-cluster", ready()), // will move to `NotReady` since there is no MemberStatus for this cluster
+				}
 				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 				// when
@@ -627,7 +633,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 					HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 					HasHostOperatorStatus(hostOperatorStatusReady()).
-					HasMemberStatus(memberClusterSingleReady()).
+					HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 					HasRegistrationServiceStatus(registrationServiceReady())
 			})
 		})
@@ -643,7 +649,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 
 	registrationService := newRegistrationServiceReady()
 	toolchainStatus := NewToolchainStatus()
-	memberStatus := newMemberStatusReady()
+	memberStatus := newMemberStatus(ready())
 	registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName,
 		status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 	hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
@@ -724,7 +730,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 	registrationService := newRegistrationServiceReady()
 	toolchainStatus := NewToolchainStatus()
-	memberStatus := newMemberStatusReady()
+	memberStatus := newMemberStatus(ready())
 	registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName,
 		status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
@@ -761,7 +767,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
-			HasMemberStatus(memberClusterSingleReady()).
+			HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 			HasRegistrationServiceStatus(registrationServiceReady())
 
 		// Confirm there is no notification
@@ -972,6 +978,7 @@ func assertToolchainStatusNotificationNotCreated(t *testing.T, fakeClient *test.
 
 func TestSynchronizationWithCounter(t *testing.T) {
 	// given
+	logf.SetLogger(zap.Logger(true))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	requestName := configuration.DefaultToolchainStatusName
@@ -979,12 +986,15 @@ func TestSynchronizationWithCounter(t *testing.T) {
 	hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 	registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 	toolchainStatus := NewToolchainStatus()
-	memberStatus := newMemberStatusReady()
+	memberStatus := newMemberStatus(ready())
 
-	t.Run("Load all current MURs & UAs", func(t *testing.T) {
+	t.Run("Load all current MURs and UAs", func(t *testing.T) {
 		// given
 		defer counter.Reset()
-		initObjects := append(CreateMultipleMurs(t, 10), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+		initObjects := append([]runtime.Object{}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+		initObjects = append(initObjects, CreateMultipleMurs(t, "cookie-", 8, "member-1")...)
+		initObjects = append(initObjects, CreateMultipleMurs(t, "pasta-", 2, "member-2")...)
+
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, initObjects...)
 
 		// when
@@ -997,16 +1007,17 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMurCount(10).
-			HasMemberStatus(memberClusterSingleReady()).
-			HasUserAccountCount("member-cluster", 10).
+			HasMemberClusterStatus(
+				memberCluster("member-1", ready(), userAccountCount(8)),
+				memberCluster("member-2", ready(), userAccountCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady())
 
-		t.Run("sync with newly added MURs & UAs", func(t *testing.T) {
+		t.Run("sync with newly added MURs and UAs", func(t *testing.T) {
 			// given
 			defer counter.Reset()
 			counter.IncrementMasterUserRecordCount()
 			counter.IncrementMasterUserRecordCount()
-			counter.IncrementUserAccountCount("member-cluster")
+			counter.IncrementUserAccountCount("member-1")
 			toolchainStatus := NewToolchainStatus()
 			toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
 				MasterUserRecordCount: 1,
@@ -1023,26 +1034,33 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMurCount(12).
-				HasMemberStatus(memberClusterSingleReady()).
-				HasUserAccountCount("member-cluster", 11).
+				HasMemberClusterStatus(
+					memberCluster("member-1", ready(), userAccountCount(9)),
+					memberCluster("member-2", ready(), userAccountCount(2))).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
 	})
 
-	t.Run("initialize the cache using the MURs & UAs from ToolchainStatus", func(t *testing.T) {
+	t.Run("initialize the cache using the MURs and UAs from ToolchainStatus", func(t *testing.T) {
 		// given
 		defer counter.Reset()
 		counter.IncrementMasterUserRecordCount()
-		counter.IncrementUserAccountCount("member-cluster")
+		counter.IncrementUserAccountCount("member-1")
 		toolchainStatus := NewToolchainStatus()
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
 			MasterUserRecordCount: 8,
 		}
-		toolchainStatus.Status.Members = []toolchainv1alpha1.Member{{
-			ClusterName:      "member-cluster",
-			UserAccountCount: 6,
-		}}
+		toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
+			{
+				ClusterName:      "member-1",
+				UserAccountCount: 6, // will increase
+			},
+			{
+				ClusterName:      "member-2",
+				UserAccountCount: 2, // will remain the same
+			},
+		}
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncReady, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when
@@ -1055,10 +1073,9 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMurCount(9).
-			HasMemberStatus(memberClusterSingleReady()).
-			HasUserAccountCount("member-cluster", 7).
+			HasMemberClusterStatus(memberCluster("member-1", ready(), userAccountCount(7)), memberCluster("member-2", ready(), userAccountCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady())
-		AssertThatCounterHas(t, 9, UserAccountsForCluster("member-cluster", 7))
+		AssertThatCounterHas(t, 9, UserAccountsForCluster("member-1", 7), UserAccountsForCluster("member-2", 2))
 	})
 }
 
@@ -1087,8 +1104,10 @@ func newDeploymentWithConditions(deploymentName string, deploymentConditions ...
 
 func newGetMemberClustersFuncReady(fakeClient client.Client) cluster.GetMemberClustersFunc {
 	return func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
-		clusters := []*cluster.CachedToolchainCluster{memberCluster(fakeClient, corev1.ConditionTrue, metav1.Now())}
-		return clusters
+		return []*cluster.CachedToolchainCluster{
+			cachedToolchainCluster(fakeClient, "member-1", corev1.ConditionTrue, metav1.Now()),
+			cachedToolchainCluster(fakeClient, "member-2", corev1.ConditionTrue, metav1.Now()),
+		}
 	}
 }
 
@@ -1099,9 +1118,9 @@ func newGetMemberClustersFuncEmpty(_ client.Client) cluster.GetMemberClustersFun
 	}
 }
 
-func memberCluster(cl client.Client, status corev1.ConditionStatus, lastProbeTime metav1.Time) *cluster.CachedToolchainCluster {
+func cachedToolchainCluster(cl client.Client, name string, status corev1.ConditionStatus, lastProbeTime metav1.Time) *cluster.CachedToolchainCluster {
 	return &cluster.CachedToolchainCluster{
-		Name:              "member-cluster",
+		Name:              name,
 		Client:            cl,
 		Type:              cluster.Host,
 		OperatorNamespace: test.MemberOperatorNs,
@@ -1116,19 +1135,12 @@ func memberCluster(cl client.Client, status corev1.ConditionStatus, lastProbeTim
 	}
 }
 
-func newMemberStatusReady() *toolchainv1alpha1.MemberStatus {
-	readyStatus := status.NewComponentReadyCondition(toolchainv1alpha1.ToolchainStatusAllComponentsReadyReason)
-	return newMemberStatus(readyStatus)
+type memberstatusOptions interface {
+	applyToMemberStatus(*toolchainv1alpha1.MemberStatus)
 }
 
-func newMemberStatusNotReady(unreadyComponents ...string) *toolchainv1alpha1.MemberStatus {
-	msg := fmt.Sprintf("components not ready: %v", unreadyComponents)
-	notReadyStatus := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason, msg)
-	return newMemberStatus(notReadyStatus)
-}
-
-func newMemberStatus(condition *toolchainv1alpha1.Condition) *toolchainv1alpha1.MemberStatus {
-	return &toolchainv1alpha1.MemberStatus{
+func newMemberStatus(options ...memberstatusOptions) *toolchainv1alpha1.MemberStatus {
+	status := &toolchainv1alpha1.MemberStatus{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: test.MemberOperatorNs,
 			Name:      memberStatusName,
@@ -1139,7 +1151,7 @@ func newMemberStatus(condition *toolchainv1alpha1.Condition) *toolchainv1alpha1.
 		},
 		Spec: toolchainv1alpha1.MemberStatusSpec{},
 		Status: toolchainv1alpha1.MemberStatusStatus{
-			Conditions: []toolchainv1alpha1.Condition{*condition},
+			Conditions: []toolchainv1alpha1.Condition{},
 			ResourceUsage: toolchainv1alpha1.ResourceUsage{
 				MemoryUsagePerNodeRole: map[string]int{
 					"worker": 60,
@@ -1153,6 +1165,11 @@ func newMemberStatus(condition *toolchainv1alpha1.Condition) *toolchainv1alpha1.
 			},
 		},
 	}
+	for _, opt := range options {
+		opt.applyToMemberStatus(status)
+	}
+
+	return status
 }
 
 func newRegistrationServiceReady() *toolchainv1alpha1.RegistrationService {
@@ -1295,17 +1312,60 @@ func hostOperatorStatusNotReady(deploymentName, reason, msg string) toolchainv1a
 	}
 }
 
-func memberClusterSingleReady() toolchainv1alpha1.Member {
-	return toolchainv1alpha1.Member{
-		ClusterName: "member-cluster",
+type statusCondition toolchainv1alpha1.Condition
+
+func (c statusCondition) applyToMemberStatus(s *toolchainv1alpha1.MemberStatus) {
+	s.Status.Conditions = append(s.Status.Conditions, toolchainv1alpha1.Condition(c))
+}
+
+func (c statusCondition) applyToMember(m *toolchainv1alpha1.Member) {
+	m.MemberStatus.Conditions = append(m.MemberStatus.Conditions, toolchainv1alpha1.Condition(c))
+}
+
+func ready() statusCondition {
+	return statusCondition(toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: corev1.ConditionTrue,
+		Reason: "AllComponentsReady",
+	})
+}
+
+func notReady(reason, msg string) statusCondition {
+	return statusCondition(toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  reason,
+		Message: msg,
+	})
+}
+
+func noResourceUsage() resourceUsage {
+	return resourceUsage(nil)
+}
+
+type resourceUsage map[string]int
+
+func (n resourceUsage) applyToMember(m *toolchainv1alpha1.Member) {
+	m.MemberStatus.ResourceUsage = toolchainv1alpha1.ResourceUsage{
+		MemoryUsagePerNodeRole: n,
+	}
+}
+
+type userAccountCount int
+
+func (c userAccountCount) applyToMember(m *toolchainv1alpha1.Member) {
+	m.UserAccountCount = int(c)
+}
+
+type memberClusterOption interface {
+	applyToMember(*toolchainv1alpha1.Member)
+}
+
+func memberCluster(name string, options ...memberClusterOption) toolchainv1alpha1.Member {
+	m := toolchainv1alpha1.Member{
+		ClusterName: name,
 		MemberStatus: toolchainv1alpha1.MemberStatusStatus{
-			Conditions: []toolchainv1alpha1.Condition{
-				{
-					Type:   toolchainv1alpha1.ConditionReady,
-					Status: corev1.ConditionTrue,
-					Reason: "AllComponentsReady",
-				},
-			},
+			Conditions: []toolchainv1alpha1.Condition{},
 			ResourceUsage: toolchainv1alpha1.ResourceUsage{
 				MemoryUsagePerNodeRole: map[string]int{
 					"worker": 60,
@@ -1318,32 +1378,12 @@ func memberClusterSingleReady() toolchainv1alpha1.Member {
 				Conditions:      []toolchainv1alpha1.Condition{ToBeReady()},
 			},
 		},
-		UserAccountCount: 10,
+		UserAccountCount: 0,
 	}
-}
-
-func memberClusterSingleNotReady(name, reason, msg string, resourceUsage map[string]int) toolchainv1alpha1.Member {
-	return toolchainv1alpha1.Member{
-		ClusterName: name,
-		MemberStatus: toolchainv1alpha1.MemberStatusStatus{
-			Conditions: []toolchainv1alpha1.Condition{
-				{
-					Type:    toolchainv1alpha1.ConditionReady,
-					Status:  corev1.ConditionFalse,
-					Reason:  reason,
-					Message: msg,
-				},
-			},
-			ResourceUsage: toolchainv1alpha1.ResourceUsage{
-				MemoryUsagePerNodeRole: resourceUsage,
-			},
-			Routes: &toolchainv1alpha1.Routes{
-				ConsoleURL:      "http://console.openshift.com/url",
-				CheDashboardURL: "http://console.openshift.com/url",
-				Conditions:      []toolchainv1alpha1.Condition{ToBeReady()},
-			},
-		},
+	for _, opt := range options {
+		opt.applyToMember(&m)
 	}
+	return m
 }
 
 type regTestDeployStatus struct {
