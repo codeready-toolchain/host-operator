@@ -451,7 +451,6 @@ func TestToolchainStatusConditions(t *testing.T) {
 			toolchainStatus := NewToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
-				// memberCluster("member-2", ready()),
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), newGetMemberClustersFuncEmpty, hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
 
