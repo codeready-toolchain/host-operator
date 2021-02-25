@@ -454,7 +454,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), noMemberClusters(), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters(), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -1172,14 +1172,6 @@ func memberClusters(clusterNames ...string) getMemberClustersFunc {
 				clusters[i] = cachedToolchainCluster(cl, clusterName, corev1.ConditionTrue, metav1.Now())
 			}
 			return clusters
-		}
-	}
-}
-
-func noMemberClusters() getMemberClustersFunc {
-	return func(cl client.Client) cluster.GetMemberClustersFunc {
-		return func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
-			return make([]*cluster.CachedToolchainCluster, 0)
 		}
 	}
 }
