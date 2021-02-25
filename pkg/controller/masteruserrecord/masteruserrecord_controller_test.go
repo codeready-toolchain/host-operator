@@ -3,9 +3,10 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
-	"github.com/gofrs/uuid"
 	"testing"
 	"time"
+
+	"github.com/gofrs/uuid"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -794,7 +795,9 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		assert.True(t, result1.Requeue)
 		assert.Equal(t, int64(result1.RequeueAfter), int64(10*time.Second))
 
-		memberClient.Delete(nil, userAcc)
+		err = memberClient.Delete(context.TODO(), userAcc)
+		require.NoError(t, err)
+
 		result2, err2 := cntrl.Reconcile(newMurRequest(mur))
 
 		// then

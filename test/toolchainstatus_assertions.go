@@ -90,10 +90,11 @@ func (a *ToolchainStatusAssertion) HasUserAccountCount(memberClusterName string,
 	return a
 }
 
-func (a *ToolchainStatusAssertion) HasMemberStatus(expected ...toolchainv1alpha1.Member) *ToolchainStatusAssertion {
+func (a *ToolchainStatusAssertion) HasMemberClusterStatus(expected ...toolchainv1alpha1.Member) *ToolchainStatusAssertion {
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
 	test.AssertMembersMatch(a.t, a.toolchainStatus.Status.Members, expected...)
+
 	return a
 }
 
