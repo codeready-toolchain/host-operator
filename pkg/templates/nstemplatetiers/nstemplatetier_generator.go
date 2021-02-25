@@ -147,7 +147,7 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 		parts := strings.Split(name, "/")
 		// skip any name that does not have 2 parts
 		if len(parts) != 2 {
-			return nil, errors.Wrapf(err, "unable to load templates: invalid name format for file '%s'", name)
+			return nil, fmt.Errorf("unable to load templates: invalid name format for file '%s'", name)
 		}
 		tier := parts[0]
 		filename := parts[1]
