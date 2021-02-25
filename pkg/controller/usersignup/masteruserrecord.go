@@ -3,7 +3,7 @@ package usersignup
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
-	
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

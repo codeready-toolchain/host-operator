@@ -304,14 +304,14 @@ func (r *ReconcileToolchainStatus) registrationServiceHandleStatus(reqLogger log
 
 // memberHandleStatus retrieves the status of member clusters and adds them to ToolchainStatus. It returns an error
 // if any of the members are not ready or if no member clusters are found
-func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	// get member clusters
 	memberClusters := r.getMembersFunc()
 	members := map[string]toolchainv1alpha1.MemberStatusStatus{}
 	ready := true
 	if len(memberClusters) == 0 {
 		err := fmt.Errorf("no member clusters found")
-		reqLogger.Error(err, "number of member clusters is zero")
+		logger.Error(err, "number of member clusters is zero")
 		ready = false
 	}
 	for _, memberCluster := range memberClusters {
@@ -319,7 +319,7 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 		err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: memberStatusName}, memberStatusObj)
 		if err != nil {
 			// couldn't find the memberstatus resource on the member cluster, create a status condition and add it to this member's status
-			reqLogger.Error(err, fmt.Sprintf("cannot find memberstatus resource in namespace %s in cluster %s", memberCluster.OperatorNamespace, memberCluster.Name))
+			logger.Error(err, fmt.Sprintf("cannot find memberstatus resource in namespace %s in cluster %s", memberCluster.OperatorNamespace, memberCluster.Name))
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberStatusNotFoundReason, err.Error())
 			memberStatus := customMemberStatus(*memberStatusNotFoundCondition)
 			members[memberCluster.Name] = memberStatus
@@ -337,14 +337,15 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(reqLogger logr.Logger, to
 		}
 		if condition.IsNotTrue(memberStatusObj.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 			// the memberstatus is not ready so set the component error to bubble up the error to the overall toolchain status
-			reqLogger.Error(fmt.Errorf("member cluster %s not ready", memberCluster.Name), "the memberstatus ready condition is not true")
+			logger.Error(fmt.Errorf("member cluster %s not ready", memberCluster.Name), "the memberstatus ready condition is not true")
 			ready = false
 		}
+		log.Info("adding member status", "member_name", memberCluster.Name, string(memberStatus.Conditions[0].Type), memberStatus.Conditions[0].Status)
 		members[memberCluster.Name] = memberStatus
 	}
 
 	// add member cluster statuses to toolchainstatus
-	ready = compareAndAssignMemberStatuses(reqLogger, toolchainStatus, members) && ready
+	ready = compareAndAssignMemberStatuses(logger, toolchainStatus, members) && ready
 	return ready
 }
 
@@ -390,16 +391,16 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger
 	return nil
 }
 
-func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, members map[string]toolchainv1alpha1.MemberStatusStatus) bool {
+func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, members map[string]toolchainv1alpha1.MemberStatusStatus) bool {
 	allOk := true
-	for index, memberStatus := range toolchainStatus.Status.Members {
-		newMemberStatus, ok := members[memberStatus.ClusterName]
+	for index, member := range toolchainStatus.Status.Members {
+		newMemberStatus, ok := members[member.ClusterName]
 		if ok {
 			toolchainStatus.Status.Members[index].MemberStatus = newMemberStatus
-			delete(members, memberStatus.ClusterName)
-		} else if memberStatus.UserAccountCount > 0 {
-			err := fmt.Errorf("ToolchainCluster CR wasn't found for member cluster `%s` that was previously registered in the host", memberStatus.ClusterName)
-			reqLogger.Error(err, "the member cluster seems to be removed")
+			delete(members, member.ClusterName)
+		} else if member.UserAccountCount > 0 {
+			err := fmt.Errorf("ToolchainCluster CR wasn't found for member cluster `%s` that was previously registered in the host", member.ClusterName)
+			logger.Error(err, "the member cluster seems to be removed")
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterMissingReason, err.Error())
 			toolchainStatus.Status.Members[index].MemberStatus = customMemberStatus(*memberStatusNotFoundCondition)
 			allOk = false
@@ -412,6 +413,7 @@ func compareAndAssignMemberStatuses(reqLogger logr.Logger, toolchainStatus *tool
 			ClusterName:  clusterName,
 			MemberStatus: memberStatus,
 		})
+		logger.Info("added member status", "cluster_name", clusterName)
 	}
 	return allOk
 }
