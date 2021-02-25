@@ -37,8 +37,6 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			// then
-			require.NoError(t, err)
 			require.Len(t, tmpls, 5)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 			for _, tier := range []string{"advanced", "basic", "team", "basicdeactivationdisabled", "test"} {
@@ -140,6 +138,29 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			// then
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "unable to load templates: an error occurred")
+		})
+
+		t.Run("invalid name format", func(t *testing.T) {
+			// given
+			fakeAssetNames := func() []string {
+				return []string{`.DS_Store`, `metadata.yaml`} // '/advanced/foo.yaml' is not a valid filename
+			}
+			fakeAssets := func(name string) ([]byte, error) {
+				switch name {
+				case "metadata.yaml":
+					return []byte(`advanced/foo.yaml: "123456a"`), nil // just make sure the asset exists
+				case ".DS_Store":
+					return []byte(`foo:bar`), nil // just make sure the asset exists
+				default:
+					return testnstemplatetiers.Asset(name)
+				}
+			}
+			assets := assets.NewAssets(fakeAssetNames, fakeAssets)
+			// when
+			_, err := loadTemplatesByTiers(assets)
+			// then
+			require.Error(t, err)
+			assert.EqualError(t, err, "unable to load templates: invalid name format for file '.DS_Store'")
 		})
 
 		t.Run("invalid filename scope", func(t *testing.T) {

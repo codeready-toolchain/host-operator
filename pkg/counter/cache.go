@@ -133,8 +133,8 @@ func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) er
 		}
 		cachedCounts.initialized = true
 	}
-
 	toolchainStatus.Status.HostOperator.MasterUserRecordCount = cachedCounts.MasterUserRecordCount
+
 CachedCountsPerCluster:
 	for clusterName, count := range cachedCounts.UserAccountsPerClusterCounts {
 		for index, member := range toolchainStatus.Status.Members {
