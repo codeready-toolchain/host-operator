@@ -154,7 +154,7 @@ func TestInitializeCounterByLoadingExistingMurs(t *testing.T) {
 	counter.IncrementMasterUserRecordCount()
 	counter.IncrementUserAccountCount("member")
 
-	murs := CreateMultipleMurs(t, 10)
+	murs := CreateMultipleMurs(t, "user-", 10, "member-cluster")
 	fakeClient := test.NewFakeClient(t, murs...)
 
 	// when
@@ -174,7 +174,7 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 	counter.IncrementMasterUserRecordCount()
 	counter.IncrementUserAccountCount("member")
 
-	murs := CreateMultipleMurs(t, 10)
+	murs := CreateMultipleMurs(t, "user-", 10, "member-cluster")
 	fakeClient := test.NewFakeClient(t, murs...)
 	InitializeCounterWithClient(t, fakeClient, 0)
 	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-cluster")))
@@ -195,7 +195,7 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 func TestMultipleExecutionsInParallel(t *testing.T) {
 	// given
 	defer counter.Reset()
-	murs := CreateMultipleMurs(t, 10)
+	murs := CreateMultipleMurs(t, "user-", 10, "member-cluster")
 	fakeClient := test.NewFakeClient(t, murs...)
 	toolchainStatus := InitializeCounterWithClient(t, fakeClient, 0)
 	var latch sync.WaitGroup

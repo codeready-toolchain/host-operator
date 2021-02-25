@@ -44,6 +44,7 @@ func TestRegisterCustomMetrics(t *testing.T) {
 	for _, m := range allGauges {
 		assert.True(t, k8smetrics.Registry.Unregister(m))
 	}
+
 }
 
 func TestResetMetrics(t *testing.T) {
@@ -51,6 +52,7 @@ func TestResetMetrics(t *testing.T) {
 	// when
 	UserSignupUniqueTotal.Inc()
 	MasterUserRecordGauge.Set(22)
+
 	Reset()
 
 	// then

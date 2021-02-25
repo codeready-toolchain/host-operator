@@ -47,10 +47,10 @@ func verifyCounts(t *testing.T, counts counter.Counts, numberOfMurs int, numberO
 	}
 }
 
-func CreateMultipleMurs(t *testing.T, number int) []runtime.Object {
+func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster string) []runtime.Object {
 	murs := make([]runtime.Object, number)
 	for index := range murs {
-		murs[index] = masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("johny-%d", index), masteruserrecord.TargetCluster("member-cluster"))
+		murs[index] = masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("%s%d", prefix, index), masteruserrecord.TargetCluster(targetCluster))
 	}
 	return murs
 }
