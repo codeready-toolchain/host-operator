@@ -423,7 +423,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
 	case "team":
 		assert.Len(t, actual.Objects, 9) // No Idlers
-		containsObj(t, actual, clusterResourceQuotaComputeObj("10000m", "2000m", "15Gi"))
+		containsObj(t, actual, clusterResourceQuotaComputeObj("15000m", "2000m", "15Gi"))
 		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
 		containsObj(t, actual, clusterResourceQuotaReplicasObj())
 		containsObj(t, actual, clusterResourceQuotaRoutesObj())
@@ -479,16 +479,10 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	containsObj(t, actual, userEditRoleBindingObj(kind))
 
 	// LimitRange
-	cpuLimit := "500m"
+	cpuLimit := "1000m"
 	memoryLimit := "750Mi"
 	memoryRequest := "64Mi"
 	cpuRequest := "10m"
-	if kind == "code" {
-		cpuLimit = "1000m"
-		cpuRequest = "60m"
-		memoryRequest = "307Mi"
-		memoryLimit = "512Mi"
-	}
 	if tier == "team" {
 		memoryLimit = "1Gi"
 	}
