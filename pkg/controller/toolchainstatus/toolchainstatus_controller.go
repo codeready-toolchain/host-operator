@@ -306,7 +306,7 @@ func (r *ReconcileToolchainStatus) registrationServiceHandleStatus(reqLogger log
 // if any of the members are not ready or if no member clusters are found
 func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	// get member clusters
-	log.Info("updating member status")
+	logger.Info("updating member status")
 	memberClusters := r.getMembersFunc()
 	members := map[string]toolchainv1alpha1.MemberStatusStatus{}
 	ready := true
