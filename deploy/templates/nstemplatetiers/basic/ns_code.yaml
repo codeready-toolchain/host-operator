@@ -68,10 +68,10 @@ objects:
     - type: "Container"
       default:
         cpu: 1000m
-        memory: 512Mi
+        memory: 750Mi
       defaultRequest:
-        cpu: 60m
-        memory: 307Mi
+        cpu: 10m
+        memory: 64Mi
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
