@@ -36,7 +36,7 @@ var (
 // gauge vectors
 var (
 	// MasterUserRecordGauge should reflect the current number of master user records in the system, with a label to partition per member cluster
-	MasterUserRecordGaugeVec *prometheus.GaugeVec
+	UserAccountGaugeVec *prometheus.GaugeVec
 )
 
 // collections
@@ -63,7 +63,7 @@ func initMetrics() {
 	// Gauges
 	MasterUserRecordGauge = newGauge("master_user_record_current", "Current number of Master User Records")
 	// GaugeVecs
-	MasterUserRecordGaugeVec = newGaugeVec("master_user_records_current", "Current number of Master User Records", "cluster_name")
+	UserAccountGaugeVec = newGaugeVec("user_accounts_current", "Current number of User Accounts (per member cluster)", "cluster_name")
 	log.Info("custom metrics initialized")
 }
 

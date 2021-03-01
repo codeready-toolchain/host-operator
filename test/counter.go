@@ -43,7 +43,7 @@ func verifyCounts(t *testing.T, counts counter.Counts, numberOfMurs int, numberO
 	for _, userAccountsForCluster := range numberOfUasPerCluster {
 		clusterName, count := userAccountsForCluster()
 		assert.Equal(t, count, counts.UserAccountsPerClusterCounts[clusterName])
-		AssertMetricsGaugeEquals(t, count, metrics.MasterUserRecordGaugeVec.WithLabelValues(clusterName))
+		AssertMetricsGaugeEquals(t, count, metrics.UserAccountGaugeVec.WithLabelValues(clusterName))
 	}
 }
 

@@ -51,7 +51,7 @@ func reset() {
 	}
 	cachedCounts.initialized = false
 	metrics.MasterUserRecordGauge.Set(float64(0))
-	metrics.MasterUserRecordGaugeVec.Reset()
+	metrics.UserAccountGaugeVec.Reset()
 }
 
 // IncrementMasterUserRecordCount increments the number of MasterUserRecord in the cached counter
@@ -81,7 +81,7 @@ func DecrementMasterUserRecordCount(log logr.Logger) {
 func IncrementUserAccountCount(clusterName string) {
 	write(func() {
 		cachedCounts.UserAccountsPerClusterCounts[clusterName]++
-		metrics.MasterUserRecordGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.UserAccountsPerClusterCounts[clusterName]))
+		metrics.UserAccountGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.UserAccountsPerClusterCounts[clusterName]))
 	})
 }
 
@@ -90,7 +90,7 @@ func DecrementUserAccountCount(log logr.Logger, clusterName string) {
 	write(func() {
 		if cachedCounts.UserAccountsPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized {
 			cachedCounts.UserAccountsPerClusterCounts[clusterName]--
-			metrics.MasterUserRecordGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.UserAccountsPerClusterCounts[clusterName]))
+			metrics.UserAccountGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.UserAccountsPerClusterCounts[clusterName]))
 		} else {
 			log.Error(fmt.Errorf("the count of UserAccounts is zero"),
 				"unable to decrement the number of UserAccounts for the given cluster", "cluster", clusterName)
@@ -149,7 +149,8 @@ func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) er
 			index = len(toolchainStatus.Status.Members) - 1
 		}
 		toolchainStatus.Status.Members[index].UserAccountCount = count
-		metrics.MasterUserRecordGaugeVec.WithLabelValues(clusterName).Set(float64(count))
+		log.Info("synchronizing MasterUserRecords gauge", "member_cluster", member.ClusterName, "count", count)
+		metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName).Set(float64(count))
 	}
 	metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 	return nil
