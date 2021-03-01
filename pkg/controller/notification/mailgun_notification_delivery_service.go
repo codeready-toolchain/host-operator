@@ -28,15 +28,17 @@ func NewMailgunDeliveryError(id, response, errorMessage string) error {
 }
 
 type MailgunNotificationDeliveryService struct {
-	base        BaseNotificationDeliveryService
-	Mailgun     mailgun.Mailgun
-	SenderEmail string
+	base         BaseNotificationDeliveryService
+	Mailgun      mailgun.Mailgun
+	SenderEmail  string
+	ReplyToEmail string
 }
 
 type MailgunConfig interface {
 	GetMailgunDomain() string
 	GetMailgunAPIKey() string
 	GetMailgunSenderEmail() string
+	GetMailgunReplyToEmail() string
 }
 
 type MailgunOption interface {
@@ -55,9 +57,10 @@ func NewMailgunNotificationDeliveryService(config NotificationDeliveryServiceFac
 	}
 
 	return &MailgunNotificationDeliveryService{
-		base:        BaseNotificationDeliveryService{TemplateLoader: templateLoader},
-		Mailgun:     mg,
-		SenderEmail: config.GetMailgunSenderEmail(),
+		base:         BaseNotificationDeliveryService{TemplateLoader: templateLoader},
+		Mailgun:      mg,
+		SenderEmail:  config.GetMailgunSenderEmail(),
+		ReplyToEmail: config.GetMailgunReplyToEmail(),
 	}
 }
 
@@ -96,6 +99,11 @@ func (s *MailgunNotificationDeliveryService) Send(notificationCtx NotificationCo
 
 	// The message object allows you to add attachments and Bcc recipients
 	message := s.Mailgun.NewMessage(s.SenderEmail, subject, "", notificationCtx.DeliveryEmail())
+
+	if s.ReplyToEmail != "" {
+		message.SetReplyTo(s.ReplyToEmail)
+	}
+
 	message.SetHtml(body)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
