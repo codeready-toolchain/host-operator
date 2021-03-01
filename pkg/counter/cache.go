@@ -137,9 +137,12 @@ func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) er
 			cachedCounts.UserAccountsPerClusterCounts[memberStatus.ClusterName] += memberStatus.UserAccountCount
 		}
 		cachedCounts.initialized = true
+		log.Info("cachedCounts initialized", "useraccounts_per_cluster_counts", cachedCounts.UserAccountsPerClusterCounts)
 	}
 	toolchainStatus.Status.HostOperator.MasterUserRecordCount = cachedCounts.MasterUserRecordCount
+	metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 
+	log.Info("cachedCounts", "useraccounts_per_cluster_counts", cachedCounts.UserAccountsPerClusterCounts)
 	for _, member := range toolchainStatus.Status.Members {
 		count := cachedCounts.UserAccountsPerClusterCounts[member.ClusterName]
 		index := indexOfMember(toolchainStatus.Status.Members, member.ClusterName)
@@ -150,10 +153,9 @@ func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) er
 			index = len(toolchainStatus.Status.Members) - 1
 		}
 		toolchainStatus.Status.Members[index].UserAccountCount = count
-		log.Info("synchronizing user_accounts_current gauge", "member_cluster", member.ClusterName, "count", count)
+		log.Info("synchronized user_accounts_current gauge", "member_cluster", member.ClusterName, "count", count)
 		metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName).Set(float64(count))
 	}
-	metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 	return nil
 }
 

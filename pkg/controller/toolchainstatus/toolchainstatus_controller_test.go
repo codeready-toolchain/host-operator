@@ -144,6 +144,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 
 func TestToolchainStatusConditions(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
+	logf.SetLogger(zap.Logger(true))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	requestName := configuration.DefaultToolchainStatusName
@@ -472,8 +473,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(
-					memberCluster("member-1", userAccountCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
-					memberCluster("member-2", userAccountCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
+					memberCluster("member-1", userAccountCount(0), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
+					memberCluster("member-2", userAccountCount(0), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
 				).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
@@ -482,7 +483,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatus(ready())
-			toolchainStatus := NewToolchainStatus()
+			toolchainStatus := NewToolchainStatus(WithHost(MasterUserRecordCount(20)))
+
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
@@ -509,7 +511,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatus(ready())
-			toolchainStatus := NewToolchainStatus()
+			toolchainStatus := NewToolchainStatus(WithHost(MasterUserRecordCount(20)))
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
@@ -570,8 +572,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(
-					memberCluster("member-1", noResourceUsage(), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
-					memberCluster("member-2", noResourceUsage(), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
+					memberCluster("member-1", noResourceUsage(), userAccountCount(0), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
+					memberCluster("member-2", noResourceUsage(), userAccountCount(0), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
 				).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
@@ -673,7 +675,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					HasMemberClusterStatus(
 						memberCluster("member-1", ready()),
 						memberCluster("member-2", ready()),
-						memberCluster("member-3", noResourceUsage(), userAccountCount(10), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-3` that was previously registered in the host")),
+						memberCluster("member-3", noResourceUsage(), userAccountCount(0), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-3` that was previously registered in the host")),
 					).
 					HasRegistrationServiceStatus(registrationServiceReady())
 			})

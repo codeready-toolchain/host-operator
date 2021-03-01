@@ -59,7 +59,7 @@ func InitializeCounter(t *testing.T, numberOfMurs int, numberOfUasPerCluster ...
 	counter.Reset()
 	return InitializeCounterWithoutReset(t, numberOfMurs, numberOfUasPerCluster...)
 }
-func InitializeCounterWithClient(t *testing.T, cl *test.FakeClient, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) *v1alpha1.ToolchainStatus {
+func InitializeCounterWithClientAndBaseValues(t *testing.T, cl *test.FakeClient, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) *v1alpha1.ToolchainStatus {
 	counter.Reset()
 	return initializeCounter(t, cl, numberOfMurs, numberOfUasPerCluster...)
 }
@@ -70,9 +70,6 @@ func InitializeCounterWithoutReset(t *testing.T, numberOfMurs int, numberOfUasPe
 
 func initializeCounter(t *testing.T, cl *test.FakeClient, numberOfMurs int, numberOfUasPerCluster ...ExpectedNumberOfUserAccounts) *v1alpha1.ToolchainStatus {
 	metrics.MasterUserRecordGauge.Set(float64(numberOfMurs))
-	if len(numberOfUasPerCluster) > 0 && numberOfMurs == 0 {
-		require.FailNow(t, "When specifying number of UserAccounts per member cluster, you need to specify a count of MURs that is higher than zero")
-	}
 	toolchainStatus := &v1alpha1.ToolchainStatus{
 		Status: v1alpha1.ToolchainStatusStatus{
 			HostOperator: &v1alpha1.HostOperatorStatus{
@@ -88,7 +85,7 @@ func initializeCounter(t *testing.T, cl *test.FakeClient, numberOfMurs int, numb
 			UserAccountCount: uaCount,
 		})
 	}
-
+	t.Logf("toolchainStatus members: %v", toolchainStatus.Status.Members)
 	err := counter.Synchronize(cl, toolchainStatus)
 	require.NoError(t, err)
 	t.Logf("MasterUserRecordGauge=%.0f", promtestutil.ToFloat64(metrics.MasterUserRecordGauge))
