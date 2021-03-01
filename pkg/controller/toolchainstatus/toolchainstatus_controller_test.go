@@ -59,7 +59,7 @@ const respBodyInvalid = `{"not found"}`
 const respBodyBad = `{"alive":false,"environment":"dev","revision":"64af1be5c6011fae5497a7c35e2a986d633b3421","buildTime":"0","startTime":"2020-07-06T13:18:30Z"}`
 
 func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTPClient,
-	getMemberClustersFunc getMemberClustersFunc, initObjs ...runtime.Object) (*ReconcileToolchainStatus, reconcile.Request, *test.FakeClient) {
+	memberClusters []string, initObjs ...runtime.Object) (*ReconcileToolchainStatus, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -71,14 +71,20 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 		client:         fakeClient,
 		httpClientImpl: httpTestClient,
 		scheme:         s,
-		getMembersFunc: getMemberClustersFunc(fakeClient),
-		config:         hostConfig,
+		getMembersFunc: func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
+			clusters := make([]*cluster.CachedToolchainCluster, len(memberClusters))
+			for i, clusterName := range memberClusters {
+				clusters[i] = cachedToolchainCluster(fakeClient, clusterName, corev1.ConditionTrue, metav1.Now())
+			}
+			return clusters
+		},
+		config: hostConfig,
 	}
 	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }
 
-func prepareReconcileWithStatusConditions(t *testing.T, requestName string, getMemberClustersFunc getMemberClustersFunc, conditions []toolchainv1alpha1.Condition, initObjs ...runtime.Object) (*ReconcileToolchainStatus, reconcile.Request, *test.FakeClient) {
-	reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), getMemberClustersFunc, initObjs...)
+func prepareReconcileWithStatusConditions(t *testing.T, requestName string, memberClusters []string, conditions []toolchainv1alpha1.Condition, initObjs ...runtime.Object) (*ReconcileToolchainStatus, reconcile.Request, *test.FakeClient) {
+	reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters, initObjs...)
 
 	// explicitly set the conditions, so they are not empty/unknown
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
@@ -107,7 +113,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 	t.Run("No toolchainstatus resource found", func(t *testing.T) {
 		// given
 		requestName := "bad-name"
-		reconciler, req, _ := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"))
+		reconciler, req, _ := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
 
 		// when
 		res, err := reconciler.Reconcile(req)
@@ -121,7 +127,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 		// given
 		expectedErrMsg := "get failed"
 		requestName := configuration.DefaultToolchainStatusName
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"))
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
 		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 			return fmt.Errorf(expectedErrMsg)
 		}
@@ -149,7 +155,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatus(ready())
 		toolchainStatus := NewToolchainStatus()
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when
 		res, err := reconciler.Reconcile(req)
@@ -173,7 +179,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("Host operator deployment not found - deployment env var not set", func(t *testing.T) {
 			// given
 			resetFunc := test.UnsetEnvVarAndRestore(t, k8sutil.OperatorNameEnvVar)
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -191,7 +197,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Host operator deployment not found", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -209,7 +215,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("Host operator deployment not ready", func(t *testing.T) {
 			// given
 			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -227,7 +233,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("Host operator deployment not progressing", func(t *testing.T) {
 			// given
 			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentNotProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -251,7 +257,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration service deployment not found", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, registrationService, memberStatus, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationService, memberStatus, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -269,7 +275,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("Registration service deployment not ready", func(t *testing.T) {
 			// given
 			registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -287,7 +293,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("Registration service deployment not progressing", func(t *testing.T) {
 			// given
 			registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentNotProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -311,7 +317,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration service resource not found", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -329,7 +335,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("Registration service resource not ready", func(t *testing.T) {
 			// given
 			registrationService := newRegistrationServiceNotReady()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -354,7 +360,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration health endpoint - http client error", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, httpClientError(), memberClusters("member-1", "member-2"), hostOperatorDeployment, registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, httpClientError(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -371,7 +377,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration health endpoint - bad status code", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBadCode(), memberClusters("member-1", "member-2"), hostOperatorDeployment, registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBadCode(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -388,7 +394,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration health endpoint - invalid JSON", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseInvalid(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseInvalid(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -405,7 +411,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration health endpoint - not alive", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBodyNotAlive(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBodyNotAlive(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -430,7 +436,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("MemberStatus not found", func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters(), hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{}, hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -454,7 +460,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters(), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -481,7 +487,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -508,7 +514,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -534,7 +540,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", userAccountCount(0), notReady("NoMemberClustersFound", "no member clusters found")),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -552,7 +558,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("MemberStatus not found", func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -574,7 +580,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatus(notReady(toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason, "components not ready: [memberOperator]"))
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -596,7 +602,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatus(ready())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 			fakeClient.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 				return fmt.Errorf("some error")
 			}
@@ -623,7 +629,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				memberCluster("member-1", notReady("ComponentsNotReady", "some cool error")),
 				memberCluster("member-2", ready()),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -653,7 +659,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					// member-1 and member-2 will be added since there are MemberStatus resources for each one of them
 					memberCluster("member-3", ready(), userAccountCount(10)), // will move to `NotReady` since there is no CachedToolchainCluster for this member
 				}
-				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 				// when
 				res, err := reconciler.Reconcile(req)
@@ -678,7 +684,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 					memberCluster("removed-cluster", ready()), // will move to `NotReady` since there is no MemberStatus for this cluster
 				}
-				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 				// when
 				res, err := reconciler.Reconcile(req)
@@ -716,7 +722,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		defer counter.Reset()
 
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-			memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+			[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
 			registrationService, toolchainStatus)
 
 		// when
@@ -739,7 +745,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		ready.LastUpdatedTime = &before
 		conditions := []toolchainv1alpha1.Condition{ready}
 		reconciler, req, fakeClient := prepareReconcileWithStatusConditions(t, requestName,
-			memberClusters("member-1", "member-2"),
+			[]string{"member-1", "member-2"},
 			conditions,
 			hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -765,7 +771,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
 			status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 		reconciler, req, fakeClient := prepareReconcileWithStatusConditions(t, requestName,
-			memberClusters("member-1", "member-2"),
+			[]string{"member-1", "member-2"},
 			conditions,
 			hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -814,7 +820,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 		}
 
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-			memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+			[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
 			registrationService, toolchainStatus)
 
 		// when
@@ -839,7 +845,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 				status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-				memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+				[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
 				registrationService, toolchainStatus, config)
 
 			// when
@@ -876,7 +882,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 					overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
 					reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-						memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+						[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
 						registrationService, toolchainStatus, invalidConfig)
 
 					// when
@@ -910,7 +916,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 				overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
 				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-					memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+					[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
 					registrationService, toolchainStatus, config)
 
 				// when
@@ -933,7 +939,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						status.DeploymentAvailableCondition())
 
 					reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-						memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+						[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
 						registrationService, toolchainStatus)
 
 					// when
@@ -957,7 +963,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 						// Reconcile in order to update the ready status to false
 						reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-							memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+							[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
 							registrationService, toolchainStatus, config)
 
 						// when
@@ -976,7 +982,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 						// Reconcile once more
 						reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(),
-							memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment,
+							[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
 							registrationService, toolchainStatus, config)
 
 						// when
@@ -1055,7 +1061,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		initObjects = append(initObjects, CreateMultipleMurs(t, "cookie-", 8, "member-1")...)
 		initObjects = append(initObjects, CreateMultipleMurs(t, "pasta-", 2, "member-2")...)
 
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), initObjects...)
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, initObjects...)
 
 		// when
 		res, err := reconciler.Reconcile(req)
@@ -1082,7 +1088,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
 				MasterUserRecordCount: 1,
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -1121,7 +1127,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				UserAccountCount: 2, // will remain the same
 			},
 		}
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters("member-1", "member-2"), hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when
 		res, err := reconciler.Reconcile(req)
@@ -1159,20 +1165,6 @@ func newDeploymentWithConditions(deploymentName string, deploymentConditions ...
 		Status: appsv1.DeploymentStatus{
 			Conditions: deploymentConditions,
 		},
-	}
-}
-
-type getMemberClustersFunc func(client.Client) cluster.GetMemberClustersFunc
-
-func memberClusters(clusterNames ...string) getMemberClustersFunc {
-	return func(cl client.Client) cluster.GetMemberClustersFunc {
-		return func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
-			clusters := make([]*cluster.CachedToolchainCluster, len(clusterNames))
-			for i, clusterName := range clusterNames {
-				clusters[i] = cachedToolchainCluster(cl, clusterName, corev1.ConditionTrue, metav1.Now())
-			}
-			return clusters
-		}
 	}
 }
 
