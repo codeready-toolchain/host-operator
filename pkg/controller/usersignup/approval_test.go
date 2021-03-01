@@ -90,8 +90,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().
 				Enabled().
-				MaxUsersNumber(2000, PerMemberCluster("member1", 6000), PerMemberCluster("member2", 1000)).
-				ResourceCapThreshold(80, PerMemberCluster("member1", 60), PerMemberCluster("member2", 75)))
+				MaxUsersNumber(2000, PerMemberCluster("member1", 800), PerMemberCluster("member2", 1000)).
+				ResourceCapThreshold(80, PerMemberCluster("member1", 90), PerMemberCluster("member2", 95)))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
