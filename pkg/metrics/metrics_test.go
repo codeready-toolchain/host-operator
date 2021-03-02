@@ -31,6 +31,19 @@ func TestInitGauge(t *testing.T) {
 	assert.Equal(t, float64(22), promtestutil.ToFloat64(m))
 }
 
+func TestInitGaugeVec(t *testing.T) {
+	// given
+	m := newGaugeVec("test_gauge_vec", "test gauge description", "cluster_name")
+
+	// when
+	m.WithLabelValues("member-1").Set(1)
+	m.WithLabelValues("member-2").Set(2)
+
+	// then
+	assert.Equal(t, float64(1), promtestutil.ToFloat64(m.WithLabelValues("member-1")))
+	assert.Equal(t, float64(2), promtestutil.ToFloat64(m.WithLabelValues("member-2")))
+}
+
 func TestRegisterCustomMetrics(t *testing.T) {
 	// when
 	RegisterCustomMetrics()
