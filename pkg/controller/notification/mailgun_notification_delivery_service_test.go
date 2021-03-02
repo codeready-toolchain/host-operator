@@ -144,5 +144,6 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
+
 	})
 }
