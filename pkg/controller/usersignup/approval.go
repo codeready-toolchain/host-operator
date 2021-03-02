@@ -67,7 +67,7 @@ func hasNotReachedMaxNumberOfUsersThreshold(config toolchainv1alpha1.HostOperato
 		}
 		numberOfUserAccounts := counts.UserAccountsPerClusterCounts[cluster.Name]
 		threshold := config.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster[cluster.Name]
-		return threshold == 0 || numberOfUserAccounts <= threshold
+		return threshold == 0 || numberOfUserAccounts < threshold
 	}
 }
 
