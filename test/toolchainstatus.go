@@ -4,11 +4,29 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type ToolchainStatusOption func(*toolchainv1alpha1.ToolchainStatus)
+
+func WithHost(options ...HostToolchainStatusOption) ToolchainStatusOption {
+	return func(status *toolchainv1alpha1.ToolchainStatus) {
+		status.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
+		for _, modify := range options {
+			modify(status.Status.HostOperator)
+		}
+	}
+
+}
+
+type HostToolchainStatusOption func(*toolchainv1alpha1.HostOperatorStatus)
+
+func MasterUserRecordCount(count int) HostToolchainStatusOption {
+	return func(status *toolchainv1alpha1.HostOperatorStatus) {
+		status.MasterUserRecordCount = count
+	}
+}
 
 func WithMember(name string, options ...MemberToolchainStatusOption) ToolchainStatusOption {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {

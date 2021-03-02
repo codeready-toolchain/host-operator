@@ -306,6 +306,7 @@ func (r *ReconcileToolchainStatus) registrationServiceHandleStatus(reqLogger log
 // if any of the members are not ready or if no member clusters are found
 func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	// get member clusters
+	logger.Info("updating member status")
 	memberClusters := r.getMembersFunc()
 	members := map[string]toolchainv1alpha1.MemberStatusStatus{}
 	ready := true
@@ -410,8 +411,9 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 	}
 	for clusterName, memberStatus := range members {
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
-			ClusterName:  clusterName,
-			MemberStatus: memberStatus,
+			ClusterName:      clusterName,
+			MemberStatus:     memberStatus,
+			UserAccountCount: 0,
 		})
 		logger.Info("added member status", "cluster_name", clusterName)
 	}
