@@ -50,6 +50,8 @@ func reset() {
 		UserAccountsPerClusterCounts: map[string]int{},
 	}
 	cachedCounts.initialized = false
+	metrics.MasterUserRecordGauge.Set(float64(0))
+	metrics.UserAccountGaugeVec.Reset()
 }
 
 // IncrementMasterUserRecordCount increments the number of MasterUserRecord in the cached counter
@@ -79,6 +81,7 @@ func DecrementMasterUserRecordCount(log logr.Logger) {
 func IncrementUserAccountCount(clusterName string) {
 	write(func() {
 		cachedCounts.UserAccountsPerClusterCounts[clusterName]++
+		metrics.UserAccountGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.UserAccountsPerClusterCounts[clusterName]))
 	})
 }
 
@@ -87,6 +90,7 @@ func DecrementUserAccountCount(log logr.Logger, clusterName string) {
 	write(func() {
 		if cachedCounts.UserAccountsPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized {
 			cachedCounts.UserAccountsPerClusterCounts[clusterName]--
+			metrics.UserAccountGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.UserAccountsPerClusterCounts[clusterName]))
 		} else {
 			log.Error(fmt.Errorf("the count of UserAccounts is zero"),
 				"unable to decrement the number of UserAccounts for the given cluster", "cluster", clusterName)
@@ -118,6 +122,7 @@ func GetCounts() (Counts, error) {
 func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) error {
 	cachedCounts.Lock()
 	defer cachedCounts.Unlock()
+	log.Info("synchronizing counters", "cachedCounts.initialized", cachedCounts.initialized, "members", toolchainStatus.Status.Members)
 	if shouldLoadCurrentMURsAndUserAccounts(toolchainStatus) {
 		if err := loadCurrentMURsAndUserAccounts(cl, toolchainStatus.Namespace); err != nil {
 			return err
@@ -132,24 +137,36 @@ func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) er
 			cachedCounts.UserAccountsPerClusterCounts[memberStatus.ClusterName] += memberStatus.UserAccountCount
 		}
 		cachedCounts.initialized = true
+		log.Info("cachedCounts initialized", "useraccounts_per_cluster_counts", cachedCounts.UserAccountsPerClusterCounts)
 	}
 	toolchainStatus.Status.HostOperator.MasterUserRecordCount = cachedCounts.MasterUserRecordCount
-
-CachedCountsPerCluster:
-	for clusterName, count := range cachedCounts.UserAccountsPerClusterCounts {
-		for index, member := range toolchainStatus.Status.Members {
-			if clusterName == member.ClusterName {
-				toolchainStatus.Status.Members[index].UserAccountCount = count
-				continue CachedCountsPerCluster
-			}
-		}
-		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, v1alpha1.Member{
-			ClusterName:      clusterName,
-			UserAccountCount: count,
-		})
-	}
 	metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
+
+	log.Info("cachedCounts", "useraccounts_per_cluster_counts", cachedCounts.UserAccountsPerClusterCounts)
+	for _, member := range toolchainStatus.Status.Members {
+		count := cachedCounts.UserAccountsPerClusterCounts[member.ClusterName]
+		index := indexOfMember(toolchainStatus.Status.Members, member.ClusterName)
+		if index == -1 {
+			toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, v1alpha1.Member{
+				ClusterName: member.ClusterName,
+			})
+			index = len(toolchainStatus.Status.Members) - 1
+		}
+		toolchainStatus.Status.Members[index].UserAccountCount = count
+		log.Info("synchronized user_accounts_current gauge", "member_cluster", member.ClusterName, "count", count)
+		metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName).Set(float64(count))
+	}
 	return nil
+}
+
+// retrieves the index of the member with the given name, or return -1 if not found
+func indexOfMember(members []v1alpha1.Member, name string) int {
+	for index, member := range members {
+		if member.ClusterName == name {
+			return index
+		}
+	}
+	return -1
 }
 
 func shouldLoadCurrentMURsAndUserAccounts(toolchainStatus *v1alpha1.ToolchainStatus) bool {
