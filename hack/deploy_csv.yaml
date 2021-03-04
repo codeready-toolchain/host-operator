@@ -564,8 +564,8 @@ data:
             name: User ID
             priority: 1
             type: string
-          - jsonPath: .status.conditions[?(@.type=="Delivered")].status
-            name: Delivered
+          - jsonPath: .status.conditions[?(@.type=="Sent")].status
+            name: Sent
             type: string
           name: v1alpha1
           schema:
@@ -618,7 +618,7 @@ data:
                   properties:
                     conditions:
                       description: 'Conditions is an array of current Notification conditions
-                        Supported condition types: Delivered'
+                        Supported condition types: Sent'
                       items:
                         properties:
                           lastTransitionTime:
