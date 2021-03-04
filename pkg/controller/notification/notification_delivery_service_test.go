@@ -23,9 +23,10 @@ func (c *MockNotificationDeliveryServiceFactoryConfig) GetNotificationDeliverySe
 }
 
 type MockMailgunConfiguration struct {
-	Domain      string
-	APIKey      string
-	SenderEmail string
+	Domain       string
+	APIKey       string
+	SenderEmail  string
+	ReplyToEmail string
 }
 
 func (c *MockNotificationDeliveryServiceFactoryConfig) GetMailgunDomain() string {
@@ -40,9 +41,18 @@ func (c *MockNotificationDeliveryServiceFactoryConfig) GetMailgunSenderEmail() s
 	return c.Mailgun.SenderEmail
 }
 
-func NewNotificationDeliveryServiceFactoryConfig(domain, apiKey, senderEmail, service string) NotificationDeliveryServiceFactoryConfig {
+func (c *MockNotificationDeliveryServiceFactoryConfig) GetMailgunReplyToEmail() string {
+	return c.Mailgun.ReplyToEmail
+}
+
+func NewNotificationDeliveryServiceFactoryConfig(domain, apiKey, senderEmail, replyToEmail, service string) NotificationDeliveryServiceFactoryConfig {
 	return &MockNotificationDeliveryServiceFactoryConfig{
-		Mailgun: MockMailgunConfiguration{Domain: domain, APIKey: apiKey, SenderEmail: senderEmail},
+		Mailgun: MockMailgunConfiguration{
+			Domain:       domain,
+			APIKey:       apiKey,
+			SenderEmail:  senderEmail,
+			ReplyToEmail: replyToEmail,
+		},
 		Service: MockNotificationDeliveryServiceConfig{service: service},
 	}
 
@@ -79,7 +89,8 @@ func TestNotificationDeliveryServiceFactory(t *testing.T) {
 
 	t.Run("factory configured with mailgun delivery service", func(t *testing.T) {
 		// when
-		factory := NewNotificationDeliveryServiceFactory(client, NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345", "noreply@foo.com", "mailgun"))
+		factory := NewNotificationDeliveryServiceFactory(client, NewNotificationDeliveryServiceFactoryConfig(
+			"mg.foo.com", "abcd12345", "noreply@foo.com", "", "mailgun"))
 		svc, err := factory.CreateNotificationDeliveryService()
 
 		// then
@@ -91,7 +102,8 @@ func TestNotificationDeliveryServiceFactory(t *testing.T) {
 
 		// when
 		factory := NewNotificationDeliveryServiceFactory(client,
-			NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345", "noreply@foo.com", ""))
+			NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345",
+				"noreply@foo.com", "", ""))
 		_, err := factory.CreateNotificationDeliveryService()
 
 		// then

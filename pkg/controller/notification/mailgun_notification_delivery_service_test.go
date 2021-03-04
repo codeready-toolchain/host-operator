@@ -28,7 +28,8 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	mockServerOption := NewMailgunAPIBaseOption(mgs.URL())
 	invalidServerOption := NewMailgunAPIBaseOption("https://127.0.0.1:60000/v3")
 
-	config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345", "noreply@foo.com", "mailgun")
+	config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345",
+		"noreply@foo.com", "", "mailgun")
 	notCtx := &UserNotificationContext{
 		UserID:      "jsmith123",
 		FirstName:   "John",
@@ -126,5 +127,23 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 		// then
 		require.Error(t, err)
 		require.Equal(t, "template: template:1: function \"invalid_expression\" not defined", err.Error())
+	})
+
+	t.Run("test mailgun notification delivery service send with reply-to address", func(t *testing.T) {
+		// when
+		config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345",
+			"noreply@foo.com", "info@foo.com", "mailgun")
+
+		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
+		err := mgds.Send(notCtx, &v1alpha1.Notification{
+			Spec: v1alpha1.NotificationSpec{
+				Subject: "test",
+				Content: "abc",
+			},
+		})
+
+		// then
+		require.NoError(t, err)
+
 	})
 }
