@@ -75,6 +75,9 @@ const (
 	// varMailgunSenderEmail specifies the host operator mailgun senders email
 	varMailgunSenderEmail = "mailgun.sender.email"
 
+	// varMailgunReplyToEmail specifies the reply-to email address that will be set in sent notifications
+	varMailgunReplyToEmail = "mailgun.replyto.email"
+
 	// varEnvironment specifies the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
 	varEnvironment = "environment"
 
@@ -220,6 +223,11 @@ func (c *Config) GetMailgunAPIKey() string {
 // GetMailgunSenderEmail returns the host operator mailgun sender's email address
 func (c *Config) GetMailgunSenderEmail() string {
 	return c.secretValues[varMailgunSenderEmail]
+}
+
+// GetMailgunReplyToEmail returns the (optional) reply-to email address to set in sent notifications
+func (c *Config) GetMailgunReplyToEmail() string {
+	return c.secretValues[varMailgunReplyToEmail]
 }
 
 // GetEnvironment returns the host-operator environment such as prod, stage, unit-tests, e2e-tests, dev, etc
