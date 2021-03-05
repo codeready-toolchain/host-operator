@@ -113,16 +113,20 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 		// TODO read from configuration
 		days := 14
 
-		threshold := v1.Time{time.Now().Add(time.Duration(days*24) * time.Hour)}
+		threshold := v1.Time{time.Now().Add(-time.Duration(days*24) * time.Hour)}
 
 		if deactivatedStatusCondition.LastTransitionTime.Before(&threshold) {
 			return reconcile.Result{}, r.DeleteUserSignup(instance, reqLogger)
 		}
 
+		// Requeue this for reconciliation after the time has passed between the last transition time
+		// and the current deletion expiry threshold
+		requeueAfter := deactivatedStatusCondition.LastTransitionTime.Sub(threshold.Time)
+
 		// Requeue the reconciler to process this resource again after the threshold for deletion
 		return reconcile.Result{
 			Requeue:      true,
-			RequeueAfter: 0,
+			RequeueAfter: requeueAfter,
 		}, nil
 	}
 
