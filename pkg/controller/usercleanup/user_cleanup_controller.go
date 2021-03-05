@@ -91,6 +91,18 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
+	if instance.Spec.VerificationRequired && !instance.Spec.Approved {
+		// TODO replace this with the last active time from the UserSignup, once we determine what that is :)
+		lastActiveTime := time.Now()
+
+		unverifiedThreshold := time.Now().Add(-time.Duration(r.crtConfig.GetUserSignupUnverifiedRetentionDays()*24) * time.Hour)
+
+		if lastActiveTime.Before(unverifiedThreshold) {
+			reqLogger.Info("UserSignup deleted due to exceeding unverified retention period")
+			return reconcile.Result{}, r.DeleteUserSignup(instance, reqLogger)
+		}
+	}
+
 	if instance.Spec.Deactivated {
 		// Find the UserSignupComplete condition
 		var deactivatedStatusCondition *toolchainv1alpha1.Condition
@@ -111,18 +123,16 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 		// If the LastTransitionTime of the deactivated status condition is older than the configured threshold,
 		// then delete the UserSignup
 
-		// Read the number of retention days for deactivated accounts from the configuration
-		days := r.crtConfig.GetUserSignupDeactivatedRetentionDays()
+		deactivatedThreshold := v1.Time{time.Now().Add(-time.Duration(r.crtConfig.GetUserSignupDeactivatedRetentionDays()*24) * time.Hour)}
 
-		threshold := v1.Time{time.Now().Add(-time.Duration(days*24) * time.Hour)}
-
-		if deactivatedStatusCondition.LastTransitionTime.Before(&threshold) {
+		if deactivatedStatusCondition.LastTransitionTime.Before(&deactivatedThreshold) {
+			reqLogger.Info("UserSignup deleted due to exceeding deactivated retention period")
 			return reconcile.Result{}, r.DeleteUserSignup(instance, reqLogger)
 		}
 
 		// Requeue this for reconciliation after the time has passed between the last transition time
 		// and the current deletion expiry threshold
-		requeueAfter := deactivatedStatusCondition.LastTransitionTime.Sub(threshold.Time)
+		requeueAfter := deactivatedStatusCondition.LastTransitionTime.Sub(deactivatedThreshold.Time)
 
 		// Requeue the reconciler to process this resource again after the threshold for deletion
 		return reconcile.Result{
