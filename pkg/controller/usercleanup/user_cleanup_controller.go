@@ -105,6 +105,7 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 		if deactivatedStatusCondition == nil {
 			// We cannot find the status condition
 			// TODO how should we handle this if we can't find the condition?
+			return reconcile.Result{}, nil
 		}
 
 		// If the LastTransitionTime of the deactivated status condition is older than the configured threshold,
