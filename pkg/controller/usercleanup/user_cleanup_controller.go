@@ -111,8 +111,8 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 		// If the LastTransitionTime of the deactivated status condition is older than the configured threshold,
 		// then delete the UserSignup
 
-		// TODO read from configuration
-		days := 14
+		// Read the number of retention days for deactivated accounts from the configuration
+		days := r.crtConfig.GetUserSignupDeactivatedRetentionDays()
 
 		threshold := v1.Time{time.Now().Add(-time.Duration(days*24) * time.Hour)}
 

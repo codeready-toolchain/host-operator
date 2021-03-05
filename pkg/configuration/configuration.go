@@ -102,6 +102,21 @@ const (
 	varForbiddenUsernamePrefixes = "username.forbidden.prefixes"
 
 	DefaultForbiddenUsernamePrefixes = "openshift,kube,default,redhat,sandbox"
+
+	// varUserSignupUnverifiedRetentionDays is used to configure how many days we should keep unverified (i.e. the user
+	// hasn't completed the user verification process via the registration service) UserSignup resources before deleting
+	// them.  It is intended for this parameter to define an aggressive cleanup schedule for unverified user signups,
+	// and the default configuration value for this parameter reflects this.
+	varUserSignupUnverifiedRetentionDays = "usersignup.unverified.retention.days"
+
+	defaultUserSignupUnverifiedRetentionDays = 2
+
+	// varUserSignupDeactivatedRetentionDays is used to configure how many days we should keep deactivated UserSignup
+	// resources before deleting them.  This parameter value should reflect an extended period of time sufficient for
+	// gathering user metrics before removing the resources from the cluster.
+	varUserSignupDeactivatedRetentionDays = "usersignup.deactivated.retention.days"
+
+	defaultUserSignupDeactivatedRetentionDays = 90
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -173,6 +188,8 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(varForbiddenUsernamePrefixes, strings.FieldsFunc(DefaultForbiddenUsernamePrefixes, func(c rune) bool {
 		return c == ','
 	}))
+	c.host.SetDefault(varUserSignupUnverifiedRetentionDays, defaultUserSignupUnverifiedRetentionDays)
+	c.host.SetDefault(varUserSignupDeactivatedRetentionDays, defaultUserSignupDeactivatedRetentionDays)
 }
 
 // GetToolchainStatusName returns the configured name of the member status resource
@@ -270,4 +287,12 @@ func (c *Config) GetDeactivationDomainsExcludedList() []string {
 
 func (c *Config) GetForbiddenUsernamePrefixes() []string {
 	return c.host.GetStringSlice(varForbiddenUsernamePrefixes)
+}
+
+func (c *Config) GetUserSignupUnverifiedRetentionDays() int {
+	return c.host.GetInt(varUserSignupUnverifiedRetentionDays)
+}
+
+func (c *Config) GetUserSignupDeactivatedRetentionDays() int {
+	return c.host.GetInt(varUserSignupDeactivatedRetentionDays)
 }
