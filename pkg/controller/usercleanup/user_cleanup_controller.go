@@ -92,19 +92,19 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
 	if instance.Spec.VerificationRequired && !instance.Spec.Approved {
-		// TODO replace this with the last active time from the UserSignup, once we determine what that is :)
-		lastActiveTime := time.Now()
+
+		createdTime := instance.ObjectMeta.CreationTimestamp
 
 		unverifiedThreshold := time.Now().Add(-time.Duration(r.crtConfig.GetUserSignupUnverifiedRetentionDays()*24) * time.Hour)
 
-		if lastActiveTime.Before(unverifiedThreshold) {
+		if createdTime.Time.Before(unverifiedThreshold) {
 			reqLogger.Info("UserSignup deleted due to exceeding unverified retention period")
 			return reconcile.Result{}, r.DeleteUserSignup(instance, reqLogger)
 		}
 
 		// Requeue this for reconciliation after the time has passed between the last active time
 		// and the current unverified user deletion expiry threshold
-		requeueAfter := lastActiveTime.Sub(unverifiedThreshold)
+		requeueAfter := createdTime.Sub(unverifiedThreshold)
 
 		// Requeue the reconciler to process this resource again after the threshold for unverified user deletion
 		return reconcile.Result{
