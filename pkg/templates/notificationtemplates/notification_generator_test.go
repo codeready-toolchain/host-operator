@@ -35,7 +35,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NotNil(t, template)
 			assert.True(t, found)
 			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift Beta account is provisioned", template.Subject)
-			assert.Contains(t, template.Content, "Your account has been provisioned and is ready to use. Your account will be active for 14 days.")
+			assert.Contains(t, template.Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
 		})
 		t.Run("ensure cache is used", func(t *testing.T) {
 			// when
@@ -48,7 +48,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NotNil(t, template)
 			require.NotEmpty(t, template["userprovisioned"])
 			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift Beta account is provisioned", template["userprovisioned"].Subject)
-			assert.Contains(t, template["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 14 days.")
+			assert.Contains(t, template["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
 			assert.Equal(t, template["userprovisioned"], *UserProvisioned)
 		})
 	})
