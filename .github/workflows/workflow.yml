@@ -1,0 +1,48 @@
+name: operator-cd
+on:
+  push:
+    branches:
+      - master
+    tags-ignore:
+      - '*.*'
+env:
+  GOPATH: /tmp/go
+  GO_VERSION: 1.14.x
+
+jobs:
+  binary:
+    name: Build & push a new operator release
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Cache dependencies
+      uses: actions/cache@v2
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles ('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Prepare tools
+      uses: codeready-toolchain/toolchain-cicd/prepare-tools-action@master
+
+    - name: Release operator
+      uses: codeready-toolchain/toolchain-cicd/release-operator-action@master
+      with:
+        quay-token: ${{ secrets.QUAY_TOKEN }}
+        quay-namespace: codeready-toolchain
