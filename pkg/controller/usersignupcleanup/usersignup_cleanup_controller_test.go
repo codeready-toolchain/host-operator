@@ -90,13 +90,22 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		_, err := r.Reconcile(req)
+		res, err := r.Reconcile(req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup still exists
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 		require.NoError(t, r.client.Get(context.Background(), key, userSignup))
 		require.NotNil(t, userSignup)
+		require.True(t, res.Requeue)
+
+		// We expect the requeue duration to be approximately equal to the default retention time of 90 days. Let's
+		// accept any value here between the range of 89 days and 91 days
+		durLower := time.Duration(89 * time.Hour * 24)
+		durUpper := time.Duration(91 * time.Hour * 24)
+
+		require.Greater(t, res.RequeueAfter, durLower)
+		require.Less(t, res.RequeueAfter, durUpper)
 	})
 
 }
