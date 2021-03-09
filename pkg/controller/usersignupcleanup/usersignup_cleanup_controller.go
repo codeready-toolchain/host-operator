@@ -4,6 +4,7 @@ import (
 	"context"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -111,16 +112,9 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 
 	if instance.Spec.Deactivated {
 		// Find the UserSignupComplete condition
-		var deactivatedStatusCondition *toolchainv1alpha1.Condition
-		for _, cond := range instance.Status.Conditions {
-			if cond.Type == toolchainv1alpha1.UserSignupComplete &&
-				cond.Reason == toolchainv1alpha1.UserSignupUserDeactivatedReason {
-				deactivatedStatusCondition = &cond
-				break
-			}
-		}
+		cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
 
-		if deactivatedStatusCondition == nil {
+		if !found || cond.Reason != toolchainv1alpha1.UserSignupUserDeactivatedReason {
 			// We cannot find the status condition, simply return
 			return reconcile.Result{}, nil
 		}
@@ -130,14 +124,14 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 
 		deactivatedThreshold := time.Now().Add(-time.Duration(r.crtConfig.GetUserSignupDeactivatedRetentionDays()*24) * time.Hour)
 
-		if deactivatedStatusCondition.LastTransitionTime.Time.Before(deactivatedThreshold) {
+		if cond.LastTransitionTime.Time.Before(deactivatedThreshold) {
 			reqLogger.Info("Deleting UserSignup due to exceeding deactivated retention period")
 			return reconcile.Result{}, r.DeleteUserSignup(instance, reqLogger)
 		}
 
 		// Requeue this for reconciliation after the time has passed between the last transition time
 		// and the current deletion expiry threshold
-		requeueAfter := deactivatedStatusCondition.LastTransitionTime.Time.Sub(deactivatedThreshold)
+		requeueAfter := cond.LastTransitionTime.Time.Sub(deactivatedThreshold)
 
 		// Requeue the reconciler to process this resource again after the threshold for deletion
 		return reconcile.Result{
