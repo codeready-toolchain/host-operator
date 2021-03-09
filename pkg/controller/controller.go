@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/codeready-toolchain/host-operator/pkg/controller/usercleanup"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignupcleanup"
 	"time"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -26,7 +26,7 @@ func init() {
 	addToManagerFuncs = append(addToManagerFuncs, masteruserrecord.Add)
 	addToManagerFuncs = append(addToManagerFuncs, registrationservice.Add)
 	addToManagerFuncs = append(addToManagerFuncs, usersignup.Add)
-	addToManagerFuncs = append(addToManagerFuncs, usercleanup.Add)
+	addToManagerFuncs = append(addToManagerFuncs, usersignupcleanup.Add)
 	addToManagerFuncs = append(addToManagerFuncs, changetierrequest.Add)
 	addToManagerFuncs = append(addToManagerFuncs, nstemplatetier.Add)
 	addToManagerFuncs = append(addToManagerFuncs, notification.Add)

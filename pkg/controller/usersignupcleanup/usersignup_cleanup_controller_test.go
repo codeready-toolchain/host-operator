@@ -1,4 +1,4 @@
-package usercleanup
+package usersignupcleanup
 
 import (
 	"context"

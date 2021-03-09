@@ -1,4 +1,4 @@
-package usercleanup
+package usersignupcleanup
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -40,18 +39,15 @@ func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) reconcile.Reco
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("usercleanup-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("usersignupcleanup-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
 	// Watch for changes to the secondary resource UserSignup and requeue the owner UserSignup
-	if err := c.Watch(
-		&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
-		&handler.EnqueueRequestForOwner{
-			IsController: true,
-			OwnerType:    &toolchainv1alpha1.UserSignup{},
-		}); err != nil {
+	if err := c.Watch(&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
 		return err
 	}
 
@@ -98,7 +94,7 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 		unverifiedThreshold := time.Now().Add(-time.Duration(r.crtConfig.GetUserSignupUnverifiedRetentionDays()*24) * time.Hour)
 
 		if createdTime.Time.Before(unverifiedThreshold) {
-			reqLogger.Info("UserSignup deleted due to exceeding unverified retention period")
+			reqLogger.Info("Deleting UserSignup due to exceeding unverified retention period")
 			return reconcile.Result{}, r.DeleteUserSignup(instance, reqLogger)
 		}
 
@@ -125,24 +121,23 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 		}
 
 		if deactivatedStatusCondition == nil {
-			// We cannot find the status condition
-			// TODO how should we handle this if we can't find the condition?
+			// We cannot find the status condition, simply return
 			return reconcile.Result{}, nil
 		}
 
 		// If the LastTransitionTime of the deactivated status condition is older than the configured threshold,
 		// then delete the UserSignup
 
-		deactivatedThreshold := v1.Time{time.Now().Add(-time.Duration(r.crtConfig.GetUserSignupDeactivatedRetentionDays()*24) * time.Hour)}
+		deactivatedThreshold := time.Now().Add(-time.Duration(r.crtConfig.GetUserSignupDeactivatedRetentionDays()*24) * time.Hour)
 
-		if deactivatedStatusCondition.LastTransitionTime.Before(&deactivatedThreshold) {
-			reqLogger.Info("UserSignup deleted due to exceeding deactivated retention period")
+		if deactivatedStatusCondition.LastTransitionTime.Time.Before(deactivatedThreshold) {
+			reqLogger.Info("Deleting UserSignup due to exceeding deactivated retention period")
 			return reconcile.Result{}, r.DeleteUserSignup(instance, reqLogger)
 		}
 
 		// Requeue this for reconciliation after the time has passed between the last transition time
 		// and the current deletion expiry threshold
-		requeueAfter := deactivatedStatusCondition.LastTransitionTime.Sub(deactivatedThreshold.Time)
+		requeueAfter := deactivatedStatusCondition.LastTransitionTime.Time.Sub(deactivatedThreshold)
 
 		// Requeue the reconciler to process this resource again after the threshold for deletion
 		return reconcile.Result{

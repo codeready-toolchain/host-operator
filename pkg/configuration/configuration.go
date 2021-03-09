@@ -109,7 +109,7 @@ const (
 	// and the default configuration value for this parameter reflects this.
 	varUserSignupUnverifiedRetentionDays = "usersignup.unverified.retention.days"
 
-	defaultUserSignupUnverifiedRetentionDays = 2
+	defaultUserSignupUnverifiedRetentionDays = 7
 
 	// varUserSignupDeactivatedRetentionDays is used to configure how many days we should keep deactivated UserSignup
 	// resources before deleting them.  This parameter value should reflect an extended period of time sufficient for
