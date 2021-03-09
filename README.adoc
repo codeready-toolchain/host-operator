@@ -3,7 +3,7 @@
 image:https://goreportcard.com/badge/github.com/codeready-toolchain/host-operator[Go Report Card, link="https://goreportcard.com/report/github.com/codeready-toolchain/host-operator"]
 image:https://godoc.org/github.com/codeready-toolchain/host-operator?status.png[GoDoc,link="https://godoc.org/github.com/codeready-toolchain/host-operator"]
 image:https://codecov.io/gh/codeready-toolchain/host-operator/branch/master/graph/badge.svg[Codecov.io,link="https://codecov.io/gh/codeready-toolchain/host-operator"]
-image:https://travis-ci.org/codeready-toolchain/host-operator.svg?branch=master["CD Build Status", link="https://travis-ci.org/codeready-toolchain/host-operator"]
+image:https://github.com/codeready-toolchain/host-operator/actions/workflows/workflow.yml/badge.svg[Operator CD,link="https://github.com/codeready-toolchain/host-operator/actions/workflows/workflow.yml"]
 image:https://quay.io/repository/codeready-toolchain/host-operator/status["Docker Repository on Quay", link="https://quay.io/repository/codeready-toolchain/host-operator"]
 
 This is the CodeReady Toolchain Host Operator repository. It contains the OpenShift Operator that is deployed on the "host" cluster in the SaaS.
@@ -87,10 +87,7 @@ That Makefile target takes care of several steps that can be executed separately
 
 == Releasing operator
 
-The releases of the operator are automatically managed via Tekton pipeline running under `codeready-toolchain` user account in CRT cluster.
-
-The definition of the CD pipeline can be found here https://github.com/codeready-toolchain/toolchain-cicd.
-The pipeline triggers Makefile targets located in this repository.
+The releases of the operator are automatically managed via GitHub Actions workflow defined in this repository.
 
 === Broken release
 
