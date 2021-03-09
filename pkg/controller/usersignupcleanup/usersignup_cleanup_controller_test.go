@@ -22,6 +22,10 @@ import (
 
 func TestUserCleanup(t *testing.T) {
 	t.Run("test that user cleanup doesn't delete an active UserSignup", func(t *testing.T) {
+
+		// Use a creation time three years in the past
+		past := time.Now().AddDate(-3, 0, 0)
+
 		userSignup := &v1alpha1.UserSignup{
 			ObjectMeta: test2.NewUserSignupObjectMeta("", "abigail.thompson@redhat.com"),
 			Spec: v1alpha1.UserSignupSpec{
@@ -44,6 +48,7 @@ func TestUserCleanup(t *testing.T) {
 				CompliantUsername: "abigail-thompson",
 			},
 		}
+		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: past}
 		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
 
@@ -107,7 +112,6 @@ func TestUserCleanup(t *testing.T) {
 		require.Greater(t, res.RequeueAfter, durLower)
 		require.Less(t, res.RequeueAfter, durUpper)
 	})
-
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserCleanup, reconcile.Request, *test.FakeClient) {
