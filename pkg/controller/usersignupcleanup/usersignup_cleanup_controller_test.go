@@ -2,6 +2,7 @@ package usersignupcleanup
 
 import (
 	"context"
+	"fmt"
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -10,6 +11,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,10 +23,10 @@ import (
 )
 
 func TestUserCleanup(t *testing.T) {
-	t.Run("test that user cleanup doesn't delete an active UserSignup", func(t *testing.T) {
+	// A creation time three years in the past
+	old := time.Now().AddDate(-3, 0, 0)
 
-		// Use a creation time three years in the past
-		past := time.Now().AddDate(-3, 0, 0)
+	t.Run("test that user cleanup doesn't delete an active UserSignup", func(t *testing.T) {
 
 		userSignup := &v1alpha1.UserSignup{
 			ObjectMeta: test2.NewUserSignupObjectMeta("", "abigail.thompson@redhat.com"),
@@ -48,7 +50,7 @@ func TestUserCleanup(t *testing.T) {
 				CompliantUsername: "abigail-thompson",
 			},
 		}
-		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: past}
+		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: old}
 		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
 
@@ -112,6 +114,129 @@ func TestUserCleanup(t *testing.T) {
 		require.Greater(t, res.RequeueAfter, durLower)
 		require.Less(t, res.RequeueAfter, durUpper)
 	})
+
+	t.Run("test that an old, deactivated UserSignup is deleted", func(t *testing.T) {
+
+		userSignup := &v1alpha1.UserSignup{
+			ObjectMeta: test2.NewUserSignupObjectMeta("", "jessica.lansbury@redhat.com"),
+			Spec: v1alpha1.UserSignupSpec{
+				UserID:      "User-91923",
+				Username:    "jessica.lansbury@redhat.com",
+				Deactivated: true,
+			},
+			Status: v1alpha1.UserSignupStatus{
+				Conditions: []v1alpha1.Condition{
+					{
+						Type:            v1alpha1.UserSignupComplete,
+						Status:          v1.ConditionTrue,
+						Reason:          v1alpha1.UserSignupUserDeactivatedReason,
+						LastUpdatedTime: &metav1.Time{Time: old},
+					},
+					{
+						Type:   v1alpha1.UserSignupApproved,
+						Status: v1.ConditionTrue,
+						Reason: "ApprovedAutomatically",
+					},
+				},
+				CompliantUsername: "jessica-lansbury",
+			},
+		}
+		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: old}
+		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = v1alpha1.UserSignupStateLabelValueDeactivated
+
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+
+		_, err := r.Reconcile(req)
+		require.NoError(t, err)
+
+		// Confirm the UserSignup has been deleted
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		err = r.client.Get(context.Background(), key, userSignup)
+		require.Error(t, err)
+		require.IsType(t, &errors.StatusError{}, err)
+		statusErr := err.(*errors.StatusError)
+		require.Equal(t, metav1.StatusReasonNotFound, statusErr.Status().Reason)
+		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
+	})
+
+	t.Run("test that an old, unverified UserSignup is deleted", func(t *testing.T) {
+
+		userSignup := &v1alpha1.UserSignup{
+			ObjectMeta: test2.NewUserSignupObjectMeta("", "brandon.elder@redhat.com"),
+			Spec: v1alpha1.UserSignupSpec{
+				UserID:               "User-83922",
+				Username:             "brandon.elder@redhat.com",
+				VerificationRequired: true,
+			},
+			Status: v1alpha1.UserSignupStatus{
+				Conditions: []v1alpha1.Condition{
+					{
+						Type:            v1alpha1.UserSignupComplete,
+						Status:          v1.ConditionFalse,
+						Reason:          v1alpha1.UserSignupVerificationRequiredReason,
+						LastUpdatedTime: &metav1.Time{Time: old},
+					},
+				},
+				CompliantUsername: "brandon-elder",
+			},
+		}
+		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: old}
+		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = v1alpha1.UserSignupStateLabelValuePending
+
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+
+		_, err := r.Reconcile(req)
+		require.NoError(t, err)
+
+		// Confirm the UserSignup has been deleted
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		err = r.client.Get(context.Background(), key, userSignup)
+		require.Error(t, err)
+		require.IsType(t, &errors.StatusError{}, err)
+		statusErr := err.(*errors.StatusError)
+		require.Equal(t, metav1.StatusReasonNotFound, statusErr.Status().Reason)
+		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
+	})
+
+	t.Run("test that an old, verified but unapproved UserSignup is not deleted", func(t *testing.T) {
+
+		userSignup := &v1alpha1.UserSignup{
+			ObjectMeta: test2.NewUserSignupObjectMeta("", "charles.xavier@xmen.com"),
+			Spec: v1alpha1.UserSignupSpec{
+				UserID:               "User-73211",
+				Username:             "charles.xavier@xmen.com",
+				VerificationRequired: false,
+				Approved:             false,
+			},
+			Status: v1alpha1.UserSignupStatus{
+				Conditions: []v1alpha1.Condition{
+					{
+						Type:            v1alpha1.UserSignupComplete,
+						Status:          v1.ConditionFalse,
+						Reason:          v1alpha1.UserSignupVerificationRequiredReason,
+						LastUpdatedTime: &metav1.Time{Time: old},
+					},
+				},
+				CompliantUsername: "charles-xavier",
+			},
+		}
+		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: old}
+		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = v1alpha1.UserSignupStateLabelValuePending
+
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+
+		res, err := r.Reconcile(req)
+		require.NoError(t, err)
+
+		// Confirm the UserSignup has not been deleted
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		err = r.client.Get(context.Background(), key, userSignup)
+		require.NoError(t, err)
+		require.NotNil(t, userSignup)
+		require.False(t, res.Requeue)
+	})
+
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserCleanup, reconcile.Request, *test.FakeClient) {
