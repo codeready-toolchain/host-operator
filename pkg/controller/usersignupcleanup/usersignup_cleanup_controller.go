@@ -115,7 +115,7 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 		cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
 
 		if !found || cond.Reason != toolchainv1alpha1.UserSignupUserDeactivatedReason {
-			// We cannot find the status condition, simply return
+			// We cannot find the status condition with "deactivated" reason, simply return
 			return reconcile.Result{}, nil
 		}
 
