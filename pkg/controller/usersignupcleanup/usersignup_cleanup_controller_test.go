@@ -154,9 +154,8 @@ func TestUserCleanup(t *testing.T) {
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 		err = r.client.Get(context.Background(), key, userSignup)
 		require.Error(t, err)
-		require.IsType(t, &errors.StatusError{}, err)
+		require.True(t, errors.IsNotFound(err))
 		statusErr := err.(*errors.StatusError)
-		require.Equal(t, metav1.StatusReasonNotFound, statusErr.Status().Reason)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 	})
 
@@ -193,9 +192,9 @@ func TestUserCleanup(t *testing.T) {
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 		err = r.client.Get(context.Background(), key, userSignup)
 		require.Error(t, err)
+		require.True(t, errors.IsNotFound(err))
 		require.IsType(t, &errors.StatusError{}, err)
 		statusErr := err.(*errors.StatusError)
-		require.Equal(t, metav1.StatusReasonNotFound, statusErr.Status().Reason)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 	})
 
@@ -239,7 +238,7 @@ func TestUserCleanup(t *testing.T) {
 
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserCleanup, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignupCleanup, reconcile.Request, *test.FakeClient) {
 	metrics.Reset()
 
 	s := scheme.Scheme
@@ -252,7 +251,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 	config, err := configuration.LoadConfig(fakeClient)
 	require.NoError(t, err)
 
-	r := &ReconcileUserCleanup{
+	r := &ReconcileUserSignupCleanup{
 		scheme:    s,
 		crtConfig: config,
 		client:    fakeClient,
