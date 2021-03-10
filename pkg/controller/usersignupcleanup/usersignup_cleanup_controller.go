@@ -6,6 +6,7 @@ import (
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -114,7 +115,7 @@ func (r *ReconcileUserCleanup) Reconcile(request reconcile.Request) (reconcile.R
 		// Find the UserSignupComplete condition
 		cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
 
-		if !found || cond.Reason != toolchainv1alpha1.UserSignupUserDeactivatedReason {
+		if !found || cond.Status != apiv1.ConditionTrue || cond.Reason != toolchainv1alpha1.UserSignupUserDeactivatedReason {
 			// We cannot find the status condition with "deactivated" reason, simply return
 			return reconcile.Result{}, nil
 		}
