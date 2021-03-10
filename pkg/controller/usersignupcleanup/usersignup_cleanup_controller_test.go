@@ -10,9 +10,7 @@ import (
 	test2 "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -24,35 +22,16 @@ import (
 
 func TestUserCleanup(t *testing.T) {
 	// A creation time three years in the past
-	old := time.Now().AddDate(-3, 0, 0)
+	threeYears := time.Duration(time.Hour * 24 * 365 * 3)
 
 	t.Run("test that user cleanup doesn't delete an active UserSignup", func(t *testing.T) {
 
-		userSignup := &v1alpha1.UserSignup{
-			ObjectMeta: test2.NewUserSignupObjectMeta("", "abigail.thompson@redhat.com"),
-			Spec: v1alpha1.UserSignupSpec{
-				UserID:      "User-98887",
-				Username:    "abigail.thompson@redhat.com",
-				Deactivated: false,
-			},
-			Status: v1alpha1.UserSignupStatus{
-				Conditions: []v1alpha1.Condition{
-					{
-						Type:   v1alpha1.UserSignupComplete,
-						Status: v1.ConditionTrue,
-					},
-					{
-						Type:   v1alpha1.UserSignupApproved,
-						Status: v1.ConditionTrue,
-						Reason: "ApprovedAutomatically",
-					},
-				},
-				CompliantUsername: "abigail-thompson",
-			},
-		}
-		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: old}
-		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
-		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
+		userSignup := test2.NewUserSignup(
+			test2.CreatedBefore(threeYears),
+			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
+			test2.SignupComplete(""),
+			test2.ApprovedAutomatically(),
+		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
@@ -67,33 +46,12 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that user cleanup doesn't delete a recently deactivated UserSignup", func(t *testing.T) {
 
-		userSignup := &v1alpha1.UserSignup{
-			ObjectMeta: test2.NewUserSignupObjectMeta("", "brian.anderson@redhat.com"),
-			Spec: v1alpha1.UserSignupSpec{
-				UserID:      "User-93321",
-				Username:    "brian.anderson@redhat.com",
-				Approved:    true,
-				Deactivated: true,
-			},
-			Status: v1alpha1.UserSignupStatus{
-				Conditions: []v1alpha1.Condition{
-					{
-						Type:               v1alpha1.UserSignupComplete,
-						Status:             v1.ConditionTrue,
-						Reason:             v1alpha1.UserSignupUserDeactivatedReason,
-						LastTransitionTime: metav1.Time{Time: time.Now()},
-					},
-					{
-						Type:   v1alpha1.UserSignupApproved,
-						Status: v1.ConditionTrue,
-						Reason: "ApprovedAutomatically",
-					},
-				},
-				CompliantUsername: "brian.anderson",
-			},
-		}
-		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
-		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
+		userSignup := test2.NewUserSignup(
+			test2.DeactivatedWithLastTransitionTime(time.Duration(5 * time.Minute)),
+			test2.CreatedBefore(threeYears),
+			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
+			test2.ApprovedAutomatically(),
+		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
@@ -117,33 +75,12 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that an old, deactivated UserSignup is deleted", func(t *testing.T) {
 
-		userSignup := &v1alpha1.UserSignup{
-			ObjectMeta: test2.NewUserSignupObjectMeta("", "jessica.lansbury@redhat.com"),
-			Spec: v1alpha1.UserSignupSpec{
-				UserID:      "User-91923",
-				Username:    "jessica.lansbury@redhat.com",
-				Deactivated: true,
-			},
-			Status: v1alpha1.UserSignupStatus{
-				Conditions: []v1alpha1.Condition{
-					{
-						Type:            v1alpha1.UserSignupComplete,
-						Status:          v1.ConditionTrue,
-						Reason:          v1alpha1.UserSignupUserDeactivatedReason,
-						LastUpdatedTime: &metav1.Time{Time: old},
-					},
-					{
-						Type:   v1alpha1.UserSignupApproved,
-						Status: v1.ConditionTrue,
-						Reason: "ApprovedAutomatically",
-					},
-				},
-				CompliantUsername: "jessica-lansbury",
-			},
-		}
-		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: old}
-		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
-		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = v1alpha1.UserSignupStateLabelValueDeactivated
+		userSignup := test2.NewUserSignup(
+			test2.DeactivatedWithLastTransitionTime(threeYears),
+			test2.CreatedBefore(threeYears),
+			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
+			test2.ApprovedAutomatically(),
+		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
@@ -161,27 +98,10 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that an old, unverified UserSignup is deleted", func(t *testing.T) {
 
-		userSignup := &v1alpha1.UserSignup{
-			ObjectMeta: test2.NewUserSignupObjectMeta("", "brandon.elder@redhat.com"),
-			Spec: v1alpha1.UserSignupSpec{
-				UserID:               "User-83922",
-				Username:             "brandon.elder@redhat.com",
-				VerificationRequired: true,
-			},
-			Status: v1alpha1.UserSignupStatus{
-				Conditions: []v1alpha1.Condition{
-					{
-						Type:            v1alpha1.UserSignupComplete,
-						Status:          v1.ConditionFalse,
-						Reason:          v1alpha1.UserSignupVerificationRequiredReason,
-						LastUpdatedTime: &metav1.Time{Time: old},
-					},
-				},
-				CompliantUsername: "brandon-elder",
-			},
-		}
-		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: old}
-		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = v1alpha1.UserSignupStateLabelValuePending
+		userSignup := test2.NewUserSignup(
+			test2.CreatedBefore(threeYears),
+			test2.VerificationRequired(),
+		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
@@ -200,28 +120,11 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that an old, verified but unapproved UserSignup is not deleted", func(t *testing.T) {
 
-		userSignup := &v1alpha1.UserSignup{
-			ObjectMeta: test2.NewUserSignupObjectMeta("", "charles.xavier@xmen.com"),
-			Spec: v1alpha1.UserSignupSpec{
-				UserID:               "User-73211",
-				Username:             "charles.xavier@xmen.com",
-				VerificationRequired: false,
-				Approved:             false,
-			},
-			Status: v1alpha1.UserSignupStatus{
-				Conditions: []v1alpha1.Condition{
-					{
-						Type:            v1alpha1.UserSignupComplete,
-						Status:          v1.ConditionFalse,
-						Reason:          v1alpha1.UserSignupVerificationRequiredReason,
-						LastUpdatedTime: &metav1.Time{Time: old},
-					},
-				},
-				CompliantUsername: "charles-xavier",
-			},
-		}
-		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: old}
-		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = v1alpha1.UserSignupStateLabelValuePending
+		userSignup := test2.NewUserSignup(
+			test2.CreatedBefore(threeYears),
+		)
+		userSignup.Spec.VerificationRequired = false
+		userSignup.Spec.Approved = false
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
