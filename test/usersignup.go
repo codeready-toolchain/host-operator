@@ -35,7 +35,7 @@ func ApprovedAutomatically() UserSignupModifier {
 				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
-		})
+			})
 	}
 }
 
@@ -93,9 +93,9 @@ func SignupComplete(reason string) UserSignupModifier {
 	return func(userSignup *v1alpha1.UserSignup) {
 		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
-				Type:               toolchainv1alpha1.UserSignupComplete,
-				Status:             v1.ConditionTrue,
-				Reason:             reason,
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: reason,
 			})
 	}
 }

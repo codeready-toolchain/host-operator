@@ -47,7 +47,7 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that user cleanup doesn't delete a recently deactivated UserSignup", func(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
-			test2.DeactivatedWithLastTransitionTime(time.Duration(5 * time.Minute)),
+			test2.DeactivatedWithLastTransitionTime(time.Duration(5*time.Minute)),
 			test2.CreatedBefore(threeYears),
 			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
 			test2.ApprovedAutomatically(),
@@ -147,8 +147,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-
-	initObjs = append(initObjs)
 
 	fakeClient := test.NewFakeClient(t, initObjs...)
 	config, err := configuration.LoadConfig(fakeClient)
