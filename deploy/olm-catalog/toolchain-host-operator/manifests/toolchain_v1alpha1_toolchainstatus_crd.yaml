@@ -195,6 +195,10 @@ spec:
                               - type
                               x-kubernetes-list-type: map
                           type: object
+                        clusterApiEndpoint:
+                          description: ClusterApiEndpoint is the server API URL of
+                            the cluster
+                          type: string
                         conditions:
                           description: 'Conditions is an array of current toolchain
                             status conditions Supported condition types: ConditionReady'

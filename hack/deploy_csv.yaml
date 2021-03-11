@@ -1523,6 +1523,10 @@ data:
                                     - type
                                     x-kubernetes-list-type: map
                                 type: object
+                              clusterApiEndpoint:
+                                description: ClusterApiEndpoint is the server API URL of
+                                  the cluster
+                                type: string
                               conditions:
                                 description: 'Conditions is an array of current toolchain
                                   status conditions Supported condition types: ConditionReady'
@@ -2049,7 +2053,7 @@ data:
                       description: The cluster in which the user is provisioned in If not
                         set then the target cluster will be picked automatically
                       type: string
-                    userid:
+                    userID:
                       description: The user's user ID, obtained from the identity provider
                         from the 'sub' (subject) claim
                       type: string
@@ -2064,7 +2068,7 @@ data:
                         passed the verification. Default value is false.
                       type: boolean
                   required:
-                  - userid
+                  - userID
                   - username
                   type: object
                 status:
