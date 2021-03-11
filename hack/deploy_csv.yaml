@@ -1481,6 +1481,9 @@ data:
                           memberStatus:
                             description: The array of member status objects
                             properties:
+                              apiEndpoint:
+                                description: ApiEndpoint is the server API URL of the cluster
+                                type: string
                               che:
                                 description: Che is the status of Che/CRW, such as installed
                                   and whether the member configuration is correct
@@ -2049,7 +2052,7 @@ data:
                       description: The cluster in which the user is provisioned in If not
                         set then the target cluster will be picked automatically
                       type: string
-                    userid:
+                    userID:
                       description: The user's user ID, obtained from the identity provider
                         from the 'sub' (subject) claim
                       type: string
@@ -2064,7 +2067,7 @@ data:
                         passed the verification. Default value is false.
                       type: boolean
                   required:
-                  - userid
+                  - userID
                   - username
                   type: object
                 status:

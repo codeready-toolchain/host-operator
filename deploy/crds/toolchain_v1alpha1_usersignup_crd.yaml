@@ -97,7 +97,7 @@ spec:
                 description: The cluster in which the user is provisioned in If not
                   set then the target cluster will be picked automatically
                 type: string
-              userid:
+              userID:
                 description: The user's user ID, obtained from the identity provider
                   from the 'sub' (subject) claim
                 type: string
@@ -112,7 +112,7 @@ spec:
                   passed the verification. Default value is false.
                 type: boolean
             required:
-            - userid
+            - userID
             - username
             type: object
           status:
