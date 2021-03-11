@@ -3,6 +3,7 @@ package test
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"time"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -10,6 +11,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	uuid "github.com/satori/go.uuid"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,9 +27,36 @@ func Approved() UserSignupModifier {
 	}
 }
 
+func ApprovedAutomatically() UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Spec.Approved = true
+		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			})
+	}
+}
+
 func Deactivated() UserSignupModifier {
 	return func(userSignup *v1alpha1.UserSignup) {
 		userSignup.Spec.Deactivated = true
+	}
+}
+
+func DeactivatedWithLastTransitionTime(before time.Duration) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Spec.Deactivated = true
+
+		deactivatedCondition := toolchainv1alpha1.Condition{
+			Type:               v1alpha1.UserSignupComplete,
+			Status:             v1.ConditionTrue,
+			Reason:             v1alpha1.UserSignupUserDeactivatedReason,
+			LastTransitionTime: metav1.Time{Time: time.Now().Add(-before)},
+		}
+
+		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions, deactivatedCondition)
 	}
 }
 
@@ -46,6 +75,28 @@ func WithUsername(username string) UserSignupModifier {
 func WithStateLabel(stateValue string) UserSignupModifier {
 	return func(userSignup *v1alpha1.UserSignup) {
 		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = stateValue
+	}
+}
+
+func WithEmail(email string) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		md5hash := md5.New()
+		// Ignore the error, as this implementation cannot return one
+		_, _ = md5hash.Write([]byte(email))
+		emailHash := hex.EncodeToString(md5hash.Sum(nil))
+		userSignup.ObjectMeta.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey] = emailHash
+		userSignup.ObjectMeta.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey] = email
+	}
+}
+
+func SignupComplete(reason string) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: reason,
+			})
 	}
 }
 
