@@ -1481,6 +1481,9 @@ data:
                           memberStatus:
                             description: The array of member status objects
                             properties:
+                              apiEndpoint:
+                                description: ApiEndpoint is the server API URL of the cluster
+                                type: string
                               che:
                                 description: Che is the status of Che/CRW, such as installed
                                   and whether the member configuration is correct
