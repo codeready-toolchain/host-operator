@@ -123,6 +123,12 @@ const (
 	varUserSignupDeactivatedRetentionDays = "usersignup.deactivated.retention.days"
 
 	defaultUserSignupDeactivatedRetentionDays = 90
+
+	// varUserSignupPreDeactivationNotificationDays indicates the number of days before a user's account is due to be
+	// deactivated that a notification email should be sent to the user informing them of the pending deactivation
+	varUserSignupPreDeactivationNotificationDays = "usersignup.pre.deactivation.notification.days"
+
+	defaultUserSignupPreDeactivationNotificationDays = 3
 )
 
 // Config encapsulates the Viper configuration registry which stores the
@@ -199,6 +205,7 @@ func (c *Config) setConfigDefaults() {
 	}))
 	c.host.SetDefault(varUserSignupUnverifiedRetentionDays, defaultUserSignupUnverifiedRetentionDays)
 	c.host.SetDefault(varUserSignupDeactivatedRetentionDays, defaultUserSignupDeactivatedRetentionDays)
+	c.host.SetDefault(varUserSignupPreDeactivationNotificationDays, defaultUserSignupPreDeactivationNotificationDays)
 }
 
 // GetToolchainStatusName returns the configured name of the member status resource
@@ -308,4 +315,8 @@ func (c *Config) GetUserSignupUnverifiedRetentionDays() int {
 
 func (c *Config) GetUserSignupDeactivatedRetentionDays() int {
 	return c.host.GetInt(varUserSignupDeactivatedRetentionDays)
+}
+
+func (c *Config) GetUserSignupPreDeactivationNotificationDays() int {
+	return c.host.GetInt(varUserSignupPreDeactivationNotificationDays)
 }
