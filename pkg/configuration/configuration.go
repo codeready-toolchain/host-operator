@@ -317,6 +317,6 @@ func (c *Config) GetUserSignupDeactivatedRetentionDays() int {
 	return c.host.GetInt(varUserSignupDeactivatedRetentionDays)
 }
 
-func (c *Config) GetUserSignupPreDeactivationNotificationDays() int {
+func (c *Config) GetUserSignupDeactivatingNotificationDays() int {
 	return c.host.GetInt(varUserSignupDeactivatingNotificationDays)
 }
