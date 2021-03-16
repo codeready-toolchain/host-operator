@@ -1177,6 +1177,7 @@ func cachedToolchainCluster(cl client.Client, name string, status corev1.Conditi
 		Type:              cluster.Host,
 		OperatorNamespace: test.MemberOperatorNs,
 		OwnerClusterName:  test.MemberClusterName,
+		APIEndpoint: "http://api.devcluster.openshift.com",
 		ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
 			Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
 				Type:          toolchainv1alpha1.ToolchainClusterReady,
@@ -1203,6 +1204,7 @@ func newMemberStatus(options ...memberstatusOptions) *toolchainv1alpha1.MemberSt
 		},
 		Spec: toolchainv1alpha1.MemberStatusSpec{},
 		Status: toolchainv1alpha1.MemberStatusStatus{
+			ApiEndpoint: "http://api.devcluster.openshift.com",
 			Conditions: []toolchainv1alpha1.Condition{},
 			ResourceUsage: toolchainv1alpha1.ResourceUsage{
 				MemoryUsagePerNodeRole: map[string]int{
@@ -1417,6 +1419,7 @@ func memberCluster(name string, options ...memberClusterOption) toolchainv1alpha
 	m := toolchainv1alpha1.Member{
 		ClusterName: name,
 		MemberStatus: toolchainv1alpha1.MemberStatusStatus{
+			ApiEndpoint: "http://api.devcluster.openshift.com",
 			Conditions: []toolchainv1alpha1.Condition{},
 			ResourceUsage: toolchainv1alpha1.ResourceUsage{
 				MemoryUsagePerNodeRole: map[string]int{

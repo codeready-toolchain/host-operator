@@ -335,6 +335,7 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolc
 			Conditions:    memberStatusObj.Status.Conditions,
 			ResourceUsage: memberStatusObj.Status.ResourceUsage,
 			Routes:        memberStatusObj.Status.Routes,
+			ApiEndpoint:   memberCluster.APIEndpoint,
 		}
 		if condition.IsNotTrue(memberStatusObj.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 			// the memberstatus is not ready so set the component error to bubble up the error to the overall toolchain status
@@ -503,6 +504,7 @@ func (r *ReconcileToolchainStatus) setStatusUnreadyNotificationCreationFailed(re
 
 func customMemberStatus(conditions ...toolchainv1alpha1.Condition) toolchainv1alpha1.MemberStatusStatus {
 	return toolchainv1alpha1.MemberStatusStatus{
+		ApiEndpoint: "http://api.devcluster.openshift.com",
 		Conditions: conditions,
 	}
 }
