@@ -49,7 +49,7 @@ func Add(mgr manager.Manager, crtConfig *crtCfg.Config) error {
 func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) reconcile.Reconciler {
 	return &ReconcileUserSignup{
 		StatusUpdater: &StatusUpdater{
-			client: mgr.GetClient(),
+			Client: mgr.GetClient(),
 		},
 		scheme:            mgr.GetScheme(),
 		crtConfig:         crtConfig,
@@ -130,7 +130,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 	// Fetch the UserSignup instance
 	instance := &toolchainv1alpha1.UserSignup{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -219,7 +219,7 @@ func (r *ReconcileUserSignup) isUserBanned(reqLogger logr.Logger, userSignup *to
 			bannedUserList := &toolchainv1alpha1.BannedUserList{}
 
 			// Query BannedUser for resources that match the same email hash
-			if err := r.client.List(context.TODO(), bannedUserList, opts); err != nil {
+			if err := r.Client.List(context.TODO(), bannedUserList, opts); err != nil {
 				return false, r.WrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToReadBannedUsers, err, "Failed to query BannedUsers")
 			}
 
@@ -260,7 +260,7 @@ func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, us
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
 	labels := map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 	opts := client.MatchingLabels(labels)
-	if err := r.client.List(context.TODO(), murList, opts); err != nil {
+	if err := r.Client.List(context.TODO(), murList, opts); err != nil {
 		return false, r.WrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err,
 			"Failed to list MasterUserRecords by owner")
 	}
@@ -295,8 +295,8 @@ func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, us
 			return true, err
 		}
 
-		// look-up the default NSTemplateTier to get the NS templates
-		nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, userSignup.Namespace)
+		// look-up the `basic` NSTemplateTier to get the NS templates
+		nstemplateTier, err := getNsTemplateTier(r.Client, defaultTierName, userSignup.Namespace)
 		if err != nil {
 			return true, r.WrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 		}
@@ -306,7 +306,7 @@ func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, us
 			return true, r.WrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
 
 		} else if changed {
-			if err := r.client.Update(context.TODO(), mur); err != nil {
+			if err := r.Client.Update(context.TODO(), mur); err != nil {
 				return true, r.WrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
 			}
 			return true, nil
@@ -327,7 +327,7 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 		return r.UpdateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
 	}
 
-	approved, targetCluster, err := getClusterIfApproved(r.client, r.crtConfig, userSignup, r.getMemberClusters)
+	approved, targetCluster, err := getClusterIfApproved(r.Client, r.crtConfig, userSignup, r.getMemberClusters)
 	// if error was returned or no available cluster found
 	if err != nil || targetCluster == notFound {
 		// set the state label to pending
@@ -373,7 +373,7 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 	}
 
 	// look-up the `basic` NSTemplateTier to get the NS templates
-	nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, userSignup.Namespace)
+	nstemplateTier, err := getNsTemplateTier(r.Client, defaultTierName, userSignup.Namespace)
 	if err != nil {
 		return r.WrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 	}
@@ -386,7 +386,7 @@ func (r *ReconcileUserSignup) setStateLabel(reqLogger logr.Logger, userSignup *t
 	oldValue := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
 	if oldValue != value {
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = value
-		if err := r.client.Update(context.TODO(), userSignup); err != nil {
+		if err := r.Client.Update(context.TODO(), userSignup); err != nil {
 			return r.WrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
 				"unable to update state label at UserSignup resource")
 		}
@@ -446,7 +446,7 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 		mur := &toolchainv1alpha1.MasterUserRecord{}
 		// Check if a MasterUserRecord exists with the same transformed name
 		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: transformed}
-		err := r.client.Get(context.TODO(), namespacedMurName, mur)
+		err := r.Client.Get(context.TODO(), namespacedMurName, mur)
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				return "", err
@@ -492,7 +492,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	}
 
 	logger.Info("Creating MasterUserRecord", "Name", mur.Name)
-	err = r.client.Create(context.TODO(), mur)
+	err = r.Client.Create(context.TODO(), mur)
 	if err != nil {
 		return r.WrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord")
@@ -513,7 +513,7 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 		return nil
 	}
 
-	err = r.client.Delete(context.TODO(), mur)
+	err = r.Client.Delete(context.TODO(), mur)
 	if err != nil {
 		return r.WrapErrorWithStatusUpdate(logger, userSignup, failedStatusUpdater, err,
 			"Error deleting MasterUserRecord")
@@ -545,7 +545,7 @@ func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, us
 		return err
 	}
 
-	if err := r.client.Create(context.TODO(), notification); err != nil {
+	if err := r.Client.Create(context.TODO(), notification); err != nil {
 		logger.Error(err, "Failed to create deactivation notification resource")
 		return err
 	}

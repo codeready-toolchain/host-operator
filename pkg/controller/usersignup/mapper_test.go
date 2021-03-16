@@ -69,7 +69,7 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		}, req[0].NamespacedName)
 	})
 
-	t.Run("test BannedUserToUserSignupMapper returns nil when client list fails", func(t *testing.T) {
+	t.Run("test BannedUserToUserSignupMapper returns nil when Client list fails", func(t *testing.T) {
 		c := test.NewFakeClient(t)
 		c.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 			return errors.New("err happened")

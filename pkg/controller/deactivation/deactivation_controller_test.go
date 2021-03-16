@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -265,7 +267,14 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	cl := test.NewFakeClient(t, initObjs...)
 	cfg, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
-	r := &ReconcileDeactivation{client: cl, scheme: s, config: cfg}
+	r := &ReconcileDeactivation{
+		StatusUpdater: &usersignup.StatusUpdater{
+			Client: cl,
+		},
+		client: cl,
+		scheme: s,
+		config: cfg,
+	}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      name,

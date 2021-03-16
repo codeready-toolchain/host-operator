@@ -42,7 +42,14 @@ func Add(mgr manager.Manager, config *configuration.Config) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, cfg *configuration.Config) reconcile.Reconciler {
-	return &ReconcileDeactivation{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: cfg}
+	return &ReconcileDeactivation{
+		StatusUpdater: &usersignup.StatusUpdater{
+			Client: mgr.GetClient(),
+		},
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		config: cfg,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler

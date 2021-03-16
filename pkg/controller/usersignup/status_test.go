@@ -15,7 +15,7 @@ func TestUpdateStatus(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{}
 
-	statusUpdater := StatusUpdater{client: test.NewFakeClient(t)}
+	statusUpdater := StatusUpdater{Client: test.NewFakeClient(t)}
 
 	t.Run("status updated", func(t *testing.T) {
 		updateStatus := func(changeTierRequest *v1alpha1.UserSignup, message string) error {

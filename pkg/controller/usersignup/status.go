@@ -12,7 +12,7 @@ import (
 )
 
 type StatusUpdater struct {
-	client client.Client
+	Client client.Client
 }
 
 func (u *StatusUpdater) setStatusApprovedAutomatically(userSignup *toolchainv1alpha1.UserSignup, message string) error {
@@ -320,7 +320,7 @@ func (u *StatusUpdater) updateCompleteStatus(compliantUsername string) func(user
 			// Nothing changed
 			return nil
 		}
-		return u.client.Status().Update(context.TODO(), userSignup)
+		return u.Client.Status().Update(context.TODO(), userSignup)
 	}
 }
 
@@ -343,5 +343,5 @@ func (u *StatusUpdater) updateStatusConditions(userSignup *toolchainv1alpha1.Use
 		// Nothing changed
 		return nil
 	}
-	return u.client.Status().Update(context.TODO(), userSignup)
+	return u.Client.Status().Update(context.TODO(), userSignup)
 }
