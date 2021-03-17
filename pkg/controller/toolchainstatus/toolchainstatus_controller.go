@@ -323,6 +323,7 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolc
 			logger.Error(err, fmt.Sprintf("cannot find memberstatus resource in namespace %s in cluster %s", memberCluster.OperatorNamespace, memberCluster.Name))
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberStatusNotFoundReason, err.Error())
 			memberStatus := customMemberStatus(*memberStatusNotFoundCondition)
+			memberStatus.ApiEndpoint = memberCluster.APIEndpoint
 			members[memberCluster.Name] = memberStatus
 			ready = false
 			continue
@@ -405,6 +406,8 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 			logger.Error(err, "the member cluster seems to be removed")
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterMissingReason, err.Error())
 			toolchainStatus.Status.Members[index].MemberStatus = customMemberStatus(*memberStatusNotFoundCondition)
+			// This is an error scenario where memberStatus not found, assigning back old apiEndpoint
+			toolchainStatus.Status.Members[index].MemberStatus.ApiEndpoint = member.MemberStatus.ApiEndpoint
 			allOk = false
 		} else {
 			toolchainStatus.Status.Members = append(toolchainStatus.Status.Members[:index], toolchainStatus.Status.Members[index+1:]...)
@@ -504,7 +507,6 @@ func (r *ReconcileToolchainStatus) setStatusUnreadyNotificationCreationFailed(re
 
 func customMemberStatus(conditions ...toolchainv1alpha1.Condition) toolchainv1alpha1.MemberStatusStatus {
 	return toolchainv1alpha1.MemberStatusStatus{
-		ApiEndpoint: "http://api.devcluster.openshift.com",
 		Conditions: conditions,
 	}
 }
