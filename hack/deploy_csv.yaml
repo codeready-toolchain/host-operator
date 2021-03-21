@@ -1475,15 +1475,15 @@ data:
                       items:
                         description: Member contains the status of a member cluster
                         properties:
+                          apiEndpoint:
+                            description: ApiEndpoint is the server API URL of the cluster
+                            type: string
                           clusterName:
                             description: The cluster identifier
                             type: string
                           memberStatus:
                             description: The array of member status objects
                             properties:
-                              apiEndpoint:
-                                description: ApiEndpoint is the server API URL of the cluster
-                                type: string
                               che:
                                 description: Che is the status of Che/CRW, such as installed
                                   and whether the member configuration is correct
@@ -2031,16 +2031,17 @@ data:
                   description: UserSignupSpec defines the desired state of UserSignup
                   properties:
                     approved:
-                      description: If Approved set to 'true' then the user has been manually
+                      description: 'If Approved set to ''true'' then the user has been manually
                         approved If not set then the user is subject of auto-approval (if
-                        enabled)
+                        enabled) Deprecated: will be replaced by States'
                       type: boolean
                     company:
                       description: The user's company name, obtained from the identity provider.
                       type: string
                     deactivated:
-                      description: Deactivated is used to deactivate the user.  If not set,
-                        then by default the user is active
+                      description: 'Deactivated is used to deactivate the user.  If not
+                        set, then by default the user is active Deprecated: will be replaced
+                        by States'
                       type: boolean
                     familyName:
                       description: The user's last name, obtained from the identity provider.
@@ -2048,6 +2049,12 @@ data:
                     givenName:
                       description: The user's first name, obtained from the identity provider.
                       type: string
+                    states:
+                      description: States contains a number of values that reflect the desired
+                        state of the UserSignup.
+                      items:
+                        type: string
+                      type: array
                     targetCluster:
                       description: The cluster in which the user is provisioned in If not
                         set then the target cluster will be picked automatically
@@ -2060,11 +2067,12 @@ data:
                       description: The user's username, obtained from the identity provider.
                       type: string
                     verificationRequired:
-                      description: VerificationRequired is used to determine if a user requires
-                        phone verification. The user should not be provisioned if VerificationRequired
-                        is set to true. VerificationRequired is set to false when the user
-                        is ether exempt from phone verification or has already successfully
-                        passed the verification. Default value is false.
+                      description: 'VerificationRequired is used to determine if a user
+                        requires phone verification. The user should not be provisioned
+                        if VerificationRequired is set to true. VerificationRequired is
+                        set to false when the user is ether exempt from phone verification
+                        or has already successfully passed the verification. Default value
+                        is false. Deprecated: will be replaced by States'
                       type: boolean
                   required:
                   - userid
