@@ -1204,7 +1204,6 @@ func newMemberStatus(options ...memberstatusOptions) *toolchainv1alpha1.MemberSt
 		},
 		Spec: toolchainv1alpha1.MemberStatusSpec{},
 		Status: toolchainv1alpha1.MemberStatusStatus{
-			ApiEndpoint: "http://api.devcluster.openshift.com",
 			Conditions: []toolchainv1alpha1.Condition{},
 			ResourceUsage: toolchainv1alpha1.ResourceUsage{
 				MemoryUsagePerNodeRole: map[string]int{
@@ -1417,9 +1416,9 @@ type memberClusterOption interface {
 
 func memberCluster(name string, options ...memberClusterOption) toolchainv1alpha1.Member {
 	m := toolchainv1alpha1.Member{
+		ApiEndpoint: "http://api.devcluster.openshift.com",
 		ClusterName: name,
 		MemberStatus: toolchainv1alpha1.MemberStatusStatus{
-			ApiEndpoint: "http://api.devcluster.openshift.com",
 			Conditions: []toolchainv1alpha1.Condition{},
 			ResourceUsage: toolchainv1alpha1.ResourceUsage{
 				MemoryUsagePerNodeRole: map[string]int{

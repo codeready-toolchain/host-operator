@@ -323,7 +323,6 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolc
 			logger.Error(err, fmt.Sprintf("cannot find memberstatus resource in namespace %s in cluster %s", memberCluster.OperatorNamespace, memberCluster.Name))
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberStatusNotFoundReason, err.Error())
 			memberStatus := customMemberStatus(*memberStatusNotFoundCondition)
-			memberStatus.ApiEndpoint = memberCluster.APIEndpoint
 			members[memberCluster.Name] = memberStatus
 			ready = false
 			continue
@@ -336,7 +335,6 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolc
 			Conditions:    memberStatusObj.Status.Conditions,
 			ResourceUsage: memberStatusObj.Status.ResourceUsage,
 			Routes:        memberStatusObj.Status.Routes,
-			ApiEndpoint:   memberCluster.APIEndpoint,
 		}
 		if condition.IsNotTrue(memberStatusObj.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 			// the memberstatus is not ready so set the component error to bubble up the error to the overall toolchain status
@@ -349,9 +347,23 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolc
 
 	// add member cluster statuses to toolchainstatus
 	ready = compareAndAssignMemberStatuses(logger, toolchainStatus, members) && ready
+	// assign apiEndpoint to Members
+	if ready {
+		assignApiEndpoint(toolchainStatus,memberClusters)
+	}
 	return ready
 }
 
+func assignApiEndpoint(toolchainStatus *toolchainv1alpha1.ToolchainStatus, memberClusters []*cluster.CachedToolchainCluster) {
+	for _, memberCluster := range memberClusters {
+		for index, member := range toolchainStatus.Status.Members{
+			if member.ClusterName == memberCluster.Name {
+				toolchainStatus.Status.Members[index].ApiEndpoint = memberCluster.APIEndpoint
+				break
+			}
+		}
+	}
+}
 func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 
@@ -406,8 +418,6 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 			logger.Error(err, "the member cluster seems to be removed")
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterMissingReason, err.Error())
 			toolchainStatus.Status.Members[index].MemberStatus = customMemberStatus(*memberStatusNotFoundCondition)
-			// This is an error scenario where memberStatus not found, assigning back old apiEndpoint
-			toolchainStatus.Status.Members[index].MemberStatus.ApiEndpoint = member.MemberStatus.ApiEndpoint
 			allOk = false
 		} else {
 			toolchainStatus.Status.Members = append(toolchainStatus.Status.Members[:index], toolchainStatus.Status.Members[index+1:]...)
