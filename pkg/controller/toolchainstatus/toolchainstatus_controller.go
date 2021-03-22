@@ -348,9 +348,7 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolc
 	// add member cluster statuses to toolchainstatus
 	ready = compareAndAssignMemberStatuses(logger, toolchainStatus, members) && ready
 	// assign apiEndpoint to Members
-	if ready {
-		assignApiEndpoint(toolchainStatus,memberClusters)
-	}
+	assignApiEndpoint(toolchainStatus,memberClusters)
 	return ready
 }
 
