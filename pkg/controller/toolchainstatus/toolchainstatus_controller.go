@@ -352,7 +352,7 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolc
 
 func getApiEndpoint(clusterName string, memberClusters []*cluster.CachedToolchainCluster) string {
 	for _, memberCluster := range memberClusters {
-			if memberCluster.Name == memberCluster.Name {
+			if memberCluster.Name == clusterName {
 				return memberCluster.APIEndpoint
 			}
 	}
