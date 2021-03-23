@@ -409,7 +409,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	switch tier {
 	case "basic", "basicdeactivationdisabled":
 		assert.Len(t, actual.Objects, 12)
-		containsObj(t, actual, clusterResourceQuotaComputeObj("10000m", "1750m", "7Gi"))
+		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi"))
 		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
 		containsObj(t, actual, clusterResourceQuotaReplicasObj())
 		containsObj(t, actual, clusterResourceQuotaRoutesObj())
@@ -423,7 +423,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
 	case "team":
 		assert.Len(t, actual.Objects, 9) // No Idlers
-		containsObj(t, actual, clusterResourceQuotaComputeObj("15000m", "2000m", "15Gi"))
+		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "2000m", "15Gi"))
 		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
 		containsObj(t, actual, clusterResourceQuotaReplicasObj())
 		containsObj(t, actual, clusterResourceQuotaRoutesObj())
@@ -434,7 +434,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
 	case "advanced":
 		assert.Len(t, actual.Objects, 9) // No Idlers
-		containsObj(t, actual, clusterResourceQuotaComputeObj("10000m", "1750m", "7Gi"))
+		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi"))
 		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
 		containsObj(t, actual, clusterResourceQuotaReplicasObj())
 		containsObj(t, actual, clusterResourceQuotaRoutesObj())
