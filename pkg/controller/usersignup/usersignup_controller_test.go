@@ -2094,7 +2094,7 @@ func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMe
 	require.NoError(t, err)
 
 	r := &ReconcileUserSignup{
-		StatusUpdater: &StatusUpdater{
+		statusUpdater: &statusUpdater{
 			Client: fakeClient,
 		},
 		scheme:            s,

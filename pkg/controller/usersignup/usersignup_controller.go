@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup/unapproved"
@@ -48,7 +50,7 @@ func Add(mgr manager.Manager, crtConfig *crtCfg.Config) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) reconcile.Reconciler {
 	return &ReconcileUserSignup{
-		StatusUpdater: &StatusUpdater{
+		statusUpdater: &statusUpdater{
 			Client: mgr.GetClient(),
 		},
 		scheme:            mgr.GetScheme(),
@@ -113,7 +115,7 @@ var _ reconcile.Reconciler = &ReconcileUserSignup{}
 
 // ReconcileUserSignup reconciles a UserSignup object
 type ReconcileUserSignup struct {
-	*StatusUpdater
+	*statusUpdater
 	scheme            *runtime.Scheme
 	crtConfig         *crtCfg.Config
 	getMemberClusters cluster.GetMemberClustersFunc
@@ -175,6 +177,22 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			return reconcile.Result{}, err
 		}
 		return reconcile.Result{}, r.UpdateStatus(reqLogger, instance, r.setStatusBanned)
+	}
+
+	if states.Deactivating(instance) && condition.IsNotTrue(instance.Status.Conditions,
+		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated) {
+		if err := r.sendDeactivatingNotification(reqLogger, instance); err != nil {
+			reqLogger.Error(err, "Failed to create user deactivating notification")
+
+			// set the failed to create notification status condition
+			return reconcile.Result{}, r.WrapErrorWithStatusUpdate(reqLogger, instance,
+				r.SetStatusDeactivatingNotificationCreationFailed, err, "Failed to create user deactivating notification")
+		}
+
+		if err := r.UpdateStatus(reqLogger, instance, r.SetStatusDeactivatingNotificationCreated); err != nil {
+			reqLogger.Error(err, "Failed to update notification created status")
+			return reconcile.Result{}, err
+		}
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
@@ -519,6 +537,38 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 			"Error deleting MasterUserRecord")
 	}
 	logger.Info("Deleted MasterUserRecord", "Name", mur.Name)
+	return nil
+}
+
+func (r *ReconcileUserSignup) sendDeactivatingNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+	notification := &toolchainv1alpha1.Notification{
+		ObjectMeta: v1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-%s-", userSignup.Status.CompliantUsername, toolchainv1alpha1.NotificationTypeDeactivating),
+			Namespace:    userSignup.Namespace,
+			Labels: map[string]string{
+				// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
+				toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
+				// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
+				toolchainv1alpha1.NotificationTypeLabelKey: toolchainv1alpha1.NotificationTypeDeactivating,
+			},
+		},
+		Spec: toolchainv1alpha1.NotificationSpec{
+			UserID:   userSignup.Name,
+			Template: notificationtemplates.UserDeactivating.Name,
+		},
+	}
+
+	if err := controllerutil.SetControllerReference(userSignup, notification, r.scheme); err != nil {
+		logger.Error(err, "Failed to set owner reference for deactivating notification resource")
+		return err
+	}
+
+	if err := r.Client.Create(context.TODO(), notification); err != nil {
+		logger.Error(err, "Failed to create deactivating notification resource")
+		return err
+	}
+
+	logger.Info("Deactivating notification resource created")
 	return nil
 }
 

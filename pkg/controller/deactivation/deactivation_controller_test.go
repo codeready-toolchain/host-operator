@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -50,6 +50,9 @@ func TestReconcile(t *testing.T) {
 
 	userSignupFoobar := userSignupWithEmail(username, "foo@bar.com")
 	userSignupRedhat := userSignupWithEmail(username, "foo@redhat.com")
+
+	// Set the deactivating status
+	states.SetDeactivating(userSignupFoobar, true)
 
 	t.Run("controller should not deactivate user", func(t *testing.T) {
 
@@ -268,9 +271,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	cfg, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
 	r := &ReconcileDeactivation{
-		StatusUpdater: &usersignup.StatusUpdater{
-			Client: cl,
-		},
 		client: cl,
 		scheme: s,
 		config: cfg,

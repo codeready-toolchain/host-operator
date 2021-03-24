@@ -11,11 +11,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type StatusUpdater struct {
+type statusUpdater struct {
 	Client client.Client
 }
 
-func (u *StatusUpdater) setStatusApprovedAutomatically(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusApprovedAutomatically(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -52,7 +52,7 @@ var statusIncompletePendingApproval = func(message string) toolchainv1alpha1.Con
 	}
 }
 
-func (u *StatusUpdater) setStatusInvalidMURState(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusInvalidMURState(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -63,7 +63,7 @@ func (u *StatusUpdater) setStatusInvalidMURState(userSignup *toolchainv1alpha1.U
 		})
 }
 
-func (u *StatusUpdater) setStatusFailedToCreateMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusFailedToCreateMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -74,7 +74,7 @@ func (u *StatusUpdater) setStatusFailedToCreateMUR(userSignup *toolchainv1alpha1
 		})
 }
 
-func (u *StatusUpdater) setStatusFailedToDeleteMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusFailedToDeleteMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -85,7 +85,7 @@ func (u *StatusUpdater) setStatusFailedToDeleteMUR(userSignup *toolchainv1alpha1
 		})
 }
 
-func (u *StatusUpdater) set(conditionCreators ...func(message string) toolchainv1alpha1.Condition) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) set(conditionCreators ...func(message string) toolchainv1alpha1.Condition) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 		conditions := make([]toolchainv1alpha1.Condition, len(conditionCreators))
 		for index, createCondition := range conditionCreators {
@@ -104,7 +104,7 @@ var statusNoClustersAvailable = func(message string) toolchainv1alpha1.Condition
 	}
 }
 
-func (u *StatusUpdater) setStatusNoTemplateTierAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusNoTemplateTierAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -115,7 +115,7 @@ func (u *StatusUpdater) setStatusNoTemplateTierAvailable(userSignup *toolchainv1
 		})
 }
 
-func (u *StatusUpdater) setStatusBanning(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusBanning(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -127,7 +127,7 @@ func (u *StatusUpdater) setStatusBanning(userSignup *toolchainv1alpha1.UserSignu
 }
 
 // setStatusBanned sets the Complete status to True, as the banning operation has been successful (with a reason of "Banned")
-func (u *StatusUpdater) setStatusBanned(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusBanned(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -138,7 +138,7 @@ func (u *StatusUpdater) setStatusBanned(userSignup *toolchainv1alpha1.UserSignup
 		})
 }
 
-func (u *StatusUpdater) setStatusDeactivating(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusDeactivating(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -149,7 +149,7 @@ func (u *StatusUpdater) setStatusDeactivating(userSignup *toolchainv1alpha1.User
 		})
 }
 
-func (u *StatusUpdater) setStatusDeactivated(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusDeactivated(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -160,7 +160,7 @@ func (u *StatusUpdater) setStatusDeactivated(userSignup *toolchainv1alpha1.UserS
 		})
 }
 
-func (u *StatusUpdater) setStatusFailedToReadBannedUsers(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusFailedToReadBannedUsers(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -171,7 +171,7 @@ func (u *StatusUpdater) setStatusFailedToReadBannedUsers(userSignup *toolchainv1
 		})
 }
 
-func (u *StatusUpdater) setStatusInvalidMissingUserEmailAnnotation(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusInvalidMissingUserEmailAnnotation(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -182,7 +182,7 @@ func (u *StatusUpdater) setStatusInvalidMissingUserEmailAnnotation(userSignup *t
 		})
 }
 
-func (u *StatusUpdater) setStatusMissingEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusMissingEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -193,7 +193,7 @@ func (u *StatusUpdater) setStatusMissingEmailHash(userSignup *toolchainv1alpha1.
 		})
 }
 
-func (u *StatusUpdater) setStatusInvalidEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusInvalidEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -204,7 +204,7 @@ func (u *StatusUpdater) setStatusInvalidEmailHash(userSignup *toolchainv1alpha1.
 		})
 }
 
-func (u *StatusUpdater) setStatusVerificationRequired(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusVerificationRequired(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -215,7 +215,7 @@ func (u *StatusUpdater) setStatusVerificationRequired(userSignup *toolchainv1alp
 		})
 }
 
-func (u *StatusUpdater) setStatusFailedToUpdateStateLabel(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusFailedToUpdateStateLabel(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -226,7 +226,7 @@ func (u *StatusUpdater) setStatusFailedToUpdateStateLabel(userSignup *toolchainv
 		})
 }
 
-func (u *StatusUpdater) setStatusDeactivationNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+func (u *statusUpdater) setStatusDeactivationNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -236,7 +236,7 @@ func (u *StatusUpdater) setStatusDeactivationNotificationCreated(userSignup *too
 		})
 }
 
-func (u *StatusUpdater) setStatusDeactivationNotificationUserIsActive(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+func (u *statusUpdater) setStatusDeactivationNotificationUserIsActive(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -246,7 +246,7 @@ func (u *StatusUpdater) setStatusDeactivationNotificationUserIsActive(userSignup
 		})
 }
 
-func (u *StatusUpdater) setStatusDeactivationNotificationCreationFailed(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusDeactivationNotificationCreationFailed(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -257,7 +257,7 @@ func (u *StatusUpdater) setStatusDeactivationNotificationCreationFailed(userSign
 		})
 }
 
-func (u *StatusUpdater) SetStatusDeactivatingNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+func (u *statusUpdater) SetStatusDeactivatingNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -267,7 +267,7 @@ func (u *StatusUpdater) SetStatusDeactivatingNotificationCreated(userSignup *too
 		})
 }
 
-func (u *StatusUpdater) SetStatusDeactivatingNotificationUserIsActive(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+func (u *statusUpdater) SetStatusDeactivatingNotificationUserIsActive(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -277,7 +277,7 @@ func (u *StatusUpdater) SetStatusDeactivatingNotificationUserIsActive(userSignup
 		})
 }
 
-func (u *StatusUpdater) SetStatusDeactivatingNotificationCreationFailed(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) SetStatusDeactivatingNotificationCreationFailed(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -288,7 +288,7 @@ func (u *StatusUpdater) SetStatusDeactivatingNotificationCreationFailed(userSign
 		})
 }
 
-func (u *StatusUpdater) UpdateStatus(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+func (u *statusUpdater) UpdateStatus(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error) error {
 
 	if err := statusUpdater(userSignup, ""); err != nil {
@@ -301,7 +301,7 @@ func (u *StatusUpdater) UpdateStatus(logger logr.Logger, userSignup *toolchainv1
 
 // updateCompleteStatus updates the `CompliantUsername` and `Conditions` in the status, should only be invoked on completion because
 // both completion and the compliant username require the master user record to be created.
-func (u *StatusUpdater) updateCompleteStatus(compliantUsername string) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) updateCompleteStatus(compliantUsername string) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 
 		usernameUpdated := userSignup.Status.CompliantUsername != compliantUsername
@@ -325,7 +325,7 @@ func (u *StatusUpdater) updateCompleteStatus(compliantUsername string) func(user
 }
 
 // WrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
-func (u *StatusUpdater) WrapErrorWithStatusUpdate(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+func (u *statusUpdater) WrapErrorWithStatusUpdate(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	statusUpdater StatusUpdaterFunc, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
@@ -336,7 +336,7 @@ func (u *StatusUpdater) WrapErrorWithStatusUpdate(logger logr.Logger, userSignup
 	return errs.Wrapf(err, format, args...)
 }
 
-func (u *StatusUpdater) updateStatusConditions(userSignup *toolchainv1alpha1.UserSignup, newConditions ...toolchainv1alpha1.Condition) error {
+func (u *statusUpdater) updateStatusConditions(userSignup *toolchainv1alpha1.UserSignup, newConditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
 	userSignup.Status.Conditions, updated = commonCondition.AddOrUpdateStatusConditions(userSignup.Status.Conditions, newConditions...)
 	if !updated {

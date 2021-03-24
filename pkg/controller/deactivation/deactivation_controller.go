@@ -6,13 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
-
-	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
-	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"github.com/go-logr/logr"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 
@@ -43,9 +37,6 @@ func Add(mgr manager.Manager, config *configuration.Config) error {
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, cfg *configuration.Config) reconcile.Reconciler {
 	return &ReconcileDeactivation{
-		StatusUpdater: &usersignup.StatusUpdater{
-			Client: mgr.GetClient(),
-		},
 		client: mgr.GetClient(),
 		scheme: mgr.GetScheme(),
 		config: cfg,
@@ -73,7 +64,6 @@ var _ reconcile.Reconciler = &ReconcileDeactivation{}
 
 // ReconcileDeactivation reconciles a Deactivation object
 type ReconcileDeactivation struct {
-	*usersignup.StatusUpdater
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
@@ -175,18 +165,17 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{RequeueAfter: requeueAfterTimeToNotify}, nil
 	}
 
-	if condition.IsNotTrue(usersignup.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated) {
-		if err := r.sendDeactivatingNotification(logger, usersignup); err != nil {
-			logger.Error(err, "Failed to create user deactivating notification")
+	// If the usersignup state hasn't been set to deactivating, then set it now
+	if !states.Deactivating(usersignup) {
+		states.SetDeactivating(usersignup, true)
 
-			// set the failed to create notification status condition
-			return reconcile.Result{}, r.WrapErrorWithStatusUpdate(logger, usersignup, r.SetStatusDeactivatingNotificationCreationFailed, err, "Failed to create user deactivating notification")
-		}
-
-		if err := r.UpdateStatus(logger, usersignup, r.SetStatusDeactivatingNotificationCreated); err != nil {
-			logger.Error(err, "Failed to update notification created status")
+		logger.Info("setting usersignup state to deactivating")
+		if err := r.client.Update(context.TODO(), usersignup); err != nil {
+			logger.Error(err, "failed to update usersignup")
 			return reconcile.Result{}, err
 		}
+
+		return reconcile.Result{}, nil
 	}
 
 	if timeSinceProvisioned < deactivationTimeout {
@@ -212,36 +201,4 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 	metrics.UserSignupAutoDeactivatedTotal.Inc()
 
 	return reconcile.Result{}, nil
-}
-
-func (r *ReconcileDeactivation) sendDeactivatingNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
-	notification := &toolchainv1alpha1.Notification{
-		ObjectMeta: v1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-%s-", userSignup.Status.CompliantUsername, toolchainv1alpha1.NotificationTypeDeactivating),
-			Namespace:    userSignup.Namespace,
-			Labels: map[string]string{
-				// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
-				toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
-				// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
-				toolchainv1alpha1.NotificationTypeLabelKey: toolchainv1alpha1.NotificationTypeDeactivating,
-			},
-		},
-		Spec: toolchainv1alpha1.NotificationSpec{
-			UserID:   userSignup.Name,
-			Template: notificationtemplates.UserDeactivating.Name,
-		},
-	}
-
-	if err := controllerutil.SetControllerReference(userSignup, notification, r.scheme); err != nil {
-		logger.Error(err, "Failed to set owner reference for deactivating notification resource")
-		return err
-	}
-
-	if err := r.client.Create(context.TODO(), notification); err != nil {
-		logger.Error(err, "Failed to create deactivating notification resource")
-		return err
-	}
-
-	logger.Info("Deactivating notification resource created")
-	return nil
 }
