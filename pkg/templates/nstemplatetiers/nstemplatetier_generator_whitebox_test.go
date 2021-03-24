@@ -37,13 +37,13 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 5)
+			require.Len(t, tmpls, 6)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "basic", "team", "basicdeactivationdisabled", "test"} {
+			for _, tier := range []string{"advanced", "base", "basic", "team", "basicdeactivationdisabled", "test"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"code", "dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
-							if tier == "team" && kind == "code" {
+							if (tier == "base" || tier == "team") && kind == "code" {
 								// not applicable
 								return
 							}
@@ -205,6 +205,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 			expectedDeactivationTimeoutsByTier := map[string]int{
 				"basic":                     30,
 				"basicdeactivationdisabled": 0,
+				"base":                      30,
 				"advanced":                  0,
 				"team":                      0,
 				"test":                      30,
@@ -458,7 +459,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// Template objects count
 	switch tier {
-	case "team":
+	case "base", "team":
 		require.Len(t, actual.Objects, 9)
 	case "basic", "basicdeactivationdisabled", "advanced":
 		if kind == "code" {
@@ -507,7 +508,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 		default:
 			t.Errorf("unexpected kind: '%s'", kind)
 		}
-	case "team":
+	case "base", "team":
 		switch kind {
 		case "dev":
 			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "stage"))
