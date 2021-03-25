@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
@@ -156,7 +158,7 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 
 	timeSinceProvisioned := time.Since(provisionedTimestamp.Time)
 
-	deactivatingNotificationTimeout := time.Duration((deactivationTimeoutDays - r.config.GetUserSignupDeactivatingNotificationDays()) * 24)
+	deactivatingNotificationTimeout := time.Duration((deactivationTimeoutDays-r.config.GetUserSignupDeactivatingNotificationDays())*24) * time.Hour
 
 	if timeSinceProvisioned < deactivatingNotificationTimeout {
 		// It is not yet time to send the deactivating notification so requeue until it will be time to send it
@@ -178,9 +180,20 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, nil
 	}
 
-	if timeSinceProvisioned < deactivationTimeout {
+	deactivatingCondition, found := condition.FindConditionByType(usersignup.Status.Conditions,
+		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated)
+	if !found || deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason {
+		// If the UserSignup has been marked as deactivating, however the deactivating notification hasn't been
+		// created yet, then requeue - the notification should be created shortly
+		return reconcile.Result{Requeue: true}, nil
+	}
+
+	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(r.config.GetUserSignupDeactivatingNotificationDays()*24) * time.Hour)
+
+	if time.Now().Before(deactivationDueTime) {
 		// It is not yet time to deactivate so requeue when it will be
-		requeueAfterExpired := deactivationTimeout - timeSinceProvisioned
+		requeueAfterExpired := time.Until(deactivationDueTime) + time.Duration(1*time.Minute)
+
 		logger.Info("requeueing request", "RequeueAfter", requeueAfterExpired, "Expected deactivation date/time", time.Now().Add(requeueAfterExpired).String())
 		return reconcile.Result{RequeueAfter: requeueAfterExpired}, nil
 	}

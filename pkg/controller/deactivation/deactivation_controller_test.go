@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
+
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -36,6 +38,8 @@ const (
 
 	expectedDeactivationTimeoutBasicTier = 30
 	expectedDeactivationTimeoutOtherTier = 60
+
+	preDeactivationNotificationDays = 3
 )
 
 func TestReconcile(t *testing.T) {
@@ -68,7 +72,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.NoError(t, err)
-			expectedTime := (time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour) - timeSinceProvisioned
+			expectedTime := (time.Duration((expectedDeactivationTimeoutBasicTier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
 			actualTime := res.RequeueAfter
 			diff := expectedTime - actualTime
 			require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
@@ -87,7 +91,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.NoError(t, err)
-			expectedTime := (time.Duration(expectedDeactivationTimeoutOtherTier*24) * time.Hour) - timeSinceProvisioned
+			expectedTime := (time.Duration((expectedDeactivationTimeoutOtherTier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
 			actualTime := res.RequeueAfter
 			diff := expectedTime - actualTime
 			require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
@@ -151,6 +155,12 @@ func TestReconcile(t *testing.T) {
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+			userSignupFoobar.Status.Conditions = append(userSignupFoobar.Status.Conditions, toolchainv1alpha1.Condition{
+				Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status:             v1.ConditionTrue,
+				LastTransitionTime: metav1.Time{Time: time.Now().Add(time.Duration(preDeactivationNotificationDays*24*-1) * time.Hour)},
+				Reason:             toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason,
+			})
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar)
 			// when
 			res, err := r.Reconcile(req)
