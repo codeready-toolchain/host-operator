@@ -532,7 +532,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 		default:
 			t.Errorf("unexpected kind: '%s'", kind)
 		}
-	case "base":
+	case "base", "basedeactivationdisabled":
 		switch kind {
 		case "dev":
 			containsObj(t, actual, allowFromCRWPolicyObj(kind))
