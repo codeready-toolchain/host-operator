@@ -37,14 +37,14 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 6)
+			require.Len(t, tmpls, 7)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "base", "basic", "team", "basicdeactivationdisabled", "test"} {
+			for _, tier := range []string{"advanced", "base", "basedeactivationdisabled", "basic", "team", "basicdeactivationdisabled", "test"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"code", "dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
-							if (tier == "base" || tier == "team") && kind == "code" {
-								// not applicable
+							if kind == "code" && (tier == "base" || tier == "basedeactivationdisabled" || tier == "team") {
+								// no code namespaces for these tiers
 								return
 							}
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
@@ -206,6 +206,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 				"basic":                     30,
 				"basicdeactivationdisabled": 0,
 				"base":                      30,
+				"basedeactivationdisabled":  0,
 				"advanced":                  0,
 				"team":                      0,
 				"test":                      30,
@@ -410,9 +411,9 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	switch tier {
 	case "test":
 		// skip because this tier is for testing purposes only and the template can change often
-	case "base":
+	case "base", "basedeactivationdisabled":
 		assert.Len(t, actual.Objects, 11)
-		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "25Gi"))
+		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
 		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
 		containsObj(t, actual, clusterResourceQuotaReplicasObj())
 		containsObj(t, actual, clusterResourceQuotaRoutesObj())
@@ -425,7 +426,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
 	case "basic", "basicdeactivationdisabled":
 		assert.Len(t, actual.Objects, 12)
-		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
+		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "25Gi"))
 		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
 		containsObj(t, actual, clusterResourceQuotaReplicasObj())
 		containsObj(t, actual, clusterResourceQuotaRoutesObj())
@@ -478,7 +479,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	switch tier {
 	case "team":
 		require.Len(t, actual.Objects, 9)
-	case "base":
+	case "base", "basedeactivationdisabled":
 		if kind == "dev" {
 			require.Len(t, actual.Objects, 10)
 		} else {
