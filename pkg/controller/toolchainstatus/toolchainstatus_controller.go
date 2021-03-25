@@ -346,15 +346,15 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolc
 	}
 
 	// add member cluster statuses to toolchainstatus, and assign apiEndpoint in members
-	ready = compareAndAssignMemberStatuses(logger, toolchainStatus, members,memberClusters) && ready
+	ready = compareAndAssignMemberStatuses(logger, toolchainStatus, members, memberClusters) && ready
 	return ready
 }
 
 func getApiEndpoint(clusterName string, memberClusters []*cluster.CachedToolchainCluster) string {
 	for _, memberCluster := range memberClusters {
-			if memberCluster.Name == clusterName {
-				return memberCluster.APIEndpoint
-			}
+		if memberCluster.Name == clusterName {
+			return memberCluster.APIEndpoint
+		}
 	}
 	return ""
 }
@@ -404,8 +404,8 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 	allOk := true
 	for index, member := range toolchainStatus.Status.Members {
 		newMemberStatus, ok := members[member.ClusterName]
-		apiEndpoint := getApiEndpoint(member.ClusterName,memberClusters)
-		if apiEndpoint != ""{
+		apiEndpoint := getApiEndpoint(member.ClusterName, memberClusters)
+		if apiEndpoint != "" {
 			toolchainStatus.Status.Members[index].ApiEndpoint = apiEndpoint
 		}
 
@@ -423,9 +423,9 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 		}
 	}
 	for clusterName, memberStatus := range members {
-		apiEndpoint := getApiEndpoint(clusterName,memberClusters)
+		apiEndpoint := getApiEndpoint(clusterName, memberClusters)
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
-			ApiEndpoint: apiEndpoint,
+			ApiEndpoint:      apiEndpoint,
 			ClusterName:      clusterName,
 			MemberStatus:     memberStatus,
 			UserAccountCount: 0,

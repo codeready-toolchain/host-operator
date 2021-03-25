@@ -1177,7 +1177,7 @@ func cachedToolchainCluster(cl client.Client, name string, status corev1.Conditi
 		Type:              cluster.Host,
 		OperatorNamespace: test.MemberOperatorNs,
 		OwnerClusterName:  test.MemberClusterName,
-		APIEndpoint: "http://api.devcluster.openshift.com",
+		APIEndpoint:       "http://api.devcluster.openshift.com",
 		ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
 			Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
 				Type:          toolchainv1alpha1.ToolchainClusterReady,
