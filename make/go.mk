@@ -39,7 +39,6 @@ clean-metadata:
 generate-metadata: clean-metadata
 	@echo "generating templates metadata for manifests in $(NSTEMPLATES_BASEDIR)" 
 	@$(foreach tmpl,$(wildcard $(NSTEMPLATES_FILES)),$(call git_commit,$(tmpl),$(NSTEMPLATES_BASEDIR),metadata.yaml))
-	@cat $(NSTEMPLATES_BASEDIR)/metadata.yaml
 	
 define git_commit
 	echo "processing YAML files in $(2)"
