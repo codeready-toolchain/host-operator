@@ -103,6 +103,12 @@ const (
 
 	DefaultForbiddenUsernamePrefixes = "openshift,kube,default,redhat,sandbox"
 
+	// varForbiddenUsernameSuffixes defines the suffixes that a username may not have when signing up.  If a
+	// username has a forbidden suffix, then the username compliance suffix is added to the username
+	varForbiddenUsernameSuffixes = "username.forbidden.suffixes"
+
+	DefaultForbiddenUsernameSuffixes = "admin"
+
 	// varUserSignupUnverifiedRetentionDays is used to configure how many days we should keep unverified (i.e. the user
 	// hasn't completed the user verification process via the registration service) UserSignup resources before deleting
 	// them.  It is intended for this parameter to define an aggressive cleanup schedule for unverified user signups,
@@ -186,6 +192,9 @@ func (c *Config) setConfigDefaults() {
 	c.host.SetDefault(varMasterUserRecordUpdateFailureThreshold, 2) // allow 1 failure, try again and then give up if failed again
 	c.host.SetDefault(varToolchainStatusRefreshTime, defaultToolchainStatusRefreshTime)
 	c.host.SetDefault(varForbiddenUsernamePrefixes, strings.FieldsFunc(DefaultForbiddenUsernamePrefixes, func(c rune) bool {
+		return c == ','
+	}))
+	c.host.SetDefault(varForbiddenUsernameSuffixes, strings.FieldsFunc(DefaultForbiddenUsernameSuffixes, func(c rune) bool {
 		return c == ','
 	}))
 	c.host.SetDefault(varUserSignupUnverifiedRetentionDays, defaultUserSignupUnverifiedRetentionDays)
@@ -287,6 +296,10 @@ func (c *Config) GetDeactivationDomainsExcludedList() []string {
 
 func (c *Config) GetForbiddenUsernamePrefixes() []string {
 	return c.host.GetStringSlice(varForbiddenUsernamePrefixes)
+}
+
+func (c *Config) GetForbiddenUsernameSuffixes() []string {
+	return c.host.GetStringSlice(varForbiddenUsernameSuffixes)
 }
 
 func (c *Config) GetUserSignupUnverifiedRetentionDays() int {
