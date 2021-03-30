@@ -165,6 +165,16 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 	}
 
+	// If the usersignup is not banned and not within the pre-deactivation period then ensure the deactivation notification
+	// status is set to false. This is especially important for cases when a user is deactivated and then reactivated
+	// because the status is used to trigger sending of the notification. If a user is reactivated a notification should
+	// be sent to the user again.
+	if !banned && !states.Deactivating(instance) {
+		if err := r.UpdateStatus(reqLogger, instance, r.setStatusDeactivatingNotificationUserIsActive); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	if exists, err := r.ensureMurIfAlreadyExists(reqLogger, instance, banned); exists || err != nil {
 		return reconcile.Result{}, err
 	}
@@ -186,10 +196,10 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 			// set the failed to create notification status condition
 			return reconcile.Result{}, r.WrapErrorWithStatusUpdate(reqLogger, instance,
-				r.SetStatusDeactivatingNotificationCreationFailed, err, "Failed to create user deactivating notification")
+				r.setStatusDeactivatingNotificationCreationFailed, err, "Failed to create user deactivating notification")
 		}
 
-		if err := r.UpdateStatus(reqLogger, instance, r.SetStatusDeactivatingNotificationCreated); err != nil {
+		if err := r.UpdateStatus(reqLogger, instance, r.setStatusDeactivatingNotificationCreated); err != nil {
 			reqLogger.Error(err, "Failed to update notification created status")
 			return reconcile.Result{}, err
 		}

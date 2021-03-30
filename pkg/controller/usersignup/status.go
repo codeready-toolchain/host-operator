@@ -257,7 +257,7 @@ func (u *statusUpdater) setStatusDeactivationNotificationCreationFailed(userSign
 		})
 }
 
-func (u *statusUpdater) SetStatusDeactivatingNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+func (u *statusUpdater) setStatusDeactivatingNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -267,7 +267,7 @@ func (u *statusUpdater) SetStatusDeactivatingNotificationCreated(userSignup *too
 		})
 }
 
-func (u *statusUpdater) SetStatusDeactivatingNotificationUserIsActive(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+func (u *statusUpdater) setStatusDeactivatingNotificationUserIsActive(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -277,7 +277,7 @@ func (u *statusUpdater) SetStatusDeactivatingNotificationUserIsActive(userSignup
 		})
 }
 
-func (u *statusUpdater) SetStatusDeactivatingNotificationCreationFailed(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) setStatusDeactivatingNotificationCreationFailed(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
