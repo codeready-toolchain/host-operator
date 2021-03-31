@@ -19,7 +19,6 @@ var cachedCounts = cache{
 	Counts: Counts{
 		MasterUserRecordCount:        0,
 		UserAccountsPerClusterCounts: map[string]int{},
-		UsersPerActivationCounts:     map[int]int{},
 	},
 }
 
@@ -29,8 +28,6 @@ type Counts struct {
 	MasterUserRecordCount int
 	// User Accounts per Clusters (indexed by cluster name)
 	UserAccountsPerClusterCounts map[string]int
-	// Activations per Users (number of users indexed by their number of activations)
-	UsersPerActivationCounts map[int]int
 }
 
 type cache struct {
@@ -55,7 +52,6 @@ func Reset() {
 func reset() {
 	cachedCounts.Counts = Counts{
 		UserAccountsPerClusterCounts: map[string]int{},
-		UsersPerActivationCounts:     map[int]int{},
 	}
 	cachedCounts.initialized = false
 	metrics.MasterUserRecordGauge.Set(float64(0))
@@ -152,7 +148,7 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 	toolchainStatus.Status.HostOperator.MasterUserRecordCount = cachedCounts.MasterUserRecordCount
 	metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 
-	log.Info("cachedCounts", "useraccounts_per_cluster_counts", cachedCounts.UserAccountsPerClusterCounts, "users_per_activations", cachedCounts.UsersPerActivationCounts)
+	log.Info("cachedCounts", "useraccounts_per_cluster_counts", cachedCounts.UserAccountsPerClusterCounts)
 	for _, member := range toolchainStatus.Status.Members {
 		count := cachedCounts.UserAccountsPerClusterCounts[member.ClusterName]
 		index := indexOfMember(toolchainStatus.Status.Members, member.ClusterName)
