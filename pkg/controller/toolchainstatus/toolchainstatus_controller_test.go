@@ -1143,7 +1143,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			HasMurCount(9).
 			HasMemberClusterStatus(memberCluster("member-1", ready(), userAccountCount(7)), memberCluster("member-2", ready(), userAccountCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady())
-		AssertThatCounterHas(t, 9, UserAccountsForCluster("member-1", 7), UserAccountsForCluster("member-2", 2))
+		AssertThatCounterHas(t, MasterUserRecords(9), UserAccountsForCluster("member-1", 7), UserAccountsForCluster("member-2", 2))
 	})
 }
 
