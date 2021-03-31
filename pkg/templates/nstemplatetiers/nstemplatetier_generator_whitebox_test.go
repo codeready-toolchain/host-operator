@@ -478,7 +478,11 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	// Template objects count
 	switch tier {
 	case "team":
-		require.Len(t, actual.Objects, 9)
+		if kind == "dev" {
+			require.Len(t, actual.Objects, 10)
+		} else {
+			require.Len(t, actual.Objects, 9)
+		}
 	case "base", "basedeactivationdisabled":
 		if kind == "dev" {
 			require.Len(t, actual.Objects, 10)
@@ -486,7 +490,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 			require.Len(t, actual.Objects, 9)
 		}
 	case "basic", "basicdeactivationdisabled", "advanced":
-		if kind == "code" {
+		if kind == "code" || kind == "dev" {
 			require.Len(t, actual.Objects, 10)
 		} else {
 			require.Len(t, actual.Objects, 9)
@@ -526,6 +530,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 			containsObj(t, actual, allowFromCRWPolicyObj(kind))
 			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "dev", "stage"))
 		case "dev":
+			containsObj(t, actual, allowFromCRWPolicyObj(kind))
 			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "code", "stage"))
 		case "stage":
 			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "code", "dev"))
@@ -545,6 +550,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	case "team":
 		switch kind {
 		case "dev":
+			containsObj(t, actual, allowFromCRWPolicyObj(kind))
 			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "stage"))
 		case "stage":
 			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "dev"))
