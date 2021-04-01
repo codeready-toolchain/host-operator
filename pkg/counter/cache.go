@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -16,13 +17,16 @@ var log = logf.Log.WithName("counter_cache")
 
 var cachedCounts = cache{
 	Counts: Counts{
+		MasterUserRecordCount:        0,
 		UserAccountsPerClusterCounts: map[string]int{},
 	},
 }
 
 // Counts is type that contains number of MURs and number of UserAccounts per member cluster
 type Counts struct {
-	MasterUserRecordCount        int
+	// Total number of Master User Accounts
+	MasterUserRecordCount int
+	// User Accounts per Clusters (indexed by cluster name)
 	UserAccountsPerClusterCounts map[string]int
 }
 
@@ -66,7 +70,7 @@ func IncrementMasterUserRecordCount() {
 // DecrementMasterUserRecordCount decreases the number of MasterUserRecord in the cached counter
 func DecrementMasterUserRecordCount(log logr.Logger) {
 	write(func() {
-		if cachedCounts.MasterUserRecordCount != 0 || !cachedCounts.initialized {
+		if cachedCounts.MasterUserRecordCount != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
 			cachedCounts.MasterUserRecordCount--
 		} else {
 			log.Error(fmt.Errorf("the count of MasterUserRecords is zero"),
@@ -88,7 +92,7 @@ func IncrementUserAccountCount(clusterName string) {
 // DecrementUserAccountCount decreases the number of UserAccount for the given member cluster in the cached counter
 func DecrementUserAccountCount(log logr.Logger, clusterName string) {
 	write(func() {
-		if cachedCounts.UserAccountsPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized {
+		if cachedCounts.UserAccountsPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
 			cachedCounts.UserAccountsPerClusterCounts[clusterName]--
 			metrics.UserAccountGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.UserAccountsPerClusterCounts[clusterName]))
 		} else {
@@ -119,20 +123,22 @@ func GetCounts() (Counts, error) {
 //
 // If the cached counter is initialized and ToolchainStatus contains already some numbers
 // then it updates the ToolchainStatus numbers with the one taken from the cached counter
-func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) error {
+func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	cachedCounts.Lock()
 	defer cachedCounts.Unlock()
 	log.Info("synchronizing counters", "cachedCounts.initialized", cachedCounts.initialized, "members", toolchainStatus.Status.Members)
-	if shouldLoadCurrentMURsAndUserAccounts(toolchainStatus) {
-		if err := loadCurrentMURsAndUserAccounts(cl, toolchainStatus.Namespace); err != nil {
+	if shouldLoadCurrentResources(toolchainStatus) {
+		if err := loadCurrentResources(cl, toolchainStatus.Namespace); err != nil {
 			return err
 		}
 	}
 	if toolchainStatus.Status.HostOperator == nil {
-		toolchainStatus.Status.HostOperator = &v1alpha1.HostOperatorStatus{}
+		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
 	}
 	if !cachedCounts.initialized {
+		// MasterUserRecordCount
 		cachedCounts.MasterUserRecordCount += toolchainStatus.Status.HostOperator.MasterUserRecordCount
+		// UserAccountsPerClusterCounts
 		for _, memberStatus := range toolchainStatus.Status.Members {
 			cachedCounts.UserAccountsPerClusterCounts[memberStatus.ClusterName] += memberStatus.UserAccountCount
 		}
@@ -147,7 +153,7 @@ func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) er
 		count := cachedCounts.UserAccountsPerClusterCounts[member.ClusterName]
 		index := indexOfMember(toolchainStatus.Status.Members, member.ClusterName)
 		if index == -1 {
-			toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, v1alpha1.Member{
+			toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
 				ClusterName: member.ClusterName,
 			})
 			index = len(toolchainStatus.Status.Members) - 1
@@ -160,7 +166,7 @@ func Synchronize(cl client.Client, toolchainStatus *v1alpha1.ToolchainStatus) er
 }
 
 // retrieves the index of the member with the given name, or return -1 if not found
-func indexOfMember(members []v1alpha1.Member, name string) int {
+func indexOfMember(members []toolchainv1alpha1.Member, name string) int {
 	for index, member := range members {
 		if member.ClusterName == name {
 			return index
@@ -169,14 +175,14 @@ func indexOfMember(members []v1alpha1.Member, name string) int {
 	return -1
 }
 
-func shouldLoadCurrentMURsAndUserAccounts(toolchainStatus *v1alpha1.ToolchainStatus) bool {
+func shouldLoadCurrentResources(toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	return (toolchainStatus.Status.HostOperator == nil ||
 		toolchainStatus.Status.HostOperator.MasterUserRecordCount == 0) &&
 		!cachedCounts.initialized
 }
 
-func loadCurrentMURsAndUserAccounts(cl client.Client, namespace string) error {
-	murs := &v1alpha1.MasterUserRecordList{}
+func loadCurrentResources(cl client.Client, namespace string) error {
+	murs := &toolchainv1alpha1.MasterUserRecordList{}
 	if err := cl.List(context.TODO(), murs, client.InNamespace(namespace)); err != nil {
 		return err
 	}
