@@ -22,7 +22,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	config, err := configuration.LoadConfig(NewFakeClient(t))
 	require.NoError(t, err)
 	defer counter.Reset()
-	InitializeCounter(t, 1500, UserAccountsForCluster("member1", 800), UserAccountsForCluster("member2", 700))
+	InitializeCounter(t, MasterUserRecords(1500), UserAccountsForCluster("member1", 800), UserAccountsForCluster("member2", 700))
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
 		WithMember("member2", WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
