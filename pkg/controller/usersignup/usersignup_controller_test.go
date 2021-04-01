@@ -2216,7 +2216,7 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 			userSignup.Spec.Username = fmt.Sprintf("%s%s", name, suffix)
 
 			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
-			InitializeCounter(t, 1)
+			InitializeCounter(t, MasterUserRecords(1))
 
 			// when
 			_, err := r.Reconcile(req)
