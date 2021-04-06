@@ -1787,6 +1787,10 @@ data:
                       x-kubernetes-list-map-keys:
                       - clusterName
                       x-kubernetes-list-type: map
+                    metrics:
+                      additionalProperties:
+                        type: string
+                      type: object
                     registrationService:
                       description: RegistrationService is the status of the registration
                         service

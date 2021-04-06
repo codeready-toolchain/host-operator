@@ -16,6 +16,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -1056,11 +1057,13 @@ func TestSynchronizationWithCounter(t *testing.T) {
 	toolchainStatus := NewToolchainStatus()
 	memberStatus := newMemberStatus(ready())
 
-	t.Run("Load all current MURs and UAs", func(t *testing.T) {
+	t.Run("Load all current resources", func(t *testing.T) {
 		// given
 		defer counter.Reset()
 		initObjects := append([]runtime.Object{}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+		initObjects = append(initObjects, CreateMultipleUserSignups("cookie-", 8)...)
 		initObjects = append(initObjects, CreateMultipleMurs(t, "cookie-", 8, "member-1")...)
+		initObjects = append(initObjects, CreateMultipleUserSignups("pasta-", 2)...)
 		initObjects = append(initObjects, CreateMultipleMurs(t, "pasta-", 2, "member-2")...)
 
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, initObjects...)
@@ -1078,7 +1081,17 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			HasMemberClusterStatus(
 				memberCluster("member-1", ready(), userAccountCount(8)),
 				memberCluster("member-2", ready(), userAccountCount(2))).
-			HasRegistrationServiceStatus(registrationServiceReady())
+			HasRegistrationServiceStatus(registrationServiceReady()).
+			HasMetric(toolchainv1alpha1.UsersPerActivationMetricKey, map[string]int{
+				"1": 2, // users "cookie-00" and "pasta-00"
+				"2": 2, // users "cookie-01" and "pasta-01"
+				"3": 1, // users "cookie-02"
+				"4": 1, // users "cookie-03"
+				"5": 1, // etc.
+				"6": 1,
+				"7": 1,
+				"8": 1,
+			})
 
 		t.Run("sync with newly added MURs and UAs", func(t *testing.T) {
 			// given
@@ -1110,28 +1123,20 @@ func TestSynchronizationWithCounter(t *testing.T) {
 
 	})
 
-	t.Run("initialize the cache using the MURs and UAs from ToolchainStatus", func(t *testing.T) {
+	t.Run("initialize the cache using the ToolchainStatus resource", func(t *testing.T) {
 		// given
 		defer counter.Reset()
-		counter.IncrementMasterUserRecordCount()
-		counter.IncrementUserAccountCount("member-1")
-		toolchainStatus := NewToolchainStatus()
-		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
-			MasterUserRecordCount: 8,
-		}
-		toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
-			{
-				ClusterName:      "member-1",
-				UserAccountCount: 6, // will increase
-			},
-			{
-				ClusterName:      "member-2",
-				UserAccountCount: 2, // will remain the same
-			},
-		}
+		toolchainStatus := NewToolchainStatus(
+			WithHost(MasterUserRecordCount(8)),
+			WithMember("member-1", WithUserAccountCount(6)), // will increase
+			WithMember("member-2", WithUserAccountCount(2)), // will remain the same
+			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, `{"1":5,"2":2,"3":1}`),
+		)
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when
+		counter.IncrementMasterUserRecordCount()
+		counter.IncrementUserAccountCount("member-1")
 		res, err := reconciler.Reconcile(req)
 
 		// then
@@ -1140,10 +1145,20 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
-			HasMurCount(9).
-			HasMemberClusterStatus(memberCluster("member-1", ready(), userAccountCount(7)), memberCluster("member-2", ready(), userAccountCount(2))).
-			HasRegistrationServiceStatus(registrationServiceReady())
+			HasMurCount(9). // was incremented
+			HasMemberClusterStatus(
+				memberCluster("member-1", ready(), userAccountCount(7)), // was incremented
+				memberCluster("member-2", ready(), userAccountCount(2))).
+			HasRegistrationServiceStatus(registrationServiceReady()).
+			HasMetric(toolchainv1alpha1.UsersPerActivationMetricKey, map[string]int{
+				"1": 5,
+				"2": 2,
+				"3": 1,
+			})
 		AssertThatCounterHas(t, MasterUserRecords(9), UserAccountsForCluster("member-1", 7), UserAccountsForCluster("member-2", 2))
+		AssertMetricsGaugeEquals(t, 5, metrics.UsersPerActivationGaugeVec.WithLabelValues("1")) // 5 users signed up a 1 time
+		AssertMetricsGaugeEquals(t, 2, metrics.UsersPerActivationGaugeVec.WithLabelValues("2")) // 2 users signed up a 1 times
+		AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("3")) // 1 user signed up a 3 times
 	})
 }
 

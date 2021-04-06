@@ -17,6 +17,8 @@ type UserSignupChangedPredicate struct {
 	controllerPredicate.Funcs
 }
 
+var _ controllerPredicate.Predicate = UserSignupChangedPredicate{}
+
 // Update filters update events and let the reconcile loop to be triggered when any of the following conditions is met:
 //
 // * generation number has changed
@@ -42,6 +44,11 @@ func (p UserSignupChangedPredicate) AnnotationChanged(e event.UpdateEvent, annot
 
 func (p UserSignupChangedPredicate) LabelChanged(e event.UpdateEvent, labelName string) bool {
 	return e.MetaOld.GetLabels()[labelName] != e.MetaNew.GetLabels()[labelName]
+}
+
+func (p UserSignupChangedPredicate) Delete(e event.DeleteEvent) bool {
+	// will reconcile to remove the finalizers
+	return len(e.Meta.GetFinalizers()) > 0
 }
 
 var configLog = logf.Log.WithName("automatic_approval_predicate")

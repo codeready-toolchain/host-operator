@@ -3,8 +3,9 @@ package test
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"time"
+
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -72,6 +73,12 @@ func WithUsername(username string) UserSignupModifier {
 	}
 }
 
+func WithLabel(key, value string) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Labels[key] = value
+	}
+}
+
 func WithStateLabel(stateValue string) UserSignupModifier {
 	return func(userSignup *v1alpha1.UserSignup) {
 		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = stateValue
@@ -106,6 +113,35 @@ func CreatedBefore(before time.Duration) UserSignupModifier {
 	}
 }
 
+func BeingDeleted() UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.ObjectMeta.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	}
+}
+
+func WithAnnotation(key, value string) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Annotations[key] = value
+	}
+}
+func WithoutAnnotation(key string) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		delete(userSignup.Annotations, key)
+	}
+}
+
+func WithoutAnnotations() UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Annotations = map[string]string{}
+	}
+}
+
+func WithoutFinalizers() UserSignupModifier {
+	return func(usersignup *toolchainv1alpha1.UserSignup) {
+		usersignup.Finalizers = []string{}
+	}
+}
+
 type UserSignupModifier func(*v1alpha1.UserSignup)
 
 func NewUserSignup(modifiers ...UserSignupModifier) *v1alpha1.UserSignup {
@@ -136,11 +172,13 @@ func NewUserSignupObjectMeta(name, email string) metav1.ObjectMeta {
 		Name:      name,
 		Namespace: test.HostOperatorNs,
 		Annotations: map[string]string{
-			toolchainv1alpha1.UserSignupUserEmailAnnotationKey: email,
+			toolchainv1alpha1.UserSignupUserEmailAnnotationKey:         email,
+			toolchainv1alpha1.UserSignupActivationCounterAnnotationKey: "1",
 		},
 		Labels: map[string]string{
 			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
 		},
 		CreationTimestamp: metav1.Now(),
+		Finalizers:        []string{"finalizer.toolchain.dev.openshift.com"},
 	}
 }

@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func AssertMetricsCounterEquals(t *testing.T, expected int, counter prometheus.Counter) {
-	assert.Equal(t, float64(expected), promtestutil.ToFloat64(counter))
+func AssertMetricsCounterEquals(t *testing.T, expected int, c prometheus.Counter) {
+	assert.Equal(t, float64(expected), promtestutil.ToFloat64(c))
 }
 
-func AssertMetricsGaugeEquals(t *testing.T, expected int, gauge prometheus.Gauge) {
-	assert.Equal(t, float64(expected), promtestutil.ToFloat64(gauge))
+func AssertMetricsGaugeEquals(t *testing.T, expected int, g prometheus.Gauge) {
+	assert.Equal(t, float64(expected), promtestutil.ToFloat64(g))
 }

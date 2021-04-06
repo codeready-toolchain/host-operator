@@ -42,6 +42,12 @@ func WithMember(name string, options ...MemberToolchainStatusOption) ToolchainSt
 
 type MemberToolchainStatusOption func(*toolchainv1alpha1.Member)
 
+func WithUserAccountCount(count int) MemberToolchainStatusOption {
+	return func(status *toolchainv1alpha1.Member) {
+		status.UserAccountCount = count
+	}
+}
+
 func WithNodeRoleUsage(role string, usage int) MemberToolchainStatusOption {
 	return func(status *toolchainv1alpha1.Member) {
 		if status.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole == nil {
@@ -62,7 +68,16 @@ func WithRoutes(consoleURL, cheURL string, condition toolchainv1alpha1.Condition
 	}
 }
 
-func NewToolchainStatus(options ...func(*toolchainv1alpha1.ToolchainStatus)) *toolchainv1alpha1.ToolchainStatus {
+func WithMetric(key, value string) ToolchainStatusOption {
+	return func(status *toolchainv1alpha1.ToolchainStatus) {
+		if status.Status.Metrics == nil {
+			status.Status.Metrics = map[string]string{}
+		}
+		status.Status.Metrics[key] = value
+	}
+}
+
+func NewToolchainStatus(options ...ToolchainStatusOption) *toolchainv1alpha1.ToolchainStatus {
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configuration.DefaultToolchainStatusName,

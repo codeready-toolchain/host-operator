@@ -58,48 +58,133 @@ func newNsTemplateTier(tierName string, nsTypes ...string) *v1alpha1.NSTemplateT
 var basicNSTemplateTier = newNsTemplateTier("basic", "code", "dev", "stage")
 
 func TestUserSignupCreateMUROk(t *testing.T) {
+
+	for name, userSignup := range map[string]*v1alpha1.UserSignup{
+		"with activation annotation":    NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready")),
+		"without activation annotation": NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithoutAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey)),
+	} {
+		t.Run(name, func(t *testing.T) {
+
+			// given
+			defer counter.Reset()
+			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
+			InitializeCounter(t, MasterUserRecords(1))
+
+			// when
+			res, err := r.Reconcile(req)
+
+			// then verify that the MUR exists and is complete
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res)
+			murs := &v1alpha1.MasterUserRecordList{}
+			err = r.client.List(context.TODO(), murs)
+			require.NoError(t, err)
+			require.Len(t, murs.Items, 1)
+			mur := murs.Items[0]
+			require.Equal(t, test.HostOperatorNs, mur.Namespace)
+			require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
+			require.Len(t, mur.Spec.UserAccounts, 1)
+			assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
+			assert.Equal(t, []v1alpha1.NSTemplateSetNamespace{
+				{
+					TemplateRef: "basic-code-123abc1",
+				},
+				{
+					TemplateRef: "basic-dev-123abc2",
+				},
+				{
+					TemplateRef: "basic-stage-123abc3",
+				},
+			}, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces)
+			require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
+			assert.Equal(t, "basic-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
+
+			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			require.NoError(t, err)
+			assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
+			assert.Equal(t, "1", userSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // annotation value was not changed (if existed) or set (if missng)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)                                 // zero because we started with a not-ready state instead of empty as per usual
+			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+			AssertThatCounterHas(t, MasterUserRecords(2))
+		})
+	}
+}
+
+func TestAddFinalizerSucceeds(t *testing.T) {
 	// given
-	defer counter.Reset()
-	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
-	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "not-ready"
+	userSignup := NewUserSignup(WithoutFinalizers())
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
-	InitializeCounter(t, MasterUserRecords(1))
 
 	// when
-	res, err := r.Reconcile(req)
+	_, err := r.Reconcile(req)
 
-	// then verify that the MUR exists and is complete
+	// then
 	require.NoError(t, err)
-	require.Equal(t, reconcile.Result{}, res)
-	murs := &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 1)
-	mur := murs.Items[0]
-	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
-	require.Len(t, mur.Spec.UserAccounts, 1)
-	assert.Equal(t, "basic", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
-	assert.Equal(t, []v1alpha1.NSTemplateSetNamespace{
-		{
-			TemplateRef: "basic-code-123abc1",
-		},
-		{
-			TemplateRef: "basic-dev-123abc2",
-		},
-		{
-			TemplateRef: "basic-stage-123abc3",
-		},
-	}, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces)
-	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
-	assert.Equal(t, "basic-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
 
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	// Lookup the user signup again
+	actual := &v1alpha1.UserSignup{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actual)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal) // zero because we started with a not-ready state instead of empty as per usual
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	assert.ElementsMatch(t, []string{"finalizer.toolchain.dev.openshift.com"}, actual.Finalizers)
+}
+
+func TestAddFinalizerFails(t *testing.T) {
+	// given
+	logf.SetLogger(zap.Logger(true))
+	userSignup := NewUserSignup(WithoutFinalizers())
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
+	fakeClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		return fmt.Errorf("some error")
+	}
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		// because the StatusUpdate results in full update of the obj (spec + status) in the fake client...
+		return fmt.Errorf("some error")
+	}
+
+	// when
+	_, err := r.Reconcile(req)
+
+	// then
+	require.Error(t, err)
+
+	// Lookup the user signup again
+	actual := &v1alpha1.UserSignup{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actual)
+	require.NoError(t, err)
+	assert.Empty(t, actual.Finalizers)
+}
+
+func TestDeletingUserSignupShouldUpdateMetrics(t *testing.T) {
+	// given
+	logf.SetLogger(zap.Logger(true))
+	defer counter.Reset()
+	userSignup := NewUserSignup(BeingDeleted(), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
+	InitializeCounter(t,
+		MasterUserRecords(12),
+		UsersPerActivations(map[string]int{
+			"1": 1,
+			"2": 10, // will be decreased when usersignup controller reconciles the usersignup deletion
+			"3": 1,
+		}))
+
+	// when
+	_, err := r.Reconcile(req)
+
+	// then
+	require.NoError(t, err)
+
+	// Verify the counters
+	AssertThatCounterHas(t,
+		MasterUserRecords(12), // unchanged at this point
+		UsersPerActivations(map[string]int{
+			"1": 1,
+			"2": 9, // was decreased when usersignup controller reconciled the usersignup deletion
+			"3": 1,
+		}))
+	AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))
+	AssertMetricsGaugeEquals(t, 9, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))
+	AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))
 }
 
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
@@ -209,12 +294,11 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 }
 
-func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
+func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 	// given
 	logf.SetLogger(zap.Logger(true))
 	defer counter.Reset()
-	userSignup := NewUserSignup()
-	userSignup.Annotations = map[string]string{}
+	userSignup := NewUserSignup(WithoutAnnotations())
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t,
@@ -231,6 +315,7 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "not-ready", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "1", userSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // was set with default value to "1"
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -246,14 +331,11 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	// given
 	defer counter.Reset()
-	userSignup := NewUserSignup()
-	userSignup.Annotations = map[string]string{
-		v1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-	}
-	userSignup.Labels = map[string]string{
-		v1alpha1.UserSignupUserEmailHashLabelKey: "abcdef0123456789",
-		"toolchain.dev.openshift.com/approved":   "false",
-	}
+	userSignup := NewUserSignup(
+		WithLabel(v1alpha1.UserSignupUserEmailHashLabelKey, "abcdef0123456789"),
+		WithLabel("toolchain.dev.openshift.com/approved", "false"),
+		WithAnnotation(v1alpha1.UserSignupUserEmailAnnotationKey, "foo@redhat.com"),
+	)
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), basicNSTemplateTier)
@@ -1373,6 +1455,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		// start with a usersignup that has the Notification Created status set to "true" but Spec.Deactivated is set to "false" which signals a user which has been just reactivated.
 		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "deactivated"
 		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+		userSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey] = "2" // this is the second time that the user signed up (annotation value is "managed" by Registration Service)
 		userSignup.Status.Conditions = []v1alpha1.Condition{
 			{
 				Type:   v1alpha1.UserSignupComplete,
@@ -1430,6 +1513,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+		AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("2")) // user signed up a two times, so the counter for `2` activations was increased by 1
 
 		// There should not be a notification created because the user was reactivated
 		ntest.AssertNoNotificationsExist(t, r.client)

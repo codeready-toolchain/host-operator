@@ -2,7 +2,9 @@ package counter
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -19,6 +21,7 @@ var cachedCounts = cache{
 	Counts: Counts{
 		MasterUserRecordCount:        0,
 		UserAccountsPerClusterCounts: map[string]int{},
+		UsersPerActivationCounts:     map[string]int{},
 	},
 }
 
@@ -28,6 +31,8 @@ type Counts struct {
 	MasterUserRecordCount int
 	// User Accounts per Clusters (indexed by cluster name)
 	UserAccountsPerClusterCounts map[string]int
+	// Activations per Users (number of users indexed by their number of activations)
+	UsersPerActivationCounts map[string]int
 }
 
 type cache struct {
@@ -50,12 +55,15 @@ func Reset() {
 }
 
 func reset() {
+	fmt.Println("resetting counters...")
 	cachedCounts.Counts = Counts{
 		UserAccountsPerClusterCounts: map[string]int{},
+		UsersPerActivationCounts:     map[string]int{},
 	}
 	cachedCounts.initialized = false
 	metrics.MasterUserRecordGauge.Set(float64(0))
 	metrics.UserAccountGaugeVec.Reset()
+	metrics.UsersPerActivationGaugeVec.Reset()
 }
 
 // IncrementMasterUserRecordCount increments the number of MasterUserRecord in the cached counter
@@ -102,6 +110,31 @@ func DecrementUserAccountCount(log logr.Logger, clusterName string) {
 	})
 }
 
+// IncrementUsersPerActivationCounter increments the counter of a given number of activations for a (returning) user.
+// When a user signs up for the 1st time, her `activations` number is `1`, on the second time, it's `2`, etc.
+func IncrementUsersPerActivationCounter(activations int) {
+	write(func() {
+		// increase the gauge with the given number of activations
+		cachedCounts.UsersPerActivationCounts[strconv.Itoa(activations)]++
+		metrics.UsersPerActivationGaugeVec.WithLabelValues(strconv.Itoa(activations)).Inc()
+		// and decrease the gauge with the previous number of activations (if applicable)
+		if activations > 1 {
+			cachedCounts.UsersPerActivationCounts[strconv.Itoa(activations-1)]--
+			metrics.UsersPerActivationGaugeVec.WithLabelValues(strconv.Itoa(activations - 1)).Dec()
+		}
+	})
+}
+
+// DecrementUsersPerActivationCounter decrements the counter of a given number of activations for a (returning) user.
+// Happens when a user is deleted
+func DecrementUsersPerActivationCounter(activations int) {
+	write(func() {
+		// increase the gauge with the given number of activations
+		cachedCounts.UsersPerActivationCounts[strconv.Itoa(activations)]--
+		metrics.UsersPerActivationGaugeVec.WithLabelValues(strconv.Itoa(activations)).Dec()
+	})
+}
+
 // GetCounts returns Counts struct containing number of MURs and number of UserAccounts per member cluster.
 // If the counter is not yet initialized, then it returns error
 func GetCounts() (Counts, error) {
@@ -126,29 +159,24 @@ func GetCounts() (Counts, error) {
 func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	cachedCounts.Lock()
 	defer cachedCounts.Unlock()
-	log.Info("synchronizing counters", "cachedCounts.initialized", cachedCounts.initialized, "members", toolchainStatus.Status.Members)
-	if shouldLoadCurrentResources(toolchainStatus) {
-		if err := loadCurrentResources(cl, toolchainStatus.Namespace); err != nil {
-			return err
-		}
+
+	// initialize the cached counters (if needed)
+	if err := initialize(cl, toolchainStatus); err != nil {
+		return err
 	}
+
+	log.Info("synchronizing counters", "cachedCounts.initialized", cachedCounts.initialized, "members", toolchainStatus.Status.Members)
+
+	// update the toolchainStatus.HostOperator.MasterUserRecordCount and metrics.MasterUserRecordGauge
+	// from the cachedCounts.MasterUserRecordCount
 	if toolchainStatus.Status.HostOperator == nil {
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
-	}
-	if !cachedCounts.initialized {
-		// MasterUserRecordCount
-		cachedCounts.MasterUserRecordCount += toolchainStatus.Status.HostOperator.MasterUserRecordCount
-		// UserAccountsPerClusterCounts
-		for _, memberStatus := range toolchainStatus.Status.Members {
-			cachedCounts.UserAccountsPerClusterCounts[memberStatus.ClusterName] += memberStatus.UserAccountCount
-		}
-		cachedCounts.initialized = true
-		log.Info("cachedCounts initialized", "useraccounts_per_cluster_counts", cachedCounts.UserAccountsPerClusterCounts)
 	}
 	toolchainStatus.Status.HostOperator.MasterUserRecordCount = cachedCounts.MasterUserRecordCount
 	metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 
-	log.Info("cachedCounts", "useraccounts_per_cluster_counts", cachedCounts.UserAccountsPerClusterCounts)
+	// update the toolchainStatus.Status.Members and metrics.UserAccountGaugeVec
+	// from the cachedCounts.UserAccountsPerClusterCounts
 	for _, member := range toolchainStatus.Status.Members {
 		count := cachedCounts.UserAccountsPerClusterCounts[member.ClusterName]
 		index := indexOfMember(toolchainStatus.Status.Members, member.ClusterName)
@@ -162,6 +190,23 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 		log.Info("synchronized user_accounts_current gauge", "member_cluster", member.ClusterName, "count", count)
 		metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName).Set(float64(count))
 	}
+
+	// update the toolchainStatus.Status.Metrics and metrics.UserAccountGaugeVec
+	// from the cachedCounts.UsersPerActivationCounts
+	usersPerActivationCountsJSON, err := json.Marshal(cachedCounts.UsersPerActivationCounts)
+	if err != nil {
+		log.Error(err, "unable to serialize the 'UsersPerActivation` counter")
+	}
+	if toolchainStatus.Status.Metrics == nil {
+		toolchainStatus.Status.Metrics = map[string]string{}
+	}
+	toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey] = string(usersPerActivationCountsJSON)
+	for activations, users := range cachedCounts.UsersPerActivationCounts {
+		metrics.UsersPerActivationGaugeVec.WithLabelValues(activations).Set(float64(users))
+	}
+
+	log.Info("synchronized counters", "counts", cachedCounts.Counts)
+
 	return nil
 }
 
@@ -175,18 +220,48 @@ func indexOfMember(members []toolchainv1alpha1.Member, name string) int {
 	return -1
 }
 
-func shouldLoadCurrentResources(toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
-	return (toolchainStatus.Status.HostOperator == nil ||
-		toolchainStatus.Status.HostOperator.MasterUserRecordCount == 0) &&
-		!cachedCounts.initialized
+func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+	// skip if cached counters are already initialized
+	if cachedCounts.initialized {
+		return nil
+	}
+
+	// initialize the cached counters from the UserSignup and MasterUserRecord resources.
+	if toolchainStatus.Status.HostOperator == nil ||
+		toolchainStatus.Status.HostOperator.MasterUserRecordCount == 0 {
+		return initializeFromResources(cl, toolchainStatus.Namespace)
+	}
+	// otherwise, initialize the cached counters from the ToolchainStatud resource.
+	return initializeFromToolchainStatus(cl, toolchainStatus)
 }
 
-func loadCurrentResources(cl client.Client, namespace string) error {
+// initialize the cached counters from the UserSignup and MasterUserRecord resources.
+// this func lists all UserSignup and MasterUserRecord resources
+func initializeFromResources(cl client.Client, namespace string) error {
+	log.Info("initializing counters from resources")
+	usersignups := &toolchainv1alpha1.UserSignupList{}
+	if err := cl.List(context.TODO(), usersignups, client.InNamespace(namespace)); err != nil {
+		return err
+	}
 	murs := &toolchainv1alpha1.MasterUserRecordList{}
 	if err := cl.List(context.TODO(), murs, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 	reset()
+	for _, usersignup := range usersignups.Items {
+		if value, exists := usersignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
+			_, err := strconv.Atoi(value) // let's make sure the value is actually an integer
+			if err != nil {
+				log.Error(err, "invalid number of activations", "name", usersignup.Name, "value", value)
+				continue
+			}
+			cachedCounts.UsersPerActivationCounts[value]++
+		} else {
+			// annotation wasn't already set by the UserSignup controller at the time where the list was loaded,
+			// so let's assume the value is '1'
+			cachedCounts.UsersPerActivationCounts["1"]++
+		}
+	}
 	for _, mur := range murs.Items {
 		cachedCounts.MasterUserRecordCount++
 		for _, ua := range mur.Spec.UserAccounts {
@@ -194,5 +269,36 @@ func loadCurrentResources(cl client.Client, namespace string) error {
 		}
 	}
 	cachedCounts.initialized = true
+	log.Info("cached counts initialized from UserSignups and MasterUserRecords",
+		"MasterUserRecordCount", cachedCounts.MasterUserRecordCount,
+		"UserAccountsPerClusterCounts", cachedCounts.UserAccountsPerClusterCounts,
+		"UsersPerActivationCounts", cachedCounts.UsersPerActivationCounts)
+	return nil
+}
+
+// initialize the cached counters from the ToolchainStatud resource.
+func initializeFromToolchainStatus(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+	// initialize the cached counters from the ToolchainStatus resource
+	if toolchainStatus.Status.HostOperator == nil {
+		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
+	}
+	// MasterUserRecordCount
+	cachedCounts.MasterUserRecordCount += toolchainStatus.Status.HostOperator.MasterUserRecordCount
+	// UserAccountsPerClusterCounts
+	for _, memberStatus := range toolchainStatus.Status.Members {
+		cachedCounts.UserAccountsPerClusterCounts[memberStatus.ClusterName] += memberStatus.UserAccountCount
+	}
+	// UsersPerActivationCounts
+	if toolchainStatus.Status.Metrics != nil {
+		if jsonMetric, exists := toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey]; exists {
+			usersPerActivationCounts := map[string]int{}
+			if err := json.Unmarshal([]byte(jsonMetric), &usersPerActivationCounts); err != nil {
+				return err
+			}
+			cachedCounts.UsersPerActivationCounts = usersPerActivationCounts
+		}
+	}
+	cachedCounts.initialized = true
+	log.Info("cached counts initialized from ToolchainStatus")
 	return nil
 }

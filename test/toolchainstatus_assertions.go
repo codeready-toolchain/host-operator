@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -57,6 +58,26 @@ func (a *ToolchainStatusAssertion) HasConditions(expected ...toolchainv1alpha1.C
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
 	test.AssertConditionsMatch(a.t, a.toolchainStatus.Status.Conditions, expected...)
+	return a
+}
+
+// HasMetric verifies that the `ToolchainStatus.Status.Metrics` has the given key/value (where the value is serialized if it is a map)
+func (a *ToolchainStatusAssertion) HasMetric(key string, value interface{}) *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+	require.NotNil(a.t, a.toolchainStatus.Status)
+	require.NotNil(a.t, a.toolchainStatus.Status.Metrics)
+	switch value := value.(type) {
+	case map[string]int:
+		// unmarshal current value from JSON and compare
+		actualValue := map[string]int{}
+		err := json.Unmarshal([]byte(a.toolchainStatus.Status.Metrics[key]), &actualValue)
+		require.NoError(a.t, err)
+		assert.Equal(a.t, value, actualValue)
+
+	default:
+		a.t.Fatalf("unexpected type of annotation value")
+	}
 	return a
 }
 

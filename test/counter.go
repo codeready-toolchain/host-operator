@@ -1,13 +1,16 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	usersignup "github.com/codeready-toolchain/host-operator/test/usersignups"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
@@ -36,6 +39,16 @@ func UserAccountsForCluster(clusterName string, number int) BaseValue {
 	}
 }
 
+func UsersPerActivations(values map[string]int) BaseValue {
+	return func(status *toolchainv1alpha1.ToolchainStatus) {
+		if status.Status.Metrics == nil {
+			status.Status.Metrics = map[string]string{}
+		}
+		jsonValues, _ := json.Marshal(values) // assume no error occurred when marshalling
+		status.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey] = string(jsonValues)
+	}
+}
+
 func AssertThatUninitializedCounterHas(t *testing.T, baseValues ...BaseValue) {
 	counts, err := counter.GetCounts()
 	assert.EqualErrorf(t, err, "counter is not initialized", "should be error because counter hasn't been initialized yet")
@@ -56,15 +69,40 @@ func verifyCountsAndMetrics(t *testing.T, counts counter.Counts, baseValues ...B
 	for _, apply := range baseValues {
 		apply(toolchainStatus)
 	}
+	// MasterUserRecordCount
 	require.NotNil(t, toolchainStatus.Status.HostOperator)
 	assert.Equal(t, toolchainStatus.Status.HostOperator.MasterUserRecordCount, counts.MasterUserRecordCount)
 	AssertMetricsGaugeEquals(t, toolchainStatus.Status.HostOperator.MasterUserRecordCount, metrics.MasterUserRecordGauge)
 
+	// UserAccountsPerClusterCounts
 	assert.Len(t, counts.UserAccountsPerClusterCounts, len(toolchainStatus.Status.Members))
 	for _, member := range toolchainStatus.Status.Members {
 		assert.Equal(t, member.UserAccountCount, counts.UserAccountsPerClusterCounts[member.ClusterName])
 		AssertMetricsGaugeEquals(t, member.UserAccountCount, metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName))
 	}
+
+	// UsersPerActivationCounts (if applicable)
+	if m, ok := toolchainStatus.Status.Metrics[v1alpha1.UsersPerActivationMetricKey]; ok {
+		usersPerActivations := map[string]int{}
+		err := json.Unmarshal([]byte(m), &usersPerActivations)
+		require.NoError(t, err)
+		assert.Equal(t, counts.UsersPerActivationCounts, usersPerActivations)
+		for activations, users := range usersPerActivations {
+			AssertMetricsGaugeEquals(t, users, metrics.UsersPerActivationGaugeVec.WithLabelValues(activations))
+		}
+	}
+
+}
+
+func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
+	usersignups := make([]runtime.Object, number)
+	for index := range usersignups {
+		usersignups[index] = usersignup.NewUserSignup(
+			fmt.Sprintf("%s%d", prefix, index),
+			usersignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1)),
+		)
+	}
+	return usersignups
 }
 
 func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster string) []runtime.Object {
@@ -96,6 +134,7 @@ func initializeCounter(t *testing.T, cl *test.FakeClient, baseValues ...BaseValu
 	for _, apply := range baseValues {
 		apply(toolchainStatus)
 	}
+	// TODO: is it needed?
 	if toolchainStatus.Status.HostOperator != nil {
 		metrics.MasterUserRecordGauge.Set(float64(toolchainStatus.Status.HostOperator.MasterUserRecordCount))
 	}

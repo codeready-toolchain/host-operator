@@ -28,15 +28,17 @@ var (
 
 // gauges
 var (
-	// DEPRECATED - See MasterUserRecordGaugeVec
+	// DEPRECATED - See UserAccountGaugeVec
 	// MasterUserRecordGauge should reflect the current number of master user records in the system
 	MasterUserRecordGauge prometheus.Gauge
 )
 
-// gauge vectors
+// gauge with labels
 var (
-	// MasterUserRecordGauge should reflect the current number of master user records in the system, with a label to partition per member cluster
+	// UserAccountGaugeVec should reflect the current number of master user records in the system, with a label to partition per member cluster
 	UserAccountGaugeVec *prometheus.GaugeVec
+
+	UsersPerActivationGaugeVec *prometheus.GaugeVec
 )
 
 // collections
@@ -62,13 +64,15 @@ func initMetrics() {
 	UserSignupAutoDeactivatedTotal = newCounter("user_signups_auto_deactivated_total", "Total number of Automatically Deactivated User Signups")
 	// Gauges
 	MasterUserRecordGauge = newGauge("master_user_record_current", "Current number of Master User Records")
-	// GaugeVecs
+	// Gauges with labels
 	UserAccountGaugeVec = newGaugeVec("user_accounts_current", "Current number of User Accounts (per member cluster)", "cluster_name")
+	UsersPerActivationGaugeVec = newGaugeVec("users_per_activations", "Number of users per activation", []string{"activations"}...)
 	log.Info("custom metrics initialized")
 }
 
 // Reset resets all metrics. For testing purpose only!
 func Reset() {
+	log.Info("resetting custom metrics")
 	initMetrics()
 }
 

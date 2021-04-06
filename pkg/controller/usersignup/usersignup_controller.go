@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -18,6 +19,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 
 	"github.com/go-logr/logr"
+	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,6 +40,11 @@ var log = logf.Log.WithName("controller_usersignup")
 type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error
 
 const defaultTierName = "basic"
+
+const (
+	// Finalizers
+	userSignupFinalizerName = "finalizer.toolchain.dev.openshift.com"
+)
 
 // Add creates a new UserSignup Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -125,12 +132,12 @@ type ReconcileUserSignup struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling UserSignup")
+	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	logger.Info("Reconciling UserSignup")
 
 	// Fetch the UserSignup instance
-	instance := &toolchainv1alpha1.UserSignup{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	userSignup := &toolchainv1alpha1.UserSignup{}
+	err := r.client.Get(context.TODO(), request.NamespacedName, userSignup)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -141,15 +148,48 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	logger = logger.WithValues("username", userSignup.Spec.Username)
 
-	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
-	if instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
-		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
+	// If the UserAccount is not being deleted, make sure it has a finalizer
+	if !coputil.IsBeingDeleted(userSignup) {
+		// Add the finalizer if it is not present
+		if err := r.addFinalizer(logger, userSignup, userSignupFinalizerName); err != nil {
+			logger.Error(err, "unable to add finalizer to UserSignup")
+			return reconcile.Result{}, err
+		}
+	} else if coputil.HasFinalizer(userSignup, userSignupFinalizerName) {
+		// remove the finalizer (if present) and update the counters accordingly
+		if err := r.removeFinalizer(logger, userSignup, userSignupFinalizerName); err != nil {
+			logger.Error(err, "unable to add finalizer to UserSignup")
+			return reconcile.Result{}, err
+		}
+		if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
+			if activations, err := strconv.Atoi(activations); err == nil {
+				counter.DecrementUsersPerActivationCounter(activations)
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
+	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
+		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	banned, err := r.isUserBanned(reqLogger, instance)
+	// (migration) set the UserSignupActivationCounterAnnotationKey if it is missing (for existing user signups)
+	if _, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; !exists {
+		if userSignup.Annotations == nil { // if annotations is empty, it's omitted when reading the resource, hence it's nil here.
+			userSignup.Annotations = map[string]string{}
+		}
+		userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
+		// will not trigger a reconcile if update succeeds (see UserSignupChangedPredicate)
+		if err := r.client.Update(context.TODO(), userSignup); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	banned, err := r.isUserBanned(logger, userSignup)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -157,13 +197,13 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// If the usersignup is not banned and not deactivated then ensure the deactivated notification status is set to false.
 	// This is especially important for cases when a user is deactivated and then reactivated because the status is used to
 	// trigger sending of the notification. If a user is reactivated a notification should be sent to the user again.
-	if !banned && !instance.Spec.Deactivated {
-		if err := r.updateStatus(reqLogger, instance, r.setStatusDeactivationNotificationUserIsActive); err != nil {
+	if !banned && !userSignup.Spec.Deactivated {
+		if err := r.updateStatus(logger, userSignup, r.setStatusDeactivationNotificationUserIsActive); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	if exists, err := r.ensureMurIfAlreadyExists(reqLogger, instance, banned); exists || err != nil {
+	if exists, err := r.ensureMurIfAlreadyExists(logger, userSignup, banned); exists || err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -171,36 +211,64 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// and return
 	if banned {
 		// if the UserSignup doesn't have the state=banned label set, then update it
-		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
+		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
 			return reconcile.Result{}, err
 		}
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusBanned)
+		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusBanned)
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
 	// send a notification to the user, and return
-	if instance.Spec.Deactivated {
+	if userSignup.Spec.Deactivated {
 		// if the UserSignup doesn't have the state=deactivated label set, then update it
-		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
+		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
 			return reconcile.Result{}, err
 		}
-		if condition.IsNotTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
-			if err := r.sendDeactivatedNotification(reqLogger, instance); err != nil {
-				reqLogger.Error(err, "Failed to create user deactivation notification")
+		if condition.IsNotTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
+			if err := r.sendDeactivatedNotification(logger, userSignup); err != nil {
+				logger.Error(err, "Failed to create user deactivation notification")
 
 				// set the failed to create notification status condition
-				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusDeactivationNotificationCreationFailed, err, "Failed to create user deactivation notification")
+				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusDeactivationNotificationCreationFailed, err, "Failed to create user deactivation notification")
 			}
 
-			if err := r.updateStatus(reqLogger, instance, r.setStatusDeactivationNotificationCreated); err != nil {
-				reqLogger.Error(err, "Failed to update notification created status")
+			if err := r.updateStatus(logger, userSignup, r.setStatusDeactivationNotificationCreated); err != nil {
+				logger.Error(err, "Failed to update notification created status")
 				return reconcile.Result{}, err
 			}
 		}
-		return reconcile.Result{}, r.updateStatus(reqLogger, instance, r.setStatusDeactivated)
+		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusDeactivated)
 	}
 
-	return reconcile.Result{}, r.ensureNewMurIfApproved(reqLogger, instance)
+	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, userSignup)
+}
+
+func (r *ReconcileUserSignup) addFinalizer(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, finalizer string) error {
+	// Add the finalizer if it is not present
+	if !coputil.HasFinalizer(userSignup, finalizer) {
+		coputil.AddFinalizer(userSignup, finalizer)
+		if err := r.client.Update(context.TODO(), userSignup); err != nil {
+			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToAddFinalizer, err,
+				"Failed to add finalizer")
+		}
+		logger.Info("finalizer added")
+		return nil
+	}
+	return nil
+}
+
+func (r *ReconcileUserSignup) removeFinalizer(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, finalizer string) error {
+	// Add the finalizer if it is not present
+	if coputil.HasFinalizer(userSignup, finalizer) {
+		coputil.RemoveFinalizer(userSignup, finalizer)
+		if err := r.client.Update(context.TODO(), userSignup); err != nil {
+			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToRemoveFinalizer, err,
+				"Failed to remove finalizer")
+		}
+		logger.Info("finalizer removed")
+		return nil
+	}
+	return nil
 }
 
 // Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
@@ -489,7 +557,17 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord")
 	}
+
 	counter.IncrementMasterUserRecordCount()
+	if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
+		if activations, err := strconv.Atoi(activations); err == nil {
+			counter.IncrementUsersPerActivationCounter(activations)
+		} else {
+			counter.IncrementUsersPerActivationCounter(1) // best-effort: there is no activation counter so let's assume it's the first one for this user
+		}
+	} else {
+		counter.IncrementUsersPerActivationCounter(1) // best-effort: there is no activation counter so let's assume it's the first one for this user
+	}
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
