@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: test-dev
+  name: basedeactivationdisabled-dev
 objects:
 - apiVersion: v1
   kind: Namespace
@@ -117,9 +117,6 @@ objects:
   spec:
     ingress:
       - from:
-        - namespaceSelector:
-            matchLabels:
-              name: ${USERNAME}-code
         - namespaceSelector:
             matchLabels:
               name: ${USERNAME}-stage

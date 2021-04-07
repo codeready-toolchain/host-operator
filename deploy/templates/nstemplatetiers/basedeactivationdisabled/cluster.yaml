@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: basicdeactivationdisabled-cluster-resources
+  name: basedeactivationdisabled-cluster-resources
 objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
@@ -15,7 +15,7 @@ objects:
         limits.ephemeral-storage: 7Gi
         requests.cpu: 1750m
         requests.memory: 7Gi
-        requests.storage: 25Gi
+        requests.storage: 15Gi
         requests.ephemeral-storage: 7Gi
         count/persistentvolumeclaims: "5"
     selector:
@@ -129,12 +129,6 @@ objects:
   kind: Idler
   metadata:
     name: ${USERNAME}-dev
-  spec:
-    timeoutSeconds: 28800 # 8 hours
-- apiVersion: toolchain.dev.openshift.com/v1alpha1
-  kind: Idler
-  metadata:
-    name: ${USERNAME}-code
   spec:
     timeoutSeconds: 28800 # 8 hours
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
