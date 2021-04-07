@@ -462,7 +462,10 @@ spec:
               metrics:
                 additionalProperties:
                   type: string
+                description: Metrics is a map that stores (seralized) metrics to be
+                  exposed on Prometheus.
                 type: object
+                x-kubernetes-map-type: atomic
               registrationService:
                 description: RegistrationService is the status of the registration
                   service
