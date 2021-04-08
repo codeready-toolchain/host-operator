@@ -37,7 +37,7 @@ var log = logf.Log.WithName("controller_usersignup")
 
 type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error
 
-const defaultTierName = "basic"
+const defaultTierName = "base"
 
 // Add creates a new UserSignup Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -295,7 +295,7 @@ func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, us
 			return true, err
 		}
 
-		// look-up the `basic` NSTemplateTier to get the NS templates
+		// look-up the default NSTemplateTier to get the NS templates
 		nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, userSignup.Namespace)
 		if err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
