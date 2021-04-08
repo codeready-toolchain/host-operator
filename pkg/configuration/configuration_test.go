@@ -301,3 +301,12 @@ func TestForbiddenUsernamePrefixesHaveCorrectDefaults(t *testing.T) {
 	require.Contains(t, config.GetForbiddenUsernamePrefixes(), "redhat")
 	require.Contains(t, config.GetForbiddenUsernamePrefixes(), "sandbox")
 }
+
+func TestForbiddenUsernameSuffixesHaveCorrectDefaults(t *testing.T) {
+	restore := test.SetEnvVarAndRestore(t, "WATCH_NAMESPACE", "toolchain-host-operator")
+	defer restore()
+
+	config := getDefaultConfiguration(t)
+	require.Len(t, config.GetForbiddenUsernameSuffixes(), 1)
+	require.Contains(t, config.GetForbiddenUsernameSuffixes(), "admin")
+}
