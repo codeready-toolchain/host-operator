@@ -445,6 +445,14 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 		}
 	}
 
+	// Check for any forbidden suffixes
+	for _, suffix := range r.crtConfig.GetForbiddenUsernameSuffixes() {
+		if strings.HasSuffix(replaced, suffix) {
+			replaced = fmt.Sprintf("%s%s", replaced, "-crt")
+			break
+		}
+	}
+
 	validationErrors := validation.IsQualifiedName(replaced)
 	if len(validationErrors) > 0 {
 		return "", fmt.Errorf(fmt.Sprintf("transformed username [%s] is invalid", replaced))

@@ -2202,9 +2202,9 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 
 	defer counter.Reset()
 
-	// Confirm we have 3 forbidden prefixes by default
+	// Confirm we have 5 forbidden prefixes by default
 	require.Len(t, config.GetForbiddenUsernamePrefixes(), 5)
-	names := []string{"-Bob", "-Dave", "Linda", "admin", ""}
+	names := []string{"-Bob", "-Dave", "Linda", ""}
 
 	for _, prefix := range config.GetForbiddenUsernamePrefixes() {
 		userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
@@ -2232,6 +2232,48 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 			mur := murs.Items[0]
 			require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 			require.Equal(t, fmt.Sprintf("crt-%s%s", prefix, name), mur.Name)
+		}
+
+	}
+}
+
+func TestUsernameWithForbiddenSuffixes(t *testing.T) {
+	// given
+	fakeClient := test.NewFakeClient(t)
+	config, err := configuration.LoadConfig(fakeClient)
+	require.NoError(t, err)
+
+	defer counter.Reset()
+
+	require.Len(t, config.GetForbiddenUsernameSuffixes(), 1)
+	names := []string{"dedicated-", "cluster-", "bob", ""}
+
+	for _, suffix := range config.GetForbiddenUsernameSuffixes() {
+		userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
+		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "not-ready"
+
+		for _, name := range names {
+			userSignup.Spec.Username = fmt.Sprintf("%s%s", name, suffix)
+
+			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
+			InitializeCounter(t, MasterUserRecords(1))
+
+			// when
+			_, err := r.Reconcile(req)
+			require.NoError(t, err)
+
+			// then verify that the username has been suffixed - first lookup the UserSignup again
+			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			require.NoError(t, err)
+
+			// Lookup the MUR
+			murs := &v1alpha1.MasterUserRecordList{}
+			err = r.client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
+			require.NoError(t, err)
+			require.Len(t, murs.Items, 1)
+			mur := murs.Items[0]
+			require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
+			require.Equal(t, fmt.Sprintf("%s%s-crt", name, suffix), mur.Name)
 		}
 
 	}
