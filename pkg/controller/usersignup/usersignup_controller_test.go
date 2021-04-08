@@ -110,50 +110,6 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	}
 }
 
-func TestAddFinalizerSucceeds(t *testing.T) {
-	// given
-	userSignup := NewUserSignup(WithoutFinalizers())
-	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
-
-	// when
-	_, err := r.Reconcile(req)
-
-	// then
-	require.NoError(t, err)
-
-	// Lookup the user signup again
-	actual := &v1alpha1.UserSignup{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actual)
-	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"finalizer.toolchain.dev.openshift.com"}, actual.Finalizers)
-}
-
-func TestAddFinalizerFails(t *testing.T) {
-	// given
-	logf.SetLogger(zap.Logger(true))
-	userSignup := NewUserSignup(WithoutFinalizers())
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
-	fakeClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-		return fmt.Errorf("some error")
-	}
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-		// because the StatusUpdate results in full update of the obj (spec + status) in the fake client...
-		return fmt.Errorf("some error")
-	}
-
-	// when
-	_, err := r.Reconcile(req)
-
-	// then
-	require.Error(t, err)
-
-	// Lookup the user signup again
-	actual := &v1alpha1.UserSignup{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actual)
-	require.NoError(t, err)
-	assert.Empty(t, actual.Finalizers)
-}
-
 func TestDeletingUserSignupShouldUpdateMetrics(t *testing.T) {
 	// given
 	logf.SetLogger(zap.Logger(true))
@@ -164,7 +120,7 @@ func TestDeletingUserSignupShouldUpdateMetrics(t *testing.T) {
 		MasterUserRecords(12),
 		UsersPerActivations(map[string]int{
 			"1": 1,
-			"2": 10, // will be decreased when usersignup controller reconciles the usersignup deletion
+			"2": 10, // will not be decreased when the usersignup is deleted
 			"3": 1,
 		}))
 
@@ -179,11 +135,11 @@ func TestDeletingUserSignupShouldUpdateMetrics(t *testing.T) {
 		MasterUserRecords(12), // unchanged at this point
 		UsersPerActivations(map[string]int{
 			"1": 1,
-			"2": 9, // was decreased when usersignup controller reconciled the usersignup deletion
+			"2": 10, // unchanged
 			"3": 1,
 		}))
 	AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))
-	AssertMetricsGaugeEquals(t, 9, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))
+	AssertMetricsGaugeEquals(t, 10, metrics.UsersPerActivationGaugeVec.WithLabelValues("2")) // unchanged
 	AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))
 }
 

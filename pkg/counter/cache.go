@@ -55,7 +55,6 @@ func Reset() {
 }
 
 func reset() {
-	fmt.Println("resetting counters...")
 	cachedCounts.Counts = Counts{
 		UserAccountsPerClusterCounts: map[string]int{},
 		UsersPerActivationCounts:     map[string]int{},

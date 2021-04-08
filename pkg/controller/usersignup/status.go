@@ -226,28 +226,6 @@ func (u *statusUpdater) setStatusFailedToUpdateStateLabel(userSignup *toolchainv
 		})
 }
 
-func (u *statusUpdater) setStatusFailedToAddFinalizer(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupUnableToAddFinalizerReason,
-			Message: message,
-		})
-}
-
-func (u *statusUpdater) setStatusFailedToRemoveFinalizer(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupUnableToRemoveFinalizerReason,
-			Message: message,
-		})
-}
-
 func (u *statusUpdater) setStatusDeactivationNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
 	return u.updateStatusConditions(
 		userSignup,

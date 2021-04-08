@@ -46,11 +46,6 @@ func (p UserSignupChangedPredicate) LabelChanged(e event.UpdateEvent, labelName 
 	return e.MetaOld.GetLabels()[labelName] != e.MetaNew.GetLabels()[labelName]
 }
 
-func (p UserSignupChangedPredicate) Delete(e event.DeleteEvent) bool {
-	// will reconcile to remove the finalizers
-	return len(e.Meta.GetFinalizers()) > 0
-}
-
 var configLog = logf.Log.WithName("automatic_approval_predicate")
 
 // OnlyWhenAutomaticApprovalIsEnabled let the reconcile to be triggered only when the automatic approval is enabled

@@ -19,7 +19,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 
 	"github.com/go-logr/logr"
-	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -150,27 +149,6 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	logger = logger.WithValues("username", userSignup.Spec.Username)
 
-	// If the UserAccount is not being deleted, make sure it has a finalizer
-	if !coputil.IsBeingDeleted(userSignup) {
-		// Add the finalizer if it is not present
-		if err := r.addFinalizer(logger, userSignup, userSignupFinalizerName); err != nil {
-			logger.Error(err, "unable to add finalizer to UserSignup")
-			return reconcile.Result{}, err
-		}
-	} else if coputil.HasFinalizer(userSignup, userSignupFinalizerName) {
-		// remove the finalizer (if present) and update the counters accordingly
-		if err := r.removeFinalizer(logger, userSignup, userSignupFinalizerName); err != nil {
-			logger.Error(err, "unable to add finalizer to UserSignup")
-			return reconcile.Result{}, err
-		}
-		if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
-			if activations, err := strconv.Atoi(activations); err == nil {
-				counter.DecrementUsersPerActivationCounter(activations)
-			}
-		}
-		return reconcile.Result{}, nil
-	}
-
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
@@ -241,34 +219,6 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, userSignup)
-}
-
-func (r *ReconcileUserSignup) addFinalizer(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, finalizer string) error {
-	// Add the finalizer if it is not present
-	if !coputil.HasFinalizer(userSignup, finalizer) {
-		coputil.AddFinalizer(userSignup, finalizer)
-		if err := r.client.Update(context.TODO(), userSignup); err != nil {
-			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToAddFinalizer, err,
-				"Failed to add finalizer")
-		}
-		logger.Info("finalizer added")
-		return nil
-	}
-	return nil
-}
-
-func (r *ReconcileUserSignup) removeFinalizer(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, finalizer string) error {
-	// Add the finalizer if it is not present
-	if coputil.HasFinalizer(userSignup, finalizer) {
-		coputil.RemoveFinalizer(userSignup, finalizer)
-		if err := r.client.Update(context.TODO(), userSignup); err != nil {
-			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToRemoveFinalizer, err,
-				"Failed to remove finalizer")
-		}
-		logger.Info("finalizer removed")
-		return nil
-	}
-	return nil
 }
 
 // Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
