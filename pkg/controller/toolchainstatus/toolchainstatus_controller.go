@@ -196,6 +196,10 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 
 		return r.setStatusNotReady(reqLogger, toolchainStatus, fmt.Sprintf("components not ready: %v", unreadyComponents))
 	}
+	err := r.restoredCheck(reqLogger, toolchainStatus)
+	if err != nil {
+		return err
+	}
 	return r.setStatusReady(reqLogger, toolchainStatus)
 }
 
