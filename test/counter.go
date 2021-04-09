@@ -127,7 +127,6 @@ func initializeCounter(t *testing.T, cl *commontest.FakeClient, baseValues ...Ba
 	for _, apply := range baseValues {
 		apply(toolchainStatus)
 	}
-	// TODO: is it needed?
 	if toolchainStatus.Status.HostOperator != nil {
 		metrics.MasterUserRecordGauge.Set(float64(toolchainStatus.Status.HostOperator.MasterUserRecordCount))
 	}
