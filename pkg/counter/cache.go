@@ -2,7 +2,6 @@ package counter
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"sync"
@@ -192,14 +191,10 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 
 	// update the toolchainStatus.Status.Metrics and metrics.UserAccountGaugeVec
 	// from the cachedCounts.UsersPerActivationCounts
-	usersPerActivationCountsJSON, err := json.Marshal(cachedCounts.UsersPerActivationCounts)
-	if err != nil {
-		log.Error(err, "unable to serialize the 'UsersPerActivation` counter")
-	}
 	if toolchainStatus.Status.Metrics == nil {
-		toolchainStatus.Status.Metrics = map[string]string{}
+		toolchainStatus.Status.Metrics = map[string]toolchainv1alpha1.Metric{}
 	}
-	toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey] = string(usersPerActivationCountsJSON)
+	toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey] = toolchainv1alpha1.Metric(cachedCounts.UsersPerActivationCounts)
 	for activations, users := range cachedCounts.UsersPerActivationCounts {
 		metrics.UsersPerActivationGaugeVec.WithLabelValues(activations).Set(float64(users))
 	}
@@ -289,12 +284,8 @@ func initializeFromToolchainStatus(cl client.Client, toolchainStatus *toolchainv
 	}
 	// UsersPerActivationCounts
 	if toolchainStatus.Status.Metrics != nil {
-		if jsonMetric, exists := toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey]; exists {
-			usersPerActivationCounts := map[string]int{}
-			if err := json.Unmarshal([]byte(jsonMetric), &usersPerActivationCounts); err != nil {
-				return err
-			}
-			cachedCounts.UsersPerActivationCounts = usersPerActivationCounts
+		if metric, exists := toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey]; exists {
+			cachedCounts.UsersPerActivationCounts = metric
 		}
 	}
 	cachedCounts.initialized = true

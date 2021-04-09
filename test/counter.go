@@ -1,13 +1,11 @@
 package test
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	usersignup "github.com/codeready-toolchain/host-operator/test/usersignups"
@@ -20,18 +18,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type BaseValue func(*toolchainv1alpha1.ToolchainStatus)
+type BaseValue func(*v1alpha1.ToolchainStatus)
 
 func MasterUserRecords(number int) BaseValue {
-	return func(status *toolchainv1alpha1.ToolchainStatus) {
-		status.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
+	return func(status *v1alpha1.ToolchainStatus) {
+		status.Status.HostOperator = &v1alpha1.HostOperatorStatus{
 			MasterUserRecordCount: number,
 		}
 	}
 }
 
 func UserAccountsForCluster(clusterName string, number int) BaseValue {
-	return func(status *toolchainv1alpha1.ToolchainStatus) {
+	return func(status *v1alpha1.ToolchainStatus) {
 		status.Status.Members = append(status.Status.Members, v1alpha1.Member{
 			ClusterName:      clusterName,
 			UserAccountCount: number,
@@ -39,13 +37,12 @@ func UserAccountsForCluster(clusterName string, number int) BaseValue {
 	}
 }
 
-func UsersPerActivations(values map[string]int) BaseValue {
-	return func(status *toolchainv1alpha1.ToolchainStatus) {
+func UsersPerActivations(values v1alpha1.Metric) BaseValue {
+	return func(status *v1alpha1.ToolchainStatus) {
 		if status.Status.Metrics == nil {
-			status.Status.Metrics = map[string]string{}
+			status.Status.Metrics = map[string]v1alpha1.Metric{}
 		}
-		jsonValues, _ := json.Marshal(values) // assume no error occurred when marshalling
-		status.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey] = string(jsonValues)
+		status.Status.Metrics[v1alpha1.UsersPerActivationMetricKey] = values
 	}
 }
 
@@ -82,11 +79,8 @@ func verifyCountsAndMetrics(t *testing.T, counts counter.Counts, baseValues ...B
 	}
 
 	// UsersPerActivationCounts (if applicable)
-	if m, ok := toolchainStatus.Status.Metrics[v1alpha1.UsersPerActivationMetricKey]; ok {
-		usersPerActivations := map[string]int{}
-		err := json.Unmarshal([]byte(m), &usersPerActivations)
-		require.NoError(t, err)
-		assert.Equal(t, counts.UsersPerActivationCounts, usersPerActivations)
+	if usersPerActivations, ok := toolchainStatus.Status.Metrics[v1alpha1.UsersPerActivationMetricKey]; ok {
+		assert.Equal(t, v1alpha1.Metric(counts.UsersPerActivationCounts), usersPerActivations)
 		for activations, users := range usersPerActivations {
 			AssertMetricsGaugeEquals(t, users, metrics.UsersPerActivationGaugeVec.WithLabelValues(activations))
 		}
@@ -99,7 +93,7 @@ func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
 	for index := range usersignups {
 		usersignups[index] = usersignup.NewUserSignup(
 			fmt.Sprintf("%s%d", prefix, index),
-			usersignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1)),
+			usersignup.WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1)),
 		)
 	}
 	return usersignups

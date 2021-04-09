@@ -1082,7 +1082,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				memberCluster("member-1", ready(), userAccountCount(8)),
 				memberCluster("member-2", ready(), userAccountCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady()).
-			HasMetric(toolchainv1alpha1.UsersPerActivationMetricKey, map[string]int{
+			HasMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 				"1": 2, // users "cookie-00" and "pasta-00"
 				"2": 2, // users "cookie-01" and "pasta-01"
 				"3": 1, // users "cookie-02"
@@ -1130,7 +1130,11 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			WithHost(MasterUserRecordCount(8)),
 			WithMember("member-1", WithUserAccountCount(6)), // will increase
 			WithMember("member-2", WithUserAccountCount(2)), // will remain the same
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, `{"1":5,"2":2,"3":1}`),
+			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+				"1": 5,
+				"2": 2,
+				"3": 1,
+			}),
 		)
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
@@ -1150,7 +1154,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				memberCluster("member-1", ready(), userAccountCount(7)), // was incremented
 				memberCluster("member-2", ready(), userAccountCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady()).
-			HasMetric(toolchainv1alpha1.UsersPerActivationMetricKey, map[string]int{
+			HasMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 				"1": 5,
 				"2": 2,
 				"3": 1,

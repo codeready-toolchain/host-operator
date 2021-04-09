@@ -118,7 +118,7 @@ func TestDeletingUserSignupShouldUpdateMetrics(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, basicNSTemplateTier)
 	InitializeCounter(t,
 		MasterUserRecords(12),
-		UsersPerActivations(map[string]int{
+		UsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 			"2": 10, // will not be decreased when the usersignup is deleted
 			"3": 1,
@@ -133,7 +133,7 @@ func TestDeletingUserSignupShouldUpdateMetrics(t *testing.T) {
 	// Verify the counters
 	AssertThatCounterHas(t,
 		MasterUserRecords(12), // unchanged at this point
-		UsersPerActivations(map[string]int{
+		UsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 			"2": 10, // unchanged
 			"3": 1,
