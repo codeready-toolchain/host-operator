@@ -240,10 +240,6 @@ func initializeFromResources(cl client.Client, namespace string) error {
 				continue
 			}
 			cachedCounts.UsersPerActivationCounts[value]++
-		} else {
-			// annotation wasn't already set by the UserSignup controller at the time where the list was loaded,
-			// so let's assume the value is '1'
-			cachedCounts.UsersPerActivationCounts["1"]++
 		}
 	}
 	for _, mur := range murs.Items {
