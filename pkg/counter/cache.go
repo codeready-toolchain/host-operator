@@ -123,16 +123,6 @@ func IncrementUsersPerActivationCounter(activations int) {
 	})
 }
 
-// DecrementUsersPerActivationCounter decrements the counter of a given number of activations for a (returning) user.
-// Happens when a user is deleted
-func DecrementUsersPerActivationCounter(activations int) {
-	write(func() {
-		// increase the gauge with the given number of activations
-		cachedCounts.UsersPerActivationCounts[strconv.Itoa(activations)]--
-		metrics.UsersPerActivationGaugeVec.WithLabelValues(strconv.Itoa(activations)).Dec()
-	})
-}
-
 // GetCounts returns Counts struct containing number of MURs and number of UserAccounts per member cluster.
 // If the counter is not yet initialized, then it returns error
 func GetCounts() (Counts, error) {
