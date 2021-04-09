@@ -136,12 +136,6 @@ func WithoutAnnotations() UserSignupModifier {
 	}
 }
 
-func WithoutFinalizers() UserSignupModifier {
-	return func(usersignup *toolchainv1alpha1.UserSignup) {
-		usersignup.Finalizers = []string{}
-	}
-}
-
 type UserSignupModifier func(*v1alpha1.UserSignup)
 
 func NewUserSignup(modifiers ...UserSignupModifier) *v1alpha1.UserSignup {
