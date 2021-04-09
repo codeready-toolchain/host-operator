@@ -150,15 +150,19 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 	}
 
-	// (migration) set the UserSignupActivationCounterAnnotationKey if it is missing (for existing user signups)
-	if _, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; !exists {
+	// (migration for 'complete' usersignups only) set the UserSignupActivationCounterAnnotationKey if it is missing
+	if condition.IsTrueWithReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete, "") {
 		if userSignup.Annotations == nil { // if annotations is empty, it's omitted when reading the resource, hence it's nil here.
 			userSignup.Annotations = map[string]string{}
 		}
-		userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
-		// will not trigger a reconcile if update succeeds (see UserSignupChangedPredicate)
-		if err := r.client.Update(context.TODO(), userSignup); err != nil {
-			return reconcile.Result{}, err
+		if _, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; !exists {
+			log.Info("setting 'toolchain.dev.openshift.com/activation-counter' on existing active user")
+			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
+			// will not trigger a reconcile if update succeeds (see UserSignupChangedPredicate)
+			if err := r.client.Update(context.TODO(), userSignup); err != nil {
+				return reconcile.Result{}, err
+			}
+			counter.IncrementUsersPerActivationCounter(1)
 		}
 	}
 
@@ -511,15 +515,33 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			"Error creating MasterUserRecord")
 	}
 
+	// increment the counter of MasterUserRecords
 	counter.IncrementMasterUserRecordCount()
+
+	// increment the counter of Returning Users
 	if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
+		log.Info("updating 'toolchain.dev.openshift.com/activation-counter' on active user")
 		if activations, err := strconv.Atoi(activations); err == nil {
+			// increment the value of the annotation
+			activations++
+			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = strconv.Itoa(activations)
+			// increment the counter
 			counter.IncrementUsersPerActivationCounter(activations)
 		} else {
-			counter.IncrementUsersPerActivationCounter(1) // best-effort: there is no activation counter so let's assume it's the first one for this user
+			// "best effort": reset number of activations to 1 for this user
+			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
+			// increment the counter
+			counter.IncrementUsersPerActivationCounter(1)
 		}
 	} else {
-		counter.IncrementUsersPerActivationCounter(1) // best-effort: there is no activation counter so let's assume it's the first one for this user
+		// annotation was missing so assume it's the first activation
+		log.Info("setting 'toolchain.dev.openshift.com/activation-counter' on new active user")
+		userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1" // first activation, annotation did not exist
+		counter.IncrementUsersPerActivationCounter(1)
+	}
+	// will not trigger a reconcile if update succeeds (see UserSignupChangedPredicate)
+	if err := r.client.Update(context.TODO(), userSignup); err != nil {
+		return err
 	}
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)

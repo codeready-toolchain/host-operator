@@ -8,8 +8,7 @@ import (
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
-	usersignup "github.com/codeready-toolchain/host-operator/test/usersignups"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
 	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
@@ -37,12 +36,12 @@ func UserAccountsForCluster(clusterName string, number int) BaseValue {
 	}
 }
 
-func UsersPerActivations(values v1alpha1.Metric) BaseValue {
+func UsersPerActivations(values map[string]int) BaseValue {
 	return func(status *v1alpha1.ToolchainStatus) {
 		if status.Status.Metrics == nil {
 			status.Status.Metrics = map[string]v1alpha1.Metric{}
 		}
-		status.Status.Metrics[v1alpha1.UsersPerActivationMetricKey] = values
+		status.Status.Metrics[v1alpha1.UsersPerActivationMetricKey] = v1alpha1.Metric(values)
 	}
 }
 
@@ -91,9 +90,9 @@ func verifyCountsAndMetrics(t *testing.T, counts counter.Counts, baseValues ...B
 func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
 	usersignups := make([]runtime.Object, number)
 	for index := range usersignups {
-		usersignups[index] = usersignup.NewUserSignup(
-			fmt.Sprintf("%s%d", prefix, index),
-			usersignup.WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1)),
+		usersignups[index] = NewUserSignup(
+			WithName(fmt.Sprintf("%s%d", prefix, index)),
+			WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1)),
 		)
 	}
 	return usersignups
@@ -112,16 +111,16 @@ func InitializeCounter(t *testing.T, baseValues ...BaseValue) *v1alpha1.Toolchai
 	return InitializeCounterWithoutReset(t, baseValues...)
 }
 
-func InitializeCounterWithBaseValues(t *testing.T, cl *test.FakeClient, baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
+func InitializeCounterWithBaseValues(t *testing.T, cl *commontest.FakeClient, baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
 	counter.Reset()
 	return initializeCounter(t, cl, baseValues...)
 }
 
 func InitializeCounterWithoutReset(t *testing.T, baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
-	return initializeCounter(t, test.NewFakeClient(t), baseValues...)
+	return initializeCounter(t, commontest.NewFakeClient(t), baseValues...)
 }
 
-func initializeCounter(t *testing.T, cl *test.FakeClient, baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
+func initializeCounter(t *testing.T, cl *commontest.FakeClient, baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
 	toolchainStatus := &v1alpha1.ToolchainStatus{
 		Status: v1alpha1.ToolchainStatusStatus{},
 	}

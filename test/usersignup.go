@@ -136,6 +136,13 @@ func WithoutAnnotations() UserSignupModifier {
 	}
 }
 
+func WithName(name string) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Name = name
+		userSignup.Spec.Username = name
+	}
+}
+
 type UserSignupModifier func(*v1alpha1.UserSignup)
 
 func NewUserSignup(modifiers ...UserSignupModifier) *v1alpha1.UserSignup {
@@ -166,8 +173,7 @@ func NewUserSignupObjectMeta(name, email string) metav1.ObjectMeta {
 		Name:      name,
 		Namespace: test.HostOperatorNs,
 		Annotations: map[string]string{
-			toolchainv1alpha1.UserSignupUserEmailAnnotationKey:         email,
-			toolchainv1alpha1.UserSignupActivationCounterAnnotationKey: "1",
+			toolchainv1alpha1.UserSignupUserEmailAnnotationKey: email,
 		},
 		Labels: map[string]string{
 			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
