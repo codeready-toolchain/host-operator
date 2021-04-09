@@ -65,6 +65,7 @@ const (
 
 const (
 	adminUnreadyNotificationSubject = "ToolchainStatus has been in an unready status for an extended period"
+	adminReadyNotificationSubject   = "ToolchainStatus has now been restored to ready status"
 )
 
 var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
@@ -226,6 +227,29 @@ func (r *ReconcileToolchainStatus) notificationCheck(reqLogger logr.Logger, tool
 		}
 	}
 
+	return nil
+}
+
+func (r *ReconcileToolchainStatus) restoredCheck(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+	// If the current ToolchainStatus:
+	// a) Was not ready before,
+	// b) notification was sent out due prolonged not ready status, and
+	// c) status is now restored
+	// send a notification to the admin mailing list
+	c, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	if found && c.Status == corev1.ConditionFalse {
+		c, found = condition.FindConditionByType(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated)
+		if found && c.Status == corev1.ConditionTrue {
+			if err := r.sendToolchainStatusRestoredNotification(reqLogger, toolchainStatus); err != nil {
+				reqLogger.Error(err, "Failed to create toolchain status restored notification")
+
+				// set the failed to create notification status condition
+				return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
+					r.setStatusReadyNotificationCreationFailed, err,
+					"Failed to create user deactivation notification")
+			}
+		}
+	}
 	return nil
 }
 
@@ -400,6 +424,48 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger
 	return nil
 }
 
+func (r *ReconcileToolchainStatus) sendToolchainStatusRestoredNotification(logger logr.Logger,
+	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+
+	if !isValidEmailAddress(r.config.GetAdminEmail()) {
+		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
+			r.config.GetAdminEmail()))
+	}
+	toolchainStatus = toolchainStatus.DeepCopy()
+	toolchainStatus.ManagedFields = nil // we don't need these managed fields in the notification
+	statusYaml, err := yaml.Marshal(toolchainStatus)
+	if err != nil {
+		return err
+	}
+
+	tsValue := time.Now().Format("20060102150405")
+
+	notification := &toolchainv1alpha1.Notification{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("toolchainstatus-ready-%s", tsValue),
+			Namespace: toolchainStatus.Namespace,
+		},
+		Spec: toolchainv1alpha1.NotificationSpec{
+			Recipient: r.config.GetAdminEmail(),
+			Subject:   adminReadyNotificationSubject,
+			Content:   "<div><pre><code>" + string(statusYaml) + "</code></pre></div>", // wrap with div/pre/code tags so the formatting remains intact in the delivered mail
+		},
+	}
+
+	if err := controllerutil.SetControllerReference(toolchainStatus, notification, r.scheme); err != nil {
+		logger.Error(err, "Failed to set owner reference for toolchain status unready notification resource")
+		return err
+	}
+
+	if err := r.client.Create(context.TODO(), notification); err != nil {
+		logger.Error(err, "Failed to create toolchain status restored notification resource")
+		return err
+	}
+
+	logger.Info("Toolchain status restored notification resource created")
+	return nil
+}
+
 func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, members map[string]toolchainv1alpha1.MemberStatusStatus, memberClusters []*cluster.CachedToolchainCluster) bool {
 	allOk := true
 	for index, member := range toolchainStatus.Status.Members {
@@ -512,6 +578,20 @@ func (r *ReconcileToolchainStatus) setStatusUnreadyNotificationCreationFailed(re
 			Type:    toolchainv1alpha1.ConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.ToolchainStatusUnreadyNotificationCRCreationFailedReason,
+			Message: message,
+		})
+}
+
+func (r *ReconcileToolchainStatus) setStatusReadyNotificationCreationFailed(reqLogger logr.Logger,
+	toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
+
+	return r.updateStatusConditions(
+		reqLogger,
+		toolchainStatus,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.ConditionReady,
+			Status:  corev1.ConditionTrue,
+			Reason:  "Status Ready Notification creation failed",
 			Message: message,
 		})
 }
