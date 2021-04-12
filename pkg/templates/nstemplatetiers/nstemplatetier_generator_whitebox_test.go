@@ -43,7 +43,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"code", "dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
-							if kind == "code" && (tier == "base" || tier == "basedeactivationdisabled" || tier == "team") {
+							if kind == "code" && (tier == "advanced" || tier == "base" || tier == "basedeactivationdisabled" || tier == "team" || tier == "test") {
 								// no code namespaces for these tiers
 								return
 							}
@@ -74,7 +74,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"code", "dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
-							if tier == "team" && kind == "code" {
+							if kind == "code" && (tier == "advanced" || tier == "team") {
 								// not applicable
 								return
 							}
@@ -263,7 +263,6 @@ func TestNewNSTemplateTier(t *testing.T) {
 			require.NoError(t, err)
 			namespaceRevisions := map[string]map[string]string{
 				"advanced": {
-					"code":  "123456a",
 					"dev":   "123456b",
 					"stage": "123456c",
 				},
@@ -396,7 +395,7 @@ func TestNewTierTemplate(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to generate 'advanced-code-123456a' TierTemplate manifest: couldn't get version/kind; json parse error")
+			assert.Contains(t, err.Error(), "unable to generate 'advanced-dev-123456b' TierTemplate manifest: couldn't get version/kind; json parse error")
 		})
 	})
 }
@@ -477,19 +476,13 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// Template objects count
 	switch tier {
-	case "team":
+	case "advanced", "base", "basedeactivationdisabled", "team":
 		if kind == "dev" {
 			require.Len(t, actual.Objects, 10)
 		} else {
 			require.Len(t, actual.Objects, 9)
 		}
-	case "base", "basedeactivationdisabled":
-		if kind == "dev" {
-			require.Len(t, actual.Objects, 10)
-		} else {
-			require.Len(t, actual.Objects, 9)
-		}
-	case "basic", "basicdeactivationdisabled", "advanced":
+	case "basic", "basicdeactivationdisabled":
 		if kind == "code" || kind == "dev" {
 			require.Len(t, actual.Objects, 10)
 		} else {
@@ -524,7 +517,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// User Namespaces Network Policies
 	switch tier {
-	case "advanced", "basic", "basicdeactivationdisabled":
+	case "basic", "basicdeactivationdisabled":
 		switch kind {
 		case "code":
 			containsObj(t, actual, allowFromCRWPolicyObj(kind))
@@ -537,17 +530,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 		default:
 			t.Errorf("unexpected kind: '%s'", kind)
 		}
-	case "base", "basedeactivationdisabled":
-		switch kind {
-		case "dev":
-			containsObj(t, actual, allowFromCRWPolicyObj(kind))
-			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "stage"))
-		case "stage":
-			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "dev"))
-		default:
-			t.Errorf("unexpected kind: '%s'", kind)
-		}
-	case "team":
+	case "advanced", "base", "basedeactivationdisabled", "team":
 		switch kind {
 		case "dev":
 			containsObj(t, actual, allowFromCRWPolicyObj(kind))
@@ -741,7 +724,6 @@ func TestNewNSTemplateTiers(t *testing.T) {
 
 var ExpectedRevisions = map[string]map[string]string{
 	"advanced": {
-		"code":    "123456a",
 		"dev":     "123456b",
 		"stage":   "123456c",
 		"cluster": "654321a",

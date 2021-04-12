@@ -40,7 +40,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			"advanced": {
 				"clusterresources": {"advanced-clusterresources-654321a"},
 				"namespaces": {
-					"advanced-code-123456a",
 					"advanced-dev-123456b",
 					"advanced-stage-123456c",
 				},
@@ -104,7 +103,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			fmt.Printf("names: %v\n", names)
 			assert.ElementsMatch(t, []string{
 				"advanced-clusterresources-654321a",
-				"advanced-code-123456a",
 				"advanced-dev-123456b",
 				"advanced-stage-123456c",
 				"basic-clusterresources-654321b",
@@ -199,7 +197,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			testassets = assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
 				if name == "metadata.yaml" {
 					return []byte(`advanced/cluster: "111111a"` + "\n" +
-						`advanced/ns_code: "222222a"` + "\n" +
 						`advanced/ns_dev: "222222b"` + "\n" +
 						`advanced/ns_stage: "222222c"` + "\n" +
 						`basic/cluster: "111111b"` + "\n" +
@@ -235,7 +232,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				"advanced": {
 					"clusterresources": {"advanced-clusterresources-111111a"},
 					"namespaces": {
-						"advanced-code-222222a",
 						"advanced-dev-222222b",
 						"advanced-stage-222222c",
 					},
