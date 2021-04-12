@@ -43,7 +43,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"code", "dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
-							if kind == "code" && (tier == "advanced" || tier == "base" || tier == "basedeactivationdisabled" || tier == "team" || tier == "test") {
+							if kind == "code" && tier != "basic" {
 								// no code namespaces for these tiers
 								return
 							}
