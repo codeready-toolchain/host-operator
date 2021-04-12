@@ -240,13 +240,11 @@ func (r *ReconcileToolchainStatus) restoredCheck(reqLogger logr.Logger, toolchai
 	// b) notification was sent out due prolonged not ready status, and
 	// c) status is now restored
 	// send a notification to the admin mailing list
-	c, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
-	if found && c.Status == corev1.ConditionFalse {
-		c, found = condition.FindConditionByType(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated)
-		if found && c.Status == corev1.ConditionTrue {
+	if condition.IsFalse(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady) {
+		if condition.IsTrue(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated) {
+
 			if err := r.sendToolchainStatusRestoredNotification(reqLogger, toolchainStatus); err != nil {
 				reqLogger.Error(err, "Failed to create toolchain status restored notification")
-
 				// set the failed to create notification status condition
 				return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
 					r.setStatusReadyNotificationCreationFailed, err,
@@ -588,7 +586,7 @@ func (r *ReconcileToolchainStatus) setStatusReadyNotificationCreationFailed(reqL
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
 			Status:  corev1.ConditionTrue,
-			Reason:  "Status Ready Notification creation failed",
+			Reason:  toolchainv1alpha1.ToolchainStatusRestoredNotificationCRCreationFailedReason,
 			Message: message,
 		})
 }
