@@ -250,7 +250,7 @@ func (r *ReconcileToolchainStatus) restoredCheck(reqLogger logr.Logger, toolchai
 				// set the failed to create notification status condition
 				return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
 					r.setStatusReadyNotificationCreationFailed, err,
-					"Failed to create user deactivation notification")
+					"Failed to create toolchain restored notification")
 			}
 		}
 	}
@@ -435,13 +435,6 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusRestoredNotification(logge
 		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
 			r.config.GetAdminEmail()))
 	}
-	toolchainStatus = toolchainStatus.DeepCopy()
-	toolchainStatus.ManagedFields = nil // we don't need these managed fields in the notification
-	statusYaml, err := yaml.Marshal(toolchainStatus)
-	if err != nil {
-		return err
-	}
-
 	tsValue := time.Now().Format("20060102150405")
 
 	notification := &toolchainv1alpha1.Notification{
@@ -452,12 +445,12 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusRestoredNotification(logge
 		Spec: toolchainv1alpha1.NotificationSpec{
 			Recipient: r.config.GetAdminEmail(),
 			Subject:   adminReadyNotificationSubject,
-			Content:   "<div><pre><code>" + string(statusYaml) + "</code></pre></div>", // wrap with div/pre/code tags so the formatting remains intact in the delivered mail
+			Content:   "<div><pre>ToolchainStatus is back to ready status.</pre></div>", // wrap with div/pre/code tags so the formatting remains intact in the delivered mail
 		},
 	}
 
 	if err := controllerutil.SetControllerReference(toolchainStatus, notification, r.scheme); err != nil {
-		logger.Error(err, "Failed to set owner reference for toolchain status unready notification resource")
+		logger.Error(err, "Failed to set owner reference for toolchain status restored notification resource")
 		return err
 	}
 
