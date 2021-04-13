@@ -6,6 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
+	errors2 "github.com/pkg/errors"
+
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
@@ -81,9 +84,14 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	logger.Info("Reconciling Deactivation")
 
+	config, err := hostoperatorconfig.GetConfig(r.client, request.Namespace)
+	if err != nil {
+		return reconcile.Result{}, errors2.Wrapf(err, "unable to read HostOperatorConfig resource")
+	}
+
 	// Fetch the MasterUserRecord instance
 	mur := &toolchainv1alpha1.MasterUserRecord{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, mur)
+	err = r.client.Get(context.TODO(), request.NamespacedName, mur)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -158,7 +166,7 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 
 	timeSinceProvisioned := time.Since(provisionedTimestamp.Time)
 
-	deactivatingNotificationTimeout := time.Duration((deactivationTimeoutDays-r.config.GetUserSignupDeactivatingNotificationDays())*24) * time.Hour
+	deactivatingNotificationTimeout := time.Duration((deactivationTimeoutDays-config.Deactivation.DeactivatingNotificationDays)*24) * time.Hour
 
 	if timeSinceProvisioned < deactivatingNotificationTimeout {
 		// It is not yet time to send the deactivating notification so requeue until it will be time to send it
@@ -188,7 +196,7 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{Requeue: true}, nil
 	}
 
-	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(r.config.GetUserSignupDeactivatingNotificationDays()*24) * time.Hour)
+	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(config.Deactivation.DeactivatingNotificationDays*24) * time.Hour)
 
 	if time.Now().Before(deactivationDueTime) {
 		// It is not yet time to deactivate so requeue when it will be
