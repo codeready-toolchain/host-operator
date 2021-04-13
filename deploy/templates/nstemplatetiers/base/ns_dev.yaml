@@ -1,23 +1,23 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: advanced-stage
+  name: base-dev
 objects:
 - apiVersion: v1
   kind: Namespace
   metadata:
     annotations:
-      openshift.io/description: ${USERNAME}-stage
-      openshift.io/display-name: ${USERNAME}-stage
+      openshift.io/description: ${USERNAME}-dev
+      openshift.io/display-name: ${USERNAME}-dev
       openshift.io/requester: ${USERNAME}
     labels:
-      name: ${USERNAME}-stage
-    name: ${USERNAME}-stage
+      name: ${USERNAME}-dev
+    name: ${USERNAME}-dev
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
   metadata:
     name: rbac-edit
-    namespace: ${USERNAME}-stage
+    namespace: ${USERNAME}-dev
   rules:
     - apiGroups:
         - authorization.openshift.io
@@ -37,7 +37,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: user-rbac-edit
-    namespace: ${USERNAME}-stage
+    namespace: ${USERNAME}-dev
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
@@ -49,7 +49,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: user-edit
-    namespace: ${USERNAME}-stage
+    namespace: ${USERNAME}-dev
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
@@ -61,7 +61,7 @@ objects:
   kind: LimitRange
   metadata:
     name: resource-limits
-    namespace: ${USERNAME}-stage
+    namespace: ${USERNAME}-dev
   spec:
     limits:
     - type: "Container"
@@ -75,7 +75,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-same-namespace
-    namespace: ${USERNAME}-stage
+    namespace: ${USERNAME}-dev
   spec:
     podSelector: {}
     ingress:
@@ -85,7 +85,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-ingress
-    namespace: ${USERNAME}-stage
+    namespace: ${USERNAME}-dev
   spec:
     ingress:
     - from:
@@ -99,7 +99,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-monitoring
-    namespace: ${USERNAME}-stage
+    namespace: ${USERNAME}-dev
   spec:
     ingress:
     - from:
@@ -113,13 +113,27 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-other-user-namespaces
-    namespace: ${USERNAME}-stage
+    namespace: ${USERNAME}-dev
   spec:
     ingress:
       - from:
         - namespaceSelector:
             matchLabels:
-              name: ${USERNAME}-dev
+              name: ${USERNAME}-stage
+    podSelector: {}
+    policyTypes:
+      - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-codeready-workspaces-operator
+    namespace: ${USERNAME}-dev
+  spec:
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                network.openshift.io/policy-group: codeready-workspaces
     podSelector: {}
     policyTypes:
       - Ingress

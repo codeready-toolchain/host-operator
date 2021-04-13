@@ -134,12 +134,6 @@ objects:
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
-    name: ${USERNAME}-code
-  spec:
-    timeoutSeconds: 28800 # 8 hours
-- apiVersion: toolchain.dev.openshift.com/v1alpha1
-  kind: Idler
-  metadata:
     name: ${USERNAME}-stage
   spec:
     timeoutSeconds: 28800 # 8 hours

@@ -1,24 +1,23 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: test-code
+  name: basedeactivationdisabled-dev
 objects:
 - apiVersion: v1
   kind: Namespace
   metadata:
     annotations:
-      che.eclipse.org/openshift-username: ${USERNAME}
-      openshift.io/description: ${USERNAME}-code
-      openshift.io/display-name: ${USERNAME}-code
+      openshift.io/description: ${USERNAME}-dev
+      openshift.io/display-name: ${USERNAME}-dev
       openshift.io/requester: ${USERNAME}
     labels:
-      name: ${USERNAME}-code
-    name: ${USERNAME}-code
+      name: ${USERNAME}-dev
+    name: ${USERNAME}-dev
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
   metadata:
     name: rbac-edit
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-dev
   rules:
     - apiGroups:
         - authorization.openshift.io
@@ -38,7 +37,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: user-rbac-edit
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-dev
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
@@ -50,7 +49,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: user-edit
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-dev
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
@@ -62,7 +61,7 @@ objects:
   kind: LimitRange
   metadata:
     name: resource-limits
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-dev
   spec:
     limits:
     - type: "Container"
@@ -76,7 +75,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-same-namespace
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-dev
   spec:
     podSelector: {}
     ingress:
@@ -86,7 +85,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-ingress
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-dev
   spec:
     ingress:
     - from:
@@ -100,7 +99,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-monitoring
-    namespace: ${USERNAME}-code
+    namespace: ${USERNAME}-dev
   spec:
     ingress:
     - from:
@@ -113,31 +112,28 @@ objects:
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
-    name: allow-from-codeready-workspaces-operator
-    namespace: ${USERNAME}-code
+    name: allow-from-other-user-namespaces
+    namespace: ${USERNAME}-dev
   spec:
     ingress:
       - from:
-          - namespaceSelector:
-              matchLabels:
-                network.openshift.io/policy-group: codeready-workspaces
+        - namespaceSelector:
+            matchLabels:
+              name: ${USERNAME}-stage
     podSelector: {}
     policyTypes:
       - Ingress
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
-    name: allow-from-other-user-namespaces
-    namespace: ${USERNAME}-code
+    name: allow-from-codeready-workspaces-operator
+    namespace: ${USERNAME}-dev
   spec:
     ingress:
       - from:
-        - namespaceSelector:
-            matchLabels:
-              name: ${USERNAME}-dev
-        - namespaceSelector:
-            matchLabels:
-              name: ${USERNAME}-stage
+          - namespaceSelector:
+              matchLabels:
+                network.openshift.io/policy-group: codeready-workspaces
     podSelector: {}
     policyTypes:
       - Ingress

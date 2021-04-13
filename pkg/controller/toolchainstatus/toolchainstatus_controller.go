@@ -345,11 +345,19 @@ func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolc
 		members[memberCluster.Name] = memberStatus
 	}
 
-	// add member cluster statuses to toolchainstatus
-	ready = compareAndAssignMemberStatuses(logger, toolchainStatus, members) && ready
+	// add member cluster statuses to toolchainstatus, and assign apiEndpoint in members
+	ready = compareAndAssignMemberStatuses(logger, toolchainStatus, members, memberClusters) && ready
 	return ready
 }
 
+func getApiEndpoint(clusterName string, memberClusters []*cluster.CachedToolchainCluster) string {
+	for _, memberCluster := range memberClusters {
+		if memberCluster.Name == clusterName {
+			return memberCluster.APIEndpoint
+		}
+	}
+	return ""
+}
 func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 
@@ -392,10 +400,15 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusUnreadyNotification(logger
 	return nil
 }
 
-func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, members map[string]toolchainv1alpha1.MemberStatusStatus) bool {
+func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, members map[string]toolchainv1alpha1.MemberStatusStatus, memberClusters []*cluster.CachedToolchainCluster) bool {
 	allOk := true
 	for index, member := range toolchainStatus.Status.Members {
 		newMemberStatus, ok := members[member.ClusterName]
+		apiEndpoint := getApiEndpoint(member.ClusterName, memberClusters)
+		if apiEndpoint != "" {
+			toolchainStatus.Status.Members[index].ApiEndpoint = apiEndpoint
+		}
+
 		if ok {
 			toolchainStatus.Status.Members[index].MemberStatus = newMemberStatus
 			delete(members, member.ClusterName)
@@ -410,7 +423,9 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 		}
 	}
 	for clusterName, memberStatus := range members {
+		apiEndpoint := getApiEndpoint(clusterName, memberClusters)
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
+			ApiEndpoint:      apiEndpoint,
 			ClusterName:      clusterName,
 			MemberStatus:     memberStatus,
 			UserAccountCount: 0,

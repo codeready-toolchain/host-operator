@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: team-cluster-resources
+  name: base-cluster-resources
 objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
@@ -11,10 +11,10 @@ objects:
     quota:
       hard:
         limits.cpu: 20000m
-        limits.memory: 15Gi
+        limits.memory: 7Gi
         limits.ephemeral-storage: 7Gi
-        requests.cpu: 2000m
-        requests.memory: 15Gi
+        requests.cpu: 1750m
+        requests.memory: 7Gi
         requests.storage: 15Gi
         requests.ephemeral-storage: 7Gi
         count/persistentvolumeclaims: "5"
@@ -125,6 +125,18 @@ objects:
       annotations:
         openshift.io/requester: ${USERNAME}
       labels: null
+- apiVersion: toolchain.dev.openshift.com/v1alpha1
+  kind: Idler
+  metadata:
+    name: ${USERNAME}-dev
+  spec:
+    timeoutSeconds: 28800 # 8 hours
+- apiVersion: toolchain.dev.openshift.com/v1alpha1
+  kind: Idler
+  metadata:
+    name: ${USERNAME}-stage
+  spec:
+    timeoutSeconds: 28800 # 8 hours
 parameters:
 - name: USERNAME
   required: true

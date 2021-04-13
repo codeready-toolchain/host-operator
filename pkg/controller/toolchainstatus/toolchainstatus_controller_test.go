@@ -1143,7 +1143,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			HasMurCount(9).
 			HasMemberClusterStatus(memberCluster("member-1", ready(), userAccountCount(7)), memberCluster("member-2", ready(), userAccountCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady())
-		AssertThatCounterHas(t, 9, UserAccountsForCluster("member-1", 7), UserAccountsForCluster("member-2", 2))
+		AssertThatCounterHas(t, MasterUserRecords(9), UserAccountsForCluster("member-1", 7), UserAccountsForCluster("member-2", 2))
 	})
 }
 
@@ -1177,6 +1177,7 @@ func cachedToolchainCluster(cl client.Client, name string, status corev1.Conditi
 		Type:              cluster.Host,
 		OperatorNamespace: test.MemberOperatorNs,
 		OwnerClusterName:  test.MemberClusterName,
+		APIEndpoint:       "http://api.devcluster.openshift.com",
 		ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
 			Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
 				Type:          toolchainv1alpha1.ToolchainClusterReady,
@@ -1415,6 +1416,7 @@ type memberClusterOption interface {
 
 func memberCluster(name string, options ...memberClusterOption) toolchainv1alpha1.Member {
 	m := toolchainv1alpha1.Member{
+		ApiEndpoint: "http://api.devcluster.openshift.com",
 		ClusterName: name,
 		MemberStatus: toolchainv1alpha1.MemberStatusStatus{
 			Conditions: []toolchainv1alpha1.Condition{},
