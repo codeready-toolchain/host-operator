@@ -535,7 +535,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		}
 	} else {
 		// annotation was missing so assume it's the first activation
-		log.Info("setting 'toolchain.dev.openshift.com/activation-counter' on new active user")
+		logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on new active user")
 		userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1" // first activation, annotation did not exist
 		counter.IncrementUsersPerActivationCounter(1)
 	}
