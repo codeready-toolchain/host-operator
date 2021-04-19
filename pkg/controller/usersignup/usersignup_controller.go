@@ -520,7 +520,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 
 	// increment the counter of Returning Users
 	if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
-		log.Info("updating 'toolchain.dev.openshift.com/activation-counter' on active user")
+		logger.Info("updating 'toolchain.dev.openshift.com/activation-counter' on active user")
 		if activations, err := strconv.Atoi(activations); err == nil {
 			// increment the value of the annotation
 			activations++
