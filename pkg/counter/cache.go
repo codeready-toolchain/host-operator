@@ -190,7 +190,6 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 	}
 
 	log.Info("synchronized counters", "counts", cachedCounts.Counts)
-
 	return nil
 }
 
@@ -204,11 +203,16 @@ func indexOfMember(members []toolchainv1alpha1.Member, name string) int {
 	return -1
 }
 
+// InitializationMutex a mutual exclusion lock to prevent initialization of the counter and resource migration at the same time (the migration func will need to obtain the lock, too)
+var InitializationMutex sync.Mutex
+
 func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// skip if cached counters are already initialized
 	if cachedCounts.initialized {
 		return nil
 	}
+	InitializationMutex.Lock()
+	defer InitializationMutex.Unlock()
 
 	// initialize the cached counters from the UserSignup and MasterUserRecord resources.
 	if toolchainStatus.Status.HostOperator == nil ||
