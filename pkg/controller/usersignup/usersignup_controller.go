@@ -152,7 +152,10 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 	// (migration for 'complete' usersignups only) set the UserSignupActivationCounterAnnotationKey if it is missing
 	// To be removed once the operator was deployed in production, as per https://issues.redhat.com/browse/CRT-1036
-	if condition.IsTrueWithReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete, "") {
+	state := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
+	if state == toolchainv1alpha1.UserSignupStateLabelValueApproved ||
+		state == toolchainv1alpha1.UserSignupStateLabelValueDeactivated ||
+		state == toolchainv1alpha1.UserSignupStateLabelValueBanned {
 		if userSignup.Annotations == nil { // if annotations is empty, it's omitted when reading the resource, hence it's nil here.
 			userSignup.Annotations = map[string]string{}
 		}

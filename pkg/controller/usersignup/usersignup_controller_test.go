@@ -139,91 +139,103 @@ func TestUserSignupMigration(t *testing.T) {
 	// given
 	logf.SetLogger(zap.Logger(true))
 
-	t.Run("when user is complete", func(t *testing.T) {
+	for _, state := range []string{
+		v1alpha1.UserSignupStateLabelValueApproved,
+		v1alpha1.UserSignupStateLabelValueDeactivated,
+		v1alpha1.UserSignupStateLabelValueBanned,
+	} {
+		t.Run(fmt.Sprintf("when user is %s", state), func(t *testing.T) {
 
-		t.Run("when annotation is missing", func(t *testing.T) {
-			defer counter.Reset()
-			userSignup := NewUserSignup(SignupComplete(""), WithStateLabel("approved"))
-			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-			InitializeCounter(t,
-				MasterUserRecords(1),
-				UsersPerActivations(map[string]int{
-					"1": 0,
-					"2": 0,
-					"3": 0,
-				}),
-			)
-			// when
-			res, err := r.Reconcile(req)
+			t.Run("when annotation is missing", func(t *testing.T) {
+				defer counter.Reset()
+				userSignup := NewUserSignup(SignupComplete(""), WithStateLabel(state))
+				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+				InitializeCounter(t,
+					MasterUserRecords(1),
+					UsersPerActivations(map[string]int{
+						"1": 0,
+						"2": 0,
+						"3": 0,
+					}),
+				)
+				// when
+				res, err := r.Reconcile(req)
 
-			// then verify that the MUR exists and is complete
-			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{}, res)
-			actualUserSignup := &v1alpha1.UserSignup{}
-			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
-			require.NoError(t, err)
-			assert.Equal(t, "1", actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // set
-			AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))               // set
-			AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))               // unchanged
-			AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))               // unchanged
+				// then verify that the MUR exists and is complete
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res)
+				actualUserSignup := &v1alpha1.UserSignup{}
+				err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
+				require.NoError(t, err)
+				assert.Equal(t, "1", actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // set
+				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))               // set
+				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))               // unchanged
+				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))               // unchanged
+			})
+
+			t.Run("when annotation already exists", func(t *testing.T) {
+				defer counter.Reset()
+				userSignup := NewUserSignup(SignupComplete(""), WithStateLabel(state), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
+				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+				InitializeCounter(t,
+					MasterUserRecords(1),
+					UsersPerActivations(map[string]int{
+						"1": 0,
+						"2": 1,
+						"3": 0,
+					}),
+				)
+				// when
+				res, err := r.Reconcile(req)
+
+				// then verify that the MUR exists and is complete
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res)
+				actualUserSignup := &v1alpha1.UserSignup{}
+				err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
+				require.NoError(t, err)
+				assert.Equal(t, "2", actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // unchanged
+				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))               // unchanged
+				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))               // unchanged
+				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))               // unchanged
+
+			})
 		})
+	}
 
-		t.Run("when annotation already exists", func(t *testing.T) {
-			defer counter.Reset()
-			userSignup := NewUserSignup(SignupComplete(""), WithStateLabel("approved"), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
-			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-			InitializeCounter(t,
-				MasterUserRecords(1),
-				UsersPerActivations(map[string]int{
-					"1": 0,
-					"2": 1,
-					"3": 0,
-				}),
-			)
-			// when
-			res, err := r.Reconcile(req)
+	for _, state := range []string{
+		v1alpha1.UserSignupStateLabelValueNotReady,
+		v1alpha1.UserSignupStateLabelValuePending,
+	} {
+		t.Run(fmt.Sprintf("when user is %s", state), func(t *testing.T) {
+			t.Run("when annotation is missing", func(t *testing.T) {
+				defer counter.Reset()
+				userSignup := NewUserSignup(VerificationRequired(), WithStateLabel(state))
+				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+				InitializeCounter(t,
+					MasterUserRecords(1),
+					UsersPerActivations(map[string]int{
+						"1": 0,
+						"2": 0,
+						"3": 0,
+					}),
+				)
+				// when
+				res, err := r.Reconcile(req)
 
-			// then verify that the MUR exists and is complete
-			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{}, res)
-			actualUserSignup := &v1alpha1.UserSignup{}
-			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
-			require.NoError(t, err)
-			assert.Equal(t, "2", actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // unchanged
-			AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))               // unchanged
-			AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))               // unchanged
-			AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))               // unchanged
-
+				// then verify that the MUR exists and is complete
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res)
+				actualUserSignup := &v1alpha1.UserSignup{}
+				err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
+				require.NoError(t, err)
+				assert.Empty(t, actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // unset
+				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))          // unchanged
+				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))          // unchanged
+				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))          // unchanged
+			})
 		})
-	})
-	t.Run("when user is not complete", func(t *testing.T) {
-		t.Run("when annotation is missing", func(t *testing.T) {
-			defer counter.Reset()
-			userSignup := NewUserSignup(VerificationRequired(), WithStateLabel("not-ready"))
-			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-			InitializeCounter(t,
-				MasterUserRecords(1),
-				UsersPerActivations(map[string]int{
-					"1": 0,
-					"2": 0,
-					"3": 0,
-				}),
-			)
-			// when
-			res, err := r.Reconcile(req)
-
-			// then verify that the MUR exists and is complete
-			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{}, res)
-			actualUserSignup := &v1alpha1.UserSignup{}
-			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
-			require.NoError(t, err)
-			assert.Empty(t, actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // unset
-			AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))          // unchanged
-			AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))          // unchanged
-			AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))          // unchanged
-		})
-	})
+	}
 }
 func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	// given
