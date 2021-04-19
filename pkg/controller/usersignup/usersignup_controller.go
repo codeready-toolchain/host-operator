@@ -514,10 +514,15 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord")
 	}
-
+	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	// increment the counter of MasterUserRecords
 	counter.IncrementMasterUserRecordCount()
+	// also, update the 'toolchain.dev.openshift.com/activation-counter' annotation value
+	return r.ensureActivationCounter(userSignup, logger)
+}
 
+// ensureActivationCounter increments the 'toolchain.dev.openshift.com/activation-counter' annotation value on the given UserSignup
+func (r *ReconcileUserSignup) ensureActivationCounter(userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger) error {
 	// increment the counter of Returning Users
 	if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
 		logger.Info("updating 'toolchain.dev.openshift.com/activation-counter' on active user")
@@ -541,12 +546,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		counter.IncrementUsersPerActivationCounter(1)
 	}
 	// will not trigger a reconcile if update succeeds (see UserSignupChangedPredicate)
-	if err := r.client.Update(context.TODO(), userSignup); err != nil {
-		return err
-	}
-
-	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
-	return nil
+	return r.client.Update(context.TODO(), userSignup)
 }
 
 // DeleteMasterUserRecord deletes the specified MasterUserRecord
