@@ -153,9 +153,6 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// (migration for 'complete' usersignups only) set the UserSignupActivationCounterAnnotationKey if it is missing
 	// To be removed once the operator was deployed in production, as per https://issues.redhat.com/browse/CRT-1036
 	if condition.IsTrueWithReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete, "") {
-		// obtain a lock to avoid race condition with the counter initializations
-		counter.InitializationMutex.Lock()
-		defer counter.InitializationMutex.Unlock()
 		if userSignup.Annotations == nil { // if annotations is empty, it's omitted when reading the resource, hence it's nil here.
 			userSignup.Annotations = map[string]string{}
 		}
