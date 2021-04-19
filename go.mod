@@ -1,8 +1,8 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20210322033730-9b79ca615ae9
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20210323222322-40cc7fc9a3ea
+	github.com/codeready-toolchain/api v0.0.0-20210413031854-81652586fd90
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20210413083628-a2981455c932
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0
@@ -40,8 +40,6 @@ replace (
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6 // avoids case-insensitive import collision: "github.com/googleapis/gnostic/openapiv2" and "github.com/googleapis/gnostic/OpenAPIv2"
 )
 
-replace github.com/codeready-toolchain/api => github.com/xcoulon/api v0.0.0-20210409075938-31fcd86d8415
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20210409131216-0221bb0d13d7
+replace github.com/codeready-toolchain/api => github.com/xcoulon/api v0.0.0-20210419080352-d095e646a897
 
 go 1.14
