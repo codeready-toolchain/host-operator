@@ -61,17 +61,12 @@ func (a *ToolchainStatusAssertion) HasConditions(expected ...toolchainv1alpha1.C
 }
 
 // HasMetric verifies that the `ToolchainStatus.Status.Metrics` has the given key/value (where the value is serialized if it is a map)
-func (a *ToolchainStatusAssertion) HasMetric(key string, value interface{}) *ToolchainStatusAssertion {
+func (a *ToolchainStatusAssertion) HasMetric(key string, value toolchainv1alpha1.Metric) *ToolchainStatusAssertion {
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
 	require.NotNil(a.t, a.toolchainStatus.Status)
 	require.NotNil(a.t, a.toolchainStatus.Status.Metrics)
-	switch value := value.(type) {
-	case toolchainv1alpha1.Metric:
-		assert.Equal(a.t, value, value)
-	default:
-		a.t.Fatalf("unsupported type of annotation value: '%T'", value)
-	}
+	assert.Equal(a.t, value, value)
 	return a
 }
 
