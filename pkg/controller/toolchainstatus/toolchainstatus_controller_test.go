@@ -953,6 +953,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 					// Confirm there is no notification
 					assertToolchainStatusNotificationNotCreated(t, fakeClient)
+					// Confirm restored notification is created
+					//assertToolchainStatusRestoredNotificationCreated(t, fakeClient)
 
 					t.Run("Toolchain status not ready again for extended period, notification is created", func(t *testing.T) {
 						// given
@@ -1042,6 +1044,13 @@ func assertToolchainStatusNotificationNotCreated(t *testing.T, fakeClient *test.
 	require.Error(t, err)
 	require.IsType(t, &errors.StatusError{}, err)
 	require.True(t, errors.IsNotFound(err))
+}
+
+func assertToolchainStatusRestoredNotificationCreated(t *testing.T, fakeClient *test.FakeClient){
+	var notification toolchainv1alpha1.Notification
+	err := fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs, "toolchainstatus-restore"),
+		&notification)
+	require.NoError(t, err)
 }
 
 func TestSynchronizationWithCounter(t *testing.T) {
