@@ -1,5 +1,4 @@
 advanced/cluster: "654321a"
-advanced/ns_code: "123456a"
 advanced/ns_dev: "123456b"
 advanced/ns_stage: "123456c"
 basic/cluster: "654321b"
