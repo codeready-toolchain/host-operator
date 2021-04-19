@@ -108,9 +108,9 @@ func DecrementUserAccountCount(log logr.Logger, clusterName string) {
 	})
 }
 
-// IncrementUsersPerActivationCounter increments the counter of a given number of activations for a (returning) user.
+// UpdateUsersPerActivationCounters updates the activation counters and metrics
 // When a user signs up for the 1st time, her `activations` number is `1`, on the second time, it's `2`, etc.
-func IncrementUsersPerActivationCounter(activations int) {
+func UpdateUsersPerActivationCounters(activations int) {
 	write(func() {
 		// increase the gauge with the given number of activations
 		cachedCounts.UsersPerActivationCounts[strconv.Itoa(activations)]++

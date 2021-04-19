@@ -163,7 +163,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			if err := r.client.Update(context.TODO(), userSignup); err != nil {
 				return reconcile.Result{}, err
 			}
-			counter.IncrementUsersPerActivationCounter(1)
+			counter.UpdateUsersPerActivationCounters(1)
 		}
 	}
 
@@ -532,19 +532,19 @@ func (r *ReconcileUserSignup) ensureActivationCounter(userSignup *toolchainv1alp
 			activations++
 			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = strconv.Itoa(activations)
 			// increment the counter
-			counter.IncrementUsersPerActivationCounter(activations)
+			counter.UpdateUsersPerActivationCounters(activations)
 		} else {
 			logger.Error(err, "The 'toolchain.dev.openshift.com/activation-counter' annotation value was not an integer and was reset to '1'.", "value", activations)
 			// "best effort": reset number of activations to 1 for this user
 			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
 			// increment the counter
-			counter.IncrementUsersPerActivationCounter(1)
+			counter.UpdateUsersPerActivationCounters(1)
 		}
 	} else {
 		// annotation was missing so assume it's the first activation
 		logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on new active user")
 		userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1" // first activation, annotation did not exist
-		counter.IncrementUsersPerActivationCounter(1)
+		counter.UpdateUsersPerActivationCounters(1)
 	}
 	// will not trigger a reconcile if update succeeds (see UserSignupChangedPredicate)
 	return r.client.Update(context.TODO(), userSignup)
