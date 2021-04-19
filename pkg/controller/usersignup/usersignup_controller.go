@@ -528,6 +528,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			// increment the counter
 			counter.IncrementUsersPerActivationCounter(activations)
 		} else {
+			logger.Error(err, "The 'toolchain.dev.openshift.com/activation-counter' annotation value was not an integer and was reset to '1'.", "value", activations)
 			// "best effort": reset number of activations to 1 for this user
 			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
 			// increment the counter
