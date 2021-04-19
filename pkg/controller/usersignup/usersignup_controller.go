@@ -156,7 +156,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			userSignup.Annotations = map[string]string{}
 		}
 		if _, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; !exists {
-			log.Info("setting 'toolchain.dev.openshift.com/activation-counter' on existing active user")
+			logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on existing active user")
 			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
 			// will not trigger a reconcile if update succeeds (see UserSignupChangedPredicate)
 			if err := r.client.Update(context.TODO(), userSignup); err != nil {
