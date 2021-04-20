@@ -11,7 +11,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -42,7 +41,6 @@ func TestAddFinalizer(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "john")
 		memberClient := test.NewFakeClient(t)
 		hostClient := test.NewFakeClient(t, mur)
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1))))
@@ -71,7 +69,6 @@ func TestAddFinalizer(t *testing.T) {
 		hostClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to add finalizer to MUR %s", mur.Name)
 		}
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1))))
@@ -102,7 +99,6 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
 	memberClient := test.NewFakeClient(t)
 	hostClient := test.NewFakeClient(t, mur)
-	defer counter.Reset()
 	InitializeCounters(t, hostClient, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMember(test.MemberClusterName, WithUserAccountCount(1))))
@@ -130,15 +126,13 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts("member2-cluster"), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	toolchainStatus := NewToolchainStatus(
-		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithHost(WithMasterUserRecordCount(1)),
+		WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
 		WithMember("member2-cluster", WithRoutes("https://console.member-cluster/", "", ToBeReady())))
 	memberClient := test.NewFakeClient(t)
 	memberClient2 := test.NewFakeClient(t)
 	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
-	defer counter.Reset()
-	InitializeCounters(t, hostClient, NewToolchainStatus(
-		WithHost(WithMasterUserRecordCount(1)),
-		WithMember(test.MemberClusterName, WithUserAccountCount(1))))
+	InitializeCounters(t, hostClient, toolchainStatus)
 
 	cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
 		ClusterClient(test.MemberClusterName, memberClient), ClusterClient("member2-cluster", memberClient2))
@@ -168,20 +162,17 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	userAccount1 := uatest.NewUserAccountFromMur(mur)
 	userAccount3 := uatest.NewUserAccountFromMur(mur)
 	toolchainStatus := NewToolchainStatus(
-		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-		WithMember("member2-cluster", WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-		WithMember("member3-cluster", WithRoutes("https://console.member-cluster/", "", ToBeReady())))
+		WithHost(WithMasterUserRecordCount(1)),
+		WithMember(test.MemberClusterName, WithUserAccountCount(2), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember("member2-cluster", WithUserAccountCount(2), WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
+		WithMember("member3-cluster", WithUserAccountCount(2), WithRoutes("https://console.member3-cluster/", "", ToBeReady())))
 	memberClient1 := test.NewFakeClient(t, userAccount1)
 	memberClient3 := test.NewFakeClient(t, userAccount3)
 	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 
 	t.Run("when deletion timestamp is less than 3 seconds old", func(t *testing.T) {
 		// given
-		defer counter.Reset()
-		InitializeCounters(t, hostClient, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
-			WithMember(test.MemberClusterName, WithUserAccountCount(2)),
-			WithMember("member2-cluster", WithUserAccountCount(2))))
+		InitializeCounters(t, hostClient, toolchainStatus)
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
 		memberClient2 := test.NewFakeClient(t, userAccount2)
 		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
@@ -196,16 +187,17 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.Requeue)
 		assert.Equal(t, 3*time.Second, result.RequeueAfter)
-		AssertThatCounterHas(t, MasterUserRecords(1), UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 1))
+		AssertThatCounterHas(t,
+			MasterUserRecords(1),
+			UserAccountsForCluster(test.MemberClusterName, 2),
+			UserAccountsForCluster("member2-cluster", 1),
+			UserAccountsForCluster("member3-cluster", 2),
+		)
 	})
 
 	t.Run("when deletion timestamp is more than 3 seconds old", func(t *testing.T) {
 		// given
-		defer counter.Reset()
-		InitializeCounters(t, hostClient, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
-			WithMember(test.MemberClusterName, WithUserAccountCount(2)),
-			WithMember("member2-cluster", WithUserAccountCount(2))))
+		InitializeCounters(t, hostClient, toolchainStatus)
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
 		userAccount2.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(-3 * time.Second)}
 		memberClient2 := test.NewFakeClient(t, userAccount2)
@@ -221,16 +213,17 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.Requeue)
 		assert.Equal(t, 3*time.Second, result.RequeueAfter)
-		AssertThatCounterHas(t, MasterUserRecords(1), UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 2))
+		AssertThatCounterHas(t,
+			MasterUserRecords(1),
+			UserAccountsForCluster(test.MemberClusterName, 2),
+			UserAccountsForCluster("member2-cluster", 2),
+			UserAccountsForCluster("member3-cluster", 2),
+		)
 	})
 
 	t.Run("when deletion timestamp is in the future", func(t *testing.T) {
 		// given
-		defer counter.Reset()
-		InitializeCounters(t, hostClient, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
-			WithMember(test.MemberClusterName, WithUserAccountCount(2)),
-			WithMember("member2-cluster", WithUserAccountCount(2))))
+		InitializeCounters(t, hostClient, toolchainStatus)
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
 		userAccount2.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(2 * time.Second)}
 		memberClient2 := test.NewFakeClient(t, userAccount2)
@@ -246,7 +239,12 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.Requeue)
 		assert.Greater(t, int64(result.RequeueAfter), int64(3*time.Second))
-		AssertThatCounterHas(t, MasterUserRecords(1), UserAccountsForCluster(test.MemberClusterName, 2), UserAccountsForCluster("member2-cluster", 1))
+		AssertThatCounterHas(t,
+			MasterUserRecords(1),
+			UserAccountsForCluster(test.MemberClusterName, 2),
+			UserAccountsForCluster("member2-cluster", 1),
+			UserAccountsForCluster("member3-cluster", 2),
+		)
 	})
 }
 
@@ -259,7 +257,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("when member cluster does not exist and UA hasn't been created yet", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1))))
@@ -285,7 +282,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("when member cluster does not exist and UA was already created", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1))))
@@ -309,7 +305,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("when member cluster is not ready and UA hasn't been created yet", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1))))
@@ -335,7 +330,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("when member cluster is not ready and UA was already created", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1))))
@@ -360,7 +354,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("status update of the MasterUserRecord failed", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1))))
@@ -384,7 +377,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("creation of the UserAccount failed", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1))))
@@ -412,7 +404,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1))))
@@ -446,19 +437,17 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("status synchronization between UserAccount and MasterUserRecord failed", func(t *testing.T) {
 		// given
-		defer counter.Reset()
-		InitializeCounters(t, hostClient, NewToolchainStatus(
+		toolchainStatus := NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
-			WithMember(test.MemberClusterName, WithUserAccountCount(1))))
+			WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())))
 		updatingCond := toBeNotReady("updating", "")
 		provisionedMur := murtest.NewMasterUserRecord(t, "john",
 			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 			murtest.StatusCondition(updatingCond))
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(provisionedMur,
 			uatest.StatusCondition(toBeNotReady("somethingFailed", ""))))
-		toolchainStatus := NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())))
 		hostClient := test.NewFakeClient(t, provisionedMur, toolchainStatus)
+		InitializeCounters(t, hostClient, toolchainStatus)
 
 		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			hostClient.MockStatusUpdate = nil // mock only once
@@ -486,7 +475,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("deletion of MasterUserRecord fails because it cannot remove finalizer", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(2))))
@@ -525,7 +513,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 	t.Run("deletion of the UserAccount failed", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1))))
@@ -585,7 +572,6 @@ func TestModifyUserAccounts(t *testing.T) {
 	memberClient3 := test.NewFakeClient(t, userAccount3)
 	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 
-	defer counter.Reset()
 	InitializeCounters(t, hostClient, toolchainStatus)
 
 	cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
@@ -670,7 +656,6 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			WithMember("member2-cluster", WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
 			WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", "", ToBeReady())))
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, toolchainStatus)
 
 		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
@@ -740,7 +725,6 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			WithMember("member2-cluster", WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
 			WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", "", ToBeReady())))
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, toolchainStatus)
 
 		memberClient := test.NewFakeClient(t, userAccount)
@@ -796,7 +780,6 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 		memberClient := test.NewFakeClient(t, userAcc)
 		hostClient := test.NewFakeClient(t, mur)
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(2))))
@@ -835,7 +818,6 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 		hostClient := test.NewFakeClient(t, mur)
 		memberClient := test.NewFakeClient(t, userAcc)
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(2))))
@@ -876,7 +858,6 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 		hostClient := test.NewFakeClient(t, mur)
 		memberClient := test.NewFakeClient(t, userAcc)
-		defer counter.Reset()
 		InitializeCounters(t, hostClient, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(2))))
@@ -911,7 +892,6 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 	memberClient := test.NewFakeClient(t, userAcc)
 	memberClient2 := test.NewFakeClient(t, userAcc)
 	hostClient := test.NewFakeClient(t, mur)
-	defer counter.Reset()
 	InitializeCounters(t, hostClient, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(2)),
 		WithMember(test.MemberClusterName, WithUserAccountCount(2)),
@@ -963,7 +943,6 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())))
 	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
-	defer counter.Reset()
 	InitializeCounters(t, hostClient, toolchainStatus)
 
 	cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),

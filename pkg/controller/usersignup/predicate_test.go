@@ -132,7 +132,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}
-	toolchainStatus := NewToolchainStatus()
+	toolchainStatus := EmptyToolchainStatus()
 
 	t.Run("update", func(t *testing.T) {
 		t.Run("when all fields are set", func(t *testing.T) {
@@ -261,7 +261,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsNotEnabled(t *testing.T) {
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}
-	toolchainStatus := NewToolchainStatus()
+	toolchainStatus := EmptyToolchainStatus()
 
 	t.Run("update", func(t *testing.T) {
 		// given

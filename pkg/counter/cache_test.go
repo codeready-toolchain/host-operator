@@ -20,7 +20,7 @@ var logger = logf.Log.WithName("cache_test")
 
 func TestAddMurToCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t), NewToolchainStatus())
+	InitializeCounters(t, commontest.NewFakeClient(t), EmptyToolchainStatus())
 	defer counter.Reset()
 
 	// when
@@ -44,7 +44,7 @@ func TestRemoveMurFromCounter(t *testing.T) {
 
 func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t), NewToolchainStatus())
+	InitializeCounters(t, commontest.NewFakeClient(t), EmptyToolchainStatus())
 	defer counter.Reset()
 
 	// when
@@ -124,7 +124,6 @@ func TestRemoveUserAccountFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testi
 
 func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	// given
-	defer counter.Reset()
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(13)),
 		WithMember("member-1", WithUserAccountCount(10)),
@@ -143,7 +142,6 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 
 func TestInitializeCounterFromToolchainClusterWithNegativeNumbersInCache(t *testing.T) {
 	// given
-	defer counter.Reset()
 	counter.DecrementUserAccountCount(logger, "member-1")
 	counter.DecrementMasterUserRecordCount(logger)
 	toolchainStatus := NewToolchainStatus(
@@ -165,7 +163,6 @@ func TestInitializeCounterFromToolchainClusterWithNegativeNumbersInCache(t *test
 func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	// given
 	logf.SetLogger(zap.Logger(true))
-	defer counter.Reset()
 	//this will be ignored by resetting when initializing counters
 	counter.IncrementMasterUserRecordCount()
 	counter.IncrementUserAccountCount("member-1")
@@ -188,7 +185,6 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 
 func TestShouldNotInitializeAgain(t *testing.T) {
 	// given
-	defer counter.Reset()
 	//this will be ignored by resetting when loading existing MURs
 	counter.IncrementMasterUserRecordCount()
 	counter.IncrementUserAccountCount("member-1")
@@ -221,7 +217,6 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(0)),
 		WithMember("member-1", WithUserAccountCount(0)),
 		WithMember("member-2", WithUserAccountCount(0)))
-	defer counter.Reset()
 	InitializeCounters(t, fakeClient, toolchainStatus)
 	var latch sync.WaitGroup
 	latch.Add(1)

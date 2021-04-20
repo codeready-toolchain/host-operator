@@ -7,7 +7,6 @@ import (
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	. "github.com/codeready-toolchain/host-operator/test"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +20,6 @@ func TestGetClusterIfApproved(t *testing.T) {
 	// given
 	config, err := configuration.LoadConfig(NewFakeClient(t))
 	require.NoError(t, err)
-	defer counter.Reset()
 	signup := NewUserSignup()
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1500)),
@@ -295,10 +293,10 @@ func TestGetClusterIfApproved(t *testing.T) {
 		t.Run("unable to read HostOperatorConfig", func(t *testing.T) {
 			// given
 			fakeClient := NewFakeClient(t, toolchainStatus)
-			InitializeCounters(t, fakeClient, toolchainStatus)
 			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				return fmt.Errorf("some error")
 			}
+			InitializeCounters(t, fakeClient, toolchainStatus)
 			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 			// when

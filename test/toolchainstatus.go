@@ -10,14 +10,45 @@ import (
 
 type ToolchainStatusOption func(*toolchainv1alpha1.ToolchainStatus)
 
+func NewToolchainStatus(options ...ToolchainStatusOption) *toolchainv1alpha1.ToolchainStatus {
+	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configuration.DefaultToolchainStatusName,
+			Namespace: test.HostOperatorNs,
+		},
+	}
+	for _, apply := range options {
+		apply(toolchainStatus)
+	}
+	return toolchainStatus
+}
+
+func EmptyToolchainStatus() *toolchainv1alpha1.ToolchainStatus {
+	return &toolchainv1alpha1.ToolchainStatus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configuration.DefaultToolchainStatusName,
+			Namespace: test.HostOperatorNs,
+		},
+	}
+}
+
+func DefaultToolchainStatus() *toolchainv1alpha1.ToolchainStatus {
+	return &toolchainv1alpha1.ToolchainStatus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configuration.DefaultToolchainStatusName,
+			Namespace: test.HostOperatorNs,
+		},
+	}
+}
+
 func WithHost(options ...HostToolchainStatusOption) ToolchainStatusOption {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {
-		status.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
+		host := &toolchainv1alpha1.HostOperatorStatus{}
 		for _, modify := range options {
-			modify(status.Status.HostOperator)
+			modify(host)
 		}
+		status.Status.HostOperator = host
 	}
-
 }
 
 type HostToolchainStatusOption func(*toolchainv1alpha1.HostOperatorStatus)
@@ -66,19 +97,6 @@ func WithRoutes(consoleURL, cheURL string, condition toolchainv1alpha1.Condition
 		status.MemberStatus.Routes.CheDashboardURL = cheURL
 		status.MemberStatus.Routes.Conditions = []toolchainv1alpha1.Condition{condition}
 	}
-}
-
-func NewToolchainStatus(options ...ToolchainStatusOption) *toolchainv1alpha1.ToolchainStatus {
-	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      configuration.DefaultToolchainStatusName,
-			Namespace: test.HostOperatorNs,
-		},
-	}
-	for _, modify := range options {
-		modify(toolchainStatus)
-	}
-	return toolchainStatus
 }
 
 func ToBeReady() toolchainv1alpha1.Condition {

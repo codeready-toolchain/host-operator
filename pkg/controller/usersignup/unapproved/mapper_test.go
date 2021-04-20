@@ -24,7 +24,7 @@ func TestMapperReturnsOldest(t *testing.T) {
 
 	// when
 	requests := mapper.Map(handler.MapObject{
-		Meta: NewToolchainStatus().GetObjectMeta(),
+		Meta: EmptyToolchainStatus().GetObjectMeta(),
 	})
 
 	// then
@@ -44,7 +44,7 @@ func TestMapperReturnsEmptyRequestsWhenNoPendingIsFound(t *testing.T) {
 
 	// when
 	requests := mapper.Map(handler.MapObject{
-		Meta: NewToolchainStatus().GetObjectMeta(),
+		Meta: EmptyToolchainStatus().GetObjectMeta(),
 	})
 
 	// then
@@ -61,7 +61,7 @@ func TestMapperReturnsEmptyRequestsWhenClientReturnsError(t *testing.T) {
 
 	// when
 	requests := mapper.Map(handler.MapObject{
-		Meta: NewToolchainStatus().GetObjectMeta(),
+		Meta: EmptyToolchainStatus().GetObjectMeta(),
 	})
 
 	// then

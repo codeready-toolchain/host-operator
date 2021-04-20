@@ -77,10 +77,12 @@ func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster s
 
 func InitializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *v1alpha1.ToolchainStatus) {
 	counter.Reset()
+	t.Cleanup(counter.Reset)
 	initializeCounters(t, cl, toolchainStatus)
 }
 
 func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *v1alpha1.ToolchainStatus) {
+	t.Cleanup(counter.Reset)
 	initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
 }
 
