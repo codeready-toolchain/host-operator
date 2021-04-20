@@ -135,21 +135,34 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 		HasUserAccountCount("member-2", 3)
 }
 
-func TestInitializeCounterFromToolchainClusterWithNegativeNumbersInCache(t *testing.T) {
+func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 	// given
 	defer counter.Reset()
 	counter.DecrementUserAccountCount(logger, "member-1")
 	counter.DecrementMasterUserRecordCount(logger)
+	counter.UpdateUsersPerActivationCounters(1) // a user signup once
+	counter.UpdateUsersPerActivationCounters(2) // a user signup twice (hence counter for "1" will be decreased)
 
 	// when
 	toolchainStatus := InitializeCounterWithoutReset(t, ToolchainStatus(MasterUserRecords(13), UserAccountsForCluster("member-1", 10), UserAccountsForCluster("member-2", 3)))
 
 	// then
-	AssertThatCounterHas(t, MasterUserRecords(12), UserAccountsForCluster("member-1", 9), UserAccountsForCluster("member-2", 3))
+	AssertThatCounterHas(t,
+		MasterUserRecords(12),
+		UserAccountsForCluster("member-1", 9),
+		UserAccountsForCluster("member-2", 3),
+		UsersPerActivations(map[string]int{
+			"1": 0,
+			"2": 1,
+		}))
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(12).
 		HasUserAccountCount("member-1", 9).
-		HasUserAccountCount("member-2", 3)
+		HasUserAccountCount("member-2", 3).
+		HasUsersPerActivations(map[string]int{
+			"1": 0,
+			"2": 1,
+		})
 }
 
 func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
