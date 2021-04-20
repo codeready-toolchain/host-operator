@@ -257,11 +257,15 @@ func initializeFromResources(cl client.Client, namespace string) error {
 }
 
 // initialize the cached counters from the ToolchainStatud resource.
+//
+// Note: this func increments (NOT set!) the counters with the values stored in the ToolchainStatus,
+// so that if user signups were processed before the init/sync started, we don't loose these numbers.
 func initializeFromToolchainStatus(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// initialize the cached counters from the ToolchainStatus resource
 	if toolchainStatus.Status.HostOperator == nil {
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
 	}
+
 	// MasterUserRecordCount
 	cachedCounts.MasterUserRecordCount += toolchainStatus.Status.HostOperator.MasterUserRecordCount
 	// UserAccountsPerClusterCounts
@@ -271,7 +275,9 @@ func initializeFromToolchainStatus(cl client.Client, toolchainStatus *toolchainv
 	// UsersPerActivationCounts
 	if toolchainStatus.Status.Metrics != nil {
 		if metric, exists := toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey]; exists {
-			cachedCounts.UsersPerActivationCounts = metric
+			for k, v := range metric {
+				cachedCounts.UsersPerActivationCounts[k] += v
+			}
 		}
 	}
 	cachedCounts.initialized = true
