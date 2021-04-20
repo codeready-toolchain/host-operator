@@ -95,7 +95,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal) // zero because we started with a not-ready state instead of empty as per usual
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 }
 
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
@@ -159,7 +159,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			Reason: "UserIsActive",
 		})
 
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -191,7 +191,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 				Reason: "UserIsActive",
 			})
 	})
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -229,7 +229,7 @@ func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 			Reason:  "MissingUserEmailAnnotation",
 			Message: "missing annotation at usersignup",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
@@ -266,7 +266,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 			Reason:  "InvalidEmailHashLabel",
 			Message: "hash is invalid",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUpdateOfApprovedLabelFails(t *testing.T) {
@@ -296,7 +296,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 			Reason:  "UnableToUpdateStateLabel",
 			Message: "some error",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 }
@@ -332,7 +332,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 			Reason:  "MissingEmailHashLabel",
 			Message: "missing label at usersignup",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
@@ -371,7 +371,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
@@ -416,7 +416,7 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 }
 
 func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
@@ -460,7 +460,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
@@ -507,7 +507,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -539,7 +539,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 	})
 }
 
@@ -587,7 +587,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -621,7 +621,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 	})
 }
 
@@ -669,7 +669,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
@@ -717,7 +717,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -751,7 +751,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 	})
 }
 
@@ -792,7 +792,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupMURCreateFails(t *testing.T) {
@@ -818,7 +818,7 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -850,7 +850,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 
 	// then
 	require.Error(t, err)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -884,7 +884,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -917,7 +917,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -955,7 +955,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -1011,7 +1011,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		Type:   v1alpha1.UserSignupComplete,
 		Status: v1.ConditionTrue,
 	})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
@@ -1045,7 +1045,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 2)
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 
 	key := types.NamespacedName{
 		Namespace: test.HostOperatorNs,
@@ -1089,7 +1089,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		require.Equal(t, mur.Name, instance.Status.CompliantUsername)
 		require.NotNil(t, cond)
 		require.Equal(t, v1.ConditionTrue, cond.Status)
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 	})
 }
 
@@ -1108,7 +1108,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	require.NoError(t, err)
 
 	murtest.AssertThatMasterUserRecord(t, "foo-bar", r.client).HasNoConditions()
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 }
@@ -1174,7 +1174,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		err = r.client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
-		AssertThatCounterHas(t, MasterUserRecords(1))
+		AssertThatCounters(t).HaveMasterUserRecords(1)
 
 		// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
 		ntest.AssertNoNotificationsExist(t, r.client)
@@ -1216,7 +1216,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				Status: v1.ConditionTrue,
 				Reason: "NotificationCRCreated",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 
 		// A deactivated notification should have been created
 		notifications := &v1alpha1.NotificationList{}
@@ -1307,7 +1307,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 				Reason:  "NotificationCRCreationFailed",
 				Message: "unable to create deactivation notification",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // zero because state didn't change
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -1391,7 +1391,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			})
 
 		// A mur should be created so the counter should be 3
-		AssertThatCounterHas(t, MasterUserRecords(3))
+		AssertThatCounters(t).HaveMasterUserRecords(3)
 
 		assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -1464,7 +1464,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 				Status: v1.ConditionTrue,
 				Reason: "NotificationCRCreated",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 
 		// State is still deactivated because the status update failed
 		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
@@ -1549,7 +1549,7 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 			err = r.client.List(context.TODO(), murs)
 			require.NoError(t, err)
 			require.Len(t, murs.Items, 0)
-			AssertThatCounterHas(t, MasterUserRecords(1))
+			AssertThatCounters(t).HaveMasterUserRecords(1)
 
 			// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
 			ntest.AssertNoNotificationsExist(t, r.client)
@@ -1637,7 +1637,7 @@ func TestUserSignupBanned(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupVerificationRequired(t *testing.T) {
@@ -1678,7 +1678,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupBannedMURExists(t *testing.T) {
@@ -1751,7 +1751,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -1785,7 +1785,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		err = r.client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
-		AssertThatCounterHas(t, MasterUserRecords(1))
+		AssertThatCounters(t).HaveMasterUserRecords(1)
 	})
 }
 
@@ -1805,7 +1805,7 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 
 	// then
 	require.Error(t, err)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
@@ -1880,7 +1880,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 				Reason:  "UnableToDeleteMUR",
 				Message: "unable to delete mur",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(1))
+		AssertThatCounters(t).HaveMasterUserRecords(1)
 
 		t.Run("second reconcile - there should not be a notification created since the mur deletion failed even if reconciled again", func(t *testing.T) {
 			_, err := r.Reconcile(req)
@@ -1962,7 +1962,7 @@ func TestDeathBy100Signups(t *testing.T) {
 			Reason: "UserIsActive",
 		},
 	)
-	AssertThatCounterHas(t, MasterUserRecords(100))
+	AssertThatCounters(t).HaveMasterUserRecords(100)
 }
 
 func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
@@ -2018,7 +2018,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 			Reason: "UserIsActive",
 		},
 	)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
@@ -2036,7 +2036,7 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 
 	// then
 	assert.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)

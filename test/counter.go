@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
@@ -17,54 +17,37 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type BaseValue func(*toolchainv1alpha1.ToolchainStatus)
-
-func MasterUserRecords(number int) BaseValue {
-	return func(status *toolchainv1alpha1.ToolchainStatus) {
-		status.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
-			MasterUserRecordCount: number,
-		}
-	}
+type CounterAssertion struct {
+	t      test.T
+	counts counter.Counts
 }
 
-func UserAccountsForCluster(clusterName string, number int) BaseValue {
-	return func(status *toolchainv1alpha1.ToolchainStatus) {
-		status.Status.Members = append(status.Status.Members, v1alpha1.Member{
-			ClusterName:      clusterName,
-			UserAccountCount: number,
-		})
-	}
-}
-
-func AssertThatUninitializedCounterHas(t *testing.T, baseValues ...BaseValue) {
-	counts, err := counter.GetCounts()
-	assert.EqualErrorf(t, err, "counter is not initialized", "should be error because counter hasn't been initialized yet")
-	verifyCountsAndMetrics(t, counts, baseValues...)
-}
-
-func AssertThatCounterHas(t *testing.T, baseValues ...BaseValue) {
+func AssertThatCounters(t *testing.T) *CounterAssertion {
 	counts, err := counter.GetCounts()
 	require.NoError(t, err)
-	verifyCountsAndMetrics(t, counts, baseValues...)
+	return &CounterAssertion{
+		t:      t,
+		counts: counts,
+	}
 }
 
-func verifyCountsAndMetrics(t *testing.T, counts counter.Counts, baseValues ...BaseValue) {
+func AssertThatUnitializedCounters(t *testing.T) *CounterAssertion {
+	counts, err := counter.GetCounts()
+	require.EqualErrorf(t, err, "counter is not initialized", "should be error because counter hasn't been initialized yet")
+	return &CounterAssertion{
+		t:      t,
+		counts: counts,
+	}
+}
 
-	toolchainStatus := &v1alpha1.ToolchainStatus{
-		Status: v1alpha1.ToolchainStatusStatus{},
-	}
-	for _, apply := range baseValues {
-		apply(toolchainStatus)
-	}
-	require.NotNil(t, toolchainStatus.Status.HostOperator)
-	assert.Equal(t, toolchainStatus.Status.HostOperator.MasterUserRecordCount, counts.MasterUserRecordCount)
-	AssertMetricsGaugeEquals(t, toolchainStatus.Status.HostOperator.MasterUserRecordCount, metrics.MasterUserRecordGauge)
+func (a *CounterAssertion) HaveMasterUserRecords(number int) *CounterAssertion {
+	assert.Equal(a.t, number, a.counts.MasterUserRecordCount)
+	return a
+}
 
-	assert.Len(t, counts.UserAccountsPerClusterCounts, len(toolchainStatus.Status.Members))
-	for _, member := range toolchainStatus.Status.Members {
-		assert.Equal(t, member.UserAccountCount, counts.UserAccountsPerClusterCounts[member.ClusterName])
-		AssertMetricsGaugeEquals(t, member.UserAccountCount, metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName))
-	}
+func (a *CounterAssertion) HaveUserAccountsForCluster(clusterName string, number int) *CounterAssertion {
+	assert.Equal(a.t, number, a.counts.UserAccountsPerClusterCounts[clusterName])
+	return a
 }
 
 func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster string) []runtime.Object {
