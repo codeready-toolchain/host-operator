@@ -119,9 +119,6 @@ objects:
       - from:
         - namespaceSelector:
             matchLabels:
-              name: ${USERNAME}-code
-        - namespaceSelector:
-            matchLabels:
               name: ${USERNAME}-stage
     podSelector: {}
     policyTypes:
