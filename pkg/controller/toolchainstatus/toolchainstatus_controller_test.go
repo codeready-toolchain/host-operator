@@ -456,7 +456,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatus(ready())
-			toolchainStatus := NewToolchainStatus(WithHost(MasterUserRecordCount(20)))
+			toolchainStatus := NewToolchainStatus(WithHost(WithMasterUserRecordCount(20)))
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
@@ -483,7 +483,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatus(ready())
-			toolchainStatus := NewToolchainStatus(WithHost(MasterUserRecordCount(20)))
+			toolchainStatus := NewToolchainStatus(WithHost(WithMasterUserRecordCount(20)))
 
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
@@ -511,7 +511,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatus(ready())
-			toolchainStatus := NewToolchainStatus(WithHost(MasterUserRecordCount(20)))
+			toolchainStatus := NewToolchainStatus(WithHost(WithMasterUserRecordCount(20)))
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),

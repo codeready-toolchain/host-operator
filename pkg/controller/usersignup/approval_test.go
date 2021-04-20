@@ -22,11 +22,11 @@ func TestGetClusterIfApproved(t *testing.T) {
 	config, err := configuration.LoadConfig(NewFakeClient(t))
 	require.NoError(t, err)
 	defer counter.Reset()
-	InitializeCounter(t, MasterUserRecords(1500), UserAccountsForCluster("member1", 800), UserAccountsForCluster("member2", 700))
-	toolchainStatus := NewToolchainStatus(
-		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
-		WithMember("member2", WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
 	signup := NewUserSignup()
+	toolchainStatus := NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(1500)),
+		WithMember("member1", WithUserAccountCount(800), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
+		WithMember("member2", WithUserAccountCount(700), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
 
 	t.Run("with one cluster and enough capacity", func(t *testing.T) {
 		// given
@@ -36,6 +36,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 				MaxUsersNumber(2000, PerMemberCluster("member1", 1000)).
 				ResourceCapThreshold(80, PerMemberCluster("member1", 70)))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		InitializeCounters(t, fakeClient, toolchainStatus)
+
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 		// when
@@ -55,6 +57,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				MaxUsersNumber(2000, PerMemberCluster("member1", 1000), PerMemberCluster("member2", 1000)).
 				ResourceCapThreshold(80, PerMemberCluster("member1", 70), PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
@@ -74,6 +77,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				MaxUsersNumber(2000, PerMemberCluster("member1", 1000), PerMemberCluster("member2", 1000)).
 				ResourceCapThreshold(80, PerMemberCluster("member1", 60), PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
@@ -93,6 +97,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				MaxUsersNumber(2000, PerMemberCluster("member1", 800), PerMemberCluster("member2", 1000)).
 				ResourceCapThreshold(80, PerMemberCluster("member1", 90), PerMemberCluster("member2", 95)))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
@@ -112,6 +117,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				MaxUsersNumber(1200, PerMemberCluster("member1", 6000), PerMemberCluster("member2", 1000)).
 				ResourceCapThreshold(80, PerMemberCluster("member1", 60), PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
@@ -131,6 +137,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				MaxUsersNumber(2000).
 				ResourceCapThreshold(62))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
@@ -150,6 +157,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				MaxUsersNumber(5000).
 				ResourceCapThreshold(1))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
@@ -164,6 +172,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("automatic approval not enabled and user not approved", func(t *testing.T) {
 		// given
 		fakeClient := NewFakeClient(t, toolchainStatus, NewHostOperatorConfigWithReset(t))
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
@@ -178,6 +187,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("HostOperatorConfig not found and user not approved", func(t *testing.T) {
 		// given
 		fakeClient := NewFakeClient(t, toolchainStatus)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
@@ -192,6 +202,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("HostOperatorConfig not found and user approved without target cluster", func(t *testing.T) {
 		// given
 		fakeClient := NewFakeClient(t, toolchainStatus)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 		signup := NewUserSignup(Approved())
 
@@ -209,6 +220,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().ResourceCapThreshold(50))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 		signup := NewUserSignup(Approved())
 
@@ -228,6 +240,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				MaxUsersNumber(2000).
 				ResourceCapThreshold(62))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 		signup := NewUserSignup(Approved())
 
@@ -245,6 +258,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		hostOperatorConfig := NewHostOperatorConfigWithReset(t,
 			AutomaticApproval().MaxUsersNumber(1000))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 		signup := NewUserSignup(Approved(), WithTargetCluster("member1"))
 
@@ -265,6 +279,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				MaxUsersNumber(2000, PerMemberCluster("member1", 1000), PerMemberCluster("member2", 1000)).
 				ResourceCapThreshold(80, PerMemberCluster("member1", 70), PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, hostOperatorConfig)
+		InitializeCounters(t, fakeClient, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionFalse), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
@@ -280,6 +295,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		t.Run("unable to read HostOperatorConfig", func(t *testing.T) {
 			// given
 			fakeClient := NewFakeClient(t, toolchainStatus)
+			InitializeCounters(t, fakeClient, toolchainStatus)
 			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				return fmt.Errorf("some error")
 			}
@@ -303,6 +319,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				}
 				return fakeClient.Client.Get(ctx, key, obj)
 			}
+			InitializeCounters(t, fakeClient, toolchainStatus)
 			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 			// when
