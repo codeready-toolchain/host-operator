@@ -68,7 +68,7 @@ func WithRoutes(consoleURL, cheURL string, condition toolchainv1alpha1.Condition
 	}
 }
 
-func NewToolchainStatus(options ...func(*toolchainv1alpha1.ToolchainStatus)) *toolchainv1alpha1.ToolchainStatus {
+func NewToolchainStatus(options ...ToolchainStatusOption) *toolchainv1alpha1.ToolchainStatus {
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configuration.DefaultToolchainStatusName,

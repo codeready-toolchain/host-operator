@@ -19,16 +19,6 @@ import (
 
 type BaseValue func(*toolchainv1alpha1.ToolchainStatus)
 
-func ToolchainStatus(baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
-	toolchainStatus := &v1alpha1.ToolchainStatus{
-		Status: v1alpha1.ToolchainStatusStatus{},
-	}
-	for _, apply := range baseValues {
-		apply(toolchainStatus)
-	}
-	return toolchainStatus
-}
-
 func MasterUserRecords(number int) BaseValue {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {
 		status.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{
@@ -85,16 +75,16 @@ func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster s
 	return murs
 }
 
-func InitializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *v1alpha1.ToolchainStatus) *v1alpha1.ToolchainStatus {
+func InitializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *v1alpha1.ToolchainStatus) {
 	counter.Reset()
-	return initializeCounters(t, cl, toolchainStatus)
+	initializeCounters(t, cl, toolchainStatus)
 }
 
-func InitializeCounterWithoutReset(t *testing.T, toolchainStatus *v1alpha1.ToolchainStatus) *v1alpha1.ToolchainStatus {
-	return initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
+func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *v1alpha1.ToolchainStatus) {
+	initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
 }
 
-func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *v1alpha1.ToolchainStatus) *v1alpha1.ToolchainStatus {
+func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *v1alpha1.ToolchainStatus) {
 	if toolchainStatus.Status.HostOperator != nil {
 		metrics.MasterUserRecordGauge.Set(float64(toolchainStatus.Status.HostOperator.MasterUserRecordCount))
 	}
@@ -102,5 +92,4 @@ func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus
 	err := counter.Synchronize(cl, toolchainStatus)
 	require.NoError(t, err)
 	t.Logf("MasterUserRecordGauge=%.0f", promtestutil.ToFloat64(metrics.MasterUserRecordGauge))
-	return toolchainStatus
 }

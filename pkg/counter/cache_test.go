@@ -20,7 +20,7 @@ var logger = logf.Log.WithName("cache_test")
 
 func TestAddMurToCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t), ToolchainStatus())
+	InitializeCounters(t, commontest.NewFakeClient(t), NewToolchainStatus())
 	defer counter.Reset()
 
 	// when
@@ -32,7 +32,7 @@ func TestAddMurToCounter(t *testing.T) {
 
 func TestRemoveMurFromCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t), ToolchainStatus(MasterUserRecords(2)))
+	InitializeCounters(t, commontest.NewFakeClient(t), NewToolchainStatus(WithHost(WithMasterUserRecordCount(2))))
 	defer counter.Reset()
 
 	// when
@@ -44,7 +44,7 @@ func TestRemoveMurFromCounter(t *testing.T) {
 
 func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t), ToolchainStatus())
+	InitializeCounters(t, commontest.NewFakeClient(t), NewToolchainStatus())
 	defer counter.Reset()
 
 	// when
@@ -67,7 +67,7 @@ func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
 
 func TestAddUserAccountToCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t), ToolchainStatus(MasterUserRecords(1)))
+	InitializeCounters(t, commontest.NewFakeClient(t), NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 	defer counter.Reset()
 
 	// when
@@ -80,7 +80,9 @@ func TestAddUserAccountToCounter(t *testing.T) {
 func TestRemoveUserAccountFromCounter(t *testing.T) {
 	// given
 	InitializeCounters(t, commontest.NewFakeClient(t),
-		ToolchainStatus(MasterUserRecords(1), UserAccountsForCluster("member-1", 2)))
+		NewToolchainStatus(
+			WithHost(WithMasterUserRecordCount(1)),
+			WithMember("member-1", WithUserAccountCount(2))))
 	defer counter.Reset()
 
 	// when
@@ -93,9 +95,10 @@ func TestRemoveUserAccountFromCounter(t *testing.T) {
 func TestRemoveUserAccountFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
 	InitializeCounters(t, commontest.NewFakeClient(t),
-		ToolchainStatus(MasterUserRecords(2),
-			UserAccountsForCluster("member-1", 0),
-			UserAccountsForCluster("member-2", 2)))
+		NewToolchainStatus(
+			WithHost(WithMasterUserRecordCount(2)),
+			WithMember("member-1", WithUserAccountCount(0)),
+			WithMember("member-2", WithUserAccountCount(2))))
 	defer counter.Reset()
 
 	// when
@@ -122,10 +125,13 @@ func TestRemoveUserAccountFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testi
 func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	// given
 	defer counter.Reset()
+	toolchainStatus := NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(13)),
+		WithMember("member-1", WithUserAccountCount(10)),
+		WithMember("member-2", WithUserAccountCount(3)))
 
 	// when
-	toolchainStatus := InitializeCounters(t, commontest.NewFakeClient(t),
-		ToolchainStatus(MasterUserRecords(13), UserAccountsForCluster("member-1", 10), UserAccountsForCluster("member-2", 3)))
+	InitializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
 
 	// then
 	AssertThatCounterHas(t, MasterUserRecords(13), UserAccountsForCluster("member-1", 10), UserAccountsForCluster("member-2", 3))
@@ -140,9 +146,13 @@ func TestInitializeCounterFromToolchainClusterWithNegativeNumbersInCache(t *test
 	defer counter.Reset()
 	counter.DecrementUserAccountCount(logger, "member-1")
 	counter.DecrementMasterUserRecordCount(logger)
+	toolchainStatus := NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(13)),
+		WithMember("member-1", WithUserAccountCount(10)),
+		WithMember("member-2", WithUserAccountCount(3)))
 
 	// when
-	toolchainStatus := InitializeCounterWithoutReset(t, ToolchainStatus(MasterUserRecords(13), UserAccountsForCluster("member-1", 10), UserAccountsForCluster("member-2", 3)))
+	InitializeCountersWithoutReset(t, toolchainStatus)
 
 	// then
 	AssertThatCounterHas(t, MasterUserRecords(12), UserAccountsForCluster("member-1", 9), UserAccountsForCluster("member-2", 3))
@@ -162,9 +172,12 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
 	fakeClient := test.NewFakeClient(t, murs...)
+	toolchainStatus := NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(0)),
+		WithMember("member-1", WithUserAccountCount(0)))
 
 	// when
-	toolchainStatus := InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(0), UserAccountsForCluster("member-1", 0)))
+	InitializeCounters(t, fakeClient, toolchainStatus)
 
 	// then
 	AssertThatCounterHas(t, MasterUserRecords(10), UserAccountsForCluster("member-1", 10))
@@ -182,7 +195,10 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
 	fakeClient := test.NewFakeClient(t, murs...)
-	toolchainStatus := InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(0), UserAccountsForCluster("member-1", 0)))
+	toolchainStatus := NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(0)),
+		WithMember("member-1", WithUserAccountCount(0)))
+	InitializeCounters(t, fakeClient, toolchainStatus)
 	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-1")))
 	require.NoError(t, err)
 
@@ -199,10 +215,14 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 
 func TestMultipleExecutionsInParallel(t *testing.T) {
 	// given
-	defer counter.Reset()
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
 	fakeClient := test.NewFakeClient(t, murs...)
-	toolchainStatus := InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(0), UserAccountsForCluster("member-1", 0), UserAccountsForCluster("member-2", 0)))
+	toolchainStatus := NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(0)),
+		WithMember("member-1", WithUserAccountCount(0)),
+		WithMember("member-2", WithUserAccountCount(0)))
+	defer counter.Reset()
+	InitializeCounters(t, fakeClient, toolchainStatus)
 	var latch sync.WaitGroup
 	latch.Add(1)
 	var waitForFinished sync.WaitGroup
