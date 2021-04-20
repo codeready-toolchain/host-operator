@@ -8,7 +8,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
 	"github.com/stretchr/testify/require"
@@ -20,7 +19,7 @@ var logger = logf.Log.WithName("cache_test")
 
 func TestAddMurToCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t), EmptyToolchainStatus())
+	InitializeCounters(t, EmptyToolchainStatus())
 	defer counter.Reset()
 
 	// when
@@ -32,7 +31,7 @@ func TestAddMurToCounter(t *testing.T) {
 
 func TestRemoveMurFromCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t), NewToolchainStatus(WithHost(WithMasterUserRecordCount(2))))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(2))))
 	defer counter.Reset()
 
 	// when
@@ -44,7 +43,7 @@ func TestRemoveMurFromCounter(t *testing.T) {
 
 func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t), EmptyToolchainStatus())
+	InitializeCounters(t, EmptyToolchainStatus())
 	defer counter.Reset()
 
 	// when
@@ -67,7 +66,7 @@ func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
 
 func TestAddUserAccountToCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t), NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 	defer counter.Reset()
 
 	// when
@@ -79,7 +78,7 @@ func TestAddUserAccountToCounter(t *testing.T) {
 
 func TestRemoveUserAccountFromCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t),
+	InitializeCounters(t,
 		NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember("member-1", WithUserAccountCount(2))))
@@ -94,7 +93,7 @@ func TestRemoveUserAccountFromCounter(t *testing.T) {
 
 func TestRemoveUserAccountFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
-	InitializeCounters(t, commontest.NewFakeClient(t),
+	InitializeCounters(t,
 		NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
 			WithMember("member-1", WithUserAccountCount(0)),
@@ -130,7 +129,7 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 		WithMember("member-2", WithUserAccountCount(3)))
 
 	// when
-	InitializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
+	InitializeCounters(t, toolchainStatus)
 
 	// then
 	AssertThatCounterHas(t, MasterUserRecords(13), UserAccountsForCluster("member-1", 10), UserAccountsForCluster("member-2", 3))
@@ -168,13 +167,12 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	counter.IncrementUserAccountCount("member-1")
 
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
-	fakeClient := test.NewFakeClient(t, murs...)
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(0)),
 		WithMember("member-1", WithUserAccountCount(0)))
 
 	// when
-	InitializeCounters(t, fakeClient, toolchainStatus)
+	InitializeCounters(t, toolchainStatus, murs...)
 
 	// then
 	AssertThatCounterHas(t, MasterUserRecords(10), UserAccountsForCluster("member-1", 10))
@@ -190,11 +188,11 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 	counter.IncrementUserAccountCount("member-1")
 
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
-	fakeClient := test.NewFakeClient(t, murs...)
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(0)),
 		WithMember("member-1", WithUserAccountCount(0)))
-	InitializeCounters(t, fakeClient, toolchainStatus)
+	InitializeCounters(t, toolchainStatus, murs...)
+	fakeClient := test.NewFakeClient(t, murs...)
 	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-1")))
 	require.NoError(t, err)
 
@@ -212,12 +210,12 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 func TestMultipleExecutionsInParallel(t *testing.T) {
 	// given
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
-	fakeClient := test.NewFakeClient(t, murs...)
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(0)),
 		WithMember("member-1", WithUserAccountCount(0)),
 		WithMember("member-2", WithUserAccountCount(0)))
-	InitializeCounters(t, fakeClient, toolchainStatus)
+	InitializeCounters(t, toolchainStatus, murs...)
+	fakeClient := test.NewFakeClient(t, murs...)
 	var latch sync.WaitGroup
 	latch.Add(1)
 	var waitForFinished sync.WaitGroup
