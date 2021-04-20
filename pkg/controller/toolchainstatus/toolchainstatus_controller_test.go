@@ -457,7 +457,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatus(ready())
-			toolchainStatus := NewToolchainStatus(WithHost(MasterUserRecordCount(20)))
+			toolchainStatus := NewToolchainStatus(WithHost(WithMasterUserRecordCount(20)))
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
@@ -484,7 +484,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatus(ready())
-			toolchainStatus := NewToolchainStatus(WithHost(MasterUserRecordCount(20)))
+			toolchainStatus := NewToolchainStatus(WithHost(WithMasterUserRecordCount(20)))
 
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
@@ -512,7 +512,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			defer counter.Reset()
 			memberStatus := newMemberStatus(ready())
-			toolchainStatus := NewToolchainStatus(WithHost(MasterUserRecordCount(20)))
+			toolchainStatus := NewToolchainStatus(WithHost(WithMasterUserRecordCount(20)))
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
@@ -1127,7 +1127,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		// given
 		defer counter.Reset()
 		toolchainStatus := NewToolchainStatus(
-			WithHost(MasterUserRecordCount(8)),
+			WithHost(WithMasterUserRecordCount(8)),
 			WithMember("member-1", WithUserAccountCount(6)), // will increase
 			WithMember("member-2", WithUserAccountCount(2)), // will remain the same
 			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{

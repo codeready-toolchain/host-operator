@@ -19,6 +19,16 @@ import (
 
 type BaseValue func(*v1alpha1.ToolchainStatus)
 
+func ToolchainStatus(baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
+	toolchainStatus := &v1alpha1.ToolchainStatus{
+		Status: v1alpha1.ToolchainStatusStatus{},
+	}
+	for _, apply := range baseValues {
+		apply(toolchainStatus)
+	}
+	return toolchainStatus
+}
+
 func MasterUserRecords(number int) BaseValue {
 	return func(status *v1alpha1.ToolchainStatus) {
 		status.Status.HostOperator = &v1alpha1.HostOperatorStatus{
@@ -106,27 +116,16 @@ func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster s
 	return murs
 }
 
-func InitializeCounter(t *testing.T, baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
+func InitializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *v1alpha1.ToolchainStatus) *v1alpha1.ToolchainStatus {
 	counter.Reset()
-	return InitializeCounterWithoutReset(t, baseValues...)
+	return initializeCounters(t, cl, toolchainStatus)
 }
 
-func InitializeCounterWithBaseValues(t *testing.T, cl *commontest.FakeClient, baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
-	counter.Reset()
-	return initializeCounter(t, cl, baseValues...)
+func InitializeCounterWithoutReset(t *testing.T, toolchainStatus *v1alpha1.ToolchainStatus) *v1alpha1.ToolchainStatus {
+	return initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
 }
 
-func InitializeCounterWithoutReset(t *testing.T, baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
-	return initializeCounter(t, commontest.NewFakeClient(t), baseValues...)
-}
-
-func initializeCounter(t *testing.T, cl *commontest.FakeClient, baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
-	toolchainStatus := &v1alpha1.ToolchainStatus{
-		Status: v1alpha1.ToolchainStatusStatus{},
-	}
-	for _, apply := range baseValues {
-		apply(toolchainStatus)
-	}
+func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *v1alpha1.ToolchainStatus) *v1alpha1.ToolchainStatus {
 	if toolchainStatus.Status.HostOperator != nil {
 		metrics.MasterUserRecordGauge.Set(float64(toolchainStatus.Status.HostOperator.MasterUserRecordCount))
 	}
