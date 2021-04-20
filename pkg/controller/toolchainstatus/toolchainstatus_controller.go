@@ -64,14 +64,14 @@ const (
 )
 
 const (
-	adminUnreadyNotificationSubject = "ToolchainStatus has been in an unready status for an extended period"
-	adminRestoredNotificationSubject   = "ToolchainStatus has now been restored to ready status"
+	adminUnreadyNotificationSubject  = "ToolchainStatus has been in an unready status for an extended period"
+	adminRestoredNotificationSubject = "ToolchainStatus has now been restored to ready status"
 )
 
 type toolchainStatusNotificationType string
 
 const (
-	unreadyStatus toolchainStatusNotificationType = "unready"
+	unreadyStatus  toolchainStatusNotificationType = "unready"
 	restoredStatus toolchainStatusNotificationType = "restored"
 )
 
@@ -416,7 +416,7 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusNotification(logger logr.L
 	}
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("toolchainstatus-%s-%s",string(status), tsValue),
+			Name:      fmt.Sprintf("toolchainstatus-%s-%s", string(status), tsValue),
 			Namespace: toolchainStatus.Namespace,
 		},
 		Spec: toolchainv1alpha1.NotificationSpec{
@@ -427,16 +427,16 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusNotification(logger logr.L
 	}
 
 	if err := controllerutil.SetControllerReference(toolchainStatus, notification, r.scheme); err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to set owner reference for toolchain status %s notification resource",status))
+		logger.Error(err, fmt.Sprintf("Failed to set owner reference for toolchain status %s notification resource", status))
 		return err
 	}
 
 	if err := r.client.Create(context.TODO(), notification); err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to create toolchain status %s notification resource",status))
+		logger.Error(err, fmt.Sprintf("Failed to create toolchain status %s notification resource", status))
 		return err
 	}
 
-	logger.Info(fmt.Sprintf("Toolchain status %s notification resource created",status))
+	logger.Info(fmt.Sprintf("Toolchain status %s notification resource created", status))
 	return nil
 }
 
