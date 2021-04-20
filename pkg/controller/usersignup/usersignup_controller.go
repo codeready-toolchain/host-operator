@@ -528,29 +528,32 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 // ensureActivationCounter increments the 'toolchain.dev.openshift.com/activation-counter' annotation value on the given UserSignup
 func (r *ReconcileUserSignup) ensureActivationCounter(userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger) error {
 	// increment the counter of Returning Users
+	c := 1
 	if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
 		logger.Info("updating 'toolchain.dev.openshift.com/activation-counter' on active user")
 		if activations, err := strconv.Atoi(activations); err == nil {
 			// increment the value of the annotation
 			activations++
 			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = strconv.Itoa(activations)
-			// increment the counter
-			counter.UpdateUsersPerActivationCounters(activations)
+			c = activations
 		} else {
 			logger.Error(err, "The 'toolchain.dev.openshift.com/activation-counter' annotation value was not an integer and was reset to '1'.", "value", activations)
 			// "best effort": reset number of activations to 1 for this user
 			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
-			// increment the counter
-			counter.UpdateUsersPerActivationCounters(1)
 		}
 	} else {
 		// annotation was missing so assume it's the first activation
 		logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on new active user")
 		userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1" // first activation, annotation did not exist
-		counter.UpdateUsersPerActivationCounters(1)
 	}
 	// will not trigger a reconcile if update succeeds (see UserSignupChangedPredicate)
-	return r.client.Update(context.TODO(), userSignup)
+	err := r.client.Update(context.TODO(), userSignup)
+	if err != nil {
+		return err
+	}
+	// increment the counter
+	counter.UpdateUsersPerActivationCounters(c)
+	return nil
 }
 
 // DeleteMasterUserRecord deletes the specified MasterUserRecord
