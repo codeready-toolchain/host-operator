@@ -10,14 +10,27 @@ import (
 
 type ToolchainStatusOption func(*toolchainv1alpha1.ToolchainStatus)
 
+func NewToolchainStatus(options ...ToolchainStatusOption) *toolchainv1alpha1.ToolchainStatus {
+	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configuration.DefaultToolchainStatusName,
+			Namespace: test.HostOperatorNs,
+		},
+	}
+	for _, apply := range options {
+		apply(toolchainStatus)
+	}
+	return toolchainStatus
+}
+
 func WithHost(options ...HostToolchainStatusOption) ToolchainStatusOption {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {
-		status.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
+		host := &toolchainv1alpha1.HostOperatorStatus{}
 		for _, modify := range options {
-			modify(status.Status.HostOperator)
+			modify(host)
 		}
+		status.Status.HostOperator = host
 	}
-
 }
 
 type HostToolchainStatusOption func(*toolchainv1alpha1.HostOperatorStatus)
@@ -31,6 +44,7 @@ func WithMasterUserRecordCount(count int) HostToolchainStatusOption {
 func WithMember(name string, options ...MemberToolchainStatusOption) ToolchainStatusOption {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {
 		member := toolchainv1alpha1.Member{
+			ApiEndpoint: "http://api.devcluster.openshift.com",
 			ClusterName: name,
 		}
 		for _, modify := range options {
@@ -75,19 +89,6 @@ func WithMetric(key string, value toolchainv1alpha1.Metric) ToolchainStatusOptio
 		}
 		status.Status.Metrics[key] = value
 	}
-}
-
-func NewToolchainStatus(options ...ToolchainStatusOption) *toolchainv1alpha1.ToolchainStatus {
-	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      configuration.DefaultToolchainStatusName,
-			Namespace: test.HostOperatorNs,
-		},
-	}
-	for _, modify := range options {
-		modify(toolchainStatus)
-	}
-	return toolchainStatus
 }
 
 func ToBeReady() toolchainv1alpha1.Condition {

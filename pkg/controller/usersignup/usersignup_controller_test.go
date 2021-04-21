@@ -68,10 +68,10 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 		t.Run(testname, func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-			InitializeCounters(t, fakeClient, ToolchainStatus(
-				MasterUserRecords(1),
-				UsersPerActivations(map[string]int{
+			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+			InitializeCounters(t, NewToolchainStatus(
+				WithHost(WithMasterUserRecordCount(1)),
+				WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 					"1": 0,
 					"2": 1,
 					"3": 0,
@@ -106,7 +106,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal) // zero because we started with a not-ready state instead of empty as per usual
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 
-			AssertThatCounterHas(t, MasterUserRecords(2))
+			AssertThatCounters(t).HaveMasterUserRecords(2)
 			actualUserSignup := &v1alpha1.UserSignup{}
 			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
 			require.NoError(t, err)
@@ -148,10 +148,10 @@ func TestUserSignupMigration(t *testing.T) {
 			t.Run("when annotation is missing", func(t *testing.T) {
 				defer counter.Reset()
 				userSignup := NewUserSignup(SignupComplete(""), WithStateLabel(state))
-				r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-				InitializeCounters(t, fakeClient, ToolchainStatus(
-					MasterUserRecords(1),
-					UsersPerActivations(map[string]int{
+				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+				InitializeCounters(t, NewToolchainStatus(
+					WithHost(WithMasterUserRecordCount(1)),
+					WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 						"1": 0,
 						"2": 0,
 						"3": 0,
@@ -174,10 +174,10 @@ func TestUserSignupMigration(t *testing.T) {
 			t.Run("when annotation already exists", func(t *testing.T) {
 				defer counter.Reset()
 				userSignup := NewUserSignup(SignupComplete(""), WithStateLabel(state), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
-				r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-				InitializeCounters(t, fakeClient, ToolchainStatus(
-					MasterUserRecords(1),
-					UsersPerActivations(map[string]int{
+				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+				InitializeCounters(t, NewToolchainStatus(
+					WithHost(WithMasterUserRecordCount(1)),
+					WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 						"1": 0,
 						"2": 1,
 						"3": 0,
@@ -208,10 +208,10 @@ func TestUserSignupMigration(t *testing.T) {
 			t.Run("when annotation is missing", func(t *testing.T) {
 				defer counter.Reset()
 				userSignup := NewUserSignup(VerificationRequired(), WithStateLabel(state))
-				r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-				InitializeCounters(t, fakeClient, ToolchainStatus(
-					MasterUserRecords(1),
-					UsersPerActivations(map[string]int{
+				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+				InitializeCounters(t, NewToolchainStatus(
+					WithHost(WithMasterUserRecordCount(1)),
+					WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 						"1": 0,
 						"2": 0,
 						"3": 0,
@@ -236,15 +236,15 @@ func TestUserSignupMigration(t *testing.T) {
 func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	// given
 	logf.SetLogger(zap.Logger(true))
-	defer counter.Reset()
-	userSignup := NewUserSignup(BeingDeleted(), WithTargetCluster("east"), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
-	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "not-ready"
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(
-		MasterUserRecords(12),
-		UsersPerActivations(map[string]int{
+	userSignup := NewUserSignup(BeingDeleted(), WithTargetCluster("east"),
+		WithStateLabel("not-ready"),
+		WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(12)),
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
-			"2": 10, // will not be decreased when the usersignup is deleted
+			"2": 10,
 			"3": 1,
 		})))
 
@@ -255,13 +255,12 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify the counters
-	AssertThatCounterHas(t,
-		MasterUserRecords(12), // unchanged at this point
-		UsersPerActivations(v1alpha1.Metric{
+	AssertThatCounters(t).HaveMasterUserRecords(12). // unchanged at this point
+								HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 			"2": 10, // unchanged
 			"3": 1,
-		}))
+		})
 	AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))
 	AssertMetricsGaugeEquals(t, 10, metrics.UsersPerActivationGaugeVec.WithLabelValues("2")) // unchanged
 	AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))
@@ -269,12 +268,11 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when - The first reconcile creates the MasterUserRecord
 	res, err := r.Reconcile(req)
@@ -329,7 +327,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			Reason: "UserIsActive",
 		})
 
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -361,7 +359,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 				Reason: "UserIsActive",
 			})
 	})
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -372,13 +370,12 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 	// given
 	logf.SetLogger(zap.Logger(true))
-	defer counter.Reset()
 	userSignup := NewUserSignup(WithoutAnnotations())
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t,
-		test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup,
+		NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -399,7 +396,7 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 			Reason:  "MissingUserEmailAnnotation",
 			Message: "missing annotation at usersignup",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
@@ -412,8 +409,8 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	)
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -434,12 +431,11 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 			Reason:  "InvalidEmailHashLabel",
 			Message: "hash is invalid",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUpdateOfApprovedLabelFails(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
@@ -447,7 +443,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 	fakeClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		return fmt.Errorf("some error")
 	}
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -465,14 +461,13 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 			Reason:  "UnableToUpdateStateLabel",
 			Message: "some error",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 }
 
 func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 	userSignup.Annotations = map[string]string{
 		v1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
@@ -480,8 +475,8 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	userSignup.Labels = map[string]string{"toolchain.dev.openshift.com/approved": "false"}
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -502,16 +497,15 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 			Reason:  "MissingEmailHashLabel",
 			Message: "missing label at usersignup",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled())) // baseNSTemplateTier does not exist
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled())) // baseNSTemplateTier does not exist
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -542,20 +536,19 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 
 	notReady := NewGetMemberClusters(
 		NewMemberCluster(t, "member1", v1.ConditionFalse),
 		NewMemberCluster(t, "member2", v1.ConditionFalse))
 	config := NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled().MaxUsersNumber(1))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, notReady, userSignup, config, baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(2)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, notReady, userSignup, config, baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(2))))
 
 	// when
 	res, err := r.Reconcile(req)
@@ -588,19 +581,18 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 }
 
 func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 	noCapacity := NewGetMemberClusters(
 		NewMemberCluster(t, "member1", v1.ConditionTrue),
 		NewMemberCluster(t, "member2", v1.ConditionTrue))
 	config := NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled().ResourceCapThreshold(60))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, noCapacity, userSignup, config, baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, noCapacity, userSignup, config, baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	res, err := r.Reconcile(req)
@@ -633,17 +625,16 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	res, err := r.Reconcile(req)
@@ -681,7 +672,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -713,18 +704,17 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 	})
 }
 
 func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	res, err := r.Reconcile(req)
@@ -762,7 +752,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -796,18 +786,17 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 	})
 }
 
 func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	res, err := r.Reconcile(req)
@@ -845,17 +834,16 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(WithTargetCluster("east"))
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	res, err := r.Reconcile(req)
@@ -894,7 +882,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -928,17 +916,16 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 	})
 }
 
 func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(WithTargetCluster("east"))
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	res, err := r.Reconcile(req)
@@ -970,17 +957,16 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupMURCreateFails(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 		switch obj.(type) {
@@ -997,7 +983,7 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -1009,12 +995,11 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 
 func TestUserSignupMURReadFails(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 		switch obj.(type) {
@@ -1030,7 +1015,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 
 	// then
 	require.Error(t, err)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -1042,13 +1027,12 @@ func TestUserSignupMURReadFails(t *testing.T) {
 
 func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
 	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj.(type) {
@@ -1065,7 +1049,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -1077,12 +1061,11 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 
 func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()))
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj.(type) {
@@ -1099,7 +1082,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -1112,11 +1095,10 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 
 func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()))
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj := obj.(type) {
@@ -1138,7 +1120,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -1150,7 +1132,6 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 	userSignup.Annotations = map[string]string{
 		v1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
@@ -1170,8 +1151,8 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	}
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -1195,12 +1176,11 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		Type:   v1alpha1.UserSignupComplete,
 		Status: v1.ConditionTrue,
 	})
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
 
 	// Create a MUR with a different UserID
@@ -1216,8 +1196,8 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	}
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -1230,7 +1210,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 2)
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 
 	key := types.NamespacedName{
 		Namespace: test.HostOperatorNs,
@@ -1274,18 +1254,17 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		require.Equal(t, mur.Name, instance.Status.CompliantUsername)
 		require.NotNil(t, cond)
 		require.Equal(t, v1.ConditionTrue, cond.Status)
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 	})
 }
 
 func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(WithUsername("foo#$%^bar@redhat.com"))
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -1294,7 +1273,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	require.NoError(t, err)
 
 	murtest.AssertThatMasterUserRecord(t, "foo-bar", r.client).HasNoConditions()
-	AssertThatCounterHas(t, MasterUserRecords(2))
+	AssertThatCounters(t).HaveMasterUserRecords(2)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 }
@@ -1322,12 +1301,11 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
 		mur.Labels = map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-		r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-		InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 		// when
 		_, err := r.Reconcile(req)
@@ -1360,7 +1338,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		err = r.client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
-		AssertThatCounterHas(t, MasterUserRecords(1))
+		AssertThatCounters(t).HaveMasterUserRecords(1)
 
 		// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
 		ntest.AssertNoNotificationsExist(t, r.client)
@@ -1368,9 +1346,8 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 	t.Run("when MUR doesn't exist, then the condition should be set to Deactivated", func(t *testing.T) {
 		// given
-		defer counter.Reset()
-		r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-		InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(2)))
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(2))))
 
 		// when
 		_, err := r.Reconcile(req)
@@ -1403,7 +1380,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				Status: v1.ConditionTrue,
 				Reason: "NotificationCRCreated",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 
 		// A deactivated notification should have been created
 		notifications := &v1alpha1.NotificationList{}
@@ -1453,10 +1430,9 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 
 	t.Run("when the deactivation notification cannot be created", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup,
 			NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-		InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(2)))
+		InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(2))))
 
 		fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 			switch obj.(type) {
@@ -1495,7 +1471,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 				Reason:  "NotificationCRCreationFailed",
 				Message: "unable to create deactivation notification",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // zero because state didn't change
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -1547,11 +1523,11 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 				Reason: "NotificationCRCreated",
 			},
 		}
-		defer counter.Reset()
 		ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-		r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-		InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(20),
-			UsersPerActivations(map[string]int{
+		r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		InitializeCounters(t, NewToolchainStatus(
+			WithHost(WithMasterUserRecordCount(20)),
+			WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 				"2": 11, // 11 users signed-up 2 times, including our user above, even though she is not active at the moment
 				"3": 10, // 10 users signed-up 3 times
 			})))
@@ -1585,7 +1561,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			})
 
 		// A mur should be created so the counter should be 21
-		AssertThatCounterHas(t, MasterUserRecords(21))
+		AssertThatCounters(t).HaveMasterUserRecords(21) // one more than before
 
 		assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		// verify that the annotation was incremented
@@ -1622,9 +1598,8 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 				Reason: "NotificationCRCreated",
 			},
 		}
-		defer counter.Reset()
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-		InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(2)))
+		InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(2))))
 
 		fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			switch obj.(type) {
@@ -1663,7 +1638,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 				Status: v1.ConditionTrue,
 				Reason: "NotificationCRCreated",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(2))
+		AssertThatCounters(t).HaveMasterUserRecords(2)
 
 		// State is still deactivated because the status update failed
 		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
@@ -1706,15 +1681,14 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
-		defer counter.Reset()
 		mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(test.HostOperatorNs))
 		mur.Labels = map[string]string{
 			v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
 			v1alpha1.UserSignupStateLabelKey:       "approved",
 		}
 
-		r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-		InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 		t.Run("first reconcile - status should be deactivating and mur should be deleted", func(t *testing.T) {
 			// when
@@ -1748,7 +1722,7 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 			err = r.client.List(context.TODO(), murs)
 			require.NoError(t, err)
 			require.Len(t, murs.Items, 0)
-			AssertThatCounterHas(t, MasterUserRecords(1))
+			AssertThatCounters(t).HaveMasterUserRecords(1)
 
 			// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
 			ntest.AssertNoNotificationsExist(t, r.client)
@@ -1790,7 +1764,6 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 
 func TestUserSignupBanned(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
 
@@ -1806,8 +1779,8 @@ func TestUserSignupBanned(t *testing.T) {
 		},
 	}
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, bannedUser, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, bannedUser, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -1837,16 +1810,15 @@ func TestUserSignupBanned(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupVerificationRequired(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(VerificationRequired())
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -1879,12 +1851,11 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupBannedMURExists(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 	userSignup.Status = v1alpha1.UserSignupStatus{
 		Conditions: []v1alpha1.Condition{
@@ -1917,8 +1888,8 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	mur := murtest.NewMasterUserRecord(t, "foo", murtest.MetaNamespace(test.HostOperatorNs))
 	mur.Labels = map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, bannedUser, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, bannedUser, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -1953,7 +1924,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	err = r.client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -1987,17 +1958,16 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		err = r.client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
-		AssertThatCounterHas(t, MasterUserRecords(1))
+		AssertThatCounters(t).HaveMasterUserRecords(1)
 	})
 }
 
 func TestUserSignupListBannedUsersFails(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	fakeClient.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 		return errors.New("err happened")
@@ -2008,12 +1978,11 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 
 	// then
 	require.Error(t, err)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -2045,7 +2014,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	mur.Labels = map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	fakeClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 		switch obj.(type) {
@@ -2084,7 +2053,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 				Reason:  "UnableToDeleteMUR",
 				Message: "unable to delete mur",
 			})
-		AssertThatCounterHas(t, MasterUserRecords(1))
+		AssertThatCounters(t).HaveMasterUserRecords(1)
 
 		t.Run("second reconcile - there should not be a notification created since the mur deletion failed even if reconciled again", func(t *testing.T) {
 			_, err := r.Reconcile(req)
@@ -2101,7 +2070,6 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 // TestDeathBy100Signups tests the logic of generateCompliantUsername() which allows no more than 100 attempts to find a vacant name
 func TestDeathBy100Signups(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
 
 	args := make([]runtime.Object, 0)
@@ -2130,8 +2098,8 @@ func TestDeathBy100Signups(t *testing.T) {
 	args = append(args, baseNSTemplateTier)
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, args...)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(100)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, args...)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(100))))
 
 	// when
 	res, err := r.Reconcile(req)
@@ -2167,12 +2135,11 @@ func TestDeathBy100Signups(t *testing.T) {
 			Reason: "UserIsActive",
 		},
 	)
-	AssertThatCounterHas(t, MasterUserRecords(100))
+	AssertThatCounters(t).HaveMasterUserRecords(100)
 }
 
 func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup()
 
 	// Create a MUR with the same UserID
@@ -2194,8 +2161,8 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	}
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, mur2, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, mur2, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -2224,7 +2191,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 			Reason: "UserIsActive",
 		},
 	)
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
@@ -2232,18 +2199,17 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 
 func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(Approved())
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
 	_, err := r.Reconcile(req)
 
 	// then
 	assert.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
@@ -2338,8 +2304,8 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 		for _, name := range names {
 			userSignup.Spec.Username = fmt.Sprintf("%s%s", prefix, name)
 
-			r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-			InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+			InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 			// when
 			_, err := r.Reconcile(req)
@@ -2380,8 +2346,8 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 		for _, name := range names {
 			userSignup.Spec.Username = fmt.Sprintf("%s%s", name, suffix)
 
-			r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-			InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+			InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 			// when
 			_, err := r.Reconcile(req)
@@ -2407,7 +2373,6 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 // Test the scenario where the existing usersignup CompliantUsername becomes outdated eg. transformUsername func is changed
 func TestChangedCompliantUsername(t *testing.T) {
 	// starting with a UserSignup that exists and was approved and has the now outdated CompliantUsername
-	defer counter.Reset()
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
 	userSignup.Status = v1alpha1.UserSignupStatus{
 		Conditions: []v1alpha1.Condition{
@@ -2434,8 +2399,8 @@ func TestChangedCompliantUsername(t *testing.T) {
 	}
 
 	// create the initial resources
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, oldMur, baseNSTemplateTier)
-	InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(1)))
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, oldMur, baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// 1st reconcile should effectively be a no op because the MUR name and UserSignup CompliantUsername match and status is all good
 	res, err := r.Reconcile(req)
@@ -2496,7 +2461,6 @@ func TestChangedCompliantUsername(t *testing.T) {
 
 func TestMigrateMur(t *testing.T) {
 	// given
-	defer counter.Reset()
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
 	mur, err := newMasterUserRecord(baseNSTemplateTier, "foo", test.HostOperatorNs, "east",
 		userSignup.Name, userSignup.Spec.UserID)
@@ -2525,8 +2489,8 @@ func TestMigrateMur(t *testing.T) {
 
 	t.Run("add missing tierName and nsLimit fields", func(t *testing.T) {
 		// given
-		r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier, mur)
-		InitializeCounters(t, fakeClient, ToolchainStatus(MasterUserRecords(0)))
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier, mur)
+		InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(0))))
 
 		// when
 		_, err := r.Reconcile(req)

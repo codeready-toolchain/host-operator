@@ -17,84 +17,56 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type BaseValue func(*v1alpha1.ToolchainStatus)
-
-func ToolchainStatus(baseValues ...BaseValue) *v1alpha1.ToolchainStatus {
-	toolchainStatus := &v1alpha1.ToolchainStatus{
-		Status: v1alpha1.ToolchainStatusStatus{},
-	}
-	for _, apply := range baseValues {
-		apply(toolchainStatus)
-	}
-	return toolchainStatus
+type CounterAssertion struct {
+	t      *testing.T
+	counts counter.Counts
 }
 
-func MasterUserRecords(number int) BaseValue {
-	return func(status *v1alpha1.ToolchainStatus) {
-		status.Status.HostOperator = &v1alpha1.HostOperatorStatus{
-			MasterUserRecordCount: number,
-		}
-	}
-}
-
-func UserAccountsForCluster(clusterName string, number int) BaseValue {
-	return func(status *v1alpha1.ToolchainStatus) {
-		status.Status.Members = append(status.Status.Members, v1alpha1.Member{
-			ClusterName:      clusterName,
-			UserAccountCount: number,
-		})
-	}
-}
-
-func UsersPerActivations(values map[string]int) BaseValue {
-	return func(status *v1alpha1.ToolchainStatus) {
-		if status.Status.Metrics == nil {
-			status.Status.Metrics = map[string]v1alpha1.Metric{}
-		}
-		status.Status.Metrics[v1alpha1.UsersPerActivationMetricKey] = v1alpha1.Metric(values)
-	}
-}
-
-func AssertThatUninitializedCounterHas(t *testing.T, baseValues ...BaseValue) {
-	counts, err := counter.GetCounts()
-	assert.EqualErrorf(t, err, "counter is not initialized", "should be error because counter hasn't been initialized yet")
-	verifyCountsAndMetrics(t, counts, baseValues...)
-}
-
-func AssertThatCounterHas(t *testing.T, baseValues ...BaseValue) {
+func AssertThatCounters(t *testing.T) *CounterAssertion {
 	counts, err := counter.GetCounts()
 	require.NoError(t, err)
-	verifyCountsAndMetrics(t, counts, baseValues...)
+	return &CounterAssertion{
+		t:      t,
+		counts: counts,
+	}
 }
 
-func verifyCountsAndMetrics(t *testing.T, counts counter.Counts, baseValues ...BaseValue) {
-
-	toolchainStatus := &v1alpha1.ToolchainStatus{
-		Status: v1alpha1.ToolchainStatusStatus{},
+func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
+	counts, err := counter.GetCounts()
+	require.EqualErrorf(t, err, "counter is not initialized", "should be error because counter hasn't been initialized yet")
+	return &CounterAssertion{
+		t:      t,
+		counts: counts,
 	}
-	for _, apply := range baseValues {
-		apply(toolchainStatus)
-	}
-	// MasterUserRecordCount
-	require.NotNil(t, toolchainStatus.Status.HostOperator)
-	assert.Equal(t, toolchainStatus.Status.HostOperator.MasterUserRecordCount, counts.MasterUserRecordCount)
-	AssertMetricsGaugeEquals(t, toolchainStatus.Status.HostOperator.MasterUserRecordCount, metrics.MasterUserRecordGauge)
+}
 
-	// UserAccountsPerClusterCounts
-	assert.Len(t, counts.UserAccountsPerClusterCounts, len(toolchainStatus.Status.Members))
-	for _, member := range toolchainStatus.Status.Members {
-		assert.Equal(t, member.UserAccountCount, counts.UserAccountsPerClusterCounts[member.ClusterName])
-		AssertMetricsGaugeEquals(t, member.UserAccountCount, metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName))
-	}
+func (a *CounterAssertion) HaveMasterUserRecords(number int) *CounterAssertion {
+	assert.Equal(a.t, number, a.counts.MasterUserRecordCount)
+	AssertMetricsGaugeEquals(a.t, number, metrics.MasterUserRecordGauge)
+	return a
+}
 
-	// UsersPerActivationCounts (if applicable)
-	if usersPerActivations, ok := toolchainStatus.Status.Metrics[v1alpha1.UsersPerActivationMetricKey]; ok {
-		assert.Equal(t, v1alpha1.Metric(counts.UsersPerActivationCounts), usersPerActivations)
-		for activations, users := range usersPerActivations {
-			AssertMetricsGaugeEquals(t, users, metrics.UsersPerActivationGaugeVec.WithLabelValues(activations))
-		}
-	}
+func (a *CounterAssertion) HaveUserAccountsForCluster(clusterName string, number int) *CounterAssertion {
+	assert.Equal(a.t, number, a.counts.UserAccountsPerClusterCounts[clusterName])
+	AssertMetricsGaugeEquals(a.t, number, metrics.UserAccountGaugeVec.WithLabelValues(clusterName))
+	return a
+}
 
+func (a *CounterAssertion) HaveUsersPerActivations(expected v1alpha1.Metric) *CounterAssertion {
+	actual := a.counts.UsersPerActivationCounts
+	assert.Equal(a.t, map[string]int(expected), actual)
+	for activations, count := range expected {
+		AssertMetricsGaugeEquals(a.t, count, metrics.UsersPerActivationGaugeVec.WithLabelValues(activations))
+	}
+	return a
+}
+
+func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster string) []runtime.Object {
+	murs := make([]runtime.Object, number)
+	for index := range murs {
+		murs[index] = masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("%s%d", prefix, index), masteruserrecord.TargetCluster(targetCluster))
+	}
+	return murs
 }
 
 func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
@@ -108,24 +80,18 @@ func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
 	return usersignups
 }
 
-func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster string) []runtime.Object {
-	murs := make([]runtime.Object, number)
-	for index := range murs {
-		murs[index] = masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("%s%d", prefix, index), masteruserrecord.TargetCluster(targetCluster))
-	}
-	return murs
-}
-
-func InitializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *v1alpha1.ToolchainStatus) *v1alpha1.ToolchainStatus {
+func InitializeCounters(t *testing.T, toolchainStatus *v1alpha1.ToolchainStatus, initObjs ...runtime.Object) {
 	counter.Reset()
-	return initializeCounters(t, cl, toolchainStatus)
+	t.Cleanup(counter.Reset)
+	initializeCounters(t, commontest.NewFakeClient(t, initObjs...), toolchainStatus)
 }
 
-func InitializeCounterWithoutReset(t *testing.T, toolchainStatus *v1alpha1.ToolchainStatus) *v1alpha1.ToolchainStatus {
-	return initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
+func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *v1alpha1.ToolchainStatus) {
+	t.Cleanup(counter.Reset)
+	initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
 }
 
-func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *v1alpha1.ToolchainStatus) *v1alpha1.ToolchainStatus {
+func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *v1alpha1.ToolchainStatus) {
 	if toolchainStatus.Status.HostOperator != nil {
 		metrics.MasterUserRecordGauge.Set(float64(toolchainStatus.Status.HostOperator.MasterUserRecordCount))
 	}
@@ -133,5 +99,4 @@ func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus
 	err := counter.Synchronize(cl, toolchainStatus)
 	require.NoError(t, err)
 	t.Logf("MasterUserRecordGauge=%.0f", promtestutil.ToFloat64(metrics.MasterUserRecordGauge))
-	return toolchainStatus
 }
