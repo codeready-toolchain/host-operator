@@ -31,7 +31,7 @@ func AssertThatCounters(t *testing.T) *CounterAssertion {
 	}
 }
 
-func AssertThatUnitializedCounters(t *testing.T) *CounterAssertion {
+func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
 	counts, err := counter.GetCounts()
 	require.EqualErrorf(t, err, "counter is not initialized", "should be error because counter hasn't been initialized yet")
 	return &CounterAssertion{

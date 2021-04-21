@@ -61,7 +61,7 @@ func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
 	counter.DecrementMasterUserRecordCount(logger)
 
 	// then
-	AssertThatUnitializedCounters(t).HaveMasterUserRecords(-1)
+	AssertThatUninitializedCounters(t).HaveMasterUserRecords(-1)
 }
 
 func TestAddUserAccountToCounter(t *testing.T) {
@@ -117,7 +117,7 @@ func TestRemoveUserAccountFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testi
 	counter.DecrementUserAccountCount(logger, "member-1")
 
 	// then
-	AssertThatUnitializedCounters(t).HaveMasterUserRecords(0).
+	AssertThatUninitializedCounters(t).HaveMasterUserRecords(0).
 		HaveUserAccountsForCluster("member-1", -1)
 }
 
