@@ -394,25 +394,27 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusNotification(logger logr.L
 		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
 			r.config.GetAdminEmail()))
 	}
-	toolchainStatus = toolchainStatus.DeepCopy()
-	toolchainStatus.ManagedFields = nil // we don't need these managed fields in the notification
-	statusYaml, err := yaml.Marshal(toolchainStatus)
-	if err != nil {
-		return err
-	}
 
 	tsValue := time.Now().Format("20060102150405")
 	contentString := ""
 	subjectString := ""
-	if status == unreadyStatus {
+	switch status {
+	case unreadyStatus:
+		toolchainStatus = toolchainStatus.DeepCopy()
+		toolchainStatus.ManagedFields = nil // we don't need these managed fields in the notification
+		statusYaml, err := yaml.Marshal(toolchainStatus)
+		if err != nil {
+			return err
+		}
 		contentString = "<div><pre><code>" + string(statusYaml) + "</code></pre></div>"
 		subjectString = adminUnreadyNotificationSubject
-	} else if status == restoredStatus {
-		contentString = "<div><pre>ToolchainStatus is back to ready status.</pre></div>"
+	case restoredStatus:
+		contentString = "<div><pre>ToolchainStatus is back to ready status.</pre></div>" // wrap with div/pre/code tags so the formatting remains intact in the delivered mail
 		subjectString = adminRestoredNotificationSubject
-	} else {
-		return fmt.Errorf("invalid ToolchainStatusNotification status type")
+	default:
+		return fmt.Errorf("invalid ToolchainStatusNotification status type - %s", status)
 	}
+
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("toolchainstatus-%s-%s", string(status), tsValue),
@@ -421,7 +423,7 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusNotification(logger logr.L
 		Spec: toolchainv1alpha1.NotificationSpec{
 			Recipient: r.config.GetAdminEmail(),
 			Subject:   subjectString,
-			Content:   contentString, // wrap with div/pre/code tags so the formatting remains intact in the delivered mail
+			Content:   contentString,
 		},
 	}
 
@@ -566,7 +568,7 @@ func (r *ReconcileToolchainStatus) setStatusReadyNotificationCreationFailed(reqL
 		toolchainStatus,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
-			Status:  corev1.ConditionTrue,
+			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.ToolchainStatusRestoredNotificationCRCreationFailedReason,
 			Message: message,
 		})

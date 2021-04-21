@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -1056,12 +1055,14 @@ func assertToolchainStatusNotificationCreated(t *testing.T, fakeClient *test.Fak
 }
 
 func assertToolchainStatusNotificationNotCreated(t *testing.T, fakeClient *test.FakeClient, notificationType string) {
-	var notification toolchainv1alpha1.Notification
-	err := fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs, notificationType),
-		&notification)
-	require.Error(t, err)
-	require.IsType(t, &errors.StatusError{}, err)
-	require.True(t, errors.IsNotFound(err))
+	notifications := &toolchainv1alpha1.NotificationList{}
+	err := fakeClient.List(context.Background(), notifications, &client.ListOptions{
+		Namespace: test.HostOperatorNs,
+	})
+	require.NoError(t, err)
+	for _, notification := range notifications.Items {
+		require.False(t, strings.HasPrefix(notification.ObjectMeta.Name, notificationType))
+	}
 }
 
 func TestSynchronizationWithCounter(t *testing.T) {
