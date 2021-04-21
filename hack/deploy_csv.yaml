@@ -1803,8 +1803,8 @@ data:
                         additionalProperties:
                           type: integer
                         type: object
-                      description: Metrics is a map that stores (seralized) metrics to be
-                        exposed on Prometheus.
+                      description: Metrics is a map that stores metrics to be exposed on
+                        Prometheus.
                       type: object
                       x-kubernetes-map-type: atomic
                     registrationService:
