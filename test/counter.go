@@ -7,7 +7,6 @@ import (
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
@@ -18,7 +17,7 @@ import (
 )
 
 type CounterAssertion struct {
-	t      test.T
+	t      *testing.T
 	counts counter.Counts
 }
 
@@ -42,11 +41,13 @@ func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
 
 func (a *CounterAssertion) HaveMasterUserRecords(number int) *CounterAssertion {
 	assert.Equal(a.t, number, a.counts.MasterUserRecordCount)
+	AssertMetricsGaugeEquals(a.t, number, metrics.MasterUserRecordGauge)
 	return a
 }
 
 func (a *CounterAssertion) HaveUserAccountsForCluster(clusterName string, number int) *CounterAssertion {
 	assert.Equal(a.t, number, a.counts.UserAccountsPerClusterCounts[clusterName])
+	AssertMetricsGaugeEquals(a.t, number, metrics.UserAccountGaugeVec.WithLabelValues(clusterName))
 	return a
 }
 
