@@ -405,7 +405,6 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusNotification(logger logr.L
 	contentString := ""
 	subjectString := ""
 	if status == unreadyStatus {
-		fmt.Println("called in tests")
 		contentString = "<div><pre><code>" + string(statusYaml) + "</code></pre></div>"
 		subjectString = adminUnreadyNotificationSubject
 	} else if status == restoredStatus {
