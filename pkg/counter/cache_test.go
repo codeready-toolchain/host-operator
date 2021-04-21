@@ -19,7 +19,7 @@ var logger = logf.Log.WithName("cache_test")
 
 func TestAddMurToCounter(t *testing.T) {
 	// given
-	InitializeCounters(t, EmptyToolchainStatus())
+	InitializeCounters(t, NewToolchainStatus())
 	defer counter.Reset()
 
 	// when
@@ -43,7 +43,7 @@ func TestRemoveMurFromCounter(t *testing.T) {
 
 func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
-	InitializeCounters(t, EmptyToolchainStatus())
+	InitializeCounters(t, NewToolchainStatus())
 	defer counter.Reset()
 
 	// when

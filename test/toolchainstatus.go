@@ -23,15 +23,6 @@ func NewToolchainStatus(options ...ToolchainStatusOption) *toolchainv1alpha1.Too
 	return toolchainStatus
 }
 
-func EmptyToolchainStatus() *toolchainv1alpha1.ToolchainStatus {
-	return &toolchainv1alpha1.ToolchainStatus{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      configuration.DefaultToolchainStatusName,
-			Namespace: test.HostOperatorNs,
-		},
-	}
-}
-
 func DefaultToolchainStatus() *toolchainv1alpha1.ToolchainStatus {
 	return &toolchainv1alpha1.ToolchainStatus{
 		ObjectMeta: metav1.ObjectMeta{

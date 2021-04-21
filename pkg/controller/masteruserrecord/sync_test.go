@@ -497,8 +497,8 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			t.Run("condition is not ready", func(t *testing.T) {
 				// given
 				for _, toolchainStatus := range []*toolchainv1alpha1.ToolchainStatus{
-					NewToolchainStatus(WithHost(), WithMember(test.MemberClusterName, WithRoutes("", "", ToBeNotReady()))),
-					NewToolchainStatus(WithHost(), WithMember(test.MemberClusterName)),
+					NewToolchainStatus(WithMember(test.MemberClusterName, WithRoutes("", "", ToBeNotReady()))),
+					NewToolchainStatus(WithMember(test.MemberClusterName)),
 				} {
 					memberClient := test.NewFakeClient(t, userAccount)
 					hostClient := test.NewFakeClient(t, mur, toolchainStatus)
@@ -542,7 +542,6 @@ func TestRoutes(t *testing.T) {
 	t.Run("routes are set", func(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus(
-			WithHost(),
 			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "https://che-toolchain-che.member-cluster/", ToBeReady())))
 		mur := masterUserRec.DeepCopy()
 
@@ -581,7 +580,6 @@ func TestRoutes(t *testing.T) {
 	t.Run("che route is missing but condition is ready", func(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus(
-			WithHost(),
 			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())))
 		mur := masterUserRec.DeepCopy()
 
@@ -620,7 +618,6 @@ func TestRoutes(t *testing.T) {
 	t.Run("condition is not ready", func(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus(
-			WithHost(),
 			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeNotReady())))
 		mur := masterUserRec.DeepCopy()
 
@@ -660,7 +657,6 @@ func TestRoutes(t *testing.T) {
 func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, hostClient *test.FakeClient) (Synchronizer, client.Client) {
 	copiedMur := mur.DeepCopy()
 	toolchainStatus := NewToolchainStatus(
-		WithHost(),
 		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "http://che-toolchain-che.member-cluster/", ToBeReady())))
 	memberClient := test.NewFakeClient(t, userAccount, toolchainStatus)
 	config, err := configuration.LoadConfig(hostClient)
