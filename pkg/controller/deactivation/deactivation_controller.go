@@ -186,8 +186,6 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 			return reconcile.Result{}, err
 		}
 
-		logger.Info("### Requeue for deactivation")
-
 		// Requeue so that the deactivation due time can be calculated after the notification has been sent
 		return reconcile.Result{Requeue: true}, nil
 	}
@@ -202,15 +200,12 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 
 	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(config.Deactivation.DeactivatingNotificationDays*24) * time.Hour)
 
-	logger.Info(fmt.Sprintf("### deactivationDueTime: %s", deactivationDueTime.String()))
-
 	if time.Now().Before(deactivationDueTime) {
 		// It is not yet time to deactivate so requeue when it will be
 		requeueAfterExpired := time.Until(deactivationDueTime) + time.Duration(1*time.Minute)
 
-		logger.Info(fmt.Sprintf("### requeueAfterExpired: %s", requeueAfterExpired.String()))
-
-		logger.Info("requeueing request", "RequeueAfter", requeueAfterExpired, "Expected deactivation date/time", time.Now().Add(requeueAfterExpired).String())
+		logger.Info("requeueing request", "RequeueAfter", requeueAfterExpired,
+			"Expected deactivation date/time", time.Now().Add(requeueAfterExpired).String())
 		return reconcile.Result{RequeueAfter: requeueAfterExpired}, nil
 	}
 
@@ -220,8 +215,6 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, nil
 	}
 	usersignup.Spec.Deactivated = true
-
-	logger.Info("### deactivating the user")
 
 	if err := r.client.Update(context.TODO(), usersignup); err != nil {
 		logger.Error(err, "failed to update usersignup")
