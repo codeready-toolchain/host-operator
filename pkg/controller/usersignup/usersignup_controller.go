@@ -184,7 +184,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 	}
 
-	if exists, err := r.ensureMurIfAlreadyExists(logger, userSignup, banned); exists || err != nil {
+	if exists, err := r.checkIfMurAlreadyExists(logger, userSignup, banned); exists || err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -271,11 +271,11 @@ func (r *ReconcileUserSignup) isUserBanned(reqLogger logr.Logger, userSignup *to
 	return banned, nil
 }
 
-// ensureMurIfAlreadyExists checks if there is already a MUR for the given UserSignup.
+// checkIfMurAlreadyExists checks if there is already a MUR for the given UserSignup.
 // If there is already one then it returns 'true' as the first returned value, but before doing that it checks if the MUR should be deleted or not
 // or if the MUR requires some migration changes or additional fixes.
 // If no MUR for the given UserSignup is found, then it returns 'false' as the first returned value.
-func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+func (r *ReconcileUserSignup) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	banned bool) (bool, error) {
 	// List all MasterUserRecord resources that have an owner label equal to the UserSignup.Name
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
@@ -405,14 +405,18 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 
 func (r *ReconcileUserSignup) setStateLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
 	oldValue := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
-	if oldValue != value {
-		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = value
-		if err := r.client.Update(context.TODO(), userSignup); err != nil {
-			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
-				"unable to update state label at UserSignup resource")
-		}
-		updateMetricsByState(oldValue, value)
+	if oldValue == value {
+		// skipping
 		return nil
+	}
+	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = value
+	if err := r.client.Update(context.TODO(), userSignup); err != nil {
+		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
+			"unable to update state label at UserSignup resource")
+	}
+	updateMetricsByState(oldValue, value)
+	if value == toolchainv1alpha1.UserSignupStateLabelValueApproved {
+		return r.ensureActivationCounter(reqLogger, userSignup)
 	}
 	return nil
 }
@@ -518,15 +522,15 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord")
 	}
-	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	// increment the counter of MasterUserRecords
 	counter.IncrementMasterUserRecordCount()
-	// also, update the 'toolchain.dev.openshift.com/activation-counter' annotation value
-	return r.ensureActivationCounter(userSignup, logger)
+
+	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
+	return nil
 }
 
 // ensureActivationCounter increments the 'toolchain.dev.openshift.com/activation-counter' annotation value on the given UserSignup
-func (r *ReconcileUserSignup) ensureActivationCounter(userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger) error {
+func (r *ReconcileUserSignup) ensureActivationCounter(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	// increment the counter of Returning Users
 	c := 1
 	if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
