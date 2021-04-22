@@ -468,7 +468,7 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(req)
 				// then
 				require.Error(t, err)
-				assert.EqualError(t, err, "unable to get the current NSTemplateTier: mock error!")
+				assert.EqualError(t, err, "unable to get the current NSTemplateTier: mock error")
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 		})
@@ -494,7 +494,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get MasterUserRecords to update: mock error!")
+			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get MasterUserRecords to update: mock error")
 			assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 		})
 
@@ -517,7 +517,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get active TemplateUpdateRequests: mock error!")
+			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get active TemplateUpdateRequests: mock error")
 			assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 		})
 
@@ -540,7 +540,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get TemplateUpdateRequest for MasterUserRecord 'user-0': mock error!")
+			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get TemplateUpdateRequest for MasterUserRecord 'user-0': mock error")
 			assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 		})
 
@@ -564,7 +564,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get active TemplateUpdateRequests: unable to delete the TemplateUpdateRequest resource 'user-0': mock error!")
+			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get active TemplateUpdateRequests: unable to delete the TemplateUpdateRequest resource 'user-0': mock error")
 			assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 		})
 
@@ -587,7 +587,7 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(req)
 				// then
 				require.Error(t, err)
-				assert.EqualError(t, err, "unable to insert a new entry in status.updates after NSTemplateTier changed: mock error!")
+				assert.EqualError(t, err, "unable to insert a new entry in status.updates after NSTemplateTier changed: mock error")
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 
@@ -606,7 +606,7 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(req)
 				// then
 				require.Error(t, err)
-				assert.EqualError(t, err, "unable to mark latest status.update as complete: mock error!")
+				assert.EqualError(t, err, "unable to mark latest status.update as complete: mock error")
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 		})

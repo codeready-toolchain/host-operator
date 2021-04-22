@@ -558,7 +558,7 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(req)
 				// then
 				require.Error(t, err)
-				assert.EqualError(t, err, "unable to get the current TemplateUpdateRequest: mock error!")
+				assert.EqualError(t, err, "unable to get the current TemplateUpdateRequest: mock error")
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 		})
@@ -600,7 +600,7 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(req)
 				// then
 				require.Error(t, err)
-				assert.EqualError(t, err, "unable to get the MasterUserRecord associated with the TemplateUpdateRequest: mock error!")
+				assert.EqualError(t, err, "unable to get the MasterUserRecord associated with the TemplateUpdateRequest: mock error")
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 		})
@@ -624,7 +624,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, "unable to update the TemplateUpdateRequest status: mock error!")
+			assert.EqualError(t, err, "unable to update the TemplateUpdateRequest status: mock error")
 			assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 		})
 
@@ -648,7 +648,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.Error(t, err) // expect an error and an explicit requeue with a delay
-			assert.EqualError(t, err, "unable to update the MasterUserRecord associated with the TemplateUpdateRequest: mock error!")
+			assert.EqualError(t, err, "unable to update the MasterUserRecord associated with the TemplateUpdateRequest: mock error")
 			assert.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: 5 * time.Second}, res) // explicit requeue
 
 			// when (second attempt)
