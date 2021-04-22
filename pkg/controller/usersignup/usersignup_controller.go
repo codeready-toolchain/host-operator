@@ -145,6 +145,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
+
 	if instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
@@ -175,22 +176,9 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 	}
 
-	if exists, err := r.ensureMurIfAlreadyExists(reqLogger, instance, banned); exists || err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// If there is no MasterUserRecord created, yet the UserSignup is Banned, simply set the status
-	// and return
-	if banned {
-		// if the UserSignup doesn't have the state=banned label set, then update it
-		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
-			return reconcile.Result{}, err
-		}
-		return reconcile.Result{}, r.UpdateStatus(reqLogger, instance, r.setStatusBanned)
-	}
-
 	if states.Deactivating(instance) && condition.IsNotTrue(instance.Status.Conditions,
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated) {
+
 		if err := r.sendDeactivatingNotification(reqLogger, instance); err != nil {
 			reqLogger.Error(err, "Failed to create user deactivating notification")
 
@@ -203,6 +191,23 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 			reqLogger.Error(err, "Failed to update notification created status")
 			return reconcile.Result{}, err
 		}
+	}
+
+	if exists, err := r.ensureMurIfAlreadyExists(reqLogger, instance, banned); exists || err != nil {
+		if err != nil {
+			reqLogger.Error(err, fmt.Sprintf("Error while ensuring MasterUserRecord exists, Error: %s", err))
+		}
+		return reconcile.Result{}, err
+	}
+
+	// If there is no MasterUserRecord created, yet the UserSignup is Banned, simply set the status
+	// and return
+	if banned {
+		// if the UserSignup doesn't have the state=banned label set, then update it
+		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, r.UpdateStatus(reqLogger, instance, r.setStatusBanned)
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
@@ -344,7 +349,7 @@ func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, us
 		// conditions to complete and set the compliant username and return
 		reqLogger.Info("MasterUserRecord exists, setting UserSignup status to 'Complete'")
 		// Use compliantUsernameUpdater to properly handle when the master user record is created or updated
-		return true, r.UpdateStatus(reqLogger, userSignup, r.updateCompleteStatus(mur.Name))
+		return true, r.UpdateStatus(reqLogger, userSignup, r.updateCompleteStatus(reqLogger, mur.Name))
 	}
 	return false, nil
 }

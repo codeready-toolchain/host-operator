@@ -2,6 +2,7 @@ package usersignup
 
 import (
 	"context"
+	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -301,7 +302,7 @@ func (u *statusUpdater) UpdateStatus(logger logr.Logger, userSignup *toolchainv1
 
 // updateCompleteStatus updates the `CompliantUsername` and `Conditions` in the status, should only be invoked on completion because
 // both completion and the compliant username require the master user record to be created.
-func (u *statusUpdater) updateCompleteStatus(compliantUsername string) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) updateCompleteStatus(logger logr.Logger, compliantUsername string) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 
 		usernameUpdated := userSignup.Status.CompliantUsername != compliantUsername
@@ -316,11 +317,29 @@ func (u *statusUpdater) updateCompleteStatus(compliantUsername string) func(user
 				Message: message,
 			})
 
+		logger.Info(fmt.Sprintf("### userNameUpdated: %t  conditionUpdated: %t", usernameUpdated, conditionUpdated))
 		if !usernameUpdated && !conditionUpdated {
 			// Nothing changed
 			return nil
 		}
-		return u.Client.Status().Update(context.TODO(), userSignup)
+
+		logger.Info(fmt.Sprintf("### ResourceVersion before updating status in updateCompleteStatus: %s", userSignup.ResourceVersion))
+
+		/*err := u.Client.Get(context.TODO(), client.ObjectKey{
+			Namespace: userSignup.Namespace,
+			Name:      userSignup.Name,
+		}, userSignup)
+
+		if err != nil {
+			logger.Error(err, "### Error while reloading userSignup in updateCompleteStatus")
+		}*/
+
+		err := u.Client.Status().Update(context.TODO(), userSignup)
+		if err != nil {
+			logger.Error(err, "### Error while updating status in updateCompleteStatus")
+		}
+		logger.Info(fmt.Sprintf("### ResourceVersion after updating status in updateCompleteStatus: %s", userSignup.ResourceVersion))
+		return err
 	}
 }
 
