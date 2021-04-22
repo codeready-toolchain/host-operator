@@ -1136,6 +1136,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		// when
 		counter.IncrementMasterUserRecordCount()
 		counter.IncrementUserAccountCount("member-1")
+		counter.UpdateUsersPerActivationCounters(1)
+		counter.UpdateUsersPerActivationCounters(2)
 		res, err := reconciler.Reconcile(req)
 
 		// then
@@ -1150,15 +1152,15 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				memberCluster("member-2", ready(), userAccountCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady()).
 			HasUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 5,
-				"2": 2,
+				"1": 5, // was incremented by `counter.UpdateUsersPerActivationCounters(1)` but decremented `counter.UpdateUsersPerActivationCounters(2)`
+				"2": 3, // was incremented by `counter.UpdateUsersPerActivationCounters(2)`
 				"3": 1,
 			})
 		AssertThatCounters(t).HaveMasterUserRecords(9).
 			HaveUserAccountsForCluster("member-1", 7).
 			HaveUserAccountsForCluster("member-2", 2)
 		AssertMetricsGaugeEquals(t, 5, metrics.UsersPerActivationGaugeVec.WithLabelValues("1")) // 5 users signed up a 1 time
-		AssertMetricsGaugeEquals(t, 2, metrics.UsersPerActivationGaugeVec.WithLabelValues("2")) // 2 users signed up a 1 times
+		AssertMetricsGaugeEquals(t, 3, metrics.UsersPerActivationGaugeVec.WithLabelValues("2")) // 3 users signed up a 2 times
 		AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("3")) // 1 user signed up a 3 times
 	})
 }
