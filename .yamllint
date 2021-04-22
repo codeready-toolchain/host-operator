@@ -1,6 +1,7 @@
 ignore: |
   /vendor
   /.codecov.yaml
+  /deploy/crds
   
 rules:
   braces: enable
