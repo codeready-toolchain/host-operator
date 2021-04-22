@@ -10,19 +10,32 @@ import (
 
 type ToolchainStatusOption func(*toolchainv1alpha1.ToolchainStatus)
 
+func NewToolchainStatus(options ...ToolchainStatusOption) *toolchainv1alpha1.ToolchainStatus {
+	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configuration.DefaultToolchainStatusName,
+			Namespace: test.HostOperatorNs,
+		},
+	}
+	for _, apply := range options {
+		apply(toolchainStatus)
+	}
+	return toolchainStatus
+}
+
 func WithHost(options ...HostToolchainStatusOption) ToolchainStatusOption {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {
-		status.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
+		host := &toolchainv1alpha1.HostOperatorStatus{}
 		for _, modify := range options {
-			modify(status.Status.HostOperator)
+			modify(host)
 		}
+		status.Status.HostOperator = host
 	}
-
 }
 
 type HostToolchainStatusOption func(*toolchainv1alpha1.HostOperatorStatus)
 
-func MasterUserRecordCount(count int) HostToolchainStatusOption {
+func WithMasterUserRecordCount(count int) HostToolchainStatusOption {
 	return func(status *toolchainv1alpha1.HostOperatorStatus) {
 		status.MasterUserRecordCount = count
 	}
@@ -42,6 +55,12 @@ func WithMember(name string, options ...MemberToolchainStatusOption) ToolchainSt
 
 type MemberToolchainStatusOption func(*toolchainv1alpha1.Member)
 
+func WithUserAccountCount(count int) MemberToolchainStatusOption {
+	return func(status *toolchainv1alpha1.Member) {
+		status.UserAccountCount = count
+	}
+}
+
 func WithNodeRoleUsage(role string, usage int) MemberToolchainStatusOption {
 	return func(status *toolchainv1alpha1.Member) {
 		if status.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole == nil {
@@ -60,19 +79,6 @@ func WithRoutes(consoleURL, cheURL string, condition toolchainv1alpha1.Condition
 		status.MemberStatus.Routes.CheDashboardURL = cheURL
 		status.MemberStatus.Routes.Conditions = []toolchainv1alpha1.Condition{condition}
 	}
-}
-
-func NewToolchainStatus(options ...func(*toolchainv1alpha1.ToolchainStatus)) *toolchainv1alpha1.ToolchainStatus {
-	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      configuration.DefaultToolchainStatusName,
-			Namespace: test.HostOperatorNs,
-		},
-	}
-	for _, modify := range options {
-		modify(toolchainStatus)
-	}
-	return toolchainStatus
 }
 
 func ToBeReady() toolchainv1alpha1.Condition {

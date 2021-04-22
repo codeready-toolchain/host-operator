@@ -9,6 +9,7 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+
 	"github.com/stretchr/testify/require"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -18,38 +19,38 @@ var logger = logf.Log.WithName("cache_test")
 
 func TestAddMurToCounter(t *testing.T) {
 	// given
-	InitializeCounter(t)
+	InitializeCounters(t, NewToolchainStatus())
 	defer counter.Reset()
 
 	// when
 	counter.IncrementMasterUserRecordCount()
 
 	// then
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestRemoveMurFromCounter(t *testing.T) {
 	// given
-	InitializeCounter(t, MasterUserRecords(2))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(2))))
 	defer counter.Reset()
 
 	// when
 	counter.DecrementMasterUserRecordCount(logger)
 
 	// then
-	AssertThatCounterHas(t, MasterUserRecords(1))
+	AssertThatCounters(t).HaveMasterUserRecords(1)
 }
 
 func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
-	InitializeCounter(t)
+	InitializeCounters(t, NewToolchainStatus())
 	defer counter.Reset()
 
 	// when
 	counter.DecrementMasterUserRecordCount(logger)
 
 	// then
-	AssertThatCounterHas(t, MasterUserRecords(0))
+	AssertThatCounters(t).HaveMasterUserRecords(0)
 }
 
 func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
@@ -60,47 +61,52 @@ func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
 	counter.DecrementMasterUserRecordCount(logger)
 
 	// then
-	AssertThatUninitializedCounterHas(t, MasterUserRecords(-1))
+	AssertThatUninitializedCounters(t).HaveMasterUserRecords(-1)
 }
 
 func TestAddUserAccountToCounter(t *testing.T) {
 	// given
-	InitializeCounter(t, MasterUserRecords(1))
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 	defer counter.Reset()
 
 	// when
 	counter.IncrementUserAccountCount("member-1")
 
 	// then
-	AssertThatCounterHas(t, MasterUserRecords(1), UserAccountsForCluster("member-1", 1))
+	AssertThatCounters(t).HaveMasterUserRecords(1).HaveUserAccountsForCluster("member-1", 1)
 }
 
 func TestRemoveUserAccountFromCounter(t *testing.T) {
 	// given
-	InitializeCounter(t, MasterUserRecords(1), UserAccountsForCluster("member-1", 2))
+	InitializeCounters(t,
+		NewToolchainStatus(
+			WithHost(WithMasterUserRecordCount(1)),
+			WithMember("member-1", WithUserAccountCount(2))))
 	defer counter.Reset()
 
 	// when
 	counter.DecrementUserAccountCount(logger, "member-1")
 
 	// then
-	AssertThatCounterHas(t, MasterUserRecords(1), UserAccountsForCluster("member-1", 1))
+	AssertThatCounters(t).HaveMasterUserRecords(1).HaveUserAccountsForCluster("member-1", 1)
 }
 
 func TestRemoveUserAccountFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// given
-	InitializeCounter(t, MasterUserRecords(2),
-		UserAccountsForCluster("member-1", 0),
-		UserAccountsForCluster("member-2", 2))
+	InitializeCounters(t,
+		NewToolchainStatus(
+			WithHost(WithMasterUserRecordCount(2)),
+			WithMember("member-1", WithUserAccountCount(0)),
+			WithMember("member-2", WithUserAccountCount(2))))
 	defer counter.Reset()
 
 	// when
 	counter.DecrementUserAccountCount(logger, "member-1")
 
 	// then
-	AssertThatCounterHas(t, MasterUserRecords(2),
-		UserAccountsForCluster("member-1", 0),
-		UserAccountsForCluster("member-2", 2))
+	AssertThatCounters(t).HaveMasterUserRecords(2).
+		HaveUserAccountsForCluster("member-1", 0).
+		HaveUserAccountsForCluster("member-2", 2)
 }
 
 func TestRemoveUserAccountFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
@@ -111,19 +117,24 @@ func TestRemoveUserAccountFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testi
 	counter.DecrementUserAccountCount(logger, "member-1")
 
 	// then
-	AssertThatUninitializedCounterHas(t, MasterUserRecords(0),
-		UserAccountsForCluster("member-1", -1))
+	AssertThatUninitializedCounters(t).HaveMasterUserRecords(0).
+		HaveUserAccountsForCluster("member-1", -1)
 }
 
 func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	// given
-	defer counter.Reset()
+	toolchainStatus := NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(13)),
+		WithMember("member-1", WithUserAccountCount(10)),
+		WithMember("member-2", WithUserAccountCount(3)))
 
 	// when
-	toolchainStatus := InitializeCounter(t, MasterUserRecords(13), UserAccountsForCluster("member-1", 10), UserAccountsForCluster("member-2", 3))
+	InitializeCounters(t, toolchainStatus)
 
 	// then
-	AssertThatCounterHas(t, MasterUserRecords(13), UserAccountsForCluster("member-1", 10), UserAccountsForCluster("member-2", 3))
+	AssertThatCounters(t).HaveMasterUserRecords(13).
+		HaveUserAccountsForCluster("member-1", 10).
+		HaveUserAccountsForCluster("member-2", 3)
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(13).
 		HasUserAccountCount("member-1", 10).
@@ -132,37 +143,44 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 
 func TestInitializeCounterFromToolchainClusterWithNegativeNumbersInCache(t *testing.T) {
 	// given
-	defer counter.Reset()
 	counter.DecrementUserAccountCount(logger, "member-1")
 	counter.DecrementMasterUserRecordCount(logger)
+	toolchainStatus := NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(13)),
+		WithMember("member-1", WithUserAccountCount(10)),
+		WithMember("member-2", WithUserAccountCount(3)))
 
 	// when
-	toolchainStatus := InitializeCounterWithoutReset(t, MasterUserRecords(13), UserAccountsForCluster("member-1", 10), UserAccountsForCluster("member-2", 3))
+	InitializeCountersWithoutReset(t, toolchainStatus)
 
 	// then
-	AssertThatCounterHas(t, MasterUserRecords(12), UserAccountsForCluster("member-1", 9), UserAccountsForCluster("member-2", 3))
+	AssertThatCounters(t).HaveMasterUserRecords(12).
+		HaveUserAccountsForCluster("member-1", 9).
+		HaveUserAccountsForCluster("member-2", 3)
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(12).
 		HasUserAccountCount("member-1", 9).
 		HasUserAccountCount("member-2", 3)
 }
 
-func TestInitializeCounterByLoadingExistingMurs(t *testing.T) {
+func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	// given
 	logf.SetLogger(zap.Logger(true))
-	defer counter.Reset()
 	//this will be ignored by resetting when initializing counters
 	counter.IncrementMasterUserRecordCount()
 	counter.IncrementUserAccountCount("member-1")
 
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
-	fakeClient := test.NewFakeClient(t, murs...)
+	toolchainStatus := NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(0)),
+		WithMember("member-1", WithUserAccountCount(0)))
 
 	// when
-	toolchainStatus := InitializeCounterWithBaseValues(t, fakeClient, MasterUserRecords(0), UserAccountsForCluster("member-1", 0))
+	InitializeCounters(t, toolchainStatus, murs...)
 
 	// then
-	AssertThatCounterHas(t, MasterUserRecords(10), UserAccountsForCluster("member-1", 10))
+	AssertThatCounters(t).HaveMasterUserRecords(10).
+		HaveUserAccountsForCluster("member-1", 10)
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(10).
 		HasUserAccountCount("member-1", 10)
@@ -170,14 +188,16 @@ func TestInitializeCounterByLoadingExistingMurs(t *testing.T) {
 
 func TestShouldNotInitializeAgain(t *testing.T) {
 	// given
-	defer counter.Reset()
 	//this will be ignored by resetting when loading existing MURs
 	counter.IncrementMasterUserRecordCount()
 	counter.IncrementUserAccountCount("member-1")
 
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
+	toolchainStatus := NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(0)),
+		WithMember("member-1", WithUserAccountCount(0)))
+	InitializeCounters(t, toolchainStatus, murs...)
 	fakeClient := test.NewFakeClient(t, murs...)
-	toolchainStatus := InitializeCounterWithBaseValues(t, fakeClient, MasterUserRecords(0), UserAccountsForCluster("member-1", 0))
 	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-1")))
 	require.NoError(t, err)
 
@@ -186,7 +206,8 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	AssertThatCounterHas(t, MasterUserRecords(10), UserAccountsForCluster("member-1", 10))
+	AssertThatCounters(t).HaveMasterUserRecords(10).
+		HaveUserAccountsForCluster("member-1", 10)
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(10).
 		HasUserAccountCount("member-1", 10)
@@ -194,10 +215,13 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 
 func TestMultipleExecutionsInParallel(t *testing.T) {
 	// given
-	defer counter.Reset()
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
+	toolchainStatus := NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(0)),
+		WithMember("member-1", WithUserAccountCount(0)),
+		WithMember("member-2", WithUserAccountCount(0)))
+	InitializeCounters(t, toolchainStatus, murs...)
 	fakeClient := test.NewFakeClient(t, murs...)
-	toolchainStatus := InitializeCounterWithBaseValues(t, fakeClient, MasterUserRecords(0), UserAccountsForCluster("member-1", 0), UserAccountsForCluster("member-2", 0))
 	var latch sync.WaitGroup
 	latch.Add(1)
 	var waitForFinished sync.WaitGroup
@@ -259,7 +283,9 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	AssertThatCounterHas(t, MasterUserRecords(12), UserAccountsForCluster("member-1", 12), UserAccountsForCluster("member-2", 2))
+	AssertThatCounters(t).HaveMasterUserRecords(12).
+		HaveUserAccountsForCluster("member-1", 12).
+		HaveUserAccountsForCluster("member-2", 2)
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(12).
 		HasUserAccountCount("member-1", 12).
