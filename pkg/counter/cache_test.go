@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -121,6 +122,27 @@ func TestRemoveUserAccountFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testi
 		HaveUserAccountsForCluster("member-1", -1)
 }
 
+func TestUpdateUsersPerActivationMetric(t *testing.T) {
+	// given
+	toolchainStatus := NewToolchainStatus()
+	InitializeCounters(t, toolchainStatus)
+
+	// when
+	counter.UpdateUsersPerActivationCounters(1) // a user signup once
+	counter.UpdateUsersPerActivationCounters(2) // a user signup twice (hence counter for "1" will be decreased)
+
+	// then
+	AssertThatCounters(t).HaveUsersPerActivations(v1alpha1.Metric{
+		"1": 0,
+		"2": 1,
+	})
+	AssertThatGivenToolchainStatus(t, toolchainStatus).
+		HasUsersPerActivations(map[string]int{
+			"1": 0,
+			"2": 1,
+		})
+}
+
 func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	// given
 	toolchainStatus := NewToolchainStatus(
@@ -158,7 +180,11 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 	// then
 	AssertThatCounters(t).HaveMasterUserRecords(12).
 		HaveUserAccountsForCluster("member-1", 9).
-		HaveUserAccountsForCluster("member-2", 3)
+		HaveUserAccountsForCluster("member-2", 3).
+		HaveUsersPerActivations(v1alpha1.Metric{
+			"1": 0,
+			"2": 1,
+		})
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(12).
 		HasUserAccountCount("member-1", 9).
@@ -233,9 +259,9 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	var waitForFinished sync.WaitGroup
 
 	for i := 0; i < 1002; i++ {
-		waitForFinished.Add(3)
+		waitForFinished.Add(4) // 4 routines to increment counters
 		if i < 1000 {
-			waitForFinished.Add(3)
+			waitForFinished.Add(4) // 4 routines to decrement counters until 1000th iteration
 		}
 		go func(index int) {
 			defer waitForFinished.Done()
@@ -270,6 +296,17 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 				}()
 			}
 		}(i)
+		go func(index int) {
+			defer waitForFinished.Done()
+			latch.Wait()
+			counter.UpdateUsersPerActivationCounters(1) // increment metric for users with 1 activation
+			if index < 1000 {
+				go func() {
+					defer waitForFinished.Done()
+					counter.UpdateUsersPerActivationCounters(2) // increment metric for users with 2 activations and decrement metric for user with 1 activation
+				}()
+			}
+		}(i)
 	}
 
 	for i := 0; i < 102; i++ {
@@ -291,9 +328,17 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	require.NoError(t, err)
 	AssertThatCounters(t).HaveMasterUserRecords(12).
 		HaveUserAccountsForCluster("member-1", 12).
-		HaveUserAccountsForCluster("member-2", 2)
+		HaveUserAccountsForCluster("member-2", 2).
+		HaveUsersPerActivations(v1alpha1.Metric{
+			"1": 2,
+			"2": 1000,
+		})
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(12).
 		HasUserAccountCount("member-1", 12).
-		HasUserAccountCount("member-2", 2)
+		HasUserAccountCount("member-2", 2).
+		HasUsersPerActivations(v1alpha1.Metric{
+			"1": 2,
+			"2": 1000,
+		})
 }
