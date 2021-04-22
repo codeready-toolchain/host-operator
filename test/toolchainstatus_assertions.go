@@ -66,7 +66,7 @@ func (a *ToolchainStatusAssertion) HasMetric(key string, value toolchainv1alpha1
 	require.NoError(a.t, err)
 	require.NotNil(a.t, a.toolchainStatus.Status)
 	require.NotNil(a.t, a.toolchainStatus.Status.Metrics)
-	assert.Equal(a.t, value, value)
+	assert.Equal(a.t, value, a.toolchainStatus.Status.Metrics[key])
 	return a
 }
 

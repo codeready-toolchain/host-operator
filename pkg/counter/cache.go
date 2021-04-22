@@ -216,7 +216,7 @@ func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainSt
 		return initializeFromResources(cl, toolchainStatus.Namespace)
 	}
 	// otherwise, initialize the cached counters from the ToolchainStatud resource.
-	return initializeFromToolchainStatus(cl, toolchainStatus)
+	return initializeFromToolchainStatus(toolchainStatus)
 }
 
 // initialize the cached counters from the UserSignup and MasterUserRecord resources.
@@ -260,7 +260,7 @@ func initializeFromResources(cl client.Client, namespace string) error {
 //
 // Note: this func increments (NOT set!) the counters with the values stored in the ToolchainStatus,
 // so that if user signups were processed before the init/sync started, we don't loose these numbers.
-func initializeFromToolchainStatus(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func initializeFromToolchainStatus(toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// initialize the cached counters from the ToolchainStatus resource
 	if toolchainStatus.Status.HostOperator == nil {
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}

@@ -3,6 +3,9 @@ package usersignupcleanup
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -14,8 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"testing"
-	"time"
 
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -141,7 +142,7 @@ func TestUserCleanup(t *testing.T) {
 
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignupCleanup, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignupCleanup, reconcile.Request, *test.FakeClient) { //nolint: unparam
 	metrics.Reset()
 
 	s := scheme.Scheme
