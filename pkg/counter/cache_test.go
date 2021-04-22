@@ -148,7 +148,11 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(13)),
 		WithMember("member-1", WithUserAccountCount(10)),
-		WithMember("member-2", WithUserAccountCount(3)))
+		WithMember("member-2", WithUserAccountCount(3)),
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+			"1": 0,
+			"2": 1,
+		}))
 
 	// when
 	InitializeCounters(t, toolchainStatus)
@@ -156,11 +160,19 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	// then
 	AssertThatCounters(t).HaveMasterUserRecords(13).
 		HaveUserAccountsForCluster("member-1", 10).
-		HaveUserAccountsForCluster("member-2", 3)
+		HaveUserAccountsForCluster("member-2", 3).
+		HaveUsersPerActivations(map[string]int{
+			"1": 0,
+			"2": 1,
+		})
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(13).
 		HasUserAccountCount("member-1", 10).
-		HasUserAccountCount("member-2", 3)
+		HasUserAccountCount("member-2", 3).
+		HasUsersPerActivations(map[string]int{
+			"1": 0,
+			"2": 1,
+		})
 }
 
 func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
