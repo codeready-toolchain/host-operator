@@ -1079,7 +1079,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				memberCluster("member-1", ready(), userAccountCount(8)),
 				memberCluster("member-2", ready(), userAccountCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady()).
-			HasMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+			HasUsersPerActivations(toolchainv1alpha1.Metric{
 				"1": 2, // users "cookie-00" and "pasta-00"
 				"2": 2, // users "cookie-01" and "pasta-01"
 				"3": 1, // users "cookie-02"
@@ -1149,7 +1149,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				memberCluster("member-1", ready(), userAccountCount(7)), // was incremented
 				memberCluster("member-2", ready(), userAccountCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady()).
-			HasMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+			HasUsersPerActivations(toolchainv1alpha1.Metric{
 				"1": 5,
 				"2": 2,
 				"3": 1,

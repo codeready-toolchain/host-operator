@@ -60,16 +60,6 @@ func (a *ToolchainStatusAssertion) HasConditions(expected ...toolchainv1alpha1.C
 	return a
 }
 
-// HasMetric verifies that the `ToolchainStatus.Status.Metrics` has the given key/value (where the value is serialized if it is a map)
-func (a *ToolchainStatusAssertion) HasMetric(key string, value toolchainv1alpha1.Metric) *ToolchainStatusAssertion {
-	err := a.loadToolchainStatus()
-	require.NoError(a.t, err)
-	require.NotNil(a.t, a.toolchainStatus.Status)
-	require.NotNil(a.t, a.toolchainStatus.Status.Metrics)
-	assert.Equal(a.t, value, a.toolchainStatus.Status.Metrics[key])
-	return a
-}
-
 func (a *ToolchainStatusAssertion) HasHostOperatorStatus(expected toolchainv1alpha1.HostOperatorStatus) *ToolchainStatusAssertion {
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
@@ -86,11 +76,11 @@ func (a *ToolchainStatusAssertion) HasMurCount(expectedCount int) *ToolchainStat
 	return a
 }
 
-func (a *ToolchainStatusAssertion) HasUsersPerActivations(expectedMetric map[string]int) *ToolchainStatusAssertion {
+func (a *ToolchainStatusAssertion) HasUsersPerActivations(expectedMetric toolchainv1alpha1.Metric) *ToolchainStatusAssertion {
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
 	require.NotEmpty(a.t, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey])
-	assert.Equal(a.t, toolchainv1alpha1.Metric(expectedMetric), a.toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey])
+	assert.Equal(a.t, expectedMetric, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey])
 	return a
 }
 
