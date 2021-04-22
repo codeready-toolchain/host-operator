@@ -37,7 +37,7 @@ const (
 func TestReconcile(t *testing.T) {
 
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	t.Run("controller should add entry in tier.status.updates", func(t *testing.T) {
 
@@ -460,7 +460,7 @@ func TestReconcile(t *testing.T) {
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Get(ctx, key, obj)
 				}
@@ -486,7 +486,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			cl.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.MasterUserRecordList); ok {
-					return fmt.Errorf("mock error!")
+					return fmt.Errorf("mock error")
 				}
 				return cl.Client.List(ctx, list, opts...)
 			}
@@ -509,7 +509,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			cl.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.TemplateUpdateRequestList); ok {
-					return fmt.Errorf("mock error!")
+					return fmt.Errorf("mock error")
 				}
 				return cl.Client.List(ctx, list, opts...)
 			}
@@ -532,7 +532,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-					return fmt.Errorf("mock error!") // must not be a `NotFoundError` in this test
+					return fmt.Errorf("mock error") // must not be a `NotFoundError` in this test
 				}
 				return cl.Client.Get(ctx, key, obj)
 			}
@@ -556,7 +556,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-					return fmt.Errorf("mock error!") // must not be a `NotFoundError` in this test
+					return fmt.Errorf("mock error") // must not be a `NotFoundError` in this test
 				}
 				return cl.Client.Delete(ctx, obj, opts...)
 			}
@@ -579,7 +579,7 @@ func TestReconcile(t *testing.T) {
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				cl.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Status().Update(ctx, obj, opts...)
 				}
@@ -598,7 +598,7 @@ func TestReconcile(t *testing.T) {
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				cl.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Status().Update(ctx, obj, opts...)
 				}

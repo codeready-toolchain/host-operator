@@ -75,7 +75,7 @@ type ReconcileNotification struct {
 	client          client.Client
 	scheme          *runtime.Scheme
 	config          *configuration.Config
-	deliveryService NotificationDeliveryService
+	deliveryService DeliveryService
 }
 
 func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.Result, error) {
@@ -112,7 +112,7 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 		}, nil
 	}
 
-	var notCtx NotificationContext
+	var notCtx Context
 	// Send the notification - first create the notification context
 	if notification.Spec.Recipient != "" {
 		notCtx = NewAdminNotificationContext(notification.Spec.Recipient)

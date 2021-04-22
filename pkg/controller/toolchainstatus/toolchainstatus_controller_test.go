@@ -144,7 +144,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 
 func TestToolchainStatusConditions(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	requestName := configuration.DefaultToolchainStatusName
@@ -1046,7 +1046,7 @@ func assertToolchainStatusNotificationNotCreated(t *testing.T, fakeClient *test.
 
 func TestSynchronizationWithCounter(t *testing.T) {
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	requestName := configuration.DefaultToolchainStatusName

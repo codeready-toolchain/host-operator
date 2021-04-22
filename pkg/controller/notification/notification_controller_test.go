@@ -33,7 +33,7 @@ import (
 type MockDeliveryService struct {
 }
 
-func (s *MockDeliveryService) Send(notificationCtx NotificationContext, notification *v1alpha1.Notification) error {
+func (s *MockDeliveryService) Send(notificationCtx Context, notification *v1alpha1.Notification) error {
 	return errors.New("delivery error")
 }
 
@@ -323,7 +323,7 @@ func defaultTemplateLoader() TemplateLoader {
 	return templateLoader
 }
 
-func mockDeliveryService(templateLoader TemplateLoader) (NotificationDeliveryService, mailgun.MockServer) {
+func mockDeliveryService(templateLoader TemplateLoader) (DeliveryService, mailgun.MockServer) {
 	mgs := mailgun.NewMockServer()
 	mockServerOption := NewMailgunAPIBaseOption(mgs.URL())
 
@@ -405,7 +405,7 @@ func newAdminNotification(recipient, subject, content string) *v1alpha1.Notifica
 	}
 }
 
-func newController(t *testing.T, notification *v1alpha1.Notification, deliveryService NotificationDeliveryService,
+func newController(t *testing.T, notification *v1alpha1.Notification, deliveryService DeliveryService,
 	initObjs ...runtime.Object) (*ReconcileNotification, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)

@@ -13,7 +13,7 @@ import (
 )
 
 func TestGetNotificationTemplate(t *testing.T) {
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	t.Run("ok", func(t *testing.T) {
 		t.Run("get userdeactivated notification template", func(t *testing.T) {
 			// when

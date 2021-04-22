@@ -26,28 +26,28 @@ func (l *DefaultTemplateLoader) GetNotificationTemplate(name string) (*notificat
 	return notificationtemplates.GetNotificationTemplate(name)
 }
 
-type NotificationDeliveryService interface {
-	Send(notificationCtx NotificationContext, notification *v1alpha1.Notification) error
+type DeliveryService interface {
+	Send(notificationCtx Context, notification *v1alpha1.Notification) error
 }
 
-type NotificationDeliveryServiceFactory struct {
+type DeliveryServiceFactory struct {
 	Client client.Client
-	Config NotificationDeliveryServiceFactoryConfig
+	Config DeliveryServiceFactoryConfig
 }
 
-type NotificationDeliveryServiceFactoryConfig interface {
+type DeliveryServiceFactoryConfig interface {
 	notificationDeliveryServiceConfig
 	MailgunConfig
 }
 
-func NewNotificationDeliveryServiceFactory(client client.Client, config NotificationDeliveryServiceFactoryConfig) *NotificationDeliveryServiceFactory {
-	return &NotificationDeliveryServiceFactory{
+func NewNotificationDeliveryServiceFactory(client client.Client, config DeliveryServiceFactoryConfig) *DeliveryServiceFactory {
+	return &DeliveryServiceFactory{
 		Client: client,
 		Config: config,
 	}
 }
 
-func (f *NotificationDeliveryServiceFactory) CreateNotificationDeliveryService() (NotificationDeliveryService, error) {
+func (f *DeliveryServiceFactory) CreateNotificationDeliveryService() (DeliveryService, error) {
 	switch f.Config.GetNotificationDeliveryService() {
 	case configuration.NotificationDeliveryServiceMailgun:
 		return NewMailgunNotificationDeliveryService(f.Config, &DefaultTemplateLoader{}), nil

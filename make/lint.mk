@@ -10,6 +10,10 @@ lint-yaml: ${YAML_FILES}
 
 .PHONY: lint-go-code
 ## Checks the code with golangci-lint
-lint-go-code: generate
-	$(Q)go get github.com/golangci/golangci-lint/cmd/golangci-lint
-	$(Q)${GOPATH}/bin/golangci-lint ${V_FLAG} run
+lint-go-code: generate install-golangci-lint
+	$(Q)${GOPATH}/bin/golangci-lint ${V_FLAG} run -E gofmt,golint,megacheck,misspell ./...
+
+.PHONY: install-golangci-lint
+## Install development tools.
+install-golangci-lint:
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.39.0

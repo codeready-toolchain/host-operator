@@ -1,7 +1,7 @@
 apiVersion: toolchain.dev.openshift.com/v1alpha1
 kind: MasterUserRecord
 metadata:
-  name: johnsmith #username
+  name: johnsmith # username
 spec:
   userID: 1a03ecac-7c0b-44fc-b66d-12dd7fb21c40
   userAccounts:

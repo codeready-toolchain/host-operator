@@ -201,7 +201,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 
 func TestUserSignupWithMissingEmailLabelFails(t *testing.T) {
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := NewUserSignup()
 	userSignup.Annotations = map[string]string{}
 
