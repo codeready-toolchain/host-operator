@@ -179,6 +179,5 @@ func NewUserSignupObjectMeta(name, email string) metav1.ObjectMeta {
 			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
 		},
 		CreationTimestamp: metav1.Now(),
-		Finalizers:        []string{"finalizer.toolchain.dev.openshift.com"},
 	}
 }
