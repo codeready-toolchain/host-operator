@@ -1505,7 +1505,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		// start with a usersignup that has the Notification Created status set to "true" but Spec.Deactivated is set to "false" which signals a user which has been just reactivated.
 		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "deactivated"
 		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
-		userSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey] = "2" // this is the second time that the user signed up (annotation value is "managed" by Registration Service)
+		userSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey] = "2" // the user signed up twice
 		userSignup.Status.Conditions = []v1alpha1.Condition{
 			{
 				Type:   v1alpha1.UserSignupComplete,
