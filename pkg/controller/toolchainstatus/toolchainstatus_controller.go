@@ -398,6 +398,7 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusNotification(logger logr.L
 	tsValue := time.Now().Format("20060102150405")
 	contentString := ""
 	subjectString := ""
+	environment := ""
 	switch status {
 	case unreadyStatus:
 		toolchainStatus = toolchainStatus.DeepCopy()
@@ -406,10 +407,11 @@ func (r *ReconcileToolchainStatus) sendToolchainStatusNotification(logger logr.L
 		if err != nil {
 			return err
 		}
-		contentString = "<div><pre><code>" + string(statusYaml) + "</code></pre></div>"
+		contentString = "<div><pre><code>" + string(statusYaml) + "</code></pre></div>" // wrap with div/pre/code tags so the formatting remains intact in the delivered mail
 		subjectString = adminUnreadyNotificationSubject
 	case restoredStatus:
-		contentString = "<div><pre>ToolchainStatus is back to ready status.</pre></div>" // wrap with div/pre/code tags so the formatting remains intact in the delivered mail
+		environment = toolchainStatus.Status.RegistrationService.Health.Environment
+		contentString = "<div><pre>ToolchainStatus in " + environment +" is back to ready status.</pre></div>"
 		subjectString = adminRestoredNotificationSubject
 	default:
 		return fmt.Errorf("invalid ToolchainStatusNotification status type - %s", status)
