@@ -443,7 +443,11 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 	fakeClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		return fmt.Errorf("some error")
 	}
-	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
+	InitializeCounters(t, NewToolchainStatus(
+		WithHost(WithMasterUserRecordCount(1)),
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+			"1": 0, // no user approved yet
+		})))
 
 	// when
 	_, err := r.Reconcile(req)
@@ -461,9 +465,13 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 			Reason:  "UnableToUpdateStateLabel",
 			Message: "some error",
 		})
-	AssertThatCounters(t).HaveMasterUserRecords(1)
+	AssertThatCounters(t).HaveMasterUserRecords(1).
+		HaveUsersPerActivations(v1alpha1.Metric{
+			"1": 0, // unchanged
+		})
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+	AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1")) // unchanged
 }
 
 func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
@@ -2508,7 +2516,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 	t.Run("common state changes", func(t *testing.T) {
 		t.Run("empty -> not-ready - increment UserSignupUniqueTotal", func(t *testing.T) {
 			metrics.Reset()
-			updateMetricsByState("", "not-ready")
+			updateUserSignupMetricsByState("", "not-ready")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -2518,7 +2526,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 
 		t.Run("not-ready -> pending - no change", func(t *testing.T) {
 			metrics.Reset()
-			updateMetricsByState("not-ready", "pending")
+			updateUserSignupMetricsByState("not-ready", "pending")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -2528,7 +2536,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 
 		t.Run("pending -> approved - increment UserSignupApprovedTotal", func(t *testing.T) {
 			metrics.Reset()
-			updateMetricsByState("pending", "approved")
+			updateUserSignupMetricsByState("pending", "approved")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -2538,7 +2546,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 
 		t.Run("approved -> deactivated - increment UserSignupDeactivatedTotal", func(t *testing.T) {
 			metrics.Reset()
-			updateMetricsByState("approved", "deactivated")
+			updateUserSignupMetricsByState("approved", "deactivated")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
@@ -2548,7 +2556,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 
 		t.Run("deactivated -> banned - increment UserSignupBannedTotal", func(t *testing.T) {
 			metrics.Reset()
-			updateMetricsByState("deactivated", "banned")
+			updateUserSignupMetricsByState("deactivated", "banned")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -2560,7 +2568,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 	t.Run("uncommon state changes", func(t *testing.T) {
 		t.Run("old value is not empty", func(t *testing.T) {
 			metrics.Reset()
-			updateMetricsByState("any-value", "")
+			updateUserSignupMetricsByState("any-value", "")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -2570,7 +2578,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 
 		t.Run("new value is not-ready - no change", func(t *testing.T) {
 			metrics.Reset()
-			updateMetricsByState("any-value", "not-ready")
+			updateUserSignupMetricsByState("any-value", "not-ready")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -2580,7 +2588,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 
 		t.Run("new value is not a valid state - no change", func(t *testing.T) {
 			metrics.Reset()
-			updateMetricsByState("any-value", "x")
+			updateUserSignupMetricsByState("any-value", "x")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)

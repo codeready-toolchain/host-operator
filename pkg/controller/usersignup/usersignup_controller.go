@@ -410,18 +410,22 @@ func (r *ReconcileUserSignup) setStateLabel(reqLogger logr.Logger, userSignup *t
 		return nil
 	}
 	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = value
+	activations := 0
+	if value == toolchainv1alpha1.UserSignupStateLabelValueApproved {
+		activations = r.updateActivationCounterAnnotation(reqLogger, userSignup)
+	}
 	if err := r.client.Update(context.TODO(), userSignup); err != nil {
 		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
 			"unable to update state label at UserSignup resource")
 	}
-	updateMetricsByState(oldValue, value)
-	if value == toolchainv1alpha1.UserSignupStateLabelValueApproved {
-		return r.ensureActivationCounter(reqLogger, userSignup)
-	}
+	updateUserSignupMetricsByState(oldValue, value)
+	// increment the counter *only if the client update did not fail*
+	counter.UpdateUsersPerActivationCounters(activations) // will ignore if `activations == 0`
+
 	return nil
 }
 
-func updateMetricsByState(oldState, newState string) {
+func updateUserSignupMetricsByState(oldState, newState string) {
 	if oldState == "" {
 		metrics.UserSignupUniqueTotal.Inc()
 	}
@@ -529,35 +533,26 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 	return nil
 }
 
-// ensureActivationCounter increments the 'toolchain.dev.openshift.com/activation-counter' annotation value on the given UserSignup
-func (r *ReconcileUserSignup) ensureActivationCounter(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
-	// increment the counter of Returning Users
-	c := 1
+// updateActivationCounterAnnotation increments the 'toolchain.dev.openshift.com/activation-counter' annotation value on the given UserSignup
+func (r *ReconcileUserSignup) updateActivationCounterAnnotation(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) int {
 	if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
 		logger.Info("updating 'toolchain.dev.openshift.com/activation-counter' on active user")
-		if activations, err := strconv.Atoi(activations); err == nil {
+		activations, err := strconv.Atoi(activations)
+		if err == nil {
 			// increment the value of the annotation
 			activations++
 			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = strconv.Itoa(activations)
-			c = activations
-		} else {
-			logger.Error(err, "The 'toolchain.dev.openshift.com/activation-counter' annotation value was not an integer and was reset to '1'.", "value", activations)
-			// "best effort": reset number of activations to 1 for this user
-			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
+			return activations
 		}
-	} else {
-		// annotation was missing so assume it's the first activation
-		logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on new active user")
-		userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1" // first activation, annotation did not exist
+		logger.Error(err, "The 'toolchain.dev.openshift.com/activation-counter' annotation value was not an integer and was reset to '1'.", "value", activations)
+		// "best effort": reset number of activations to 1 for this user
+		userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
+		return 1
 	}
-	// will not trigger a reconcile if update succeeds (see UserSignupChangedPredicate)
-	err := r.client.Update(context.TODO(), userSignup)
-	if err != nil {
-		return err
-	}
-	// increment the counter
-	counter.UpdateUsersPerActivationCounters(c)
-	return nil
+	// annotation was missing so assume it's the first activation
+	logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on new active user")
+	userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1" // first activation, annotation did not exist
+	return 1
 }
 
 // DeleteMasterUserRecord deletes the specified MasterUserRecord

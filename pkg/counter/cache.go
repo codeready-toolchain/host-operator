@@ -112,6 +112,10 @@ func DecrementUserAccountCount(logger logr.Logger, clusterName string) {
 // When a user signs up for the 1st time, her `activations` number is `1`, on the second time, it's `2`, etc.
 func UpdateUsersPerActivationCounters(activations int) {
 	write(func() {
+		// skip for invalid values
+		if activations <= 0 {
+			return
+		}
 		// increase the gauge with the given number of activations
 		cachedCounts.UsersPerActivationCounts[strconv.Itoa(activations)]++
 		metrics.UsersPerActivationGaugeVec.WithLabelValues(strconv.Itoa(activations)).Inc()
