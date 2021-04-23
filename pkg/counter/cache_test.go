@@ -10,6 +10,7 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/stretchr/testify/require"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -214,20 +215,34 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	counter.IncrementMasterUserRecordCount()
 	counter.IncrementUserAccountCount("member-1")
 
-	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
+	usersignups := CreateMultipleUserSignups("user-", 3)
+	murs := CreateMultipleMurs(t, "user-", 3, "member-1")
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(0)),
 		WithMember("member-1", WithUserAccountCount(0)))
+	initObjs := append([]runtime.Object{}, murs...)
+	initObjs = append(initObjs, usersignups...)
 
 	// when
-	InitializeCounters(t, toolchainStatus, murs...)
+	InitializeCounters(t, toolchainStatus, initObjs...)
 
 	// then
-	AssertThatCounters(t).HaveMasterUserRecords(10).
-		HaveUserAccountsForCluster("member-1", 10)
+	AssertThatCounters(t).
+		HaveMasterUserRecords(3).
+		HaveUserAccountsForCluster("member-1", 3).
+		HaveUsersPerActivations(v1alpha1.Metric{
+			"1": 1,
+			"2": 1,
+			"3": 1,
+		})
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
-		HasMurCount(10).
-		HasUserAccountCount("member-1", 10)
+		HasMurCount(3).
+		HasUserAccountCount("member-1", 3).
+		HasUsersPerActivations(v1alpha1.Metric{
+			"1": 1,
+			"2": 1,
+			"3": 1,
+		})
 }
 
 func TestShouldNotInitializeAgain(t *testing.T) {
