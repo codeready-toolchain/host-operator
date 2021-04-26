@@ -133,7 +133,7 @@ objects:
     quota:
       hard:
         count/cloudservicesrequests.rhoas.redhat.com: "2"
-        count/kafkaconnections.rhoas.redhat.com: "6"
+        count/kafkaconnections.rhoas.redhat.com: "5"
         count/cloudserviceaccountrequest.rhoas.redhat.com: "2"
     selector:
       annotations:
