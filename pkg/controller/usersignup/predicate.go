@@ -17,6 +17,8 @@ type UserSignupChangedPredicate struct {
 	controllerPredicate.Funcs
 }
 
+var _ controllerPredicate.Predicate = UserSignupChangedPredicate{}
+
 // Update filters update events and let the reconcile loop to be triggered when any of the following conditions is met:
 //
 // * generation number has changed

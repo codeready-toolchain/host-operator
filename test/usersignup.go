@@ -3,8 +3,9 @@ package test
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"time"
+
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -72,6 +73,12 @@ func WithUsername(username string) UserSignupModifier {
 	}
 }
 
+func WithLabel(key, value string) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Labels[key] = value
+	}
+}
+
 func WithStateLabel(stateValue string) UserSignupModifier {
 	return func(userSignup *v1alpha1.UserSignup) {
 		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = stateValue
@@ -103,6 +110,36 @@ func SignupComplete(reason string) UserSignupModifier {
 func CreatedBefore(before time.Duration) UserSignupModifier {
 	return func(userSignup *v1alpha1.UserSignup) {
 		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Now().Add(-before)}
+	}
+}
+
+func BeingDeleted() UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.ObjectMeta.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	}
+}
+
+func WithAnnotation(key, value string) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Annotations[key] = value
+	}
+}
+func WithoutAnnotation(key string) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		delete(userSignup.Annotations, key)
+	}
+}
+
+func WithoutAnnotations() UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Annotations = map[string]string{}
+	}
+}
+
+func WithName(name string) UserSignupModifier {
+	return func(userSignup *v1alpha1.UserSignup) {
+		userSignup.Name = name
+		userSignup.Spec.Username = name
 	}
 }
 

@@ -293,6 +293,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		t.Run("unable to read HostOperatorConfig", func(t *testing.T) {
 			// given
 			fakeClient := NewFakeClient(t, toolchainStatus)
+			InitializeCounters(t, toolchainStatus)
 			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				return fmt.Errorf("some error")
 			}
