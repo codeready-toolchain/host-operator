@@ -65,17 +65,17 @@ func (a *RegServiceAssertion) HasEnvironment(env string) *RegServiceAssertion {
 	return a
 }
 
-func (a *RegServiceAssertion) HasAuthLibraryUrl(libUrl string) *RegServiceAssertion {
+func (a *RegServiceAssertion) HasAuthLibraryURL(libURL string) *RegServiceAssertion {
 	err := a.loadRegServiceAssertion()
 	require.NoError(a.t, err)
-	assert.Equal(a.t, libUrl, a.RegistrationService.Spec.EnvironmentVariables["AUTH_CLIENT_LIBRARY_URL"])
+	assert.Equal(a.t, libURL, a.RegistrationService.Spec.EnvironmentVariables["AUTH_CLIENT_LIBRARY_URL"])
 	return a
 }
 
-func (a *RegServiceAssertion) HasAuthPublicKeysUrl(publicKeysUrl string) *RegServiceAssertion {
+func (a *RegServiceAssertion) HasAuthPublicKeysURL(publicKeysURL string) *RegServiceAssertion {
 	err := a.loadRegServiceAssertion()
 	require.NoError(a.t, err)
-	assert.Equal(a.t, publicKeysUrl, a.RegistrationService.Spec.EnvironmentVariables["AUTH_CLIENT_PUBLIC_KEYS_URL"])
+	assert.Equal(a.t, publicKeysURL, a.RegistrationService.Spec.EnvironmentVariables["AUTH_CLIENT_PUBLIC_KEYS_URL"])
 	return a
 }
 

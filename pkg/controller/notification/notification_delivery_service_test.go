@@ -45,7 +45,7 @@ func (c *MockNotificationDeliveryServiceFactoryConfig) GetMailgunReplyToEmail() 
 	return c.Mailgun.ReplyToEmail
 }
 
-func NewNotificationDeliveryServiceFactoryConfig(domain, apiKey, senderEmail, replyToEmail, service string) NotificationDeliveryServiceFactoryConfig {
+func NewNotificationDeliveryServiceFactoryConfig(domain, apiKey, senderEmail, replyToEmail, service string) DeliveryServiceFactoryConfig {
 	return &MockNotificationDeliveryServiceFactoryConfig{
 		Mailgun: MockMailgunConfiguration{
 			Domain:       domain,
@@ -66,9 +66,8 @@ func (l *MockTemplateLoader) GetNotificationTemplate(name string) (*notification
 	template := l.templates[name]
 	if template != nil {
 		return template, true, nil
-	} else {
-		return nil, false, errors.New("Template not found")
 	}
+	return nil, false, errors.New("template not found")
 }
 
 func NewMockTemplateLoader(templates ...*notificationtemplates.NotificationTemplate) TemplateLoader {

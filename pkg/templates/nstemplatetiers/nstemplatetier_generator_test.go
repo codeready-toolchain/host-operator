@@ -30,7 +30,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	testassets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 

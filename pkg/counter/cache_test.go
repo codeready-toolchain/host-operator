@@ -210,7 +210,7 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 
 func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	//this will be ignored by resetting when initializing counters
 	counter.IncrementMasterUserRecordCount()
 	counter.IncrementUserAccountCount("member-1")

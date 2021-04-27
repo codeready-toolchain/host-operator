@@ -142,7 +142,7 @@ func TestUserCleanup(t *testing.T) {
 
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignupCleanup, reconcile.Request, *test.FakeClient) { //nolint: unparam
+func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignupCleanup, reconcile.Request, *test.FakeClient) { // nolint: unparam
 	metrics.Reset()
 
 	s := scheme.Scheme

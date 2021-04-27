@@ -1,6 +1,6 @@
 package notification
 
-type NotificationContext interface {
+type Context interface {
 	DeliveryEmail() string
 }
 
