@@ -13,7 +13,7 @@ import (
 )
 
 type statusUpdater struct {
-	Client client.Client
+	client client.Client
 }
 
 func (u *statusUpdater) setStatusApprovedAutomatically(userSignup *toolchainv1alpha1.UserSignup, message string) error {
@@ -289,7 +289,7 @@ func (u *statusUpdater) setStatusDeactivatingNotificationCreationFailed(userSign
 		})
 }
 
-func (u *statusUpdater) UpdateStatus(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+func (u *statusUpdater) updateStatus(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error) error {
 
 	if err := statusUpdater(userSignup, ""); err != nil {
@@ -325,7 +325,7 @@ func (u *statusUpdater) updateCompleteStatus(logger logr.Logger, compliantUserna
 
 		logger.Info(fmt.Sprintf("### ResourceVersion before updating status in updateCompleteStatus: %s", userSignup.ResourceVersion))
 
-		/*err := u.Client.Get(context.TODO(), client.ObjectKey{
+		/*err := u.client.Get(context.TODO(), client.ObjectKey{
 			Namespace: userSignup.Namespace,
 			Name:      userSignup.Name,
 		}, userSignup)
@@ -334,7 +334,7 @@ func (u *statusUpdater) updateCompleteStatus(logger logr.Logger, compliantUserna
 			logger.Error(err, "### Error while reloading userSignup in updateCompleteStatus")
 		}*/
 
-		err := u.Client.Status().Update(context.TODO(), userSignup)
+		err := u.client.Status().Update(context.TODO(), userSignup)
 		if err != nil {
 			logger.Error(err, "### Error while updating status in updateCompleteStatus")
 		}
@@ -343,8 +343,8 @@ func (u *statusUpdater) updateCompleteStatus(logger logr.Logger, compliantUserna
 	}
 }
 
-// WrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
-func (u *statusUpdater) WrapErrorWithStatusUpdate(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+// wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
+func (u *statusUpdater) wrapErrorWithStatusUpdate(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	statusUpdater StatusUpdaterFunc, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
@@ -362,5 +362,5 @@ func (u *statusUpdater) updateStatusConditions(userSignup *toolchainv1alpha1.Use
 		// Nothing changed
 		return nil
 	}
-	return u.Client.Status().Update(context.TODO(), userSignup)
+	return u.client.Status().Update(context.TODO(), userSignup)
 }

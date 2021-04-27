@@ -70,7 +70,7 @@ var _ reconcile.Reconciler = &ReconcileNotification{}
 
 // ReconcileNotification reconciles a Notification object
 type ReconcileNotification struct {
-	// This client, initialized using mgr.Client() above, is a split client
+	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client          client.Client
 	scheme          *runtime.Scheme
