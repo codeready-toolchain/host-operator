@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
@@ -127,8 +128,8 @@ type ReconcileUserSignup struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling UserSignup")
+	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	logger.Info("Reconciling UserSignup")
 
 	// Fetch the UserSignup instance
 	instance := &toolchainv1alpha1.UserSignup{}
@@ -143,16 +144,36 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	logger = logger.WithValues("username", userSignup.Spec.Username)
 
-	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
+	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
+		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 
-	if instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
-		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	banned, err := r.isUserBanned(reqLogger, instance)
+	// (migration for 'complete' usersignups only) set the UserSignupActivationCounterAnnotationKey if it is missing
+	// To be removed once the operator was deployed in production, as per https://issues.redhat.com/browse/CRT-1036
+	state := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
+	if state == toolchainv1alpha1.UserSignupStateLabelValueApproved ||
+		state == toolchainv1alpha1.UserSignupStateLabelValueDeactivated ||
+		state == toolchainv1alpha1.UserSignupStateLabelValueBanned {
+		if userSignup.Annotations == nil { // if annotations is empty, it's omitted when reading the resource, hence it's nil here.
+			userSignup.Annotations = map[string]string{}
+		}
+		if _, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; !exists {
+			logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on existing active user")
+			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
+			// will not trigger a reconcile if update succeeds (see UserSignupChangedPredicate)
+			if err := r.client.Update(context.TODO(), userSignup); err != nil {
+				return reconcile.Result{}, err
+			}
+			counter.UpdateUsersPerActivationCounters(1)
+		}
+	}
+
+	banned, err := r.isUserBanned(logger, userSignup)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -160,6 +181,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// If the usersignup is not banned and not deactivated then ensure the deactivated notification status is set to false.
 	// This is especially important for cases when a user is deactivated and then reactivated because the status is used to
 	// trigger sending of the notification. If a user is reactivated a notification should be sent to the user again.
+
 	if !banned && !instance.Spec.Deactivated {
 		if err := r.UpdateStatus(reqLogger, instance, r.setStatusDeactivationNotificationUserIsActive); err != nil {
 			return reconcile.Result{}, err
@@ -176,7 +198,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 	}
 
-	if states.Deactivating(instance) && condition.IsNotTrue(instance.Status.Conditions,
+	if states.Deactivating(instance) && condition.IsNotTrue(userSignup.Status.Conditions,
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated) {
 
 		if err := r.sendDeactivatingNotification(reqLogger, instance); err != nil {
@@ -193,10 +215,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 	}
 
-	if exists, err := r.ensureMurIfAlreadyExists(reqLogger, instance, banned); exists || err != nil {
-		if err != nil {
-			reqLogger.Error(err, fmt.Sprintf("Error while ensuring MasterUserRecord exists, Error: %s", err))
-		}
+	if exists, err := r.checkIfMurAlreadyExists(logger, userSignup, banned); exists || err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -204,36 +223,37 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// and return
 	if banned {
 		// if the UserSignup doesn't have the state=banned label set, then update it
-		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
+		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
 			return reconcile.Result{}, err
 		}
-		return reconcile.Result{}, r.UpdateStatus(reqLogger, instance, r.setStatusBanned)
+
+		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusBanned)
 	}
 
 	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
 	// send a notification to the user, and return
-	if instance.Spec.Deactivated {
+	if userSignup.Spec.Deactivated {
 		// if the UserSignup doesn't have the state=deactivated label set, then update it
-		if err := r.setStateLabel(reqLogger, instance, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
+		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
 			return reconcile.Result{}, err
 		}
-		if condition.IsNotTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
-			if err := r.sendDeactivatedNotification(reqLogger, instance); err != nil {
-				reqLogger.Error(err, "Failed to create user deactivation notification")
+		if condition.IsNotTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
+			if err := r.sendDeactivatedNotification(logger, userSignup); err != nil {
+				logger.Error(err, "Failed to create user deactivation notification")
 
 				// set the failed to create notification status condition
-				return reconcile.Result{}, r.WrapErrorWithStatusUpdate(reqLogger, instance, r.setStatusDeactivationNotificationCreationFailed, err, "Failed to create user deactivation notification")
+				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusDeactivationNotificationCreationFailed, err, "Failed to create user deactivation notification")
 			}
 
-			if err := r.UpdateStatus(reqLogger, instance, r.setStatusDeactivationNotificationCreated); err != nil {
-				reqLogger.Error(err, "Failed to update notification created status")
+			if err := r.updateStatus(logger, userSignup, r.setStatusDeactivationNotificationCreated); err != nil {
+				logger.Error(err, "Failed to update notification created status")
 				return reconcile.Result{}, err
 			}
 		}
-		return reconcile.Result{}, r.UpdateStatus(reqLogger, instance, r.setStatusDeactivated)
+		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusDeactivated)
 	}
 
-	return reconcile.Result{}, r.ensureNewMurIfApproved(reqLogger, instance)
+	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, userSignup)
 }
 
 // Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
@@ -283,11 +303,11 @@ func (r *ReconcileUserSignup) isUserBanned(reqLogger logr.Logger, userSignup *to
 	return banned, nil
 }
 
-// ensureMurIfAlreadyExists checks if there is already a MUR for the given UserSignup.
+// checkIfMurAlreadyExists checks if there is already a MUR for the given UserSignup.
 // If there is already one then it returns 'true' as the first returned value, but before doing that it checks if the MUR should be deleted or not
 // or if the MUR requires some migration changes or additional fixes.
 // If no MUR for the given UserSignup is found, then it returns 'false' as the first returned value.
-func (r *ReconcileUserSignup) ensureMurIfAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+func (r *ReconcileUserSignup) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	banned bool) (bool, error) {
 	// List all MasterUserRecord resources that have an owner label equal to the UserSignup.Name
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
@@ -417,19 +437,27 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 
 func (r *ReconcileUserSignup) setStateLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
 	oldValue := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
-	if oldValue != value {
-		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = value
-		if err := r.Client.Update(context.TODO(), userSignup); err != nil {
-			return r.WrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
-				"unable to update state label at UserSignup resource")
-		}
-		updateMetricsByState(oldValue, value)
+	if oldValue == value {
+		// skipping
 		return nil
 	}
+	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = value
+	activations := 0
+	if value == toolchainv1alpha1.UserSignupStateLabelValueApproved {
+		activations = r.updateActivationCounterAnnotation(reqLogger, userSignup)
+	}
+	if err := r.client.Update(context.TODO(), userSignup); err != nil {
+		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
+			"unable to update state label at UserSignup resource")
+	}
+	updateUserSignupMetricsByState(oldValue, value)
+	// increment the counter *only if the client update did not fail*
+	counter.UpdateUsersPerActivationCounters(activations) // will ignore if `activations == 0`
+
 	return nil
 }
 
-func updateMetricsByState(oldState, newState string) {
+func updateUserSignupMetricsByState(oldState, newState string) {
 	if oldState == "" {
 		metrics.UserSignupUniqueTotal.Inc()
 	}
@@ -530,10 +558,33 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 		return r.WrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord")
 	}
+	// increment the counter of MasterUserRecords
 	counter.IncrementMasterUserRecordCount()
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
+}
+
+// updateActivationCounterAnnotation increments the 'toolchain.dev.openshift.com/activation-counter' annotation value on the given UserSignup
+func (r *ReconcileUserSignup) updateActivationCounterAnnotation(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) int {
+	if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
+		logger.Info("updating 'toolchain.dev.openshift.com/activation-counter' on active user")
+		activations, err := strconv.Atoi(activations)
+		if err == nil {
+			// increment the value of the annotation
+			activations++
+			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = strconv.Itoa(activations)
+			return activations
+		}
+		logger.Error(err, "The 'toolchain.dev.openshift.com/activation-counter' annotation value was not an integer and was reset to '1'.", "value", activations)
+		// "best effort": reset number of activations to 1 for this user
+		userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
+		return 1
+	}
+	// annotation was missing so assume it's the first activation
+	logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on new active user")
+	userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1" // first activation, annotation did not exist
+	return 1
 }
 
 // DeleteMasterUserRecord deletes the specified MasterUserRecord

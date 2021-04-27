@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -51,12 +52,32 @@ func (a *CounterAssertion) HaveUserAccountsForCluster(clusterName string, number
 	return a
 }
 
+func (a *CounterAssertion) HaveUsersPerActivations(expected v1alpha1.Metric) *CounterAssertion {
+	actual := a.counts.UsersPerActivationCounts
+	assert.Equal(a.t, map[string]int(expected), actual)
+	for activations, count := range expected {
+		AssertMetricsGaugeEquals(a.t, count, metrics.UsersPerActivationGaugeVec.WithLabelValues(activations))
+	}
+	return a
+}
+
 func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster string) []runtime.Object {
 	murs := make([]runtime.Object, number)
 	for index := range murs {
 		murs[index] = masteruserrecord.NewMasterUserRecord(t, fmt.Sprintf("%s%d", prefix, index), masteruserrecord.TargetCluster(targetCluster))
 	}
 	return murs
+}
+
+func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
+	usersignups := make([]runtime.Object, number)
+	for index := range usersignups {
+		usersignups[index] = NewUserSignup(
+			WithName(fmt.Sprintf("%s%d", prefix, index)),
+			WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1)),
+		)
+	}
+	return usersignups
 }
 
 func InitializeCounters(t *testing.T, toolchainStatus *v1alpha1.ToolchainStatus, initObjs ...runtime.Object) {

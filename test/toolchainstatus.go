@@ -44,6 +44,7 @@ func WithMasterUserRecordCount(count int) HostToolchainStatusOption {
 func WithMember(name string, options ...MemberToolchainStatusOption) ToolchainStatusOption {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {
 		member := toolchainv1alpha1.Member{
+			ApiEndpoint: "http://api.devcluster.openshift.com",
 			ClusterName: name,
 		}
 		for _, modify := range options {
@@ -78,6 +79,15 @@ func WithRoutes(consoleURL, cheURL string, condition toolchainv1alpha1.Condition
 		status.MemberStatus.Routes.ConsoleURL = consoleURL
 		status.MemberStatus.Routes.CheDashboardURL = cheURL
 		status.MemberStatus.Routes.Conditions = []toolchainv1alpha1.Condition{condition}
+	}
+}
+
+func WithMetric(key string, value toolchainv1alpha1.Metric) ToolchainStatusOption {
+	return func(status *toolchainv1alpha1.ToolchainStatus) {
+		if status.Status.Metrics == nil {
+			status.Status.Metrics = map[string]toolchainv1alpha1.Metric{}
+		}
+		status.Status.Metrics[key] = value
 	}
 }
 
