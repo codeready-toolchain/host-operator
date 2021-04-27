@@ -26,7 +26,7 @@ import (
 
 func TestLoadTemplatesByTiers(t *testing.T) {
 
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	t.Run("ok", func(t *testing.T) {
 
@@ -388,7 +388,7 @@ func TestNewTierTemplate(t *testing.T) {
 					return testnstemplatetiers.Asset(name)
 				}
 				// error occurs when fetching the content of the 'advanced-code.yaml' template
-				return []byte("invalid"), nil // return an invalid YAML represention of a Template
+				return []byte("invalid"), nil // return an invalid YAML representation of a Template
 			})
 			// when
 			_, err := newTierGenerator(s, nil, namespace, fakeAssets)
@@ -591,7 +591,7 @@ func limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest string
 	return fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"%s","memory":"%s"},"type":"Container"}]}}`, kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest)
 }
 
-func clusterResourceQuotaComputeObj(cpuLimit, cpuRequest, memoryLimit, storageLimit string) string { //nolint: unparam
+func clusterResourceQuotaComputeObj(cpuLimit, cpuRequest, memoryLimit, storageLimit string) string { // nolint: unparam
 	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-compute"},"spec":{"quota":{"hard":{"count/persistentvolumeclaims":"5","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"%[4]s"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit, storageLimit)
 }
 

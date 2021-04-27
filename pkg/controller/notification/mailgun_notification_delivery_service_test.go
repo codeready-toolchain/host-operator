@@ -1,8 +1,9 @@
 package notification
 
 import (
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"testing"
+
+	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 
@@ -98,7 +99,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		require.Equal(t, "Template not found", err.Error())
+		require.Equal(t, "template not found", err.Error())
 	})
 
 	t.Run("test mailgun notification delivery invalid subject template", func(t *testing.T) {

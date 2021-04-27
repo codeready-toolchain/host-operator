@@ -42,8 +42,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			HasEnvironment("").
 			HasReplicas("").
 			HasAuthConfig("").
-			HasAuthLibraryUrl("").
-			HasAuthPublicKeysUrl("")
+			HasAuthLibraryURL("").
+			HasAuthPublicKeysURL("")
 
 	})
 
@@ -81,8 +81,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			HasEnvironment("test").
 			HasReplicas("").
 			HasAuthConfig(`{"my":"cool-config"}`).
-			HasAuthLibraryUrl("url/to/library/location").
-			HasAuthPublicKeysUrl("url/to/public/key/location")
+			HasAuthLibraryURL("url/to/library/location").
+			HasAuthPublicKeysURL("url/to/public/key/location")
 	})
 
 	t.Run("when creation fails then should return error", func(t *testing.T) {

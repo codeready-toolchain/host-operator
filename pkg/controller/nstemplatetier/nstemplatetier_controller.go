@@ -83,7 +83,7 @@ func NewReconciler(cl client.Client, s *runtime.Scheme, config *configuration.Co
 }
 
 // NSTemplateTierReconciler reconciles a NSTemplateTier object (only when this latter's specs were updated)
-type NSTemplateTierReconciler struct {
+type NSTemplateTierReconciler struct { // nolint: golint
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client

@@ -39,7 +39,7 @@ const (
 func TestReconcile(t *testing.T) {
 
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	username := "test-user"
 
 	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
