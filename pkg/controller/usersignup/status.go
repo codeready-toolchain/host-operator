@@ -2,7 +2,6 @@ package usersignup
 
 import (
 	"context"
-	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	commonCondition "github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -317,29 +316,12 @@ func (u *statusUpdater) updateCompleteStatus(logger logr.Logger, compliantUserna
 				Message: message,
 			})
 
-		logger.Info(fmt.Sprintf("### userNameUpdated: %t  conditionUpdated: %t", usernameUpdated, conditionUpdated))
 		if !usernameUpdated && !conditionUpdated {
 			// Nothing changed
 			return nil
 		}
 
-		logger.Info(fmt.Sprintf("### ResourceVersion before updating status in updateCompleteStatus: %s", userSignup.ResourceVersion))
-
-		/*err := u.client.Get(context.TODO(), client.ObjectKey{
-			Namespace: userSignup.Namespace,
-			Name:      userSignup.Name,
-		}, userSignup)
-
-		if err != nil {
-			logger.Error(err, "### Error while reloading userSignup in updateCompleteStatus")
-		}*/
-
-		err := u.client.Status().Update(context.TODO(), userSignup)
-		if err != nil {
-			logger.Error(err, "### Error while updating status in updateCompleteStatus")
-		}
-		logger.Info(fmt.Sprintf("### ResourceVersion after updating status in updateCompleteStatus: %s", userSignup.ResourceVersion))
-		return err
+		return u.client.Status().Update(context.TODO(), userSignup)
 	}
 }
 
