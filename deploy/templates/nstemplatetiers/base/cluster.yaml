@@ -139,6 +139,18 @@ objects:
       annotations:
         openshift.io/requester: ${USERNAME}
       labels: null
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-sbo
+  spec:
+    quota:
+      hard:
+        count/servicebindings.binding.operators.coreos.com: "100"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
