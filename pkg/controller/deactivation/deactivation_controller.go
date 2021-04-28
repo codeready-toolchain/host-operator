@@ -188,8 +188,19 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 			return reconcile.Result{}, err
 		}
 
-		// Requeue so that the deactivation due time can be calculated after the notification has been sent
-		return reconcile.Result{Requeue: true}, nil
+		// Requeue so that the deactivation due time can be calculated after the notification has been sent.
+		// The sequence of events from here are:
+		// 1. This controller has now set the UserSignup state to deactivating if it's not already set
+		// 2. Reconciliation is requeued
+		// 3. UserSignup controller picks up that the deactivating state has been set, and responds by:
+		//		a) creating a pre-deactivating notification for the user, and
+		//		b) setting the "deactivating notification created" status condition to true.
+		// 4. This  controller reconciles again, and if it doesn't find the notification created status condition as
+		//    expected, requeues again, otherwise:
+		// 5. This controller calculates the amount of time that has passed since the deactivating notification was sent,
+		//  based on the LastTransitionTime of the condition. If enough time has now passed, it sets the UserSignup to deactivated.
+
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Duration(10) * time.Second}, nil
 	}
 
 	deactivatingCondition, found := condition.FindConditionByType(usersignup.Status.Conditions,
@@ -199,7 +210,7 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 		// If the UserSignup has been marked as deactivating, however the deactivating notification hasn't been
 		// created yet, then requeue - the notification should be created shortly by the UserSignup controller
 		// once the "deactivating" state has been set
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Duration(10) * time.Second}, nil
 	}
 
 	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(config.Deactivation.DeactivatingNotificationDays*24) * time.Hour)
