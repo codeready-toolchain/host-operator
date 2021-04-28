@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
 	errors2 "github.com/pkg/errors"
 
@@ -192,9 +194,11 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 
 	deactivatingCondition, found := condition.FindConditionByType(usersignup.Status.Conditions,
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated)
-	if !found || deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason {
+	if !found || deactivatingCondition.Status != corev1.ConditionTrue ||
+		deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason {
 		// If the UserSignup has been marked as deactivating, however the deactivating notification hasn't been
-		// created yet, then requeue - the notification should be created shortly
+		// created yet, then requeue - the notification should be created shortly by the UserSignup controller
+		// once the "deactivating" state has been set
 		return reconcile.Result{Requeue: true}, nil
 	}
 
