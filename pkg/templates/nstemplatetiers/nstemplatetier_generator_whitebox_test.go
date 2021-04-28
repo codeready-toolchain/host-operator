@@ -26,7 +26,7 @@ import (
 
 func TestLoadTemplatesByTiers(t *testing.T) {
 
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	t.Run("ok", func(t *testing.T) {
 
@@ -388,7 +388,7 @@ func TestNewTierTemplate(t *testing.T) {
 					return testnstemplatetiers.Asset(name)
 				}
 				// error occurs when fetching the content of the 'advanced-code.yaml' template
-				return []byte("invalid"), nil // return an invalid YAML represention of a Template
+				return []byte("invalid"), nil // return an invalid YAML representation of a Template
 			})
 			// when
 			_, err := newTierGenerator(s, nil, namespace, fakeAssets)
@@ -411,7 +411,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	case "test":
 		// skip because this tier is for testing purposes only and the template can change often
 	case "base", "basedeactivationdisabled":
-		assert.Len(t, actual.Objects, 11)
+		assert.Len(t, actual.Objects, 13)
 		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
 		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
 		containsObj(t, actual, clusterResourceQuotaReplicasObj())
@@ -421,6 +421,8 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
 		containsObj(t, actual, clusterResourceQuotaSecretsObj())
 		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
+		containsObj(t, actual, clusterResourceQuotaRHOASOperatorObj())
+		containsObj(t, actual, clusterResourceQuotaSBOObj())
 		containsObj(t, actual, idlerObj("${USERNAME}-dev", "28800"))
 		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
 	case "basic", "basicdeactivationdisabled":
@@ -589,7 +591,7 @@ func limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest string
 	return fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"%s","memory":"%s"},"type":"Container"}]}}`, kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest)
 }
 
-func clusterResourceQuotaComputeObj(cpuLimit, cpuRequest, memoryLimit, storageLimit string) string { //nolint: unparam
+func clusterResourceQuotaComputeObj(cpuLimit, cpuRequest, memoryLimit, storageLimit string) string { // nolint: unparam
 	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-compute"},"spec":{"quota":{"hard":{"count/persistentvolumeclaims":"5","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"%[4]s"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit, storageLimit)
 }
 
@@ -623,6 +625,14 @@ func clusterResourceQuotaSecretsObj() string {
 
 func clusterResourceQuotaConfigMapObj() string {
 	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-cm"},"spec":{"quota":{"hard":{"count/configmaps":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
+}
+
+func clusterResourceQuotaRHOASOperatorObj() string {
+	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-rhoas"},"spec":{"quota":{"hard":{"count/cloudserviceaccountrequest.rhoas.redhat.com":"2","count/cloudservicesrequests.rhoas.redhat.com":"2","count/kafkaconnections.rhoas.redhat.com":"5"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
+}
+
+func clusterResourceQuotaSBOObj() string {
+	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-sbo"},"spec":{"quota":{"hard":{"count/servicebindings.binding.operators.coreos.com":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
 }
 
 func idlerObj(name, timeout string) string { //nolint:unparam

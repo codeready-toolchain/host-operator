@@ -50,7 +50,7 @@ func TestReconcile(t *testing.T) {
 		test.Deactivation().DeactivatingNotificationDays(3))
 
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	username := "test-user"
 
 	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)

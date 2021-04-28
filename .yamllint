@@ -1,5 +1,7 @@
 ignore: |
   /vendor
+  /.codecov.yaml
+  /deploy/crds
   
 rules:
   braces: enable
@@ -8,6 +10,7 @@ rules:
   commas: enable
   comments:
     level: warning
+    min-spaces-from-content: 1
   comments-indentation:
     level: warning
   document-end: disable

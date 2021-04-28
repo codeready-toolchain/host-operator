@@ -36,7 +36,7 @@ const (
 func TestReconcile(t *testing.T) {
 
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	// a "basic" NSTemplateTier
 
 	t.Run("controller should update the MasterUserRecord", func(t *testing.T) {
@@ -550,7 +550,7 @@ func TestReconcile(t *testing.T) {
 				r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Get(ctx, key, obj)
 				}
@@ -558,7 +558,7 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(req)
 				// then
 				require.Error(t, err)
-				assert.EqualError(t, err, "unable to get the current TemplateUpdateRequest: mock error!")
+				assert.EqualError(t, err, "unable to get the current TemplateUpdateRequest: mock error")
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 		})
@@ -592,7 +592,7 @@ func TestReconcile(t *testing.T) {
 				r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Get(ctx, key, obj)
 				}
@@ -600,7 +600,7 @@ func TestReconcile(t *testing.T) {
 				res, err := r.Reconcile(req)
 				// then
 				require.Error(t, err)
-				assert.EqualError(t, err, "unable to get the MasterUserRecord associated with the TemplateUpdateRequest: mock error!")
+				assert.EqualError(t, err, "unable to get the MasterUserRecord associated with the TemplateUpdateRequest: mock error")
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
 		})
@@ -616,7 +616,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, initObjs...)
 			cl.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-					return fmt.Errorf("mock error!")
+					return fmt.Errorf("mock error")
 				}
 				return cl.Client.Status().Update(ctx, obj, opts...)
 			}
@@ -624,7 +624,7 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, "unable to update the TemplateUpdateRequest status: mock error!")
+			assert.EqualError(t, err, "unable to update the TemplateUpdateRequest status: mock error")
 			assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 		})
 
@@ -639,7 +639,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, initObjs...)
 			cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
-					return fmt.Errorf("mock error!")
+					return fmt.Errorf("mock error")
 				}
 				return cl.Client.Update(ctx, obj, opts...)
 			}
@@ -648,13 +648,13 @@ func TestReconcile(t *testing.T) {
 			res, err := r.Reconcile(req)
 			// then
 			require.Error(t, err) // expect an error and an explicit requeue with a delay
-			assert.EqualError(t, err, "unable to update the MasterUserRecord associated with the TemplateUpdateRequest: mock error!")
+			assert.EqualError(t, err, "unable to update the MasterUserRecord associated with the TemplateUpdateRequest: mock error")
 			assert.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: 5 * time.Second}, res) // explicit requeue
 
 			// when (second attempt)
 			res, err = r.Reconcile(req)
 			// then
-			require.NoError(t, err)                  // this time, don't expect an error (but error wass logged )
+			require.NoError(t, err)                  // this time, don't expect an error (but error was logged )
 			assert.Equal(t, reconcile.Result{}, res) // no requeue
 		})
 

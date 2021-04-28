@@ -30,7 +30,7 @@ import (
 
 func TestChangeTierSuccess(t *testing.T) {
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_CHANGE_REQUEST_DELETION", "10s")
 	defer restore()
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
