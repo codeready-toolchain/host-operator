@@ -169,7 +169,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.True(t, res.Requeue)
-			require.Equal(t, time.Duration(0)*time.Second, res.RequeueAfter)
+			require.Equal(t, time.Duration(10)*time.Second, res.RequeueAfter)
 
 			// Reload the userSignup
 			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
@@ -183,7 +183,7 @@ func TestReconcile(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				require.True(t, res.Requeue)
-				require.Equal(t, time.Duration(0)*time.Second, res.RequeueAfter)
+				require.Equal(t, time.Duration(10)*time.Second, res.RequeueAfter)
 
 				// Reload the userSignup
 				require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))

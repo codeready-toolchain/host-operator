@@ -267,13 +267,13 @@ func (u *statusUpdater) setStatusDeactivatingNotificationCreated(userSignup *too
 		})
 }
 
-func (u *statusUpdater) setStatusDeactivatingNotificationUserIsActive(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+func (u *statusUpdater) setStatusDeactivatingNotificationNotInPreDeactivation(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: corev1.ConditionFalse,
-			Reason: toolchainv1alpha1.UserSignupDeactivatingNotificationUserIsActiveReason,
+			Reason: toolchainv1alpha1.UserSignupDeactivatingNotificationUserNotInPreDeactivationReason,
 		})
 }
 

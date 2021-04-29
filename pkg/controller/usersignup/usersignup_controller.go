@@ -193,7 +193,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// because the status is used to trigger sending of the notification. If a user is reactivated a notification should
 	// be sent to the user again.
 	if !banned && !states.Deactivating(userSignup) {
-		if err := r.updateStatus(logger, userSignup, r.setStatusDeactivatingNotificationUserIsActive); err != nil {
+		if err := r.updateStatus(logger, userSignup, r.setStatusDeactivatingNotificationNotInPreDeactivation); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
