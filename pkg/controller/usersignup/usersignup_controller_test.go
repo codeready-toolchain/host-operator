@@ -1407,11 +1407,6 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionFalse,
 				Reason: "Deactivating",
-			},
-			v1alpha1.Condition{
-				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
-				Status: v1.ConditionFalse,
-				Reason: "UserNotInPreDeactivation",
 			})
 
 		murs := &v1alpha1.MasterUserRecordList{}
@@ -1456,11 +1451,6 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 				Reason: "Deactivated",
-			},
-			v1alpha1.Condition{
-				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
-				Status: v1.ConditionFalse,
-				Reason: "UserNotInPreDeactivation",
 			},
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -1551,11 +1541,6 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
-			},
-			v1alpha1.Condition{
-				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
-				Status: v1.ConditionFalse,
-				Reason: "UserNotInPreDeactivation",
 			},
 			v1alpha1.Condition{
 				Type:    v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -1811,11 +1796,6 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 					Type:   v1alpha1.UserSignupComplete,
 					Status: v1.ConditionFalse,
 					Reason: "Deactivating",
-				},
-				v1alpha1.Condition{
-					Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
-					Status: v1.ConditionFalse,
-					Reason: "UserNotInPreDeactivation",
 				})
 
 			murs := &v1alpha1.MasterUserRecordList{}
@@ -1850,11 +1830,6 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 					Type:   v1alpha1.UserSignupComplete,
 					Status: v1.ConditionTrue,
 					Reason: "Deactivated",
-				},
-				v1alpha1.Condition{
-					Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
-					Status: v1.ConditionFalse,
-					Reason: "UserNotInPreDeactivation",
 				},
 				v1alpha1.Condition{
 					Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -2164,11 +2139,6 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 				Status:  v1.ConditionFalse,
 				Reason:  "UnableToDeleteMUR",
 				Message: "unable to delete mur",
-			},
-			v1alpha1.Condition{
-				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
-				Status: v1.ConditionFalse,
-				Reason: "UserNotInPreDeactivation",
 			})
 		AssertThatCounters(t).HaveMasterUserRecords(1)
 
