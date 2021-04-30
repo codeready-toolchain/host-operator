@@ -124,6 +124,8 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 		}
 	}
 
+	durationBeforeDelete := r.config.GetDurationBeforeNotificationDeletion()
+
 	// if the environment is set to e2e do not attempt sending via mailgun
 	if r.config.GetEnvironment() != "e2e-tests" {
 		// Send the notification via the configured delivery service
@@ -134,12 +136,13 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 		}
 		reqLogger.Info("Notification has been sent")
 	} else {
-		reqLogger.Info("Notification has been skipped")
+		durationBeforeDelete = time.Duration(1) * time.Hour
+		reqLogger.Info("Notification sending skipped during e2e tests.  Deleting after 1 hour")
 	}
 
 	return reconcile.Result{
 		Requeue:      true,
-		RequeueAfter: r.config.GetDurationBeforeNotificationDeletion(),
+		RequeueAfter: durationBeforeDelete,
 	}, r.updateStatus(reqLogger, notification, r.setStatusNotificationSent)
 }
 
