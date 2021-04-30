@@ -217,7 +217,7 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 
 	if time.Now().Before(deactivationDueTime) {
 		// It is not yet time to deactivate so requeue when it will be
-		requeueAfterExpired := time.Until(deactivationDueTime) + time.Duration(1*time.Minute)
+		requeueAfterExpired := time.Until(deactivationDueTime)
 
 		logger.Info("requeueing request", "RequeueAfter", requeueAfterExpired,
 			"Expected deactivation date/time", time.Now().Add(requeueAfterExpired).String())

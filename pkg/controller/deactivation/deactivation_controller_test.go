@@ -412,13 +412,6 @@ func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
 	}
 }
 
-func assertThatUserSignupDeactivating(t *testing.T, cl *test.FakeClient, name string, expected bool) {
-	userSignup := &toolchainv1alpha1.UserSignup{}
-	err := cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: operatorNamespace}, userSignup)
-	require.NoError(t, err)
-	require.Equal(t, expected, states.Deactivating(userSignup))
-}
-
 func assertThatUserSignupDeactivated(t *testing.T, cl *test.FakeClient, name string, expected bool) {
 	userSignup := &toolchainv1alpha1.UserSignup{}
 	err := cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: operatorNamespace}, userSignup)
