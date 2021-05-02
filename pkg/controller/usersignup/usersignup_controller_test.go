@@ -1470,7 +1470,6 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.Equal(t, userSignup.Name, notification.Spec.UserID)
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
-
 }
 
 func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
@@ -1840,6 +1839,14 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+
+			notifications := &v1alpha1.NotificationList{}
+			err = r.client.List(context.TODO(), notifications)
+
+			require.Len(t, notifications.Items, 1)
+
+			require.Equal(t, "userdeactivated", notifications.Items[0].Spec.Template)
+			require.Equal(t, userSignup.Name, notifications.Items[0].Spec.UserID)
 		})
 	})
 }
