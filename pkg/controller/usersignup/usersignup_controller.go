@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup/unapproved"
@@ -36,7 +38,7 @@ import (
 
 var log = logf.Log.WithName("controller_usersignup")
 
-type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error
+type StatusUpdaterFunc func(userAcc *toolchainv1alpha1.UserSignup, message string) error
 
 const defaultTierName = "base"
 
@@ -146,6 +148,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
+
 			return reconcile.Result{}, err
 		}
 	}
@@ -178,8 +181,36 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// If the usersignup is not banned and not deactivated then ensure the deactivated notification status is set to false.
 	// This is especially important for cases when a user is deactivated and then reactivated because the status is used to
 	// trigger sending of the notification. If a user is reactivated a notification should be sent to the user again.
+
 	if !banned && !userSignup.Spec.Deactivated {
 		if err := r.updateStatus(logger, userSignup, r.setStatusDeactivationNotificationUserIsActive); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	// If the usersignup is not banned and not within the pre-deactivation period then ensure the deactivation notification
+	// status is set to false. This is especially important for cases when a user is deactivated and then reactivated
+	// because the status is used to trigger sending of the notification. If a user is reactivated a notification should
+	// be sent to the user again.
+	if !banned && !states.Deactivating(userSignup) && !userSignup.Spec.Deactivated {
+		if err := r.updateStatus(logger, userSignup, r.setStatusDeactivatingNotificationNotInPreDeactivation); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	if states.Deactivating(userSignup) && !userSignup.Spec.Deactivated && condition.IsNotTrue(userSignup.Status.Conditions,
+		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated) {
+
+		if err := r.sendDeactivatingNotification(logger, userSignup); err != nil {
+			logger.Error(err, "Failed to create user deactivating notification")
+
+			// set the failed to create notification status condition
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
+				r.setStatusDeactivatingNotificationCreationFailed, err, "Failed to create user deactivating notification")
+		}
+
+		if err := r.updateStatus(logger, userSignup, r.setStatusDeactivatingNotificationCreated); err != nil {
+			logger.Error(err, "Failed to update notification created status")
 			return reconcile.Result{}, err
 		}
 	}
@@ -195,6 +226,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
 			return reconcile.Result{}, err
 		}
+
 		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusBanned)
 	}
 
@@ -316,7 +348,7 @@ func (r *ReconcileUserSignup) checkIfMurAlreadyExists(reqLogger logr.Logger, use
 			return true, err
 		}
 
-		// look-up the default NSTemplateTier to get the NS templates
+		// look-up the `basic` NSTemplateTier to get the NS templates
 		nstemplateTier, err := getNsTemplateTier(r.client, defaultTierName, userSignup.Namespace)
 		if err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
@@ -337,7 +369,7 @@ func (r *ReconcileUserSignup) checkIfMurAlreadyExists(reqLogger logr.Logger, use
 		// conditions to complete and set the compliant username and return
 		reqLogger.Info("MasterUserRecord exists, setting UserSignup status to 'Complete'")
 		// Use compliantUsernameUpdater to properly handle when the master user record is created or updated
-		return true, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(mur.Name))
+		return true, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(reqLogger, mur.Name))
 	}
 	return false, nil
 }
@@ -558,7 +590,7 @@ func (r *ReconcileUserSignup) updateActivationCounterAnnotation(logger logr.Logg
 // DeleteMasterUserRecord deletes the specified MasterUserRecord
 func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRecord,
 	userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger,
-	inProgressStatusUpdater, failedStatusUpdater StatusUpdater) error {
+	inProgressStatusUpdater, failedStatusUpdater StatusUpdaterFunc) error {
 
 	err := r.updateStatus(logger, userSignup, inProgressStatusUpdater)
 	if err != nil {
@@ -571,6 +603,38 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 			"Error deleting MasterUserRecord")
 	}
 	logger.Info("Deleted MasterUserRecord", "Name", mur.Name)
+	return nil
+}
+
+func (r *ReconcileUserSignup) sendDeactivatingNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+	notification := &toolchainv1alpha1.Notification{
+		ObjectMeta: v1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-%s-", userSignup.Status.CompliantUsername, toolchainv1alpha1.NotificationTypeDeactivating),
+			Namespace:    userSignup.Namespace,
+			Labels: map[string]string{
+				// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
+				toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
+				// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
+				toolchainv1alpha1.NotificationTypeLabelKey: toolchainv1alpha1.NotificationTypeDeactivating,
+			},
+		},
+		Spec: toolchainv1alpha1.NotificationSpec{
+			UserID:   userSignup.Name,
+			Template: notificationtemplates.UserDeactivating.Name,
+		},
+	}
+
+	if err := controllerutil.SetControllerReference(userSignup, notification, r.scheme); err != nil {
+		logger.Error(err, "Failed to set owner reference for deactivating notification resource")
+		return err
+	}
+
+	if err := r.client.Create(context.TODO(), notification); err != nil {
+		logger.Error(err, "Failed to create deactivating notification resource")
+		return err
+	}
+
+	logger.Info("Deactivating notification resource created")
 	return nil
 }
 

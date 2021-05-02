@@ -322,6 +322,11 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			Reason: "ApprovedAutomatically",
 		},
 		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
+		},
+		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
@@ -352,6 +357,11 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
 			},
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -537,6 +547,11 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 			Message: "nstemplatetiers.toolchain.dev.openshift.com \"base\" not found",
 		},
 		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
+		},
+		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
@@ -578,6 +593,11 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
 		},
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -622,6 +642,11 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
 		},
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -676,6 +701,11 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			Reason: "ApprovedByAdmin",
 		},
 		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
+		},
+		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
@@ -708,6 +738,11 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 				Status: v1.ConditionTrue,
 			},
 			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
+			},
+			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
@@ -720,8 +755,11 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	// given
 	userSignup := NewUserSignup(Approved())
 
+	config := NewHostOperatorConfigWithReset(t)
+
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier)
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier, config)
 	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 	// when
@@ -756,6 +794,11 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			Reason: "ApprovedByAdmin",
 		},
 		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
+		},
+		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
@@ -788,6 +831,11 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
 			},
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -838,6 +886,11 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 			Reason: "PendingApproval",
 		},
 		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
+		},
+		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
@@ -886,6 +939,11 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			Reason: "ApprovedAutomatically",
 		},
 		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
+		},
+		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
@@ -918,6 +976,11 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
 			},
 			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -959,6 +1022,11 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
 		},
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -1282,6 +1350,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 
 	murtest.AssertThatMasterUserRecord(t, "foo-bar", r.client).HasNoConditions()
 	AssertThatCounters(t).HaveMasterUserRecords(2)
+
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 }
@@ -1401,7 +1470,6 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.Equal(t, userSignup.Name, notification.Spec.UserID)
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
-
 }
 
 func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
@@ -1563,6 +1631,11 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 				Reason: "Deactivated",
 			},
 			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
+			},
+			v1alpha1.Condition{
 				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
@@ -1659,7 +1732,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 	})
 }
 
-func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
+func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
@@ -1770,6 +1843,84 @@ func TestUserSignupDeactivatingWhenMURExists(t *testing.T) {
 	})
 }
 
+func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
+	userSignup := &v1alpha1.UserSignup{
+		ObjectMeta: NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
+		Spec: v1alpha1.UserSignupSpec{
+			UserID:   "UserID089",
+			Username: "freja.johanssen@redhat.com",
+			States:   []v1alpha1.UserSignupState{"deactivating"},
+		},
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
+				{
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+				},
+				{
+					Type:   v1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "freja-johanssen",
+		},
+	}
+
+	// given
+	mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(test.HostOperatorNs))
+	mur.Labels = map[string]string{
+		v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
+		v1alpha1.UserSignupStateLabelKey:       "approved",
+	}
+
+	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
+	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur,
+		NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
+	// when
+	_, err := r.Reconcile(req)
+	// then
+	require.NoError(t, err)
+	err = r.client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
+
+	notifications := &v1alpha1.NotificationList{}
+	err = r.client.List(context.TODO(), notifications)
+
+	require.Len(t, notifications.Items, 1)
+
+	require.Equal(t, "userdeactivating", notifications.Items[0].Spec.Template)
+	require.Equal(t, userSignup.Name, notifications.Items[0].Spec.UserID)
+
+	// Confirm the status is correct
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserIsActive",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionTrue,
+			Reason: "NotificationCRCreated",
+		},
+	)
+}
+
 func TestUserSignupBanned(t *testing.T) {
 	// given
 	userSignup := NewUserSignup()
@@ -1847,6 +1998,11 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "VerificationRequired",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
 		},
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -2138,6 +2294,11 @@ func TestDeathBy100Signups(t *testing.T) {
 			Reason: "ApprovedByAdmin",
 		},
 		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
+		},
+		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
@@ -2194,6 +2355,11 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 			Message: "multiple matching MasterUserRecord resources found",
 		},
 		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
+		},
+		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
@@ -2237,6 +2403,11 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 			Status:  v1.ConditionFalse,
 			Reason:  "NoClusterAvailable",
 			Message: "no suitable member cluster found - capacity was reached",
+		},
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserNotInPreDeactivation",
 		},
 		v1alpha1.Condition{
 			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
