@@ -79,7 +79,7 @@ var _ reconcile.Reconciler = &ReconcileTemplateUpdateRequest{}
 
 // ReconcileTemplateUpdateRequest reconciles a TemplateUpdateRequest object
 type ReconcileTemplateUpdateRequest struct {
-	// This client, initialized using mgr.Client() above, is a split client
+	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme

@@ -6,6 +6,15 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
+	errors2 "github.com/pkg/errors"
+
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -34,7 +43,11 @@ func Add(mgr manager.Manager, config *configuration.Config) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, cfg *configuration.Config) reconcile.Reconciler {
-	return &ReconcileDeactivation{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: cfg}
+	return &ReconcileDeactivation{
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		config: cfg,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -58,7 +71,7 @@ var _ reconcile.Reconciler = &ReconcileDeactivation{}
 
 // ReconcileDeactivation reconciles a Deactivation object
 type ReconcileDeactivation struct {
-	// This client, initialized using mgr.Client() above, is a split client
+	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
@@ -73,9 +86,14 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	logger.Info("Reconciling Deactivation")
 
+	config, err := hostoperatorconfig.GetConfig(r.client, request.Namespace)
+	if err != nil {
+		return reconcile.Result{}, errors2.Wrapf(err, "unable to read HostOperatorConfig resource")
+	}
+
 	// Fetch the MasterUserRecord instance
 	mur := &toolchainv1alpha1.MasterUserRecord{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, mur)
+	err = r.client.Get(context.TODO(), request.NamespacedName, mur)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -149,10 +167,60 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 	logger.Info("user account time values", "deactivation timeout duration", deactivationTimeout, "provisionedTimestamp", provisionedTimestamp)
 
 	timeSinceProvisioned := time.Since(provisionedTimestamp.Time)
-	if timeSinceProvisioned < deactivationTimeout {
+
+	deactivatingNotificationTimeout := time.Duration((deactivationTimeoutDays-config.Deactivation.DeactivatingNotificationDays)*24) * time.Hour
+
+	if timeSinceProvisioned < deactivatingNotificationTimeout {
+		// It is not yet time to send the deactivating notification so requeue until it will be time to send it
+		requeueAfterTimeToNotify := deactivatingNotificationTimeout - timeSinceProvisioned
+		logger.Info("requeueing request", "RequeueAfter", requeueAfterTimeToNotify,
+			"Expected deactivating notification date/time", time.Now().Add(requeueAfterTimeToNotify).String())
+		return reconcile.Result{RequeueAfter: requeueAfterTimeToNotify}, nil
+	}
+
+	// If the usersignup state hasn't been set to deactivating, then set it now
+	if !states.Deactivating(usersignup) {
+		states.SetDeactivating(usersignup, true)
+
+		logger.Info("setting usersignup state to deactivating")
+		if err := r.client.Update(context.TODO(), usersignup); err != nil {
+			logger.Error(err, "failed to update usersignup")
+			return reconcile.Result{}, err
+		}
+
+		// Requeue so that the deactivation due time can be calculated after the notification has been sent.
+		// The sequence of events from here are:
+		// 1. This controller has now set the UserSignup state to deactivating if it's not already set
+		// 2. Reconciliation is requeued
+		// 3. UserSignup controller picks up that the deactivating state has been set, and responds by:
+		//		a) creating a pre-deactivating notification for the user, and
+		//		b) setting the "deactivating notification created" status condition to true.
+		// 4. This  controller reconciles again, and if it doesn't find the notification created status condition as
+		//    expected, requeues again, otherwise:
+		// 5. This controller calculates the amount of time that has passed since the deactivating notification was sent,
+		//  based on the LastTransitionTime of the condition. If enough time has now passed, it sets the UserSignup to deactivated.
+
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Duration(10) * time.Second}, nil
+	}
+
+	deactivatingCondition, found := condition.FindConditionByType(usersignup.Status.Conditions,
+		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated)
+	if !found || deactivatingCondition.Status != corev1.ConditionTrue ||
+		deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason {
+		// If the UserSignup has been marked as deactivating, however the deactivating notification hasn't been
+		// created yet, then requeue - the notification should be created shortly by the UserSignup controller
+		// once the "deactivating" state has been set
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Duration(10) * time.Second}, nil
+	}
+
+	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(config.Deactivation.DeactivatingNotificationDays*24) * time.Hour)
+
+	if time.Now().Before(deactivationDueTime) {
 		// It is not yet time to deactivate so requeue when it will be
-		requeueAfterExpired := deactivationTimeout - timeSinceProvisioned
-		logger.Info("requeueing request", "RequeueAfter", requeueAfterExpired, "Expected deactivation date/time", time.Now().Add(requeueAfterExpired).String())
+		requeueAfterExpired := time.Until(deactivationDueTime)
+
+		logger.Info("requeueing request", "RequeueAfter", requeueAfterExpired,
+			"Expected deactivation date/time", time.Now().Add(requeueAfterExpired).String())
 		return reconcile.Result{RequeueAfter: requeueAfterExpired}, nil
 	}
 
@@ -163,7 +231,6 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 	}
 	usersignup.Spec.Deactivated = true
 
-	logger.Info("deactivating the user")
 	if err := r.client.Update(context.TODO(), usersignup); err != nil {
 		logger.Error(err, "failed to update usersignup")
 		return reconcile.Result{}, err

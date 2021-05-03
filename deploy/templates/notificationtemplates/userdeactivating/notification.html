@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>
+        Notice: Your Developer Sandbox for Red Hat OpenShift Beta account will be deactivated soon.
+    </title>
+    <style>
+        a:hover {
+            text-decoration: underline !important;
+        }
+        p {
+            text-align: left;
+            margin: 30px 0;
+        }
+    </style>
+</head>
+
+<body
+        style="
+       padding: 10px;
+       padding: 0;
+       background-color: #f9f9f9;
+       font-family: 'Open Sans', sans-serif;
+       font-size: 15px;
+       font-weight: lighter;
+       line-height: 1.2;"
+>
+<div
+        style="
+       min-height: 300px;
+       max-width: 750px;
+       margin: 0 auto;
+       padding: 20px;
+       border: 1px solid #d7d7d7;
+       border-radius: 4px;
+       background-color: #fff;
+       box-shadow: 0 2px 4px #d7d7d7;"
+>
+
+    <p>
+        You are receiving this email because your email account {{.UserEmail}} was provisioned to Developer Sandbox for
+        Red Hat OpenShift Beta.
+    </p>
+
+    <p>
+        Your sandbox will expire in 3 days.  We recommend you save your work as all data in your sandbox will be
+        deleted upon expiry.  After deactivation, you can sign up again at any time for new access at {{.RegistrationURL}}.
+    </p>
+
+    <p>
+        Please reach us at devsandbox@redhat.com with any questions.
+    </p>
+
+    <p>
+        Thanks,<br />
+        The Developer Sandbox for Red Hat OpenShift team
+    </p>
+</div>
+</body>
+</html>
