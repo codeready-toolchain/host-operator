@@ -225,11 +225,11 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Deactivate the user
-	if usersignup.Spec.Deactivated {
+	if states.Deactivated(usersignup) {
 		// The UserSignup is already set for deactivation, nothing left to do
 		return reconcile.Result{}, nil
 	}
-	usersignup.Spec.Deactivated = true
+	states.SetDeactivated(usersignup, true)
 
 	if err := r.client.Update(context.TODO(), usersignup); err != nil {
 		logger.Error(err, "failed to update usersignup")

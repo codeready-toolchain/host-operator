@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -42,13 +44,13 @@ func ApprovedAutomatically() UserSignupModifier {
 
 func Deactivated() UserSignupModifier {
 	return func(userSignup *v1alpha1.UserSignup) {
-		userSignup.Spec.Deactivated = true
+		states.SetDeactivated(userSignup, true)
 	}
 }
 
 func DeactivatedWithLastTransitionTime(before time.Duration) UserSignupModifier {
 	return func(userSignup *v1alpha1.UserSignup) {
-		userSignup.Spec.Deactivated = true
+		states.SetDeactivated(userSignup, true)
 
 		deactivatedCondition := toolchainv1alpha1.Condition{
 			Type:               v1alpha1.UserSignupComplete,

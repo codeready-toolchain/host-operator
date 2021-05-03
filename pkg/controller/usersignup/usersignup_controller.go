@@ -182,7 +182,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// This is especially important for cases when a user is deactivated and then reactivated because the status is used to
 	// trigger sending of the notification. If a user is reactivated a notification should be sent to the user again.
 
-	if !banned && !userSignup.Spec.Deactivated {
+	if !banned && !states.Deactivated(userSignup) {
 		if err := r.updateStatus(logger, userSignup, r.setStatusDeactivationNotificationUserIsActive); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -192,13 +192,13 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	// status is set to false. This is especially important for cases when a user is deactivated and then reactivated
 	// because the status is used to trigger sending of the notification. If a user is reactivated a notification should
 	// be sent to the user again.
-	if !banned && !states.Deactivating(userSignup) && !userSignup.Spec.Deactivated {
+	if !banned && !states.Deactivating(userSignup) && !states.Deactivated(userSignup) {
 		if err := r.updateStatus(logger, userSignup, r.setStatusDeactivatingNotificationNotInPreDeactivation); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	if states.Deactivating(userSignup) && !userSignup.Spec.Deactivated && condition.IsNotTrue(userSignup.Status.Conditions,
+	if states.Deactivating(userSignup) && !states.Deactivated(userSignup) && condition.IsNotTrue(userSignup.Status.Conditions,
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated) {
 
 		if err := r.sendDeactivatingNotification(logger, userSignup); err != nil {
@@ -232,7 +232,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
 	// send a notification to the user, and return
-	if userSignup.Spec.Deactivated {
+	if states.Deactivated(userSignup) {
 		// if the UserSignup doesn't have the state=deactivated label set, then update it
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
 			return reconcile.Result{}, err
@@ -335,7 +335,7 @@ func (r *ReconcileUserSignup) checkIfMurAlreadyExists(reqLogger logr.Logger, use
 		}
 
 		// If the user has been deactivated, then we need to delete the MUR
-		if userSignup.Spec.Deactivated {
+		if states.Deactivated(userSignup) {
 			// set the state label to deactivated
 			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
 				return true, err
