@@ -211,7 +211,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 	}
 
-	if states.Deactivating(userSignup) && !states.Deactivated(userSignup) && condition.IsNotTrue(userSignup.Status.Conditions,
+	if states.Deactivating(userSignup) && condition.IsNotTrue(userSignup.Status.Conditions,
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated) {
 
 		if err := r.sendDeactivatingNotification(logger, userSignup); err != nil {
