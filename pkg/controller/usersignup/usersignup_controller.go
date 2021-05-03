@@ -156,6 +156,8 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		if err := r.client.Update(context.TODO(), userSignup); err != nil {
 			return reconcile.Result{}, err
 		}
+		// Requeue the reconciliation if the UserSignup was migrated
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {

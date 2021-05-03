@@ -246,10 +246,10 @@ func TestReconcile(t *testing.T) {
 						// Reload the userSignup
 						require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
 
-						// deactivating state should still be true
-						require.True(t, states.Deactivating(userSignupFoobar))
+						// deactivating state should now be false
+						require.False(t, states.Deactivating(userSignupFoobar))
 
-						// deactivated state should now be true also
+						// deactivated state should now be true
 						require.True(t, states.Deactivated(userSignupFoobar))
 
 						t.Run("usersignup already deactivated", func(t *testing.T) {
@@ -267,7 +267,7 @@ func TestReconcile(t *testing.T) {
 
 		// the time since the mur was provisioned exceeds the deactivation timeout period for the 'other' tier
 		t.Run("usersignup should be deactivated - other tier (60 days)", func(t *testing.T) {
-			states.SetDeactivated(userSignupFoobar, false)
+			states.SetDeactivating(userSignupFoobar, true)
 			// given
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutOtherTier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))

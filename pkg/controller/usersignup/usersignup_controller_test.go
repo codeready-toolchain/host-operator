@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -56,6 +58,27 @@ func newNsTemplateTier(tierName string, nsTypes ...string) *v1alpha1.NSTemplateT
 }
 
 var baseNSTemplateTier = newNsTemplateTier("base", "dev", "stage")
+
+// TODO remove this test once the migration code is removed
+func TestMigration(t *testing.T) {
+	// given
+	userSignup := NewUserSignup()
+	userSignup.Spec.Deactivated = true
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup)
+
+	// when
+	res, err := r.Reconcile(req)
+	require.NoError(t, err)
+
+	// Verify that the UserSignup was migrated correctly, and the result is set to requeue
+	require.True(t, res.Requeue)
+
+	// Reload the UserSignup
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	require.True(t, states.Deactivated(userSignup))
+}
 
 func TestUserSignupCreateMUROk(t *testing.T) {
 
