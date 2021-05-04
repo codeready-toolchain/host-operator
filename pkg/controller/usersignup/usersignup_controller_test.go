@@ -59,7 +59,7 @@ var baseNSTemplateTier = newNsTemplateTier("base", "dev", "stage")
 
 func TestUserSignupCreateMUROk(t *testing.T) {
 
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	for testname, userSignup := range map[string]*v1alpha1.UserSignup{
 		"with valid activation annotation":   NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2")), // this is a returning user
 		"with invalid activation annotation": NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "?")), // annotation value is not an 'int'
@@ -131,7 +131,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 
 func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := NewUserSignup(BeingDeleted(), WithTargetCluster("east"),
 		WithStateLabel("not-ready"),
 		WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))

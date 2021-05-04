@@ -197,7 +197,7 @@ func TestReconcile(t *testing.T) {
 				t.Run("usersignup requeued after deactivating notification created for user", func(t *testing.T) {
 					// Set the notification status condition as sent
 					userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
-						toolchainv1alpha1.Condition{
+						{
 							Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
 							Status:             v1.ConditionTrue,
 							LastTransitionTime: metav1.Time{Time: time.Now()},
@@ -227,7 +227,7 @@ func TestReconcile(t *testing.T) {
 					t.Run("usersignup should be deactivated", func(t *testing.T) {
 						// Set the notification status condition as sent, but this time 3 days in the past
 						userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
-							toolchainv1alpha1.Condition{
+							{
 								Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
 								Status:             v1.ConditionTrue,
 								LastTransitionTime: metav1.Time{Time: time.Now().Add(time.Duration(-3) * time.Hour * 24)},
