@@ -538,7 +538,8 @@ func (r *Reconciler) provisionMasterUserRecord(userSignup *toolchainv1alpha1.Use
 			"Error creating MasterUserRecord")
 	}
 	// increment the counter of MasterUserRecords
-	counter.IncrementMasterUserRecordCount()
+	domain := metrics.GetEmailDomain(mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey])
+	counter.IncrementMasterUserRecordCount(domain)
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil

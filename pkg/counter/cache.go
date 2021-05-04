@@ -18,16 +18,19 @@ var log = logf.Log.WithName("counter_cache")
 
 var cachedCounts = cache{
 	Counts: Counts{
-		MasterUserRecordCount:        0,
-		UserAccountsPerClusterCounts: map[string]int{},
-		UsersPerActivationCounts:     map[string]int{},
+		MasterUserRecordCount:           0,
+		UserAccountsPerClusterCounts:    map[string]int{},
+		UsersPerActivationCounts:        map[string]int{},
+		MasterUserRecordPerDomainCounts: map[string]int{},
 	},
 }
 
 // Counts is type that contains number of MURs and number of UserAccounts per member cluster
 type Counts struct {
 	// Total number of Master User Accounts
-	MasterUserRecordCount int
+	// DEPRECATED - see MasterUserRecordCounts (mapped by email domain)
+	MasterUserRecordCount           int
+	MasterUserRecordPerDomainCounts map[string]int
 	// User Accounts per Clusters (indexed by cluster name)
 	UserAccountsPerClusterCounts map[string]int
 	// Activations per Users (number of users indexed by their number of activations)
@@ -55,35 +58,48 @@ func Reset() {
 
 func reset() {
 	cachedCounts.Counts = Counts{
-		UserAccountsPerClusterCounts: map[string]int{},
-		UsersPerActivationCounts:     map[string]int{},
+		UserAccountsPerClusterCounts:    map[string]int{},
+		UsersPerActivationCounts:        map[string]int{},
+		MasterUserRecordPerDomainCounts: map[string]int{},
 	}
 	cachedCounts.initialized = false
-	metrics.MasterUserRecordGauge.Set(float64(0))
 	metrics.UserAccountGaugeVec.Reset()
 	metrics.UsersPerActivationGaugeVec.Reset()
+	metrics.MasterUserRecordGauge.Set(float64(0))
+	metrics.MasterUserRecordGaugeVec.Reset()
 }
 
 // IncrementMasterUserRecordCount increments the number of MasterUserRecord in the cached counter
-func IncrementMasterUserRecordCount() {
+func IncrementMasterUserRecordCount(domain metrics.Domain) {
 	write(func() {
 		cachedCounts.MasterUserRecordCount++
 		log.Info("incrementing MasterUserRecordGauge", "value", cachedCounts.MasterUserRecordCount)
 		metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
+
+		cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]++
+		log.Info("incrementing MasterUserRecordGaugeVec", "value", cachedCounts.MasterUserRecordPerDomainCounts[string(domain)], "domain", domain)
+		metrics.MasterUserRecordGaugeVec.WithLabelValues(string(domain)).Set(float64(cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]))
 	})
 }
 
 // DecrementMasterUserRecordCount decreases the number of MasterUserRecord in the cached counter
-func DecrementMasterUserRecordCount(logger logr.Logger) {
+func DecrementMasterUserRecordCount(domain metrics.Domain) {
 	write(func() {
 		if cachedCounts.MasterUserRecordCount != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
 			cachedCounts.MasterUserRecordCount--
 		} else {
-			logger.Error(fmt.Errorf("the count of MasterUserRecords is zero"),
-				"unable to decrement the number of MasterUserRecords")
+			log.Error(fmt.Errorf("the count of MasterUserRecords is zero"), "unable to decrement the number of MasterUserRecords")
 		}
-		logger.Info("decrementing MasterUserRecordGauge", "value", cachedCounts.MasterUserRecordCount)
+		log.Info("decrementing MasterUserRecordGauge", "value", cachedCounts.MasterUserRecordCount)
 		metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
+
+		if cachedCounts.MasterUserRecordPerDomainCounts[string(domain)] != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
+			cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]--
+		} else {
+			log.Error(fmt.Errorf("the count of MasterUserRecords is zero"), "unable to decrement the number of MasterUserRecords", "domain", domain)
+		}
+		log.Info("decrementing MasterUserRecordGaugeVec", "value", cachedCounts.MasterUserRecordCount, "domain", domain)
+		metrics.MasterUserRecordGaugeVec.WithLabelValues(string(domain)).Set(float64(cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]))
 	})
 }
 
@@ -91,6 +107,7 @@ func DecrementMasterUserRecordCount(logger logr.Logger) {
 func IncrementUserAccountCount(clusterName string) {
 	write(func() {
 		cachedCounts.UserAccountsPerClusterCounts[clusterName]++
+		log.Info("incremented UserAccountsPerClusterCounts", "clusterName", clusterName, "value", cachedCounts.UserAccountsPerClusterCounts[clusterName])
 		metrics.UserAccountGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.UserAccountsPerClusterCounts[clusterName]))
 	})
 }
@@ -189,8 +206,12 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 		toolchainStatus.Status.Metrics = map[string]toolchainv1alpha1.Metric{}
 	}
 	toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey] = toolchainv1alpha1.Metric(cachedCounts.UsersPerActivationCounts)
-	for activations, users := range cachedCounts.UsersPerActivationCounts {
-		metrics.UsersPerActivationGaugeVec.WithLabelValues(activations).Set(float64(users))
+	for activations, count := range cachedCounts.UsersPerActivationCounts {
+		metrics.UsersPerActivationGaugeVec.WithLabelValues(activations).Set(float64(count))
+	}
+	toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey] = toolchainv1alpha1.Metric(cachedCounts.MasterUserRecordPerDomainCounts)
+	for domain, count := range cachedCounts.MasterUserRecordPerDomainCounts {
+		metrics.MasterUserRecordGaugeVec.WithLabelValues(domain).Set(float64(count))
 	}
 
 	log.Info("synchronized counters", "counts", cachedCounts.Counts)
@@ -217,6 +238,11 @@ func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainSt
 	// initialize the cached counters from the UserSignup and MasterUserRecord resources.
 	if toolchainStatus.Status.HostOperator == nil ||
 		toolchainStatus.Status.HostOperator.MasterUserRecordCount == 0 {
+		return initializeFromResources(cl, toolchainStatus.Namespace)
+	}
+	// Migration for CRT-1072: force initialization from existing UserSignups/MasterUserRecords
+	// TODO: remove as part of CRT-1074
+	if _, exists := toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey]; !exists {
 		return initializeFromResources(cl, toolchainStatus.Namespace)
 	}
 	// otherwise, initialize the cached counters from the ToolchainStatud resource.
@@ -248,6 +274,8 @@ func initializeFromResources(cl client.Client, namespace string) error {
 	}
 	for _, mur := range murs.Items {
 		cachedCounts.MasterUserRecordCount++
+		domain := metrics.GetEmailDomain(mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey])
+		cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]++
 		for _, ua := range mur.Spec.UserAccounts {
 			cachedCounts.UserAccountsPerClusterCounts[ua.TargetCluster]++
 		}
@@ -256,7 +284,9 @@ func initializeFromResources(cl client.Client, namespace string) error {
 	log.Info("cached counts initialized from UserSignups and MasterUserRecords",
 		"MasterUserRecordCount", cachedCounts.MasterUserRecordCount,
 		"UserAccountsPerClusterCounts", cachedCounts.UserAccountsPerClusterCounts,
-		"UsersPerActivationCounts", cachedCounts.UsersPerActivationCounts)
+		"UsersPerActivationCounts", cachedCounts.UsersPerActivationCounts,
+		"MasterUserRecordPerDomainCounts", cachedCounts.MasterUserRecordPerDomainCounts,
+	)
 	return nil
 }
 
@@ -270,19 +300,26 @@ func initializeFromToolchainStatus(toolchainStatus *toolchainv1alpha1.ToolchainS
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
 	}
 
-	// MasterUserRecordCount
+	// MasterUserRecordCount (deprecated)
 	cachedCounts.MasterUserRecordCount += toolchainStatus.Status.HostOperator.MasterUserRecordCount
 	// UserAccountsPerClusterCounts
 	for _, memberStatus := range toolchainStatus.Status.Members {
 		cachedCounts.UserAccountsPerClusterCounts[memberStatus.ClusterName] += memberStatus.UserAccountCount
 	}
-	// UsersPerActivationCounts
 	if toolchainStatus.Status.Metrics != nil {
+		// UsersPerActivationCounts
 		if metric, exists := toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey]; exists {
 			for k, v := range metric {
 				cachedCounts.UsersPerActivationCounts[k] += v
 			}
 		}
+		// MasterUserRecordCountPerDomain
+		if metric, exists := toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey]; exists {
+			for k, v := range metric {
+				cachedCounts.MasterUserRecordPerDomainCounts[k] += v
+			}
+		}
+
 	}
 	cachedCounts.initialized = true
 	log.Info("cached counts initialized from ToolchainStatus")

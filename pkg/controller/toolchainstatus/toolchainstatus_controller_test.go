@@ -458,6 +458,9 @@ func TestToolchainStatusConditions(t *testing.T) {
 			memberStatus := newMemberStatus(ready())
 			toolchainStatus := NewToolchainStatus(
 				WithHost(WithMasterUserRecordCount(20)),
+				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+					string(metrics.Other): 20,
+				}),
 				WithMember("member-1", WithUserAccountCount(10)),
 				WithMember("member-2", WithUserAccountCount(10)),
 			)
@@ -483,7 +486,11 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("ToolchainCluster CR of member-1 cluster was removed", func(t *testing.T) {
 			// given
 			memberStatus := newMemberStatus(ready())
-			toolchainStatus := NewToolchainStatus(WithHost(WithMasterUserRecordCount(20)))
+			toolchainStatus := NewToolchainStatus(
+				WithHost(WithMasterUserRecordCount(20)),
+				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+					string(metrics.Other): 20,
+				}))
 
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
@@ -511,7 +518,11 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("ToolchainCluster CR of member-2 cluster was removed", func(t *testing.T) {
 			// given
 			memberStatus := newMemberStatus(ready())
-			toolchainStatus := NewToolchainStatus(WithHost(WithMasterUserRecordCount(20)))
+			toolchainStatus := NewToolchainStatus(
+				WithHost(WithMasterUserRecordCount(20)),
+				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+					string(metrics.Other): 20,
+				}))
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
@@ -1113,8 +1124,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 
 		t.Run("sync with newly added MURs and UAs", func(t *testing.T) {
 			// given
-			counter.IncrementMasterUserRecordCount()
-			counter.IncrementMasterUserRecordCount()
+			counter.IncrementMasterUserRecordCount(metrics.RedHat)
+			counter.IncrementMasterUserRecordCount(metrics.Other)
 			counter.IncrementUserAccountCount("member-1")
 			toolchainStatus := NewToolchainStatus(
 				WithHost(WithMasterUserRecordCount(1)),
@@ -1151,11 +1162,14 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				"2": 2,
 				"3": 1,
 			}),
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.Other): 8,
+			}),
 		)
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when
-		counter.IncrementMasterUserRecordCount()
+		counter.IncrementMasterUserRecordCount(metrics.RedHat)
 		counter.IncrementUserAccountCount("member-1")
 		counter.UpdateUsersPerActivationCounters(1)
 		counter.UpdateUsersPerActivationCounters(2)
