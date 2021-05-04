@@ -15,11 +15,6 @@ create-namespace:
 	$(Q)-echo "Creating Namespace"
 	$(Q)-oc new-project $(LOCAL_TEST_NAMESPACE)
 
-.PHONY: deploy-crd
-## Deploy CRD
-deploy-crd:
-	$(Q)-oc apply -f deploy/crds
-
 .PHONY: add-member-to-host
 ## Run script add-cluster.sh member member-cluster
 add-member-to-host:
