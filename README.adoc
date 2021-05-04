@@ -16,19 +16,12 @@ This repository uses https://github.com/golang/go/wiki/Modules[Go modules]. You 
 
 == Development
 
+toolchain-e2e repo makefile can be used as a starting point for setting up host and member operators for development.
 
-That Makefile target takes care of additional several steps which can be executed separately:
-
-* creating local test namespace: `$ make create-namespace`
+Following Makefile targets takes care of additional several steps which can be executed separately:
 * deploy CRDs: `$ make deploy-crd`
 * building the project: `$ make build`
 * deploying ClusterRole/ClusterRoleBinding and creating ServiceAccount: `$ make deploy-rbac`
-
-There are a few more targets that you can find useful:
-
-* to login as system:admin user and enter the local test namespace: `$ make use-namespace`
-* to remove the local test namespace: `$ make clean-namespace`
-* to remove & create the local test namespace, and create ClusterRole/ClusterRoleBinding and ServiceAccount inside of the namespace: `$ make reset-namespace`
 
 == OLM catalog files
 

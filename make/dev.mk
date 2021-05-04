@@ -15,31 +15,6 @@ create-namespace:
 	$(Q)-echo "Creating Namespace"
 	$(Q)-oc new-project $(LOCAL_TEST_NAMESPACE)
 
-.PHONY: use-namespace
-## Log in as system:admin and enter the test namespace
-use-namespace:
-	$(Q)-echo "Using to the namespace $(LOCAL_TEST_NAMESPACE)"
-	$(Q)-oc project $(LOCAL_TEST_NAMESPACE)
-
-.PHONY: clean-namespace
-## Delete the test namespace
-clean-namespace:
-	$(Q)-echo "Deleting Namespace"
-	$(Q)-oc delete project $(LOCAL_TEST_NAMESPACE)
-
-.PHONY: reset-namespace
-## Delete an create the test namespace and deploy rbac there
-reset-namespace: clean-namespace create-namespace deploy-rbac
-
-.PHONY: deploy-rbac
-## Setup service account and deploy RBAC
-deploy-rbac:
-	$(Q)-oc apply -f deploy/service_account.yaml
-	$(Q)-oc apply -f deploy/role.yaml
-	$(Q)-oc apply -f deploy/role_binding.yaml
-	$(Q)-oc apply -f deploy/cluster_role.yaml
-	$(Q)-sed -e 's|REPLACE_NAMESPACE|${LOCAL_TEST_NAMESPACE}|g' ./deploy/cluster_role_binding.yaml  | oc apply -f -
-
 .PHONY: deploy-crd
 ## Deploy CRD
 deploy-crd:
