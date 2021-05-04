@@ -19,9 +19,7 @@ This repository uses https://github.com/golang/go/wiki/Modules[Go modules]. You 
 toolchain-e2e repo makefile can be used as a starting point for setting up host and member operators for development.
 
 Following Makefile targets takes care of additional several steps which can be executed separately:
-* deploy CRDs: `$ make deploy-crd`
 * building the project: `$ make build`
-* deploying ClusterRole/ClusterRoleBinding and creating ServiceAccount: `$ make deploy-rbac`
 
 == OLM catalog files
 
