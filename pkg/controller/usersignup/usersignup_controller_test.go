@@ -67,11 +67,8 @@ func TestMigration(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup)
 
 	// when
-	res, err := r.Reconcile(req)
+	_, err := r.Reconcile(req)
 	require.NoError(t, err)
-
-	// Verify that the UserSignup was migrated correctly, and the result is set to requeue
-	require.True(t, res.Requeue)
 
 	// Reload the UserSignup
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
