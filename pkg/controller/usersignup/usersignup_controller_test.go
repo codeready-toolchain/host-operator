@@ -145,58 +145,29 @@ func TestUserSignupMigration(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("when user is %s", state), func(t *testing.T) {
 
-			t.Run("when annotation is missing", func(t *testing.T) {
-				defer counter.Reset()
-				userSignup := NewUserSignup(SignupComplete(""), WithStateLabel(state))
-				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-				InitializeCounters(t, NewToolchainStatus(
-					WithHost(WithMasterUserRecordCount(1)),
-					WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
-						"1": 0,
-						"2": 0,
-						"3": 0,
-					})))
-				// when
-				res, err := r.Reconcile(req)
+			defer counter.Reset()
+			userSignup := NewUserSignup(SignupComplete(""), WithStateLabel(state), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
+			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+			InitializeCounters(t, NewToolchainStatus(
+				WithHost(WithMasterUserRecordCount(1)),
+				WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+					"1": 0,
+					"2": 1,
+					"3": 0,
+				})))
+			// when
+			res, err := r.Reconcile(req)
 
-				// then verify that the MUR exists and is complete
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res)
-				actualUserSignup := &v1alpha1.UserSignup{}
-				err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
-				require.NoError(t, err)
-				assert.Equal(t, "1", actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // set
-				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))               // set
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))               // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))               // unchanged
-			})
-
-			t.Run("when annotation already exists", func(t *testing.T) {
-				defer counter.Reset()
-				userSignup := NewUserSignup(SignupComplete(""), WithStateLabel(state), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
-				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-				InitializeCounters(t, NewToolchainStatus(
-					WithHost(WithMasterUserRecordCount(1)),
-					WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
-						"1": 0,
-						"2": 1,
-						"3": 0,
-					})))
-				// when
-				res, err := r.Reconcile(req)
-
-				// then verify that the MUR exists and is complete
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res)
-				actualUserSignup := &v1alpha1.UserSignup{}
-				err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
-				require.NoError(t, err)
-				assert.Equal(t, "2", actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))               // unchanged
-				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))               // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))               // unchanged
-
-			})
+			// then verify that the MUR exists and is complete
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res)
+			actualUserSignup := &v1alpha1.UserSignup{}
+			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
+			require.NoError(t, err)
+			assert.Equal(t, "2", actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // unchanged
+			AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))               // unchanged
+			AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))               // unchanged
+			AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))               // unchanged
 		})
 	}
 

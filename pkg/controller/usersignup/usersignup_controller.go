@@ -153,26 +153,6 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 	}
 
-	// (migration for 'complete' usersignups only) set the UserSignupActivationCounterAnnotationKey if it is missing
-	// To be removed once the operator was deployed in production, as per https://issues.redhat.com/browse/CRT-1036
-	state := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
-	if state == toolchainv1alpha1.UserSignupStateLabelValueApproved ||
-		state == toolchainv1alpha1.UserSignupStateLabelValueDeactivated ||
-		state == toolchainv1alpha1.UserSignupStateLabelValueBanned {
-		if userSignup.Annotations == nil { // if annotations is empty, it's omitted when reading the resource, hence it's nil here.
-			userSignup.Annotations = map[string]string{}
-		}
-		if _, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; !exists {
-			logger.Info("setting 'toolchain.dev.openshift.com/activation-counter' on existing active user")
-			userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "1"
-			// will not trigger a reconcile if update succeeds (see UserSignupChangedPredicate)
-			if err := r.client.Update(context.TODO(), userSignup); err != nil {
-				return reconcile.Result{}, err
-			}
-			counter.UpdateUsersPerActivationCounters(1)
-		}
-	}
-
 	banned, err := r.isUserBanned(logger, userSignup)
 	if err != nil {
 		return reconcile.Result{}, err
