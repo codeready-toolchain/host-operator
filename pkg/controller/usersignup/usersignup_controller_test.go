@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -56,6 +58,24 @@ func newNsTemplateTier(tierName string, nsTypes ...string) *v1alpha1.NSTemplateT
 }
 
 var baseNSTemplateTier = newNsTemplateTier("base", "dev", "stage")
+
+// TODO remove this test once the migration code is removed
+func TestMigration(t *testing.T) {
+	// given
+	userSignup := NewUserSignup()
+	userSignup.Spec.Deactivated = true
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup)
+
+	// when
+	_, err := r.Reconcile(req)
+	require.NoError(t, err)
+
+	// Reload the UserSignup
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	require.True(t, states.Deactivated(userSignup))
+}
 
 func TestUserSignupCreateMUROk(t *testing.T) {
 
@@ -1381,7 +1401,8 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
 		mur.Labels = map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur,
+			NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
 
 		// when
@@ -1477,9 +1498,9 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "john.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:      "UserID123",
-			Username:    "john.doe@redhat.com",
-			Deactivated: true,
+			UserID:   "UserID123",
+			Username: "john.doe@redhat.com",
+			States:   []v1alpha1.UserSignupState{v1alpha1.UserSignupStateDeactivated},
 		},
 		Status: v1alpha1.UserSignupStatus{
 			Conditions: []v1alpha1.Condition{
@@ -1566,9 +1587,8 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "john.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:      "UserID123",
-			Username:    "john.doe@redhat.com",
-			Deactivated: false,
+			UserID:   "UserID123",
+			Username: "john.doe@redhat.com",
 		},
 		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "john-doe",
@@ -1736,9 +1756,9 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:      "UserID123",
-			Username:    "edward.jones@redhat.com",
-			Deactivated: true,
+			UserID:   "UserID123",
+			Username: "edward.jones@redhat.com",
+			States:   []v1alpha1.UserSignupState{v1alpha1.UserSignupStateDeactivated},
 		},
 		Status: v1alpha1.UserSignupStatus{
 			Conditions: []v1alpha1.Condition{
@@ -2150,9 +2170,9 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:      "UserID123",
-			Username:    "alice.mayweather.doe@redhat.com",
-			Deactivated: true,
+			UserID:   "UserID123",
+			Username: "alice.mayweather.doe@redhat.com",
+			States:   []v1alpha1.UserSignupState{v1alpha1.UserSignupStateDeactivated},
 		},
 		Status: v1alpha1.UserSignupStatus{
 			Conditions: []v1alpha1.Condition{
