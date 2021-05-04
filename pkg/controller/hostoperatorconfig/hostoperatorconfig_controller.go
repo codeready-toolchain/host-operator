@@ -46,7 +46,7 @@ var _ reconcile.Reconciler = &ReconcileHostOperatorConfig{}
 
 // ReconcileHostOperatorConfig reconciles a HostOperatorConfig object
 type ReconcileHostOperatorConfig struct {
-	// This client, initialized using mgr.Client() above, is a split client
+	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 }

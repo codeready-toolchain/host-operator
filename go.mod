@@ -1,7 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20210426074636-2f2696f1a944
+	github.com/codeready-toolchain/api v0.0.0-20210429025708-2d7ac2edb6d8
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20210413083628-a2981455c932
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible

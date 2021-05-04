@@ -257,6 +257,37 @@ func (u *statusUpdater) setStatusDeactivationNotificationCreationFailed(userSign
 		})
 }
 
+func (u *statusUpdater) setStatusDeactivatingNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason,
+		})
+}
+
+func (u *statusUpdater) setStatusDeactivatingNotificationNotInPreDeactivation(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.UserSignupDeactivatingNotificationUserNotInPreDeactivationReason,
+		})
+}
+
+func (u *statusUpdater) setStatusDeactivatingNotificationCreationFailed(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreationFailedReason,
+			Message: message,
+		})
+}
+
 func (u *statusUpdater) updateStatus(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	statusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error) error {
 
@@ -270,7 +301,7 @@ func (u *statusUpdater) updateStatus(logger logr.Logger, userSignup *toolchainv1
 
 // updateCompleteStatus updates the `CompliantUsername` and `Conditions` in the status, should only be invoked on completion because
 // both completion and the compliant username require the master user record to be created.
-func (u *statusUpdater) updateCompleteStatus(compliantUsername string) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *statusUpdater) updateCompleteStatus(logger logr.Logger, compliantUsername string) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 
 		usernameUpdated := userSignup.Status.CompliantUsername != compliantUsername
@@ -289,13 +320,14 @@ func (u *statusUpdater) updateCompleteStatus(compliantUsername string) func(user
 			// Nothing changed
 			return nil
 		}
+
 		return u.client.Status().Update(context.TODO(), userSignup)
 	}
 }
 
 // wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
 func (u *statusUpdater) wrapErrorWithStatusUpdate(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
-	statusUpdater StatusUpdater, err error, format string, args ...interface{}) error {
+	statusUpdater StatusUpdaterFunc, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
