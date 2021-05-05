@@ -389,7 +389,7 @@ func (r *ReconcileUserSignup) checkIfMurAlreadyExists(reqLogger logr.Logger, use
 
 func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	// Check if the user requires phone verification, and do not proceed further if they do
-	if userSignup.Spec.VerificationRequired {
+	if states.VerificationRequired(userSignup) {
 		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
 	}
 

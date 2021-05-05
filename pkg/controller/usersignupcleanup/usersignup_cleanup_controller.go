@@ -91,7 +91,7 @@ func (r *ReconcileUserSignupCleanup) Reconcile(request reconcile.Request) (recon
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
-	if instance.Spec.VerificationRequired && !instance.Spec.Approved {
+	if states.VerificationRequired(instance) && !instance.Spec.Approved {
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
 
