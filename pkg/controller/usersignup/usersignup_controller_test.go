@@ -2560,8 +2560,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 func TestMigrateMur(t *testing.T) {
 	// given
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
-	mur, err := newMasterUserRecord(baseNSTemplateTier, "foo", test.HostOperatorNs, "east",
-		userSignup.Name, userSignup.Spec.UserID)
+	mur, err := newMasterUserRecord(userSignup, "east", baseNSTemplateTier, "foo")
 	require.NoError(t, err)
 
 	// set NSLimit and NSTemplateSet to be empty

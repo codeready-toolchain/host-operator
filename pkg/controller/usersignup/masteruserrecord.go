@@ -40,8 +40,7 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 	return changed, nil
 }
 
-func newMasterUserRecord(nstemplateTier *toolchainv1alpha1.NSTemplateTier, name, namespace, targetCluster,
-	userSignupName, userID string) (*toolchainv1alpha1.MasterUserRecord, error) {
+func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string, nstemplateTier *toolchainv1alpha1.NSTemplateTier, compliantUserName string) (*toolchainv1alpha1.MasterUserRecord, error) {
 	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 		{
 			TargetCluster: targetCluster,
@@ -53,24 +52,28 @@ func newMasterUserRecord(nstemplateTier *toolchainv1alpha1.NSTemplateTier, name,
 			},
 		},
 	}
-	hash, err := nstemplatetier.ComputeHashForNSTemplateTier(*nstemplateTier)
+	hash, err := nstemplatetier.ComputeHashForNSTemplateTier(nstemplateTier)
 	if err != nil {
 		return nil, err
 	}
 	labels := map[string]string{
-		toolchainv1alpha1.MasterUserRecordOwnerLabelKey:              userSignupName,
+		toolchainv1alpha1.MasterUserRecordOwnerLabelKey:              userSignup.Name,
 		nstemplatetier.TemplateTierHashLabelKey(nstemplateTier.Name): hash,
+	}
+	annotations := map[string]string{
+		toolchainv1alpha1.MasterUserRecordEmailAnnotationKey: userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey],
 	}
 
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels:    labels,
+			Namespace:   userSignup.Namespace,
+			Name:        compliantUserName,
+			Labels:      labels,
+			Annotations: annotations,
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserAccounts: userAccounts,
-			UserID:       userID,
+			UserID:       userSignup.Spec.UserID,
 		},
 	}
 	return mur, nil

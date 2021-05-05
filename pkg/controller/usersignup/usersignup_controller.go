@@ -532,8 +532,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			"Error generating compliant username for %s", userSignup.Spec.Username)
 	}
 
-	mur, err := newMasterUserRecord(nstemplateTier, compliantUsername, userSignup.Namespace, targetCluster,
-		userSignup.Name, userSignup.Spec.UserID)
+	mur, err := newMasterUserRecord(userSignup, targetCluster, nstemplateTier, compliantUsername)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord %s", mur.Name)

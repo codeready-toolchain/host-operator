@@ -31,6 +31,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// TODO: to be removed once CRT-1075 is done
+func TestMigrationAddEmailAddressAnnotation(t *testing.T) {
+	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	s := apiScheme(t)
+	usersignup := NewUserSignup() // email is `foo@redhat.com`
+	mur := murtest.NewMasterUserRecord(t, "john", murtest.UserID(usersignup.Name))
+	hostClient := test.NewFakeClient(t, usersignup, mur)
+	memberClient := test.NewFakeClient(t)
+	cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
+		ClusterClient(test.MemberClusterName, memberClient))
+
+	// when
+	result, err := cntrl.Reconcile(newMurRequest(mur))
+
+	// then
+	require.NoError(t, err)
+	require.False(t, result.Requeue)
+
+	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
+		HasFinalizer()
+
+	// then
+}
 func TestAddFinalizer(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
