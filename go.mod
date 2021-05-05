@@ -1,6 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
+	cloud.google.com/go v0.60.0 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20210429025708-2d7ac2edb6d8
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20210504213526-a9f78c786c6f
 	github.com/ghodss/yaml v1.0.0
@@ -8,24 +9,29 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/google/go-cmp v0.5.4 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/mailgun/mailgun-go/v4 v4.1.3
-	github.com/onsi/ginkgo v1.14.2 // indirect
-	github.com/onsi/gomega v1.10.4 // indirect
+	github.com/nxadm/tail v1.4.8 // indirect
+	github.com/onsi/ginkgo v1.15.0 // indirect
+	github.com/onsi/gomega v1.10.5 // indirect
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/operator-framework/operator-sdk v0.19.2
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.5.1
+	github.com/prometheus/client_golang v1.7.1
 	github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/mod v0.4.0 // indirect
-	golang.org/x/text v0.3.4 // indirect
-	golang.org/x/tools v0.1.0 // indirect
+	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
+	golang.org/x/mod v0.4.1 // indirect
+	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110 // indirect
+	golang.org/x/sys v0.0.0-20210228012217-479acdf4ea46 // indirect
+	golang.org/x/text v0.3.5 // indirect
+	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	honnef.co/go/tools v0.0.1-2020.1.6 // indirect
+	honnef.co/go/tools v0.1.3 // indirect
 	k8s.io/api v0.18.3
 	k8s.io/apiextensions-apiserver v0.18.3
 	k8s.io/apimachinery v0.18.3
