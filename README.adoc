@@ -16,7 +16,7 @@ This repository uses https://github.com/golang/go/wiki/Modules[Go modules]. You 
 
 == Development
 
-The dev targets in the toolchain-e2e repository can be used to build and deploy the host and member operators for development: https://github.com/codeready-toolchain/toolchain-e2e/blob/master/make/dev.mk
+The dev.mk targets in the toolchain-e2e repository can be used to build and deploy the host and member operators for development, or use the guide- https://github.com/codeready-toolchain/toolchain-e2e/blob/master/dev_install.adoc
 
 
 == OLM catalog files
