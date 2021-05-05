@@ -11,12 +11,14 @@ on:
 
 jobs:
   golangci:
-    name: Lint with Go ${{ matrix.go-version }}
+    name: GolangCI Lint
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: [1.14.x]
     steps:
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.14.x
+        
     - name: Checkout code
       uses: actions/checkout@v2
     

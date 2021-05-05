@@ -31,7 +31,10 @@ NOTIFICATION_BASEDIR = deploy/templates/notificationtemplates
 REGISTRATION_SERVICE_DIR=deploy/registration-service
 
 .PHONY: generate
-generate: generate-metadata generate-assets 
+generate: install-go-bindata generate-metadata generate-assets 
+
+install-go-bindata:
+	@go install github.com/go-bindata/go-bindata/...
 
 clean-metadata:
 	@rm $(NSTEMPLATES_BASEDIR)/metadata.yaml 2>/dev/null || true
@@ -48,7 +51,6 @@ endef
 
 .PHONY: generate-assets
 generate-assets:
-	@go install github.com/go-bindata/go-bindata/...
 	@echo "generating bindata for files in $(NSTEMPLATES_BASEDIR) ..."
 	@rm ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
 	@$(GOPATH)/bin/go-bindata -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_BASEDIR) $(NSTEMPLATES_BASEDIR)/...
