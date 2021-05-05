@@ -79,7 +79,7 @@ func TestMigration(t *testing.T) {
 
 func TestUserSignupCreateMUROk(t *testing.T) {
 
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	for testname, userSignup := range map[string]*v1alpha1.UserSignup{
 		"with valid activation annotation":   NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2")), // this is a returning user
 		"with invalid activation annotation": NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "?")), // annotation value is not an 'int'
@@ -149,113 +149,9 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	}
 }
 
-func TestUserSignupMigration(t *testing.T) {
-
-	// check that the "toolchain.dev.openshift.com/activation-counter" annotation
-	// is set to "1" on usersignups which are complete/true and for whom
-	// the annotation was not already set
-
-	// given
-	logf.SetLogger(zap.Logger(true))
-
-	for _, state := range []string{
-		v1alpha1.UserSignupStateLabelValueApproved,
-		v1alpha1.UserSignupStateLabelValueDeactivated,
-		v1alpha1.UserSignupStateLabelValueBanned,
-	} {
-		t.Run(fmt.Sprintf("when user is %s", state), func(t *testing.T) {
-
-			t.Run("when annotation is missing", func(t *testing.T) {
-				defer counter.Reset()
-				userSignup := NewUserSignup(SignupComplete(""), WithStateLabel(state))
-				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-				InitializeCounters(t, NewToolchainStatus(
-					WithHost(WithMasterUserRecordCount(1)),
-					WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
-						"1": 0,
-						"2": 0,
-						"3": 0,
-					})))
-				// when
-				res, err := r.Reconcile(req)
-
-				// then verify that the MUR exists and is complete
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res)
-				actualUserSignup := &v1alpha1.UserSignup{}
-				err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
-				require.NoError(t, err)
-				assert.Equal(t, "1", actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // set
-				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))               // set
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))               // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))               // unchanged
-			})
-
-			t.Run("when annotation already exists", func(t *testing.T) {
-				defer counter.Reset()
-				userSignup := NewUserSignup(SignupComplete(""), WithStateLabel(state), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
-				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-				InitializeCounters(t, NewToolchainStatus(
-					WithHost(WithMasterUserRecordCount(1)),
-					WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
-						"1": 0,
-						"2": 1,
-						"3": 0,
-					})))
-				// when
-				res, err := r.Reconcile(req)
-
-				// then verify that the MUR exists and is complete
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res)
-				actualUserSignup := &v1alpha1.UserSignup{}
-				err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
-				require.NoError(t, err)
-				assert.Equal(t, "2", actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))               // unchanged
-				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))               // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))               // unchanged
-
-			})
-		})
-	}
-
-	for _, state := range []string{
-		v1alpha1.UserSignupStateLabelValueNotReady,
-		v1alpha1.UserSignupStateLabelValuePending,
-	} {
-		t.Run(fmt.Sprintf("when user is %s", state), func(t *testing.T) {
-			t.Run("when annotation is missing", func(t *testing.T) {
-				defer counter.Reset()
-				userSignup := NewUserSignup(VerificationRequired(), WithStateLabel(state))
-				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
-				InitializeCounters(t, NewToolchainStatus(
-					WithHost(WithMasterUserRecordCount(1)),
-					WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
-						"1": 0,
-						"2": 0,
-						"3": 0,
-					})))
-				// when
-				res, err := r.Reconcile(req)
-
-				// then verify that the MUR exists and is complete
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res)
-				actualUserSignup := &v1alpha1.UserSignup{}
-				err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
-				require.NoError(t, err)
-				assert.Empty(t, actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // unset
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))          // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))          // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))          // unchanged
-			})
-		})
-	}
-}
 func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	// given
-	logf.SetLogger(zap.Logger(true))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := NewUserSignup(BeingDeleted(), WithTargetCluster("east"),
 		WithStateLabel("not-ready"),
 		WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
@@ -1901,8 +1797,10 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur,
 		NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
+
 	// when
 	_, err := r.Reconcile(req)
+
 	// then
 	require.NoError(t, err)
 	err = r.client.Get(context.TODO(), key, userSignup)
@@ -1911,6 +1809,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 
 	notifications := &v1alpha1.NotificationList{}
 	err = r.client.List(context.TODO(), notifications)
+	require.NoError(t, err)
 
 	require.Len(t, notifications.Items, 1)
 
