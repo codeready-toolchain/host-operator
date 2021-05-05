@@ -174,7 +174,7 @@ func TestReconcile(t *testing.T) {
 			// Reload the userSignup
 			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
 			require.True(t, states.Deactivating(userSignupFoobar))
-			require.False(t, userSignupFoobar.Spec.Deactivated)
+			require.False(t, states.Deactivated(userSignupFoobar))
 
 			t.Run("reconciliation should be requeued when notification not yet sent", func(t *testing.T) {
 				r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
@@ -192,12 +192,12 @@ func TestReconcile(t *testing.T) {
 				require.True(t, states.Deactivating(userSignupFoobar))
 
 				// deactivated state should still be false
-				require.False(t, userSignupFoobar.Spec.Deactivated)
+				require.False(t, states.Deactivated(userSignupFoobar))
 
 				t.Run("usersignup requeued after deactivating notification created for user", func(t *testing.T) {
 					// Set the notification status condition as sent
 					userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
-						toolchainv1alpha1.Condition{
+						{
 							Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
 							Status:             v1.ConditionTrue,
 							LastTransitionTime: metav1.Time{Time: time.Now()},
@@ -222,12 +222,12 @@ func TestReconcile(t *testing.T) {
 					require.True(t, states.Deactivating(userSignupFoobar))
 
 					// deactivated state should still be false
-					require.False(t, userSignupFoobar.Spec.Deactivated)
+					require.False(t, states.Deactivated(userSignupFoobar))
 
 					t.Run("usersignup should be deactivated", func(t *testing.T) {
 						// Set the notification status condition as sent, but this time 3 days in the past
 						userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
-							toolchainv1alpha1.Condition{
+							{
 								Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
 								Status:             v1.ConditionTrue,
 								LastTransitionTime: metav1.Time{Time: time.Now().Add(time.Duration(-3) * time.Hour * 24)},
@@ -246,11 +246,11 @@ func TestReconcile(t *testing.T) {
 						// Reload the userSignup
 						require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
 
-						// deactivating state should still be true
-						require.True(t, states.Deactivating(userSignupFoobar))
+						// deactivating state should now be false
+						require.False(t, states.Deactivating(userSignupFoobar))
 
-						// deactivated state should now be true also
-						require.True(t, userSignupFoobar.Spec.Deactivated)
+						// deactivated state should now be true
+						require.True(t, states.Deactivated(userSignupFoobar))
 
 						t.Run("usersignup already deactivated", func(t *testing.T) {
 							// additional reconciles should find the usersignup is already deactivated
@@ -267,7 +267,7 @@ func TestReconcile(t *testing.T) {
 
 		// the time since the mur was provisioned exceeds the deactivation timeout period for the 'other' tier
 		t.Run("usersignup should be deactivated - other tier (60 days)", func(t *testing.T) {
-			userSignupFoobar.Spec.Deactivated = false
+			states.SetDeactivating(userSignupFoobar, true)
 			// given
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutOtherTier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
@@ -416,7 +416,7 @@ func assertThatUserSignupDeactivated(t *testing.T, cl *test.FakeClient, name str
 	userSignup := &toolchainv1alpha1.UserSignup{}
 	err := cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: operatorNamespace}, userSignup)
 	require.NoError(t, err)
-	require.Equal(t, expected, userSignup.Spec.Deactivated)
+	require.Equal(t, expected, states.Deactivated(userSignup))
 }
 
 func newHostOperatorConfigWithReset(t *testing.T, options ...test.HostOperatorConfigOption) *toolchainv1alpha1.HostOperatorConfig {

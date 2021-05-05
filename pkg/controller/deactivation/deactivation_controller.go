@@ -127,6 +127,11 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, err
 	}
 
+	// If the usersignup is already deactivated then there's nothing else to do
+	if states.Deactivated(usersignup) {
+		return reconcile.Result{}, nil
+	}
+
 	// Check the domain exclusion list, if the user's email matches then they cannot be automatically deactivated
 	if emailLbl, exists := usersignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
 		for _, domain := range r.config.GetDeactivationDomainsExcludedList() {
@@ -225,11 +230,11 @@ func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	// Deactivate the user
-	if usersignup.Spec.Deactivated {
+	if states.Deactivated(usersignup) {
 		// The UserSignup is already set for deactivation, nothing left to do
 		return reconcile.Result{}, nil
 	}
-	usersignup.Spec.Deactivated = true
+	states.SetDeactivated(usersignup, true)
 
 	if err := r.client.Update(context.TODO(), usersignup); err != nil {
 		logger.Error(err, "failed to update usersignup")
