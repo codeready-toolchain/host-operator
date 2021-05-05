@@ -16,31 +16,8 @@ This repository uses https://github.com/golang/go/wiki/Modules[Go modules]. You 
 
 == Development
 
-To run this operator locally you need to have at least one Minishift profile started:
+The dev.mk targets in the toolchain-e2e repository can be used to build and deploy the host and member operators for development, or use the guide- https://github.com/codeready-toolchain/toolchain-e2e/blob/master/dev_install.adoc
 
-```bash
-$ minishift start --profile host
-```
-
-Then you can run the operator locally with the help of `operator-sdk` (you need version v0.19.2):
-
-```bash
-$ make up-local
-```
-
-That Makefile target takes care of additional several steps which can be executed separately:
-
-* logging as system:admin user: `$ make login-as-admin`
-* creating local test namespace: `$ make create-namespace`
-* deploy CRDs: `$ make deploy-crd`
-* building the project: `$ make build`
-* deploying ClusterRole/ClusterRoleBinding and creating ServiceAccount: `$ make deploy-rbac`
-
-There are a few more targets that you can find useful:
-
-* to login as system:admin user and enter the local test namespace: `$ make use-namespace`
-* to remove the local test namespace: `$ make clean-namespace`
-* to remove & create the local test namespace, and create ClusterRole/ClusterRoleBinding and ServiceAccount inside of the namespace: `$ make reset-namespace`
 
 == OLM catalog files
 
