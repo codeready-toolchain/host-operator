@@ -237,11 +237,11 @@ parameters:
   - name: ENVIRONMENT
     value: 'prod' # prod, stage, e2e-tests, dev, etc
   - name: AUTH_CLIENT_LIBRARY_URL
-    value: '' # use default value from reg-service configuration
+    value: '' #use default value from reg-service configuration
   - name: AUTH_CLIENT_CONFIG_RAW
-    value: '' # use default value from reg-service configuration
+    value: '' #use default value from reg-service configuration
   - name: AUTH_CLIENT_PUBLIC_KEYS_URL
-    value: '' # use default value from reg-service configuration
+    value: '' #use default value from reg-service configuration
   - name: VERIFICATION_ENABLED
     value: ''
   - name: VERIFICATION_DAILY_LIMIT
