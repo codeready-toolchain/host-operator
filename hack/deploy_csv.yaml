@@ -2020,8 +2020,8 @@ data:
             name: ApprovedBy
             priority: 1
             type: string
-          - jsonPath: .spec.deactivated
-            name: Deactivated
+          - jsonPath: .spec.states
+            name: States
             priority: 1
             type: string
           - jsonPath: .status.compliantUsername
@@ -2058,11 +2058,6 @@ data:
                     company:
                       description: The user's company name, obtained from the identity provider.
                       type: string
-                    deactivated:
-                      description: 'Deactivated is used to deactivate the user.  If not
-                        set, then by default the user is active Deprecated: will be replaced
-                        by States'
-                      type: boolean
                     familyName:
                       description: The user's last name, obtained from the identity provider.
                       type: string
