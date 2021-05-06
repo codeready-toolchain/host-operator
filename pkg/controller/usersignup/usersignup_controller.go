@@ -146,6 +146,22 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	logger = logger.WithValues("username", userSignup.Spec.Username)
 
+	// ###################################################################################
+	//
+	// VerificationRequired Migration
+	//
+	// TODO remove this after all UserSignup instances have been migrated
+	//
+	// ###################################################################################
+	if userSignup.Spec.VerificationRequired && !states.VerificationRequired(userSignup) {
+		states.SetVerificationRequired(userSignup, true)
+		if err := r.client.Update(context.TODO(), userSignup); err != nil {
+			return reconcile.Result{}, err
+		}
+		// Requeue the reconciliation if the UserSignup was migrated
+		return reconcile.Result{}, nil
+	}
+
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
