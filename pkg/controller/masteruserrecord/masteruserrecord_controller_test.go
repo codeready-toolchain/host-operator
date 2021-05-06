@@ -52,9 +52,8 @@ func TestMigrationAddEmailAddressAnnotation(t *testing.T) {
 
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
-		HasFinalizer()
-
-	// then
+		HasFinalizer().
+		HasAnnotationWithValue(toolchainv1alpha1.MasterUserRecordEmailAnnotationKey, "foo@redhat.com")
 }
 func TestAddFinalizer(t *testing.T) {
 	// given
