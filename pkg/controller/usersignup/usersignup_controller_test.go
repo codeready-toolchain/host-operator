@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/states"
-
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -17,6 +15,7 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
