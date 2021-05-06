@@ -2020,8 +2020,8 @@ data:
             name: ApprovedBy
             priority: 1
             type: string
-          - jsonPath: .spec.states[?(@=="deactivated")]
-            name: Deactivated
+          - jsonPath: .spec.states
+            name: States
             priority: 1
             type: string
           - jsonPath: .status.compliantUsername
