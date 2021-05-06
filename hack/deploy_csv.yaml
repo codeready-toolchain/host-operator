@@ -2020,7 +2020,7 @@ data:
             name: ApprovedBy
             priority: 1
             type: string
-          - jsonPath: .spec.deactivated
+          - jsonPath: .spec.states[?(@=="deactivated")]
             name: Deactivated
             priority: 1
             type: string
@@ -2058,11 +2058,6 @@ data:
                     company:
                       description: The user's company name, obtained from the identity provider.
                       type: string
-                    deactivated:
-                      description: 'Deactivated is used to deactivate the user.  If not
-                        set, then by default the user is active Deprecated: will be replaced
-                        by States'
-                      type: boolean
                     familyName:
                       description: The user's last name, obtained from the identity provider.
                       type: string
