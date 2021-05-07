@@ -15,7 +15,7 @@ func TestComputeHash(t *testing.T) {
 
 	t.Run("should match without cluster resources", func(t *testing.T) {
 		// given
-		nsTemplateTier := toolchainv1alpha1.NSTemplateTier{
+		nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: operatorNamespace,
 				Name:      "basic",
@@ -65,7 +65,7 @@ func TestComputeHash(t *testing.T) {
 
 	t.Run("should match with cluster resources", func(t *testing.T) {
 		// given
-		nsTemplateTier := toolchainv1alpha1.NSTemplateTier{
+		nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: operatorNamespace,
 				Name:      "basic",
@@ -121,7 +121,7 @@ func TestComputeHash(t *testing.T) {
 
 	t.Run("should not match without cluster resources", func(t *testing.T) {
 		// given
-		nsTemplateTier := toolchainv1alpha1.NSTemplateTier{
+		nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: operatorNamespace,
 				Name:      "basic",
@@ -171,7 +171,7 @@ func TestComputeHash(t *testing.T) {
 
 	t.Run("should not match with cluster resources", func(t *testing.T) {
 		// given
-		nsTemplateTier := toolchainv1alpha1.NSTemplateTier{
+		nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: operatorNamespace,
 				Name:      "basic",

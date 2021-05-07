@@ -26,7 +26,7 @@ import (
 // Note: The `hash` value is computed from the TemplateRefs. See `computeTemplateRefsHash()`
 func murSelector(tier *toolchainv1alpha1.NSTemplateTier) (client.MatchingLabelsSelector, error) {
 	// compute the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-	hash, err := ComputeHashForNSTemplateTier(*tier)
+	hash, err := ComputeHashForNSTemplateTier(tier)
 	if err != nil {
 		return client.MatchingLabelsSelector{}, err
 	}
@@ -52,7 +52,7 @@ func TemplateTierHashLabelKey(tierName string) string {
 }
 
 // ComputeHashForNSTemplateTier computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-func ComputeHashForNSTemplateTier(tier toolchainv1alpha1.NSTemplateTier) (string, error) {
+func ComputeHashForNSTemplateTier(tier *toolchainv1alpha1.NSTemplateTier) (string, error) {
 	refs := []string{}
 	for _, ns := range tier.Spec.Namespaces {
 		refs = append(refs, ns.TemplateRef)

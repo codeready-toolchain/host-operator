@@ -57,7 +57,7 @@ func BasicTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options 
 		},
 		Spec: spec,
 	}
-	hash, err := tierutil.ComputeHashForNSTemplateTier(*tier)
+	hash, err := tierutil.ComputeHashForNSTemplateTier(tier)
 	require.NoError(t, err)
 	tier.Labels = map[string]string{
 		"toolchain.dev.openshift.com/" + tier.Name + "-tier-hash": hash,
@@ -102,7 +102,7 @@ func WithoutClusterResources() TierOption {
 // WithCurrentUpdateInProgress appends an "in-progress" entry in the `status.updates`
 func WithCurrentUpdateInProgress() TierOption {
 	return func(tier *toolchainv1alpha1.NSTemplateTier) {
-		hash, _ := tierutil.ComputeHashForNSTemplateTier(*tier)
+		hash, _ := tierutil.ComputeHashForNSTemplateTier(tier)
 		tier.Status.Updates = []toolchainv1alpha1.NSTemplateTierHistory{
 			{
 				StartTime:      metav1.Now(),

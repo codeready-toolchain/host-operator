@@ -136,7 +136,7 @@ func (r *NSTemplateTierReconciler) Reconcile(request reconcile.Request) (reconci
 // if needed and cleans-up the previous one if needed (ie, clears the `failedAccounts` array)
 // returns `true` if an entry was added, `err` if something wrong happened
 func (r *NSTemplateTierReconciler) ensureStatusUpdateRecord(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
-	hash, err := ComputeHashForNSTemplateTier(*tier)
+	hash, err := ComputeHashForNSTemplateTier(tier)
 	if err != nil {
 		return false, errs.Wrapf(err, "unable to append an entry in the `status.updates` for NSTemplateTier '%s'", tier.Name)
 	}

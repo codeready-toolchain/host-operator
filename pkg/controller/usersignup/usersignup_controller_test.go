@@ -1123,6 +1123,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 
 func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := NewUserSignup()
 	userSignup.Annotations = map[string]string{
 		v1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
@@ -1137,7 +1138,12 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
+			Labels: map[string]string{
+				v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
+			},
+			Annotations: map[string]string{
+				v1alpha1.MasterUserRecordEmailAnnotationKey: userSignup.Annotations[v1alpha1.UserSignupUserEmailAnnotationKey],
+			},
 		},
 	}
 
@@ -1151,12 +1157,11 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// then
 	require.NoError(t, err)
 
-	key := types.NamespacedName{
+	instance := &v1alpha1.UserSignup{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{
 		Namespace: test.HostOperatorNs,
 		Name:      userSignup.Name,
-	}
-	instance := &v1alpha1.UserSignup{}
-	err = r.client.Get(context.TODO(), key, instance)
+	}, instance)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", instance.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
@@ -2559,8 +2564,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 func TestMigrateMur(t *testing.T) {
 	// given
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
-	mur, err := newMasterUserRecord(baseNSTemplateTier, "foo", test.HostOperatorNs, "east",
-		userSignup.Name, userSignup.Spec.UserID)
+	mur, err := newMasterUserRecord(userSignup, "east", baseNSTemplateTier, "foo")
 	require.NoError(t, err)
 
 	// set NSLimit and NSTemplateSet to be empty

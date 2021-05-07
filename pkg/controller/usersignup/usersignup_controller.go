@@ -351,10 +351,11 @@ func (r *ReconcileUserSignup) checkIfMurAlreadyExists(reqLogger logr.Logger, use
 		}
 
 		// check if anything in the MUR should be migrated/fixed
-		if changed, err := migrateOrFixMurIfNecessary(mur, nstemplateTier); err != nil {
+		if changed, err := migrateOrFixMurIfNecessary(mur, nstemplateTier, userSignup); err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
 
 		} else if changed {
+			reqLogger.Info("updating MasterUserRecord after it was migrated")
 			if err := r.client.Update(context.TODO(), mur); err != nil {
 				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
 			}
@@ -535,8 +536,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 			"Error generating compliant username for %s", userSignup.Spec.Username)
 	}
 
-	mur, err := newMasterUserRecord(nstemplateTier, compliantUsername, userSignup.Namespace, targetCluster,
-		userSignup.Name, userSignup.Spec.UserID)
+	mur, err := newMasterUserRecord(userSignup, targetCluster, nstemplateTier, compliantUsername)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord %s", mur.Name)
