@@ -116,25 +116,6 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 			logger.Error(err, "unable to add finalizer to MasterUserRecord")
 			return reconcile.Result{}, err
 		}
-		// migration for CRT-1075: add an annotation with the email address (same as for associated UserSignup resource)
-		if mur.Annotations == nil || mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey] == "" {
-			usersignup := &toolchainv1alpha1.UserSignup{}
-			if r.client.Get(context.TODO(), types.NamespacedName{
-				Namespace: mur.Namespace,
-				Name:      mur.Spec.UserID,
-			}, usersignup); err != nil {
-				logger.Error(err, "unable to get associated UserSignup")
-				return reconcile.Result{}, err
-			}
-			if mur.Annotations == nil {
-				mur.Annotations = map[string]string{}
-			}
-			mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey] = usersignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]
-			if r.client.Update(context.TODO(), mur); err != nil {
-				logger.Error(err, "unable to update the MUR with the email address annotation")
-				return reconcile.Result{}, err
-			}
-		}
 		logger.Info("ensuring user accounts")
 		for _, account := range mur.Spec.UserAccounts {
 			requeueTime, err := r.ensureUserAccount(logger, account, mur)

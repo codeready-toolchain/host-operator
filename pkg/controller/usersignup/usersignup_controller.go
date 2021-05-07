@@ -348,10 +348,11 @@ func (r *ReconcileUserSignup) checkIfMurAlreadyExists(reqLogger logr.Logger, use
 		}
 
 		// check if anything in the MUR should be migrated/fixed
-		if changed, err := migrateOrFixMurIfNecessary(mur, nstemplateTier); err != nil {
+		if changed, err := migrateOrFixMurIfNecessary(mur, nstemplateTier, userSignup); err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
 
 		} else if changed {
+			reqLogger.Info("updating MasterUserRecord after it was migrated")
 			if err := r.client.Update(context.TODO(), mur); err != nil {
 				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
 			}

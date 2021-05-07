@@ -7,6 +7,8 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -84,7 +86,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			require.NoError(t, err)
 
 			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier)
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
 
 			// then
 			require.NoError(t, err)
@@ -102,7 +104,25 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			providedMur := mur.DeepCopy()
 
 			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier)
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+
+			// then
+			require.NoError(t, err)
+			assert.False(t, changed)
+			assert.Equal(t, *providedMur, *mur)
+		})
+
+		// TODO: to be removed once CRT-1075 is done
+		t.Run("when email annotation is set", func(t *testing.T) {
+			// given
+			logf.SetLogger(zap.New(zap.UseDevMode(true)))
+			userSignup := NewUserSignup() // email is `foo@redhat.com`
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			providedMur := mur.DeepCopy()
+
+			// when
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
 
 			// then
 			require.NoError(t, err)
@@ -122,7 +142,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur.Spec.UserAccounts[0].Spec.NSLimit = ""
 
 			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier)
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
 
 			// then
 			require.NoError(t, err)
@@ -139,7 +159,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = v1alpha1.NSTemplateSetSpec{}
 
 			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier)
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
 
 			// then
 			require.NoError(t, err)
@@ -156,7 +176,25 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			require.NoError(t, err)
 
 			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier)
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+
+			// then
+			require.NoError(t, err)
+			assert.True(t, changed)
+			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+		})
+
+		// TODO: to be removed once CRT-1075 is done
+		t.Run("when email annotation is missing", func(t *testing.T) {
+			// given
+			logf.SetLogger(zap.New(zap.UseDevMode(true)))
+			userSignup := NewUserSignup() // email is `foo@redhat.com`
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			delete(mur.Annotations, v1alpha1.MasterUserRecordEmailAnnotationKey)
+
+			// when
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
 
 			// then
 			require.NoError(t, err)

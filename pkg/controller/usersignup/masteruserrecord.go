@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
+func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTier *toolchainv1alpha1.NSTemplateTier, userSignup *toolchainv1alpha1.UserSignup) (bool, error) {
 	changed := false
 	for uaIndex, userAccount := range mur.Spec.UserAccounts {
 		if userAccount.Spec.NSLimit == "" {
@@ -36,6 +36,14 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)] = hash
 			changed = true
 		}
+	}
+	// migration for CRT-1075: add an annotation with the email address (same as for associated UserSignup resource)
+	if mur.Annotations == nil || mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey] == "" {
+		if mur.Annotations == nil {
+			mur.Annotations = map[string]string{}
+		}
+		mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey] = userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]
+		changed = true
 	}
 	return changed, nil
 }
