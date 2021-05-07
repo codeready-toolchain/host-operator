@@ -119,6 +119,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			userSignup := NewUserSignup() // email is `foo@redhat.com`
 			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			require.NoError(t, err)
 			providedMur := mur.DeepCopy()
 
 			// when
@@ -191,6 +192,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			userSignup := NewUserSignup() // email is `foo@redhat.com`
 			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			require.NoError(t, err)
 			delete(mur.Annotations, v1alpha1.MasterUserRecordEmailAnnotationKey)
 
 			// when
