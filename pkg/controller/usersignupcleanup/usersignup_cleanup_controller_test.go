@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -124,7 +126,7 @@ func TestUserCleanup(t *testing.T) {
 		userSignup := test2.NewUserSignup(
 			test2.CreatedBefore(threeYears),
 		)
-		userSignup.Spec.VerificationRequired = false
+		states.SetVerificationRequired(userSignup, false)
 		userSignup.Spec.Approved = false
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
