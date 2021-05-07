@@ -1,0 +1,43 @@
+name: ci-build
+on:
+  push:
+    branches:
+      - master
+    tags-ignore:
+      - '*.*'
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  golangci:
+    name: GolangCI Lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.14.x
+        
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Cache dependencies
+      uses: actions/cache@v2
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles ('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: generate
+      run: |
+        make generate
+    
+    - name: Lint
+      uses: golangci/golangci-lint-action@v2
+      with:
+        version: v1.29
+        args: -E gofmt,golint,megacheck,misspell
+
+

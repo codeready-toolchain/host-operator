@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/states"
-
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -17,6 +15,7 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
@@ -60,10 +59,10 @@ func newNsTemplateTier(tierName string, nsTypes ...string) *v1alpha1.NSTemplateT
 var baseNSTemplateTier = newNsTemplateTier("base", "dev", "stage")
 
 // TODO remove this test once the migration code is removed
-func TestMigration(t *testing.T) {
+func TestVerificationRequiredMigration(t *testing.T) {
 	// given
 	userSignup := NewUserSignup()
-	userSignup.Spec.Deactivated = true
+	userSignup.Spec.VerificationRequired = true
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup)
 
 	// when
@@ -74,7 +73,7 @@ func TestMigration(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 
-	require.True(t, states.Deactivated(userSignup))
+	require.True(t, states.VerificationRequired(userSignup))
 }
 
 func TestUserSignupCreateMUROk(t *testing.T) {

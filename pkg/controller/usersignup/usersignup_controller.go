@@ -148,15 +148,18 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 
 	// ###################################################################################
 	//
-	// TODO Migration code - remove this after all UserSignup instances have been migrated
+	// VerificationRequired Migration
+	//
+	// TODO remove this after all UserSignup instances have been migrated
 	//
 	// ###################################################################################
-	if userSignup.Spec.Deactivated && !states.Deactivated(userSignup) {
-		states.SetDeactivated(userSignup, true)
+	if userSignup.Spec.VerificationRequired && !states.VerificationRequired(userSignup) {
+		states.SetVerificationRequired(userSignup, true)
 		if err := r.client.Update(context.TODO(), userSignup); err != nil {
 			return reconcile.Result{}, err
 		}
-		// Requeue the reconciliation if the UserSignup was migrated
+		// Return from reconciliation if the UserSignup was migrated, the change in UserSignup will
+		// trigger another reconciliation
 		return reconcile.Result{}, nil
 	}
 
@@ -370,7 +373,7 @@ func (r *ReconcileUserSignup) checkIfMurAlreadyExists(reqLogger logr.Logger, use
 
 func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	// Check if the user requires phone verification, and do not proceed further if they do
-	if userSignup.Spec.VerificationRequired {
+	if states.VerificationRequired(userSignup) {
 		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
 	}
 

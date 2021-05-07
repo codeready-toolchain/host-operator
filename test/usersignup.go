@@ -65,7 +65,7 @@ func DeactivatedWithLastTransitionTime(before time.Duration) UserSignupModifier 
 
 func VerificationRequired() UserSignupModifier {
 	return func(userSignup *v1alpha1.UserSignup) {
-		userSignup.Spec.VerificationRequired = true
+		states.SetVerificationRequired(userSignup, true)
 	}
 }
 
