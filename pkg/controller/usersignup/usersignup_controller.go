@@ -158,7 +158,8 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 		if err := r.client.Update(context.TODO(), userSignup); err != nil {
 			return reconcile.Result{}, err
 		}
-		// Requeue the reconciliation if the UserSignup was migrated
+		// Return from reconciliation if the UserSignup was migrated, the change in UserSignup will
+		// trigger another reconciliation
 		return reconcile.Result{}, nil
 	}
 
