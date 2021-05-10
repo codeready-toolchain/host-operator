@@ -2,7 +2,7 @@ module github.com/codeready-toolchain/host-operator
 
 require (
 	cloud.google.com/go v0.60.0 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20210506074002-34828c94ab5d
+	github.com/codeready-toolchain/api v0.0.0-20210510074727-989dd2144dd7
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20210507200711-5dd7ad1085b4
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -40,7 +40,6 @@ require (
 )
 
 replace (
-	github.com/codeready-toolchain/api => github.com/sbryzak/api v0.0.0-20210509214226-a3513bc48834
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20200821140346-b94c46af3f2b // Using 'github.com/openshift/api@release-4.5'
 	k8s.io/client-go => k8s.io/client-go v0.18.3 // Required by prometheus-operator
