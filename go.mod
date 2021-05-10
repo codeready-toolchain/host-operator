@@ -3,7 +3,7 @@ module github.com/codeready-toolchain/host-operator
 require (
 	cloud.google.com/go v0.60.0 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20210506074002-34828c94ab5d
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20210507092551-8dd100435226
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20210507200711-5dd7ad1085b4
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.1.0

@@ -165,6 +165,8 @@ github.com/codeready-toolchain/api v0.0.0-20210506074002-34828c94ab5d h1:BH64hZw
 github.com/codeready-toolchain/api v0.0.0-20210506074002-34828c94ab5d/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20210507092551-8dd100435226 h1:6h2fTykSczXgHeLqFoFWxd8Ih26B2Xfr6e+Un6zPMvg=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20210507092551-8dd100435226/go.mod h1:174YTzyQ21yeNsnnG08RR5VExGBsoH9KDBRRNiy/ahM=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20210507200711-5dd7ad1085b4 h1:Z5GdgredSGEjDEaZ4CHtuJmSgkxU2Wi40RmpGQrDqy4=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20210507200711-5dd7ad1085b4/go.mod h1:174YTzyQ21yeNsnnG08RR5VExGBsoH9KDBRRNiy/ahM=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=
 github.com/containerd/console v0.0.0-20180822173158-c12b1e7919c1/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.2.7/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=
