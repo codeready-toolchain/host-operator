@@ -23,16 +23,12 @@ const (
 
 	// RegServiceEnvPrefix will be used for registration service environment variable name prefixing.
 	RegServiceEnvPrefix = "REGISTRATION_SERVICE"
+
+	ToolchainStatusName = "toolchain-status"
 )
 
 // host-operator constants
 const (
-	// ToolchainStatusName specifies the name of the toolchain status resource that provides information about the toolchain components in this cluster
-	ToolchainStatusName = "toolchain.status"
-
-	// DefaultToolchainStatusName the default name for the toolchain status resource created during initialization of the operator
-	DefaultToolchainStatusName = "toolchain-status"
-
 	// varDurationBeforeChangeRequestDeletion specifies the duration before a ChangeTierRequest resource is deleted
 	varDurationBeforeChangeRequestDeletion = "duration.before.change.request.deletion" // TODO: add missing `tier` in `change.tier.request`?
 
@@ -182,7 +178,6 @@ func (c *Config) PrintConfig() {
 
 func (c *Config) setConfigDefaults() {
 	c.host.SetTypeByDefaultValue(true)
-	c.host.SetDefault(ToolchainStatusName, DefaultToolchainStatusName)
 	c.host.SetDefault(varDurationBeforeChangeRequestDeletion, defaultDurationBeforeChangeTierRequestDeletion)
 	c.host.SetDefault(varRegistrationServiceURL, defaultRegistrationServiceURL)
 	c.host.SetDefault(varTemplateUpdateRequestMaxPoolSize, defaultTemplateUpdateRequestMaxPoolSize)
@@ -199,11 +194,6 @@ func (c *Config) setConfigDefaults() {
 	}))
 	c.host.SetDefault(varUserSignupUnverifiedRetentionDays, defaultUserSignupUnverifiedRetentionDays)
 	c.host.SetDefault(varUserSignupDeactivatedRetentionDays, defaultUserSignupDeactivatedRetentionDays)
-}
-
-// GetToolchainStatusName returns the configured name of the member status resource
-func (c *Config) GetToolchainStatusName() string {
-	return c.host.GetString(ToolchainStatusName)
 }
 
 // GetDurationBeforeChangeTierRequestDeletion returns the timeout before a complete TierChangeRequest will be deleted.

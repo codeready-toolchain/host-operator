@@ -43,7 +43,7 @@ func getClusterIfApproved(cl client.Client, crtConfig *crtCfg.Config, userSignup
 	}
 
 	status := &toolchainv1alpha1.ToolchainStatus{}
-	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: crtConfig.GetToolchainStatusName()}, status); err != nil {
+	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: crtCfg.ToolchainStatusName}, status); err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to read ToolchainStatus resource")
 	}
 	counts, err := counter.GetCounts()

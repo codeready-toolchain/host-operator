@@ -13,7 +13,7 @@ type ToolchainStatusOption func(*toolchainv1alpha1.ToolchainStatus)
 func NewToolchainStatus(options ...ToolchainStatusOption) *toolchainv1alpha1.ToolchainStatus {
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      configuration.DefaultToolchainStatusName,
+			Name:      configuration.ToolchainStatusName,
 			Namespace: test.HostOperatorNs,
 		},
 	}
