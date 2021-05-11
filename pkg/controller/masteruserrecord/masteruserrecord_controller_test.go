@@ -983,10 +983,10 @@ func apiScheme(t *testing.T) *runtime.Scheme {
 	return s
 }
 
-func newController(t *testing.T, hostCl client.Client, s *runtime.Scheme, getMemberCluster GetMemberClusterFunc, memberCl ...ClientForCluster) ReconcileMasterUserRecord {
+func newController(t *testing.T, hostCl client.Client, s *runtime.Scheme, getMemberCluster GetMemberClusterFunc, memberCl ...ClientForCluster) Reconciler {
 	config, err := configuration.LoadConfig(hostCl)
 	require.NoError(t, err)
-	return ReconcileMasterUserRecord{
+	return Reconciler{
 		client:                hostCl,
 		scheme:                s,
 		retrieveMemberCluster: getMemberCluster(memberCl...),

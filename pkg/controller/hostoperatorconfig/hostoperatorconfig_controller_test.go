@@ -18,7 +18,7 @@ func TestReconcileWhenHostOperatorConfigIsAvailable(t *testing.T) {
 	// given
 	config := newHostOperatorConfigWithReset(t, AutomaticApproval().MaxUsersNumber(123, PerMemberCluster("member1", 321)))
 	cl := NewFakeClient(t, config)
-	controller := ReconcileHostOperatorConfig{
+	controller := Reconciler{
 		client: cl,
 	}
 
@@ -54,7 +54,7 @@ func TestReconcileWhenReturnsError(t *testing.T) {
 	cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 		return fmt.Errorf("some error")
 	}
-	controller := ReconcileHostOperatorConfig{
+	controller := Reconciler{
 		client: cl,
 	}
 
@@ -70,7 +70,7 @@ func TestReconcileWhenReturnsError(t *testing.T) {
 
 func TestReconcileWhenHostOperatorConfigIsNotPresent(t *testing.T) {
 	// given
-	controller := ReconcileHostOperatorConfig{
+	controller := Reconciler{
 		client: NewFakeClient(t),
 	}
 
