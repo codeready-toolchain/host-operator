@@ -37,9 +37,9 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 7)
+			require.Len(t, tmpls, 8)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "base", "basedeactivationdisabled", "basic", "team", "basicdeactivationdisabled", "test"} {
+			for _, tier := range []string{"advanced", "base", "baseextended", "basedeactivationdisabled", "basic", "team", "basicdeactivationdisabled", "test"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"code", "dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
@@ -206,6 +206,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 				"basic":                     30,
 				"basicdeactivationdisabled": 0,
 				"base":                      30,
+				"baseextended":              180,
 				"basedeactivationdisabled":  0,
 				"advanced":                  0,
 				"team":                      0,
@@ -410,7 +411,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	switch tier {
 	case "test":
 		// skip because this tier is for testing purposes only and the template can change often
-	case "base", "basedeactivationdisabled":
+	case "base", "baseextended", "basedeactivationdisabled":
 		assert.Len(t, actual.Objects, 13)
 		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
 		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
@@ -478,7 +479,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// Template objects count
 	switch tier {
-	case "advanced", "base", "basedeactivationdisabled", "team":
+	case "advanced", "base", "baseextended", "basedeactivationdisabled", "team":
 		if kind == "dev" {
 			require.Len(t, actual.Objects, 10)
 		} else {
@@ -532,7 +533,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 		default:
 			t.Errorf("unexpected kind: '%s'", kind)
 		}
-	case "advanced", "base", "basedeactivationdisabled", "team":
+	case "advanced", "base", "baseextended", "basedeactivationdisabled", "team":
 		switch kind {
 		case "dev":
 			containsObj(t, actual, allowFromCRWPolicyObj(kind))
