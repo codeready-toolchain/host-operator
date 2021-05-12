@@ -37,7 +37,7 @@ func Add(mgr manager.Manager, config *configuration.Config) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.Reconciler {
-	return &ReconcileChangeTierRequest{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config}
+	return &Reconciler{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -53,11 +53,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		&predicate.GenerationChangedPredicate{})
 }
 
-// blank assignment to verify that ReconcileChangeTierRequest implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileChangeTierRequest{}
+// blank assignment to verify that Reconciler implements reconcile.Reconciler
+var _ reconcile.Reconciler = &Reconciler{}
 
-// ReconcileChangeTierRequest reconciles a ChangeTierRequest object
-type ReconcileChangeTierRequest struct {
+// Reconciler reconciles a ChangeTierRequest object
+type Reconciler struct {
 	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
@@ -70,7 +70,7 @@ type ReconcileChangeTierRequest struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ChangeTierRequest")
 
@@ -126,7 +126,7 @@ func (r *ReconcileChangeTierRequest) Reconcile(request reconcile.Request) (recon
 // the duration before the changetierrequest should be deleted. If so, the changetierrequest is deleted.
 // Returns bool indicating if the changetierrequest was deleted, the time before the changetierrequest
 // can be deleted and error
-func (r *ReconcileChangeTierRequest) checkTransitionTimeAndDelete(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
+func (r *Reconciler) checkTransitionTimeAndDelete(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
 	logger.Info("the ChangeTierRequest is completed so we can deal with its deletion")
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
@@ -144,7 +144,7 @@ func (r *ReconcileChangeTierRequest) checkTransitionTimeAndDelete(logger logr.Lo
 	return false, diff, nil
 }
 
-func (r *ReconcileChangeTierRequest) changeTier(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) error {
+func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) error {
 	mur := &toolchainv1alpha1.MasterUserRecord{}
 	murName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.MurName}
 	if err := r.client.Get(context.TODO(), murName, mur); err != nil {
@@ -201,7 +201,7 @@ func (r *ReconcileChangeTierRequest) changeTier(logger logr.Logger, changeTierRe
 	return nil
 }
 
-func (r *ReconcileChangeTierRequest) wrapErrorWithStatusUpdate(logger logr.Logger, changeRequest *toolchainv1alpha1.ChangeTierRequest, statusUpdater func(changeRequest *toolchainv1alpha1.ChangeTierRequest, message string) error, err error, format string, args ...interface{}) error {
+func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, changeRequest *toolchainv1alpha1.ChangeTierRequest, statusUpdater func(changeRequest *toolchainv1alpha1.ChangeTierRequest, message string) error, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
@@ -211,7 +211,7 @@ func (r *ReconcileChangeTierRequest) wrapErrorWithStatusUpdate(logger logr.Logge
 	return errs.Wrapf(err, format, args...)
 }
 
-func (r *ReconcileChangeTierRequest) updateStatusConditions(changeRequest *toolchainv1alpha1.ChangeTierRequest, newConditions ...toolchainv1alpha1.Condition) error {
+func (r *Reconciler) updateStatusConditions(changeRequest *toolchainv1alpha1.ChangeTierRequest, newConditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
 	changeRequest.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(changeRequest.Status.Conditions, newConditions...)
 	if !updated {
@@ -221,7 +221,7 @@ func (r *ReconcileChangeTierRequest) updateStatusConditions(changeRequest *toolc
 	return r.client.Status().Update(context.TODO(), changeRequest)
 }
 
-func (r *ReconcileChangeTierRequest) setStatusChangeComplete(changeRequest *toolchainv1alpha1.ChangeTierRequest) error {
+func (r *Reconciler) setStatusChangeComplete(changeRequest *toolchainv1alpha1.ChangeTierRequest) error {
 	return r.updateStatusConditions(
 		changeRequest,
 		toolchainv1alpha1.Condition{
@@ -231,7 +231,7 @@ func (r *ReconcileChangeTierRequest) setStatusChangeComplete(changeRequest *tool
 		})
 }
 
-func (r *ReconcileChangeTierRequest) setStatusChangeFailed(changeRequest *toolchainv1alpha1.ChangeTierRequest, message string) error {
+func (r *Reconciler) setStatusChangeFailed(changeRequest *toolchainv1alpha1.ChangeTierRequest, message string) error {
 	return r.updateStatusConditions(
 		changeRequest,
 		toolchainv1alpha1.Condition{
@@ -242,7 +242,7 @@ func (r *ReconcileChangeTierRequest) setStatusChangeFailed(changeRequest *toolch
 		})
 }
 
-func (r *ReconcileChangeTierRequest) setStatusChangeTierRequestDeletionFailed(changeRequest *toolchainv1alpha1.ChangeTierRequest, message string) error {
+func (r *Reconciler) setStatusChangeTierRequestDeletionFailed(changeRequest *toolchainv1alpha1.ChangeTierRequest, message string) error {
 	return r.updateStatusConditions(
 		changeRequest,
 		toolchainv1alpha1.Condition{

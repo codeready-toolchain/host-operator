@@ -84,8 +84,8 @@ func Add(mgr manager.Manager, crtConfig *crtCfg.Config) error {
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) *ReconcileToolchainStatus {
-	return &ReconcileToolchainStatus{
+func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) *Reconciler {
+	return &Reconciler{
 		client:         mgr.GetClient(),
 		httpClientImpl: &http.Client{},
 		scheme:         mgr.GetScheme(),
@@ -95,7 +95,7 @@ func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) *ReconcileTool
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r *ReconcileToolchainStatus) error {
+func add(mgr manager.Manager, r *Reconciler) error {
 	// create a new controller
 	c, err := controller.New("toolchainstatus-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -111,15 +111,15 @@ func add(mgr manager.Manager, r *ReconcileToolchainStatus) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileToolchainStatus implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileToolchainStatus{}
+// blank assignment to verify that Reconciler implements reconcile.Reconciler
+var _ reconcile.Reconciler = &Reconciler{}
 
 type httpClient interface {
 	Get(url string) (*http.Response, error)
 }
 
-// ReconcileToolchainStatus reconciles a ToolchainStatus object
-type ReconcileToolchainStatus struct {
+// Reconciler reconciles a ToolchainStatus object
+type Reconciler struct {
 	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client         client.Client
@@ -130,7 +130,7 @@ type ReconcileToolchainStatus struct {
 }
 
 // Reconcile reads the state of toolchain host and member cluster components and updates the ToolchainStatus resource with information useful for observation or troubleshooting
-func (r *ReconcileToolchainStatus) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ToolchainStatus")
 	requeueTime := r.config.GetToolchainStatusRefreshTime()
@@ -167,7 +167,7 @@ type statusHandlerFunc func(logr.Logger, *toolchainv1alpha1.ToolchainStatus) boo
 
 // aggregateAndUpdateStatus runs each of the status handlers. Each status handler reports readiness for a toolchain component. If any
 // component status is not ready then it will set the condition of the top-level status of the ToolchainStatus resource to not ready.
-func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func (r *Reconciler) aggregateAndUpdateStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 
 	// collect status handlers that will contribute status of various toolchain components
 	hostOperatorStatusHandlerFunc := statusHandler{name: hostOperatorTag, handleStatus: r.hostOperatorHandleStatus}
@@ -207,7 +207,7 @@ func (r *ReconcileToolchainStatus) aggregateAndUpdateStatus(reqLogger logr.Logge
 	return r.setStatusReady(reqLogger, toolchainStatus)
 }
 
-func (r *ReconcileToolchainStatus) notificationCheck(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// If the current ToolchainStatus:
 	// a) Is currently not ready,
 	// b) has not been ready for longer than the configured threshold, and
@@ -238,7 +238,7 @@ func (r *ReconcileToolchainStatus) notificationCheck(reqLogger logr.Logger, tool
 	return nil
 }
 
-func (r *ReconcileToolchainStatus) restoredCheck(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func (r *Reconciler) restoredCheck(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// If the current ToolchainStatus:
 	// a) Was not ready before,
 	// b) notification was sent out due prolonged not ready status, and
@@ -259,7 +259,7 @@ func (r *ReconcileToolchainStatus) restoredCheck(reqLogger logr.Logger, toolchai
 }
 
 // synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter
-func (r *ReconcileToolchainStatus) synchronizeWithCounter(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (r *Reconciler) synchronizeWithCounter(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	if err := counter.Synchronize(r.client, toolchainStatus); err != nil {
 		reqLogger.Error(err, "unable to synchronize with the counter")
 		return false
@@ -269,7 +269,7 @@ func (r *ReconcileToolchainStatus) synchronizeWithCounter(reqLogger logr.Logger,
 
 // hostOperatorHandleStatus retrieves the Deployment for the host operator and adds its status to ToolchainStatus. It returns false
 // if the deployment is not determined to be ready
-func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	operatorStatus := &toolchainv1alpha1.HostOperatorStatus{
 		Version:        version.Version,
 		Revision:       version.Commit,
@@ -305,7 +305,7 @@ func (r *ReconcileToolchainStatus) hostOperatorHandleStatus(reqLogger logr.Logge
 
 // registrationServiceHandleStatus retrieves the Deployment for the registration service and adds its status to ToolchainStatus. It returns false
 // if the registration service is not ready
-func (r *ReconcileToolchainStatus) registrationServiceHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 
 	s := regServiceSubstatusHandler{
 		controllerClient: r.client,
@@ -333,7 +333,7 @@ func (r *ReconcileToolchainStatus) registrationServiceHandleStatus(reqLogger log
 
 // memberHandleStatus retrieves the status of member clusters and adds them to ToolchainStatus. It returns an error
 // if any of the members are not ready or if no member clusters are found
-func (r *ReconcileToolchainStatus) membersHandleStatus(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+func (r *Reconciler) membersHandleStatus(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	// get member clusters
 	logger.Info("updating member status")
 	memberClusters := r.getMembersFunc()
@@ -388,7 +388,7 @@ func getAPIEndpoint(clusterName string, memberClusters []*cluster.CachedToolchai
 	return ""
 }
 
-func (r *ReconcileToolchainStatus) sendToolchainStatusNotification(logger logr.Logger,
+func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, status toolchainStatusNotificationType) error {
 	if !isValidEmailAddress(r.config.GetAdminEmail()) {
 		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
@@ -480,7 +480,7 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 // the controller should always update at least the last updated timestamp of the status so the status should be updated
 // regardless of whether any specific fields were updated. This way a problem with the controller can be indicated if
 // the last updated timestamp was not updated.
-func (r *ReconcileToolchainStatus) updateStatusConditions(logger logr.Logger, status *toolchainv1alpha1.ToolchainStatus,
+func (r *Reconciler) updateStatusConditions(logger logr.Logger, status *toolchainv1alpha1.ToolchainStatus,
 	newConditions ...toolchainv1alpha1.Condition) error {
 	status.Status.Conditions = condition.AddOrUpdateStatusConditionsWithLastUpdatedTimestamp(status.Status.Conditions, newConditions...)
 	logger.Info("updating ToolchainStatus status conditions", "resource_version", status.ResourceVersion)
@@ -490,7 +490,7 @@ func (r *ReconcileToolchainStatus) updateStatusConditions(logger logr.Logger, st
 }
 
 // wrapErrorWithStatusUpdate wraps the error and update the UserSignup status. If the update fails then the error is logged.
-func (r *ReconcileToolchainStatus) wrapErrorWithStatusUpdate(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus,
+func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus,
 	statusUpdater func(reqLogger logr.Logger, userAcc *toolchainv1alpha1.ToolchainStatus, message string) error, err error, format string,
 	args ...interface{}) error {
 	if err == nil {
@@ -502,7 +502,7 @@ func (r *ReconcileToolchainStatus) wrapErrorWithStatusUpdate(logger logr.Logger,
 	return errs.Wrapf(err, format, args...)
 }
 
-func (r *ReconcileToolchainStatus) setStatusReady(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func (r *Reconciler) setStatusReady(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	err := r.restoredCheck(reqLogger, toolchainStatus)
 	if err != nil {
 		return err
@@ -522,7 +522,7 @@ func (r *ReconcileToolchainStatus) setStatusReady(reqLogger logr.Logger, toolcha
 		})
 }
 
-func (r *ReconcileToolchainStatus) setStatusNotReady(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
+func (r *Reconciler) setStatusNotReady(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
 	return r.updateStatusConditions(
 		reqLogger,
 		toolchainStatus,
@@ -534,7 +534,7 @@ func (r *ReconcileToolchainStatus) setStatusNotReady(reqLogger logr.Logger, tool
 		})
 }
 
-func (r *ReconcileToolchainStatus) setStatusToolchainStatusUnreadyNotificationCreated(reqLogger logr.Logger,
+func (r *Reconciler) setStatusToolchainStatusUnreadyNotificationCreated(reqLogger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	return r.updateStatusConditions(
 		reqLogger,
@@ -546,7 +546,7 @@ func (r *ReconcileToolchainStatus) setStatusToolchainStatusUnreadyNotificationCr
 		})
 }
 
-func (r *ReconcileToolchainStatus) setStatusUnreadyNotificationCreationFailed(reqLogger logr.Logger,
+func (r *Reconciler) setStatusUnreadyNotificationCreationFailed(reqLogger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
 
 	return r.updateStatusConditions(
@@ -560,7 +560,7 @@ func (r *ReconcileToolchainStatus) setStatusUnreadyNotificationCreationFailed(re
 		})
 }
 
-func (r *ReconcileToolchainStatus) setStatusReadyNotificationCreationFailed(reqLogger logr.Logger,
+func (r *Reconciler) setStatusReadyNotificationCreationFailed(reqLogger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, message string) error {
 
 	return r.updateStatusConditions(

@@ -26,7 +26,7 @@ func Add(mgr manager.Manager, _ *configuration.Config) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileHostOperatorConfig{client: mgr.GetClient()}
+	return &Reconciler{client: mgr.GetClient()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -41,11 +41,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return c.Watch(&source.Kind{Type: &toolchainv1alpha1.HostOperatorConfig{}}, &handler.EnqueueRequestForObject{})
 }
 
-// blank assignment to verify that ReconcileHostOperatorConfig implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileHostOperatorConfig{}
+// blank assignment to verify that Reconciler implements reconcile.Reconciler
+var _ reconcile.Reconciler = &Reconciler{}
 
-// ReconcileHostOperatorConfig reconciles a HostOperatorConfig object
-type ReconcileHostOperatorConfig struct {
+// Reconciler reconciles a HostOperatorConfig object
+type Reconciler struct {
 	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
@@ -56,7 +56,7 @@ type ReconcileHostOperatorConfig struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileHostOperatorConfig) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling HostOperatorConfig")
 

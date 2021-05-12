@@ -365,7 +365,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	cl := test.NewFakeClient(t, initObjs...)
 	cfg, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
-	r := &ReconcileDeactivation{
+	r := &Reconciler{
 		client: cl,
 		scheme: s,
 		config: cfg,

@@ -350,14 +350,14 @@ func newChangeTierRequest(murName, tierName string, options ...changeTierRequest
 	return ctr
 }
 
-func newController(t *testing.T, changeTier *v1alpha1.ChangeTierRequest, initObjs ...runtime.Object) (*ReconcileChangeTierRequest, reconcile.Request, *test.FakeClient) {
+func newController(t *testing.T, changeTier *v1alpha1.ChangeTierRequest, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, append(initObjs, changeTier)...)
 	config, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
-	controller := &ReconcileChangeTierRequest{
+	controller := &Reconciler{
 		client: cl,
 		scheme: s,
 		config: config,
