@@ -91,6 +91,19 @@ func (r *ReconcileUserSignupCleanup) Reconcile(request reconcile.Request) (recon
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
+	// TODO remove this after migration complete
+	// Migrate the Approved property
+	if instance.Spec.Approved && !states.Approved(instance) {
+		states.SetApproved(instance, true)
+
+		if err := r.client.Update(context.TODO(), instance); err != nil {
+			return reconcile.Result{}, err
+		}
+		// Return from reconciliation if the UserSignup was migrated, the change in UserSignup will
+		// trigger another reconciliation
+		return reconcile.Result{}, nil
+	}
+
 	if states.VerificationRequired(instance) && !states.Approved(instance) {
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
