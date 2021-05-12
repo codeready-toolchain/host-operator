@@ -23,6 +23,24 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
+// TODO remove this test once the migration code is removed
+func TestApprovedPropertyMigration(t *testing.T) {
+	// given
+	userSignup := test2.NewUserSignup()
+	userSignup.Spec.Approved = true
+	r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+
+	// when
+	_, err := r.Reconcile(req)
+	require.NoError(t, err)
+
+	// Reload the UserSignup
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	require.NoError(t, err)
+
+	require.True(t, states.Approved(userSignup))
+}
+
 func TestUserCleanup(t *testing.T) {
 	// A creation time three years in the past
 	threeYears := time.Duration(time.Hour * 24 * 365 * 3)
