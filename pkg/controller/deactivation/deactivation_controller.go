@@ -43,7 +43,7 @@ func Add(mgr manager.Manager, config *configuration.Config) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, cfg *configuration.Config) reconcile.Reconciler {
-	return &ReconcileDeactivation{
+	return &Reconciler{
 		client: mgr.GetClient(),
 		scheme: mgr.GetScheme(),
 		config: cfg,
@@ -67,10 +67,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &ReconcileDeactivation{}
+var _ reconcile.Reconciler = &Reconciler{}
 
-// ReconcileDeactivation reconciles a Deactivation object
-type ReconcileDeactivation struct {
+// Reconciler reconciles a Deactivation object
+type Reconciler struct {
 	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
@@ -82,7 +82,7 @@ type ReconcileDeactivation struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileDeactivation) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	logger.Info("Reconciling Deactivation")
 

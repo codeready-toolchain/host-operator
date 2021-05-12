@@ -144,7 +144,7 @@ func TestUserCleanup(t *testing.T) {
 
 }
 
-func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*ReconcileUserSignupCleanup, reconcile.Request, *test.FakeClient) { // nolint: unparam
+func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) { // nolint: unparam
 	metrics.Reset()
 
 	s := scheme.Scheme
@@ -155,7 +155,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 	config, err := configuration.LoadConfig(fakeClient)
 	require.NoError(t, err)
 
-	r := &ReconcileUserSignupCleanup{
+	r := &Reconciler{
 		scheme:    s,
 		crtConfig: config,
 		client:    fakeClient,

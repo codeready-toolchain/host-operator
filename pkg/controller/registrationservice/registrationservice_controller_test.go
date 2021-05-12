@@ -189,10 +189,10 @@ func TestGetVarsWhenAuthClientIsSpecifiedButNotEnv(t *testing.T) {
 	assert.Equal(t, "location/of/public/key", vars["AUTH_CLIENT_PUBLIC_KEYS_URL"])
 }
 
-func prepareServiceAndRequest(t *testing.T, s *runtime.Scheme, decoder runtime.Decoder, initObjs ...runtime.Object) (*ReconcileRegistrationService, reconcile.Request) {
+func prepareServiceAndRequest(t *testing.T, s *runtime.Scheme, decoder runtime.Decoder, initObjs ...runtime.Object) (*Reconciler, reconcile.Request) {
 	tmpl := getDecodedTemplate(t, decoder)
 
-	service := &ReconcileRegistrationService{
+	service := &Reconciler{
 		client:             test.NewFakeClient(t, initObjs...),
 		scheme:             s,
 		regServiceTemplate: tmpl,

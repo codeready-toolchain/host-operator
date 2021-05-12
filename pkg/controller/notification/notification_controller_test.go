@@ -406,7 +406,7 @@ func newAdminNotification(recipient, subject, content string) *v1alpha1.Notifica
 }
 
 func newController(t *testing.T, notification *v1alpha1.Notification, deliveryService DeliveryService,
-	initObjs ...runtime.Object) (*ReconcileNotification, reconcile.Request, *test.FakeClient) {
+	initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -414,7 +414,7 @@ func newController(t *testing.T, notification *v1alpha1.Notification, deliverySe
 	config, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
 
-	controller := &ReconcileNotification{
+	controller := &Reconciler{
 		client:          cl,
 		scheme:          s,
 		config:          config,

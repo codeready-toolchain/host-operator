@@ -50,7 +50,7 @@ func Add(mgr manager.Manager, crtConfig *crtCfg.Config) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) reconcile.Reconciler {
-	return &ReconcileUserSignup{
+	return &Reconciler{
 		statusUpdater: &statusUpdater{
 			client: mgr.GetClient(),
 		},
@@ -112,10 +112,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &ReconcileUserSignup{}
+var _ reconcile.Reconciler = &Reconciler{}
 
-// ReconcileUserSignup reconciles a UserSignup object
-type ReconcileUserSignup struct {
+// Reconciler reconciles a UserSignup object
+type Reconciler struct {
 	*statusUpdater
 	scheme            *runtime.Scheme
 	crtConfig         *crtCfg.Config
@@ -127,7 +127,7 @@ type ReconcileUserSignup struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	logger.Info("Reconciling UserSignup")
 
@@ -238,7 +238,7 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 // Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
 // is based on the user's emailHash value - if there is a match, and the e-mail addresses are equal, then the
 // user is banned.
-func (r *ReconcileUserSignup) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) (bool, error) {
+func (r *Reconciler) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) (bool, error) {
 	banned := false
 	// Lookup the user email annotation
 	if emailLbl, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
@@ -286,7 +286,7 @@ func (r *ReconcileUserSignup) isUserBanned(reqLogger logr.Logger, userSignup *to
 // If there is already one then it returns 'true' as the first returned value, but before doing that it checks if the MUR should be deleted or not
 // or if the MUR requires some migration changes or additional fixes.
 // If no MUR for the given UserSignup is found, then it returns 'false' as the first returned value.
-func (r *ReconcileUserSignup) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
 	banned bool) (bool, error) {
 	// List all MasterUserRecord resources that have an owner label equal to the UserSignup.Name
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
@@ -354,7 +354,7 @@ func (r *ReconcileUserSignup) checkIfMurAlreadyExists(reqLogger logr.Logger, use
 	return false, nil
 }
 
-func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	// Check if the user requires phone verification, and do not proceed further if they do
 	if states.VerificationRequired(userSignup) {
 		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
@@ -415,7 +415,7 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 	return r.provisionMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, reqLogger)
 }
 
-func (r *ReconcileUserSignup) setStateLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
+func (r *Reconciler) setStateLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
 	oldValue := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
 	if oldValue == value {
 		// skipping
@@ -457,7 +457,7 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 	return nstemplateTier, err
 }
 
-func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
+func (r *Reconciler) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
 	replaced := usersignup.TransformUsername(instance.Spec.Username)
 
 	// Check for any forbidden prefixes
@@ -507,7 +507,7 @@ func (r *ReconcileUserSignup) generateCompliantUsername(instance *toolchainv1alp
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
-func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string,
+func (r *Reconciler) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string,
 	nstemplateTier *toolchainv1alpha1.NSTemplateTier, logger logr.Logger) error {
 
 	// TODO Update the MasterUserRecord with NSTemplateTier values
@@ -545,7 +545,7 @@ func (r *ReconcileUserSignup) provisionMasterUserRecord(userSignup *toolchainv1a
 }
 
 // updateActivationCounterAnnotation increments the 'toolchain.dev.openshift.com/activation-counter' annotation value on the given UserSignup
-func (r *ReconcileUserSignup) updateActivationCounterAnnotation(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) int {
+func (r *Reconciler) updateActivationCounterAnnotation(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) int {
 	if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
 		logger.Info("updating 'toolchain.dev.openshift.com/activation-counter' on active user")
 		activations, err := strconv.Atoi(activations)
@@ -567,7 +567,7 @@ func (r *ReconcileUserSignup) updateActivationCounterAnnotation(logger logr.Logg
 }
 
 // DeleteMasterUserRecord deletes the specified MasterUserRecord
-func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRecord,
+func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRecord,
 	userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger,
 	inProgressStatusUpdater, failedStatusUpdater StatusUpdaterFunc) error {
 
@@ -585,7 +585,7 @@ func (r *ReconcileUserSignup) DeleteMasterUserRecord(mur *toolchainv1alpha1.Mast
 	return nil
 }
 
-func (r *ReconcileUserSignup) sendDeactivatingNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: v1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-%s-", userSignup.Status.CompliantUsername, toolchainv1alpha1.NotificationTypeDeactivating),
@@ -617,7 +617,7 @@ func (r *ReconcileUserSignup) sendDeactivatingNotification(logger logr.Logger, u
 	return nil
 }
 
-func (r *ReconcileUserSignup) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: v1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-%s-", userSignup.Status.CompliantUsername, toolchainv1alpha1.NotificationTypeDeactivated),

@@ -61,7 +61,7 @@ const respBodyInvalid = `{"not found"}`
 const respBodyBad = `{"alive":false,"environment":"dev","revision":"64af1be5c6011fae5497a7c35e2a986d633b3421","buildTime":"0","startTime":"2020-07-06T13:18:30Z"}`
 
 func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTPClient,
-	memberClusters []string, initObjs ...runtime.Object) (*ReconcileToolchainStatus, reconcile.Request, *test.FakeClient) {
+	memberClusters []string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 	hostConfig, err := configuration.LoadConfig(fakeClient)
 	require.NoError(t, err)
 
-	r := &ReconcileToolchainStatus{
+	r := &Reconciler{
 		client:         fakeClient,
 		httpClientImpl: httpTestClient,
 		scheme:         s,
@@ -85,7 +85,7 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }
 
-func prepareReconcileWithStatusConditions(t *testing.T, requestName string, memberClusters []string, conditions []toolchainv1alpha1.Condition, initObjs ...runtime.Object) (*ReconcileToolchainStatus, reconcile.Request, *test.FakeClient) {
+func prepareReconcileWithStatusConditions(t *testing.T, requestName string, memberClusters []string, conditions []toolchainv1alpha1.Condition, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), memberClusters, initObjs...)
 
 	// explicitly set the conditions, so they are not empty/unknown

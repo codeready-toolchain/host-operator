@@ -45,7 +45,7 @@ func Add(mgr manager.Manager, config *configuration.Config) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.Reconciler {
-	return &ReconcileMasterUserRecord{
+	return &Reconciler{
 		client:                mgr.GetClient(),
 		scheme:                mgr.GetScheme(),
 		retrieveMemberCluster: cluster.GetCachedToolchainCluster,
@@ -73,10 +73,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &ReconcileMasterUserRecord{}
+var _ reconcile.Reconciler = &Reconciler{}
 
-// ReconcileMasterUserRecord reconciles a MasterUserRecord object
-type ReconcileMasterUserRecord struct {
+// Reconciler reconciles a MasterUserRecord object
+type Reconciler struct {
 	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client                client.Client
@@ -90,7 +90,7 @@ type ReconcileMasterUserRecord struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	logger.Info("Reconciling MasterUserRecord")
 
@@ -140,7 +140,7 @@ func (r *ReconcileMasterUserRecord) Reconcile(request reconcile.Request) (reconc
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileMasterUserRecord) addFinalizer(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, finalizer string) error {
+func (r *Reconciler) addFinalizer(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, finalizer string) error {
 	// Add the finalizer if it is not present
 	if !coputil.HasFinalizer(mur, finalizer) {
 		coputil.AddFinalizer(mur, finalizer)
@@ -159,7 +159,7 @@ func (r *ReconcileMasterUserRecord) addFinalizer(logger logr.Logger, mur *toolch
 // If the UserAccount resource already exists, then this latter is synchronized using the given `murAccount` and the associated `mur` status is also updated to reflect
 // the UserAccount specs.
 // Returns non-zero duration as the first argument if there is a need for requeing (eg, if the remote UserAccount is being deleted and the controller should wait until the deletion is complete)
-func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAccount toolchainv1alpha1.UserAccountEmbedded, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
+func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv1alpha1.UserAccountEmbedded, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
 	// get & check member cluster
 	memberCluster, err := r.getMemberCluster(murAccount.TargetCluster)
 	if err != nil {
@@ -228,7 +228,7 @@ func (r *ReconcileMasterUserRecord) ensureUserAccount(logger logr.Logger, murAcc
 	return 0, nil
 }
 
-func (r *ReconcileMasterUserRecord) getMemberCluster(targetCluster string) (*cluster.CachedToolchainCluster, error) {
+func (r *Reconciler) getMemberCluster(targetCluster string) (*cluster.CachedToolchainCluster, error) {
 	// get & check toolchain cluster
 	toolchainCluster, ok := r.retrieveMemberCluster(targetCluster)
 	if !ok {
@@ -243,7 +243,7 @@ func (r *ReconcileMasterUserRecord) getMemberCluster(targetCluster string) (*clu
 type statusUpdater func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error
 
 // wrapErrorWithStatusUpdate wraps the error and update the user account status. If the update failed then logs the error.
-func (r *ReconcileMasterUserRecord) wrapErrorWithStatusUpdate(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, updateStatus statusUpdater, err error, format string, args ...interface{}) error {
+func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, updateStatus statusUpdater, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
 	}
@@ -256,7 +256,7 @@ func (r *ReconcileMasterUserRecord) wrapErrorWithStatusUpdate(logger logr.Logger
 	return err
 }
 
-func (r *ReconcileMasterUserRecord) setStatusFailed(reason string) statusUpdater {
+func (r *Reconciler) setStatusFailed(reason string) statusUpdater {
 	return func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
 		return updateStatusConditions(
 			logger,
@@ -266,7 +266,7 @@ func (r *ReconcileMasterUserRecord) setStatusFailed(reason string) statusUpdater
 	}
 }
 
-func (r *ReconcileMasterUserRecord) useExistingConditionOfType(condType toolchainv1alpha1.ConditionType) statusUpdater {
+func (r *Reconciler) useExistingConditionOfType(condType toolchainv1alpha1.ConditionType) statusUpdater {
 	return func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
 		cond := toolchainv1alpha1.Condition{Type: condType}
 		for _, con := range mur.Status.Conditions {
@@ -280,7 +280,7 @@ func (r *ReconcileMasterUserRecord) useExistingConditionOfType(condType toolchai
 	}
 }
 
-func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
+func (r *Reconciler) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord) (time.Duration, error) {
 	for _, ua := range mur.Spec.UserAccounts {
 		requeueTime, err := r.deleteUserAccount(logger, ua.TargetCluster, mur.Name)
 		if err != nil {
@@ -301,7 +301,7 @@ func (r *ReconcileMasterUserRecord) manageCleanUp(logger logr.Logger, mur *toolc
 	return 0, nil
 }
 
-func (r *ReconcileMasterUserRecord) deleteUserAccount(logger logr.Logger, targetCluster, name string) (time.Duration, error) {
+func (r *Reconciler) deleteUserAccount(logger logr.Logger, targetCluster, name string) (time.Duration, error) {
 	requeueTime := 10 * time.Second
 	// get & check member cluster
 	memberCluster, err := r.getMemberCluster(targetCluster)
