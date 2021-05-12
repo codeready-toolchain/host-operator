@@ -63,13 +63,13 @@ func newReconciler(mgr manager.Manager, config *configuration.Config) (reconcile
 		return nil, err
 	}
 
-	return &ReconcileNotification{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config, deliveryService: svc}, nil
+	return &Reconciler{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config, deliveryService: svc}, nil
 }
 
-var _ reconcile.Reconciler = &ReconcileNotification{}
+var _ reconcile.Reconciler = &Reconciler{}
 
-// ReconcileNotification reconciles a Notification object
-type ReconcileNotification struct {
+// Reconciler reconciles a Notification object
+type Reconciler struct {
 	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client          client.Client
@@ -78,7 +78,7 @@ type ReconcileNotification struct {
 	deliveryService DeliveryService
 }
 
-func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Notification")
 
@@ -147,7 +147,7 @@ func (r *ReconcileNotification) Reconcile(request reconcile.Request) (reconcile.
 // the duration before the notification should be deleted. If so, the notification is deleted.
 // Returns bool indicating if the notification was deleted, the time before the notification
 // can be deleted and error
-func (r *ReconcileNotification) checkTransitionTimeAndDelete(log logr.Logger, notification *toolchainv1alpha1.Notification,
+func (r *Reconciler) checkTransitionTimeAndDelete(log logr.Logger, notification *toolchainv1alpha1.Notification,
 	completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
 
 	log.Info("the Notification is sent so we can deal with its deletion")
@@ -169,7 +169,7 @@ func (r *ReconcileNotification) checkTransitionTimeAndDelete(log logr.Logger, no
 
 type statusUpdater func(notification *toolchainv1alpha1.Notification, message string) error
 
-func (r *ReconcileNotification) wrapErrorWithStatusUpdate(logger logr.Logger, notification *toolchainv1alpha1.Notification,
+func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, notification *toolchainv1alpha1.Notification,
 	statusUpdater statusUpdater, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
@@ -180,7 +180,7 @@ func (r *ReconcileNotification) wrapErrorWithStatusUpdate(logger logr.Logger, no
 	return errs.Wrapf(err, format, args...)
 }
 
-func (r *ReconcileNotification) updateStatusConditions(notification *toolchainv1alpha1.Notification, newConditions ...toolchainv1alpha1.Condition) error {
+func (r *Reconciler) updateStatusConditions(notification *toolchainv1alpha1.Notification, newConditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
 	notification.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(notification.Status.Conditions, newConditions...)
 	if !updated {
@@ -190,7 +190,7 @@ func (r *ReconcileNotification) updateStatusConditions(notification *toolchainv1
 	return r.client.Status().Update(context.TODO(), notification)
 }
 
-func (r *ReconcileNotification) setStatusNotificationDeletionFailed(notification *toolchainv1alpha1.Notification, msg string) error {
+func (r *Reconciler) setStatusNotificationDeletionFailed(notification *toolchainv1alpha1.Notification, msg string) error {
 	return r.updateStatusConditions(
 		notification,
 		toolchainv1alpha1.Condition{
@@ -201,7 +201,7 @@ func (r *ReconcileNotification) setStatusNotificationDeletionFailed(notification
 		})
 }
 
-func (r *ReconcileNotification) setStatusNotificationContextError(notification *toolchainv1alpha1.Notification, msg string) error {
+func (r *Reconciler) setStatusNotificationContextError(notification *toolchainv1alpha1.Notification, msg string) error {
 	return r.updateStatusConditions(
 		notification,
 		toolchainv1alpha1.Condition{
@@ -212,7 +212,7 @@ func (r *ReconcileNotification) setStatusNotificationContextError(notification *
 		})
 }
 
-func (r *ReconcileNotification) setStatusNotificationDeliveryError(notification *toolchainv1alpha1.Notification, msg string) error {
+func (r *Reconciler) setStatusNotificationDeliveryError(notification *toolchainv1alpha1.Notification, msg string) error {
 	return r.updateStatusConditions(
 		notification,
 		toolchainv1alpha1.Condition{
@@ -223,7 +223,7 @@ func (r *ReconcileNotification) setStatusNotificationDeliveryError(notification 
 		})
 }
 
-func (r *ReconcileNotification) setStatusNotificationSent(notification *toolchainv1alpha1.Notification, msg string) error {
+func (r *Reconciler) setStatusNotificationSent(notification *toolchainv1alpha1.Notification, msg string) error {
 	return r.updateStatusConditions(
 		notification,
 		toolchainv1alpha1.Condition{
@@ -234,7 +234,7 @@ func (r *ReconcileNotification) setStatusNotificationSent(notification *toolchai
 		})
 }
 
-func (r *ReconcileNotification) updateStatus(logger logr.Logger, notification *toolchainv1alpha1.Notification,
+func (r *Reconciler) updateStatus(logger logr.Logger, notification *toolchainv1alpha1.Notification,
 	statusUpdater statusUpdater) error {
 
 	if err := statusUpdater(notification, ""); err != nil {

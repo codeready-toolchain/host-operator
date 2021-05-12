@@ -33,7 +33,7 @@ func Add(mgr manager.Manager, crtConfig *crtCfg.Config) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) reconcile.Reconciler {
-	return &ReconcileUserSignupCleanup{
+	return &Reconciler{
 		client:    mgr.GetClient(),
 		scheme:    mgr.GetScheme(),
 		crtConfig: crtConfig,
@@ -58,10 +58,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &ReconcileUserSignupCleanup{}
+var _ reconcile.Reconciler = &Reconciler{}
 
-// ReconcileUserSignupCleanup cleans up old UserSignup resources
-type ReconcileUserSignupCleanup struct {
+// Reconciler cleans up old UserSignup resources
+type Reconciler struct {
 	client    client.Client
 	scheme    *runtime.Scheme
 	crtConfig *crtCfg.Config
@@ -72,7 +72,7 @@ type ReconcileUserSignupCleanup struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileUserSignupCleanup) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling UserSignup")
 
@@ -147,7 +147,7 @@ func (r *ReconcileUserSignupCleanup) Reconcile(request reconcile.Request) (recon
 }
 
 // DeleteUserSignup deletes the specified UserSignup
-func (r *ReconcileUserSignupCleanup) DeleteUserSignup(userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger) error {
+func (r *Reconciler) DeleteUserSignup(userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger) error {
 
 	err := r.client.Delete(context.TODO(), userSignup)
 	if err != nil {

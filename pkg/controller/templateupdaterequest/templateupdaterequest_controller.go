@@ -36,7 +36,7 @@ func Add(mgr manager.Manager, config *configuration.Config) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.Reconciler {
-	return &ReconcileTemplateUpdateRequest{
+	return &Reconciler{
 		client: mgr.GetClient(),
 		scheme: mgr.GetScheme(),
 		config: config,
@@ -45,7 +45,7 @@ func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.
 
 // NewReconciler returns a new reconcile.Reconciler
 func NewReconciler(cl client.Client, s *runtime.Scheme, config *configuration.Config) reconcile.Reconciler {
-	return &ReconcileTemplateUpdateRequest{
+	return &Reconciler{
 		client: cl,
 		scheme: s,
 		config: config,
@@ -74,11 +74,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileTemplateUpdateRequest implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileTemplateUpdateRequest{}
+// blank assignment to verify that Reconciler implements reconcile.Reconciler
+var _ reconcile.Reconciler = &Reconciler{}
 
-// ReconcileTemplateUpdateRequest reconciles a TemplateUpdateRequest object
-type ReconcileTemplateUpdateRequest struct {
+// Reconciler reconciles a TemplateUpdateRequest object
+type Reconciler struct {
 	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
@@ -91,7 +91,7 @@ type ReconcileTemplateUpdateRequest struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileTemplateUpdateRequest) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	logger.Info("Reconciling TemplateUpdateRequest")
 
@@ -174,7 +174,7 @@ func maxUpdateFailuresReached(tur toolchainv1alpha1.TemplateUpdateRequest, thres
 		toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) >= threshod
 }
 
-func (r ReconcileTemplateUpdateRequest) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur *toolchainv1alpha1.MasterUserRecord) error {
+func (r Reconciler) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur *toolchainv1alpha1.MasterUserRecord) error {
 	// update MasterUserRecord accounts whose tier matches the TemplateUpdateRequest
 	for i, ua := range mur.Spec.UserAccounts {
 		if ua.Spec.NSTemplateSet.TierName == tur.Spec.TierName {
@@ -240,7 +240,7 @@ func namespaceType(templateRef string) string {
 
 // allSyncIndexesChanged compares the sync indexes in the given TemplateUpdateRequest status vs the given MasterUserRecord
 // returns `true` if ALL values are DIFFERENT, meaning that all user accounts were updated on the target clusters where the tier is in use
-func (r ReconcileTemplateUpdateRequest) allSyncIndexesChanged(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur toolchainv1alpha1.MasterUserRecord) bool {
+func (r Reconciler) allSyncIndexesChanged(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur toolchainv1alpha1.MasterUserRecord) bool {
 	murIndexes := syncIndexes(tur.Spec.TierName, mur)
 	for targetCluster, syncIndex := range tur.Status.SyncIndexes {
 		if current, ok := murIndexes[targetCluster]; ok && current == syncIndex {
@@ -287,20 +287,20 @@ func ToBeComplete() toolchainv1alpha1.Condition {
 }
 
 // addUpdatingStatusCondition sets the TemplateUpdateRequest status condition to `complete=false/reason=updating` and retains the sync indexes
-func (r *ReconcileTemplateUpdateRequest) addUpdatingStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest, syncIndexes map[string]string) error {
+func (r *Reconciler) addUpdatingStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest, syncIndexes map[string]string) error {
 	tur.Status.SyncIndexes = syncIndexes
 	tur.Status.Conditions = []toolchainv1alpha1.Condition{ToBeUpdating()}
 	return r.client.Status().Update(context.TODO(), tur)
 }
 
 // addFailureStatusCondition appends a new TemplateUpdateRequest status condition to `complete=false/reason=updating`
-func (r *ReconcileTemplateUpdateRequest) addFailureStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest, err error) error {
+func (r *Reconciler) addFailureStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest, err error) error {
 	tur.Status.Conditions = condition.AddStatusConditions(tur.Status.Conditions, ToFailure(err))
 	return r.client.Status().Update(context.TODO(), tur)
 }
 
 // setCompleteStatusCondition sets the TemplateUpdateRequest status condition to `complete=true/reason=updated` and clears all previous conditions of the same type
-func (r *ReconcileTemplateUpdateRequest) setCompleteStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest) error {
+func (r *Reconciler) setCompleteStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest) error {
 	tur.Status.Conditions = []toolchainv1alpha1.Condition{ToBeComplete()}
 	return r.client.Status().Update(context.TODO(), tur)
 }

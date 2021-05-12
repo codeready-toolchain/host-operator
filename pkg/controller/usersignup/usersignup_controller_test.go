@@ -2321,7 +2321,7 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 
 }
 
-func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMemberClustersFunc, initObjs ...runtime.Object) (*ReconcileUserSignup, reconcile.Request, *test.FakeClient) {
+func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMemberClustersFunc, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	metrics.Reset()
 
 	s := scheme.Scheme
@@ -2348,7 +2348,7 @@ func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMe
 	config, err := configuration.LoadConfig(fakeClient)
 	require.NoError(t, err)
 
-	r := &ReconcileUserSignup{
+	r := &Reconciler{
 		statusUpdater: &statusUpdater{
 			client: fakeClient,
 		},
