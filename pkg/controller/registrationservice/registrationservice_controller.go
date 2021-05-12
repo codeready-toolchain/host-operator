@@ -53,8 +53,8 @@ func getDeploymentTemplate(s *runtime.Scheme) (*v1.Template, error) {
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, regServiceDeployment *v1.Template) *ReconcileRegistrationService {
-	return &ReconcileRegistrationService{
+func newReconciler(mgr manager.Manager, regServiceDeployment *v1.Template) *Reconciler {
+	return &Reconciler{
 		client:             mgr.GetClient(),
 		scheme:             mgr.GetScheme(),
 		regServiceTemplate: regServiceDeployment,
@@ -62,7 +62,7 @@ func newReconciler(mgr manager.Manager, regServiceDeployment *v1.Template) *Reco
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r *ReconcileRegistrationService) error {
+func add(mgr manager.Manager, r *Reconciler) error {
 	// Create a new controller
 	c, err := controller.New("registrationservice-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -99,11 +99,11 @@ func add(mgr manager.Manager, r *ReconcileRegistrationService) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileRegistrationService implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileRegistrationService{}
+// blank assignment to verify that Reconciler implements reconcile.Reconciler
+var _ reconcile.Reconciler = &Reconciler{}
 
-// ReconcileRegistrationService reconciles a RegistrationService object
-type ReconcileRegistrationService struct {
+// Reconciler reconciles a RegistrationService object
+type Reconciler struct {
 	// This client, initialized using mgr.client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client             client.Client
@@ -113,7 +113,7 @@ type ReconcileRegistrationService struct {
 
 // Reconcile reads that state of the cluster for a RegistrationService object and makes changes based on the state read
 // and what is in the RegistrationService.Spec
-func (r *ReconcileRegistrationService) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling RegistrationService")
 
@@ -188,7 +188,7 @@ func updateStatusConditions(cl client.Client, regServ *toolchainv1alpha1.Registr
 	return cl.Status().Update(context.TODO(), regServ)
 }
 
-func (r *ReconcileRegistrationService) setStatusFailed(reason string) func(regServ *toolchainv1alpha1.RegistrationService, message string) error {
+func (r *Reconciler) setStatusFailed(reason string) func(regServ *toolchainv1alpha1.RegistrationService, message string) error {
 	return func(regServ *toolchainv1alpha1.RegistrationService, message string) error {
 		return updateStatusConditions(
 			r.client,
@@ -198,7 +198,7 @@ func (r *ReconcileRegistrationService) setStatusFailed(reason string) func(regSe
 }
 
 // wrapErrorWithStatusUpdate wraps the error and update the RegistrationService status. If the update fails then the error is logged.
-func (r *ReconcileRegistrationService) wrapErrorWithStatusUpdate(logger logr.Logger, regServ *toolchainv1alpha1.RegistrationService,
+func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, regServ *toolchainv1alpha1.RegistrationService,
 	statusUpdater func(regServ *toolchainv1alpha1.RegistrationService, message string) error, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
