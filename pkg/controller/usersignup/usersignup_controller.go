@@ -146,6 +146,19 @@ func (r *ReconcileUserSignup) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	logger = logger.WithValues("username", userSignup.Spec.Username)
 
+	// TODO remove this after migration complete
+	// Migrate the Approved property
+	if userSignup.Spec.Approved && !states.Approved(userSignup) {
+		states.SetApproved(userSignup, true)
+
+		if err := r.client.Update(context.TODO(), userSignup); err != nil {
+			return reconcile.Result{}, err
+		}
+		// Return from reconciliation if the UserSignup was migrated, the change in UserSignup will
+		// trigger another reconciliation
+		return reconcile.Result{}, nil
+	}
+
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
@@ -368,7 +381,7 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 			return err
 		}
 		// if user was approved manually
-		if userSignup.Spec.Approved {
+		if states.Approved(userSignup) {
 			if err == nil {
 				err = fmt.Errorf("no suitable member cluster found - capacity was reached")
 			}
@@ -391,7 +404,7 @@ func (r *ReconcileUserSignup) ensureNewMurIfApproved(reqLogger logr.Logger, user
 		return r.updateStatus(reqLogger, userSignup, r.set(statusPendingApproval, statusIncompletePendingApproval))
 	}
 
-	if userSignup.Spec.Approved {
+	if states.Approved(userSignup) {
 		if err := r.updateStatus(reqLogger, userSignup, r.set(statusApprovedByAdmin)); err != nil {
 			return err
 		}
