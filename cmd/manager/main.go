@@ -167,7 +167,7 @@ func main() {
 
 		// create or update Toolchain status during the operator deployment
 		log.Info("Creating/updating the ToolchainStatus resource")
-		toolchainStatusName := crtConfig.GetToolchainStatusName()
+		toolchainStatusName := configuration.ToolchainStatusName
 		if err := toolchainstatus.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, toolchainStatusName); err != nil {
 			log.Error(err, "cannot create/update ToolchainStatus resource")
 			os.Exit(1)

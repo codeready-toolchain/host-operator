@@ -125,7 +125,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
 	if status.Cluster.Name != "" {
 		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
-		if err := s.hostClient.Get(context.TODO(), types.NamespacedName{Namespace: s.record.Namespace, Name: s.config.GetToolchainStatusName()}, toolchainStatus); err != nil {
+		if err := s.hostClient.Get(context.TODO(), types.NamespacedName{Namespace: s.record.Namespace, Name: configuration.ToolchainStatusName}, toolchainStatus); err != nil {
 			return status, errors.Wrapf(err, "unable to read ToolchainStatus resource")
 		}
 
