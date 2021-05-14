@@ -373,7 +373,7 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *t
 		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
 	}
 
-	approved, targetCluster, err := getClusterIfApproved(r.client, r.crtConfig, userSignup, r.getMemberClusters)
+	approved, targetCluster, err := getClusterIfApproved(r.client, userSignup, r.getMemberClusters)
 	// if error was returned or no available cluster found
 	if err != nil || targetCluster == notFound {
 		// set the state label to pending

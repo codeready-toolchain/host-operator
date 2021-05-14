@@ -34,7 +34,7 @@ func (c targetCluster) getClusterName() string {
 // If the user is not approved manually, then it loads HostOperatorConfig to check if automatic approval is enabled or not. If it is then it checks
 // capacity thresholds and the actual use if there is any suitable member cluster. If it is not then it returns false as the first value and
 // targetCluster unknown as the second value.
-func getClusterIfApproved(cl client.Client, crtConfig *crtCfg.Config, userSignup *toolchainv1alpha1.UserSignup, getMemberClusters cluster.GetMemberClustersFunc) (bool, targetCluster, error) {
+func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSignup, getMemberClusters cluster.GetMemberClustersFunc) (bool, targetCluster, error) {
 	config, err := hostoperatorconfig.GetConfig(cl, userSignup.Namespace)
 	if err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to read HostOperatorConfig resource")
@@ -45,7 +45,7 @@ func getClusterIfApproved(cl client.Client, crtConfig *crtCfg.Config, userSignup
 	}
 
 	status := &toolchainv1alpha1.ToolchainStatus{}
-	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: crtConfig.GetToolchainStatusName()}, status); err != nil {
+	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: crtCfg.ToolchainStatusName}, status); err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to read ToolchainStatus resource")
 	}
 	counts, err := counter.GetCounts()
