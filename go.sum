@@ -160,8 +160,6 @@ github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMe
 github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c/go.mod h1:XGLbWH/ujMcbPbhZq52Nv6UrCghb1yGn//133kEsvDk=
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20210512065017-fd63189cf59d h1:pq7MUpP74Rog+eDWxvKlZo4Nlk4+ZtrIF+bSgDMEBZU=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20210512065017-fd63189cf59d/go.mod h1:174YTzyQ21yeNsnnG08RR5VExGBsoH9KDBRRNiy/ahM=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=
 github.com/containerd/console v0.0.0-20180822173158-c12b1e7919c1/go.mod h1:Tj/on1eG8kiEhd0+fhSDzsPAFESxzBBvdyEgyryXffw=
 github.com/containerd/containerd v1.2.7/go.mod h1:bC6axHOhabU15QhwfG7w5PipXdVtMXFTttgp+kVtyUA=
@@ -826,6 +824,8 @@ github.com/prometheus/prometheus v2.3.2+incompatible/go.mod h1:oAIUtOny2rjMX0OWN
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
 github.com/rajivnathan/api v0.0.0-20210517183111-bd3161732163 h1:vEtRvQso07CCbw3iulbZiNX78gTolrRKZXe+zYVmVF4=
 github.com/rajivnathan/api v0.0.0-20210517183111-bd3161732163/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
+github.com/rajivnathan/toolchain-common v0.0.0-20210517210759-0d8f2e9e2566 h1:5u50WeXLG6nVP7uMNJuwRqLy3n8c9LbUsiHI+WZ8HsA=
+github.com/rajivnathan/toolchain-common v0.0.0-20210517210759-0d8f2e9e2566/go.mod h1:Yz3Pqz6VqdE56TwMe2RvnxdKFFWasbegic53oH65BO8=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776 h1:b4BUvzMzkoRJvEbs1J3GaewlHzjxYYxVfuy8/DOU9zo=
 github.com/redhat-cop/operator-utils v0.0.0-20190827162636-51e6b0c32776/go.mod h1:K9f0vBA2bBiDyg9bsGDUojdwdhwUvHKX5QW0B+brWgo=
