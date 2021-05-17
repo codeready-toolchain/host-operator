@@ -48,7 +48,8 @@ replace (
 
 replace (
 	github.com/codeready-toolchain/api => github.com/xcoulon/api v0.0.0-20210517161155-5d86e3f50cbb
-	github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20210517161702-77d3fcea9e07
+	github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20210517162322-e34eefabaf90
 )
+
 
 go 1.14
