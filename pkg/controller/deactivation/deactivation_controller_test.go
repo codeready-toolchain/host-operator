@@ -407,7 +407,7 @@ func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
 			Username:      email,
 			Approved:      true,
 			TargetCluster: "east",
-			UserID:        username,
+			Userid:        username,
 		},
 	}
 }
