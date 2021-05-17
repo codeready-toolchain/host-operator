@@ -96,7 +96,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return add(mgr, r)
 }
 
-type HttpClient interface {
+type HTTPClient interface {
 	Get(url string) (*http.Response, error)
 }
 
@@ -107,7 +107,7 @@ type Reconciler struct {
 	Scheme         *runtime.Scheme
 	GetMembersFunc cluster.GetMemberClustersFunc
 	Config         *crtCfg.Config
-	HTTPClientImpl HttpClient
+	HTTPClientImpl HTTPClient
 }
 
 // Reconcile reads the state of toolchain host and member cluster components and updates the ToolchainStatus resource with information useful for observation or troubleshooting
@@ -562,7 +562,7 @@ func customMemberStatus(conditions ...toolchainv1alpha1.Condition) toolchainv1al
 }
 
 type regServiceSubstatusHandler struct {
-	httpClientImpl   HttpClient
+	httpClientImpl   HTTPClient
 	controllerClient client.Client
 }
 
