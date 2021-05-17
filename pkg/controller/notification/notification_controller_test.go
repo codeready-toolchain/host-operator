@@ -26,6 +26,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -415,10 +416,11 @@ func newController(t *testing.T, notification *v1alpha1.Notification, deliverySe
 	require.NoError(t, err)
 
 	controller := &Reconciler{
-		client:          cl,
-		scheme:          s,
-		config:          config,
+		Client:          cl,
+		Scheme:          s,
+		Config:          config,
 		deliveryService: deliveryService,
+		Log:             ctrl.Log.WithName("controllers").WithName("Notification"),
 	}
 	request := reconcile.Request{
 		NamespacedName: test.NamespacedName(test.HostOperatorNs, notification.Name),

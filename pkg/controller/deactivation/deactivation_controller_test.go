@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -366,9 +367,10 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	cfg, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
 	r := &Reconciler{
-		client: cl,
-		scheme: s,
-		config: cfg,
+		Client: cl,
+		Scheme: s,
+		Config: cfg,
+		Log:    ctrl.Log.WithName("controllers").WithName("Deactivation"),
 	}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{

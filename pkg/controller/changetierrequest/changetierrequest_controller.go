@@ -21,24 +21,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
-
-var log = logf.Log.WithName("controller_changetierrequest")
-
-// Add creates a new ChangeTierRequest Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager, config *configuration.Config) error {
-	return add(mgr, newReconciler(mgr, config))
-}
-
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.Reconciler {
-	return &Reconciler{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config}
-}
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -53,16 +39,17 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		&predicate.GenerationChangedPredicate{})
 }
 
-// blank assignment to verify that Reconciler implements reconcile.Reconciler
-var _ reconcile.Reconciler = &Reconciler{}
+// SetupWithManager sets up the controller with the Manager.
+func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	return add(mgr, r)
+}
 
 // Reconciler reconciles a ChangeTierRequest object
 type Reconciler struct {
-	// This client, initialized using mgr.client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
-	config *configuration.Config
+	Client client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Config *configuration.Config
 }
 
 // Reconcile reads that state of the cluster for a ChangeTierRequest object and makes changes based on the state read
@@ -71,12 +58,12 @@ type Reconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ChangeTierRequest")
 
 	// Fetch the ChangeTierRequest instance
 	changeTierRequest := &toolchainv1alpha1.ChangeTierRequest{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, changeTierRequest)
+	err := r.Client.Get(context.TODO(), request.NamespacedName, changeTierRequest)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -118,7 +105,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	return reconcile.Result{
 		Requeue:      true,
-		RequeueAfter: r.config.GetDurationBeforeChangeTierRequestDeletion(),
+		RequeueAfter: r.Config.GetDurationBeforeChangeTierRequestDeletion(),
 	}, nil
 }
 
@@ -130,30 +117,30 @@ func (r *Reconciler) checkTransitionTimeAndDelete(logger logr.Logger, changeTier
 	logger.Info("the ChangeTierRequest is completed so we can deal with its deletion")
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
-	if timeSinceCompletion >= r.config.GetDurationBeforeChangeTierRequestDeletion() {
+	if timeSinceCompletion >= r.Config.GetDurationBeforeChangeTierRequestDeletion() {
 		logger.Info("the ChangeTierRequest has been completed for a longer time than the 'durationBeforeChangeRequestDeletion', so it's ready to be deleted",
-			"durationBeforeChangeRequestDeletion", r.config.GetDurationBeforeChangeTierRequestDeletion().String())
-		if err := r.client.Delete(context.TODO(), changeTierRequest, &client.DeleteOptions{}); err != nil {
+			"durationBeforeChangeRequestDeletion", r.Config.GetDurationBeforeChangeTierRequestDeletion().String())
+		if err := r.Client.Delete(context.TODO(), changeTierRequest, &client.DeleteOptions{}); err != nil {
 			return false, 0, errs.Wrapf(err, "unable to delete ChangeTierRequest object '%s'", changeTierRequest.Name)
 		}
 		return true, 0, nil
 	}
-	diff := r.config.GetDurationBeforeChangeTierRequestDeletion() - timeSinceCompletion
+	diff := r.Config.GetDurationBeforeChangeTierRequestDeletion() - timeSinceCompletion
 	logger.Info("the ChangeTierRequest has been completed for shorter time than 'durationBeforeChangeRequestDeletion', so it's going to be reconciled again",
-		"durationBeforeChangeRequestDeletion", r.config.GetDurationBeforeChangeTierRequestDeletion().String(), "reconcileAfter", diff.String())
+		"durationBeforeChangeRequestDeletion", r.Config.GetDurationBeforeChangeTierRequestDeletion().String(), "reconcileAfter", diff.String())
 	return false, diff, nil
 }
 
 func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) error {
 	mur := &toolchainv1alpha1.MasterUserRecord{}
 	murName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.MurName}
-	if err := r.client.Get(context.TODO(), murName, mur); err != nil {
+	if err := r.Client.Get(context.TODO(), murName, mur); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get MasterUserRecord with name %s", changeTierRequest.Spec.MurName)
 	}
 
 	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
 	tierName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.TierName}
-	if err := r.client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
+	if err := r.Client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get NSTemplateTier with name %s", changeTierRequest.Spec.TierName)
 	}
 
@@ -194,7 +181,7 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 		}
 		mur.Labels[nstemplatetier.TemplateTierHashLabelKey(ua.Spec.NSTemplateSet.TierName)] = hash
 	}
-	if err := r.client.Update(context.TODO(), mur); err != nil {
+	if err := r.Client.Update(context.TODO(), mur); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
 	}
 
@@ -218,7 +205,7 @@ func (r *Reconciler) updateStatusConditions(changeRequest *toolchainv1alpha1.Cha
 		// Nothing changed
 		return nil
 	}
-	return r.client.Status().Update(context.TODO(), changeRequest)
+	return r.Client.Status().Update(context.TODO(), changeRequest)
 }
 
 func (r *Reconciler) setStatusChangeComplete(changeRequest *toolchainv1alpha1.ChangeTierRequest) error {

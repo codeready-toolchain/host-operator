@@ -19,38 +19,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
-
-var log = logf.Log.WithName("controller_templateupdaterequest")
-
-// Add creates a new TemplateUpdateRequest Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager, config *configuration.Config) error {
-	return add(mgr, newReconciler(mgr, config))
-}
-
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.Reconciler {
-	return &Reconciler{
-		client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
-		config: config,
-	}
-}
-
-// NewReconciler returns a new reconcile.Reconciler
-func NewReconciler(cl client.Client, s *runtime.Scheme, config *configuration.Config) reconcile.Reconciler {
-	return &Reconciler{
-		client: cl,
-		scheme: s,
-		config: config,
-	}
-}
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -74,16 +47,17 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that Reconciler implements reconcile.Reconciler
-var _ reconcile.Reconciler = &Reconciler{}
+// SetupWithManager sets up the controller with the Manager.
+func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	return add(mgr, r)
+}
 
 // Reconciler reconciles a TemplateUpdateRequest object
 type Reconciler struct {
-	// This client, initialized using mgr.client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
-	config *configuration.Config
+	Client client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Config *configuration.Config
 }
 
 // Reconcile reads that state of the cluster for a TemplateUpdateRequest object and makes changes based on the state read
@@ -92,12 +66,12 @@ type Reconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	logger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	logger.Info("Reconciling TemplateUpdateRequest")
 
 	// Fetch the TemplateUpdateRequest tur
 	tur := &toolchainv1alpha1.TemplateUpdateRequest{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, tur)
+	err := r.Client.Get(context.TODO(), request.NamespacedName, tur)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -112,7 +86,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// lookup the MasterUserRecord with the same name as the TemplateUpdateRequest tur
 	mur := &toolchainv1alpha1.MasterUserRecord{}
-	if err = r.client.Get(context.TODO(), request.NamespacedName, mur); err != nil {
+	if err = r.Client.Get(context.TODO(), request.NamespacedName, mur); err != nil {
 		if errors.IsNotFound(err) {
 			// MUR object not found, could have been deleted after reconcile request.
 			// Marking this TemplateUpdateRequest as failed
@@ -136,7 +110,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			if err2 := r.addFailureStatusCondition(tur, err); err2 != nil {
 				return reconcile.Result{}, err2
 			}
-			if maxUpdateFailuresReached(*tur, r.config.GetMasterUserRecordUpdateFailureThreshold()) {
+			if maxUpdateFailuresReached(*tur, r.Config.GetMasterUserRecordUpdateFailureThreshold()) {
 				// exit reconcile loop but don't requeue
 				// in other words, give up with the MasterUserRecord update :(
 				return reconcile.Result{}, nil
@@ -184,7 +158,7 @@ func (r Reconciler) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1
 			for _, ns := range ua.Spec.NSTemplateSet.Namespaces {
 				if ns.Template != "" {
 					t := namespaceType(ns.TemplateRef)
-					log.Info("retainining the custom namespace template", "type", t)
+					r.Log.Info("retainining the custom namespace template", "type", t)
 					namespaces[t] = ns
 				}
 			}
@@ -226,8 +200,8 @@ func (r Reconciler) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1
 			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tur.Spec.TierName)] = hash
 		}
 	}
-	log.Info("updating the MUR")
-	return r.client.Update(context.TODO(), mur)
+	r.Log.Info("updating the MUR")
+	return r.Client.Update(context.TODO(), mur)
 
 }
 
@@ -290,19 +264,19 @@ func ToBeComplete() toolchainv1alpha1.Condition {
 func (r *Reconciler) addUpdatingStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest, syncIndexes map[string]string) error {
 	tur.Status.SyncIndexes = syncIndexes
 	tur.Status.Conditions = []toolchainv1alpha1.Condition{ToBeUpdating()}
-	return r.client.Status().Update(context.TODO(), tur)
+	return r.Client.Status().Update(context.TODO(), tur)
 }
 
 // addFailureStatusCondition appends a new TemplateUpdateRequest status condition to `complete=false/reason=updating`
 func (r *Reconciler) addFailureStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest, err error) error {
 	tur.Status.Conditions = condition.AddStatusConditions(tur.Status.Conditions, ToFailure(err))
-	return r.client.Status().Update(context.TODO(), tur)
+	return r.Client.Status().Update(context.TODO(), tur)
 }
 
 // setCompleteStatusCondition sets the TemplateUpdateRequest status condition to `complete=true/reason=updated` and clears all previous conditions of the same type
 func (r *Reconciler) setCompleteStatusCondition(tur *toolchainv1alpha1.TemplateUpdateRequest) error {
 	tur.Status.Conditions = []toolchainv1alpha1.Condition{ToBeComplete()}
-	return r.client.Status().Update(context.TODO(), tur)
+	return r.Client.Status().Update(context.TODO(), tur)
 }
 
 // syncIndexes returns the sync indexes related to the given tier, indexed by target cluster

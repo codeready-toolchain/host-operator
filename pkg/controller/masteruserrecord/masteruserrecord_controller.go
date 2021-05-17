@@ -24,34 +24,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_masteruserrecord")
-
 const (
 	// Finalizers
 	murFinalizerName = "finalizer.toolchain.dev.openshift.com"
 )
-
-// Add creates a new MasterUserRecord Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager, config *configuration.Config) error {
-	return add(mgr, newReconciler(mgr, config))
-}
-
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, config *configuration.Config) reconcile.Reconciler {
-	return &Reconciler{
-		client:                mgr.GetClient(),
-		scheme:                mgr.GetScheme(),
-		retrieveMemberCluster: cluster.GetCachedToolchainCluster,
-		config:                config,
-	}
-}
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -73,16 +54,18 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &Reconciler{}
+// SetupWithManager sets up the controller with the Manager.
+func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	return add(mgr, r)
+}
 
 // Reconciler reconciles a MasterUserRecord object
 type Reconciler struct {
-	// This client, initialized using mgr.client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client                client.Client
-	scheme                *runtime.Scheme
-	retrieveMemberCluster func(name string) (*cluster.CachedToolchainCluster, bool)
-	config                *configuration.Config
+	Client                client.Client
+	Log                   logr.Logger
+	Scheme                *runtime.Scheme
+	RetrieveMemberCluster func(name string) (*cluster.CachedToolchainCluster, bool)
+	Config                *configuration.Config
 }
 
 // Reconcile reads that state of the cluster for a MasterUserRecord object and makes changes based on the state read
@@ -91,12 +74,12 @@ type Reconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	logger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	logger.Info("Reconciling MasterUserRecord")
 
 	// Fetch the MasterUserRecord instance
 	mur := &toolchainv1alpha1.MasterUserRecord{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, mur)
+	err := r.Client.Get(context.TODO(), request.NamespacedName, mur)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -144,7 +127,7 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, mur *toolchainv1alpha1.Mas
 	// Add the finalizer if it is not present
 	if !coputil.HasFinalizer(mur, finalizer) {
 		coputil.AddFinalizer(mur, finalizer)
-		if err := r.client.Update(context.TODO(), mur); err != nil {
+		if err := r.Client.Update(context.TODO(), mur); err != nil {
 			return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason), err,
 				"failed while updating with added finalizer")
 		}
@@ -179,7 +162,7 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 					"failed to create UserAccount in the member cluster '%s'", murAccount.TargetCluster)
 			}
 			counter.IncrementUserAccountCount(murAccount.TargetCluster)
-			return 0, updateStatusConditions(logger, r.client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
+			return 0, updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 		}
 		// another/unexpected error occurred while trying to fetch the user account on the member cluster
 		return 0, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToGetUserAccountReason), err,
@@ -200,18 +183,18 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 			}
 		}
 
-		return requeueTime, updateStatusConditions(logger, r.client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "recovering deleted UserAccount"))
+		return requeueTime, updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "recovering deleted UserAccount"))
 	}
 
 	sync := Synchronizer{
 		record:            mur,
-		hostClient:        r.client,
+		hostClient:        r.Client,
 		memberCluster:     memberCluster,
 		memberUserAcc:     userAccount,
 		recordSpecUserAcc: murAccount,
 		logger:            logger,
-		scheme:            r.scheme,
-		config:            r.config,
+		scheme:            r.Scheme,
+		config:            r.Config,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
 		// note: if we got an error while sync'ing the spec, then we may not be able to update the MUR status it here neither.
@@ -230,7 +213,7 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 
 func (r *Reconciler) getMemberCluster(targetCluster string) (*cluster.CachedToolchainCluster, error) {
 	// get & check toolchain cluster
-	toolchainCluster, ok := r.retrieveMemberCluster(targetCluster)
+	toolchainCluster, ok := r.RetrieveMemberCluster(targetCluster)
 	if !ok {
 		return nil, fmt.Errorf("the member cluster %s not found in the registry", targetCluster)
 	}
@@ -260,7 +243,7 @@ func (r *Reconciler) setStatusFailed(reason string) statusUpdater {
 	return func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
 		return updateStatusConditions(
 			logger,
-			r.client,
+			r.Client,
 			mur,
 			toBeNotReady(reason, message))
 	}
@@ -276,7 +259,7 @@ func (r *Reconciler) useExistingConditionOfType(condType toolchainv1alpha1.Condi
 			}
 		}
 		cond.Message = message
-		return updateStatusConditions(logger, r.client, mur, cond)
+		return updateStatusConditions(logger, r.Client, mur, cond)
 	}
 }
 
@@ -292,7 +275,7 @@ func (r *Reconciler) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.Ma
 	}
 	// Remove finalizer from MasterUserRecord
 	coputil.RemoveFinalizer(mur, murFinalizerName)
-	if err := r.client.Update(context.Background(), mur); err != nil {
+	if err := r.Client.Update(context.Background(), mur); err != nil {
 		return 0, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason), err,
 			"failed to update MasterUserRecord while deleting finalizer")
 	}
