@@ -151,12 +151,9 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if userSignup.Spec.Approved && !states.Approved(userSignup) {
 		states.SetApproved(userSignup, true)
 
-		if err := r.client.Update(context.TODO(), userSignup); err != nil {
-			return reconcile.Result{}, err
-		}
 		// Return from reconciliation if the UserSignup was migrated, the change in UserSignup will
 		// trigger another reconciliation
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, r.client.Update(context.TODO(), userSignup)
 	}
 
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
