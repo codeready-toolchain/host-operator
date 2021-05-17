@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -70,17 +71,18 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 	require.NoError(t, err)
 
 	r := &Reconciler{
-		client:         fakeClient,
-		httpClientImpl: httpTestClient,
-		scheme:         s,
-		getMembersFunc: func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
+		Client:         fakeClient,
+		HttpClientImpl: httpTestClient,
+		Scheme:         s,
+		GetMembersFunc: func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
 			clusters := make([]*cluster.CachedToolchainCluster, len(memberClusters))
 			for i, clusterName := range memberClusters {
 				clusters[i] = cachedToolchainCluster(fakeClient, clusterName, corev1.ConditionTrue, metav1.Now())
 			}
 			return clusters
 		},
-		config: hostConfig,
+		Config: hostConfig,
+		Log:    ctrl.Log.WithName("controllers").WithName("ToolchainStatus"),
 	}
 	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }

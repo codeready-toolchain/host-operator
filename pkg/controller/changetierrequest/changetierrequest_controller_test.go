@@ -22,6 +22,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -358,9 +359,10 @@ func newController(t *testing.T, changeTier *v1alpha1.ChangeTierRequest, initObj
 	config, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
 	controller := &Reconciler{
-		client: cl,
-		scheme: s,
-		config: config,
+		Client: cl,
+		Scheme: s,
+		Config: config,
+		Log:    ctrl.Log.WithName("controllers").WithName("ChangeTierRequest"),
 	}
 	request := reconcile.Request{
 		NamespacedName: test.NamespacedName(test.HostOperatorNs, changeTier.Name),

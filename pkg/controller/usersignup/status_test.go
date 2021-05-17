@@ -9,13 +9,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
+
+var testLog = ctrl.Log.WithName("test")
 
 func TestUpdateStatus(t *testing.T) {
 	// given
 	userSignup := &v1alpha1.UserSignup{}
 
-	statusUpdater := statusUpdater{client: test.NewFakeClient(t)}
+	statusUpdater := StatusUpdater{Client: test.NewFakeClient(t)}
 
 	t.Run("status updated", func(t *testing.T) {
 		updateStatus := func(changeTierRequest *v1alpha1.UserSignup, message string) error {
@@ -24,7 +27,7 @@ func TestUpdateStatus(t *testing.T) {
 		}
 
 		// test
-		err := statusUpdater.wrapErrorWithStatusUpdate(log, userSignup, updateStatus, apierrors.NewBadRequest("oopsy woopsy"), "failed to create namespace")
+		err := statusUpdater.wrapErrorWithStatusUpdate(testLog, userSignup, updateStatus, apierrors.NewBadRequest("oopsy woopsy"), "failed to create namespace")
 
 		require.Error(t, err)
 		assert.Equal(t, "failed to create namespace: oopsy woopsy", err.Error())
@@ -36,7 +39,7 @@ func TestUpdateStatus(t *testing.T) {
 		}
 
 		// when
-		err := statusUpdater.wrapErrorWithStatusUpdate(log, userSignup, updateStatus, apierrors.NewBadRequest("oopsy woopsy"), "failed to create namespace")
+		err := statusUpdater.wrapErrorWithStatusUpdate(testLog, userSignup, updateStatus, apierrors.NewBadRequest("oopsy woopsy"), "failed to create namespace")
 
 		// then
 		require.Error(t, err)

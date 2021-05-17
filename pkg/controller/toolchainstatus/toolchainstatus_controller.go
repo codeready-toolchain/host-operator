@@ -31,14 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
-
-var log = logf.Log.WithName("controller_toolchainstatus")
 
 // general toolchainstatus constants
 const (
@@ -77,23 +74,6 @@ const (
 
 var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
-// Add creates a new ToolchainStatus Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager, crtConfig *crtCfg.Config) error {
-	return add(mgr, newReconciler(mgr, crtConfig))
-}
-
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) *Reconciler {
-	return &Reconciler{
-		client:         mgr.GetClient(),
-		httpClientImpl: &http.Client{},
-		scheme:         mgr.GetScheme(),
-		getMembersFunc: cluster.GetMemberClusters,
-		config:         crtConfig,
-	}
-}
-
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r *Reconciler) error {
 	// create a new controller
@@ -111,33 +91,34 @@ func add(mgr manager.Manager, r *Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that Reconciler implements reconcile.Reconciler
-var _ reconcile.Reconciler = &Reconciler{}
+// SetupWithManager sets up the controller with the Manager.
+func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	return add(mgr, r)
+}
 
-type httpClient interface {
+type HttpClient interface {
 	Get(url string) (*http.Response, error)
 }
 
 // Reconciler reconciles a ToolchainStatus object
 type Reconciler struct {
-	// This client, initialized using mgr.client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client         client.Client
-	httpClientImpl httpClient
-	scheme         *runtime.Scheme
-	getMembersFunc cluster.GetMemberClustersFunc
-	config         *crtCfg.Config
+	Client         client.Client
+	Log            logr.Logger
+	Scheme         *runtime.Scheme
+	GetMembersFunc cluster.GetMemberClustersFunc
+	Config         *crtCfg.Config
+	HttpClientImpl HttpClient
 }
 
 // Reconcile reads the state of toolchain host and member cluster components and updates the ToolchainStatus resource with information useful for observation or troubleshooting
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ToolchainStatus")
-	requeueTime := r.config.GetToolchainStatusRefreshTime()
+	requeueTime := r.Config.GetToolchainStatusRefreshTime()
 
 	// fetch the ToolchainStatus
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, toolchainStatus)
+	err := r.Client.Get(context.TODO(), request.NamespacedName, toolchainStatus)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -260,7 +241,7 @@ func (r *Reconciler) restoredCheck(reqLogger logr.Logger, toolchainStatus *toolc
 
 // synchronizeWithCounter synchronizes the ToolchainStatus with the cached counter
 func (r *Reconciler) synchronizeWithCounter(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
-	if err := counter.Synchronize(r.client, toolchainStatus); err != nil {
+	if err := counter.Synchronize(r.Client, toolchainStatus); err != nil {
 		reqLogger.Error(err, "unable to synchronize with the counter")
 		return false
 	}
@@ -292,7 +273,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 	operatorStatus.DeploymentName = hostOperatorDeploymentName
 
 	// check host operator deployment status
-	deploymentConditions := status.GetDeploymentStatusConditions(r.client, hostOperatorDeploymentName, toolchainStatus.Namespace)
+	deploymentConditions := status.GetDeploymentStatusConditions(r.Client, hostOperatorDeploymentName, toolchainStatus.Namespace)
 	err = status.ValidateComponentConditionReady(deploymentConditions...)
 	if err != nil {
 		reqLogger.Error(err, "host operator deployment is not ready")
@@ -308,8 +289,8 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 
 	s := regServiceSubstatusHandler{
-		controllerClient: r.client,
-		httpClientImpl:   r.httpClientImpl,
+		controllerClient: r.Client,
+		httpClientImpl:   r.HttpClientImpl,
 	}
 
 	// gather the functions for handling registration service status eg. resource templates, deployment, health endpoint
@@ -336,7 +317,7 @@ func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, tool
 func (r *Reconciler) membersHandleStatus(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	// get member clusters
 	logger.Info("updating member status")
-	memberClusters := r.getMembersFunc()
+	memberClusters := r.GetMembersFunc()
 	members := map[string]toolchainv1alpha1.MemberStatusStatus{}
 	ready := true
 	if len(memberClusters) == 0 {
@@ -370,7 +351,7 @@ func (r *Reconciler) membersHandleStatus(logger logr.Logger, toolchainStatus *to
 			logger.Error(fmt.Errorf("member cluster %s not ready", memberCluster.Name), "the memberstatus ready condition is not true")
 			ready = false
 		}
-		log.Info("adding member status", "member_name", memberCluster.Name, string(memberStatus.Conditions[0].Type), memberStatus.Conditions[0].Status)
+		r.Log.Info("adding member status", "member_name", memberCluster.Name, string(memberStatus.Conditions[0].Type), memberStatus.Conditions[0].Status)
 		members[memberCluster.Name] = memberStatus
 	}
 
@@ -390,9 +371,9 @@ func getAPIEndpoint(clusterName string, memberClusters []*cluster.CachedToolchai
 
 func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, status toolchainStatusNotificationType) error {
-	if !isValidEmailAddress(r.config.GetAdminEmail()) {
+	if !isValidEmailAddress(r.Config.GetAdminEmail()) {
 		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
-			r.config.GetAdminEmail()))
+			r.Config.GetAdminEmail()))
 	}
 
 	tsValue := time.Now().Format("20060102150405")
@@ -421,18 +402,18 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 			Namespace: toolchainStatus.Namespace,
 		},
 		Spec: toolchainv1alpha1.NotificationSpec{
-			Recipient: r.config.GetAdminEmail(),
+			Recipient: r.Config.GetAdminEmail(),
 			Subject:   subjectString,
 			Content:   contentString,
 		},
 	}
 
-	if err := controllerutil.SetControllerReference(toolchainStatus, notification, r.scheme); err != nil {
+	if err := controllerutil.SetControllerReference(toolchainStatus, notification, r.Scheme); err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to set owner reference for toolchain status %s notification resource", status))
 		return err
 	}
 
-	if err := r.client.Create(context.TODO(), notification); err != nil {
+	if err := r.Client.Create(context.TODO(), notification); err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to create toolchain status %s notification resource", status))
 		return err
 	}
@@ -484,7 +465,7 @@ func (r *Reconciler) updateStatusConditions(logger logr.Logger, status *toolchai
 	newConditions ...toolchainv1alpha1.Condition) error {
 	status.Status.Conditions = condition.AddOrUpdateStatusConditionsWithLastUpdatedTimestamp(status.Status.Conditions, newConditions...)
 	logger.Info("updating ToolchainStatus status conditions", "resource_version", status.ResourceVersion)
-	err := r.client.Status().Update(context.TODO(), status)
+	err := r.Client.Status().Update(context.TODO(), status)
 	logger.Info("updated ToolchainStatus status conditions", "resource_version", status.ResourceVersion)
 	return err
 }
@@ -581,7 +562,7 @@ func customMemberStatus(conditions ...toolchainv1alpha1.Condition) toolchainv1al
 }
 
 type regServiceSubstatusHandler struct {
-	httpClientImpl   httpClient
+	httpClientImpl   HttpClient
 	controllerClient client.Client
 }
 

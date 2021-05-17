@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -19,7 +20,8 @@ func TestReconcileWhenHostOperatorConfigIsAvailable(t *testing.T) {
 	config := newHostOperatorConfigWithReset(t, AutomaticApproval().MaxUsersNumber(123, PerMemberCluster("member1", 321)))
 	cl := NewFakeClient(t, config)
 	controller := Reconciler{
-		client: cl,
+		Client: cl,
+		Log:    ctrl.Log.WithName("controllers").WithName("HostOperatorConfig"),
 	}
 
 	// when
@@ -55,7 +57,8 @@ func TestReconcileWhenReturnsError(t *testing.T) {
 		return fmt.Errorf("some error")
 	}
 	controller := Reconciler{
-		client: cl,
+		Client: cl,
+		Log:    ctrl.Log.WithName("controllers").WithName("HostOperatorConfig"),
 	}
 
 	// when
@@ -71,7 +74,8 @@ func TestReconcileWhenReturnsError(t *testing.T) {
 func TestReconcileWhenHostOperatorConfigIsNotPresent(t *testing.T) {
 	// given
 	controller := Reconciler{
-		client: NewFakeClient(t),
+		Client: NewFakeClient(t),
+		Log:    ctrl.Log.WithName("controllers").WithName("HostOperatorConfig"),
 	}
 
 	// when
