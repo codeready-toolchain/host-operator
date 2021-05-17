@@ -1,8 +1,9 @@
 package controller
 
 import (
-	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignupcleanup"
 	"time"
+
+	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignupcleanup"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/changetierrequest"
@@ -13,6 +14,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/templateupdaterequest"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainstatus"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
 	"github.com/codeready-toolchain/toolchain-common/pkg/controller/toolchaincluster"
@@ -34,6 +36,7 @@ func init() {
 	addToManagerFuncs = append(addToManagerFuncs, templateupdaterequest.Add)
 	addToManagerFuncs = append(addToManagerFuncs, deactivation.Add)
 	addToManagerFuncs = append(addToManagerFuncs, hostoperatorconfig.Add)
+	addToManagerFuncs = append(addToManagerFuncs, toolchainconfig.Add)
 }
 
 // AddToManager adds all Controllers to the Manager
