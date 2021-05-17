@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
+	"github.com/go-logr/logr"
 	errors2 "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
@@ -27,28 +27,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
-
-var log = logf.Log.WithName("controller_deactivation")
-
-// Add creates a new Deactivation Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager, config *configuration.Config) error {
-	return add(mgr, newReconciler(mgr, config))
-}
-
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, cfg *configuration.Config) reconcile.Reconciler {
-	return &Reconciler{
-		client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
-		config: cfg,
-	}
-}
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -67,15 +49,17 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &Reconciler{}
+// SetupWithManager sets up the controller with the Manager.
+func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	return add(mgr, r)
+}
 
 // Reconciler reconciles a Deactivation object
 type Reconciler struct {
-	// This client, initialized using mgr.client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
-	config *configuration.Config
+	Client client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Config *configuration.Config
 }
 
 // Reconcile reads the state of the cluster for a MUR object and determines whether to trigger deactivation or requeue based on its current status
@@ -83,17 +67,17 @@ type Reconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	logger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	logger.Info("Reconciling Deactivation")
 
-	config, err := hostoperatorconfig.GetConfig(r.client, request.Namespace)
+	config, err := hostoperatorconfig.GetConfig(r.Client, request.Namespace)
 	if err != nil {
 		return reconcile.Result{}, errors2.Wrapf(err, "unable to read HostOperatorConfig resource")
 	}
 
 	// Fetch the MasterUserRecord instance
 	mur := &toolchainv1alpha1.MasterUserRecord{}
-	err = r.client.Get(context.TODO(), request.NamespacedName, mur)
+	err = r.Client.Get(context.TODO(), request.NamespacedName, mur)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -119,7 +103,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Get the associated usersignup
 	usersignup := &toolchainv1alpha1.UserSignup{}
-	if err := r.client.Get(context.TODO(), types.NamespacedName{
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: mur.Namespace,
 		Name:      mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
 	}, usersignup); err != nil {
@@ -134,7 +118,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Check the domain exclusion list, if the user's email matches then they cannot be automatically deactivated
 	if emailLbl, exists := usersignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
-		for _, domain := range r.config.GetDeactivationDomainsExcludedList() {
+		for _, domain := range r.Config.GetDeactivationDomainsExcludedList() {
 			if strings.HasSuffix(emailLbl, domain) {
 				logger.Info("user cannot be automatically deactivated because they belong to the exclusion list", "domain", domain)
 				return reconcile.Result{}, nil
@@ -154,7 +138,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// Get the tier associated with the user account, we'll observe the deactivation timeout period from the tier spec
 	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
 	tierName := types.NamespacedName{Namespace: request.Namespace, Name: account.Spec.NSTemplateSet.TierName}
-	if err := r.client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
+	if err := r.Client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
 		logger.Error(err, "unable to get NSTemplateTier", "name", account.Spec.NSTemplateSet.TierName)
 		return reconcile.Result{}, err
 	}
@@ -188,7 +172,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		states.SetDeactivating(usersignup, true)
 
 		logger.Info("setting usersignup state to deactivating")
-		if err := r.client.Update(context.TODO(), usersignup); err != nil {
+		if err := r.Client.Update(context.TODO(), usersignup); err != nil {
 			logger.Error(err, "failed to update usersignup")
 			return reconcile.Result{}, err
 		}
@@ -236,7 +220,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	states.SetDeactivated(usersignup, true)
 
-	if err := r.client.Update(context.TODO(), usersignup); err != nil {
+	if err := r.Client.Update(context.TODO(), usersignup); err != nil {
 		logger.Error(err, "failed to update usersignup")
 		return reconcile.Result{}, err
 	}

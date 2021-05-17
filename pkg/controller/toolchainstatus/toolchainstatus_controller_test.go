@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -70,17 +71,18 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 	require.NoError(t, err)
 
 	r := &Reconciler{
-		client:         fakeClient,
-		httpClientImpl: httpTestClient,
-		scheme:         s,
-		getMembersFunc: func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
+		Client:         fakeClient,
+		HTTPClientImpl: httpTestClient,
+		Scheme:         s,
+		GetMembersFunc: func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
 			clusters := make([]*cluster.CachedToolchainCluster, len(memberClusters))
 			for i, clusterName := range memberClusters {
 				clusters[i] = cachedToolchainCluster(fakeClient, clusterName, corev1.ConditionTrue, metav1.Now())
 			}
 			return clusters
 		},
-		config: hostConfig,
+		Config: hostConfig,
+		Log:    ctrl.Log.WithName("controllers").WithName("ToolchainStatus"),
 	}
 	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }
@@ -128,7 +130,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 	t.Run("No toolchainstatus resource found - right name but not found", func(t *testing.T) {
 		// given
 		expectedErrMsg := "get failed"
-		requestName := configuration.DefaultToolchainStatusName
+		requestName := configuration.ToolchainStatusName
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
 		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 			return fmt.Errorf(expectedErrMsg)
@@ -149,7 +151,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := configuration.DefaultToolchainStatusName
+	requestName := configuration.ToolchainStatusName
 
 	t.Run("All components ready", func(t *testing.T) {
 		// given
@@ -708,7 +710,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := configuration.DefaultToolchainStatusName
+	requestName := configuration.ToolchainStatusName
 
 	registrationService := newRegistrationServiceReady()
 	toolchainStatus := NewToolchainStatus()
@@ -794,7 +796,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	defer counter.Reset()
-	requestName := configuration.DefaultToolchainStatusName
+	requestName := configuration.ToolchainStatusName
 
 	registrationService := newRegistrationServiceReady()
 	toolchainStatus := NewToolchainStatus()
@@ -1068,7 +1070,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := configuration.DefaultToolchainStatusName
+	requestName := configuration.ToolchainStatusName
 	registrationService := newRegistrationServiceReady()
 	hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 	registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
