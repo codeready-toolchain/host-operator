@@ -72,7 +72,7 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 
 	r := &Reconciler{
 		Client:         fakeClient,
-		HttpClientImpl: httpTestClient,
+		HTTPClientImpl: httpTestClient,
 		Scheme:         s,
 		GetMembersFunc: func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
 			clusters := make([]*cluster.CachedToolchainCluster, len(memberClusters))

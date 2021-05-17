@@ -231,7 +231,7 @@ func main() {
 		Log:            ctrl.Log.WithName("controllers").WithName("ToolchainStatus"),
 		Scheme:         mgr.GetScheme(),
 		Config:         crtConfig,
-		HttpClientImpl: &http.Client{},
+		HTTPClientImpl: &http.Client{},
 		GetMembersFunc: cluster.GetMemberClusters,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainStatus")

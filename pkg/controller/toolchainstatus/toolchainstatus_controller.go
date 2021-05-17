@@ -107,7 +107,7 @@ type Reconciler struct {
 	Scheme         *runtime.Scheme
 	GetMembersFunc cluster.GetMemberClustersFunc
 	Config         *crtCfg.Config
-	HttpClientImpl HttpClient
+	HTTPClientImpl HttpClient
 }
 
 // Reconcile reads the state of toolchain host and member cluster components and updates the ToolchainStatus resource with information useful for observation or troubleshooting
@@ -290,7 +290,7 @@ func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, tool
 
 	s := regServiceSubstatusHandler{
 		controllerClient: r.Client,
-		httpClientImpl:   r.HttpClientImpl,
+		httpClientImpl:   r.HTTPClientImpl,
 	}
 
 	// gather the functions for handling registration service status eg. resource templates, deployment, health endpoint
