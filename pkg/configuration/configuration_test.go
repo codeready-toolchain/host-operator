@@ -217,30 +217,6 @@ func TestGetDurationBeforeChangeTierRequestDeletion(t *testing.T) {
 	})
 }
 
-func TestGetToolchainStatusName(t *testing.T) {
-	key := configuration.HostEnvPrefix + "_" + "TOOLCHAIN_STATUS"
-	resetFunc := test.UnsetEnvVarAndRestore(t, key)
-	defer resetFunc()
-
-	t.Run("default", func(t *testing.T) {
-		resetFunc := test.UnsetEnvVarAndRestore(t, key)
-		defer resetFunc()
-		config := getDefaultConfiguration(t)
-		assert.Equal(t, "toolchain-status", config.GetToolchainStatusName())
-	})
-
-	t.Run("env overwrite", func(t *testing.T) {
-		testName := "test-toolchain-status"
-		restore := test.SetEnvVarAndRestore(t, key, testName)
-		defer restore()
-
-		restore = test.SetEnvVarAndRestore(t, configuration.HostEnvPrefix+"_"+"ANY_CONFIG", "20s")
-		defer restore()
-		config := getDefaultConfiguration(t)
-		assert.Equal(t, testName, config.GetToolchainStatusName())
-	})
-}
-
 func TestGetToolchainStatusRefreshTime(t *testing.T) {
 	key := configuration.HostEnvPrefix + "_" + "TOOLCHAINSTATUS_REFRESH_TIME"
 	resetFunc := test.UnsetEnvVarAndRestore(t, key)
