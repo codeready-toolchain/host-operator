@@ -7,7 +7,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -16,24 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
-
-var log = logf.Log.WithName("controller_notification")
-
-// Add creates a new Notification Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager, config *configuration.Config) error {
-	reconciler, err := newReconciler(mgr, config)
-	if err != nil {
-		return err
-	}
-	return add(mgr, reconciler)
-}
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -54,37 +40,34 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, config *configuration.Config) (reconcile.Reconciler, error) {
-	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), config)
-
+// SetupWithManager sets up the controller with the Manager.
+func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), r.Config)
 	svc, err := factory.CreateNotificationDeliveryService()
 	if err != nil {
-		return nil, err
+		return err
 	}
+	r.deliveryService = svc
 
-	return &Reconciler{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config, deliveryService: svc}, nil
+	return add(mgr, r)
 }
-
-var _ reconcile.Reconciler = &Reconciler{}
 
 // Reconciler reconciles a Notification object
 type Reconciler struct {
-	// This client, initialized using mgr.client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client          client.Client
-	scheme          *runtime.Scheme
-	config          *configuration.Config
+	Client          client.Client
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	Config          *configuration.Config
 	deliveryService DeliveryService
 }
 
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Notification")
 
 	// Fetch the Notification instance
 	notification := &toolchainv1alpha1.Notification{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, notification)
+	err := r.Client.Get(context.TODO(), request.NamespacedName, notification)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -117,7 +100,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if notification.Spec.Recipient != "" {
 		notCtx = NewAdminNotificationContext(notification.Spec.Recipient)
 	} else {
-		notCtx, err = NewUserNotificationContext(r.client, notification.Spec.UserID, request.Namespace, r.config)
+		notCtx, err = NewUserNotificationContext(r.Client, notification.Spec.UserID, request.Namespace, r.Config)
 		if err != nil {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
 				r.setStatusNotificationContextError, err, "failed to create notification context")
@@ -125,7 +108,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// if the environment is set to e2e do not attempt sending via mailgun
-	if r.config.GetEnvironment() != "e2e-tests" {
+	if r.Config.GetEnvironment() != "e2e-tests" {
 		// Send the notification via the configured delivery service
 		err = r.deliveryService.Send(notCtx, notification)
 		if err != nil {
@@ -139,7 +122,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	return reconcile.Result{
 		Requeue:      true,
-		RequeueAfter: r.config.GetDurationBeforeNotificationDeletion(),
+		RequeueAfter: r.Config.GetDurationBeforeNotificationDeletion(),
 	}, r.updateStatus(reqLogger, notification, r.setStatusNotificationSent)
 }
 
@@ -153,17 +136,17 @@ func (r *Reconciler) checkTransitionTimeAndDelete(log logr.Logger, notification 
 	log.Info("the Notification is sent so we can deal with its deletion")
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
-	if timeSinceCompletion >= r.config.GetDurationBeforeNotificationDeletion() {
+	if timeSinceCompletion >= r.Config.GetDurationBeforeNotificationDeletion() {
 		log.Info("the Notification has been sent for a longer time than the 'durationBeforeNotificationDeletion', so it's ready to be deleted",
-			"durationBeforeNotificationDeletion", r.config.GetDurationBeforeNotificationDeletion().String())
-		if err := r.client.Delete(context.TODO(), notification, &client.DeleteOptions{}); err != nil {
+			"durationBeforeNotificationDeletion", r.Config.GetDurationBeforeNotificationDeletion().String())
+		if err := r.Client.Delete(context.TODO(), notification, &client.DeleteOptions{}); err != nil {
 			return false, 0, errs.Wrapf(err, "unable to delete Notification object '%s'", notification.Name)
 		}
 		return true, 0, nil
 	}
-	diff := r.config.GetDurationBeforeNotificationDeletion() - timeSinceCompletion
+	diff := r.Config.GetDurationBeforeNotificationDeletion() - timeSinceCompletion
 	log.Info("the Notification has been completed for shorter time than 'durationBeforeNotificationDeletion', so it's going to be reconciled again",
-		"durationBeforeNotificationDeletion", r.config.GetDurationBeforeNotificationDeletion().String(), "reconcileAfter", diff.String())
+		"durationBeforeNotificationDeletion", r.Config.GetDurationBeforeNotificationDeletion().String(), "reconcileAfter", diff.String())
 	return false, diff, nil
 }
 
@@ -187,7 +170,7 @@ func (r *Reconciler) updateStatusConditions(notification *toolchainv1alpha1.Noti
 		// Nothing changed
 		return nil
 	}
-	return r.client.Status().Update(context.TODO(), notification)
+	return r.Client.Status().Update(context.TODO(), notification)
 }
 
 func (r *Reconciler) setStatusNotificationDeletionFailed(notification *toolchainv1alpha1.Notification, msg string) error {

@@ -6,11 +6,9 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	applycl "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
-
 	"github.com/go-logr/logr"
 	v1 "github.com/openshift/api/template/v1"
 	errs "github.com/pkg/errors"
@@ -21,25 +19,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
-
-var log = logf.Log.WithName("controller_registrationservice")
-
-// Add creates a new RegistrationService Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager, _ *configuration.Config) error {
-	deploymentTemplate, err := getDeploymentTemplate(mgr.GetScheme())
-	if err != nil {
-		return errs.Wrap(err, "unable to decode the registration service deployment")
-	}
-
-	return add(mgr, newReconciler(mgr, deploymentTemplate))
-}
 
 func getDeploymentTemplate(s *runtime.Scheme) (*v1.Template, error) {
 	deployment, err := Asset("registration-service.yaml")
@@ -52,17 +36,14 @@ func getDeploymentTemplate(s *runtime.Scheme) (*v1.Template, error) {
 	return deploymentTemplate, err
 }
 
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, regServiceDeployment *v1.Template) *Reconciler {
-	return &Reconciler{
-		client:             mgr.GetClient(),
-		scheme:             mgr.GetScheme(),
-		regServiceTemplate: regServiceDeployment,
-	}
-}
-
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r *Reconciler) error {
+	deploymentTemplate, err := getDeploymentTemplate(mgr.GetScheme())
+	if err != nil {
+		return errs.Wrap(err, "unable to decode the registration service deployment")
+	}
+	r.regServiceTemplate = deploymentTemplate
+
 	// Create a new controller
 	c, err := controller.New("registrationservice-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -76,7 +57,7 @@ func add(mgr manager.Manager, r *Reconciler) error {
 	}
 
 	// process with default variables - we need to get just the list of objects - we don't care about their content
-	processor := template.NewProcessor(r.scheme)
+	processor := template.NewProcessor(r.Scheme)
 	toolchainObjects, err := processor.Process(r.regServiceTemplate.DeepCopy(), map[string]string{})
 	if err != nil {
 		return err
@@ -99,27 +80,28 @@ func add(mgr manager.Manager, r *Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that Reconciler implements reconcile.Reconciler
-var _ reconcile.Reconciler = &Reconciler{}
+// SetupWithManager sets up the controller with the Manager.
+func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	return add(mgr, r)
+}
 
 // Reconciler reconciles a RegistrationService object
 type Reconciler struct {
-	// This client, initialized using mgr.client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client             client.Client
-	scheme             *runtime.Scheme
+	Client             client.Client
+	Log                logr.Logger
+	Scheme             *runtime.Scheme
 	regServiceTemplate *v1.Template
 }
 
 // Reconcile reads that state of the cluster for a RegistrationService object and makes changes based on the state read
 // and what is in the RegistrationService.Spec
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling RegistrationService")
 
 	// Fetch the RegistrationService regService
 	regService := &toolchainv1alpha1.RegistrationService{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, regService)
+	err := r.Client.Get(context.TODO(), request.NamespacedName, regService)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -132,8 +114,8 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// process template with variables taken from the RegistrationService CRD
-	cl := applycl.NewApplyClient(r.client, r.scheme)
-	toolchainObjects, err := template.NewProcessor(r.scheme).Process(r.regServiceTemplate.DeepCopy(), getVars(regService))
+	cl := applycl.NewApplyClient(r.Client, r.Scheme)
+	toolchainObjects, err := template.NewProcessor(r.Scheme).Process(r.regServiceTemplate.DeepCopy(), getVars(regService))
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -153,11 +135,11 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{
 			Requeue:      true,
 			RequeueAfter: time.Second, // le't put one second there in case it wasn't re-queued by some resource change
-		}, updateStatusConditions(r.client, regService, toBeNotReady(toolchainv1alpha1.RegistrationServiceDeployingReason, fmt.Sprintf("updated resources: %s", updated)))
+		}, updateStatusConditions(r.Client, regService, toBeNotReady(toolchainv1alpha1.RegistrationServiceDeployingReason, fmt.Sprintf("updated resources: %s", updated)))
 	}
 
 	reqLogger.Info("All objects in registration service template has been created and are up-to-date")
-	return reconcile.Result{}, updateStatusConditions(r.client, regService, toBeDeployed())
+	return reconcile.Result{}, updateStatusConditions(r.Client, regService, toBeDeployed())
 }
 
 type templateVars map[string]string
@@ -191,7 +173,7 @@ func updateStatusConditions(cl client.Client, regServ *toolchainv1alpha1.Registr
 func (r *Reconciler) setStatusFailed(reason string) func(regServ *toolchainv1alpha1.RegistrationService, message string) error {
 	return func(regServ *toolchainv1alpha1.RegistrationService, message string) error {
 		return updateStatusConditions(
-			r.client,
+			r.Client,
 			regServ,
 			toBeNotReady(reason, message))
 	}

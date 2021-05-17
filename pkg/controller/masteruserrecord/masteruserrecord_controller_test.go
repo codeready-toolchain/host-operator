@@ -27,11 +27,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+var testLog = ctrl.Log.WithName("test")
 
 func TestAddFinalizer(t *testing.T) {
 	// given
@@ -426,7 +429,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		}
 
 		// when
-		err := cntrl.wrapErrorWithStatusUpdate(log, mur, statusUpdater,
+		err := cntrl.wrapErrorWithStatusUpdate(testLog, mur, statusUpdater,
 			apierros.NewBadRequest("oopsy woopsy"), "failed to create %s", "user bob")
 
 		// then
@@ -1122,9 +1125,10 @@ func newController(t *testing.T, hostCl client.Client, s *runtime.Scheme, getMem
 	config, err := configuration.LoadConfig(hostCl)
 	require.NoError(t, err)
 	return Reconciler{
-		client:                hostCl,
-		scheme:                s,
-		retrieveMemberCluster: getMemberCluster(memberCl...),
-		config:                config,
+		Client:                hostCl,
+		Scheme:                s,
+		RetrieveMemberCluster: getMemberCluster(memberCl...),
+		Config:                config,
+		Log:                   ctrl.Log.WithName("controllers").WithName("MasterUserRecord"),
 	}
 }

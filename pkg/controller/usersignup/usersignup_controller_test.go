@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -87,7 +88,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 			murs := &v1alpha1.MasterUserRecordList{}
-			err = r.client.List(context.TODO(), murs)
+			err = r.Client.List(context.TODO(), murs)
 			require.NoError(t, err)
 			require.Len(t, murs.Items, 1)
 			mur := murs.Items[0]
@@ -116,7 +117,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 					string(metrics.Other):  1, // existing metric (from the counter init)
 				}) //
 			actualUserSignup := &v1alpha1.UserSignup{}
-			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
+			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
 			require.NoError(t, err)
 			assert.Equal(t, "approved", actualUserSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 			switch testname {
@@ -198,7 +199,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// Lookup the user signup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
@@ -208,7 +209,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	murs := &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs)
+	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 
@@ -259,7 +260,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		require.Equal(t, reconcile.Result{}, res)
 
 		// Lookup the userSignup one more and check the conditions are updated
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 		assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
@@ -315,7 +316,7 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 	require.Error(t, err)
 
 	// Lookup the user signup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "not-ready", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -355,7 +356,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	require.Error(t, err)
 
 	// Lookup the user signup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "not-ready", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -396,7 +397,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 	require.Error(t, err)
 
 	// Lookup the user signup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		v1alpha1.Condition{
@@ -438,7 +439,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	require.Error(t, err)
 
 	// Lookup the user signup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "not-ready", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -472,7 +473,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	// then
 	// error reported, and request is requeued and userSignup status was updated
 	require.Error(t, err)
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -526,7 +527,7 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	// it should not return an error but just wait for another reconcile triggered by updated ToolchainStatus
 	require.NoError(t, err)
 	assert.Equal(t, reconcile.Result{Requeue: false}, res)
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -580,7 +581,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	// it should not return an error but just wait for another reconcile triggered by updated ToolchainStatus
 	require.NoError(t, err)
 	assert.Equal(t, reconcile.Result{Requeue: false}, res)
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -633,14 +634,14 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// Lookup the userSignup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	murs := &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs)
+	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 
@@ -677,7 +678,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		require.Equal(t, reconcile.Result{}, res)
 
 		// Lookup the userSignup one more time and check the conditions are updated
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 		assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
@@ -731,14 +732,14 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// Lookup the userSignup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	murs := &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs)
+	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 
@@ -775,7 +776,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		require.Equal(t, reconcile.Result{}, res)
 
 		// Lookup the userSignup one more and check the conditions are updated
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 
@@ -828,7 +829,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// Lookup the userSignup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "pending", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -836,7 +837,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 
 	// There should be no MasterUserRecords
 	murs := &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs)
+	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
 
@@ -885,14 +886,14 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// Lookup the userSignup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	murs := &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs)
+	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 
@@ -930,7 +931,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		require.Equal(t, reconcile.Result{}, res)
 
 		// Lookup the userSignup one more and check the conditions are updated
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 
@@ -982,7 +983,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// Lookup the userSignup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "pending", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -1042,7 +1043,7 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounters(t).HaveMasterUserRecords(1)
 
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
@@ -1079,7 +1080,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 	require.Error(t, err)
 	AssertThatCounters(t).HaveMasterUserRecords(1)
 
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
@@ -1118,7 +1119,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounters(t).HaveMasterUserRecords(1)
 
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal) // zero since starting state was approved
@@ -1156,7 +1157,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounters(t).HaveMasterUserRecords(1)
 
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "not-ready", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -1199,7 +1200,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounters(t).HaveMasterUserRecords(1)
 
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "pending", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -1249,7 +1250,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	require.NoError(t, err)
 
 	instance := &v1alpha1.UserSignup{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{
+	err = r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: test.HostOperatorNs,
 		Name:      userSignup.Name,
 	}, instance)
@@ -1299,7 +1300,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 	// We should now have 2 MURs
 	murs := &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs)
+	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 2)
 	AssertThatCounters(t).HaveMasterUserRecords(2)
@@ -1309,7 +1310,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		Name:      userSignup.Name,
 	}
 	instance := &v1alpha1.UserSignup{}
-	err = r.client.Get(context.TODO(), key, instance)
+	err = r.Client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", instance.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
@@ -1322,7 +1323,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		err = r.client.Get(context.TODO(), key, instance)
+		err = r.Client.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
 		assert.Equal(t, "approved", instance.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
@@ -1332,7 +1333,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 		// Confirm that the mur exists
 		mur = &v1alpha1.MasterUserRecord{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: test.HostOperatorNs, Name: instance.Status.CompliantUsername}, mur)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: test.HostOperatorNs, Name: instance.Status.CompliantUsername}, mur)
 		require.NoError(t, err)
 		require.Equal(t, instance.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 
@@ -1369,7 +1370,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	// then
 	require.NoError(t, err)
 
-	murtest.AssertThatMasterUserRecord(t, "foo-bar", r.client).HasNoConditions()
+	murtest.AssertThatMasterUserRecord(t, "foo-bar", r.Client).HasNoConditions()
 	AssertThatCounters(t).HaveMasterUserRecords(2)
 
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
@@ -1416,7 +1417,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		err = r.client.Get(context.TODO(), key, userSignup)
+		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
@@ -1439,13 +1440,13 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		murs := &v1alpha1.MasterUserRecordList{}
 
 		// The MUR should have now been deleted
-		err = r.client.List(context.TODO(), murs)
+		err = r.Client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
 		AssertThatCounters(t).HaveMasterUserRecords(1)
 
 		// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
-		ntest.AssertNoNotificationsExist(t, r.client)
+		ntest.AssertNoNotificationsExist(t, r.Client)
 	})
 
 	t.Run("when MUR doesn't exist, then the condition should be set to Deactivated", func(t *testing.T) {
@@ -1465,7 +1466,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.NoError(t, err)
 
 		// Lookup the UserSignup
-		err = r.client.Get(context.TODO(), key, userSignup)
+		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // zero because state didn't change
@@ -1493,7 +1494,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 		// A deactivated notification should have been created
 		notifications := &v1alpha1.NotificationList{}
-		err = r.client.List(context.TODO(), notifications)
+		err = r.Client.List(context.TODO(), notifications)
 		require.NoError(t, err)
 		require.Len(t, notifications.Items, 1)
 		notification := notifications.Items[0]
@@ -1564,7 +1565,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		require.Equal(t, "Failed to create user deactivation notification: unable to create deactivation notification", err.Error())
 
 		// Lookup the UserSignup
-		err = r.client.Get(context.TODO(), key, userSignup)
+		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 
 		// Confirm the status shows the deactivation notification failure
@@ -1592,7 +1593,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 
 		// A deactivated notification should not have been created
 		notificationList := &v1alpha1.NotificationList{}
-		err = r.client.List(context.TODO(), notificationList)
+		err = r.Client.List(context.TODO(), notificationList)
 		require.NoError(t, err)
 		require.Equal(t, 0, len(notificationList.Items))
 	})
@@ -1655,7 +1656,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		require.NoError(t, err)
 
 		// Lookup the UserSignup
-		err = r.client.Get(context.TODO(), key, userSignup)
+		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 
 		// Confirm the status shows the notification created condition is reset to active
@@ -1694,7 +1695,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		AssertMetricsGaugeEquals(t, 11, metrics.UsersPerActivationGaugeVec.WithLabelValues("3")) // user signed up 3 times now, so the counter for `3` activations was increased by 1
 
 		// There should not be a notification created because the user was reactivated
-		ntest.AssertNoNotificationsExist(t, r.client)
+		ntest.AssertNoNotificationsExist(t, r.Client)
 	})
 
 	t.Run("when resetting the usersignup deactivation notification status fails", func(t *testing.T) {
@@ -1744,7 +1745,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		require.Equal(t, "failed to update UserSignup status", err.Error())
 
 		// Lookup the UserSignup
-		err = r.client.Get(context.TODO(), key, userSignup)
+		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 
 		// Confirm the status shows the notification is unchanged because the status update failed
@@ -1773,7 +1774,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// A deactivation notification should not be created because this is the reactivation case
-		ntest.AssertNoNotificationsExist(t, r.client)
+		ntest.AssertNoNotificationsExist(t, r.Client)
 	})
 }
 
@@ -1827,7 +1828,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			err = r.client.Get(context.TODO(), key, userSignup)
+			err = r.Client.Get(context.TODO(), key, userSignup)
 			require.NoError(t, err)
 			assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
@@ -1850,13 +1851,13 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 			murs := &v1alpha1.MasterUserRecordList{}
 
 			// The MUR should have now been deleted
-			err = r.client.List(context.TODO(), murs)
+			err = r.Client.List(context.TODO(), murs)
 			require.NoError(t, err)
 			require.Len(t, murs.Items, 0)
 			AssertThatCounters(t).HaveMasterUserRecords(1)
 
 			// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
-			ntest.AssertNoNotificationsExist(t, r.client)
+			ntest.AssertNoNotificationsExist(t, r.Client)
 		})
 
 		t.Run("second reconcile - condition should be deactivated and deactivation notification created", func(t *testing.T) {
@@ -1865,7 +1866,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 			require.Equal(t, reconcile.Result{}, res)
 
 			// lookup the userSignup and check the conditions
-			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 			require.NoError(t, err)
 
 			// Confirm the status has been set to Deactivated and the deactivation notification is created
@@ -1942,12 +1943,12 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	err = r.client.Get(context.TODO(), key, userSignup)
+	err = r.Client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 
 	notifications := &v1alpha1.NotificationList{}
-	err = r.client.List(context.TODO(), notifications)
+	err = r.Client.List(context.TODO(), notifications)
 	require.NoError(t, err)
 
 	require.Len(t, notifications.Items, 1)
@@ -2009,7 +2010,7 @@ func TestUserSignupBanned(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	err = r.client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
+	err = r.Client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "banned", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
@@ -2029,7 +2030,7 @@ func TestUserSignupBanned(t *testing.T) {
 	murs := &v1alpha1.MasterUserRecordList{}
 
 	// Confirm that the MUR has now been deleted
-	err = r.client.List(context.TODO(), murs)
+	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
 	AssertThatCounters(t).HaveMasterUserRecords(1)
@@ -2052,7 +2053,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	err = r.client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
+	err = r.Client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "not-ready", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -2080,7 +2081,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 
 	// Confirm that no MUR is created
 	murs := &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs)
+	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
 	AssertThatCounters(t).HaveMasterUserRecords(1)
@@ -2134,7 +2135,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-	err = r.client.Get(context.TODO(), key, userSignup)
+	err = r.Client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "banned", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
@@ -2158,7 +2159,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	murs := &v1alpha1.MasterUserRecordList{}
 
 	// Confirm that the MUR has now been deleted
-	err = r.client.List(context.TODO(), murs)
+	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
 	AssertThatCounters(t).HaveMasterUserRecords(1)
@@ -2168,7 +2169,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		_, err = r.Reconcile(req)
 		require.NoError(t, err)
 
-		err = r.client.Get(context.TODO(), key, userSignup)
+		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 
 		assert.Equal(t, "banned", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
@@ -2192,7 +2193,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 			})
 
 		// Confirm that there is still no MUR
-		err = r.client.List(context.TODO(), murs)
+		err = r.Client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
 		AssertThatCounters(t).HaveMasterUserRecords(1)
@@ -2280,7 +2281,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		// then
 
 		// Lookup the UserSignup
-		err = r.client.Get(context.TODO(), key, userSignup)
+		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
@@ -2305,7 +2306,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		t.Run("second reconcile - there should not be a notification created since the mur deletion failed even if reconciled again", func(t *testing.T) {
 			_, err := r.Reconcile(req)
 			require.Error(t, err)
-			ntest.AssertNoNotificationsExist(t, r.client)
+			ntest.AssertNoNotificationsExist(t, r.Client)
 			// the metrics should be the same, deactivation should only be counted once
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -2362,7 +2363,7 @@ func TestDeathBy100Signups(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// Lookup the user signup again
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -2437,7 +2438,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		Name:      userSignup.Name,
 	}
 	instance := &v1alpha1.UserSignup{}
-	err = r.client.Get(context.TODO(), key, instance)
+	err = r.Client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
 
 	test.AssertConditionsMatch(t, instance.Status.Conditions,
@@ -2483,7 +2484,7 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 	assert.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
 	AssertThatCounters(t).HaveMasterUserRecords(1)
 
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	assert.Equal(t, "pending", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -2543,12 +2544,13 @@ func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMe
 	require.NoError(t, err)
 
 	r := &Reconciler{
-		statusUpdater: &statusUpdater{
-			client: fakeClient,
+		StatusUpdater: &StatusUpdater{
+			Client: fakeClient,
 		},
-		scheme:            s,
-		crtConfig:         config,
-		getMemberClusters: getMemberClusters,
+		Scheme:            s,
+		CrtConfig:         config,
+		GetMemberClusters: getMemberClusters,
+		Log:               ctrl.Log.WithName("controllers").WithName("UserSignup"),
 	}
 	return r, newReconcileRequest(name), fakeClient
 }
@@ -2594,12 +2596,12 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 			require.NoError(t, err)
 
 			// then verify that the username has been prefixed - first lookup the UserSignup again
-			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 			require.NoError(t, err)
 
 			// Lookup the MUR
 			murs := &v1alpha1.MasterUserRecordList{}
-			err = r.client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
+			err = r.Client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
 			require.NoError(t, err)
 			require.Len(t, murs.Items, 1)
 			mur := murs.Items[0]
@@ -2641,12 +2643,12 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 			require.NoError(t, err)
 
 			// then verify that the username has been suffixed - first lookup the UserSignup again
-			err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 			require.NoError(t, err)
 
 			// Lookup the MUR
 			murs := &v1alpha1.MasterUserRecordList{}
-			err = r.client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
+			err = r.Client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
 			require.NoError(t, err)
 			require.Len(t, murs.Items, 1)
 			mur := murs.Items[0]
@@ -2701,7 +2703,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 
 	// after the 1st reconcile verify that the MUR still exists and its name still matches the initial UserSignup CompliantUsername
 	murs := &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
+	err = r.Client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 	mur := murs.Items[0]
@@ -2710,7 +2712,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.Equal(t, userSignup.Status.CompliantUsername, "foo-old")
 
 	// delete the old MUR to trigger creation of a new MUR using the new username
-	err = r.client.Delete(context.TODO(), oldMur)
+	err = r.Client.Delete(context.TODO(), oldMur)
 	require.NoError(t, err)
 
 	// 2nd reconcile should handle the deleted MUR and provision a new one
@@ -2720,7 +2722,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 
 	// verify the new MUR is provisioned
 	murs = &v1alpha1.MasterUserRecordList{}
-	err = r.client.List(context.TODO(), murs)
+	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 	mur = murs.Items[0]
@@ -2734,7 +2736,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 2)
 
 	// lookup the userSignup and check the conditions are updated but the CompliantUsername is still the old one
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	require.Equal(t, userSignup.Status.CompliantUsername, "foo-old")
 
@@ -2744,7 +2746,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// lookup the userSignup one more time and verify that the CompliantUsername was updated using the current transformUsername logic
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 
 	// the CompliantUsername and MUR name should now match
@@ -2788,7 +2790,7 @@ func TestMigrateMur(t *testing.T) {
 		// then verify that the MUR exists and is complete
 		require.NoError(t, err)
 		murs := &v1alpha1.MasterUserRecordList{}
-		err = r.client.List(context.TODO(), murs)
+		err = r.Client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 1)
 		assert.Equal(t, *expectedMur, murs.Items[0])

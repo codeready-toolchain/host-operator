@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -662,7 +663,12 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	}
 	config, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
-	r := nstemplatetier.NewReconciler(cl, s, config)
+	r := &nstemplatetier.Reconciler{
+		Client: cl,
+		Scheme: s,
+		Config: config,
+		Log:    ctrl.Log.WithName("controllers").WithName("NSTemplateTier"),
+	}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      name,
