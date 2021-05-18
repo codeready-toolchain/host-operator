@@ -6,7 +6,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func TestGetConfig(t *testing.T) {
+func TestCache(t *testing.T) {
 	// given
 	cl := NewFakeClient(t)
 
@@ -127,9 +126,4 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, config.AutomaticApproval().MaxNumberOfUsersOverall())
 	assert.NotEmpty(t, config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-}
-
-func newToolchainConfigWithReset(t *testing.T, options ...ToolchainConfigOption) *v1alpha1.ToolchainConfig {
-	t.Cleanup(Reset)
-	return NewToolchainConfig(options...)
 }

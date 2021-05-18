@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -104,11 +105,7 @@ func newRequest() reconcile.Request {
 	}
 }
 
-func matchesDefaultConfig(t *testing.T, actual ToolchainConfig) {
-	assert.False(t, actual.AutomaticApproval().IsEnabled())
-	assert.Equal(t, 0, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-	assert.Empty(t, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-	assert.Equal(t, 0, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-	assert.Empty(t, actual.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
-	assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationInDays())
+func newToolchainConfigWithReset(t *testing.T, options ...ToolchainConfigOption) *v1alpha1.ToolchainConfig {
+	t.Cleanup(Reset)
+	return NewToolchainConfig(options...)
 }
