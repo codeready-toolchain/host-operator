@@ -15,30 +15,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_usercleanup")
-
 type StatusUpdater func(userAcc *toolchainv1alpha1.UserSignup, message string) error
-
-// Add creates a new UserCleanup Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager, crtConfig *crtCfg.Config) error {
-	return add(mgr, newReconciler(mgr, crtConfig))
-}
-
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, crtConfig *crtCfg.Config) reconcile.Reconciler {
-	return &Reconciler{
-		client:    mgr.GetClient(),
-		scheme:    mgr.GetScheme(),
-		crtConfig: crtConfig,
-	}
-}
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -58,13 +40,17 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &Reconciler{}
+// SetupWithManager sets up the controller with the Manager.
+func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	return add(mgr, r)
+}
 
 // Reconciler cleans up old UserSignup resources
 type Reconciler struct {
-	client    client.Client
-	scheme    *runtime.Scheme
-	crtConfig *crtCfg.Config
+	Client client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Config *crtCfg.Config
 }
 
 // Reconcile reads that state of the cluster for a UserSignup object and makes changes based on the state read
@@ -73,12 +59,12 @@ type Reconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling UserSignup")
 
 	// Fetch the UserSignup instance
 	instance := &toolchainv1alpha1.UserSignup{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -111,7 +97,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
 
-		unverifiedThreshold := time.Now().Add(-time.Duration(r.crtConfig.GetUserSignupUnverifiedRetentionDays()*24) * time.Hour)
+		unverifiedThreshold := time.Now().Add(-time.Duration(r.Config.GetUserSignupUnverifiedRetentionDays()*24) * time.Hour)
 
 		if createdTime.Time.Before(unverifiedThreshold) {
 			reqLogger.Info("Deleting UserSignup due to exceeding unverified retention period")
@@ -141,7 +127,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		// If the LastTransitionTime of the deactivated status condition is older than the configured threshold,
 		// then delete the UserSignup
 
-		deactivatedThreshold := time.Now().Add(-time.Duration(r.crtConfig.GetUserSignupDeactivatedRetentionDays()*24) * time.Hour)
+		deactivatedThreshold := time.Now().Add(-time.Duration(r.Config.GetUserSignupDeactivatedRetentionDays()*24) * time.Hour)
 
 		if cond.LastTransitionTime.Time.Before(deactivatedThreshold) {
 			reqLogger.Info("Deleting UserSignup due to exceeding deactivated retention period")
@@ -165,7 +151,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 // DeleteUserSignup deletes the specified UserSignup
 func (r *Reconciler) DeleteUserSignup(userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger) error {
 
-	err := r.client.Delete(context.TODO(), userSignup)
+	err := r.Client.Delete(context.TODO(), userSignup)
 	if err != nil {
 		return err
 	}

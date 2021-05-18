@@ -18,21 +18,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
-
-var log = logf.Log.WithName("controller_nstemplatetier")
-
-// Add creates a new NSTemplateTier Controller and adds it to the Manager.
-func Add(mgr manager.Manager, config *configuration.Config) error {
-	return add(mgr, NewReconciler(mgr.GetClient(), mgr.GetScheme(), config))
-}
 
 // ----------------------------------------------------------------------------------------------------------------------------
 // NSTemplateTier Controller Reconciler:
@@ -66,29 +58,20 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}); err != nil {
 		return err
 	}
-	log.Info("nstemplatetier-controller added")
 	return nil
 }
 
-// blank assignment to verify that Reconciler implements reconcile.Reconciler
-var _ reconcile.Reconciler = &Reconciler{}
-
-// NewReconciler returns a new Reconciler
-func NewReconciler(cl client.Client, s *runtime.Scheme, config *configuration.Config) reconcile.Reconciler {
-	return &Reconciler{
-		client: cl,
-		scheme: s,
-		config: config,
-	}
+// SetupWithManager sets up the controller with the Manager.
+func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	return add(mgr, r)
 }
 
 // Reconciler reconciles a NSTemplateTier object (only when this latter's specs were updated)
-type Reconciler struct { // nolint: golint
-	// This client, initialized using mgr.Client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
-	config *configuration.Config
+type Reconciler struct {
+	Client client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	Config *configuration.Config
 }
 
 // Reconcile takes care of:
@@ -97,11 +80,11 @@ type Reconciler struct { // nolint: golint
 // - updating the `Failed` counter in the `status.updates` when a MasterUserRecord failed to update
 // - setting the `completionTime` when all MasterUserRecord have been processed
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	logger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	logger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 
 	// fetch the NSTemplateTier tier
 	tier := &toolchainv1alpha1.NSTemplateTier{}
-	if err := r.client.Get(context.TODO(), request.NamespacedName, tier); err != nil {
+	if err := r.Client.Get(context.TODO(), request.NamespacedName, tier); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("NSTemplateTier not found")
 			return reconcile.Result{}, nil
@@ -146,7 +129,7 @@ func (r *Reconciler) ensureStatusUpdateRecord(logger logr.Logger, tier *toolchai
 			StartTime: metav1.Now(),
 			Hash:      hash,
 		})
-		return true, r.client.Status().Update(context.TODO(), tier)
+		return true, r.Client.Status().Update(context.TODO(), tier)
 	}
 	// check that last entry
 	if tier.Status.Updates[len(tier.Status.Updates)-1].Hash == hash {
@@ -161,7 +144,7 @@ func (r *Reconciler) ensureStatusUpdateRecord(logger logr.Logger, tier *toolchai
 		StartTime: metav1.Now(),
 		Hash:      hash,
 	})
-	return true, r.client.Status().Update(context.TODO(), tier)
+	return true, r.Client.Status().Update(context.TODO(), tier)
 }
 
 // ensureTemplateUpdateRequest ensures that all relared MasterUserRecords are up-to-date with the NSTemplateTier that changed.
@@ -175,7 +158,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, tier *toolc
 		logger.Info("requeuing as a TemplateUpdateRequest was deleted")
 		// skip TemplateUpdateRequest creation in this reconcile loop since one was deleted
 		return false, nil
-	} else if activeTemplateUpdateRequests < r.config.GetTemplateUpdateRequestMaxPoolSize() {
+	} else if activeTemplateUpdateRequests < r.Config.GetTemplateUpdateRequestMaxPoolSize() {
 		// create a TemplateUpdateRequest if active count < MaxPoolSize,
 		// ie, find a MasterUserRecord which is not already up-to-date
 		// and for which there is no TemplateUpdateRequest yet
@@ -186,9 +169,9 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, tier *toolc
 		if err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
-		if err = r.client.List(context.Background(), &murs,
+		if err = r.Client.List(context.Background(), &murs,
 			client.InNamespace(tier.Namespace),
-			client.Limit(r.config.GetTemplateUpdateRequestMaxPoolSize()+1),
+			client.Limit(r.Config.GetTemplateUpdateRequestMaxPoolSize()+1),
 			matchingLabels,
 		); err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
@@ -201,7 +184,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, tier *toolc
 		for _, mur := range murs.Items {
 			// check if there's already a TemplateUpdateRequest for this MasterUserRecord
 			templateUpdateRequest := toolchainv1alpha1.TemplateUpdateRequest{}
-			if err := r.client.Get(context.TODO(), types.NamespacedName{
+			if err := r.Client.Get(context.TODO(), types.NamespacedName{
 				Namespace: tier.Namespace,
 				Name:      mur.Name,
 			}, &templateUpdateRequest); err == nil {
@@ -225,13 +208,13 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, tier *toolc
 					ClusterResources: tier.Spec.ClusterResources,
 				},
 			}
-			if err = controllerutil.SetControllerReference(tier, tur, r.scheme); err != nil {
+			if err = controllerutil.SetControllerReference(tier, tur, r.Scheme); err != nil {
 				return false, err
 			}
 			// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
 			// and the creation of this TemplateUpdateRequest will trigger another reconcile loop
 			// since the controller watches TemplateUpdateRequests owned by the NSTemplateTier
-			return false, r.client.Create(context.TODO(), tur)
+			return false, r.Client.Create(context.TODO(), tur)
 		}
 	}
 	logger.Info("done for now with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", tier.Name)
@@ -246,7 +229,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, tier *toolc
 func (r *Reconciler) activeTemplateUpdateRequests(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) (int, bool, error) {
 	// fetch the list of TemplateUpdateRequest owned by the NSTemplateTier tier
 	templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
-	if err := r.client.List(context.TODO(), &templateUpdateRequests, client.MatchingLabels{
+	if err := r.Client.List(context.TODO(), &templateUpdateRequests, client.MatchingLabels{
 		toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
 	}); err != nil {
 		return -1, false, err
@@ -270,11 +253,11 @@ func (r *Reconciler) activeTemplateUpdateRequests(logger logr.Logger, tier *tool
 		// delete when in `complete=true` (reason=updated) or when in `complete=false/reason=failed` status conditions
 		if condition.IsTrue(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete) ||
 			(condition.IsFalseWithReason(tur.Status.Conditions, toolchainv1alpha1.TemplateUpdateRequestComplete, toolchainv1alpha1.TemplateUpdateRequestUnableToUpdateReason) &&
-				maxUpdateFailuresReached(tur, r.config.GetMasterUserRecordUpdateFailureThreshold())) {
+				maxUpdateFailuresReached(tur, r.Config.GetMasterUserRecordUpdateFailureThreshold())) {
 			if err := r.incrementCounters(logger, tier, tur); err != nil {
 				return -1, false, err
 			}
-			if err := r.client.Delete(context.TODO(), &tur); err != nil {
+			if err := r.Client.Delete(context.TODO(), &tur); err != nil {
 				if errors.IsNotFound(err) {
 					logger.Info("skipping failed TemplateUpdateRequest as it was already deleted", "name", tur.Name)
 					continue
@@ -311,7 +294,7 @@ func (r *Reconciler) incrementCounters(logger logr.Logger, tier *toolchainv1alph
 		latest.FailedAccounts = append(latest.FailedAccounts, tur.Name)
 	}
 	tier.Status.Updates[len(tier.Status.Updates)-1] = latest
-	if err := r.client.Status().Update(context.TODO(), tier); err != nil {
+	if err := r.Client.Status().Update(context.TODO(), tier); err != nil {
 		return err
 	}
 	logger.Info("incrementing counter after TemplateUpdateRequest completed", "name", tur.Name)
@@ -328,5 +311,5 @@ func (r *Reconciler) markUpdateRecordAsCompleted(tier *toolchainv1alpha1.NSTempl
 	now := metav1.Now()
 	latest.CompletionTime = &now
 	tier.Status.Updates[len(tier.Status.Updates)-1] = latest
-	return r.client.Status().Update(context.TODO(), tier)
+	return r.Client.Status().Update(context.TODO(), tier)
 }

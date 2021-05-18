@@ -7,6 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	controllerPredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 )
@@ -18,6 +19,7 @@ type UserSignupChangedPredicate struct { // nolint: golint
 }
 
 var _ controllerPredicate.Predicate = UserSignupChangedPredicate{}
+var predicateLog = ctrl.Log.WithName("UserSignupChangedPredicate")
 
 // Update filters update events and let the reconcile loop to be triggered when any of the following conditions is met:
 //
@@ -74,7 +76,7 @@ func (OnlyWhenAutomaticApprovalIsEnabled) Delete(e event.DeleteEvent) bool {
 // Generic implements Predicate
 func (p OnlyWhenAutomaticApprovalIsEnabled) Generic(e event.GenericEvent) bool {
 	if e.Meta == nil {
-		log.Error(nil, "Generic event has no object metadata", "event", e)
+		predicateLog.Error(nil, "Generic event has no object metadata", "event", e)
 		return false
 	}
 	return p.checkIfAutomaticApprovalIsEnabled(e.Meta.GetNamespace())

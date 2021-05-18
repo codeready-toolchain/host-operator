@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // TODO remove this test once the migration code is removed
@@ -61,7 +62,7 @@ func TestUserCleanup(t *testing.T) {
 
 		// Confirm the UserSignup still exists
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		require.NoError(t, r.client.Get(context.Background(), key, userSignup))
+		require.NoError(t, r.Client.Get(context.Background(), key, userSignup))
 		require.NotNil(t, userSignup)
 	})
 
@@ -81,7 +82,7 @@ func TestUserCleanup(t *testing.T) {
 
 		// Confirm the UserSignup still exists
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		require.NoError(t, r.client.Get(context.Background(), key, userSignup))
+		require.NoError(t, r.Client.Get(context.Background(), key, userSignup))
 		require.NotNil(t, userSignup)
 		require.True(t, res.Requeue)
 
@@ -110,7 +111,7 @@ func TestUserCleanup(t *testing.T) {
 
 		// Confirm the UserSignup has been deleted
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.client.Get(context.Background(), key, userSignup)
+		err = r.Client.Get(context.Background(), key, userSignup)
 		require.Error(t, err)
 		require.True(t, errors.IsNotFound(err))
 		statusErr := err.(*errors.StatusError)
@@ -131,7 +132,7 @@ func TestUserCleanup(t *testing.T) {
 
 		// Confirm the UserSignup has been deleted
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.client.Get(context.Background(), key, userSignup)
+		err = r.Client.Get(context.Background(), key, userSignup)
 		require.Error(t, err)
 		require.True(t, errors.IsNotFound(err))
 		require.IsType(t, &errors.StatusError{}, err)
@@ -154,7 +155,7 @@ func TestUserCleanup(t *testing.T) {
 
 		// Confirm the UserSignup has not been deleted
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.client.Get(context.Background(), key, userSignup)
+		err = r.Client.Get(context.Background(), key, userSignup)
 		require.NoError(t, err)
 		require.NotNil(t, userSignup)
 		require.False(t, res.Requeue)
@@ -174,9 +175,10 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 	require.NoError(t, err)
 
 	r := &Reconciler{
-		scheme:    s,
-		crtConfig: config,
-		client:    fakeClient,
+		Scheme: s,
+		Config: config,
+		Client: fakeClient,
+		Log:    ctrl.Log.WithName("controllers").WithName("UserSignupCleanup"),
 	}
 	return r, newReconcileRequest(name), fakeClient
 }
