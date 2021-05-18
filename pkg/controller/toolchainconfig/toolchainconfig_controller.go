@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -24,7 +25,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource ToolchainConfig
-	return c.Watch(&source.Kind{Type: &toolchainv1alpha1.ToolchainConfig{}}, &handler.EnqueueRequestForObject{})
+	return c.Watch(&source.Kind{Type: &toolchainv1alpha1.ToolchainConfig{}}, &handler.EnqueueRequestForObject{}, &predicate.GenerationChangedPredicate{})
 }
 
 // SetupWithManager sets up the controller with the Manager.
