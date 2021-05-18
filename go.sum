@@ -821,8 +821,8 @@ github.com/prometheus/prometheus v0.0.0-20180315085919-58e2a31db8de/go.mod h1:oA
 github.com/prometheus/prometheus v1.8.2-0.20200110114423-1e64d757f711/go.mod h1:7U90zPoLkWjEIQcy/rweQla82OCTUzxVHE51G3OhJbI=
 github.com/prometheus/prometheus v2.3.2+incompatible/go.mod h1:oAIUtOny2rjMX0OWN5vPR5/q/twIROJvdqnQKDdil/s=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
-github.com/rajivnathan/api v0.0.0-20210517183111-bd3161732163 h1:vEtRvQso07CCbw3iulbZiNX78gTolrRKZXe+zYVmVF4=
-github.com/rajivnathan/api v0.0.0-20210517183111-bd3161732163/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
+github.com/rajivnathan/api v0.0.0-20210518150156-3181b79e2ec4 h1:EGuCsFsDS7GbEwfloVVihYB2R0Aupb7hT/qeORrmG08=
+github.com/rajivnathan/api v0.0.0-20210518150156-3181b79e2ec4/go.mod h1:tVouC34ewr4KABqqsVgsUmrg+eDeKsPIBD7VLOeZPEQ=
 github.com/rajivnathan/toolchain-common v0.0.0-20210517220311-0770b8d8e0b3 h1:4sJle+jQ8ZD5jSUJOoY/YKNIegZ4rBMVLRENu0CQGF8=
 github.com/rajivnathan/toolchain-common v0.0.0-20210517220311-0770b8d8e0b3/go.mod h1:uzFdA3rPnPJKh1vq9E5Kax3uelfpF81wNtq2+B59USQ=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
