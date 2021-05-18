@@ -78,7 +78,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 					"3": 0,
 				}),
 				WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-					string(metrics.Other): 1,
+					string(metrics.External): 1,
 				})))
 
 			// when
@@ -113,8 +113,8 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			AssertThatCounters(t).
 				HaveMasterUserRecords(2). // one more
 				HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
-					string(metrics.RedHat): 1, // new user with an `@redhat.com` email address
-					string(metrics.Other):  1, // existing metric (from the counter init)
+					string(metrics.Internal): 1, // new user with an `@redhat.com` email address
+					string(metrics.External): 1, // existing metric (from the counter init)
 				}) //
 			actualUserSignup := &v1alpha1.UserSignup{}
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
@@ -153,7 +153,7 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 			"3": 1,
 		}),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 12,
+			string(metrics.External): 12,
 		})))
 
 	// when
@@ -171,7 +171,7 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 			"3": 1,
 		}).
 		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
-			string(metrics.Other): 12,
+			string(metrics.External): 12,
 		})
 	AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))
 	AssertMetricsGaugeEquals(t, 10, metrics.UsersPerActivationGaugeVec.WithLabelValues("2")) // unchanged
@@ -187,7 +187,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -305,7 +305,7 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -345,7 +345,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -386,7 +386,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 			"1": 0, // no user approved yet
 		}),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -428,7 +428,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -463,7 +463,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -516,7 +516,7 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(2)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 2,
+			string(metrics.External): 2,
 		}),
 	))
 
@@ -570,7 +570,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -622,7 +622,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -720,7 +720,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -817,7 +817,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -874,7 +874,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -971,7 +971,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -1022,7 +1022,7 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -1060,7 +1060,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -1098,7 +1098,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -1136,7 +1136,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -1174,7 +1174,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -1239,7 +1239,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -1288,7 +1288,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -1360,7 +1360,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -1408,7 +1408,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-				string(metrics.Other): 1,
+				string(metrics.External): 1,
 			}),
 		))
 
@@ -1455,7 +1455,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
 			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-				string(metrics.Other): 2,
+				string(metrics.External): 2,
 			}),
 		))
 
@@ -1544,7 +1544,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
 			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-				string(metrics.Other): 2,
+				string(metrics.External): 2,
 			}),
 		))
 
@@ -1645,7 +1645,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 				"3": 10, // 10 users signed-up 3 times
 			}),
 			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-				string(metrics.Other): 20,
+				string(metrics.External): 20,
 			}),
 		))
 
@@ -1724,7 +1724,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
 			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-				string(metrics.Other): 2,
+				string(metrics.External): 2,
 			}),
 		))
 
@@ -1818,7 +1818,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-				string(metrics.Other): 1,
+				string(metrics.External): 1,
 			}),
 		))
 
@@ -1934,7 +1934,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -2001,7 +2001,7 @@ func TestUserSignupBanned(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -2044,7 +2044,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -2125,7 +2125,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -2208,7 +2208,7 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -2260,7 +2260,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -2350,7 +2350,7 @@ func TestDeathBy100Signups(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(100)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 100,
+			string(metrics.External): 100,
 		}),
 	))
 
@@ -2423,7 +2423,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -2473,7 +2473,7 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 
@@ -2587,7 +2587,7 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 			InitializeCounters(t, NewToolchainStatus(
 				WithHost(WithMasterUserRecordCount(1)),
 				WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-					string(metrics.Other): 1,
+					string(metrics.External): 1,
 				}),
 			))
 
@@ -2634,7 +2634,7 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 			InitializeCounters(t, NewToolchainStatus(
 				WithHost(WithMasterUserRecordCount(1)),
 				WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-					string(metrics.Other): 1,
+					string(metrics.External): 1,
 				}),
 			))
 
@@ -2692,7 +2692,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.Other): 1,
+			string(metrics.External): 1,
 		}),
 	))
 

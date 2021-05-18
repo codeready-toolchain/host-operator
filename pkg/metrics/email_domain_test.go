@@ -20,31 +20,31 @@ func TestGetEmailDomain(t *testing.T) {
 		{
 			name:           "Red Hatter",
 			emailAddress:   "joe@redhat.com",
-			expectedDomain: metrics.RedHat,
+			expectedDomain: metrics.Internal,
 		},
 		{
 			name:           "IBMer",
 			emailAddress:   "joe@ibm.com",
-			expectedDomain: metrics.IBM,
+			expectedDomain: metrics.Internal,
 		},
 		{
 			name:           "Another IBMer",
 			emailAddress:   "joe@fr.ibm.com",
-			expectedDomain: metrics.IBM,
+			expectedDomain: metrics.Internal,
 		},
 		{
 			name:           "Not an IBMer",
 			emailAddress:   "joe@fribm.com",
-			expectedDomain: metrics.Other,
+			expectedDomain: metrics.External,
 		},
 		{
-			name:           "Other",
+			name:           "External",
 			emailAddress:   "joe@example.com",
-			expectedDomain: metrics.Other,
+			expectedDomain: metrics.External,
 		},
 		{
 			name:           "Missing",
-			expectedDomain: metrics.Other,
+			expectedDomain: metrics.External,
 		},
 	}
 

@@ -51,5 +51,4 @@ replace (
 	github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20210517162322-e34eefabaf90
 )
 
-
 go 1.14

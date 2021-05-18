@@ -23,8 +23,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1500)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.RedHat): 100,
-			string(metrics.Other):  1400,
+			string(metrics.Internal): 100,
+			string(metrics.External): 1400,
 		}),
 		WithMember("member1", WithUserAccountCount(800), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
 		WithMember("member2", WithUserAccountCount(700), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))

@@ -6,28 +6,21 @@ import (
 
 type Domain string
 
-const RedHat Domain = "Red Hat"
-const IBM Domain = "IBM"
-const Other Domain = "Other"
+const Internal Domain = "internal"
+const External Domain = "external"
 
-var rhDomainPattern *regexp.Regexp
-var ibmDomainPattern *regexp.Regexp
+var internalDomainPattern *regexp.Regexp
 
 func init() {
-	rhDomainPattern = regexp.MustCompile(`^.*@redhat.com$`)
-	ibmDomainPattern = regexp.MustCompile(`^.*@((.+)\.)?ibm.com$`)
+	// pattern to match email addresses in the form of `@redhat.com`, `@ibm.com` or subdomains (eg: `@fr.ibm.com`)
+	internalDomainPattern = regexp.MustCompile(`^.*@redhat.com$|^.*@((.+)\.)?ibm.com$`)
 }
 
 // GetEmailDomain retrieves the email address for the given UserSignup
-// returns the associated domain (`Red Hat`, `IBM` or `Other`)
-// returns `true` if found, `false` otherwise
+// returns the associated domain (`Internal` or `External`)
 func GetEmailDomain(emailAddress string) Domain {
-	// match a pattern in the email address: `@redhat.com`, `@ibm.com` or subdomains (eg: `@fr.ibm.com`) or others
-	if rhDomainPattern.MatchString(emailAddress) {
-		return RedHat
-	} else if ibmDomainPattern.MatchString(emailAddress) {
-		return IBM
+	if internalDomainPattern.MatchString(emailAddress) {
+		return Internal
 	}
-	return Other
-
+	return External
 }

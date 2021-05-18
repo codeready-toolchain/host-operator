@@ -26,12 +26,12 @@ func TestAddMurToCounter(t *testing.T) {
 	defer counter.Reset()
 
 	// when
-	counter.IncrementMasterUserRecordCount(metrics.RedHat)
+	counter.IncrementMasterUserRecordCount(metrics.Internal)
 
 	// then
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{string(metrics.RedHat): 1})
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{string(metrics.Internal): 1})
 }
 
 func TestRemoveMurFromCounter(t *testing.T) {
@@ -39,20 +39,20 @@ func TestRemoveMurFromCounter(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(2)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.RedHat): 1,
-			string(metrics.Other):  1,
+			string(metrics.Internal): 1,
+			string(metrics.External): 1,
 		})))
 	defer counter.Reset()
 
 	// when
-	counter.DecrementMasterUserRecordCount(metrics.RedHat)
+	counter.DecrementMasterUserRecordCount(metrics.Internal)
 
 	// then
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
-			string(metrics.RedHat): 0,
-			string(metrics.Other):  1,
+			string(metrics.Internal): 0,
+			string(metrics.External): 1,
 		})
 }
 
@@ -62,7 +62,7 @@ func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	defer counter.Reset()
 
 	// when
-	counter.DecrementMasterUserRecordCount(metrics.RedHat)
+	counter.DecrementMasterUserRecordCount(metrics.Internal)
 
 	// then
 	AssertThatCounters(t).
@@ -75,12 +75,12 @@ func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
 	defer counter.Reset()
 
 	// when
-	counter.DecrementMasterUserRecordCount(metrics.RedHat)
+	counter.DecrementMasterUserRecordCount(metrics.Internal)
 
 	// then
 	AssertThatUninitializedCounters(t).
 		HaveMasterUserRecords(-1).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{string(metrics.RedHat): -1})
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{string(metrics.Internal): -1})
 }
 
 func TestAddUserAccountToCounter(t *testing.T) {
@@ -88,7 +88,7 @@ func TestAddUserAccountToCounter(t *testing.T) {
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.RedHat): 1,
+			string(metrics.Internal): 1,
 		}),
 	))
 	defer counter.Reset()
@@ -109,7 +109,7 @@ func TestRemoveUserAccountFromCounter(t *testing.T) {
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember("member-1", WithUserAccountCount(2)),
 			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-				string(metrics.RedHat): 1,
+				string(metrics.Internal): 1,
 			}),
 		))
 	defer counter.Reset()
@@ -129,8 +129,8 @@ func TestRemoveUserAccountFromCounterWhenIsAlreadyZero(t *testing.T) {
 		NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
 			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-				string(metrics.RedHat): 1,
-				string(metrics.Other):  1,
+				string(metrics.Internal): 1,
+				string(metrics.External): 1,
 			}),
 			WithMember("member-1", WithUserAccountCount(0)),
 			WithMember("member-2", WithUserAccountCount(2))))
@@ -189,8 +189,8 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 			"2": 4,
 		}),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.RedHat): 8,
-			string(metrics.Other):  5,
+			string(metrics.Internal): 8,
+			string(metrics.External): 5,
 		}),
 	)
 
@@ -207,8 +207,8 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 			"2": 4,
 		}).
 		HaveMasterUserRecordsPerDomain(map[string]int{
-			string(metrics.RedHat): 8,
-			string(metrics.Other):  5,
+			string(metrics.Internal): 8,
+			string(metrics.External): 5,
 		})
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(13).
@@ -219,15 +219,15 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 			"2": 4,
 		}).
 		HasMasterUserRecordsPerDomain(map[string]int{
-			string(metrics.RedHat): 8,
-			string(metrics.Other):  5,
+			string(metrics.Internal): 8,
+			string(metrics.External): 5,
 		})
 }
 
 func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 	// given
 	counter.DecrementUserAccountCount(logger, "member-1")
-	counter.DecrementMasterUserRecordCount(metrics.RedHat)
+	counter.DecrementMasterUserRecordCount(metrics.Internal)
 	counter.UpdateUsersPerActivationCounters(1) // a user signup once
 	counter.UpdateUsersPerActivationCounters(2) // a user signup twice (hence counter for "1" will be decreased)
 	toolchainStatus := NewToolchainStatus(
@@ -235,8 +235,8 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 		WithMember("member-1", WithUserAccountCount(10)),
 		WithMember("member-2", WithUserAccountCount(3)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.RedHat): 8,
-			string(metrics.Other):  5,
+			string(metrics.Internal): 8,
+			string(metrics.External): 5,
 		}))
 
 	// when
@@ -252,8 +252,8 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 			"2": 1,
 		}).
 		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
-			string(metrics.RedHat): 7, // decremented
-			string(metrics.Other):  5,
+			string(metrics.Internal): 7, // decremented
+			string(metrics.External): 5,
 		})
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(12).
@@ -264,8 +264,8 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 			"2": 1,
 		}).
 		HasMasterUserRecordsPerDomain(map[string]int{
-			string(metrics.RedHat): 7, // decremented
-			string(metrics.Other):  5,
+			string(metrics.Internal): 7, // decremented
+			string(metrics.External): 5,
 		})
 }
 
@@ -273,7 +273,7 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	//this will be ignored by resetting when initializing counters
-	counter.IncrementMasterUserRecordCount(metrics.RedHat)
+	counter.IncrementMasterUserRecordCount(metrics.Internal)
 	counter.IncrementUserAccountCount("member-1")
 
 	usersignups := CreateMultipleUserSignups("user-", 3)
@@ -282,8 +282,8 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(0)), // will load from UserSignups and MURs
 		WithMember("member-1", WithUserAccountCount(0)),
 		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
-			string(metrics.RedHat): 0,
-			string(metrics.Other):  0,
+			string(metrics.Internal): 0,
+			string(metrics.External): 0,
 		}),
 	)
 	initObjs := append([]runtime.Object{}, murs...)
@@ -302,7 +302,7 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 			"3": 1,
 		}).
 		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
-			string(metrics.RedHat): 3, // all MURs have `@redhat.com` email address
+			string(metrics.Internal): 3, // all MURs have `@redhat.com` email address
 		})
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(3).
@@ -313,14 +313,14 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 			"3": 1,
 		}).
 		HasMasterUserRecordsPerDomain(map[string]int{
-			string(metrics.RedHat): 3, // all MURs have `@redhat.com` email address
+			string(metrics.Internal): 3, // all MURs have `@redhat.com` email address
 		})
 }
 
 func TestShouldNotInitializeAgain(t *testing.T) {
 	// given
 	//this will be ignored by resetting when loading existing MURs
-	counter.IncrementMasterUserRecordCount(metrics.RedHat)
+	counter.IncrementMasterUserRecordCount(metrics.Internal)
 	counter.IncrementUserAccountCount("member-1")
 
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
@@ -340,13 +340,13 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 	AssertThatCounters(t).
 		HaveMasterUserRecords(10).
 		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
-			string(metrics.RedHat): 10, // all MURs have `@redhat.com` email address
+			string(metrics.Internal): 10, // all MURs have `@redhat.com` email address
 		}).
 		HaveUserAccountsForCluster("member-1", 10)
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(10).
 		HasMasterUserRecordsPerDomain(map[string]int{
-			string(metrics.RedHat): 10, // all MURs have `@redhat.com` email address
+			string(metrics.Internal): 10, // all MURs have `@redhat.com` email address
 		}).
 		HasUserAccountCount("member-1", 10)
 }
@@ -372,11 +372,11 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		go func(index int) {
 			defer waitForFinished.Done()
 			latch.Wait()
-			counter.IncrementMasterUserRecordCount(metrics.RedHat)
+			counter.IncrementMasterUserRecordCount(metrics.Internal)
 			if index < 1000 {
 				go func() {
 					defer waitForFinished.Done()
-					counter.DecrementMasterUserRecordCount(metrics.RedHat)
+					counter.DecrementMasterUserRecordCount(metrics.Internal)
 				}()
 			}
 		}(i)
@@ -435,7 +435,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	AssertThatCounters(t).
 		HaveMasterUserRecords(12).
 		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
-			string(metrics.RedHat): 12, // all MURs have `@redhat.com` email address
+			string(metrics.Internal): 12, // all MURs have `@redhat.com` email address
 		}).
 		HaveUserAccountsForCluster("member-1", 12).
 		HaveUserAccountsForCluster("member-2", 2).
@@ -446,7 +446,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(12).
 		HasMasterUserRecordsPerDomain(map[string]int{
-			string(metrics.RedHat): 12, // all MURs have `@redhat.com` email address
+			string(metrics.Internal): 12, // all MURs have `@redhat.com` email address
 		}).
 		HasUserAccountCount("member-1", 12).
 		HasUserAccountCount("member-2", 2).
