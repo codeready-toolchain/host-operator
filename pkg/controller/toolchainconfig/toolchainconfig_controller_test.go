@@ -34,9 +34,6 @@ func TestReconcileWhenToolchainConfigIsAvailable(t *testing.T) {
 	assert.False(t, actual.AutomaticApproval().IsEnabled())
 	assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 	assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-	assert.Equal(t, 0, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-	assert.Empty(t, actual.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
-	assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationInDays())
 
 	t.Run("update with new version", func(t *testing.T) {
 		// given
@@ -56,8 +53,6 @@ func TestReconcileWhenToolchainConfigIsAvailable(t *testing.T) {
 		assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 		assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 		assert.Equal(t, 100, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-		assert.Empty(t, actual.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
-		assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationInDays())
 	})
 }
 
