@@ -66,8 +66,6 @@ spec:
                               cluster
                             type: object
                             x-kubernetes-map-type: atomic
-                        required:
-                        - overall
                         type: object
                       resourceCapacityThreshold:
                         description: Contains threshold (in percentage of usage) that
@@ -86,17 +84,12 @@ spec:
                               mapped by their names
                             type: object
                             x-kubernetes-map-type: atomic
-                        required:
-                        - defaultThreshold
                         type: object
-                    required:
-                    - enabled
                     type: object
                   deactivation:
                     description: Keeps parameters concerned with user deactivation
                     properties:
                       deactivatingNotificationDays:
-                        default: 3
                         description: DeactivatingNotificationDays is the number of
                           days after a pre-deactivating notification is sent that
                           actual deactivation occurs.  If this parameter is set to
@@ -112,7 +105,7 @@ spec:
                     description: Defines default configuration to be applied to all
                       member clusters
                     properties:
-                      status:
+                      memberStatus:
                         description: Keeps parameters concerned with member status
                         properties:
                           refreshPeriod:
@@ -126,7 +119,7 @@ spec:
                       description: MemberOperatorConfigSpec contains all configuration
                         parameters of the member operator
                       properties:
-                        status:
+                        memberStatus:
                           description: Keeps parameters concerned with member status
                           properties:
                             refreshPeriod:
@@ -138,6 +131,7 @@ spec:
                     description: A map of cluster-specific member operator configurations
                       indexed by member toolchaincluster name
                     type: object
+                    x-kubernetes-map-type: atomic
                 type: object
             type: object
           status:
