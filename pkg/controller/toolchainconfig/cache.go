@@ -40,7 +40,7 @@ func loadLatest(cl client.Client, namespace string) error {
 	config := &v1alpha1.ToolchainConfig{}
 	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "config"}, config); err != nil {
 		if apierrors.IsNotFound(err) {
-			cacheLog.Error(err, "ToolchainConfig resource with the name 'config' wasn't found", "namespace", namespace)
+			cacheLog.Info("ToolchainConfig resource with the name 'config' wasn't found, default configuration will be used", "namespace", namespace)
 			return nil
 		}
 		return err

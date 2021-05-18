@@ -9,7 +9,9 @@ import (
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -70,21 +72,41 @@ func TestCache(t *testing.T) {
 	})
 }
 
-func TestGetConfigErrored(t *testing.T) {
+func TestGetConfigFailed(t *testing.T) {
 	// given
-	config := newToolchainConfigWithReset(t, AutomaticApprovalCfg().MaxUsersNumber(123, PerMemberClusterCfg("member1", 321)))
-	cl := NewFakeClient(t, config)
-	cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-		return fmt.Errorf("some error")
-	}
+	t.Run("config not found", func(t *testing.T) {
+		config := newToolchainConfigWithReset(t, AutomaticApprovalCfg().MaxUsersNumber(123, PerMemberClusterCfg("member1", 321)))
+		cl := NewFakeClient(t, config)
+		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+			return apierrors.NewNotFound(schema.GroupResource{}, "config")
+		}
 
-	// when
-	defaultConfig, err := GetConfig(cl, HostOperatorNs)
+		// when
+		defaultConfig, err := GetConfig(cl, HostOperatorNs)
 
-	// then
-	require.Error(t, err)
-	assert.Equal(t, 0, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
-	assert.Empty(t, defaultConfig.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, 0, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
+		assert.Empty(t, defaultConfig.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
+
+	})
+
+	t.Run("error getting config", func(t *testing.T) {
+		config := newToolchainConfigWithReset(t, AutomaticApprovalCfg().MaxUsersNumber(123, PerMemberClusterCfg("member1", 321)))
+		cl := NewFakeClient(t, config)
+		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+			return fmt.Errorf("some error")
+		}
+
+		// when
+		defaultConfig, err := GetConfig(cl, HostOperatorNs)
+
+		// then
+		require.Error(t, err)
+		assert.Equal(t, 0, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
+		assert.Empty(t, defaultConfig.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
+
+	})
 }
 
 func TestMultipleExecutionsInParallel(t *testing.T) {
