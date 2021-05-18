@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -49,25 +50,25 @@ func TestReconcileRegistrationService(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.Requeue)
 		assert.Equal(t, time.Second, result.RequeueAfter)
-		AssertThatServiceAccount(t, test.HostOperatorNs, "registration-service", service.client).HasOwner(reqService)
-		AssertThatConfigMap(t, test.HostOperatorNs, "registration-service", service.client).HasOwner(reqService).
+		AssertThatServiceAccount(t, test.HostOperatorNs, "registration-service", service.Client).HasOwner(reqService)
+		AssertThatConfigMap(t, test.HostOperatorNs, "registration-service", service.Client).HasOwner(reqService).
 			HasData(map[string]string{
 				"reg-service-image": imageDef,
 				"reg-service-env":   "dev",
 			})
-		AssertThatRegistrationService(t, "registration-service", service.client).
+		AssertThatRegistrationService(t, "registration-service", service.Client).
 			HasConditions(toBeNotReady("Deploying", "updated resources: [ServiceAccount: registration-service ConfigMap: registration-service]"))
 	})
 
 	t.Run("reconcile when both objects are present and don't update nor create anything", func(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder, reqService)
-		cclient := commonclient.NewApplyClient(service.client, service.scheme)
+		cclient := commonclient.NewApplyClient(service.Client, service.Scheme)
 		_, err := cclient.ApplyObject(objs[0].GetRuntimeObject().DeepCopyObject())
 		require.NoError(t, err)
 		_, err = cclient.ApplyObject(objs[1].GetRuntimeObject().DeepCopyObject())
 		require.NoError(t, err)
-		fakeClient := service.client.(*test.FakeClient)
+		fakeClient := service.Client.(*test.FakeClient)
 		fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 			return fmt.Errorf("create shouldn't be called")
 		}
@@ -81,20 +82,20 @@ func TestReconcileRegistrationService(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.False(t, result.Requeue)
-		AssertThatServiceAccount(t, test.HostOperatorNs, "registration-service", service.client).Exists()
-		AssertThatConfigMap(t, test.HostOperatorNs, "registration-service", service.client).HasData(map[string]string{
+		AssertThatServiceAccount(t, test.HostOperatorNs, "registration-service", service.Client).Exists()
+		AssertThatConfigMap(t, test.HostOperatorNs, "registration-service", service.Client).HasData(map[string]string{
 			"reg-service-image": imageDef,
 			"reg-service-env":   "dev",
 		})
 
-		AssertThatRegistrationService(t, "registration-service", service.client).
+		AssertThatRegistrationService(t, "registration-service", service.Client).
 			HasConditions(toBeDeployed())
 	})
 
 	t.Run("change ConfigMap object & don't specify environment so it uses the default one", func(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder)
-		client := commonclient.NewApplyClient(service.client, service.scheme)
+		client := commonclient.NewApplyClient(service.Client, service.Scheme)
 		_, err := client.ApplyObject(objs[0].GetRuntimeObject().DeepCopyObject())
 		require.NoError(t, err)
 		_, err = client.ApplyObject(objs[1].GetRuntimeObject().DeepCopyObject())
@@ -110,20 +111,20 @@ func TestReconcileRegistrationService(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, result.Requeue)
 		assert.Equal(t, time.Second, result.RequeueAfter)
-		AssertThatServiceAccount(t, test.HostOperatorNs, "registration-service", service.client).Exists()
-		AssertThatConfigMap(t, test.HostOperatorNs, "registration-service", service.client).Exists().HasData(map[string]string{
+		AssertThatServiceAccount(t, test.HostOperatorNs, "registration-service", service.Client).Exists()
+		AssertThatConfigMap(t, test.HostOperatorNs, "registration-service", service.Client).Exists().HasData(map[string]string{
 			"reg-service-image": "quay.io/rh/registration-service:v0.1",
 			"reg-service-env":   "prod",
 		})
 
-		AssertThatRegistrationService(t, "registration-service", service.client).
+		AssertThatRegistrationService(t, "registration-service", service.Client).
 			HasConditions(toBeNotReady("Deploying", "updated resources: [ConfigMap: registration-service]"))
 	})
 
 	t.Run("when cannot create, then it should set appropriate condition", func(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder, reqService)
-		fakeClient := service.client.(*test.FakeClient)
+		fakeClient := service.Client.(*test.FakeClient)
 		fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 			return fmt.Errorf("creation failed")
 		}
@@ -133,7 +134,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		AssertThatRegistrationService(t, "registration-service", service.client).
+		AssertThatRegistrationService(t, "registration-service", service.Client).
 			HasConditions(toBeNotReady("DeployingFailed", "unable to create resource of kind: ServiceAccount, version: v1: creation failed"))
 	})
 
@@ -145,7 +146,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 		}
 
 		// when
-		err := service.wrapErrorWithStatusUpdate(log, reqService, statusUpdater,
+		err := service.wrapErrorWithStatusUpdate(service.Log, reqService, statusUpdater,
 			errors.NewBadRequest("oopsy woopsy"), "template deployment failed")
 
 		// then
@@ -193,9 +194,10 @@ func prepareServiceAndRequest(t *testing.T, s *runtime.Scheme, decoder runtime.D
 	tmpl := getDecodedTemplate(t, decoder)
 
 	service := &Reconciler{
-		client:             test.NewFakeClient(t, initObjs...),
-		scheme:             s,
+		Client:             test.NewFakeClient(t, initObjs...),
+		Scheme:             s,
 		regServiceTemplate: tmpl,
+		Log:                ctrl.Log.WithName("controllers").WithName("RegistrationService"),
 	}
 	return service, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, "registration-service")}
 }

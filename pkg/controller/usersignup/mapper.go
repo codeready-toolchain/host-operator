@@ -6,6 +6,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -16,6 +17,7 @@ type BannedUserToUserSignupMapper struct {
 }
 
 var _ handler.Mapper = BannedUserToUserSignupMapper{}
+var mapperLog = ctrl.Log.WithName("BannedUserToUserSignupMapper")
 
 func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Request {
 	if bu, ok := obj.Object.(*toolchainv1alpha1.BannedUser); ok {
@@ -26,7 +28,7 @@ func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Req
 			opts := client.MatchingLabels(labels)
 			userSignupList := &toolchainv1alpha1.UserSignupList{}
 			if err := b.client.List(context.TODO(), userSignupList, opts); err != nil {
-				log.Error(err, "Could not list UserSignup resources with label value", toolchainv1alpha1.UserSignupUserEmailHashLabelKey, emailHashLbl)
+				mapperLog.Error(err, "Could not list UserSignup resources with label value", toolchainv1alpha1.UserSignupUserEmailHashLabelKey, emailHashLbl)
 				return nil
 			}
 
@@ -34,7 +36,7 @@ func (b BannedUserToUserSignupMapper) Map(obj handler.MapObject) []reconcile.Req
 
 			ns, err := k8sutil.GetWatchNamespace()
 			if err != nil {
-				log.Error(err, "Could not determine watched namespace")
+				mapperLog.Error(err, "Could not determine watched namespace")
 				return nil
 			}
 
