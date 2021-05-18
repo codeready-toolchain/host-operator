@@ -1510,7 +1510,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "john.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "UserID123",
+			Userid:   "UserID123",
 			Username: "john.doe@redhat.com",
 			States:   []v1alpha1.UserSignupState{v1alpha1.UserSignupStateDeactivated},
 		},
@@ -1604,7 +1604,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "john.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "UserID123",
+			Userid:   "UserID123",
 			Username: "john.doe@redhat.com",
 		},
 		Status: v1alpha1.UserSignupStatus{
@@ -1782,7 +1782,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "UserID123",
+			Userid:   "UserID123",
 			Username: "edward.jones@redhat.com",
 			States:   []v1alpha1.UserSignupState{v1alpha1.UserSignupStateDeactivated},
 		},
@@ -1898,7 +1898,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "UserID089",
+			Userid:   "UserID089",
 			Username: "freja.johanssen@redhat.com",
 			States:   []v1alpha1.UserSignupState{"deactivating"},
 		},
@@ -2229,7 +2229,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
-			UserID:   "UserID123",
+			Userid:   "UserID123",
 			Username: "alice.mayweather.doe@redhat.com",
 			States:   []v1alpha1.UserSignupState{v1alpha1.UserSignupStateDeactivated},
 		},
