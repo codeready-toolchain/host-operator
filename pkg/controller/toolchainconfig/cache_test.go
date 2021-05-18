@@ -23,12 +23,8 @@ func TestGetConfig(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	assert.False(t, defaultConfig.AutomaticApproval().IsEnabled())
 	assert.Equal(t, 0, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
 	assert.Empty(t, defaultConfig.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-	assert.Equal(t, 0, defaultConfig.AutomaticApproval().ResourceCapacityThresholdDefault())
-	assert.Empty(t, defaultConfig.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
-	assert.Equal(t, 3, defaultConfig.Deactivation().DeactivatingNotificationInDays())
 
 	t.Run("return config that is stored in client", func(t *testing.T) {
 		// given
@@ -40,12 +36,8 @@ func TestGetConfig(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, actual.AutomaticApproval().IsEnabled())
 		assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 		assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-		assert.Equal(t, 0, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-		assert.Equal(t, config.Spec.Host.AutomaticApproval.ResourceCapacityThreshold.SpecificPerMemberCluster, actual.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
-		assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationInDays())
 
 		t.Run("returns the same when the cache hasn't been updated", func(t *testing.T) {
 			// given
@@ -57,12 +49,8 @@ func TestGetConfig(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.False(t, actual.AutomaticApproval().IsEnabled())
 			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-			assert.Equal(t, 0, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-			assert.Equal(t, config.Spec.Host.AutomaticApproval.ResourceCapacityThreshold.SpecificPerMemberCluster, actual.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
-			assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationInDays())
 		})
 
 		t.Run("returns the new config when the cache was updated", func(t *testing.T) {
@@ -76,11 +64,8 @@ func TestGetConfig(t *testing.T) {
 			// then
 			actual, err := GetConfig(cl, HostOperatorNs)
 			require.NoError(t, err)
-			assert.False(t, actual.AutomaticApproval().IsEnabled())
 			assert.Equal(t, 666, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 			assert.Empty(t, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-			assert.Equal(t, 0, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-			assert.Empty(t, actual.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
 			assert.Equal(t, 5, actual.Deactivation().DeactivatingNotificationInDays())
 		})
 	})
@@ -99,12 +84,8 @@ func TestGetConfigErrored(t *testing.T) {
 
 	// then
 	require.Error(t, err)
-	assert.False(t, defaultConfig.AutomaticApproval().IsEnabled())
 	assert.Equal(t, 0, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
 	assert.Empty(t, defaultConfig.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-	assert.Equal(t, 0, defaultConfig.AutomaticApproval().ResourceCapacityThresholdDefault())
-	assert.Empty(t, defaultConfig.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
-	assert.Equal(t, 3, defaultConfig.Deactivation().DeactivatingNotificationInDays())
 }
 
 func TestMultipleExecutionsInParallel(t *testing.T) {
@@ -151,13 +132,4 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 func newToolchainConfigWithReset(t *testing.T, options ...ToolchainConfigOption) *v1alpha1.ToolchainConfig {
 	t.Cleanup(Reset)
 	return NewToolchainConfig(options...)
-}
-
-func matchesDefaultConfig(t *testing.T, actual ToolchainConfig) {
-	assert.False(t, actual.AutomaticApproval().IsEnabled())
-	assert.Equal(t, 0, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-	assert.Empty(t, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-	assert.Equal(t, 0, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-	assert.Empty(t, actual.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
-	assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationInDays())
 }
