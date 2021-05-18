@@ -85,7 +85,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		// We don't want this migration to run more than once
 		instance.Spec.Approved = false
 
-		if err := r.client.Update(context.TODO(), instance); err != nil {
+		if err := r.Client.Update(context.TODO(), instance); err != nil {
 			return reconcile.Result{}, err
 		}
 		// Return from reconciliation if the UserSignup was migrated, the change in UserSignup will
