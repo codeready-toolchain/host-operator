@@ -53,19 +53,19 @@ func loadLatest(cl client.Client, namespace string) error {
 // If no config is stored in the cache, then it retrieves it from the cluster and stores in the cache.
 // If the resource is not found, then returns the default config.
 // If any failure happens while getting the ToolchainConfig resource, then returns an error.
-func GetConfig(cl client.Client, namespace string) (Config, error) {
+func GetConfig(cl client.Client, namespace string) (ToolchainConfig, error) {
 	config := configCache.get()
 	if config == nil {
 		err := loadLatest(cl, namespace)
 		if err != nil {
-			return Config{}, err
+			return ToolchainConfig{cfg: &v1alpha1.ToolchainConfigSpec{}}, err
 		}
 		config = configCache.get()
 	}
 	if config == nil {
-		return Config{}, nil
+		return ToolchainConfig{cfg: &v1alpha1.ToolchainConfigSpec{}}, nil
 	}
-	return Config{toolchainconfig: &config.Spec}, nil
+	return ToolchainConfig{cfg: &config.Spec}, nil
 }
 
 // Reset resets the cache.

@@ -2,16 +2,16 @@ package toolchainconfig
 
 import "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 
-type Config struct {
-	toolchainconfig *v1alpha1.ToolchainConfigSpec
+type ToolchainConfig struct {
+	cfg *v1alpha1.ToolchainConfigSpec
 }
 
-func (c *Config) AutomaticApproval() *autoApproval {
-	return &autoApproval{c.toolchainconfig.Host.AutomaticApproval}
+func (c *ToolchainConfig) AutomaticApproval() *autoApproval {
+	return &autoApproval{c.cfg.Host.AutomaticApproval}
 }
 
-func (c *Config) Deactivation() *deactivation {
-	return &deactivation{c.toolchainconfig.Host.Deactivation}
+func (c *ToolchainConfig) Deactivation() *deactivation {
+	return &deactivation{c.cfg.Host.Deactivation}
 }
 
 type autoApproval struct {

@@ -119,8 +119,6 @@ spec:
                             description: Defines the period between refreshes of the
                               member status
                             type: string
-                        required:
-                        - refreshPeriod
                         type: object
                     type: object
                   specificPerMemberCluster:
@@ -135,8 +133,6 @@ spec:
                               description: Defines the period between refreshes of
                                 the member status
                               type: string
-                          required:
-                          - refreshPeriod
                           type: object
                       type: object
                     description: A map of cluster-specific member operator configurations
