@@ -36,7 +36,7 @@ func TestApprovedPropertyMigration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Reload the UserSignup
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 
 	require.True(t, states.Approved(userSignup))
