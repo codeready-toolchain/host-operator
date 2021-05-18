@@ -2215,6 +2215,7 @@ data:
                       items:
                         type: string
                       type: array
+                      x-kubernetes-list-type: atomic
                     targetCluster:
                       description: The cluster in which the user is provisioned in If not
                         set then the target cluster will be picked automatically
