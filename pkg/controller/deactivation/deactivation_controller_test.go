@@ -408,7 +408,7 @@ func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			Username:      email,
 			TargetCluster: "east",
-			UserID:        username,
+			Userid:        username,
 		},
 	}
 	states.SetApproved(us, true)
