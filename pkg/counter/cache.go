@@ -28,7 +28,7 @@ var cachedCounts = cache{
 // Counts is type that contains number of MURs and number of UserAccounts per member cluster
 type Counts struct {
 	// Total number of Master User Accounts
-	// DEPRECATED - see MasterUserRecordCounts (mapped by email domain)
+	// DEPRECATED - see MasterUserRecordPerDomainCounts (mapped by email domain)
 	MasterUserRecordCount           int
 	MasterUserRecordPerDomainCounts map[string]int
 	// User Accounts per Clusters (indexed by cluster name)
