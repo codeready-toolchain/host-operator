@@ -96,6 +96,9 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if instance.Spec.Approved && !states.Approved(instance) {
 		states.SetApproved(instance, true)
 
+		// We don't want this migration to run more than once
+		instance.Spec.Approved = false
+
 		if err := r.client.Update(context.TODO(), instance); err != nil {
 			return reconcile.Result{}, err
 		}
