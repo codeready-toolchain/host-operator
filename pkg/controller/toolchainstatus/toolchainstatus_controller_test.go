@@ -465,6 +465,9 @@ func TestToolchainStatusConditions(t *testing.T) {
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 					string(metrics.External): 20,
 				}),
+				WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+					"1": 20,
+				}),
 				WithMember("member-1", WithUserAccountCount(10)),
 				WithMember("member-2", WithUserAccountCount(10)),
 			)
@@ -494,7 +497,11 @@ func TestToolchainStatusConditions(t *testing.T) {
 				WithHost(WithMasterUserRecordCount(20)),
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 					string(metrics.External): 20,
-				}))
+				}),
+				WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+					"1": 20,
+				}),
+			)
 
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
@@ -526,7 +533,11 @@ func TestToolchainStatusConditions(t *testing.T) {
 				WithHost(WithMasterUserRecordCount(20)),
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 					string(metrics.External): 20,
-				}))
+				}),
+				WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+					"1": 20,
+				}),
+			)
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
@@ -1175,8 +1186,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		// when
 		counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 		counter.IncrementUserAccountCount(logger, "member-1")
-		counter.UpdateUsersPerActivationCounters(1)
-		counter.UpdateUsersPerActivationCounters(2)
+		counter.UpdateUsersPerActivationCounters(logger, 1)
+		counter.UpdateUsersPerActivationCounters(logger, 2)
 		res, err := reconciler.Reconcile(req)
 
 		// then

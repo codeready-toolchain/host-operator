@@ -127,12 +127,13 @@ func DecrementUserAccountCount(logger logr.Logger, clusterName string) {
 
 // UpdateUsersPerActivationCounters updates the activation counters and metrics
 // When a user signs up for the 1st time, her `activations` number is `1`, on the second time, it's `2`, etc.
-func UpdateUsersPerActivationCounters(activations int) {
+func UpdateUsersPerActivationCounters(logger logr.Logger, activations int) {
 	write(func() {
 		// skip for invalid values
 		if activations <= 0 {
 			return
 		}
+		logger.Info("updating UserAccountsPerActivations counter", "activations", activations)
 		// increase the gauge with the given number of activations
 		cachedCounts.UsersPerActivationCounts[strconv.Itoa(activations)]++
 		metrics.UsersPerActivationGaugeVec.WithLabelValues(strconv.Itoa(activations)).Inc()
@@ -237,8 +238,10 @@ func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainSt
 
 	// initialize the cached counters from the UserSignup and MasterUserRecord resources.
 	_, masterUserRecordsPerDomainMetricExists := toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey]
+	_, usersPerActivationMetricKeyExists := toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey]
 	if toolchainStatus.Status.HostOperator == nil ||
 		toolchainStatus.Status.HostOperator.MasterUserRecordCount == 0 ||
+		!usersPerActivationMetricKeyExists ||
 		!masterUserRecordsPerDomainMetricExists {
 		return initializeFromResources(cl, toolchainStatus.Namespace)
 	}
