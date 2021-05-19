@@ -28,7 +28,7 @@ var (
 
 // gauges
 var (
-	// DEPRECATED - See UserAccountGaugeVec and MasterUserRecordGaugeVec
+	// DEPRECATED - See MasterUserRecordGaugeVec
 	// MasterUserRecordGauge should reflect the current number of master user records in the system
 	MasterUserRecordGauge prometheus.Gauge
 )
