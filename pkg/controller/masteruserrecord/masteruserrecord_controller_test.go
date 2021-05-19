@@ -72,8 +72,8 @@ func TestAddFinalizer(t *testing.T) {
 			HasFinalizer()
 		AssertThatCounters(t).
 			HaveUsersPerActivations(toolchainv1alpha1.Metric{"1": 1}).                             // unchanged
-			HaveMasterUserRecords(1).                                                              // unchanged (not complete yet)
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 1}). // unchanged (not complete yet)
+			HaveMasterUserRecords(1).                                                              // unchanged
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 1}). // unchanged
 			HaveUserAccountsForCluster(test.MemberClusterName, 2)                                  // UserAccount created
 	})
 
@@ -111,8 +111,8 @@ func TestAddFinalizer(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason, "unable to add finalizer to MUR john"))
 		AssertThatCounters(t).
 			HaveUsersPerActivations(toolchainv1alpha1.Metric{"1": 1}).                    // unchanged
-			HaveMasterUserRecords(1).                                                     // unchanged (not complete yet)
-			HaveMasterUserRecordsPerDomain(v1alpha1.Metric{string(metrics.Internal): 1}). // unchanged (not complete yet)
+			HaveMasterUserRecords(1).                                                     // unchanged
+			HaveMasterUserRecordsPerDomain(v1alpha1.Metric{string(metrics.Internal): 1}). // unchanged
 			HaveUserAccountsForCluster(test.MemberClusterName, 1)
 	})
 }
@@ -151,8 +151,8 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		HasFinalizer()
 	AssertThatCounters(t).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{"1": 1}).                             // unchanged
-		HaveMasterUserRecords(1).                                                              // unchanged (not complete yet)
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 1}). // unchanged (not complete yet)
+		HaveMasterUserRecords(1).                                                              // unchanged
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 1}). // unchanged
 		HaveUserAccountsForCluster(test.MemberClusterName, 2)                                  // UserAccount was created
 }
 
@@ -196,8 +196,8 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 		HasFinalizer()
 	AssertThatCounters(t).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{"1": 1}).                    // unchanged
-		HaveMasterUserRecords(1).                                                     // unchanged (not complete yet)
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{string(metrics.Internal): 1}). // unchanged (not complete yet)
+		HaveMasterUserRecords(1).                                                     // unchanged
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{string(metrics.Internal): 1}). // unchanged
 		HaveUserAccountsForCluster(test.MemberClusterName, 2).                        // UserAccount created
 		HaveUserAccountsForCluster(test.Member2ClusterName, 1)                        // UserAccount created
 }
