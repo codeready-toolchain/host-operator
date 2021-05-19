@@ -34,8 +34,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: HostOperatorConfigSpec contains all configuration parameters
-              of the host operator
+            description: HostConfig contains all configuration parameters of the host
+              operator
             properties:
               automaticApproval:
                 description: Keeps parameters necessary for automatic approval
