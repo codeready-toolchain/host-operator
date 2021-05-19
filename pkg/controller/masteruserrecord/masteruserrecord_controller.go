@@ -162,7 +162,7 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 				return 0, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 					"failed to create UserAccount in the member cluster '%s'", murAccount.TargetCluster)
 			}
-			counter.IncrementUserAccountCount(murAccount.TargetCluster)
+			counter.IncrementUserAccountCount(logger, murAccount.TargetCluster)
 			return 0, updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 		}
 		// another/unexpected error occurred while trying to fetch the user account on the member cluster
@@ -281,7 +281,7 @@ func (r *Reconciler) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.Ma
 			"failed to update MasterUserRecord while deleting finalizer")
 	}
 	domain := metrics.GetEmailDomain(mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey])
-	counter.DecrementMasterUserRecordCount(domain)
+	counter.DecrementMasterUserRecordCount(logger, domain)
 	logger.Info("Finalizer removed from MasterUserRecord")
 	return 0, nil
 }

@@ -70,44 +70,44 @@ func reset() {
 }
 
 // IncrementMasterUserRecordCount increments the number of MasterUserRecord in the cached counter
-func IncrementMasterUserRecordCount(domain metrics.Domain) {
+func IncrementMasterUserRecordCount(logger logr.Logger, domain metrics.Domain) {
 	write(func() {
 		cachedCounts.MasterUserRecordCount++
-		log.Info("incrementing MasterUserRecordGauge", "value", cachedCounts.MasterUserRecordCount)
+		logger.Info("incrementing MasterUserRecordGauge", "value", cachedCounts.MasterUserRecordCount)
 		metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 
 		cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]++
-		log.Info("incrementing MasterUserRecordGaugeVec", "value", cachedCounts.MasterUserRecordPerDomainCounts[string(domain)], "domain", domain)
+		logger.Info("incrementing MasterUserRecordGaugeVec", "value", cachedCounts.MasterUserRecordPerDomainCounts[string(domain)], "domain", domain)
 		metrics.MasterUserRecordGaugeVec.WithLabelValues(string(domain)).Set(float64(cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]))
 	})
 }
 
 // DecrementMasterUserRecordCount decreases the number of MasterUserRecord in the cached counter
-func DecrementMasterUserRecordCount(domain metrics.Domain) {
+func DecrementMasterUserRecordCount(logger logr.Logger, domain metrics.Domain) {
 	write(func() {
 		if cachedCounts.MasterUserRecordCount != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
 			cachedCounts.MasterUserRecordCount--
 		} else {
-			log.Error(fmt.Errorf("the count of MasterUserRecords is zero"), "unable to decrement the number of MasterUserRecords")
+			logger.Error(fmt.Errorf("the count of MasterUserRecords is zero"), "unable to decrement the number of MasterUserRecords")
 		}
-		log.Info("decrementing MasterUserRecordGauge", "value", cachedCounts.MasterUserRecordCount)
+		logger.Info("decrementing MasterUserRecordGauge", "value", cachedCounts.MasterUserRecordCount)
 		metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 
 		if cachedCounts.MasterUserRecordPerDomainCounts[string(domain)] != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
 			cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]--
 		} else {
-			log.Error(fmt.Errorf("the count of MasterUserRecords is zero"), "unable to decrement the number of MasterUserRecords", "domain", domain)
+			logger.Error(fmt.Errorf("the count of MasterUserRecords is zero"), "unable to decrement the number of MasterUserRecords", "domain", domain)
 		}
-		log.Info("decrementing MasterUserRecordGaugeVec", "value", cachedCounts.MasterUserRecordCount, "domain", domain)
+		logger.Info("decrementing MasterUserRecordGaugeVec", "value", cachedCounts.MasterUserRecordCount, "domain", domain)
 		metrics.MasterUserRecordGaugeVec.WithLabelValues(string(domain)).Set(float64(cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]))
 	})
 }
 
 // IncrementUserAccountCount increments the number of UserAccount for the given member cluster in the cached counter
-func IncrementUserAccountCount(clusterName string) {
+func IncrementUserAccountCount(logger logr.Logger, clusterName string) {
 	write(func() {
 		cachedCounts.UserAccountsPerClusterCounts[clusterName]++
-		log.Info("incremented UserAccountsPerClusterCounts", "clusterName", clusterName, "value", cachedCounts.UserAccountsPerClusterCounts[clusterName])
+		logger.Info("incremented UserAccountsPerClusterCounts", "clusterName", clusterName, "value", cachedCounts.UserAccountsPerClusterCounts[clusterName])
 		metrics.UserAccountGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.UserAccountsPerClusterCounts[clusterName]))
 	})
 }

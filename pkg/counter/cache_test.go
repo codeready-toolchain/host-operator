@@ -26,7 +26,7 @@ func TestAddMurToCounter(t *testing.T) {
 	defer counter.Reset()
 
 	// when
-	counter.IncrementMasterUserRecordCount(metrics.Internal)
+	counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 
 	// then
 	AssertThatCounters(t).
@@ -45,7 +45,7 @@ func TestRemoveMurFromCounter(t *testing.T) {
 	defer counter.Reset()
 
 	// when
-	counter.DecrementMasterUserRecordCount(metrics.Internal)
+	counter.DecrementMasterUserRecordCount(logger, metrics.Internal)
 
 	// then
 	AssertThatCounters(t).
@@ -62,7 +62,7 @@ func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	defer counter.Reset()
 
 	// when
-	counter.DecrementMasterUserRecordCount(metrics.Internal)
+	counter.DecrementMasterUserRecordCount(logger, metrics.Internal)
 
 	// then
 	AssertThatCounters(t).
@@ -75,7 +75,7 @@ func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
 	defer counter.Reset()
 
 	// when
-	counter.DecrementMasterUserRecordCount(metrics.Internal)
+	counter.DecrementMasterUserRecordCount(logger, metrics.Internal)
 
 	// then
 	AssertThatUninitializedCounters(t).
@@ -94,7 +94,7 @@ func TestAddUserAccountToCounter(t *testing.T) {
 	defer counter.Reset()
 
 	// when
-	counter.IncrementUserAccountCount("member-1")
+	counter.IncrementUserAccountCount(logger, "member-1")
 
 	// then
 	AssertThatCounters(t).
@@ -227,7 +227,7 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 	// given
 	counter.DecrementUserAccountCount(logger, "member-1")
-	counter.DecrementMasterUserRecordCount(metrics.Internal)
+	counter.DecrementMasterUserRecordCount(logger, metrics.Internal)
 	counter.UpdateUsersPerActivationCounters(1) // a user signup once
 	counter.UpdateUsersPerActivationCounters(2) // a user signup twice (hence counter for "1" will be decreased)
 	toolchainStatus := NewToolchainStatus(
@@ -273,8 +273,8 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	//this will be ignored by resetting when initializing counters
-	counter.IncrementMasterUserRecordCount(metrics.Internal)
-	counter.IncrementUserAccountCount("member-1")
+	counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
+	counter.IncrementUserAccountCount(logger, "member-1")
 
 	usersignups := CreateMultipleUserSignups("user-", 3)
 	murs := CreateMultipleMurs(t, "user-", 3, "member-1")
@@ -320,8 +320,8 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 func TestShouldNotInitializeAgain(t *testing.T) {
 	// given
 	//this will be ignored by resetting when loading existing MURs
-	counter.IncrementMasterUserRecordCount(metrics.Internal)
-	counter.IncrementUserAccountCount("member-1")
+	counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
+	counter.IncrementUserAccountCount(logger, "member-1")
 
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
 	toolchainStatus := NewToolchainStatus(
@@ -372,18 +372,18 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		go func(index int) {
 			defer waitForFinished.Done()
 			latch.Wait()
-			counter.IncrementMasterUserRecordCount(metrics.Internal)
+			counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 			if index < 1000 {
 				go func() {
 					defer waitForFinished.Done()
-					counter.DecrementMasterUserRecordCount(metrics.Internal)
+					counter.DecrementMasterUserRecordCount(logger, metrics.Internal)
 				}()
 			}
 		}(i)
 		go func(index int) {
 			defer waitForFinished.Done()
 			latch.Wait()
-			counter.IncrementUserAccountCount("member-2")
+			counter.IncrementUserAccountCount(logger, "member-2")
 			if index < 1000 {
 				go func() {
 					defer waitForFinished.Done()
@@ -394,7 +394,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		go func(index int) {
 			defer waitForFinished.Done()
 			latch.Wait()
-			counter.IncrementUserAccountCount("member-1")
+			counter.IncrementUserAccountCount(logger, "member-1")
 			if index < 1000 {
 				go func() {
 					defer waitForFinished.Done()

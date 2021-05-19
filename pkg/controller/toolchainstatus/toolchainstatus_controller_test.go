@@ -61,6 +61,8 @@ const respBodyGood = `{"alive":true,"environment":"dev","revision":"64af1be5c601
 const respBodyInvalid = `{"not found"}`
 const respBodyBad = `{"alive":false,"environment":"dev","revision":"64af1be5c6011fae5497a7c35e2a986d633b3421","buildTime":"0","startTime":"2020-07-06T13:18:30Z"}`
 
+var logger = logf.Log.WithName("toolchainstatus_controller_test")
+
 func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTPClient,
 	memberClusters []string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
@@ -1126,9 +1128,9 @@ func TestSynchronizationWithCounter(t *testing.T) {
 
 		t.Run("sync with newly added MURs and UAs", func(t *testing.T) {
 			// given
-			counter.IncrementMasterUserRecordCount(metrics.Internal)
-			counter.IncrementMasterUserRecordCount(metrics.External)
-			counter.IncrementUserAccountCount("member-1")
+			counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
+			counter.IncrementMasterUserRecordCount(logger, metrics.External)
+			counter.IncrementUserAccountCount(logger, "member-1")
 			toolchainStatus := NewToolchainStatus(
 				WithHost(WithMasterUserRecordCount(1)),
 			)
@@ -1171,8 +1173,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when
-		counter.IncrementMasterUserRecordCount(metrics.Internal)
-		counter.IncrementUserAccountCount("member-1")
+		counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
+		counter.IncrementUserAccountCount(logger, "member-1")
 		counter.UpdateUsersPerActivationCounters(1)
 		counter.UpdateUsersPerActivationCounters(2)
 		res, err := reconciler.Reconcile(req)
