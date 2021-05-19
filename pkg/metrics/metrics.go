@@ -59,17 +59,17 @@ const metricsPrefix = "sandbox_"
 func initMetrics() {
 	log.Info("initializing custom metrics")
 	// Counters
-	UserSignupUniqueTotal = newCounter("user_signups_total", "Total number of unique User Signups")
-	UserSignupApprovedTotal = newCounter("user_signups_approved_total", "Total number of Approved User Signups")
-	UserSignupBannedTotal = newCounter("user_signups_banned_total", "Total number of Banned User Signups")
-	UserSignupDeactivatedTotal = newCounter("user_signups_deactivated_total", "Total number of Deactivated User Signups")
-	UserSignupAutoDeactivatedTotal = newCounter("user_signups_auto_deactivated_total", "Total number of Automatically Deactivated User Signups")
+	UserSignupUniqueTotal = newCounter("user_signups_total", "Total number of unique UserSignups")
+	UserSignupApprovedTotal = newCounter("user_signups_approved_total", "Total number of approved UserSignups")
+	UserSignupBannedTotal = newCounter("user_signups_banned_total", "Total number of banned UserSignups")
+	UserSignupDeactivatedTotal = newCounter("user_signups_deactivated_total", "Total number of deactivated UserSignups")
+	UserSignupAutoDeactivatedTotal = newCounter("user_signups_auto_deactivated_total", "Total number of automatically deactivated UserSignups")
 	// Gauges
-	MasterUserRecordGauge = newGauge("master_user_record_current", "Current number of Master User Records")
+	MasterUserRecordGauge = newGauge("master_user_record_current", "Current number of MasterUserRecords")
 	// Gauges with labels
-	UserAccountGaugeVec = newGaugeVec("user_accounts_current", "Current number of User Accounts (per member cluster)", "cluster_name")
-	UsersPerActivationGaugeVec = newGaugeVec("users_per_activations", "Number of users per activation", []string{"activations"}...)
-	MasterUserRecordGaugeVec = newGaugeVec("master_user_records", "Number of Master User Records (per domain)", "domain")
+	UserAccountGaugeVec = newGaugeVec("user_accounts_current", "Current number of UserAccounts (per member cluster)", "cluster_name")
+	UsersPerActivationGaugeVec = newGaugeVec("users_per_activations", "Number of UserSignups per activations", []string{"activations"}...)
+	MasterUserRecordGaugeVec = newGaugeVec("master_user_records", "Number of MasterUserRecords per email address domain ('internal' vs 'external')", "domain")
 	log.Info("custom metrics initialized")
 }
 
