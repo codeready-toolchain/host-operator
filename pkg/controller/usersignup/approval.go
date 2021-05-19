@@ -38,7 +38,11 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 		return false, unknown, errors.Wrapf(err, "unable to read HostOperatorConfig resource")
 	}
 
-	if !userSignup.Spec.Approved && !config.AutomaticApproval.Enabled {
+	autoApprovalEnabled := false
+	if config.AutomaticApproval.Enabled != nil {
+		autoApprovalEnabled = *config.AutomaticApproval.Enabled
+	}
+	if !userSignup.Spec.Approved && !autoApprovalEnabled {
 		return false, unknown, nil
 	}
 
@@ -58,10 +62,10 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 	return true, targetCluster(clusterName), nil
 }
 
-func hasNotReachedMaxNumberOfUsersThreshold(config toolchainv1alpha1.HostOperatorConfigSpec, counts counter.Counts) cluster.Condition {
+func hasNotReachedMaxNumberOfUsersThreshold(config toolchainv1alpha1.HostConfig, counts counter.Counts) cluster.Condition {
 	return func(cluster *cluster.CachedToolchainCluster) bool {
-		if config.AutomaticApproval.MaxNumberOfUsers.Overall != 0 {
-			if config.AutomaticApproval.MaxNumberOfUsers.Overall <= counts.MasterUserRecordCount {
+		if config.AutomaticApproval.MaxNumberOfUsers.Overall != nil && *config.AutomaticApproval.MaxNumberOfUsers.Overall != 0 {
+			if *config.AutomaticApproval.MaxNumberOfUsers.Overall <= counts.MasterUserRecordCount {
 				return false
 			}
 		}
@@ -71,11 +75,15 @@ func hasNotReachedMaxNumberOfUsersThreshold(config toolchainv1alpha1.HostOperato
 	}
 }
 
-func hasEnoughResources(config toolchainv1alpha1.HostOperatorConfigSpec, status *toolchainv1alpha1.ToolchainStatus) cluster.Condition {
+func hasEnoughResources(config toolchainv1alpha1.HostConfig, status *toolchainv1alpha1.ToolchainStatus) cluster.Condition {
 	return func(cluster *cluster.CachedToolchainCluster) bool {
 		threshold, found := config.AutomaticApproval.ResourceCapacityThreshold.SpecificPerMemberCluster[cluster.Name]
 		if !found {
-			threshold = config.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold
+			if config.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold != nil {
+				threshold = *config.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold
+			} else {
+				threshold = 0
+			}
 		}
 		if threshold == 0 {
 			return true

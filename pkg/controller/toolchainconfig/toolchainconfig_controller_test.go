@@ -17,7 +17,7 @@ import (
 
 func TestReconcileWhenToolchainConfigIsAvailable(t *testing.T) {
 	// given
-	config := newToolchainConfigWithReset(t, AutomaticApprovalCfg().MaxUsersNumber(123, PerMemberClusterCfg("member1", 321)))
+	config := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(123, PerMemberCluster("member1", 321)))
 	cl := NewFakeClient(t, config)
 	controller := Reconciler{
 		Client: cl,
@@ -100,7 +100,7 @@ func newRequest() reconcile.Request {
 	}
 }
 
-func newToolchainConfigWithReset(t *testing.T, options ...ToolchainConfigOption) *v1alpha1.ToolchainConfig {
+func newToolchainConfigWithReset(t *testing.T, options ...HostConfigOption) *v1alpha1.ToolchainConfig {
 	t.Cleanup(Reset)
 	return NewToolchainConfig(options...)
 }

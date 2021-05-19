@@ -15,7 +15,7 @@ func (c *ToolchainConfig) Deactivation() DeactivationConfig {
 }
 
 type AutoApprovalConfig struct {
-	approval v1alpha1.AutomaticApprovalCfg
+	approval v1alpha1.AutomaticApproval
 }
 
 func (a AutoApprovalConfig) IsEnabled() bool {
@@ -39,7 +39,7 @@ func (a AutoApprovalConfig) MaxNumberOfUsersSpecificPerMemberCluster() map[strin
 }
 
 type DeactivationConfig struct {
-	dctv v1alpha1.DeactivationCfg
+	dctv v1alpha1.Deactivation
 }
 
 func (d DeactivationConfig) DeactivatingNotificationInDays() int {

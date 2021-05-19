@@ -29,7 +29,7 @@ func TestCache(t *testing.T) {
 
 	t.Run("return config that is stored in client", func(t *testing.T) {
 		// given
-		config := newToolchainConfigWithReset(t, AutomaticApprovalCfg().MaxUsersNumber(123, PerMemberClusterCfg("member1", 321)))
+		config := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(123, PerMemberCluster("member1", 321)))
 		cl := NewFakeClient(t, config)
 
 		// when
@@ -42,7 +42,7 @@ func TestCache(t *testing.T) {
 
 		t.Run("returns the same when the cache hasn't been updated", func(t *testing.T) {
 			// given
-			newConfig := newToolchainConfigWithReset(t, AutomaticApprovalCfg().MaxUsersNumber(666))
+			newConfig := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(666))
 			cl := NewFakeClient(t, newConfig)
 
 			// when
@@ -56,7 +56,7 @@ func TestCache(t *testing.T) {
 
 		t.Run("returns the new config when the cache was updated", func(t *testing.T) {
 			// given
-			newConfig := newToolchainConfigWithReset(t, AutomaticApprovalCfg().MaxUsersNumber(666), DeactivationCfg().DeactivatingNotificationDays(5))
+			newConfig := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(666), Deactivation().DeactivatingNotificationDays(5))
 			cl := NewFakeClient(t)
 
 			// when
@@ -75,7 +75,7 @@ func TestCache(t *testing.T) {
 func TestGetConfigFailed(t *testing.T) {
 	// given
 	t.Run("config not found", func(t *testing.T) {
-		config := newToolchainConfigWithReset(t, AutomaticApprovalCfg().MaxUsersNumber(123, PerMemberClusterCfg("member1", 321)))
+		config := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(123, PerMemberCluster("member1", 321)))
 		cl := NewFakeClient(t, config)
 		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 			return apierrors.NewNotFound(schema.GroupResource{}, "config")
@@ -92,7 +92,7 @@ func TestGetConfigFailed(t *testing.T) {
 	})
 
 	t.Run("error getting config", func(t *testing.T) {
-		config := newToolchainConfigWithReset(t, AutomaticApprovalCfg().MaxUsersNumber(123, PerMemberClusterCfg("member1", 321)))
+		config := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(123, PerMemberCluster("member1", 321)))
 		cl := NewFakeClient(t, config)
 		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 			return fmt.Errorf("some error")
@@ -114,7 +114,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	var latch sync.WaitGroup
 	latch.Add(1)
 	var waitForFinished sync.WaitGroup
-	initconfig := newToolchainConfigWithReset(t, AutomaticApprovalCfg().MaxUsersNumber(1, PerMemberClusterCfg("member", 1)))
+	initconfig := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(1, PerMemberCluster("member", 1)))
 	cl := NewFakeClient(t, initconfig)
 
 	for i := 0; i < 1000; i++ {
@@ -134,7 +134,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		go func(i int) {
 			defer waitForFinished.Done()
 			latch.Wait()
-			config := newToolchainConfigWithReset(t, AutomaticApprovalCfg().MaxUsersNumber(i+1, PerMemberClusterCfg(fmt.Sprintf("member%d", i), i)))
+			config := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(i+1, PerMemberCluster(fmt.Sprintf("member%d", i), i)))
 			updateConfig(config)
 		}(i)
 	}

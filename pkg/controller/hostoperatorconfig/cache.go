@@ -53,17 +53,17 @@ func loadLatest(cl client.Client, namespace string) error {
 // If no config is stored in the cache, then it retrieves it from the cluster and stores in the cache.
 // If the resource is not found, then returns the default config.
 // If any failure happens while getting the HostOperatorConfig resource, then returns an error.
-func GetConfig(cl client.Client, namespace string) (v1alpha1.HostOperatorConfigSpec, error) {
+func GetConfig(cl client.Client, namespace string) (v1alpha1.HostConfig, error) {
 	config := configCache.get()
 	if config == nil {
 		err := loadLatest(cl, namespace)
 		if err != nil {
-			return v1alpha1.HostOperatorConfigSpec{}, err
+			return v1alpha1.HostConfig{}, err
 		}
 		config = configCache.get()
 	}
 	if config == nil {
-		return v1alpha1.HostOperatorConfigSpec{}, nil
+		return v1alpha1.HostConfig{}, nil
 	}
 	return config.Spec, nil
 }

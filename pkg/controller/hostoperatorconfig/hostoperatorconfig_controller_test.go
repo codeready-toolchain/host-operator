@@ -35,7 +35,8 @@ func TestReconcileWhenHostOperatorConfigIsAvailable(t *testing.T) {
 
 	t.Run("update with new version", func(t *testing.T) {
 		// given
-		config.Spec.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold = 100
+		threshold := 100
+		config.Spec.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold = &threshold
 		err := cl.Update(context.TODO(), config)
 		require.NoError(t, err)
 
@@ -68,7 +69,7 @@ func TestReconcileWhenReturnsError(t *testing.T) {
 	require.Error(t, err)
 	configSpec, err := GetConfig(NewFakeClient(t), HostOperatorNs)
 	require.NoError(t, err)
-	assert.Equal(t, v1alpha1.HostOperatorConfigSpec{}, configSpec)
+	assert.Equal(t, v1alpha1.HostConfig{}, configSpec)
 }
 
 func TestReconcileWhenHostOperatorConfigIsNotPresent(t *testing.T) {
@@ -85,7 +86,7 @@ func TestReconcileWhenHostOperatorConfigIsNotPresent(t *testing.T) {
 	require.NoError(t, err)
 	configSpec, err := GetConfig(NewFakeClient(t), HostOperatorNs)
 	require.NoError(t, err)
-	assert.Equal(t, v1alpha1.HostOperatorConfigSpec{}, configSpec)
+	assert.Equal(t, v1alpha1.HostConfig{}, configSpec)
 }
 
 func newRequest() reconcile.Request {

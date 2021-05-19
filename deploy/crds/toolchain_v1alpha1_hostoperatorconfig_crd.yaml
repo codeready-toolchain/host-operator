@@ -61,8 +61,6 @@ spec:
                           max number of UserAccounts in member cluster
                         type: object
                         x-kubernetes-map-type: atomic
-                    required:
-                    - overall
                     type: object
                   resourceCapacityThreshold:
                     description: Contains threshold (in percentage of usage) that
@@ -81,17 +79,12 @@ spec:
                           mapped by their names
                         type: object
                         x-kubernetes-map-type: atomic
-                    required:
-                    - defaultThreshold
                     type: object
-                required:
-                - enabled
                 type: object
               deactivation:
                 description: Keeps parameters concerned with user deactivation
                 properties:
                   deactivatingNotificationDays:
-                    default: 3
                     description: DeactivatingNotificationDays is the number of days
                       after a pre-deactivating notification is sent that actual deactivation
                       occurs.  If this parameter is set to zero, then there will be

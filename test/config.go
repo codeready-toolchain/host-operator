@@ -8,7 +8,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 )
 
-func NewHostOperatorConfigWithReset(t *testing.T, options ...test.HostOperatorConfigOption) *v1alpha1.HostOperatorConfig {
+func NewHostOperatorConfigWithReset(t *testing.T, options ...test.HostConfigOption) *v1alpha1.HostOperatorConfig {
 	t.Cleanup(hostoperatorconfig.Reset)
 	return test.NewHostOperatorConfig(options...)
 }
