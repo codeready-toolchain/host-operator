@@ -47,7 +47,7 @@ replace (
 )
 
 replace (
-	github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20210519161842-1f9dccc41174
+	github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20210519171047-bc8f5c0f17d6
 	github.com/codeready-toolchain/toolchain-common => /Users/rajiv/go/src/github.com/codeready-toolchain/toolchain-common
 )
 
