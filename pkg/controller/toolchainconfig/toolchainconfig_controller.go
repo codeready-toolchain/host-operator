@@ -33,13 +33,8 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return add(mgr, r)
 }
 
-// blank assignment to verify that Reconciler implements reconcile.Reconciler
-var _ reconcile.Reconciler = &Reconciler{}
-
 // Reconciler reconciles a ToolchainConfig object
 type Reconciler struct {
-	// This client, initialized using mgr.client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
 	Client client.Client
 	Log    logr.Logger
 }
