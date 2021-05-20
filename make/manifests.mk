@@ -2,6 +2,7 @@
 PATH_TO_CD_GENERATE_FILE=scripts/generate-cd-release-manifests.sh
 PATH_TO_BUNDLE_FILE=scripts/push-bundle-and-index-image.sh
 PATH_TO_RECOVERY_FILE=scripts/recover-operator-dir.sh
+PATH_TO_OLM_GENERATE_FILE=scripts/olm-catalog-generate.sh
 
 TMP_DIR?=/tmp
 IMAGE_BUILDER?=docker

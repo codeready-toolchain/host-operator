@@ -242,7 +242,7 @@ func newExpectedMur(tier *v1alpha1.NSTemplateTier, userSignup *v1alpha1.UserSign
 			},
 		},
 		Spec: v1alpha1.MasterUserRecordSpec{
-			UserID:        userSignup.Spec.UserID,
+			UserID:        userSignup.Spec.Userid,
 			Banned:        false,
 			Disabled:      false,
 			Deprovisioned: false,

@@ -81,7 +81,7 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserAccounts: userAccounts,
-			UserID:       userSignup.Spec.UserID,
+			UserID:       userSignup.Spec.Userid,
 		},
 	}
 	return mur, nil
