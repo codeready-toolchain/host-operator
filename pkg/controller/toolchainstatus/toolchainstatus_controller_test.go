@@ -11,8 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/api/pkg/apis"
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
@@ -64,7 +63,7 @@ const respBodyBad = `{"alive":false,"environment":"dev","revision":"64af1be5c601
 func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTPClient,
 	memberClusters []string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
-	err := apis.AddToScheme(s)
+	err := toolchainv1alpha1.AddToScheme(s)
 	require.NoError(t, err)
 	fakeClient := test.NewFakeClient(t, initObjs...)
 	hostConfig, err := configuration.LoadConfig(fakeClient)

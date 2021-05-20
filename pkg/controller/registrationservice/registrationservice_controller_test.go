@@ -6,8 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/api/pkg/apis"
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/host-operator/test"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
@@ -28,7 +27,7 @@ import (
 func TestReconcileRegistrationService(t *testing.T) {
 	// given
 	s := scheme.Scheme
-	err := apis.AddToScheme(s)
+	err := v1alpha1.AddToScheme(s)
 	require.NoError(t, err)
 	codecFactory := serializer.NewCodecFactory(s)
 	decoder := codecFactory.UniversalDeserializer()

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 
 	"k8s.io/apimachinery/pkg/types"

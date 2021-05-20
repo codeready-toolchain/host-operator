@@ -6,7 +6,7 @@ require (
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20210517121035-8c0bded20a9d
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
-	github.com/go-logr/logr v0.1.0
+	github.com/go-logr/logr v0.4.0
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
@@ -39,10 +39,16 @@ require (
 	sigs.k8s.io/controller-runtime v0.6.0
 )
 
+replace github.com/codeready-toolchain/api => github.com/matousjobanek/api v0.0.0-20210520100306-bffff6b38043
+
+replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20210520100350-fca58f9efe91
+
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
+	github.com/go-logr/logr => github.com/go-logr/logr v0.1.0
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20200821140346-b94c46af3f2b // Using 'github.com/openshift/api@release-4.5'
 	k8s.io/client-go => k8s.io/client-go v0.18.3 // Required by prometheus-operator
+	k8s.io/klog/v2 => k8s.io/klog/v2 v2.0.0
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6 // avoids case-insensitive import collision: "github.com/googleapis/gnostic/openapiv2" and "github.com/googleapis/gnostic/OpenAPIv2"
 )
 

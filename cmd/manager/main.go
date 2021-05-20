@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	api "github.com/codeready-toolchain/api/pkg/apis"
+	api "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/changetierrequest"

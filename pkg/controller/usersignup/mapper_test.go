@@ -9,8 +9,8 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/require"
