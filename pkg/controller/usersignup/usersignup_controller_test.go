@@ -1697,7 +1697,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 		require.NoError(t, err)
 		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
-		assert.Equal(t, "active", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 
 		// Confirm the status is still set correctly
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -1710,6 +1710,16 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 				Reason: "",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserIsActive",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
 			})
 
 		murs := &v1alpha1.MasterUserRecordList{}
