@@ -23,7 +23,7 @@ func (a AutoApprovalConfig) IsEnabled() bool {
 }
 
 func (a AutoApprovalConfig) ResourceCapacityThresholdDefault() int {
-	return getInt(a.approval.ResourceCapacityThreshold.DefaultThreshold, 0)
+	return getInt(a.approval.ResourceCapacityThreshold.DefaultThreshold, 80)
 }
 
 func (a AutoApprovalConfig) ResourceCapacityThresholdSpecificPerMemberCluster() map[string]int {
