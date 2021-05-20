@@ -31,7 +31,7 @@ func (a AutoApprovalConfig) ResourceCapacityThresholdSpecificPerMemberCluster() 
 }
 
 func (a AutoApprovalConfig) MaxNumberOfUsersOverall() int {
-	return getInt(a.approval.MaxNumberOfUsers.Overall, 0)
+	return getInt(a.approval.MaxNumberOfUsers.Overall, 1000)
 }
 
 func (a AutoApprovalConfig) MaxNumberOfUsersSpecificPerMemberCluster() map[string]int {
