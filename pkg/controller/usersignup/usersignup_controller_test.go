@@ -1654,19 +1654,20 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 }
 
 func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
+	// given
 	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Userid:   "UserID123",
 			Username: "edward.jones@redhat.com",
-			States:   []v1alpha1.UserSignupState{v1alpha1.UserSignupStateDeactivated},
+			States:   []v1alpha1.UserSignupState{v1alpha1.UserSignupStateApproved},
 		},
 		Status: v1alpha1.UserSignupStatus{
 			Conditions: []v1alpha1.Condition{
 				{
 					Type:   v1alpha1.UserSignupComplete,
-					Status: v1.ConditionFalse,
-					Reason: "Deactivating",
+					Status: v1.ConditionTrue,
+					Reason: "",
 				},
 				{
 					Type:   v1alpha1.UserSignupApproved,
@@ -1679,15 +1680,50 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 	}
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
+
+	mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(test.HostOperatorNs))
+	mur.Labels = map[string]string{
+		v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
+		v1alpha1.UserSignupStateLabelKey:       "approved",
+	}
+
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
-	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
-		// given
-		mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(test.HostOperatorNs))
-		mur.Labels = map[string]string{
-			v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
-			v1alpha1.UserSignupStateLabelKey:       "approved",
-		}
+	t.Run("when MUR exists and not deactivated, nothing should happen", func(t *testing.T) {
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		_, err := r.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+		err = r.Client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+		assert.Equal(t, "active", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
+
+		// Confirm the status is still set correctly
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: "",
+			})
+
+		murs := &v1alpha1.MasterUserRecordList{}
+
+		// The MUR should have not been deleted
+		err = r.Client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+	})
+
+	t.Run("when UserSignup deactivated and MUR exists, then it should be deleted", func(t *testing.T) {
+
+		// Given
+		states.SetDeactivated(userSignup, true)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(WithHost(WithMasterUserRecordCount(1))))
@@ -1716,6 +1752,16 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 					Type:   v1alpha1.UserSignupComplete,
 					Status: v1.ConditionFalse,
 					Reason: "Deactivating",
+				},
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+					Status: v1.ConditionFalse,
+					Reason: "UserNotInPreDeactivation",
+				},
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+					Status: v1.ConditionFalse,
+					Reason: "UserIsActive",
 				})
 
 			murs := &v1alpha1.MasterUserRecordList{}
@@ -1755,6 +1801,11 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 					Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 					Status: v1.ConditionTrue,
 					Reason: "NotificationCRCreated",
+				},
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+					Status: v1.ConditionFalse,
+					Reason: "UserNotInPreDeactivation",
 				})
 			// metrics should be the same after the 2nd reconcile
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)

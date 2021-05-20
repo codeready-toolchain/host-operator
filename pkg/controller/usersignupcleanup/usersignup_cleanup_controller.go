@@ -79,7 +79,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// TODO remove this after migration complete
 	// Migrate the Approved property
-	if instance.Spec.Approved && !states.Approved(instance) {
+	/*if instance.Spec.Approved && !states.Approved(instance) {
 		states.SetApproved(instance, true)
 
 		// We don't want this migration to run more than once
@@ -91,9 +91,9 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		// Return from reconciliation if the UserSignup was migrated, the change in UserSignup will
 		// trigger another reconciliation
 		return reconcile.Result{}, nil
-	}
+	}*/
 
-	if states.VerificationRequired(instance) && !states.Approved(instance) {
+	if states.VerificationRequired(instance) && !(states.Approved(instance) || instance.Spec.Approved) {
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
 

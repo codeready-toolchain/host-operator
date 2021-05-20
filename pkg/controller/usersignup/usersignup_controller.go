@@ -132,6 +132,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// TODO remove this after migration complete
 	// Migrate the Approved property
 	if userSignup.Spec.Approved && !states.Approved(userSignup) {
+		logger.Info("Migrating UserSignup")
 		states.SetApproved(userSignup, true)
 
 		// We don't want this migration to run more than once
@@ -315,6 +316,8 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *
 			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
 				return true, err
 			}
+			// We set the inProgressStatusUpdater parameter here to setStatusDeactivating, as a temporary status before
+			// the main reconcile function completes the deactivation process
 			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusDeactivating, r.setStatusFailedToDeleteMUR)
 		}
 
