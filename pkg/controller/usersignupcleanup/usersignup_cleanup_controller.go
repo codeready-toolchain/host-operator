@@ -77,22 +77,6 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
-	// TODO remove this after migration complete
-	// Migrate the Approved property
-	/*if instance.Spec.Approved && !states.Approved(instance) {
-		states.SetApproved(instance, true)
-
-		// We don't want this migration to run more than once
-		instance.Spec.Approved = false
-
-		if err := r.Client.Update(context.TODO(), instance); err != nil {
-			return reconcile.Result{}, err
-		}
-		// Return from reconciliation if the UserSignup was migrated, the change in UserSignup will
-		// trigger another reconciliation
-		return reconcile.Result{}, nil
-	}*/
-
 	if states.VerificationRequired(instance) && !(states.Approved(instance) || instance.Spec.Approved) {
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
