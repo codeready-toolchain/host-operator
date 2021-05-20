@@ -61,6 +61,15 @@ func (a *CounterAssertion) HaveUsersPerActivations(expected v1alpha1.Metric) *Co
 	return a
 }
 
+func (a *CounterAssertion) HaveMasterUserRecordsPerDomain(expected v1alpha1.Metric) *CounterAssertion {
+	actual := a.counts.MasterUserRecordPerDomainCounts
+	assert.Equal(a.t, map[string]int(expected), actual, "invalid counter values")
+	for domain, count := range expected {
+		AssertMetricsGaugeEquals(a.t, count, metrics.MasterUserRecordGaugeVec.WithLabelValues(domain), "invalid gauge value for domain '%v'", domain)
+	}
+	return a
+}
+
 func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster string) []runtime.Object {
 	murs := make([]runtime.Object, number)
 	for index := range murs {
