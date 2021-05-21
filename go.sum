@@ -624,10 +624,10 @@ github.com/mailru/easyjson v0.7.1 h1:mdxE1MF9o53iCb2Ghj1VfWvh7ZOwHpnVG/xwXrV90U8
 github.com/mailru/easyjson v0.7.1/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7ldAVICs=
 github.com/markbates/inflect v1.0.4/go.mod h1:1fR9+pO2KHEO9ZRtto13gDwwZaAKstQzferVeWqbgNs=
 github.com/marstr/guid v1.1.0/go.mod h1:74gB1z2wpxxInTG6yaqA7KrtM0NZ+RbrcqDvYHefzho=
-github.com/matousjobanek/api v0.0.0-20210520100306-bffff6b38043 h1:FrCL5fGboLnw/8pzb+2tl5rOGmocaQnlVw+ZVbXirgY=
-github.com/matousjobanek/api v0.0.0-20210520100306-bffff6b38043/go.mod h1:Tk3X/k80o6hKIVlhaBoTRWpECEnZYWZcJdYMGV1pZvE=
-github.com/matousjobanek/toolchain-common v0.0.0-20210520100350-fca58f9efe91 h1:ErTmzG5H1oa/Eas5PAwCJZzPTzqUZn+9B6JEcf5SLXI=
-github.com/matousjobanek/toolchain-common v0.0.0-20210520100350-fca58f9efe91/go.mod h1:QjU7LhHgonkPxMQMgXmoyR9o7//i8caVIFrMaO9qKvM=
+github.com/matousjobanek/api v0.0.0-20210521080009-872e73020eff h1:YfHt1MpDDqdovcvxgXZh/FglkRwX10BwFlARE7wyTro=
+github.com/matousjobanek/api v0.0.0-20210521080009-872e73020eff/go.mod h1:Tk3X/k80o6hKIVlhaBoTRWpECEnZYWZcJdYMGV1pZvE=
+github.com/matousjobanek/toolchain-common v0.0.0-20210521080611-9ec9bdeaa4e4 h1:zAgG1epyRt40jLw9bxUKuBE8xeszXxphi8Z2mOP+w2Q=
+github.com/matousjobanek/toolchain-common v0.0.0-20210521080611-9ec9bdeaa4e4/go.mod h1:Pr6I+qFRtVeRFkQM/jYT2DnuCKC1Cqe3OvGj5pCgHXY=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-colorable v0.1.2/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
 github.com/mattn/go-colorable v0.1.4/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=

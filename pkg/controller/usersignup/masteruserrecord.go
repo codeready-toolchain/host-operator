@@ -37,7 +37,7 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 			changed = true
 		}
 	}
-	// migration for CRT-1075: add an annotation with the email address (same as for associated UserSignup resource)
+	// TODO: remove as part of CRT-1074
 	if mur.Annotations == nil || mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey] == "" {
 		if mur.Annotations == nil {
 			mur.Annotations = map[string]string{}

@@ -293,6 +293,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *
 			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
 				return true, err
 			}
+			reqLogger.Info("deleting MasterUserRecord since user has been banned")
 			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusBanning, r.setStatusFailedToDeleteMUR)
 		}
 
@@ -302,6 +303,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *
 			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
 				return true, err
 			}
+			reqLogger.Info("deleting MasterUserRecord since user has been deactivated")
 			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusDeactivating, r.setStatusFailedToDeleteMUR)
 		}
 
@@ -388,7 +390,7 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *t
 		return err
 	}
 
-	// look-up the `basic` NSTemplateTier to get the NS templates
+	// look-up the `base` NSTemplateTier to get the NS templates
 	nstemplateTier, err := getNsTemplateTier(r.Client, defaultTierName, userSignup.Namespace)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
@@ -398,24 +400,24 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *t
 	return r.provisionMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, reqLogger)
 }
 
-func (r *Reconciler) setStateLabel(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, value string) error {
-	oldValue := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
-	if oldValue == value {
+func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, state string) error {
+	oldState := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
+	if oldState == state {
 		// skipping
 		return nil
 	}
-	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = value
+	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = state
 	activations := 0
-	if value == toolchainv1alpha1.UserSignupStateLabelValueApproved {
-		activations = r.updateActivationCounterAnnotation(reqLogger, userSignup)
+	if state == toolchainv1alpha1.UserSignupStateLabelValueApproved {
+		activations = r.updateActivationCounterAnnotation(logger, userSignup)
 	}
 	if err := r.Client.Update(context.TODO(), userSignup); err != nil {
-		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
 			"unable to update state label at UserSignup resource")
 	}
-	updateUserSignupMetricsByState(oldValue, value)
+	updateUserSignupMetricsByState(oldState, state)
 	// increment the counter *only if the client update did not fail*
-	counter.UpdateUsersPerActivationCounters(activations) // will ignore if `activations == 0`
+	counter.UpdateUsersPerActivationCounters(logger, activations) // will ignore if `activations == 0` (ie, if `state` is not `UserSignupStateLabelValueApproved`)
 
 	return nil
 }
@@ -521,7 +523,8 @@ func (r *Reconciler) provisionMasterUserRecord(userSignup *toolchainv1alpha1.Use
 			"Error creating MasterUserRecord")
 	}
 	// increment the counter of MasterUserRecords
-	counter.IncrementMasterUserRecordCount()
+	domain := metrics.GetEmailDomain(mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey])
+	counter.IncrementMasterUserRecordCount(logger, domain)
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
