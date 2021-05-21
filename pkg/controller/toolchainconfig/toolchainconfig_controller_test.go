@@ -107,9 +107,9 @@ func newToolchainConfigWithReset(t *testing.T, options ...HostConfigOption) *v1a
 
 func matchesDefaultConfig(t *testing.T, actual ToolchainConfig) {
 	assert.False(t, actual.AutomaticApproval().IsEnabled())
-	assert.Equal(t, 0, actual.AutomaticApproval().MaxNumberOfUsersOverall())
+	assert.Equal(t, 1000, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 	assert.Empty(t, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-	assert.Equal(t, 0, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
+	assert.Equal(t, 80, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
 	assert.Empty(t, actual.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
 	assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationInDays())
 }

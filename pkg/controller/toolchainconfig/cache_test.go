@@ -24,7 +24,7 @@ func TestCache(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	assert.Equal(t, 0, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
+	assert.Equal(t, 1000, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
 	assert.Empty(t, defaultConfig.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 
 	t.Run("return config that is stored in client", func(t *testing.T) {
@@ -86,7 +86,7 @@ func TestGetConfigFailed(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, 0, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
+		assert.Equal(t, 1000, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
 		assert.Empty(t, defaultConfig.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 
 	})
@@ -103,7 +103,7 @@ func TestGetConfigFailed(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		assert.Equal(t, 0, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
+		assert.Equal(t, 1000, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
 		assert.Empty(t, defaultConfig.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 
 	})

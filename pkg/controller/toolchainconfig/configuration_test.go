@@ -13,9 +13,9 @@ func TestAutomaticApprovalConfig(t *testing.T) {
 		toolchainCfg := ToolchainConfig{cfg: &cfg.Spec}
 
 		assert.False(t, toolchainCfg.AutomaticApproval().IsEnabled())
-		assert.Equal(t, 0, toolchainCfg.AutomaticApproval().MaxNumberOfUsersOverall())
+		assert.Equal(t, 1000, toolchainCfg.AutomaticApproval().MaxNumberOfUsersOverall())
 		assert.Empty(t, toolchainCfg.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-		assert.Equal(t, 0, toolchainCfg.AutomaticApproval().ResourceCapacityThresholdDefault())
+		assert.Equal(t, 80, toolchainCfg.AutomaticApproval().ResourceCapacityThresholdDefault())
 		assert.Empty(t, toolchainCfg.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
 	})
 	t.Run("non-default", func(t *testing.T) {
