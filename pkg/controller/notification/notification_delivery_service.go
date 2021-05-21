@@ -3,7 +3,7 @@ package notification
 import (
 	"bytes"
 	"errors"
-	"github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"text/template"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -27,7 +27,7 @@ func (l *DefaultTemplateLoader) GetNotificationTemplate(name string) (*notificat
 }
 
 type DeliveryService interface {
-	Send(notificationCtx Context, notification *v1alpha1.Notification) error
+	Send(notificationCtx Context, notification *toolchainv1alpha1.Notification) error
 }
 
 type DeliveryServiceFactory struct {

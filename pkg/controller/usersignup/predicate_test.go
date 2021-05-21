@@ -3,7 +3,6 @@ package usersignup
 import (
 	"testing"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -19,7 +18,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	pred := &UserSignupChangedPredicate{}
 	userSignupName := uuid.NewV4().String()
 
-	userSignupOld := &v1alpha1.UserSignup{
+	userSignupOld := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userSignupName,
 			Namespace: test.HostOperatorNs,
@@ -31,12 +30,12 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			},
 			Generation: 1,
 		},
-		Spec: v1alpha1.UserSignupSpec{
+		Spec: toolchainv1alpha1.UserSignupSpec{
 			Username: "foo@redhat.com",
 		},
 	}
 
-	userSignupNewNotChanged := &v1alpha1.UserSignup{
+	userSignupNewNotChanged := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userSignupName,
 			Namespace: test.HostOperatorNs,
@@ -48,12 +47,12 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			},
 			Generation: 1,
 		},
-		Spec: v1alpha1.UserSignupSpec{
+		Spec: toolchainv1alpha1.UserSignupSpec{
 			Username: "alice.mayweather.doe@redhat.com",
 		},
 	}
 
-	userSignupNewChanged := &v1alpha1.UserSignup{
+	userSignupNewChanged := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userSignupName,
 			Namespace: test.HostOperatorNs,
@@ -65,7 +64,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			},
 			Generation: 2,
 		},
-		Spec: v1alpha1.UserSignupSpec{
+		Spec: toolchainv1alpha1.UserSignupSpec{
 			Username: "alice.mayweather.doe@redhat.com",
 		},
 	}

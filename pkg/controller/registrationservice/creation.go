@@ -3,7 +3,7 @@ package registrationservice
 import (
 	"strings"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,12 +20,12 @@ func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace 
 		envs[strings.TrimPrefix(key, configuration.RegServiceEnvPrefix+"_")] = value
 	}
 
-	regService := &v1alpha1.RegistrationService{
+	regService := &toolchainv1alpha1.RegistrationService{
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: namespace,
 			Name:      ResourceName,
 		},
-		Spec: v1alpha1.RegistrationServiceSpec{
+		Spec: toolchainv1alpha1.RegistrationServiceSpec{
 			EnvironmentVariables: envs,
 		}}
 	commonclient := commonclient.NewApplyClient(client, s)

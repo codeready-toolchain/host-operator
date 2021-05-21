@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/test"
@@ -49,12 +49,12 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 	t.Run("update to RegService with image, environment and auth client values set", func(t *testing.T) {
 		// given
-		regService := &v1alpha1.RegistrationService{
+		regService := &toolchainv1alpha1.RegistrationService{
 			ObjectMeta: v1.ObjectMeta{
 				Namespace: HostOperatorNs,
 				Name:      "registration-service",
 			},
-			Spec: v1alpha1.RegistrationServiceSpec{
+			Spec: toolchainv1alpha1.RegistrationServiceSpec{
 				EnvironmentVariables: map[string]string{
 					"IMAGE": "quay.io/rh/registration-service:some-old",
 				},

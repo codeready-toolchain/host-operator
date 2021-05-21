@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -68,7 +68,7 @@ func TestReconcileWhenReturnsError(t *testing.T) {
 	require.Error(t, err)
 	configSpec, err := GetConfig(NewFakeClient(t), HostOperatorNs)
 	require.NoError(t, err)
-	assert.Equal(t, v1alpha1.HostOperatorConfigSpec{}, configSpec)
+	assert.Equal(t, toolchainv1alpha1.HostOperatorConfigSpec{}, configSpec)
 }
 
 func TestReconcileWhenHostOperatorConfigIsNotPresent(t *testing.T) {
@@ -85,7 +85,7 @@ func TestReconcileWhenHostOperatorConfigIsNotPresent(t *testing.T) {
 	require.NoError(t, err)
 	configSpec, err := GetConfig(NewFakeClient(t), HostOperatorNs)
 	require.NoError(t, err)
-	assert.Equal(t, v1alpha1.HostOperatorConfigSpec{}, configSpec)
+	assert.Equal(t, toolchainv1alpha1.HostOperatorConfigSpec{}, configSpec)
 }
 
 func newRequest() reconcile.Request {

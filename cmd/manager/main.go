@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	api "github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/changetierrequest"
@@ -363,7 +363,7 @@ func serveCRMetrics(cfg *rest.Config, operatorNs string) error { //nolint:unused
 	// The function below returns a list of filtered operator/CR specific GVKs. For more control, override the GVK list below
 	// with your own custom logic. Note that if you are adding third party API schemas, probably you will need to
 	// customize this implementation to avoid permissions issues.
-	filteredGVK, err := k8sutil.GetGVKsFromAddToScheme(api.AddToScheme)
+	filteredGVK, err := k8sutil.GetGVKsFromAddToScheme(toolchainv1alpha1.AddToScheme)
 	if err != nil {
 		return err
 	}

@@ -9,7 +9,6 @@ import (
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -27,9 +26,9 @@ const (
 
 func TestNotificationContext(t *testing.T) {
 	// given
-	userSignup := &v1alpha1.UserSignup{
+	userSignup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta("john", "jsmith@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
+		Spec: toolchainv1alpha1.UserSignupSpec{
 			Username:      "jsmith@redhat.com",
 			Approved:      true,
 			TargetCluster: "east",

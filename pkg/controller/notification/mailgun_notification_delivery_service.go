@@ -3,7 +3,7 @@ package notification
 import (
 	"context"
 	"fmt"
-	"github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"time"
 
 	"github.com/mailgun/mailgun-go/v4"
@@ -64,7 +64,7 @@ func NewMailgunNotificationDeliveryService(config DeliveryServiceFactoryConfig, 
 	}
 }
 
-func (s *MailgunNotificationDeliveryService) Send(notificationCtx Context, notification *v1alpha1.Notification) error {
+func (s *MailgunNotificationDeliveryService) Send(notificationCtx Context, notification *toolchainv1alpha1.Notification) error {
 
 	var subject, body string
 

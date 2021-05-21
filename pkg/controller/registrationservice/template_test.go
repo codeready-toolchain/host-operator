@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
 	"github.com/stretchr/testify/assert"
@@ -62,8 +62,8 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 	assert.True(t, roleBindingFound, "a RoleBinding wasn't found")
 }
 
-func newRegistrationService(namespace, image, env string, replicas int) *v1alpha1.RegistrationService {
-	return &v1alpha1.RegistrationService{
+func newRegistrationService(namespace, image, env string, replicas int) *toolchainv1alpha1.RegistrationService {
+	return &toolchainv1alpha1.RegistrationService{
 		TypeMeta: metav1.TypeMeta{
 			Kind: "RegistrationService",
 		},
@@ -71,7 +71,7 @@ func newRegistrationService(namespace, image, env string, replicas int) *v1alpha
 			Namespace: namespace,
 			Name:      "registration-service",
 		},
-		Spec: v1alpha1.RegistrationServiceSpec{
+		Spec: toolchainv1alpha1.RegistrationServiceSpec{
 			EnvironmentVariables: map[string]string{
 				"IMAGE":       image,
 				"ENVIRONMENT": env,

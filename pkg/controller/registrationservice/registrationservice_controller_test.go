@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/host-operator/test"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
@@ -27,7 +27,7 @@ import (
 func TestReconcileRegistrationService(t *testing.T) {
 	// given
 	s := scheme.Scheme
-	err := v1alpha1.AddToScheme(s)
+	err := toolchainv1alpha1.AddToScheme(s)
 	require.NoError(t, err)
 	codecFactory := serializer.NewCodecFactory(s)
 	decoder := codecFactory.UniversalDeserializer()
@@ -140,7 +140,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 	t.Run("status update of the RegistrationService failed", func(t *testing.T) {
 		// given
 		service, _ := prepareServiceAndRequest(t, s, decoder, reqService)
-		statusUpdater := func(regServ *v1alpha1.RegistrationService, message string) error {
+		statusUpdater := func(regServ *toolchainv1alpha1.RegistrationService, message string) error {
 			return fmt.Errorf("unable to update status")
 		}
 

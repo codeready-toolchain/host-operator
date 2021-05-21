@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -133,7 +133,7 @@ func TestUpdateUsersPerActivationMetric(t *testing.T) {
 	counter.UpdateUsersPerActivationCounters(2) // a user signup twice (hence counter for "1" will be decreased)
 
 	// then
-	AssertThatCounters(t).HaveUsersPerActivations(v1alpha1.Metric{
+	AssertThatCounters(t).HaveUsersPerActivations(toolchainv1alpha1.Metric{
 		"1": 0,
 		"2": 1,
 	})
@@ -150,7 +150,7 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(13)),
 		WithMember("member-1", WithUserAccountCount(10)),
 		WithMember("member-2", WithUserAccountCount(3)),
-		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 0,
 			"2": 1,
 		}))
@@ -194,7 +194,7 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 	AssertThatCounters(t).HaveMasterUserRecords(12).
 		HaveUserAccountsForCluster("member-1", 9).
 		HaveUserAccountsForCluster("member-2", 3).
-		HaveUsersPerActivations(v1alpha1.Metric{
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 0,
 			"2": 1,
 		})
@@ -230,7 +230,7 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	AssertThatCounters(t).
 		HaveMasterUserRecords(3).
 		HaveUserAccountsForCluster("member-1", 3).
-		HaveUsersPerActivations(v1alpha1.Metric{
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
 			"2": 1,
 			"3": 1,
@@ -238,7 +238,7 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(3).
 		HasUserAccountCount("member-1", 3).
-		HasUsersPerActivations(v1alpha1.Metric{
+		HasUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
 			"2": 1,
 			"3": 1,
@@ -356,7 +356,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	AssertThatCounters(t).HaveMasterUserRecords(12).
 		HaveUserAccountsForCluster("member-1", 12).
 		HaveUserAccountsForCluster("member-2", 2).
-		HaveUsersPerActivations(v1alpha1.Metric{
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2,
 			"2": 1000,
 		})
@@ -364,7 +364,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		HasMurCount(12).
 		HasUserAccountCount("member-1", 12).
 		HasUserAccountCount("member-2", 2).
-		HasUsersPerActivations(v1alpha1.Metric{
+		HasUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2,
 			"2": 1000,
 		})

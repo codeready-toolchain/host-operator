@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/api/api/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -70,7 +70,7 @@ func TestGetOldestPendingApproval(t *testing.T) {
 	})
 }
 
-func approve(t *testing.T, cl *test.FakeClient, signup *v1alpha1.UserSignup) {
+func approve(t *testing.T, cl *test.FakeClient, signup *toolchainv1alpha1.UserSignup) {
 	WithStateLabel("approved")(signup)
 	err := cl.Update(context.TODO(), signup)
 	require.NoError(t, err)
@@ -148,7 +148,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T)
 			latch.Wait()
 			pending1 := NewUserSignup(WithStateLabel("pending"))
 			pending2 := NewUserSignup(WithStateLabel("pending"))
-			allSingups := []*v1alpha1.UserSignup{
+			allSingups := []*toolchainv1alpha1.UserSignup{
 				NewUserSignup(WithStateLabel("not-ready")),
 				NewUserSignup(WithStateLabel("deactivated")),
 				NewUserSignup(WithStateLabel("approved")),
@@ -160,8 +160,8 @@ func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T)
 				require.NoError(t, err)
 			}
 
-			for _, pending := range []*v1alpha1.UserSignup{pending1, pending2} {
-				go func(toApprove *v1alpha1.UserSignup) {
+			for _, pending := range []*toolchainv1alpha1.UserSignup{pending1, pending2} {
+				go func(toApprove *toolchainv1alpha1.UserSignup) {
 					defer waitForFinished.Done()
 					oldestPendingApproval := cache.getOldestPendingApproval(test.HostOperatorNs)
 					require.NotNil(t, oldestPendingApproval)
