@@ -48,7 +48,7 @@ replace (
 
 replace (
 	github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20210521051601-43fe69c13d73
-	github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20210521052240-9a1d2b7b592b
+	github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20210521053253-c647f56612e6
 )
 
 go 1.14
