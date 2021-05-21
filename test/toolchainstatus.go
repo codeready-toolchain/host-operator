@@ -82,12 +82,12 @@ func WithRoutes(consoleURL, cheURL string, condition toolchainv1alpha1.Condition
 	}
 }
 
-func WithMetric(key string, value toolchainv1alpha1.Metric) ToolchainStatusOption {
+func WithMetric(key string, metric toolchainv1alpha1.Metric) ToolchainStatusOption {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {
 		if status.Status.Metrics == nil {
 			status.Status.Metrics = map[string]toolchainv1alpha1.Metric{}
 		}
-		status.Status.Metrics[key] = value
+		status.Status.Metrics[key] = metric
 	}
 }
 

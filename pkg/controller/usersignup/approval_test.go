@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -20,6 +22,13 @@ func TestGetClusterIfApproved(t *testing.T) {
 	signup := NewUserSignup()
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1500)),
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
+			string(metrics.Internal): 100,
+			string(metrics.External): 1400,
+		}),
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+			"1": 1500,
+		}),
 		WithMember("member1", WithUserAccountCount(800), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
 		WithMember("member2", WithUserAccountCount(700), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
 
