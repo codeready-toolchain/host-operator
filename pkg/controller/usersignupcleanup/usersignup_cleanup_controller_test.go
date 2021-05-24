@@ -3,6 +3,10 @@ package usersignupcleanup
 import (
 	"context"
 	"fmt"
+	"github.com/redhat-cop/operator-utils/pkg/util"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 	"time"
 
@@ -141,6 +145,53 @@ func TestUserCleanup(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, userSignup)
 		require.False(t, res.Requeue)
+	})
+
+	t.Run("test propagation policy", func(t *testing.T) {
+		userSignup := test2.NewUserSignup(
+			test2.CreatedBefore(threeYears),
+			test2.VerificationRequired(),
+		)
+
+		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
+
+		fakeClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+
+			for _, opt := range(opts){
+				val := reflect.ValueOf(opt).Elem()
+				deletionPropagation := val.FieldByName("PropagationPolicy").Interface().(*v1.DeletionPropagation)
+				if *deletionPropagation == "Foreground" {
+					if obj, ok := obj.(*v1alpha1.UserSignup); ok {
+						util.AddFinalizer(obj, "foregroundDeletion")
+						if err := r.Client.Update(context.TODO(), obj); err != nil {
+							return err
+						}
+						return nil
+					}
+					return fmt.Errorf("object is not of type userSignup")
+				}
+			}
+			return fmt.Errorf("Deletion Propagation policy is not of type Foreground.")
+		}
+
+		_, err := r.Reconcile(req)
+		require.NoError(t, err)
+
+		// Confirm the UserSignup has finalizer set
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		require.NoError(t, r.Client.Get(context.Background(), key, userSignup))
+		require.Equal(t, userSignup.Finalizers[0], "foregroundDeletion")
+
+		// now remove finalizer, reset MockDelete to nil and call reconcile
+		util.RemoveFinalizer(userSignup, "foregroundDeletion")
+		require.NoError(t, r.Client.Update(context.TODO(), userSignup))
+		fakeClient.MockDelete = nil
+
+		_, err = r.Reconcile(req)
+		require.NoError(t, err)
+
+		// now usersignup should be deleted
+		require.Error(t, r.Client.Get(context.Background(), key, userSignup))
 	})
 
 }
