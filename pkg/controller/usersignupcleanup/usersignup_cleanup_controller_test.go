@@ -171,7 +171,7 @@ func TestUserCleanup(t *testing.T) {
 					return fmt.Errorf("object is not of type userSignup")
 				}
 			}
-			return fmt.Errorf("Deletion Propagation policy is not of type Foreground.")
+			return fmt.Errorf("deletion propagation policy is not of type foreground")
 		}
 
 		_, err := r.Reconcile(req)
