@@ -157,7 +157,7 @@ func TestUserCleanup(t *testing.T) {
 
 		fakeClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 
-			for _, opt := range(opts){
+			for _, opt := range opts {
 				val := reflect.ValueOf(opt).Elem()
 				deletionPropagation := val.FieldByName("PropagationPolicy").Interface().(*v1.DeletionPropagation)
 				if *deletionPropagation == "Foreground" {
