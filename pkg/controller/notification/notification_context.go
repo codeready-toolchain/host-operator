@@ -2,6 +2,7 @@ package notification
 
 type Context interface {
 	DeliveryEmail() string
+	KeysAndValues() []interface{}
 }
 
 // AdminNotificationContext is used to generate a notification for sending to an admin mailing list
@@ -21,4 +22,10 @@ func NewAdminNotificationContext(adminEmail string) *AdminNotificationContext {
 
 func (c *AdminNotificationContext) DeliveryEmail() string {
 	return c.AdminEmail
+}
+
+func (c *AdminNotificationContext) KeysAndValues() []interface{} {
+	return []interface{}{
+		"DeliveryEmail", c.DeliveryEmail(),
+	}
 }
