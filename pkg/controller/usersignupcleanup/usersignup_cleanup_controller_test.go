@@ -3,6 +3,9 @@ package usersignupcleanup
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 	"time"
 
@@ -141,6 +144,29 @@ func TestUserCleanup(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, userSignup)
 		require.False(t, res.Requeue)
+	})
+
+	t.Run("test propagation policy", func(t *testing.T) {
+		userSignup := test2.NewUserSignup(
+			test2.CreatedBefore(threeYears),
+			test2.VerificationRequired(),
+		)
+
+		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
+		deleted := false
+		fakeClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+			deleted = true
+			require.Len(t, opts, 1)
+			deleteOptions, ok := opts[0].(*client.DeleteOptions)
+			require.True(t, ok)
+			require.NotNil(t, deleteOptions)
+			require.NotNil(t, deleteOptions.PropagationPolicy)
+			assert.Equal(t, v1.DeletePropagationForeground, *deleteOptions.PropagationPolicy)
+			return nil
+		}
+		_, err := r.Reconcile(req)
+		require.NoError(t, err)
+		assert.True(t, deleted)
 	})
 
 }

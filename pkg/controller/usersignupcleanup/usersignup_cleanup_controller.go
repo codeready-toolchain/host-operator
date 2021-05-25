@@ -2,6 +2,7 @@ package usersignupcleanup
 
 import (
 	"context"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -134,8 +135,10 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 // DeleteUserSignup deletes the specified UserSignup
 func (r *Reconciler) DeleteUserSignup(userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger) error {
-
-	err := r.Client.Delete(context.TODO(), userSignup)
+	propagationPolicy := metav1.DeletePropagationForeground
+	err := r.Client.Delete(context.TODO(), userSignup, &client.DeleteOptions{
+		PropagationPolicy: &propagationPolicy,
+	})
 	if err != nil {
 		return err
 	}
