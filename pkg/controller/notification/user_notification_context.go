@@ -63,3 +63,15 @@ func (c *UserNotificationContext) DeliveryEmail() string {
 		c.LastName,
 		c.UserEmail)
 }
+
+func (c *UserNotificationContext) KeysAndValues() []interface{} {
+	return []interface{}{
+		"UserID", c.UserID,
+		"UserEmail", c.UserEmail,
+		"DeliveryEmail", c.DeliveryEmail(),
+		"FirstName", c.FirstName,
+		"LastName", c.LastName,
+		"CompanyName", c.CompanyName,
+		"RegistrationURL", c.RegistrationURL,
+	}
+}
