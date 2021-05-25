@@ -3,9 +3,8 @@ package usersignupcleanup
 import (
 	"context"
 	"fmt"
-	"github.com/redhat-cop/operator-utils/pkg/util"
+	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 	"time"
@@ -154,44 +153,20 @@ func TestUserCleanup(t *testing.T) {
 		)
 
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
-
+		deleted := false
 		fakeClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
-
-			for _, opt := range opts {
-				val := reflect.ValueOf(opt).Elem()
-				deletionPropagation := val.FieldByName("PropagationPolicy").Interface().(*v1.DeletionPropagation)
-				if *deletionPropagation == "Foreground" {
-					if obj, ok := obj.(*v1alpha1.UserSignup); ok {
-						util.AddFinalizer(obj, "foregroundDeletion")
-						if err := r.Client.Update(context.TODO(), obj); err != nil {
-							return err
-						}
-						return nil
-					}
-					return fmt.Errorf("object is not of type userSignup")
-				}
-			}
-			return fmt.Errorf("deletion propagation policy is not of type foreground")
+			deleted = true
+			require.Len(t, opts, 1)
+			deleteOptions, ok := opts[0].(*client.DeleteOptions)
+			require.True(t, ok)
+			require.NotNil(t, deleteOptions)
+			require.NotNil(t, deleteOptions.PropagationPolicy)
+			assert.Equal(t, v1.DeletePropagationForeground, *deleteOptions.PropagationPolicy)
+			return nil
 		}
-
 		_, err := r.Reconcile(req)
 		require.NoError(t, err)
-
-		// Confirm the UserSignup has finalizer set
-		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		require.NoError(t, r.Client.Get(context.Background(), key, userSignup))
-		require.Equal(t, userSignup.Finalizers[0], "foregroundDeletion")
-
-		// now remove finalizer, reset MockDelete to nil and call reconcile
-		util.RemoveFinalizer(userSignup, "foregroundDeletion")
-		require.NoError(t, r.Client.Update(context.TODO(), userSignup))
-		fakeClient.MockDelete = nil
-
-		_, err = r.Reconcile(req)
-		require.NoError(t, err)
-
-		// now usersignup should be deleted
-		require.Error(t, r.Client.Get(context.Background(), key, userSignup))
+		assert.True(t, deleted)
 	})
 
 }
