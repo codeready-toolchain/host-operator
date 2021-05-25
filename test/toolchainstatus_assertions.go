@@ -84,6 +84,14 @@ func (a *ToolchainStatusAssertion) HasUsersPerActivations(expectedMetric toolcha
 	return a
 }
 
+func (a *ToolchainStatusAssertion) HasUsersPerActivationsAndDomain(expectedMetric toolchainv1alpha1.Metric) *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+	require.NotEmpty(a.t, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey])
+	assert.Equal(a.t, expectedMetric, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey])
+	return a
+}
+
 func (a *ToolchainStatusAssertion) HasMasterUserRecordsPerDomain(expectedMetric toolchainv1alpha1.Metric) *ToolchainStatusAssertion {
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)

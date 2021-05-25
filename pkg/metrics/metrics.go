@@ -37,8 +37,10 @@ var (
 var (
 	// UserAccountGaugeVec reflects the current number of master user records in the system, with a label to partition per member cluster
 	UserAccountGaugeVec *prometheus.GaugeVec
-	// UsersPerActivationGaugeVec reflects the number of users labelled with on their current number of activations
+	// UsersPerActivationGaugeVec reflects the number of users labelled with on their current number of activations (DEPRECATED)
 	UsersPerActivationGaugeVec *prometheus.GaugeVec
+	// UsersPerActivationGaugeVec reflects the number of users labelled with on their current number of activations and email address domain
+	UserSignupsPerActivationAndDomainGaugeVec *prometheus.GaugeVec
 	// MasterUserRecordGaugeVec reflects the current number of MasterUserRecords, labelled with their email address domain (`internal` vs `external`)
 	MasterUserRecordGaugeVec *prometheus.GaugeVec
 )
@@ -68,7 +70,9 @@ func initMetrics() {
 	MasterUserRecordGauge = newGauge("master_user_record_current", "Current number of MasterUserRecords")
 	// Gauges with labels
 	UserAccountGaugeVec = newGaugeVec("user_accounts_current", "Current number of UserAccounts (per member cluster)", "cluster_name")
-	UsersPerActivationGaugeVec = newGaugeVec("users_per_activations", "Number of UserSignups per activations", []string{"activations"}...)
+	// DEPRECATED: use `UsersPerActivationAndDomainGaugeVec` instead
+	UsersPerActivationGaugeVec = newGaugeVec("users_per_activations", "Number of UserSignups per activations (deprecated)", []string{"activations"}...)
+	UserSignupsPerActivationAndDomainGaugeVec = newGaugeVec("users_per_activations_and_domain", "Number of UserSignups per activations and domain", []string{"activations", "domain"}...)
 	MasterUserRecordGaugeVec = newGaugeVec("master_user_records", "Number of MasterUserRecords per email address domain ('internal' vs 'external')", "domain")
 	log.Info("custom metrics initialized")
 }

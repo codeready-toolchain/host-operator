@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
@@ -22,7 +23,7 @@ type CounterAssertion struct {
 	counts counter.Counts
 }
 
-func AssertThatCounters(t *testing.T) *CounterAssertion {
+func AssertThatCountersAndMetrics(t *testing.T) *CounterAssertion {
 	counts, err := counter.GetCounts()
 	require.NoError(t, err)
 	return &CounterAssertion{
@@ -57,6 +58,15 @@ func (a *CounterAssertion) HaveUsersPerActivations(expected v1alpha1.Metric) *Co
 	assert.Equal(a.t, map[string]int(expected), actual)
 	for activations, count := range expected {
 		AssertMetricsGaugeEquals(a.t, count, metrics.UsersPerActivationGaugeVec.WithLabelValues(activations))
+	}
+	return a
+}
+
+func (a *CounterAssertion) HaveUsersPerActivationsAndDomain(expected v1alpha1.Metric) *CounterAssertion {
+	actual := a.counts.UserSignupsPerActivationAndDomainCounts
+	assert.Equal(a.t, map[string]int(expected), actual)
+	for key, count := range expected {
+		AssertMetricsGaugeEquals(a.t, count, metrics.UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strings.Split(key, ",")...))
 	}
 	return a
 }

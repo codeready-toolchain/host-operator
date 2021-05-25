@@ -29,6 +29,10 @@ func TestGetClusterIfApproved(t *testing.T) {
 		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1500,
 		}),
+		WithMetric(v1alpha1.UserSignupsPerActivationAndDomainMetricKey, v1alpha1.Metric{
+			"1,internal": 500,
+			"1,external": 1000,
+		}),
 		WithMember("member1", WithUserAccountCount(800), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
 		WithMember("member2", WithUserAccountCount(700), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
 

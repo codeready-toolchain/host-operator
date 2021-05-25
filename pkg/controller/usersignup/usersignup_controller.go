@@ -417,7 +417,9 @@ func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1al
 	}
 	updateUserSignupMetricsByState(oldState, state)
 	// increment the counter *only if the client update did not fail*
-	counter.UpdateUsersPerActivationCounters(logger, activations) // will ignore if `activations == 0` (ie, if `state` is not `UserSignupStateLabelValueApproved`)
+	emailAddress := userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey] // assume the annotation exists. Otherwise, domain will be `external`
+	domain := metrics.GetEmailDomain(emailAddress)
+	counter.UpdateUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
 
 	return nil
 }
