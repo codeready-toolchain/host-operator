@@ -2,8 +2,8 @@ module github.com/codeready-toolchain/host-operator
 
 require (
 	cloud.google.com/go v0.60.0 // indirect
-	github.com/codeready-toolchain/api v0.0.0-20210520133910-ab0d90c32c0b
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20210520134909-6a918dd11401
+	github.com/codeready-toolchain/api v0.0.0-20210525072732-81a688cbd126
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20210525074434-b7d36013dc02
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.4.0
@@ -38,10 +38,6 @@ require (
 	k8s.io/client-go v12.0.0+incompatible
 	sigs.k8s.io/controller-runtime v0.6.0
 )
-
-replace github.com/codeready-toolchain/api => github.com/matousjobanek/api v0.0.0-20210521080009-872e73020eff
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20210521080611-9ec9bdeaa4e4
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
