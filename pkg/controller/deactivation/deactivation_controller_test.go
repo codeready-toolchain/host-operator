@@ -403,15 +403,17 @@ func newObjectMeta(name, email string) metav1.ObjectMeta {
 }
 
 func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
-	return &toolchainv1alpha1.UserSignup{
+	us := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: newObjectMeta(username, email),
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			Username:      email,
-			Approved:      true,
 			TargetCluster: "east",
 			Userid:        username,
 		},
 	}
+	states.SetApproved(us, true)
+
+	return us
 }
 
 func assertThatUserSignupDeactivated(t *testing.T, cl *test.FakeClient, name string, expected bool) {

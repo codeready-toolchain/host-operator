@@ -26,13 +26,13 @@ func WithTargetCluster(targetCluster string) UserSignupModifier {
 
 func Approved() UserSignupModifier {
 	return func(userSignup *v1alpha1.UserSignup) {
-		userSignup.Spec.Approved = true
+		states.SetApproved(userSignup, true)
 	}
 }
 
 func ApprovedAutomatically() UserSignupModifier {
 	return func(userSignup *v1alpha1.UserSignup) {
-		userSignup.Spec.Approved = true
+		states.SetApproved(userSignup, true)
 		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
 				Type:   v1alpha1.UserSignupApproved,
