@@ -98,7 +98,7 @@ func DecrementMasterUserRecordCount(logger logr.Logger, domain metrics.Domain) {
 		} else {
 			logger.Error(fmt.Errorf("the count of MasterUserRecords is zero"), "unable to decrement the number of MasterUserRecords")
 		}
-		log.Info("decrementing MasterUserRecordGauge", "value", cachedCounts.MasterUserRecordCount)
+		logger.Info("decrementing MasterUserRecordGauge", "value", cachedCounts.MasterUserRecordCount)
 		metrics.MasterUserRecordGauge.Set(float64(cachedCounts.MasterUserRecordCount))
 
 		if cachedCounts.MasterUserRecordPerDomainCounts[string(domain)] != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
