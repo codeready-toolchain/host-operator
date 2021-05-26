@@ -56,7 +56,7 @@ func TestUserCleanup(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
 			test2.ApprovedAutomatically(),
-			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
+			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			test2.DeactivatedWithLastTransitionTime(time.Duration(5*time.Minute)),
 			test2.CreatedBefore(threeYears),
 		)
@@ -84,7 +84,7 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that an old, deactivated UserSignup is deleted", func(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
-			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
+			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			test2.ApprovedAutomatically(),
 			test2.DeactivatedWithLastTransitionTime(threeYears),
 			test2.CreatedBefore(threeYears),

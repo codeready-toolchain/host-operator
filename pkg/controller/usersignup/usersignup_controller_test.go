@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	v1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
@@ -35,22 +36,22 @@ import (
 )
 
 func newNsTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NSTemplateTier {
-	namespaces := make([]toolchainv1alpha1.NSTemplateTierNamespace, len(nsTypes))
+	namespaces := make([]v1alpha1.NSTemplateTierNamespace, len(nsTypes))
 	for i, nsType := range nsTypes {
 		revision := fmt.Sprintf("123abc%d", i+1)
-		namespaces[i] = toolchainv1alpha1.NSTemplateTierNamespace{
+		namespaces[i] = v1alpha1.NSTemplateTierNamespace{
 			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, nsType, revision),
 		}
 	}
 
-	return &toolchainv1alpha1.NSTemplateTier{
+	return &v1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: test.HostOperatorNs,
 			Name:      tierName,
 		},
-		Spec: toolchainv1alpha1.NSTemplateTierSpec{
+		Spec: v1alpha1.NSTemplateTierSpec{
 			Namespaces: namespaces,
-			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+			ClusterResources: &v1alpha1.NSTemplateTierClusterResources{
 				TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, "clusterresources", "654321b"),
 			},
 		},
@@ -62,10 +63,10 @@ var baseNSTemplateTier = newNsTemplateTier("base", "dev", "stage")
 func TestUserSignupCreateMUROk(t *testing.T) {
 
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	for testname, userSignup := range map[string]*toolchainv1alpha1.UserSignup{
-		"with valid activation annotation":   NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2")), // this is a returning user
-		"with invalid activation annotation": NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "?")), // annotation value is not an 'int'
-		"without activation annotation":      NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithoutAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey)),   // no annotation on this user, so the value will not be incremented
+	for testname, userSignup := range map[string]*v1alpha1.UserSignup{
+		"with valid activation annotation":   NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2")), // this is a returning user
+		"with invalid activation annotation": NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "?")), // annotation value is not an 'int'
+		"without activation annotation":      NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithoutAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey)),   // no annotation on this user, so the value will not be incremented
 	} {
 		t.Run(testname, func(t *testing.T) {
 			// given
@@ -73,12 +74,12 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
 			InitializeCounters(t, NewToolchainStatus(
 				WithHost(WithMasterUserRecordCount(1)),
-				WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+				WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 					"1": 0,
 					"2": 1,
 					"3": 0,
 				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 					string(metrics.External): 1,
 				})))
 
@@ -88,16 +89,16 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			// then verify that the MUR exists and is complete
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
-			murs := &toolchainv1alpha1.MasterUserRecordList{}
+			murs := &v1alpha1.MasterUserRecordList{}
 			err = r.Client.List(context.TODO(), murs)
 			require.NoError(t, err)
 			require.Len(t, murs.Items, 1)
 			mur := murs.Items[0]
 			require.Equal(t, test.HostOperatorNs, mur.Namespace)
-			require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
+			require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 			require.Len(t, mur.Spec.UserAccounts, 1)
 			assert.Equal(t, "base", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
-			assert.Equal(t, []toolchainv1alpha1.NSTemplateSetNamespace{
+			assert.Equal(t, []v1alpha1.NSTemplateSetNamespace{
 				{
 					TemplateRef: "base-dev-123abc1",
 				},
@@ -113,25 +114,25 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 
 			AssertThatCounters(t).
 				HaveMasterUserRecords(2). // one more
-				HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 					string(metrics.Internal): 1, // new user with an `@redhat.com` email address
 					string(metrics.External): 1, // existing metric (from the counter init)
 				}) //
-			actualUserSignup := &toolchainv1alpha1.UserSignup{}
+			actualUserSignup := &v1alpha1.UserSignup{}
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
 			require.NoError(t, err)
-			assert.Equal(t, "approved", actualUserSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+			assert.Equal(t, "approved", actualUserSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 			switch testname {
 			case "with valid activation annotation":
-				assert.Equal(t, "3", actualUserSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]) // annotation value is incremented
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))                        // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))                        // decreased
-				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))                        // incresaed
+				assert.Equal(t, "3", actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // annotation value is incremented
+				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))               // unchanged
+				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))               // decreased
+				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))               // incresaed
 			case "without activation annotation", "with invalid activation annotation":
-				assert.Equal(t, "1", actualUserSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]) // annotation was set to "1" since it was missing
-				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))                        // incresaed
-				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))                        // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))                        // unchanged
+				assert.Equal(t, "1", actualUserSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey]) // annotation was set to "1" since it was missing
+				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))               // incresaed
+				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))               // unchanged
+				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))               // unchanged
 			default:
 				assert.Fail(t, "unknown testcase")
 			}
@@ -144,16 +145,16 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := NewUserSignup(BeingDeleted(), WithTargetCluster("east"),
 		WithStateLabel("not-ready"),
-		WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
+		WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(12)),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 			"2": 10,
 			"3": 1,
 		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 12,
 		})))
 
@@ -166,12 +167,12 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	// Verify the counters
 	AssertThatCounters(t).
 		HaveMasterUserRecords(12). // unchanged at this point
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 			"2": 10, // unchanged
 			"3": 1,
 		}).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 12,
 		})
 	AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))
@@ -187,10 +188,10 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
 	))
@@ -205,31 +206,31 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 
 	mur := murs.Items[0]
 	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 	assert.Equal(t, "base", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
 	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 2)
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
-		toolchainv1alpha1.NSTemplateSetNamespace{
+		v1alpha1.NSTemplateSetNamespace{
 			TemplateRef: "base-dev-123abc1",
 			Template:    "",
 		})
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
-		toolchainv1alpha1.NSTemplateSetNamespace{
+		v1alpha1.NSTemplateSetNamespace{
 			TemplateRef: "base-stage-123abc2",
 			Template:    "",
 		})
@@ -237,18 +238,18 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	assert.Equal(t, "base-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
@@ -267,25 +268,25 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
-		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserNotInPreDeactivation",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
@@ -308,10 +309,10 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 		NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
 	))

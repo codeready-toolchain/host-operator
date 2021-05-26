@@ -24,7 +24,7 @@ func WithTargetCluster(targetCluster string) UserSignupModifier {
 }
 
 func Approved() UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		states.SetApproved(userSignup, true)
 	}
 }
@@ -42,7 +42,7 @@ func ApprovedAutomatically() UserSignupModifier {
 }
 
 func Deactivated() UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		states.SetDeactivated(userSignup, true)
 	}
 }
