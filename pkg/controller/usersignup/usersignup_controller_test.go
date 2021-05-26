@@ -15,6 +15,7 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
@@ -324,22 +325,22 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "not-ready", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "not-ready", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "MissingUserEmailAnnotation",
 			Message: "missing annotation at usersignup",
 		})
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 }
@@ -348,19 +349,19 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	// given
 	defer counter.Reset()
 	userSignup := NewUserSignup(
-		WithLabel(toolchainv1alpha1.UserSignupUserEmailHashLabelKey, "abcdef0123456789"),
+		WithLabel(v1alpha1.UserSignupUserEmailHashLabelKey, "abcdef0123456789"),
 		WithLabel("toolchain.dev.openshift.com/approved", "false"),
-		WithAnnotation(toolchainv1alpha1.UserSignupUserEmailAnnotationKey, "foo@redhat.com"),
+		WithAnnotation(v1alpha1.UserSignupUserEmailAnnotationKey, "foo@redhat.com"),
 	)
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
 	))
@@ -374,22 +375,22 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "not-ready", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "not-ready", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "InvalidEmailHashLabel",
 			Message: "hash is invalid",
 		})
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 }
@@ -405,10 +406,10 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 	}
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 0, // no user approved yet
 		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
 	))
@@ -423,21 +424,21 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "UnableToUpdateStateLabel",
 			Message: "some error",
 		})
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 0, // unchanged
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 0, // unchanged
 		})
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -449,7 +450,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	// given
 	userSignup := NewUserSignup()
 	userSignup.Annotations = map[string]string{
-		toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+		v1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
 	}
 	userSignup.Labels = map[string]string{"toolchain.dev.openshift.com/approved": "false"}
 
@@ -457,10 +458,10 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
 	))
@@ -474,22 +475,22 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "not-ready", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "not-ready", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "MissingEmailHashLabel",
 			Message: "missing label at usersignup",
 		})
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 
@@ -502,10 +503,10 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled())) // baseNSTemplateTier does not exist
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -520,36 +521,36 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		},
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "NoTemplateTierAvailable",
 			Message: "nstemplatetiers.toolchain.dev.openshift.com \"base\" not found",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal) // incremented, even though the provisioning failed due to missing NSTemplateTier
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)   // incremented, even though the provisioning failed due to missing NSTemplateTier
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 2, // incremented, even though the provisioning failed due to missing NSTemplateTier
 		})
 }
@@ -565,10 +566,10 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, notReady, userSignup, config, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(2)),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 2,
 		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 2,
 		}),
 	))
@@ -584,37 +585,37 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
 
-	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "pending", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	AssertThatCounters(t).
 		HaveMasterUserRecords(2).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 2,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 2,
 		})
 }
@@ -629,10 +630,10 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, noCapacity, userSignup, config, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -648,37 +649,37 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "NoClusterAvailable",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
 
-	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "pending", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 }
@@ -691,10 +692,10 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -709,11 +710,11 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	// Lookup the userSignup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
@@ -721,22 +722,22 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	mur := murs.Items[0]
 
 	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
@@ -754,26 +755,26 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
-		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedByAdmin",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserNotInPreDeactivation",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
@@ -792,10 +793,10 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier, config)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -810,11 +811,11 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	// Lookup the userSignup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
@@ -822,22 +823,22 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	mur := murs.Items[0]
 
 	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
@@ -856,27 +857,27 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 
-		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedByAdmin",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserNotInPreDeactivation",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
@@ -892,10 +893,10 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -910,43 +911,43 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	// Lookup the userSignup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "pending", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	// There should be no MasterUserRecords
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 }
@@ -959,10 +960,10 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -977,35 +978,35 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	// Lookup the userSignup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 
 	mur := murs.Items[0]
 	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 	assert.Equal(t, "base", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
 	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 2)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
@@ -1024,27 +1025,27 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 
-		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserNotInPreDeactivation",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
@@ -1059,10 +1060,10 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -1077,37 +1078,37 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	// Lookup the userSignup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "pending", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "PendingApproval",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 }
@@ -1120,17 +1121,17 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
 
 	fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 		switch obj.(type) {
-		case *toolchainv1alpha1.MasterUserRecord:
+		case *v1alpha1.MasterUserRecord:
 			return errors.New("unable to create mur")
 		default:
 			return fakeClient.Create(ctx, obj)
@@ -1145,16 +1146,16 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 2, // incremented, even though the creation of the MasterUserRecord failed
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
@@ -1168,17 +1169,17 @@ func TestUserSignupMURReadFails(t *testing.T) {
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
 
 	fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 		switch obj.(type) {
-		case *toolchainv1alpha1.MasterUserRecord:
+		case *v1alpha1.MasterUserRecord:
 			return errors.New("failed to lookup MUR")
 		default:
 			return fakeClient.Client.Get(ctx, key, obj)
@@ -1192,16 +1193,16 @@ func TestUserSignupMURReadFails(t *testing.T) {
 	require.Error(t, err)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 2, // incremented, even though the reading of the MasterUserRecord failed
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
@@ -1210,23 +1211,23 @@ func TestUserSignupMURReadFails(t *testing.T) {
 func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	// given
 	userSignup := NewUserSignup(Approved())
-	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
+	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj.(type) {
-		case *toolchainv1alpha1.UserSignup:
+		case *v1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
 		default:
 			return fakeClient.Client.Update(ctx, obj)
@@ -1241,16 +1242,16 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal) // zero since starting state was approved
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)   // zero since starting state was approved
 	assert.Empty(t, userSignup.Status.Conditions)
@@ -1264,17 +1265,17 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()))
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj.(type) {
-		case *toolchainv1alpha1.UserSignup:
+		case *v1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
 		default:
 			return fakeClient.Client.Update(ctx, obj)
@@ -1289,16 +1290,16 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "not-ready", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "not-ready", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	assert.Empty(t, userSignup.Status.Conditions)
@@ -1312,17 +1313,17 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()))
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		switch obj := obj.(type) {
-		case *toolchainv1alpha1.UserSignup:
+		case *v1alpha1.UserSignup:
 			for _, cond := range obj.Status.Conditions {
 				if cond.Reason == "NoClusterAvailable" {
 					return errors.New("failed to update UserSignup status")
@@ -1342,16 +1343,16 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "pending", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
@@ -1362,23 +1363,23 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := NewUserSignup()
 	userSignup.Annotations = map[string]string{
-		toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+		v1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
 	}
 	userSignup.Labels = map[string]string{
-		toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
-		"toolchain.dev.openshift.com/approved":            "true",
+		v1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+		"toolchain.dev.openshift.com/approved":   "true",
 	}
 
 	// Create a MUR with the same UserID
-	mur := &toolchainv1alpha1.MasterUserRecord{
+	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
-				toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
+				v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
 			},
 			Annotations: map[string]string{
-				toolchainv1alpha1.MasterUserRecordEmailAnnotationKey: userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey],
+				v1alpha1.MasterUserRecordEmailAnnotationKey: userSignup.Annotations[v1alpha1.UserSignupUserEmailAnnotationKey],
 			},
 		},
 	}
@@ -1387,10 +1388,10 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -1401,27 +1402,27 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// then
 	require.NoError(t, err)
 
-	instance := &toolchainv1alpha1.UserSignup{}
+	instance := &v1alpha1.UserSignup{}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: test.HostOperatorNs,
 		Name:      userSignup.Name,
 	}, instance)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", instance.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	require.Equal(t, mur.Name, instance.Status.CompliantUsername)
-	test.AssertContainsCondition(t, instance.Status.Conditions, toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.UserSignupComplete,
+	test.AssertContainsCondition(t, instance.Status.Conditions, v1alpha1.Condition{
+		Type:   v1alpha1.UserSignupComplete,
 		Status: v1.ConditionTrue,
 	})
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 2, // incremented, even though the MasterUserRecord already existed
 		})
 }
@@ -1431,13 +1432,13 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	userSignup := NewUserSignup(Approved())
 
 	// Create a MUR with a different UserID
-	mur := &toolchainv1alpha1.MasterUserRecord{
+	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
-				toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String(),
-				"toolchain.dev.openshift.com/approved":          "true",
+				v1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String(),
+				"toolchain.dev.openshift.com/approved": "true",
 			},
 		},
 	}
@@ -1446,10 +1447,10 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -1461,7 +1462,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	require.NoError(t, err)
 
 	// We should now have 2 MURs
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 2)
@@ -1471,10 +1472,10 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		Namespace: test.HostOperatorNs,
 		Name:      userSignup.Name,
 	}
-	instance := &toolchainv1alpha1.UserSignup{}
+	instance := &v1alpha1.UserSignup{}
 	err = r.Client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", instance.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
@@ -1487,21 +1488,21 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 		err = r.Client.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
-		assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "approved", instance.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 		require.Equal(t, "foo-2", instance.Status.CompliantUsername)
 
 		// Confirm that the mur exists
-		mur = &toolchainv1alpha1.MasterUserRecord{}
+		mur = &v1alpha1.MasterUserRecord{}
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: test.HostOperatorNs, Name: instance.Status.CompliantUsername}, mur)
 		require.NoError(t, err)
-		require.Equal(t, instance.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
+		require.Equal(t, instance.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 
-		var cond *toolchainv1alpha1.Condition
+		var cond *v1alpha1.Condition
 		for _, condition := range instance.Status.Conditions {
-			if condition.Type == toolchainv1alpha1.UserSignupComplete {
+			if condition.Type == v1alpha1.UserSignupComplete {
 				cond = &condition
 			}
 		}
@@ -1521,10 +1522,10 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -1546,14 +1547,14 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := NewUserSignup(Deactivated())
-	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
-		Conditions: []toolchainv1alpha1.Condition{
+	userSignup.Status = v1alpha1.UserSignupStatus{
+		Conditions: []v1alpha1.Condition{
 			{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 			},
 			{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
@@ -1567,16 +1568,16 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
-		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+		mur.Labels = map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur,
 			NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 				string(metrics.External): 1,
 			}),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 				"1": 1,
 			}),
 		))
@@ -1588,25 +1589,25 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.NoError(t, err)
 		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
-		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal) // 0 because usersignup was originally deactivated
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)   // 1 because state was initially empty
 
 		// Confirm the status is now set to Deactivating
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionFalse,
 				Reason: "Deactivating",
 			})
 
-		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		murs := &v1alpha1.MasterUserRecordList{}
 
 		// The MUR should have now been deleted
 		err = r.Client.List(context.TODO(), murs)
@@ -1614,10 +1615,10 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.Len(t, murs.Items, 0)
 		AssertThatCounters(t).
 			HaveMasterUserRecords(1). // unchanged for now: will be decreased by the MasterUserRecord controller when it runs the `manageCleanUp` func (after removing the finalizer)
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 				string(metrics.External): 1, // unchanged for now (see above)
 			}).
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			HaveUsersPerActivations(v1alpha1.Metric{
 				"1": 1, // unchanged for now (see above)
 			})
 
@@ -1630,10 +1631,10 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 				string(metrics.External): 2,
 			}),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 				"1": 2,
 			}),
 		))
@@ -1647,39 +1648,39 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		// Lookup the UserSignup
 		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
-		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // zero because state didn't change
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// Confirm the status has been set to Deactivated
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 				Reason: "Deactivated",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionTrue,
 				Reason: "NotificationCRCreated",
 			})
 		AssertThatCounters(t).
 			HaveMasterUserRecords(2). // unchanged since no MUR was removed
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 				string(metrics.External): 2, // unchanged
 			}).
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			HaveUsersPerActivations(v1alpha1.Metric{
 				"1": 2, // unchanged
 			})
 
 		// A deactivated notification should have been created
-		notifications := &toolchainv1alpha1.NotificationList{}
+		notifications := &v1alpha1.NotificationList{}
 		err = r.Client.List(context.TODO(), notifications)
 		require.NoError(t, err)
 		require.Len(t, notifications.Items, 1)
@@ -1693,21 +1694,21 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 	// given
-	userSignup := &toolchainv1alpha1.UserSignup{
+	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "john.doe@redhat.com"),
-		Spec: toolchainv1alpha1.UserSignupSpec{
+		Spec: v1alpha1.UserSignupSpec{
 			Userid:   "UserID123",
 			Username: "john.doe@redhat.com",
-			States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
+			States:   []v1alpha1.UserSignupState{v1alpha1.UserSignupStateDeactivated},
 		},
-		Status: toolchainv1alpha1.UserSignupStatus{
-			Conditions: []toolchainv1alpha1.Condition{
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
 				{
-					Type:   toolchainv1alpha1.UserSignupComplete,
+					Type:   v1alpha1.UserSignupComplete,
 					Status: v1.ConditionTrue,
 				},
 				{
-					Type:   toolchainv1alpha1.UserSignupApproved,
+					Type:   v1alpha1.UserSignupApproved,
 					Status: v1.ConditionTrue,
 					Reason: "ApprovedAutomatically",
 				},
@@ -1715,12 +1716,12 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			CompliantUsername: "john-doe",
 		},
 	}
-	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = toolchainv1alpha1.NotificationTypeDeactivated
+	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = v1alpha1.NotificationTypeDeactivated
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 	// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
-	userSignup.Labels[toolchainv1alpha1.NotificationUserNameLabelKey] = "john-doe"
+	userSignup.Labels[v1alpha1.NotificationUserNameLabelKey] = "john-doe"
 	// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
-	userSignup.Labels[toolchainv1alpha1.NotificationTypeLabelKey] = toolchainv1alpha1.NotificationTypeDeactivated
+	userSignup.Labels[v1alpha1.NotificationTypeLabelKey] = v1alpha1.NotificationTypeDeactivated
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	t.Run("when the deactivation notification cannot be created", func(t *testing.T) {
@@ -1729,17 +1730,17 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 				string(metrics.External): 2,
 			}),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 				"1": 2,
 			}),
 		))
 
 		fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 			switch obj.(type) {
-			case *toolchainv1alpha1.Notification:
+			case *v1alpha1.Notification:
 				return errors.New("unable to create deactivation notification")
 			default:
 				return fakeClient.Create(ctx, obj)
@@ -1759,36 +1760,36 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 
 		// Confirm the status shows the deactivation notification failure
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 			},
-			toolchainv1alpha1.Condition{
-				Type:    toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			v1alpha1.Condition{
+				Type:    v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status:  v1.ConditionFalse,
 				Reason:  "NotificationCRCreationFailed",
 				Message: "unable to create deactivation notification",
 			})
 		AssertThatCounters(t).
 			HaveMasterUserRecords(2).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 				string(metrics.External): 2, // unchanged
 			}).
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			HaveUsersPerActivations(v1alpha1.Metric{
 				"1": 2, // unchanged
 			})
-		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // zero because state didn't change
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// A deactivated notification should not have been created
-		notificationList := &toolchainv1alpha1.NotificationList{}
+		notificationList := &v1alpha1.NotificationList{}
 		err = r.Client.List(context.TODO(), notificationList)
 		require.NoError(t, err)
 		require.Equal(t, 0, len(notificationList.Items))
@@ -1797,13 +1798,13 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 
 func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 	// given
-	userSignup := &toolchainv1alpha1.UserSignup{
+	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "john.doe@redhat.com"),
-		Spec: toolchainv1alpha1.UserSignupSpec{
+		Spec: v1alpha1.UserSignupSpec{
 			Userid:   "UserID123",
 			Username: "john.doe@redhat.com",
 		},
-		Status: toolchainv1alpha1.UserSignupStatus{
+		Status: v1alpha1.UserSignupStatus{
 			CompliantUsername: "john-doe",
 		},
 	}
@@ -1812,22 +1813,22 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 	t.Run("when reactivating the usersignup successfully", func(t *testing.T) {
 		// given
 		// start with a usersignup that has the Notification Created status set to "true" but Spec.Deactivated is set to "false" which signals a user which has been just reactivated.
-		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "deactivated"
 		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
-		userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "2" // the user signed up twice
-		userSignup.Status.Conditions = []toolchainv1alpha1.Condition{
+		userSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey] = "2" // the user signed up twice
+		userSignup.Status.Conditions = []v1alpha1.Condition{
 			{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 				Reason: "Deactivated",
 			},
 			{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
 			{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionTrue,
 				Reason: "NotificationCRCreated",
 			},
@@ -1836,11 +1837,11 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(20)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 				"2": 11, // 11 users signed-up 2 times, including our user above, even though she is not active at the moment
 				"3": 10, // 10 users signed-up 3 times
 			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 				string(metrics.External): 20,
 			}),
 		))
@@ -1857,23 +1858,23 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 
 		// Confirm the status shows the notification created condition is reset to active
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 				Reason: "Deactivated",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserNotInPreDeactivation",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
@@ -1881,18 +1882,18 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		// A mur should be created so the counter should be 21
 		AssertThatCounters(t).
 			HaveMasterUserRecords(21). // one more than before
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 				string(metrics.External): 20, // unchanged
 				string(metrics.Internal): 1,  // one more than before
 			}).
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			HaveUsersPerActivations(v1alpha1.Metric{
 				"2": 10, // unchanged
 				"3": 11, // unchanged
 			})
 
-		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		// verify that the annotation was incremented
-		assert.Equal(t, "3", userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey])
+		assert.Equal(t, "3", userSignup.Annotations[v1alpha1.UserSignupActivationCounterAnnotationKey])
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
@@ -1906,21 +1907,21 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 	t.Run("when resetting the usersignup deactivation notification status fails", func(t *testing.T) {
 		// given
 		// start with a usersignup that has the Notification Created status set to "true" but Spec.Deactivated is set to "false" which signals a user which has been just reactivated.
-		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "deactivated"
 		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
-		userSignup.Status.Conditions = []toolchainv1alpha1.Condition{
+		userSignup.Status.Conditions = []v1alpha1.Condition{
 			{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 				Reason: "Deactivated",
 			},
 			{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
 			{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionTrue,
 				Reason: "NotificationCRCreated",
 			},
@@ -1928,17 +1929,17 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 				string(metrics.External): 2,
 			}),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 				"1": 2,
 			}),
 		))
 
 		fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			switch obj.(type) {
-			case *toolchainv1alpha1.UserSignup:
+			case *v1alpha1.UserSignup:
 				return errors.New("failed to update UserSignup status")
 			default:
 				return fakeClient.Client.Update(ctx, obj)
@@ -1958,32 +1959,32 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 
 		// Confirm the status shows the notification is unchanged because the status update failed
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 				Reason: "Deactivated",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status: v1.ConditionTrue,
 				Reason: "NotificationCRCreated",
 			})
 		AssertThatCounters(t).
 			HaveMasterUserRecords(2).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 				string(metrics.External): 2, // unchanged
 			}).
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			HaveUsersPerActivations(v1alpha1.Metric{
 				"1": 2, // unchanged
 			})
 
 		// State is still deactivated because the status update failed
-		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
@@ -1994,22 +1995,23 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 }
 
 func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
-	userSignup := &toolchainv1alpha1.UserSignup{
+	// given
+	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
-		Spec: toolchainv1alpha1.UserSignupSpec{
+		Spec: v1alpha1.UserSignupSpec{
 			Userid:   "UserID123",
 			Username: "edward.jones@redhat.com",
-			States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
+			States:   []v1alpha1.UserSignupState{v1alpha1.UserSignupStateApproved},
 		},
-		Status: toolchainv1alpha1.UserSignupStatus{
-			Conditions: []toolchainv1alpha1.Condition{
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
 				{
-					Type:   toolchainv1alpha1.UserSignupComplete,
-					Status: v1.ConditionFalse,
-					Reason: "Deactivating",
+					Type:   v1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+					Reason: "",
 				},
 				{
-					Type:   toolchainv1alpha1.UserSignupApproved,
+					Type:   v1alpha1.UserSignupApproved,
 					Status: v1.ConditionTrue,
 					Reason: "ApprovedAutomatically",
 				},
@@ -2018,24 +2020,69 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 		},
 	}
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
-	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
+	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
+
+	mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(test.HostOperatorNs))
+	mur.Labels = map[string]string{
+		v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
+		v1alpha1.UserSignupStateLabelKey:       "approved",
+	}
+
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
-	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
-		// given
-		mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(test.HostOperatorNs))
-		mur.Labels = map[string]string{
-			toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
-			toolchainv1alpha1.UserSignupStateLabelKey:       "approved",
-		}
+	t.Run("when MUR exists and not deactivated, nothing should happen", func(t *testing.T) {
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		_, err := r.Reconcile(req)
+
+		// then
+		require.NoError(t, err)
+		err = r.Client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+		assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
+
+		// Confirm the status is still set correctly
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: "",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserIsActive",
+			},
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
+			})
+
+		murs := &v1alpha1.MasterUserRecordList{}
+
+		// The MUR should have not been deleted
+		err = r.Client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+	})
+
+	t.Run("when UserSignup deactivated and MUR exists, then it should be deleted", func(t *testing.T) {
+
+		// Given
+		states.SetDeactivated(userSignup, true)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 				string(metrics.External): 1,
 			}),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+			WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 				"1": 1,
 			}),
 		))
@@ -2048,25 +2095,35 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 			require.NoError(t, err)
 			err = r.Client.Get(context.TODO(), key, userSignup)
 			require.NoError(t, err)
-			assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+			assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 			// Confirm the status is still set to Deactivating
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-				toolchainv1alpha1.Condition{
-					Type:   toolchainv1alpha1.UserSignupApproved,
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupApproved,
 					Status: v1.ConditionTrue,
 					Reason: "ApprovedAutomatically",
 				},
-				toolchainv1alpha1.Condition{
-					Type:   toolchainv1alpha1.UserSignupComplete,
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupComplete,
 					Status: v1.ConditionFalse,
 					Reason: "Deactivating",
+				},
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+					Status: v1.ConditionFalse,
+					Reason: "UserNotInPreDeactivation",
+				},
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
+					Status: v1.ConditionFalse,
+					Reason: "UserIsActive",
 				})
 
-			murs := &toolchainv1alpha1.MasterUserRecordList{}
+			murs := &v1alpha1.MasterUserRecordList{}
 
 			// The MUR should have now been deleted
 			err = r.Client.List(context.TODO(), murs)
@@ -2074,10 +2131,10 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 			require.Len(t, murs.Items, 0)
 			AssertThatCounters(t).
 				HaveMasterUserRecords(1).
-				HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 					string(metrics.External): 1,
 				}).
-				HaveUsersPerActivations(toolchainv1alpha1.Metric{
+				HaveUsersPerActivations(v1alpha1.Metric{
 					"1": 1,
 				})
 
@@ -2096,20 +2153,25 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 
 			// Confirm the status has been set to Deactivated and the deactivation notification is created
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-				toolchainv1alpha1.Condition{
-					Type:   toolchainv1alpha1.UserSignupApproved,
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupApproved,
 					Status: v1.ConditionTrue,
 					Reason: "ApprovedAutomatically",
 				},
-				toolchainv1alpha1.Condition{
-					Type:   toolchainv1alpha1.UserSignupComplete,
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupComplete,
 					Status: v1.ConditionTrue,
 					Reason: "Deactivated",
 				},
-				toolchainv1alpha1.Condition{
-					Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 					Status: v1.ConditionTrue,
 					Reason: "NotificationCRCreated",
+				},
+				v1alpha1.Condition{
+					Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
+					Status: v1.ConditionFalse,
+					Reason: "UserNotInPreDeactivation",
 				})
 			// metrics should be the same after the 2nd reconcile
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
@@ -2120,21 +2182,21 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 }
 
 func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
-	userSignup := &toolchainv1alpha1.UserSignup{
+	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
-		Spec: toolchainv1alpha1.UserSignupSpec{
+		Spec: v1alpha1.UserSignupSpec{
 			Userid:   "UserID089",
 			Username: "freja.johanssen@redhat.com",
-			States:   []toolchainv1alpha1.UserSignupState{"deactivating"},
+			States:   []v1alpha1.UserSignupState{"deactivating"},
 		},
-		Status: toolchainv1alpha1.UserSignupStatus{
-			Conditions: []toolchainv1alpha1.Condition{
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
 				{
-					Type:   toolchainv1alpha1.UserSignupComplete,
+					Type:   v1alpha1.UserSignupComplete,
 					Status: v1.ConditionTrue,
 				},
 				{
-					Type:   toolchainv1alpha1.UserSignupApproved,
+					Type:   v1alpha1.UserSignupApproved,
 					Status: v1.ConditionTrue,
 					Reason: "ApprovedAutomatically",
 				},
@@ -2146,22 +2208,22 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	// given
 	mur := murtest.NewMasterUserRecord(t, "edward-jones", murtest.MetaNamespace(test.HostOperatorNs))
 	mur.Labels = map[string]string{
-		toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
-		toolchainv1alpha1.UserSignupStateLabelKey:       "approved",
+		v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
+		v1alpha1.UserSignupStateLabelKey:       "approved",
 	}
 
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
-	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
+	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur,
 		NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -2173,9 +2235,9 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	require.NoError(t, err)
 	err = r.Client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 
-	notifications := &toolchainv1alpha1.NotificationList{}
+	notifications := &v1alpha1.NotificationList{}
 	err = r.Client.List(context.TODO(), notifications)
 	require.NoError(t, err)
 
@@ -2186,22 +2248,22 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 
 	// Confirm the status is correct
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionTrue,
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionTrue,
 			Reason: "NotificationCRCreated",
 		},
@@ -2211,16 +2273,16 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 func TestUserSignupBanned(t *testing.T) {
 	// given
 	userSignup := NewUserSignup()
-	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
+	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
 
-	bannedUser := &toolchainv1alpha1.BannedUser{
+	bannedUser := &v1alpha1.BannedUser{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				toolchainv1alpha1.BannedUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
-				toolchainv1alpha1.UserSignupStateLabelKey:     "approved",
+				v1alpha1.BannedUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+				v1alpha1.UserSignupStateLabelKey:     "approved",
 			},
 		},
-		Spec: toolchainv1alpha1.BannedUserSpec{
+		Spec: v1alpha1.BannedUserSpec{
 			Email: "foo@redhat.com",
 		},
 	}
@@ -2228,10 +2290,10 @@ func TestUserSignupBanned(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, bannedUser, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -2243,7 +2305,7 @@ func TestUserSignupBanned(t *testing.T) {
 	require.NoError(t, err)
 	err = r.Client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "banned", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "banned", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -2251,14 +2313,14 @@ func TestUserSignupBanned(t *testing.T) {
 
 	// Confirm the status is set to Banned
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionTrue,
 			Reason: "Banned",
 		})
 
 	// Confirm that no MUR is created
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	murs := &v1alpha1.MasterUserRecordList{}
 
 	// Confirm that the MUR has now been deleted
 	err = r.Client.List(context.TODO(), murs)
@@ -2266,10 +2328,10 @@ func TestUserSignupBanned(t *testing.T) {
 	require.Len(t, murs.Items, 0)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 }
@@ -2281,10 +2343,10 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -2296,7 +2358,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	require.NoError(t, err)
 	err = r.Client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "not-ready", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "not-ready", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -2304,33 +2366,33 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 
 	// Confirm the status is set to VerificationRequired
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "VerificationRequired",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
 
 	// Confirm that no MUR is created
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 }
@@ -2338,44 +2400,44 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 func TestUserSignupBannedMURExists(t *testing.T) {
 	// given
 	userSignup := NewUserSignup()
-	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
-		Conditions: []toolchainv1alpha1.Condition{
+	userSignup.Status = v1alpha1.UserSignupStatus{
+		Conditions: []v1alpha1.Condition{
 			{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 			},
 			{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
 		},
 		CompliantUsername: "foo",
 	}
-	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
+	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 
-	bannedUser := &toolchainv1alpha1.BannedUser{
+	bannedUser := &v1alpha1.BannedUser{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				toolchainv1alpha1.BannedUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+				v1alpha1.BannedUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 			},
 		},
-		Spec: toolchainv1alpha1.BannedUserSpec{
+		Spec: v1alpha1.BannedUserSpec{
 			Email: "foo@redhat.com",
 		},
 	}
 
 	mur := murtest.NewMasterUserRecord(t, "foo", murtest.MetaNamespace(test.HostOperatorNs))
-	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+	mur.Labels = map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, bannedUser, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -2388,7 +2450,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 	err = r.Client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "banned", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "banned", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -2396,18 +2458,18 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 
 	// Confirm the status is set to Banning
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupComplete,
 			Status: v1.ConditionFalse,
 			Reason: "Banning",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
 		})
 
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	murs := &v1alpha1.MasterUserRecordList{}
 
 	// Confirm that the MUR has now been deleted
 	err = r.Client.List(context.TODO(), murs)
@@ -2415,10 +2477,10 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	require.Len(t, murs.Items, 0)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 
@@ -2430,7 +2492,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 
-		assert.Equal(t, "banned", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "banned", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		// metrics should be the same after the 2nd reconcile
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -2439,13 +2501,13 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 
 		// Confirm the status is now set to Banned
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 				Reason: "Banned",
 			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			})
@@ -2456,10 +2518,10 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		require.Len(t, murs.Items, 0)
 		AssertThatCounters(t).
 			HaveMasterUserRecords(1).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 				string(metrics.External): 1,
 			}).
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			HaveUsersPerActivations(v1alpha1.Metric{
 				"1": 1,
 			})
 	})
@@ -2472,10 +2534,10 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -2491,31 +2553,31 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 	require.Error(t, err)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 }
 
 func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	// given
-	userSignup := &toolchainv1alpha1.UserSignup{
+	userSignup := &v1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
-		Spec: toolchainv1alpha1.UserSignupSpec{
+		Spec: v1alpha1.UserSignupSpec{
 			Userid:   "UserID123",
 			Username: "alice.mayweather.doe@redhat.com",
-			States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
+			States:   []v1alpha1.UserSignupState{v1alpha1.UserSignupStateDeactivated},
 		},
-		Status: toolchainv1alpha1.UserSignupStatus{
-			Conditions: []toolchainv1alpha1.Condition{
+		Status: v1alpha1.UserSignupStatus{
+			Conditions: []v1alpha1.Condition{
 				{
-					Type:   toolchainv1alpha1.UserSignupComplete,
+					Type:   v1alpha1.UserSignupComplete,
 					Status: v1.ConditionTrue,
 				},
 				{
-					Type:   toolchainv1alpha1.UserSignupApproved,
+					Type:   v1alpha1.UserSignupApproved,
 					Status: v1.ConditionTrue,
 					Reason: "ApprovedAutomatically",
 				},
@@ -2523,28 +2585,28 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			CompliantUsername: "alice-mayweather",
 		},
 	}
-	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
+	userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "approved"
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
-	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+	mur.Labels = map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
 
 	fakeClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 		switch obj.(type) {
-		case *toolchainv1alpha1.MasterUserRecord:
+		case *v1alpha1.MasterUserRecord:
 			return errors.New("unable to delete mur")
 		default:
 			return fakeClient.Delete(ctx, obj)
@@ -2561,30 +2623,30 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		// Lookup the UserSignup
 		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
-		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		assert.Equal(t, "deactivated", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
 		// Confirm the status is set to UnableToDeleteMUR
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+			v1alpha1.Condition{
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			},
-			toolchainv1alpha1.Condition{
-				Type:    toolchainv1alpha1.UserSignupComplete,
+			v1alpha1.Condition{
+				Type:    v1alpha1.UserSignupComplete,
 				Status:  v1.ConditionFalse,
 				Reason:  "UnableToDeleteMUR",
 				Message: "unable to delete mur",
 			})
 		AssertThatCounters(t).
 			HaveMasterUserRecords(1).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 				string(metrics.External): 1,
 			}).
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			HaveUsersPerActivations(v1alpha1.Metric{
 				"1": 1,
 			})
 
@@ -2611,20 +2673,20 @@ func TestDeathBy100Signups(t *testing.T) {
 	initObjs = append(initObjs, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()))
 
 	// create 100 MURs that follow the naming pattern used by `generateCompliantUsername()`: `foo`, `foo-2`, ..., `foo-100`
-	initObjs = append(initObjs, &toolchainv1alpha1.MasterUserRecord{
+	initObjs = append(initObjs, &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String()},
+			Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String()},
 		},
 	})
 
 	for i := 2; i <= 100; i++ {
-		initObjs = append(initObjs, &toolchainv1alpha1.MasterUserRecord{
+		initObjs = append(initObjs, &v1alpha1.MasterUserRecord{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("foo-%d", i),
 				Namespace: test.HostOperatorNs,
-				Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String()},
+				Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String()},
 			},
 		})
 	}
@@ -2635,10 +2697,10 @@ func TestDeathBy100Signups(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, initObjs...)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(100)),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 100,
 		}),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 100,
 		}),
 	))
@@ -2654,40 +2716,40 @@ func TestDeathBy100Signups(t *testing.T) {
 	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "approved", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "UnableToCreateMUR",
 			Message: "unable to transform username [foo@redhat.com] even after 100 attempts",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		},
 	)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(100). // unchanged
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 100, // unchanged
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 101, // was incremented, even though associated MUR could not be created
 		})
 }
@@ -2697,20 +2759,20 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	userSignup := NewUserSignup()
 
 	// Create a MUR with the same UserID
-	mur := &toolchainv1alpha1.MasterUserRecord{
+	mur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
+			Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
 		},
 	}
 
 	// Create another MUR with the same UserID
-	mur2 := &toolchainv1alpha1.MasterUserRecord{
+	mur2 := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "bar",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
+			Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
 		},
 	}
 
@@ -2718,10 +2780,10 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, mur2, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -2736,34 +2798,34 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		Namespace: test.HostOperatorNs,
 		Name:      userSignup.Name,
 	}
-	instance := &toolchainv1alpha1.UserSignup{}
+	instance := &v1alpha1.UserSignup{}
 	err = r.Client.Get(context.TODO(), key, instance)
 	require.NoError(t, err)
 
 	test.AssertConditionsMatch(t, instance.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "InvalidMURState",
 			Message: "multiple matching MasterUserRecord resources found",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		},
 	)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -2778,10 +2840,10 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -2793,39 +2855,39 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 	assert.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+		HaveUsersPerActivations(v1alpha1.Metric{
 			"1": 1,
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "pending", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, "pending", userSignup.Labels[v1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedByAdmin",
 		},
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
+		v1alpha1.Condition{
+			Type:    v1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "NoClusterAvailable",
 			Message: "no suitable member cluster found - capacity was reached",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserNotInPreDeactivation",
 		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+		v1alpha1.Condition{
+			Type:   v1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
@@ -2894,7 +2956,7 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 
 	for _, prefix := range config.GetForbiddenUsernamePrefixes() {
 		userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
-		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "not-ready"
+		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "not-ready"
 
 		for _, name := range names {
 			userSignup.Spec.Username = fmt.Sprintf("%s%s", prefix, name)
@@ -2902,7 +2964,7 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
 			InitializeCounters(t, NewToolchainStatus(
 				WithHost(WithMasterUserRecordCount(1)),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 					string(metrics.External): 1,
 				}),
 			))
@@ -2916,12 +2978,12 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 			require.NoError(t, err)
 
 			// Lookup the MUR
-			murs := &toolchainv1alpha1.MasterUserRecordList{}
+			murs := &v1alpha1.MasterUserRecordList{}
 			err = r.Client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
 			require.NoError(t, err)
 			require.Len(t, murs.Items, 1)
 			mur := murs.Items[0]
-			require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
+			require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 			require.Equal(t, fmt.Sprintf("crt-%s%s", prefix, name), mur.Name)
 		}
 
@@ -2941,7 +3003,7 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 
 	for _, suffix := range config.GetForbiddenUsernameSuffixes() {
 		userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
-		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "not-ready"
+		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = "not-ready"
 
 		for _, name := range names {
 			userSignup.Spec.Username = fmt.Sprintf("%s%s", name, suffix)
@@ -2949,7 +3011,7 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
 			InitializeCounters(t, NewToolchainStatus(
 				WithHost(WithMasterUserRecordCount(1)),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 					string(metrics.External): 1,
 				}),
 			))
@@ -2963,12 +3025,12 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 			require.NoError(t, err)
 
 			// Lookup the MUR
-			murs := &toolchainv1alpha1.MasterUserRecordList{}
+			murs := &v1alpha1.MasterUserRecordList{}
 			err = r.Client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
 			require.NoError(t, err)
 			require.Len(t, murs.Items, 1)
 			mur := murs.Items[0]
-			require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
+			require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 			require.Equal(t, fmt.Sprintf("%s%s-crt", name, suffix), mur.Name)
 		}
 
@@ -2979,27 +3041,27 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 func TestChangedCompliantUsername(t *testing.T) {
 	// starting with a UserSignup that exists and was approved and has the now outdated CompliantUsername
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
-	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
-		Conditions: []toolchainv1alpha1.Condition{
+	userSignup.Status = v1alpha1.UserSignupStatus{
+		Conditions: []v1alpha1.Condition{
 			{
-				Type:   toolchainv1alpha1.UserSignupApproved,
+				Type:   v1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
-				Reason: toolchainv1alpha1.UserSignupApprovedByAdminReason,
+				Reason: v1alpha1.UserSignupApprovedByAdminReason,
 			},
 			{
 				Status: v1.ConditionTrue,
-				Type:   toolchainv1alpha1.UserSignupComplete,
+				Type:   v1alpha1.UserSignupComplete,
 			},
 		},
 		CompliantUsername: "foo-old",
 	}
 
 	// also starting with the old MUR whose name matches the outdated UserSignup CompliantUsername
-	oldMur := &toolchainv1alpha1.MasterUserRecord{
+	oldMur := &v1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo-old",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
+			Labels:    map[string]string{v1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
 		},
 	}
 
@@ -3007,10 +3069,10 @@ func TestChangedCompliantUsername(t *testing.T) {
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, oldMur, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
+		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
 			"1": 1,
 		}),
 	))
@@ -3021,12 +3083,12 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// after the 1st reconcile verify that the MUR still exists and its name still matches the initial UserSignup CompliantUsername
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	murs := &v1alpha1.MasterUserRecordList{}
 	err = r.Client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
 	mur := murs.Items[0]
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Equal(t, mur.Name, "foo-old")
 	require.Equal(t, userSignup.Status.CompliantUsername, "foo-old")
 
@@ -3040,7 +3102,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// verify the new MUR is provisioned
-	murs = &toolchainv1alpha1.MasterUserRecordList{}
+	murs = &v1alpha1.MasterUserRecordList{}
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 1)
@@ -3049,7 +3111,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	// the MUR name should match the new CompliantUserName
 	assert.Equal(t, "foo", mur.Name)
 	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
+	require.Equal(t, userSignup.Name, mur.Labels[v1alpha1.MasterUserRecordOwnerLabelKey])
 	require.Len(t, mur.Spec.UserAccounts, 1)
 	assert.Equal(t, "base", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
 	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 2)
@@ -3079,7 +3141,7 @@ func TestMigrateMur(t *testing.T) {
 	require.NoError(t, err)
 
 	// set NSLimit and NSTemplateSet to be empty
-	mur.Spec.UserAccounts[0].Spec.NSTemplateSet = toolchainv1alpha1.NSTemplateSetSpec{}
+	mur.Spec.UserAccounts[0].Spec.NSTemplateSet = v1alpha1.NSTemplateSetSpec{}
 	mur.Spec.UserAccounts[0].Spec.NSLimit = ""
 
 	expectedMur := mur.DeepCopy()
@@ -3087,7 +3149,7 @@ func TestMigrateMur(t *testing.T) {
 	expectedMur.ResourceVersion = "1"
 	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName = "base"
 	expectedMur.Spec.UserAccounts[0].Spec.NSLimit = "default"
-	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []toolchainv1alpha1.NSTemplateSetNamespace{
+	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []v1alpha1.NSTemplateSetNamespace{
 		{
 			TemplateRef: "base-dev-123abc1",
 		},
@@ -3095,7 +3157,7 @@ func TestMigrateMur(t *testing.T) {
 			TemplateRef: "base-stage-123abc2",
 		},
 	}
-	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
+	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &v1alpha1.NSTemplateSetClusterResources{
 		TemplateRef: "base-clusterresources-654321b",
 	}
 
@@ -3108,7 +3170,7 @@ func TestMigrateMur(t *testing.T) {
 		_, err := r.Reconcile(req)
 		// then verify that the MUR exists and is complete
 		require.NoError(t, err)
-		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		murs := &v1alpha1.MasterUserRecordList{}
 		err = r.Client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 1)
