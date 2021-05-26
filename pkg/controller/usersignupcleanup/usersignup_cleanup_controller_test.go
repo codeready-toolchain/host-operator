@@ -3,11 +3,12 @@ package usersignupcleanup
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
-	"time"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
@@ -71,10 +72,10 @@ func TestUserCleanup(t *testing.T) {
 		require.NotNil(t, userSignup)
 		require.True(t, res.Requeue)
 
-		// We expect the requeue duration to be approximately equal to the default retention time of 180 days. Let's
-		// accept any value here between the range of 179 days and 181 days
-		durLower := time.Duration(179 * time.Hour * 24)
-		durUpper := time.Duration(181 * time.Hour * 24)
+		// We expect the requeue duration to be approximately equal to the default retention time of 365 days. Let's
+		// accept any value here between the range of 364 days and 366 days
+		durLower := time.Duration(364 * time.Hour * 24)
+		durUpper := time.Duration(366 * time.Hour * 24)
 
 		require.Greater(t, res.RequeueAfter, durLower)
 		require.Less(t, res.RequeueAfter, durUpper)

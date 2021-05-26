@@ -118,7 +118,7 @@ const (
 	// gathering user metrics before removing the resources from the cluster.
 	varUserSignupDeactivatedRetentionDays = "usersignup.deactivated.retention.days"
 
-	defaultUserSignupDeactivatedRetentionDays = 180
+	defaultUserSignupDeactivatedRetentionDays = 365
 )
 
 // Config encapsulates the Viper configuration registry which stores the
