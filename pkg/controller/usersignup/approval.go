@@ -3,6 +3,8 @@ package usersignup
 import (
 	"context"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
@@ -38,7 +40,7 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 		return false, unknown, errors.Wrapf(err, "unable to read HostOperatorConfig resource")
 	}
 
-	if !userSignup.Spec.Approved && !config.AutomaticApproval.Enabled {
+	if !states.Approved(userSignup) && !config.AutomaticApproval.Enabled {
 		return false, unknown, nil
 	}
 
@@ -53,7 +55,7 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 
 	clusterName := getOptimalTargetCluster(userSignup, getMemberClusters, hasNotReachedMaxNumberOfUsersThreshold(config, counts), hasEnoughResources(config, status))
 	if clusterName == "" {
-		return userSignup.Spec.Approved, notFound, nil
+		return states.Approved(userSignup), notFound, nil
 	}
 	return true, targetCluster(clusterName), nil
 }

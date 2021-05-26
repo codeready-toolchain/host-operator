@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -31,12 +33,12 @@ func TestNotificationContext(t *testing.T) {
 		ObjectMeta: newObjectMeta("john", "jsmith@redhat.com"),
 		Spec: v1alpha1.UserSignupSpec{
 			Username:      "jsmith@redhat.com",
-			Approved:      true,
 			TargetCluster: "east",
 			FamilyName:    "Smith",
 			GivenName:     "John",
 		},
 	}
+	states.SetApproved(userSignup, true)
 	client := prepareReconcile(t, userSignup)
 	config, err := configuration.LoadConfig(test.NewFakeClient(t))
 	require.NoError(t, err)
