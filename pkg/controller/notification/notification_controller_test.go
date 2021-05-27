@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
@@ -34,7 +34,7 @@ import (
 type MockDeliveryService struct {
 }
 
-func (s *MockDeliveryService) Send(notificationCtx Context, notification *v1alpha1.Notification) error {
+func (s *MockDeliveryService) Send(notificationCtx Context, notification *toolchainv1alpha1.Notification) error {
 	return errors.New("delivery error")
 }
 
@@ -46,7 +46,7 @@ func TestNotificationSuccess(t *testing.T) {
 	t.Run("will not do anything and return requeue with shorter duration that 10s", func(t *testing.T) {
 		// given
 		notification := newNotification("jane", "")
-		notification.Status.Conditions = []v1alpha1.Condition{sentCond()}
+		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, request, cl := newController(t, notification, ds)
 
@@ -65,7 +65,7 @@ func TestNotificationSuccess(t *testing.T) {
 	t.Run("sent notification deleted when deletion timeout passed", func(t *testing.T) {
 		// given
 		notification := newNotification("jane", "")
-		notification.Status.Conditions = []v1alpha1.Condition{sentCond()}
+		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, request, cl := newController(t, notification, ds)
@@ -87,7 +87,7 @@ func TestNotificationSentFailure(t *testing.T) {
 	t.Run("will return an error since it cannot delete the Notification after successfully sending", func(t *testing.T) {
 		// given
 		notification := newNotification("abc123", "")
-		notification.Status.Conditions = []v1alpha1.Condition{sentCond()}
+		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
@@ -117,9 +117,9 @@ func TestNotificationDelivery(t *testing.T) {
 
 	t.Run("test notification delivery ok", func(t *testing.T) {
 		// given
-		userSignup := &v1alpha1.UserSignup{
+		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: newObjectMeta("abc123", "foo@redhat.com"),
-			Spec: v1alpha1.UserSignupSpec{
+			Spec: toolchainv1alpha1.UserSignupSpec{
 				Username:   "foo@redhat.com",
 				GivenName:  "Foo",
 				FamilyName: "Bar",
@@ -141,15 +141,15 @@ func TestNotificationDelivery(t *testing.T) {
 			Namespace: operatorNamespace,
 			Name:      notification.Name,
 		}
-		instance := &v1alpha1.Notification{}
+		instance := &toolchainv1alpha1.Notification{}
 		err = client.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
 
 		test.AssertConditionsMatch(t, instance.Status.Conditions,
-			v1alpha1.Condition{
-				Type:   v1alpha1.NotificationSent,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.NotificationSent,
 				Status: corev1.ConditionTrue,
-				Reason: v1alpha1.NotificationSentReason,
+				Reason: toolchainv1alpha1.NotificationSentReason,
 			},
 		)
 
@@ -185,15 +185,15 @@ func TestNotificationDelivery(t *testing.T) {
 			Namespace: operatorNamespace,
 			Name:      notification.Name,
 		}
-		instance := &v1alpha1.Notification{}
+		instance := &toolchainv1alpha1.Notification{}
 		err = client.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
 
 		test.AssertConditionsMatch(t, instance.Status.Conditions,
-			v1alpha1.Condition{
-				Type:   v1alpha1.NotificationSent,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.NotificationSent,
 				Status: corev1.ConditionTrue,
-				Reason: v1alpha1.NotificationSentReason,
+				Reason: toolchainv1alpha1.NotificationSentReason,
 			},
 		)
 
@@ -216,9 +216,9 @@ func TestNotificationDelivery(t *testing.T) {
 		// given
 		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_ENVIRONMENT", "e2e-tests")
 		defer restore()
-		userSignup := &v1alpha1.UserSignup{
+		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: newObjectMeta("abc123", "jane@redhat.com"),
-			Spec: v1alpha1.UserSignupSpec{
+			Spec: toolchainv1alpha1.UserSignupSpec{
 				Username:   "jane@redhat.com",
 				GivenName:  "jane",
 				FamilyName: "doe",
@@ -241,7 +241,7 @@ func TestNotificationDelivery(t *testing.T) {
 			Namespace: operatorNamespace,
 			Name:      notification.Name,
 		}
-		instance := &v1alpha1.Notification{}
+		instance := &toolchainv1alpha1.Notification{}
 		err = client.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
 
@@ -267,7 +267,7 @@ func TestNotificationDelivery(t *testing.T) {
 			Namespace: operatorNamespace,
 			Name:      notification.Name,
 		}
-		instance := &v1alpha1.Notification{}
+		instance := &toolchainv1alpha1.Notification{}
 		err = client.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
 
@@ -278,9 +278,9 @@ func TestNotificationDelivery(t *testing.T) {
 
 	t.Run("test notification delivery fails for delivery service failure", func(t *testing.T) {
 		// given
-		userSignup := &v1alpha1.UserSignup{
+		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: newObjectMeta("abc123", "foo@redhat.com"),
-			Spec: v1alpha1.UserSignupSpec{
+			Spec: toolchainv1alpha1.UserSignupSpec{
 				Username:   "foo@redhat.com",
 				GivenName:  "Foo",
 				FamilyName: "Bar",
@@ -304,7 +304,7 @@ func TestNotificationDelivery(t *testing.T) {
 			Namespace: operatorNamespace,
 			Name:      notification.Name,
 		}
-		instance := &v1alpha1.Notification{}
+		instance := &toolchainv1alpha1.Notification{}
 		err = client.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
 
@@ -335,56 +335,56 @@ func mockDeliveryService(templateLoader TemplateLoader) (DeliveryService, mailgu
 }
 
 func AssertThatNotificationIsDeleted(t *testing.T, cl client.Client, name string) {
-	notification := &v1alpha1.Notification{}
+	notification := &toolchainv1alpha1.Notification{}
 	err := cl.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, name), notification)
 	require.Error(t, err)
 	assert.IsType(t, v1.StatusReasonNotFound, apierrors.ReasonForError(err))
 }
 
-func sentCond() v1alpha1.Condition {
-	return v1alpha1.Condition{
-		Type:               v1alpha1.NotificationSent,
+func sentCond() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:               toolchainv1alpha1.NotificationSent,
 		Status:             apiv1.ConditionTrue,
 		Reason:             "Sent",
 		LastTransitionTime: v1.Time{Time: time.Now()},
 	}
 }
 
-func deliveryErrorCond(msg string) v1alpha1.Condition {
-	return v1alpha1.Condition{
-		Type:    v1alpha1.NotificationSent,
+func deliveryErrorCond(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.NotificationSent,
 		Status:  corev1.ConditionFalse,
-		Reason:  v1alpha1.NotificationDeliveryErrorReason,
+		Reason:  toolchainv1alpha1.NotificationDeliveryErrorReason,
 		Message: msg,
 	}
 }
 
-func contextErrorCond(msg string) v1alpha1.Condition {
-	return v1alpha1.Condition{
-		Type:    v1alpha1.NotificationSent,
+func contextErrorCond(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.NotificationSent,
 		Status:  corev1.ConditionFalse,
-		Reason:  v1alpha1.NotificationContextErrorReason,
+		Reason:  toolchainv1alpha1.NotificationContextErrorReason,
 		Message: msg,
 	}
 }
 
-func deletionCond(msg string) v1alpha1.Condition {
-	return v1alpha1.Condition{
-		Type:               v1alpha1.NotificationDeletionError,
+func deletionCond(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:               toolchainv1alpha1.NotificationDeletionError,
 		Status:             apiv1.ConditionTrue,
-		Reason:             v1alpha1.NotificationDeletionErrorReason,
+		Reason:             toolchainv1alpha1.NotificationDeletionErrorReason,
 		Message:            msg,
 		LastTransitionTime: v1.Time{Time: time.Now()},
 	}
 }
 
-func newNotification(userID, template string) *v1alpha1.Notification {
-	notification := &v1alpha1.Notification{
+func newNotification(userID, template string) *toolchainv1alpha1.Notification {
+	notification := &toolchainv1alpha1.Notification{
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: test.HostOperatorNs,
 			Name:      "notification-name",
 		},
-		Spec: v1alpha1.NotificationSpec{
+		Spec: toolchainv1alpha1.NotificationSpec{
 			UserID:   userID,
 			Template: template,
 		},
@@ -392,13 +392,13 @@ func newNotification(userID, template string) *v1alpha1.Notification {
 	return notification
 }
 
-func newAdminNotification(recipient, subject, content string) *v1alpha1.Notification {
-	return &v1alpha1.Notification{
+func newAdminNotification(recipient, subject, content string) *toolchainv1alpha1.Notification {
+	return &toolchainv1alpha1.Notification{
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: test.HostOperatorNs,
 			Name:      "notification-name",
 		},
-		Spec: v1alpha1.NotificationSpec{
+		Spec: toolchainv1alpha1.NotificationSpec{
 			Recipient: recipient,
 			Subject:   subject,
 			Content:   content,
@@ -406,7 +406,7 @@ func newAdminNotification(recipient, subject, content string) *v1alpha1.Notifica
 	}
 }
 
-func newController(t *testing.T, notification *v1alpha1.Notification, deliveryService DeliveryService,
+func newController(t *testing.T, notification *toolchainv1alpha1.Notification, deliveryService DeliveryService,
 	initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)

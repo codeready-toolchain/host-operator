@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -53,7 +53,7 @@ func (a *CounterAssertion) HaveUserAccountsForCluster(clusterName string, number
 	return a
 }
 
-func (a *CounterAssertion) HaveUsersPerActivations(expected v1alpha1.Metric) *CounterAssertion {
+func (a *CounterAssertion) HaveUsersPerActivations(expected toolchainv1alpha1.Metric) *CounterAssertion {
 	actual := a.counts.UsersPerActivationCounts
 	assert.Equal(a.t, map[string]int(expected), actual)
 	for activations, count := range expected {
@@ -62,7 +62,7 @@ func (a *CounterAssertion) HaveUsersPerActivations(expected v1alpha1.Metric) *Co
 	return a
 }
 
-func (a *CounterAssertion) HaveUsersPerActivationsAndDomain(expected v1alpha1.Metric) *CounterAssertion {
+func (a *CounterAssertion) HaveUsersPerActivationsAndDomain(expected toolchainv1alpha1.Metric) *CounterAssertion {
 	actual := a.counts.UserSignupsPerActivationAndDomainCounts
 	assert.Equal(a.t, map[string]int(expected), actual)
 	for key, count := range expected {
@@ -71,7 +71,7 @@ func (a *CounterAssertion) HaveUsersPerActivationsAndDomain(expected v1alpha1.Me
 	return a
 }
 
-func (a *CounterAssertion) HaveMasterUserRecordsPerDomain(expected v1alpha1.Metric) *CounterAssertion {
+func (a *CounterAssertion) HaveMasterUserRecordsPerDomain(expected toolchainv1alpha1.Metric) *CounterAssertion {
 	actual := a.counts.MasterUserRecordPerDomainCounts
 	assert.Equal(a.t, map[string]int(expected), actual, "invalid counter values")
 	for domain, count := range expected {
@@ -93,24 +93,24 @@ func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
 	for index := range usersignups {
 		usersignups[index] = NewUserSignup(
 			WithName(fmt.Sprintf("%s%d", prefix, index)),
-			WithAnnotation(v1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1)),
+			WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1)),
 		)
 	}
 	return usersignups
 }
 
-func InitializeCounters(t *testing.T, toolchainStatus *v1alpha1.ToolchainStatus, initObjs ...runtime.Object) {
+func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus, initObjs ...runtime.Object) {
 	counter.Reset()
 	t.Cleanup(counter.Reset)
 	initializeCounters(t, commontest.NewFakeClient(t, initObjs...), toolchainStatus)
 }
 
-func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *v1alpha1.ToolchainStatus) {
+func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
 	t.Cleanup(counter.Reset)
 	initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
 }
 
-func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *v1alpha1.ToolchainStatus) {
+func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
 	if toolchainStatus.Status.HostOperator != nil {
 		metrics.MasterUserRecordGauge.Set(float64(toolchainStatus.Status.HostOperator.MasterUserRecordCount))
 	}

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
@@ -90,7 +90,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
-		changeTierRequest.Status.Conditions = []v1alpha1.Condition{toBeComplete()}
+		changeTierRequest.Status.Conditions = []toolchainv1alpha1.Condition{toBeComplete()}
 		controller, request, cl := newController(t, changeTierRequest, mur)
 
 		// when
@@ -110,7 +110,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
-		changeTierRequest.Status.Conditions = []v1alpha1.Condition{toBeComplete()}
+		changeTierRequest.Status.Conditions = []toolchainv1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 		controller, request, cl := newController(t, changeTierRequest, mur)
 
@@ -186,7 +186,7 @@ func TestChangeTierFailure(t *testing.T) {
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 		cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-			_, ok := obj.(*v1alpha1.MasterUserRecord)
+			_, ok := obj.(*toolchainv1alpha1.MasterUserRecord)
 			if ok {
 				return fmt.Errorf("error")
 			}
@@ -206,7 +206,7 @@ func TestChangeTierFailure(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "faildeletion")
-		changeTierRequest.Status.Conditions = []v1alpha1.Condition{toBeComplete()}
+		changeTierRequest.Status.Conditions = []toolchainv1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
@@ -233,7 +233,7 @@ func TestUpdateStatus(t *testing.T) {
 	log := logf.Log.WithName("test")
 
 	t.Run("status updated", func(t *testing.T) {
-		statusUpdater := func(changeTierRequest *v1alpha1.ChangeTierRequest, message string) error {
+		statusUpdater := func(changeTierRequest *toolchainv1alpha1.ChangeTierRequest, message string) error {
 			assert.Equal(t, "oopsy woopsy", message)
 			return nil
 		}
@@ -246,7 +246,7 @@ func TestUpdateStatus(t *testing.T) {
 	})
 
 	t.Run("status update failed", func(t *testing.T) {
-		statusUpdater := func(changeTierRequest *v1alpha1.ChangeTierRequest, message string) error {
+		statusUpdater := func(changeTierRequest *toolchainv1alpha1.ChangeTierRequest, message string) error {
 			return fmt.Errorf("unable to update status")
 		}
 
@@ -260,87 +260,87 @@ func TestUpdateStatus(t *testing.T) {
 }
 
 func AssertThatChangeTierRequestIsDeleted(t *testing.T, cl client.Client, name string) {
-	changeTierRequest := &v1alpha1.ChangeTierRequest{}
+	changeTierRequest := &toolchainv1alpha1.ChangeTierRequest{}
 	err := cl.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, name), changeTierRequest)
 	require.Error(t, err)
 	assert.IsType(t, v1.StatusReasonNotFound, apierrors.ReasonForError(err))
 }
 
-func AssertThatChangeTierRequestHasCondition(t *testing.T, cl client.Client, name string, condition ...v1alpha1.Condition) {
-	changeTierRequest := &v1alpha1.ChangeTierRequest{}
+func AssertThatChangeTierRequestHasCondition(t *testing.T, cl client.Client, name string, condition ...toolchainv1alpha1.Condition) {
+	changeTierRequest := &toolchainv1alpha1.ChangeTierRequest{}
 	err := cl.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, name), changeTierRequest)
 	require.NoError(t, err)
 	test.AssertConditionsMatch(t, changeTierRequest.Status.Conditions, condition...)
 }
 
-func NewNSTemplateTier(tierName, revision, clusterResourcesRevision string, nsTypes ...string) *v1alpha1.NSTemplateTier {
-	namespaces := make([]v1alpha1.NSTemplateTierNamespace, len(nsTypes))
+func NewNSTemplateTier(tierName, revision, clusterResourcesRevision string, nsTypes ...string) *toolchainv1alpha1.NSTemplateTier {
+	namespaces := make([]toolchainv1alpha1.NSTemplateTierNamespace, len(nsTypes))
 	for i, nsType := range nsTypes {
-		namespaces[i] = v1alpha1.NSTemplateTierNamespace{
+		namespaces[i] = toolchainv1alpha1.NSTemplateTierNamespace{
 			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, nsType, revision),
 		}
 	}
-	var clusterResources *v1alpha1.NSTemplateTierClusterResources
+	var clusterResources *toolchainv1alpha1.NSTemplateTierClusterResources
 	if clusterResourcesRevision != "" {
-		clusterResources = &v1alpha1.NSTemplateTierClusterResources{
+		clusterResources = &toolchainv1alpha1.NSTemplateTierClusterResources{
 			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, "clusterresources", clusterResourcesRevision),
 		}
 	}
-	return &v1alpha1.NSTemplateTier{
+	return &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: test.HostOperatorNs,
 			Name:      tierName,
 		},
-		Spec: v1alpha1.NSTemplateTierSpec{
+		Spec: toolchainv1alpha1.NSTemplateTierSpec{
 			Namespaces:       namespaces,
 			ClusterResources: clusterResources,
 		},
 	}
 }
 
-func toBeComplete() v1alpha1.Condition {
-	return v1alpha1.Condition{
-		Type:               v1alpha1.ChangeTierRequestComplete,
+func toBeComplete() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:               toolchainv1alpha1.ChangeTierRequestComplete,
 		Status:             apiv1.ConditionTrue,
-		Reason:             v1alpha1.ChangeTierRequestChangedReason,
+		Reason:             toolchainv1alpha1.ChangeTierRequestChangedReason,
 		LastTransitionTime: v1.Time{Time: time.Now()},
 	}
 }
 
-func toBeNotComplete(msg string) v1alpha1.Condition {
-	return v1alpha1.Condition{
-		Type:    v1alpha1.ChangeTierRequestComplete,
+func toBeNotComplete(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ChangeTierRequestComplete,
 		Status:  apiv1.ConditionFalse,
-		Reason:  v1alpha1.ChangeTierRequestChangeFiledReason,
+		Reason:  toolchainv1alpha1.ChangeTierRequestChangeFiledReason,
 		Message: msg,
 	}
 }
 
-func toBeDeletionError(msg string) v1alpha1.Condition {
-	return v1alpha1.Condition{
-		Type:               v1alpha1.ChangeTierRequestDeletionError,
+func toBeDeletionError(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:               toolchainv1alpha1.ChangeTierRequestDeletionError,
 		Status:             apiv1.ConditionTrue,
-		Reason:             v1alpha1.ChangeTierRequestDeletionErrorReason,
+		Reason:             toolchainv1alpha1.ChangeTierRequestDeletionErrorReason,
 		Message:            msg,
 		LastTransitionTime: v1.Time{Time: time.Now()},
 	}
 }
 
-type changeTierRequestOption func(*v1alpha1.ChangeTierRequest)
+type changeTierRequestOption func(*toolchainv1alpha1.ChangeTierRequest)
 
 func targetCluster(c string) changeTierRequestOption {
-	return func(ctr *v1alpha1.ChangeTierRequest) {
+	return func(ctr *toolchainv1alpha1.ChangeTierRequest) {
 		ctr.Spec.TargetCluster = c
 	}
 }
 
-func newChangeTierRequest(murName, tierName string, options ...changeTierRequestOption) *v1alpha1.ChangeTierRequest {
-	ctr := &v1alpha1.ChangeTierRequest{
+func newChangeTierRequest(murName, tierName string, options ...changeTierRequestOption) *toolchainv1alpha1.ChangeTierRequest {
+	ctr := &toolchainv1alpha1.ChangeTierRequest{
 		ObjectMeta: v1.ObjectMeta{
 			Namespace: test.HostOperatorNs,
 			Name:      "request-name",
 		},
-		Spec: v1alpha1.ChangeTierRequestSpec{
+		Spec: toolchainv1alpha1.ChangeTierRequestSpec{
 			MurName:  murName,
 			TierName: tierName,
 		},
@@ -351,7 +351,7 @@ func newChangeTierRequest(murName, tierName string, options ...changeTierRequest
 	return ctr
 }
 
-func newController(t *testing.T, changeTier *v1alpha1.ChangeTierRequest, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+func newController(t *testing.T, changeTier *toolchainv1alpha1.ChangeTierRequest, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
