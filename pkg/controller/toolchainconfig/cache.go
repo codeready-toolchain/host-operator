@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,27 +17,27 @@ var cacheLog = logf.Log.WithName("cache_toolchainconfig")
 
 type cache struct {
 	sync.RWMutex
-	config *v1alpha1.ToolchainConfig
+	config *toolchainv1alpha1.ToolchainConfig
 }
 
-func (c *cache) set(config *v1alpha1.ToolchainConfig) {
+func (c *cache) set(config *toolchainv1alpha1.ToolchainConfig) {
 	c.Lock()
 	defer c.Unlock()
 	c.config = config.DeepCopy()
 }
 
-func (c *cache) get() *v1alpha1.ToolchainConfig {
+func (c *cache) get() *toolchainv1alpha1.ToolchainConfig {
 	c.RLock()
 	defer c.RUnlock()
 	return c.config.DeepCopy()
 }
 
-func updateConfig(config *v1alpha1.ToolchainConfig) {
+func updateConfig(config *toolchainv1alpha1.ToolchainConfig) {
 	configCache.set(config)
 }
 
 func loadLatest(cl client.Client, namespace string) error {
-	config := &v1alpha1.ToolchainConfig{}
+	config := &toolchainv1alpha1.ToolchainConfig{}
 	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "config"}, config); err != nil {
 		if apierrors.IsNotFound(err) {
 			cacheLog.Info("ToolchainConfig resource with the name 'config' wasn't found, default configuration will be used", "namespace", namespace)
@@ -58,12 +58,12 @@ func GetConfig(cl client.Client, namespace string) (ToolchainConfig, error) {
 	if config == nil {
 		err := loadLatest(cl, namespace)
 		if err != nil {
-			return ToolchainConfig{cfg: &v1alpha1.ToolchainConfigSpec{}}, err
+			return ToolchainConfig{cfg: &toolchainv1alpha1.ToolchainConfigSpec{}}, err
 		}
 		config = configCache.get()
 	}
 	if config == nil {
-		return ToolchainConfig{cfg: &v1alpha1.ToolchainConfigSpec{}}, nil
+		return ToolchainConfig{cfg: &toolchainv1alpha1.ToolchainConfigSpec{}}, nil
 	}
 	return ToolchainConfig{cfg: &config.Spec}, nil
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -100,7 +100,7 @@ func newRequest() reconcile.Request {
 	}
 }
 
-func newToolchainConfigWithReset(t *testing.T, options ...HostConfigOption) *v1alpha1.ToolchainConfig {
+func newToolchainConfigWithReset(t *testing.T, options ...HostConfigOption) *toolchainv1alpha1.ToolchainConfig {
 	t.Cleanup(Reset)
 	return NewToolchainConfig(options...)
 }

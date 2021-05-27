@@ -1,9 +1,9 @@
 package toolchainconfig
 
-import "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+import toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
 type ToolchainConfig struct {
-	cfg *v1alpha1.ToolchainConfigSpec
+	cfg *toolchainv1alpha1.ToolchainConfigSpec
 }
 
 func (c *ToolchainConfig) AutomaticApproval() AutoApprovalConfig {
@@ -15,7 +15,7 @@ func (c *ToolchainConfig) Deactivation() DeactivationConfig {
 }
 
 type AutoApprovalConfig struct {
-	approval v1alpha1.AutomaticApproval
+	approval toolchainv1alpha1.AutomaticApproval
 }
 
 func (a AutoApprovalConfig) IsEnabled() bool {
@@ -39,7 +39,7 @@ func (a AutoApprovalConfig) MaxNumberOfUsersSpecificPerMemberCluster() map[strin
 }
 
 type DeactivationConfig struct {
-	dctv v1alpha1.Deactivation
+	dctv toolchainv1alpha1.Deactivation
 }
 
 func (d DeactivationConfig) DeactivatingNotificationInDays() int {
