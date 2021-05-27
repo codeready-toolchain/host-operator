@@ -294,7 +294,7 @@ func initializeFromResources(cl client.Client, namespace string) error {
 	reset()
 	for _, usersignup := range usersignups.Items {
 		activations, activationsExists := usersignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]
-		if activationsExists { // (DEPRECATED)
+		if activationsExists {
 			_, err := strconv.Atoi(activations) // let's make sure the value is actually an integer
 			if err != nil {
 				log.Error(err, "invalid number of activations", "name", usersignup.Name, "value", activations)
