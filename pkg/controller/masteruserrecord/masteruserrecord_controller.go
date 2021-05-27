@@ -280,7 +280,7 @@ func (r *Reconciler) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.Ma
 		return 0, r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason), err,
 			"failed to update MasterUserRecord while deleting finalizer")
 	}
-	domain := metrics.GetEmailDomain(mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey])
+	domain := metrics.GetEmailDomain(mur)
 	counter.DecrementMasterUserRecordCount(logger, domain)
 	logger.Info("Finalizer removed from MasterUserRecord")
 	return 0, nil

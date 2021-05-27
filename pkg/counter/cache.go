@@ -301,14 +301,13 @@ func initializeFromResources(cl client.Client, namespace string) error {
 				continue
 			}
 			cachedCounts.UsersPerActivationCounts[activations]++
-			emailAddress := usersignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]
-			domain := metrics.GetEmailDomain(emailAddress) // if email address did not exist (which should not happen), then the domain will be `external`
+			domain := metrics.GetEmailDomain(&usersignup)
 			cachedCounts.UserSignupsPerActivationAndDomainCounts[joinLabelValues(activations, string(domain))]++
 		}
 	}
 	for _, mur := range murs.Items {
 		cachedCounts.MasterUserRecordCount++
-		domain := metrics.GetEmailDomain(mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey])
+		domain := metrics.GetEmailDomain(&mur)
 		cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]++
 		for _, ua := range mur.Spec.UserAccounts {
 			cachedCounts.UserAccountsPerClusterCounts[ua.TargetCluster]++
