@@ -12,7 +12,7 @@ import (
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
@@ -36,7 +36,7 @@ func TestUserCleanup(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
 			test2.CreatedBefore(threeYears),
-			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
+			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			test2.SignupComplete(""),
 			test2.ApprovedAutomatically(),
 		)
@@ -56,7 +56,7 @@ func TestUserCleanup(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
 			test2.ApprovedAutomatically(),
-			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
+			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			test2.DeactivatedWithLastTransitionTime(time.Duration(5*time.Minute)),
 			test2.CreatedBefore(threeYears),
 		)
@@ -84,7 +84,7 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that an old, deactivated UserSignup is deleted", func(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
-			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
+			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			test2.ApprovedAutomatically(),
 			test2.DeactivatedWithLastTransitionTime(threeYears),
 			test2.CreatedBefore(threeYears),

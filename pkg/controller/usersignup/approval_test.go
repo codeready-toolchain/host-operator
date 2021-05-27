@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -22,11 +22,11 @@ func TestGetClusterIfApproved(t *testing.T) {
 	signup := NewUserSignup()
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1500)),
-		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 100,
 			string(metrics.External): 1400,
 		}),
-		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1500,
 		}),
 		WithMember("member1", WithUserAccountCount(800), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
@@ -319,7 +319,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			// given
 			fakeClient := NewFakeClient(t, toolchainStatus, NewHostOperatorConfigWithReset(t, AutomaticApproval().Enabled()))
 			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-				if _, ok := obj.(*v1alpha1.ToolchainStatus); ok {
+				if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
 					return fmt.Errorf("some error")
 				}
 				return fakeClient.Client.Get(ctx, key, obj)
