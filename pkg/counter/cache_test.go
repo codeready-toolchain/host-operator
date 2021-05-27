@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
@@ -31,17 +31,17 @@ func TestAddMurToCounter(t *testing.T) {
 	// then
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{string(metrics.Internal): 1})
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 1})
 }
 
 func TestRemoveMurFromCounter(t *testing.T) {
 	// given
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(2)),
-		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 2,
 		}),
-		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1,
 			string(metrics.External): 1,
 		})))
@@ -53,10 +53,10 @@ func TestRemoveMurFromCounter(t *testing.T) {
 	// then
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
-		HaveUsersPerActivations(v1alpha1.Metric{
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2,
 		}).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 0,
 			string(metrics.External): 1,
 		})
@@ -73,7 +73,7 @@ func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	// then
 	AssertThatCounters(t).
 		HaveMasterUserRecords(0).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{})
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{})
 }
 
 func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
@@ -86,17 +86,17 @@ func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
 	// then
 	AssertThatUninitializedCounters(t).
 		HaveMasterUserRecords(-1).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{string(metrics.Internal): -1})
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): -1})
 }
 
 func TestAddUserAccountToCounter(t *testing.T) {
 	// given
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
-		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
-		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1,
 		}),
 	))
@@ -109,10 +109,10 @@ func TestAddUserAccountToCounter(t *testing.T) {
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
 		HaveUserAccountsForCluster("member-1", 1).
-		HaveUsersPerActivations(v1alpha1.Metric{
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
 		}).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1,
 		})
 }
@@ -123,10 +123,10 @@ func TestRemoveUserAccountFromCounter(t *testing.T) {
 		NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMember("member-1", WithUserAccountCount(2)),
-			WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 				"1": 1,
 			}),
-			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1,
 			}),
 		))
@@ -139,10 +139,10 @@ func TestRemoveUserAccountFromCounter(t *testing.T) {
 	AssertThatCounters(t).
 		HaveMasterUserRecords(1).
 		HaveUserAccountsForCluster("member-1", 1).
-		HaveUsersPerActivations(v1alpha1.Metric{
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
 		}).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1,
 		})
 }
@@ -152,10 +152,10 @@ func TestRemoveUserAccountFromCounterWhenIsAlreadyZero(t *testing.T) {
 	InitializeCounters(t,
 		NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
-			WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 				"1": 2,
 			}),
-			WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1,
 				string(metrics.External): 1,
 			}),
@@ -170,10 +170,10 @@ func TestRemoveUserAccountFromCounterWhenIsAlreadyZero(t *testing.T) {
 	AssertThatCounters(t).HaveMasterUserRecords(2).
 		HaveUserAccountsForCluster("member-1", 0).
 		HaveUserAccountsForCluster("member-2", 2).
-		HaveUsersPerActivations(v1alpha1.Metric{
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2,
 		}).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1,
 			string(metrics.External): 1,
 		})
@@ -201,7 +201,7 @@ func TestUpdateUsersPerActivationMetric(t *testing.T) {
 	counter.UpdateUsersPerActivationCounters(logger, 2) // a user signup twice (hence counter for "1" will be decreased)
 
 	// then
-	AssertThatCounters(t).HaveUsersPerActivations(v1alpha1.Metric{
+	AssertThatCounters(t).HaveUsersPerActivations(toolchainv1alpha1.Metric{
 		"1": 0,
 		"2": 1,
 	})
@@ -218,11 +218,11 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(13)),
 		WithMember("member-1", WithUserAccountCount(10)),
 		WithMember("member-2", WithUserAccountCount(3)),
-		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 9,
 			"2": 4,
 		}),
-		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 8,
 			string(metrics.External): 5,
 		}),
@@ -268,10 +268,10 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(13)),
 		WithMember("member-1", WithUserAccountCount(10)),
 		WithMember("member-2", WithUserAccountCount(3)),
-		WithMetric(v1alpha1.UsersPerActivationMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 13,
 		}),
-		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 8,
 			string(metrics.External): 5,
 		}))
@@ -284,11 +284,11 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 		HaveMasterUserRecords(12).
 		HaveUserAccountsForCluster("member-1", 9).
 		HaveUserAccountsForCluster("member-2", 3).
-		HaveUsersPerActivations(v1alpha1.Metric{
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 13,
 			"2": 1,
 		}).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 7, // decremented
 			string(metrics.External): 5,
 		})
@@ -318,7 +318,7 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(0)), // will load from UserSignups and MURs
 		WithMember("member-1", WithUserAccountCount(0)),
-		WithMetric(v1alpha1.MasterUserRecordsPerDomainMetricKey, v1alpha1.Metric{
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 0,
 			string(metrics.External): 0,
 		}),
@@ -333,18 +333,18 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	AssertThatCounters(t).
 		HaveMasterUserRecords(3).
 		HaveUserAccountsForCluster("member-1", 3).
-		HaveUsersPerActivations(v1alpha1.Metric{
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
 			"2": 1,
 			"3": 1,
 		}).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 3, // all MURs have `@redhat.com` email address
 		})
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(3).
 		HasUserAccountCount("member-1", 3).
-		HasUsersPerActivations(v1alpha1.Metric{
+		HasUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
 			"2": 1,
 			"3": 1,
@@ -376,7 +376,7 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 	require.NoError(t, err)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(10).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 10, // all MURs have `@redhat.com` email address
 		}).
 		HaveUserAccountsForCluster("member-1", 10)
@@ -471,12 +471,12 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	require.NoError(t, err)
 	AssertThatCounters(t).
 		HaveMasterUserRecords(12).
-		HaveMasterUserRecordsPerDomain(v1alpha1.Metric{
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 12, // all MURs have `@redhat.com` email address
 		}).
 		HaveUserAccountsForCluster("member-1", 12).
 		HaveUserAccountsForCluster("member-2", 2).
-		HaveUsersPerActivations(v1alpha1.Metric{
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2,
 			"2": 1000,
 		})
@@ -487,7 +487,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		}).
 		HasUserAccountCount("member-1", 12).
 		HasUserAccountCount("member-2", 2).
-		HasUsersPerActivations(v1alpha1.Metric{
+		HasUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2,
 			"2": 1000,
 		})

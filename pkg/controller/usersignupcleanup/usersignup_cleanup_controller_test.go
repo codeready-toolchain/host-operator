@@ -3,15 +3,16 @@ package usersignupcleanup
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
@@ -35,7 +36,7 @@ func TestUserCleanup(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
 			test2.CreatedBefore(threeYears),
-			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
+			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			test2.SignupComplete(""),
 			test2.ApprovedAutomatically(),
 		)
@@ -54,10 +55,10 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that user cleanup doesn't delete a recently deactivated UserSignup", func(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
+			test2.ApprovedAutomatically(),
+			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			test2.DeactivatedWithLastTransitionTime(time.Duration(5*time.Minute)),
 			test2.CreatedBefore(threeYears),
-			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
-			test2.ApprovedAutomatically(),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -71,10 +72,10 @@ func TestUserCleanup(t *testing.T) {
 		require.NotNil(t, userSignup)
 		require.True(t, res.Requeue)
 
-		// We expect the requeue duration to be approximately equal to the default retention time of 180 days. Let's
-		// accept any value here between the range of 179 days and 181 days
-		durLower := time.Duration(179 * time.Hour * 24)
-		durUpper := time.Duration(181 * time.Hour * 24)
+		// We expect the requeue duration to be approximately equal to the default retention time of 365 days. Let's
+		// accept any value here between the range of 364 days and 366 days
+		durLower := time.Duration(364 * time.Hour * 24)
+		durUpper := time.Duration(366 * time.Hour * 24)
 
 		require.Greater(t, res.RequeueAfter, durLower)
 		require.Less(t, res.RequeueAfter, durUpper)
@@ -83,10 +84,10 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that an old, deactivated UserSignup is deleted", func(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
+			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
+			test2.ApprovedAutomatically(),
 			test2.DeactivatedWithLastTransitionTime(threeYears),
 			test2.CreatedBefore(threeYears),
-			test2.WithStateLabel(v1alpha1.UserSignupStateLabelValueApproved),
-			test2.ApprovedAutomatically(),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -131,7 +132,7 @@ func TestUserCleanup(t *testing.T) {
 			test2.CreatedBefore(threeYears),
 		)
 		states.SetVerificationRequired(userSignup, false)
-		userSignup.Spec.Approved = false
+		states.SetApproved(userSignup, false)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 

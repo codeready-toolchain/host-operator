@@ -3,11 +3,12 @@ package usersignup
 import (
 	"context"
 
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +43,7 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 	if config.AutomaticApproval.Enabled != nil {
 		autoApprovalEnabled = *config.AutomaticApproval.Enabled
 	}
-	if !userSignup.Spec.Approved && !autoApprovalEnabled {
+	if !states.Approved(userSignup) && !autoApprovalEnabled {
 		return false, unknown, nil
 	}
 
@@ -57,7 +58,7 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 
 	clusterName := getOptimalTargetCluster(userSignup, getMemberClusters, hasNotReachedMaxNumberOfUsersThreshold(config, counts), hasEnoughResources(config, status))
 	if clusterName == "" {
-		return userSignup.Spec.Approved, notFound, nil
+		return states.Approved(userSignup), notFound, nil
 	}
 	return true, targetCluster(clusterName), nil
 }

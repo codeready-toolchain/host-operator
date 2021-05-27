@@ -9,8 +9,7 @@ import (
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	uuid "github.com/satori/go.uuid"
@@ -19,23 +18,23 @@ import (
 )
 
 func WithTargetCluster(targetCluster string) UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		userSignup.Spec.TargetCluster = targetCluster
 	}
 }
 
 func Approved() UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
-		userSignup.Spec.Approved = true
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
+		states.SetApproved(userSignup, true)
 	}
 }
 
 func ApprovedAutomatically() UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
-		userSignup.Spec.Approved = true
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
+		states.SetApproved(userSignup, true)
 		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
-				Type:   v1alpha1.UserSignupApproved,
+				Type:   toolchainv1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
 				Reason: "ApprovedAutomatically",
 			})
@@ -43,19 +42,19 @@ func ApprovedAutomatically() UserSignupModifier {
 }
 
 func Deactivated() UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		states.SetDeactivated(userSignup, true)
 	}
 }
 
 func DeactivatedWithLastTransitionTime(before time.Duration) UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		states.SetDeactivated(userSignup, true)
 
 		deactivatedCondition := toolchainv1alpha1.Condition{
-			Type:               v1alpha1.UserSignupComplete,
+			Type:               toolchainv1alpha1.UserSignupComplete,
 			Status:             v1.ConditionTrue,
-			Reason:             v1alpha1.UserSignupUserDeactivatedReason,
+			Reason:             toolchainv1alpha1.UserSignupUserDeactivatedReason,
 			LastTransitionTime: metav1.Time{Time: time.Now().Add(-before)},
 		}
 
@@ -64,31 +63,31 @@ func DeactivatedWithLastTransitionTime(before time.Duration) UserSignupModifier 
 }
 
 func VerificationRequired() UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		states.SetVerificationRequired(userSignup, true)
 	}
 }
 
 func WithUsername(username string) UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		userSignup.Spec.Username = username
 	}
 }
 
 func WithLabel(key, value string) UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		userSignup.Labels[key] = value
 	}
 }
 
 func WithStateLabel(stateValue string) UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
-		userSignup.Labels[v1alpha1.UserSignupStateLabelKey] = stateValue
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = stateValue
 	}
 }
 
 func WithEmail(email string) UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		md5hash := md5.New()
 		// Ignore the error, as this implementation cannot return one
 		_, _ = md5hash.Write([]byte(email))
@@ -99,7 +98,7 @@ func WithEmail(email string) UserSignupModifier {
 }
 
 func SignupComplete(reason string) UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupComplete,
@@ -110,47 +109,47 @@ func SignupComplete(reason string) UserSignupModifier {
 }
 
 func CreatedBefore(before time.Duration) UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		userSignup.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Now().Add(-before)}
 	}
 }
 
 func BeingDeleted() UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		userSignup.ObjectMeta.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 	}
 }
 
 func WithAnnotation(key, value string) UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		userSignup.Annotations[key] = value
 	}
 }
 func WithoutAnnotation(key string) UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		delete(userSignup.Annotations, key)
 	}
 }
 
 func WithoutAnnotations() UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		userSignup.Annotations = map[string]string{}
 	}
 }
 
 func WithName(name string) UserSignupModifier {
-	return func(userSignup *v1alpha1.UserSignup) {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		userSignup.Name = name
 		userSignup.Spec.Username = name
 	}
 }
 
-type UserSignupModifier func(*v1alpha1.UserSignup)
+type UserSignupModifier func(*toolchainv1alpha1.UserSignup)
 
-func NewUserSignup(modifiers ...UserSignupModifier) *v1alpha1.UserSignup {
-	signup := &v1alpha1.UserSignup{
+func NewUserSignup(modifiers ...UserSignupModifier) *toolchainv1alpha1.UserSignup {
+	signup := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: NewUserSignupObjectMeta("", "foo@redhat.com"),
-		Spec: v1alpha1.UserSignupSpec{
+		Spec: toolchainv1alpha1.UserSignupSpec{
 			Userid:   "UserID123",
 			Username: "foo@redhat.com",
 		},

@@ -1,6 +1,10 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: (devel)
+  creationTimestamp: null
   name: hostoperatorconfigs.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
@@ -18,18 +22,13 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: HostOperatorConfig keeps all configuration parameters needed
-          in host operator
+        description: HostOperatorConfig keeps all configuration parameters needed in host operator
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -44,39 +43,28 @@ spec:
                     description: Defines if the automatic approval is enabled or not
                     type: boolean
                   maxNumberOfUsers:
-                    description: Defines the maximal number of users to be allowed
-                      for automatic approval. When the number is reached, then the
-                      automatic approval is stopped.
+                    description: Defines the maximal number of users to be allowed for automatic approval. When the number is reached, then the automatic approval is stopped.
                     properties:
                       overall:
-                        description: It is the maximal number of users provisioned
-                          in the system overall - equals to max number of MasterUserRecords
-                          in host cluster
+                        description: It is the maximal number of users provisioned in the system overall - equals to max number of MasterUserRecords in host cluster
                         type: integer
                       specificPerMemberCluster:
                         additionalProperties:
                           type: integer
-                        description: Contains a map of maximal number of users provisioned
-                          per member cluster mapped by the cluster name - equals to
-                          max number of UserAccounts in member cluster
+                        description: Contains a map of maximal number of users provisioned per member cluster mapped by the cluster name - equals to max number of UserAccounts in member cluster
                         type: object
                         x-kubernetes-map-type: atomic
                     type: object
                   resourceCapacityThreshold:
-                    description: Contains threshold (in percentage of usage) that
-                      defines when the automatic approval should be stopped
+                    description: Contains threshold (in percentage of usage) that defines when the automatic approval should be stopped
                     properties:
                       defaultThreshold:
-                        description: It is the default capacity threshold (in percentage
-                          of usage) to be used for all member clusters if no special
-                          threshold is defined
+                        description: It is the default capacity threshold (in percentage of usage) to be used for all member clusters if no special threshold is defined
                         type: integer
                       specificPerMemberCluster:
                         additionalProperties:
                           type: integer
-                        description: Contains a map of specific capacity thresholds
-                          (in percentage of usage) for particular member clusters
-                          mapped by their names
+                        description: Contains a map of specific capacity thresholds (in percentage of usage) for particular member clusters mapped by their names
                         type: object
                         x-kubernetes-map-type: atomic
                     type: object
@@ -101,3 +89,9 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

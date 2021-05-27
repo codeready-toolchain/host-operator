@@ -5,7 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
 
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
@@ -78,7 +78,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
-	if states.VerificationRequired(instance) && !instance.Spec.Approved {
+	if states.VerificationRequired(instance) && !(states.Approved(instance) || instance.Spec.Approved) {
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
 
