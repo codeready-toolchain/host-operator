@@ -105,48 +105,6 @@ type Reconciler struct {
 	GetMemberClusters cluster.GetMemberClustersFunc
 }
 
-/* =================================================
-   Migration code START - remove after migration complete
-  =================================================*/
-
-func migrateApproved(userSignup *toolchainv1alpha1.UserSignup) {
-	if userSignup.Spec.Approved {
-		setState(userSignup, toolchainv1alpha1.UserSignupStateApproved, true)
-	}
-}
-
-func setState(userSignup *toolchainv1alpha1.UserSignup, state toolchainv1alpha1.UserSignupState, val bool) {
-	if val && !contains(userSignup.Spec.States, state) {
-		userSignup.Spec.States = append(userSignup.Spec.States, state)
-	}
-
-	if !val && contains(userSignup.Spec.States, state) {
-		userSignup.Spec.States = remove(userSignup.Spec.States, state)
-	}
-}
-
-func contains(s []toolchainv1alpha1.UserSignupState, state toolchainv1alpha1.UserSignupState) bool {
-	for _, a := range s {
-		if a == state {
-			return true
-		}
-	}
-	return false
-}
-
-func remove(s []toolchainv1alpha1.UserSignupState, state toolchainv1alpha1.UserSignupState) []toolchainv1alpha1.UserSignupState {
-	for i, v := range s {
-		if v == state {
-			return append(s[:i], s[i+1:]...)
-		}
-	}
-	return s
-}
-
-/* =================================================
-   Migration code END - remove after migration complete
-  =================================================*/
-
 // Reconcile reads that state of the cluster for a UserSignup object and makes changes based on the state read
 // and what is in the UserSignup.Spec
 // Note:
@@ -170,21 +128,6 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 	logger = logger.WithValues("username", userSignup.Spec.Username)
-
-	// TODO remove this after migration complete
-	// Migrate the Approved property
-	if userSignup.Spec.Approved && !states.Approved(userSignup) && !states.Deactivated(userSignup) {
-		logger.Info("Migrating UserSignup")
-
-		migrateApproved(userSignup)
-
-		// We don't want this migration to run more than once
-		userSignup.Spec.Approved = false
-
-		// Return from reconciliation if the UserSignup was migrated, the change in UserSignup will
-		// trigger another reconciliation
-		return reconcile.Result{}, r.Client.Update(context.TODO(), userSignup)
-	}
 
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {

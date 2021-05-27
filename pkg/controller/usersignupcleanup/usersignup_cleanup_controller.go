@@ -2,8 +2,9 @@ package usersignupcleanup
 
 import (
 	"context"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -78,7 +79,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
-	if states.VerificationRequired(instance) && !(states.Approved(instance) || instance.Spec.Approved) {
+	if states.VerificationRequired(instance) && !states.Approved(instance) {
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
 
