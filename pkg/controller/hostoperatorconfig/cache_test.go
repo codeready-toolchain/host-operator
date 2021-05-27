@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +23,7 @@ func TestGetConfig(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	assert.Equal(t, v1alpha1.HostOperatorConfigSpec{}, configSpec)
+	assert.Equal(t, toolchainv1alpha1.HostOperatorConfigSpec{}, configSpec)
 
 	t.Run("return config that is stored in client", func(t *testing.T) {
 		// given
@@ -79,7 +79,7 @@ func TestGetConfigErrored(t *testing.T) {
 
 	// then
 	require.Error(t, err)
-	assert.Equal(t, v1alpha1.HostOperatorConfigSpec{}, configSpec)
+	assert.Equal(t, toolchainv1alpha1.HostOperatorConfigSpec{}, configSpec)
 }
 
 func TestMultipleExecutionsInParallel(t *testing.T) {
@@ -123,7 +123,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	assert.NotEmpty(t, configSpec.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster)
 }
 
-func newHostOperatorConfigWithReset(t *testing.T, options ...HostOperatorConfigOption) *v1alpha1.HostOperatorConfig {
+func newHostOperatorConfigWithReset(t *testing.T, options ...HostOperatorConfigOption) *toolchainv1alpha1.HostOperatorConfig {
 	t.Cleanup(Reset)
 	return NewHostOperatorConfig(options...)
 }

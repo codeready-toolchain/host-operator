@@ -3,7 +3,7 @@ package usersignup
 import (
 	"testing"
 
-	"github.com/codeready-toolchain/api/pkg/apis/toolchain/v1alpha1"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -157,7 +157,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
-			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = v1alpha1.NSTemplateSetSpec{}
+			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = toolchainv1alpha1.NSTemplateSetSpec{}
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -193,7 +193,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
-			delete(mur.Annotations, v1alpha1.MasterUserRecordEmailAnnotationKey)
+			delete(mur.Annotations, toolchainv1alpha1.MasterUserRecordEmailAnnotationKey)
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -207,10 +207,10 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 }
 
-func newExpectedNsTemplateSetSpec() v1alpha1.NSTemplateSetSpec {
-	return v1alpha1.NSTemplateSetSpec{
+func newExpectedNsTemplateSetSpec() toolchainv1alpha1.NSTemplateSetSpec {
+	return toolchainv1alpha1.NSTemplateSetSpec{
 		TierName: "advanced",
-		Namespaces: []v1alpha1.NSTemplateSetNamespace{
+		Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
 			{
 				TemplateRef: "advanced-dev-123abc1",
 			},
@@ -221,15 +221,15 @@ func newExpectedNsTemplateSetSpec() v1alpha1.NSTemplateSetSpec {
 				TemplateRef: "advanced-extra-123abc3",
 			},
 		},
-		ClusterResources: &v1alpha1.NSTemplateSetClusterResources{
+		ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
 			TemplateRef: "advanced-clusterresources-654321b",
 		},
 	}
 }
 
-func newExpectedMur(tier *v1alpha1.NSTemplateTier, userSignup *v1alpha1.UserSignup) *v1alpha1.MasterUserRecord {
+func newExpectedMur(tier *toolchainv1alpha1.NSTemplateTier, userSignup *toolchainv1alpha1.UserSignup) *toolchainv1alpha1.MasterUserRecord {
 	hash, _ := nstemplatetier.ComputeHashForNSTemplateTier(tier)
-	return &v1alpha1.MasterUserRecord{
+	return &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      "johny",
 			Namespace: test.HostOperatorNs,
@@ -241,17 +241,17 @@ func newExpectedMur(tier *v1alpha1.NSTemplateTier, userSignup *v1alpha1.UserSign
 				"toolchain.dev.openshift.com/user-email": "foo@redhat.com",
 			},
 		},
-		Spec: v1alpha1.MasterUserRecordSpec{
+		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserID:        userSignup.Spec.Userid,
 			Banned:        false,
 			Disabled:      false,
 			Deprovisioned: false,
-			UserAccounts: []v1alpha1.UserAccountEmbedded{
+			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
 				{
 					SyncIndex:     "",
 					TargetCluster: test.MemberClusterName,
-					Spec: v1alpha1.UserAccountSpecEmbedded{
-						UserAccountSpecBase: v1alpha1.UserAccountSpecBase{
+					Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
+						UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
 							NSLimit:       "default",
 							NSTemplateSet: newExpectedNsTemplateSetSpec(),
 						},
