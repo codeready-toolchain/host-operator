@@ -39,7 +39,7 @@ var (
 	UserAccountGaugeVec *prometheus.GaugeVec
 	// UsersPerActivationGaugeVec reflects the number of users labelled with on their current number of activations (DEPRECATED)
 	UsersPerActivationGaugeVec *prometheus.GaugeVec
-	// UsersPerActivationGaugeVec reflects the number of users labelled with on their current number of activations and email address domain
+	// UserSignupsPerActivationAndDomainGaugeVec reflects the number of users labelled with on their current number of activations and email address domain
 	UserSignupsPerActivationAndDomainGaugeVec *prometheus.GaugeVec
 	// MasterUserRecordGaugeVec reflects the current number of MasterUserRecords, labelled with their email address domain (`internal` vs `external`)
 	MasterUserRecordGaugeVec *prometheus.GaugeVec
