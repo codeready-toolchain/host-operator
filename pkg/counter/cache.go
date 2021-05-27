@@ -270,11 +270,6 @@ func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainSt
 		!masterUserRecordsPerDomainMetricExists {
 		return initializeFromResources(cl, toolchainStatus.Namespace)
 	}
-	// Migration for CRT-1072: force initialization from existing UserSignups/MasterUserRecords
-	// TODO: remove as part of CRT-1074
-	if _, exists := toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey]; !exists {
-		return initializeFromResources(cl, toolchainStatus.Namespace)
-	}
 	// otherwise, initialize the cached counters from the ToolchainStatud resource.
 	return initializeFromToolchainStatus(toolchainStatus)
 }
