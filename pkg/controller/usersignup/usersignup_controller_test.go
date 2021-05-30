@@ -1604,7 +1604,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupComplete,
 				Status: v1.ConditionFalse,
-				Reason: "Deactivating",
+				Reason: "DeactivationInProgress",
 			})
 
 		murs := &toolchainv1alpha1.MasterUserRecordList{}
@@ -2110,7 +2110,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 				toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.UserSignupComplete,
 					Status: v1.ConditionFalse,
-					Reason: "Deactivating",
+					Reason: "DeactivationInProgress",
 				},
 				toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
