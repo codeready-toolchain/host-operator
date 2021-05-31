@@ -59,24 +59,6 @@ func newNsTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 
 var baseNSTemplateTier = newNsTemplateTier("base", "dev", "stage")
 
-// TODO remove this test once the migration code is removed
-func TestApprovedPropertyMigration(t *testing.T) {
-	// given
-	userSignup := NewUserSignup()
-	userSignup.Spec.Approved = true
-	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup)
-
-	// when
-	_, err := r.Reconcile(req)
-	require.NoError(t, err)
-
-	// Reload the UserSignup
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-	require.NoError(t, err)
-
-	require.True(t, states.Approved(userSignup))
-}
-
 func TestUserSignupCreateMUROk(t *testing.T) {
 
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -1874,7 +1856,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupComplete,
 				Status: v1.ConditionFalse,
-				Reason: "Deactivating",
+				Reason: "DeactivationInProgress",
 			})
 
 		murs := &toolchainv1alpha1.MasterUserRecordList{}
@@ -2409,7 +2391,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 				toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.UserSignupComplete,
 					Status: v1.ConditionFalse,
-					Reason: "Deactivating",
+					Reason: "DeactivationInProgress",
 				},
 				toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,

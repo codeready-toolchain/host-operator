@@ -138,13 +138,13 @@ func (u *StatusUpdater) setStatusBanned(userSignup *toolchainv1alpha1.UserSignup
 		})
 }
 
-func (u *StatusUpdater) setStatusDeactivating(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *StatusUpdater) setStatusDeactivationInProgress(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupUserDeactivatingReason,
+			Reason:  toolchainv1alpha1.UserSignupDeactivationInProgressReason,
 			Message: message,
 		})
 }

@@ -269,6 +269,12 @@ spec:
       kind: ToolchainCluster
       name: toolchainclusters.toolchain.dev.openshift.com
       version: v1alpha1
+    - description: ToolchainConfig keeps all configuration parameters needed for host
+        and member operators
+      displayName: Toolchain Operator Config
+      kind: ToolchainConfig
+      name: toolchainconfigs.toolchain.dev.openshift.com
+      version: v1alpha1
     - description: ToolchainStatus is used to track overall toolchain status
       displayName: CodeReady Toolchain Status
       kind: ToolchainStatus

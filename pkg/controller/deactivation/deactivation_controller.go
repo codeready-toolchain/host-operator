@@ -157,7 +157,11 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	timeSinceProvisioned := time.Since(provisionedTimestamp.Time)
 
-	deactivatingNotificationTimeout := time.Duration((deactivationTimeoutDays-config.Deactivation.DeactivatingNotificationDays)*24) * time.Hour
+	deactivatingNotificationDays := 3
+	if config.Deactivation.DeactivatingNotificationDays != nil {
+		deactivatingNotificationDays = *config.Deactivation.DeactivatingNotificationDays
+	}
+	deactivatingNotificationTimeout := time.Duration((deactivationTimeoutDays-deactivatingNotificationDays)*24) * time.Hour
 
 	if timeSinceProvisioned < deactivatingNotificationTimeout {
 		// It is not yet time to send the deactivating notification so requeue until it will be time to send it
@@ -202,7 +206,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{Requeue: true, RequeueAfter: time.Duration(10) * time.Second}, nil
 	}
 
-	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(config.Deactivation.DeactivatingNotificationDays*24) * time.Hour)
+	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(deactivatingNotificationDays*24) * time.Hour)
 
 	if time.Now().Before(deactivationDueTime) {
 		// It is not yet time to deactivate so requeue when it will be
