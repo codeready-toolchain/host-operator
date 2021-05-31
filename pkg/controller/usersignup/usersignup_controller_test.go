@@ -78,6 +78,11 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 					"2": 1,
 					"3": 0,
 				}),
+				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+					"1,internal": 0,
+					"2,internal": 1,
+					"3,internal": 0,
+				}),
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 					string(metrics.External): 1,
 				})))
@@ -111,7 +116,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal) // zero because we started with a not-ready state instead of empty as per usual
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 
-			AssertThatCounters(t).
+			AssertThatCountersAndMetrics(t).
 				HaveMasterUserRecords(2). // one more
 				HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 					string(metrics.Internal): 1, // new user with an `@redhat.com` email address
@@ -124,14 +129,30 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			switch testname {
 			case "with valid activation annotation":
 				assert.Equal(t, "3", actualUserSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]) // annotation value is incremented
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))                        // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))                        // decreased
-				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))                        // incresaed
+				AssertThatCountersAndMetrics(t).
+					HaveUsersPerActivations(toolchainv1alpha1.Metric{
+						"1": 0, // unchanged
+						"2": 0, // decreased
+						"3": 1, // increased
+					}).
+					HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+						"1,internal": 0, // unchanged
+						"2,internal": 0, // decreased
+						"3,internal": 1, // increased
+					})
 			case "without activation annotation", "with invalid activation annotation":
 				assert.Equal(t, "1", actualUserSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]) // annotation was set to "1" since it was missing
-				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))                        // incresaed
-				AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("2"))                        // unchanged
-				AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))                        // unchanged
+				AssertThatCountersAndMetrics(t).
+					HaveUsersPerActivations(toolchainv1alpha1.Metric{
+						"1": 1, // increased
+						"2": 1, // unchanged
+						"3": 0, // unchanged
+					}).
+					HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+						"1,internal": 1, // increased
+						"2,internal": 1, // unchanged
+						"3,internal": 0, // unchanged
+					})
 			default:
 				assert.Fail(t, "unknown testcase")
 			}
@@ -153,6 +174,12 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 			"2": 10,
 			"3": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,internal": 1,
+			"2,internal": 1,
+			"2,external": 9,
+			"3,internal": 1,
+		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 12,
 		})))
@@ -164,19 +191,22 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify the counters
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(12). // unchanged at this point
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
 			"2": 10, // unchanged
 			"3": 1,
 		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 1,
+			"2,internal": 1,
+			"2,external": 9,
+			"3,internal": 1,
+		}).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 12,
 		})
-	AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("1"))
-	AssertMetricsGaugeEquals(t, 10, metrics.UsersPerActivationGaugeVec.WithLabelValues("2")) // unchanged
-	AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("3"))
 }
 
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
@@ -189,6 +219,9 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -253,7 +286,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			Reason: "UserIsActive",
 		})
 
-	AssertThatCounters(t).HaveMasterUserRecords(2)
+	AssertThatCountersAndMetrics(t).HaveMasterUserRecords(2)
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -290,7 +323,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 				Reason: "UserIsActive",
 			})
 	})
-	AssertThatCounters(t).HaveMasterUserRecords(2)
+	AssertThatCountersAndMetrics(t).HaveMasterUserRecords(2)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
@@ -310,6 +343,9 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -335,13 +371,16 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 			Reason:  "MissingUserEmailAnnotation",
 			Message: "missing annotation at usersignup",
 		})
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 }
 
@@ -360,6 +399,9 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -385,13 +427,16 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 			Reason:  "InvalidEmailHashLabel",
 			Message: "hash is invalid",
 		})
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 }
 
@@ -408,6 +453,9 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 0, // no user approved yet
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,internal": 0, // no user approved yet
 		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -430,7 +478,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 			Reason:  "UnableToUpdateStateLabel",
 			Message: "some error",
 		})
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -440,10 +488,12 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 0, // unchanged
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 0, // unchanged
 		})
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
-	AssertMetricsGaugeEquals(t, 0, metrics.UsersPerActivationGaugeVec.WithLabelValues("1")) // unchanged
 }
 
 func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
@@ -460,6 +510,9 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -485,15 +538,17 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 			Reason:  "MissingEmailHashLabel",
 			Message: "missing label at usersignup",
 		})
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
-
 }
 
 func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
@@ -505,6 +560,9 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
@@ -545,13 +603,17 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal) // incremented, even though the provisioning failed due to missing NSTemplateTier
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)   // incremented, even though the provisioning failed due to missing NSTemplateTier
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2, // incremented, even though the provisioning failed due to missing NSTemplateTier
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
+			"1,internal": 1,
 		})
 }
 
@@ -569,6 +631,9 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 2,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 2,
+		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 2,
 		}),
@@ -610,13 +675,16 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(2).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 2,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 2,
 		})
 }
 
@@ -632,6 +700,9 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
@@ -674,13 +745,16 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 }
 
@@ -694,6 +768,9 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
@@ -741,7 +818,19 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounters(t).HaveMasterUserRecords(2)
+	AssertThatCountersAndMetrics(t).
+		HaveMasterUserRecords(2).
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			string(metrics.External): 1,
+			string(metrics.Internal): 1,
+		}).
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			"1": 2,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
+			"1,internal": 1,
+		})
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -778,7 +867,19 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
-		AssertThatCounters(t).HaveMasterUserRecords(2)
+		AssertThatCountersAndMetrics(t).
+			HaveMasterUserRecords(2).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+				string(metrics.Internal): 1,
+			}).
+			HaveUsersPerActivations(toolchainv1alpha1.Metric{
+				"1": 2,
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 1,
+				"1,internal": 1,
+			})
 	})
 }
 
@@ -795,6 +896,9 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
@@ -842,7 +946,19 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounters(t).HaveMasterUserRecords(2)
+	AssertThatCountersAndMetrics(t).
+		HaveMasterUserRecords(2).
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			string(metrics.External): 1,
+			string(metrics.Internal): 1,
+		}).
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			"1": 2,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
+			"1,internal": 1,
+		})
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -881,7 +997,19 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
-		AssertThatCounters(t).HaveMasterUserRecords(2)
+		AssertThatCountersAndMetrics(t).
+			HaveMasterUserRecords(2).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+				string(metrics.Internal): 1,
+			}).
+			HaveUsersPerActivations(toolchainv1alpha1.Metric{
+				"1": 2,
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 1,
+				"1,internal": 1,
+			})
 	})
 }
 
@@ -895,6 +1023,9 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
@@ -942,13 +1073,16 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 }
 
@@ -962,6 +1096,9 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
@@ -1010,7 +1147,19 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounters(t).HaveMasterUserRecords(2)
+	AssertThatCountersAndMetrics(t).
+		HaveMasterUserRecords(2).
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			string(metrics.External): 1,
+			string(metrics.Internal): 1,
+		}).
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			"1": 2,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
+			"1,internal": 1,
+		})
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
@@ -1049,7 +1198,19 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
-		AssertThatCounters(t).HaveMasterUserRecords(2)
+		AssertThatCountersAndMetrics(t).
+			HaveMasterUserRecords(2).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+				string(metrics.Internal): 1,
+			}).
+			HaveUsersPerActivations(toolchainv1alpha1.Metric{
+				"1": 2,
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 1,
+				"1,internal": 1,
+			})
 	})
 }
 
@@ -1065,6 +1226,9 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 		}),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 	))
 
@@ -1103,13 +1267,16 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 }
 
@@ -1126,6 +1293,9 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 		}),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 	))
 
@@ -1144,13 +1314,17 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2, // incremented, even though the creation of the MasterUserRecord failed
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
+			"1,internal": 1,
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -1175,6 +1349,9 @@ func TestUserSignupMURReadFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
@@ -1191,13 +1368,17 @@ func TestUserSignupMURReadFails(t *testing.T) {
 
 	// then
 	require.Error(t, err)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2, // incremented, even though the reading of the MasterUserRecord failed
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
+			"1,internal": 1,
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -1223,6 +1404,9 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
@@ -1240,13 +1424,16 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -1271,6 +1458,9 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
@@ -1288,13 +1478,16 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -1319,6 +1512,9 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
@@ -1341,13 +1537,16 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -1394,6 +1593,9 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	// when
@@ -1417,13 +1619,17 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		Type:   toolchainv1alpha1.UserSignupComplete,
 		Status: v1.ConditionTrue,
 	})
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2, // incremented, even though the MasterUserRecord already existed
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
+			"1,internal": 1,
 		})
 }
 
@@ -1453,6 +1659,9 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	// when
@@ -1466,7 +1675,19 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 2)
-	AssertThatCounters(t).HaveMasterUserRecords(2)
+	AssertThatCountersAndMetrics(t).
+		HaveMasterUserRecords(2).
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			string(metrics.External): 1,
+			string(metrics.Internal): 1,
+		}).
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			"1": 2,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
+			"1,internal": 1,
+		})
 
 	key := types.NamespacedName{
 		Namespace: test.HostOperatorNs,
@@ -1510,7 +1731,20 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		require.Equal(t, mur.Name, instance.Status.CompliantUsername)
 		require.NotNil(t, cond)
 		require.Equal(t, v1.ConditionTrue, cond.Status)
-		AssertThatCounters(t).HaveMasterUserRecords(2)
+		AssertThatCountersAndMetrics(t).
+			HaveMasterUserRecords(2).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+				string(metrics.Internal): 1,
+			}).
+			HaveUsersPerActivations(toolchainv1alpha1.Metric{
+				"1": 2,
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 1,
+				"1,internal": 1,
+			})
+
 	})
 }
 
@@ -1528,6 +1762,9 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	// when
@@ -1537,7 +1774,19 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	require.NoError(t, err)
 
 	murtest.AssertThatMasterUserRecord(t, "foo-bar", r.Client).HasNoConditions()
-	AssertThatCounters(t).HaveMasterUserRecords(2)
+	AssertThatCountersAndMetrics(t).
+		HaveMasterUserRecords(2).
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			string(metrics.External): 1,
+			string(metrics.Internal): 1,
+		}).
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
+			"1": 2,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
+			"1,internal": 1,
+		})
 
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
@@ -1580,6 +1829,9 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 				"1": 1,
 			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,external": 1,
+			}),
 		))
 
 		// when
@@ -1613,13 +1865,16 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		err = r.Client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
-		AssertThatCounters(t).
+		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecords(1). // unchanged for now: will be decreased by the MasterUserRecord controller when it runs the `manageCleanUp` func (after removing the finalizer)
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.External): 1, // unchanged for now (see above)
 			}).
 			HaveUsersPerActivations(toolchainv1alpha1.Metric{
 				"1": 1, // unchanged for now (see above)
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 1,
 			})
 
 		// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
@@ -1636,6 +1891,9 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			}),
 			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 				"1": 2,
+			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,external": 2,
 			}),
 		))
 
@@ -1670,13 +1928,16 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				Status: v1.ConditionTrue,
 				Reason: "NotificationCRCreated",
 			})
-		AssertThatCounters(t).
+		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecords(2). // unchanged since no MUR was removed
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.External): 2, // unchanged
 			}).
 			HaveUsersPerActivations(toolchainv1alpha1.Metric{
 				"1": 2, // unchanged
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 2,
 			})
 
 		// A deactivated notification should have been created
@@ -1736,6 +1997,9 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 				"1": 2,
 			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,external": 2,
+			}),
 		))
 
 		fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
@@ -1775,13 +2039,16 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 				Reason:  "NotificationCRCreationFailed",
 				Message: "unable to create deactivation notification",
 			})
-		AssertThatCounters(t).
+		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecords(2).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.External): 2, // unchanged
 			}).
 			HaveUsersPerActivations(toolchainv1alpha1.Metric{
 				"1": 2, // unchanged
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 2,
 			})
 		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // zero because state didn't change
@@ -1841,8 +2108,12 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 				"2": 11, // 11 users signed-up 2 times, including our user above, even though she is not active at the moment
 				"3": 10, // 10 users signed-up 3 times
 			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"2,internal": 11, // 11 users signed-up 2 times, including our user above, even though she is not active at the moment
+				"3,internal": 10, // 10 users signed-up 3 times
+			}),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.External): 20,
+				string(metrics.Internal): 21,
 			}),
 		))
 
@@ -1880,15 +2151,18 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			})
 
 		// A mur should be created so the counter should be 21
-		AssertThatCounters(t).
+		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecords(21). // one more than before
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-				string(metrics.External): 20, // unchanged
-				string(metrics.Internal): 1,  // one more than before
+				string(metrics.Internal): 22, // one more than before
 			}).
 			HaveUsersPerActivations(toolchainv1alpha1.Metric{
 				"2": 10, // unchanged
 				"3": 11, // unchanged
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"2,internal": 10,
+				"3,internal": 11,
 			})
 
 		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
@@ -1897,8 +2171,6 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
-		AssertMetricsGaugeEquals(t, 10, metrics.UsersPerActivationGaugeVec.WithLabelValues("2")) // user signed up 3 times now, so the counter for `2` activations was decreased by 1
-		AssertMetricsGaugeEquals(t, 11, metrics.UsersPerActivationGaugeVec.WithLabelValues("3")) // user signed up 3 times now, so the counter for `3` activations was increased by 1
 
 		// There should not be a notification created because the user was reactivated
 		ntest.AssertNoNotificationsExist(t, r.Client)
@@ -1934,6 +2206,9 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			}),
 			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 				"1": 2,
+			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,external": 2,
 			}),
 		))
 
@@ -1974,13 +2249,16 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 				Status: v1.ConditionTrue,
 				Reason: "NotificationCRCreated",
 			})
-		AssertThatCounters(t).
+		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecords(2).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.External): 2, // unchanged
 			}).
 			HaveUsersPerActivations(toolchainv1alpha1.Metric{
 				"1": 2, // unchanged
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 2,
 			})
 
 		// State is still deactivated because the status update failed
@@ -2085,6 +2363,9 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 				"1": 1,
 			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,external": 1,
+			}),
 		))
 
 		t.Run("first reconcile - status should be deactivating and mur should be deleted", func(t *testing.T) {
@@ -2129,13 +2410,16 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 			err = r.Client.List(context.TODO(), murs)
 			require.NoError(t, err)
 			require.Len(t, murs.Items, 0)
-			AssertThatCounters(t).
+			AssertThatCountersAndMetrics(t).
 				HaveMasterUserRecords(1).
 				HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 					string(metrics.External): 1,
 				}).
 				HaveUsersPerActivations(toolchainv1alpha1.Metric{
 					"1": 1,
+				}).
+				HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+					"1,external": 1,
 				})
 
 			// There should not be a notification created yet, only the next reconcile (with deleted mur) would create the notification
@@ -2296,6 +2580,9 @@ func TestUserSignupBanned(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	// when
@@ -2326,13 +2613,16 @@ func TestUserSignupBanned(t *testing.T) {
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 }
 
@@ -2348,6 +2638,9 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 		}),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
 		}),
 	))
 
@@ -2387,13 +2680,16 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 }
 
@@ -2440,6 +2736,9 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	// when
@@ -2475,13 +2774,16 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	err = r.Client.List(context.TODO(), murs)
 	require.NoError(t, err)
 	require.Len(t, murs.Items, 0)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 
 	t.Run("second reconcile", func(t *testing.T) {
@@ -2516,13 +2818,16 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		err = r.Client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 0)
-		AssertThatCounters(t).
+		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecords(1).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.External): 1,
 			}).
 			HaveUsersPerActivations(toolchainv1alpha1.Metric{
 				"1": 1,
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 1,
 			})
 	})
 }
@@ -2540,6 +2845,9 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	fakeClient.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
@@ -2551,13 +2859,16 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 
 	// then
 	require.Error(t, err)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 }
 
@@ -2602,6 +2913,9 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	fakeClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
@@ -2641,13 +2955,16 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 				Reason:  "UnableToDeleteMUR",
 				Message: "unable to delete mur",
 			})
-		AssertThatCounters(t).
+		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecords(1).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.External): 1,
 			}).
 			HaveUsersPerActivations(toolchainv1alpha1.Metric{
 				"1": 1,
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 1,
 			})
 
 		t.Run("second reconcile - there should not be a notification created since the mur deletion failed even if reconciled again", func(t *testing.T) {
@@ -2703,6 +3020,9 @@ func TestDeathBy100Signups(t *testing.T) {
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 100,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 100,
+		}),
 	))
 
 	// when
@@ -2744,13 +3064,17 @@ func TestDeathBy100Signups(t *testing.T) {
 			Reason: "UserIsActive",
 		},
 	)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(100). // unchanged
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 100, // unchanged
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 101, // was incremented, even though associated MUR could not be created
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 100,
+			"1,internal": 1, // was incremented, even though associated MUR could not be created
 		})
 }
 
@@ -2786,6 +3110,9 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	// when
@@ -2820,13 +3147,16 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 			Reason: "UserIsActive",
 		},
 	)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -2846,6 +3176,9 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
 	))
 
 	// when
@@ -2853,13 +3186,16 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 
 	// then
 	assert.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
 		})
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)

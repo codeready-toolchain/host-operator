@@ -419,7 +419,8 @@ func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1al
 	}
 	updateUserSignupMetricsByState(oldState, state)
 	// increment the counter *only if the client update did not fail*
-	counter.UpdateUsersPerActivationCounters(logger, activations) // will ignore if `activations == 0` (ie, if `state` is not `UserSignupStateLabelValueApproved`)
+	domain := metrics.GetEmailDomain(userSignup)
+	counter.UpdateUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
 
 	return nil
 }
@@ -525,7 +526,7 @@ func (r *Reconciler) provisionMasterUserRecord(userSignup *toolchainv1alpha1.Use
 			"Error creating MasterUserRecord")
 	}
 	// increment the counter of MasterUserRecords
-	domain := metrics.GetEmailDomain(mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey])
+	domain := metrics.GetEmailDomain(mur)
 	counter.IncrementMasterUserRecordCount(logger, domain)
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)

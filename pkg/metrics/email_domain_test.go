@@ -3,7 +3,9 @@ package metrics_test
 import (
 	"testing"
 
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -12,38 +14,81 @@ func TestGetEmailDomain(t *testing.T) {
 
 	type testdata struct {
 		name           string
-		emailAddress   string
+		object         metrics.RuntimeObject
 		expectedDomain metrics.Domain
 	}
 
 	dataset := []testdata{
 		{
-			name:           "Red Hatter",
-			emailAddress:   "joe@redhat.com",
+			name: "Red Hatter",
+			object: &toolchainv1alpha1.UserSignup{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "joe",
+					Annotations: map[string]string{
+						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@redhat.com",
+					},
+				},
+			},
 			expectedDomain: metrics.Internal,
 		},
 		{
-			name:           "IBMer",
-			emailAddress:   "joe@ibm.com",
+			name: "IBMer",
+			object: &toolchainv1alpha1.UserSignup{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "joe",
+					Annotations: map[string]string{
+						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@ibm.com",
+					},
+				},
+			},
 			expectedDomain: metrics.Internal,
 		},
 		{
-			name:           "Another IBMer",
-			emailAddress:   "joe@fr.ibm.com",
+			name: "Another IBMer",
+			object: &toolchainv1alpha1.UserSignup{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "joe",
+					Annotations: map[string]string{
+						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@fr.ibm.com",
+					},
+				},
+			},
 			expectedDomain: metrics.Internal,
 		},
 		{
-			name:           "Not an IBMer",
-			emailAddress:   "joe@fribm.com",
+			name: "Not an IBMer",
+			object: &toolchainv1alpha1.UserSignup{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "joe",
+					Annotations: map[string]string{
+						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@fribm.com",
+					},
+				},
+			},
 			expectedDomain: metrics.External,
 		},
 		{
-			name:           "External",
-			emailAddress:   "joe@example.com",
+			name: "External",
+			object: &toolchainv1alpha1.UserSignup{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "joe",
+					Annotations: map[string]string{
+						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@example.com",
+					},
+				},
+			},
 			expectedDomain: metrics.External,
 		},
 		{
-			name:           "Missing",
+			name: "Missing",
+			object: &toolchainv1alpha1.UserSignup{
+				ObjectMeta: v1.ObjectMeta{
+					Name:        "joe",
+					Annotations: map[string]string{
+						// no email
+					},
+				},
+			},
 			expectedDomain: metrics.External,
 		},
 	}
@@ -51,7 +96,7 @@ func TestGetEmailDomain(t *testing.T) {
 	for _, d := range dataset {
 		t.Run(d.name, func(t *testing.T) {
 			// when
-			domain := metrics.GetEmailDomain(d.emailAddress)
+			domain := metrics.GetEmailDomain(d.object)
 
 			// then
 			assert.Equal(t, d.expectedDomain, domain)

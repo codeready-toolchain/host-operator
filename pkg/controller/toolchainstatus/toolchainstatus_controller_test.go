@@ -467,6 +467,9 @@ func TestToolchainStatusConditions(t *testing.T) {
 				WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 					"1": 20,
 				}),
+				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+					"1,external": 20,
+				}),
 				WithMember("member-1", WithUserAccountCount(10)),
 				WithMember("member-2", WithUserAccountCount(10)),
 			)
@@ -499,6 +502,9 @@ func TestToolchainStatusConditions(t *testing.T) {
 				}),
 				WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 					"1": 20,
+				}),
+				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+					"1,external": 20,
 				}),
 			)
 
@@ -535,6 +541,9 @@ func TestToolchainStatusConditions(t *testing.T) {
 				}),
 				WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 					"1": 20,
+				}),
+				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+					"1,external": 20,
 				}),
 			)
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
@@ -1176,6 +1185,13 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				"2": 2,
 				"3": 1,
 			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,internal": 4,
+				"1,external": 1,
+				"2,internal": 1,
+				"2,external": 1,
+				"3,internal": 1,
+			}),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.External): 8,
 			}),
@@ -1185,8 +1201,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		// when
 		counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 		counter.IncrementUserAccountCount(logger, "member-1")
-		counter.UpdateUsersPerActivationCounters(logger, 1)
-		counter.UpdateUsersPerActivationCounters(logger, 2)
+		counter.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal)
+		counter.UpdateUsersPerActivationCounters(logger, 2, metrics.Internal)
 		res, err := reconciler.Reconcile(req)
 
 		// then
@@ -1204,8 +1220,15 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				"1": 5, // was incremented by `counter.UpdateUsersPerActivationCounters(1)` but decremented `counter.UpdateUsersPerActivationCounters(2)`
 				"2": 3, // was incremented by `counter.UpdateUsersPerActivationCounters(2)`
 				"3": 1,
+			}).
+			HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,internal": 4, // was incremented by `counter.UpdateUsersPerActivationCounters(1)` but decremented `counter.UpdateUsersPerActivationCounters(2)`
+				"1,external": 1, // unchanged
+				"2,internal": 2, // was incremented by `counter.UpdateUsersPerActivationCounters(2)`
+				"2,external": 1, // unchanged
+				"3,internal": 1, // unchanged
 			})
-		AssertThatCounters(t).
+		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecords(9).
 			HaveUserAccountsForCluster("member-1", 7).
 			HaveUserAccountsForCluster("member-2", 2).
@@ -1217,10 +1240,14 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				"1": 5,
 				"2": 3,
 				"3": 1,
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,internal": 4, // was incremented by `counter.UpdateUsersPerActivationCounters(1)` but decremented `counter.UpdateUsersPerActivationCounters(2)`
+				"1,external": 1, // unchanged
+				"2,internal": 2, // was incremented by `counter.UpdateUsersPerActivationCounters(2)`
+				"2,external": 1, // unchanged
+				"3,internal": 1, // unchanged
 			})
-		AssertMetricsGaugeEquals(t, 5, metrics.UsersPerActivationGaugeVec.WithLabelValues("1")) // 5 users signed up a 1 time
-		AssertMetricsGaugeEquals(t, 3, metrics.UsersPerActivationGaugeVec.WithLabelValues("2")) // 3 users signed up a 2 times
-		AssertMetricsGaugeEquals(t, 1, metrics.UsersPerActivationGaugeVec.WithLabelValues("3")) // 1 user signed up a 3 times
 	})
 }
 

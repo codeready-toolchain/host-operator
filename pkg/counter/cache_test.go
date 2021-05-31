@@ -29,7 +29,7 @@ func TestAddMurToCounter(t *testing.T) {
 	counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 
 	// then
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 1})
 }
@@ -41,6 +41,10 @@ func TestRemoveMurFromCounter(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 2,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+			"1,internal": 1,
+		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1,
 			string(metrics.External): 1,
@@ -51,7 +55,7 @@ func TestRemoveMurFromCounter(t *testing.T) {
 	counter.DecrementMasterUserRecordCount(logger, metrics.Internal)
 
 	// then
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2,
@@ -71,7 +75,7 @@ func TestRemoveMurFromCounterWhenIsAlreadyZero(t *testing.T) {
 	counter.DecrementMasterUserRecordCount(logger, metrics.Internal)
 
 	// then
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(0).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{})
 }
@@ -96,6 +100,9 @@ func TestAddUserAccountToCounter(t *testing.T) {
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 1,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,internal": 1,
+		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1,
 		}),
@@ -106,7 +113,7 @@ func TestAddUserAccountToCounter(t *testing.T) {
 	counter.IncrementUserAccountCount(logger, "member-1")
 
 	// then
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveUserAccountsForCluster("member-1", 1).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
@@ -126,6 +133,9 @@ func TestRemoveUserAccountFromCounter(t *testing.T) {
 			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 				"1": 1,
 			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,internal": 1,
+			}),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1,
 			}),
@@ -136,7 +146,7 @@ func TestRemoveUserAccountFromCounter(t *testing.T) {
 	counter.DecrementUserAccountCount(logger, "member-1")
 
 	// then
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(1).
 		HaveUserAccountsForCluster("member-1", 1).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
@@ -155,6 +165,10 @@ func TestRemoveUserAccountFromCounterWhenIsAlreadyZero(t *testing.T) {
 			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 				"1": 2,
 			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,internal": 1,
+				"1,external": 1,
+			}),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1,
 				string(metrics.External): 1,
@@ -167,7 +181,7 @@ func TestRemoveUserAccountFromCounterWhenIsAlreadyZero(t *testing.T) {
 	counter.DecrementUserAccountCount(logger, "member-1")
 
 	// then
-	AssertThatCounters(t).HaveMasterUserRecords(2).
+	AssertThatCountersAndMetrics(t).HaveMasterUserRecords(2).
 		HaveUserAccountsForCluster("member-1", 0).
 		HaveUserAccountsForCluster("member-2", 2).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
@@ -197,18 +211,27 @@ func TestUpdateUsersPerActivationMetric(t *testing.T) {
 	InitializeCounters(t, toolchainStatus)
 
 	// when
-	counter.UpdateUsersPerActivationCounters(logger, 1) // a user signup once
-	counter.UpdateUsersPerActivationCounters(logger, 2) // a user signup twice (hence counter for "1" will be decreased)
+	counter.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal) // a user signup once
+	counter.UpdateUsersPerActivationCounters(logger, 2, metrics.Internal) // a user signup twice (hence counter for "1" will be decreased)
 
 	// then
-	AssertThatCounters(t).HaveUsersPerActivations(toolchainv1alpha1.Metric{
-		"1": 0,
-		"2": 1,
-	})
-	AssertThatGivenToolchainStatus(t, toolchainStatus).
-		HasUsersPerActivations(map[string]int{
+	AssertThatCountersAndMetrics(t).
+		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 0,
 			"2": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 0,
+			"2,internal": 1,
+		})
+	AssertThatGivenToolchainStatus(t, toolchainStatus).
+		HasUsersPerActivations(toolchainv1alpha1.Metric{
+			"1": 0,
+			"2": 1,
+		}).
+		HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 0,
+			"2,internal": 1,
 		})
 }
 
@@ -222,6 +245,12 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 			"1": 9,
 			"2": 4,
 		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,internal": 7,
+			"1,external": 2,
+			"2,internal": 1,
+			"2,external": 3,
+		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 8,
 			string(metrics.External): 5,
@@ -232,13 +261,19 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	InitializeCounters(t, toolchainStatus)
 
 	// then
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(13).
 		HaveUserAccountsForCluster("member-1", 10).
 		HaveUserAccountsForCluster("member-2", 3).
 		HaveUsersPerActivations(map[string]int{
 			"1": 9,
 			"2": 4,
+		}).
+		HaveUsersPerActivationsAndDomain(map[string]int{
+			"1,internal": 7,
+			"1,external": 2,
+			"2,internal": 1,
+			"2,external": 3,
 		}).
 		HaveMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 8,
@@ -252,6 +287,12 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 			"1": 9,
 			"2": 4,
 		}).
+		HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 7,
+			"1,external": 2,
+			"2,internal": 1,
+			"2,external": 3,
+		}).
 		HasMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 8,
 			string(metrics.External): 5,
@@ -262,14 +303,18 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 	// given
 	counter.DecrementUserAccountCount(logger, "member-1")
 	counter.DecrementMasterUserRecordCount(logger, metrics.Internal)
-	counter.UpdateUsersPerActivationCounters(logger, 1) // a user signup once
-	counter.UpdateUsersPerActivationCounters(logger, 2) // a user signup twice (hence counter for "1" will be decreased)
+	counter.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal) // a user signup once
+	counter.UpdateUsersPerActivationCounters(logger, 2, metrics.Internal) // a user signup twice (hence counter for "1" will be decreased)
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(13)),
 		WithMember("member-1", WithUserAccountCount(10)),
 		WithMember("member-2", WithUserAccountCount(3)),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
 			"1": 13,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,internal": 10,
+			"1,external": 3,
 		}),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 8,
@@ -280,13 +325,18 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 	InitializeCountersWithoutReset(t, toolchainStatus)
 
 	// then
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(12).
 		HaveUserAccountsForCluster("member-1", 9).
 		HaveUserAccountsForCluster("member-2", 3).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 13,
 			"2": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 10,
+			"1,external": 3,
+			"2,internal": 1,
 		}).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 7, // decremented
@@ -299,6 +349,11 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 		HasUsersPerActivations(map[string]int{
 			"1": 13,
 			"2": 1,
+		}).
+		HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 10,
+			"1,external": 3,
+			"2,internal": 1,
 		}).
 		HasMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 7, // decremented
@@ -313,7 +368,7 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 	counter.IncrementUserAccountCount(logger, "member-1")
 
-	usersignups := CreateMultipleUserSignups("user-", 3)
+	usersignups := CreateMultipleUserSignups("user-", 3) // all users have an `@redhat.com` email address
 	murs := CreateMultipleMurs(t, "user-", 3, "member-1")
 	toolchainStatus := NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(0)), // will load from UserSignups and MURs
@@ -330,13 +385,18 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	InitializeCounters(t, toolchainStatus, initObjs...)
 
 	// then
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(3).
 		HaveUserAccountsForCluster("member-1", 3).
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 1,
 			"2": 1,
 			"3": 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 1,
+			"2,internal": 1,
+			"3,internal": 1,
 		}).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 3, // all MURs have `@redhat.com` email address
@@ -348,6 +408,11 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 			"1": 1,
 			"2": 1,
 			"3": 1,
+		}).
+		HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 1,
+			"2,internal": 1,
+			"3,internal": 1,
 		}).
 		HasMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 3, // all MURs have `@redhat.com` email address
@@ -374,7 +439,7 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(10).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 10, // all MURs have `@redhat.com` email address
@@ -442,11 +507,11 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		go func(index int) {
 			defer waitForFinished.Done()
 			latch.Wait()
-			counter.UpdateUsersPerActivationCounters(logger, 1) // increment metric for users with 1 activation
+			counter.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal) // increment metric for internal users with 1 activation
 			if index < 1000 {
 				go func() {
 					defer waitForFinished.Done()
-					counter.UpdateUsersPerActivationCounters(logger, 2) // increment metric for users with 2 activations and decrement metric for user with 1 activation
+					counter.UpdateUsersPerActivationCounters(logger, 2, metrics.Internal) // increment metric for internal users with 2 activations and decrement metric for internal users with 1 activation
 				}()
 			}
 		}(i)
@@ -469,7 +534,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	AssertThatCounters(t).
+	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecords(12).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 12, // all MURs have `@redhat.com` email address
@@ -479,6 +544,10 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		HaveUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2,
 			"2": 1000,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 2,
+			"2,internal": 1000,
 		})
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMurCount(12).
@@ -490,5 +559,9 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		HasUsersPerActivations(toolchainv1alpha1.Metric{
 			"1": 2,
 			"2": 1000,
+		}).
+		HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 2,
+			"2,internal": 1000,
 		})
 }
