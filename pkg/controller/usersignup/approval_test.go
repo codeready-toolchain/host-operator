@@ -21,20 +21,20 @@ func TestGetClusterIfApproved(t *testing.T) {
 	// given
 	signup := NewUserSignup()
 	toolchainStatus := NewToolchainStatus(
-		WithHost(WithMasterUserRecordCount(1500)),
+		WithHost(WithMasterUserRecordCount(900)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 100,
-			string(metrics.External): 1400,
+			string(metrics.External): 800,
 		}),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-			"1": 1500,
+			"1": 900,
 		}),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,internal": 500,
-			"1,external": 1000,
+			"1,internal": 200,
+			"1,external": 700,
 		}),
-		WithMember("member1", WithUserAccountCount(800), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
-		WithMember("member2", WithUserAccountCount(700), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
+		WithMember("member1", WithUserAccountCount(700), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
+		WithMember("member2", WithUserAccountCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
 
 	t.Run("with one cluster and enough capacity", func(t *testing.T) {
 		// given
@@ -102,7 +102,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		toolchainConfig := NewToolchainConfigWithReset(t,
 			AutomaticApproval().
 				Enabled().
-				MaxUsersNumber(2000, PerMemberCluster("member1", 800), PerMemberCluster("member2", 1000)).
+				MaxUsersNumber(2000, PerMemberCluster("member1", 700), PerMemberCluster("member2", 1000)).
 				ResourceCapThreshold(80, PerMemberCluster("member1", 90), PerMemberCluster("member2", 95)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
@@ -122,7 +122,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		toolchainConfig := NewToolchainConfigWithReset(t,
 			AutomaticApproval().
 				Enabled().
-				MaxUsersNumber(1200, PerMemberCluster("member1", 6000), PerMemberCluster("member2", 1000)).
+				MaxUsersNumber(800, PerMemberCluster("member1", 6000), PerMemberCluster("member2", 1000)).
 				ResourceCapThreshold(80, PerMemberCluster("member1", 60), PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
