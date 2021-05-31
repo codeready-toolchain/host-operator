@@ -60,5 +60,5 @@ generate-assets:
 	@echo "generating notification service template data..."
 	@$(shell go env GOPATH)/bin/go-bindata -pkg notificationtemplates -o ./pkg/templates/notificationtemplates/notification_assets.go -nometadata -nocompress -prefix $(NOTIFICATION_BASEDIR) -ignore doc.go $(NOTIFICATION_BASEDIR)/...
 	@echo "generating registration service template data..."
-	@$(shell go env GOPATH)/bin/go-bindata -pkg registrationservice -o ./pkg/controller/registrationservice/template_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
+	@$(shell go env GOPATH)/bin/go-bindata -pkg registrationservice -o ./controllers/registrationservice/template_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
 
