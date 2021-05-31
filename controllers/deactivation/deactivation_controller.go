@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
+	"github.com/codeready-toolchain/host-operator/controllers/hostoperatorconfig"
 	"github.com/go-logr/logr"
 	errors2 "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
