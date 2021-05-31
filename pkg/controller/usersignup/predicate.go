@@ -88,7 +88,11 @@ func (p OnlyWhenAutomaticApprovalIsEnabled) checkIfAutomaticApprovalIsEnabled(na
 		configLog.Error(nil, "unable to get HostOperatorConfig resource", "namespace", namespace)
 		return false
 	}
-	return config.AutomaticApproval.Enabled
+	autoApprovalEnabled := false
+	if config.AutomaticApproval.Enabled != nil {
+		autoApprovalEnabled = *config.AutomaticApproval.Enabled
+	}
+	return autoApprovalEnabled
 }
 
 func checkMetaObjects(log logr.Logger, e event.UpdateEvent) bool {

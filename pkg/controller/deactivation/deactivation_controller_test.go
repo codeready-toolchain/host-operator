@@ -423,7 +423,7 @@ func assertThatUserSignupDeactivated(t *testing.T, cl *test.FakeClient, name str
 	require.Equal(t, expected, states.Deactivated(userSignup))
 }
 
-func newHostOperatorConfigWithReset(t *testing.T, options ...test.HostOperatorConfigOption) *toolchainv1alpha1.HostOperatorConfig {
+func newHostOperatorConfigWithReset(t *testing.T, options ...test.HostConfigOption) *toolchainv1alpha1.HostOperatorConfig {
 	t.Cleanup(hostoperatorconfig.Reset)
 	return test.NewHostOperatorConfig(options...)
 }

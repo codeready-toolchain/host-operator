@@ -21,6 +21,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/templateupdaterequest"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainstatus"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignupcleanup"
@@ -225,6 +226,12 @@ func main() {
 		Config: crtConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TemplateUpdateRequest")
+	}
+	if err := (&toolchainconfig.Reconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ToolchainConfig")
 	}
 	if err := (&toolchainstatus.Reconciler{
 		Client:         mgr.GetClient(),
