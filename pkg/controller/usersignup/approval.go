@@ -5,7 +5,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
@@ -30,20 +30,16 @@ func (c targetCluster) getClusterName() string {
 // If there is no suitable member cluster, then it returns notFound as the second returned value.
 //
 // If the user is approved manually then it tries to get member cluster with enough capacity if the target cluster is not already specified for UserSignup.
-// If the user is not approved manually, then it loads HostOperatorConfig to check if automatic approval is enabled or not. If it is then it checks
+// If the user is not approved manually, then it loads ToolchainConfig to check if automatic approval is enabled or not. If it is then it checks
 // capacity thresholds and the actual use if there is any suitable member cluster. If it is not then it returns false as the first value and
 // targetCluster unknown as the second value.
 func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSignup, getMemberClusters cluster.GetMemberClustersFunc) (bool, targetCluster, error) {
-	config, err := hostoperatorconfig.GetConfig(cl, userSignup.Namespace)
+	config, err := toolchainconfig.GetConfig(cl, userSignup.Namespace)
 	if err != nil {
-		return false, unknown, errors.Wrapf(err, "unable to read HostOperatorConfig resource")
+		return false, unknown, errors.Wrapf(err, "unable to get ToolchainConfig")
 	}
 
-	autoApprovalEnabled := false
-	if config.AutomaticApproval.Enabled != nil {
-		autoApprovalEnabled = *config.AutomaticApproval.Enabled
-	}
-	if !states.Approved(userSignup) && !autoApprovalEnabled {
+	if !states.Approved(userSignup) && !config.AutomaticApproval().IsEnabled() {
 		return false, unknown, nil
 	}
 
@@ -63,28 +59,24 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 	return true, targetCluster(clusterName), nil
 }
 
-func hasNotReachedMaxNumberOfUsersThreshold(config toolchainv1alpha1.HostConfig, counts counter.Counts) cluster.Condition {
+func hasNotReachedMaxNumberOfUsersThreshold(config toolchainconfig.ToolchainConfig, counts counter.Counts) cluster.Condition {
 	return func(cluster *cluster.CachedToolchainCluster) bool {
-		if config.AutomaticApproval.MaxNumberOfUsers.Overall != nil && *config.AutomaticApproval.MaxNumberOfUsers.Overall != 0 {
-			if *config.AutomaticApproval.MaxNumberOfUsers.Overall <= counts.MasterUserRecordCount {
+		if config.AutomaticApproval().MaxNumberOfUsersOverall() != 0 {
+			if config.AutomaticApproval().MaxNumberOfUsersOverall() <= counts.MasterUserRecordCount {
 				return false
 			}
 		}
 		numberOfUserAccounts := counts.UserAccountsPerClusterCounts[cluster.Name]
-		threshold := config.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster[cluster.Name]
+		threshold := config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster()[cluster.Name]
 		return threshold == 0 || numberOfUserAccounts < threshold
 	}
 }
 
-func hasEnoughResources(config toolchainv1alpha1.HostConfig, status *toolchainv1alpha1.ToolchainStatus) cluster.Condition {
+func hasEnoughResources(config toolchainconfig.ToolchainConfig, status *toolchainv1alpha1.ToolchainStatus) cluster.Condition {
 	return func(cluster *cluster.CachedToolchainCluster) bool {
-		threshold, found := config.AutomaticApproval.ResourceCapacityThreshold.SpecificPerMemberCluster[cluster.Name]
+		threshold, found := config.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster()[cluster.Name]
 		if !found {
-			if config.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold != nil {
-				threshold = *config.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold
-			} else {
-				threshold = 0
-			}
+			threshold = config.AutomaticApproval().ResourceCapacityThresholdDefault()
 		}
 		if threshold == 0 {
 			return true

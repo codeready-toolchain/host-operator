@@ -15,7 +15,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/changetierrequest"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/deactivation"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/notification"
 	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
@@ -177,13 +176,6 @@ func main() {
 		Config: crtConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Deactivation")
-		os.Exit(1)
-	}
-	if err := (&hostoperatorconfig.Reconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("HostOperatorConfig"),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "HostOperatorConfig")
 		os.Exit(1)
 	}
 	if err := (&masteruserrecord.Reconciler{

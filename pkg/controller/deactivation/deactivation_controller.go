@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
 	"github.com/go-logr/logr"
 	errors2 "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +18,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -70,9 +70,9 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	logger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	logger.Info("Reconciling Deactivation")
 
-	config, err := hostoperatorconfig.GetConfig(r.Client, request.Namespace)
+	config, err := toolchainconfig.GetConfig(r.Client, request.Namespace)
 	if err != nil {
-		return reconcile.Result{}, errors2.Wrapf(err, "unable to read HostOperatorConfig resource")
+		return reconcile.Result{}, errors2.Wrapf(err, "unable to get ToolchainConfig")
 	}
 
 	// Fetch the MasterUserRecord instance
@@ -157,10 +157,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	timeSinceProvisioned := time.Since(provisionedTimestamp.Time)
 
-	deactivatingNotificationDays := 3
-	if config.Deactivation.DeactivatingNotificationDays != nil {
-		deactivatingNotificationDays = *config.Deactivation.DeactivatingNotificationDays
-	}
+	deactivatingNotificationDays := config.Deactivation().DeactivatingNotificationInDays()
 	deactivatingNotificationTimeout := time.Duration((deactivationTimeoutDays-deactivatingNotificationDays)*24) * time.Hour
 
 	if timeSinceProvisioned < deactivatingNotificationTimeout {

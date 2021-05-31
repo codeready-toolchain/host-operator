@@ -1,12 +1,12 @@
 package usersignup
 
 import (
-	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainconfig"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	controllerPredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -83,16 +83,12 @@ func (p OnlyWhenAutomaticApprovalIsEnabled) Generic(e event.GenericEvent) bool {
 }
 
 func (p OnlyWhenAutomaticApprovalIsEnabled) checkIfAutomaticApprovalIsEnabled(namespace string) bool {
-	config, err := hostoperatorconfig.GetConfig(p.client, namespace)
+	config, err := toolchainconfig.GetConfig(p.client, namespace)
 	if err != nil {
-		configLog.Error(nil, "unable to get HostOperatorConfig resource", "namespace", namespace)
+		configLog.Error(err, "unable to get ToolchainConfig", "namespace", namespace)
 		return false
 	}
-	autoApprovalEnabled := false
-	if config.AutomaticApproval.Enabled != nil {
-		autoApprovalEnabled = *config.AutomaticApproval.Enabled
-	}
-	return autoApprovalEnabled
+	return config.AutomaticApproval().IsEnabled()
 }
 
 func checkMetaObjects(log logr.Logger, e event.UpdateEvent) bool {
