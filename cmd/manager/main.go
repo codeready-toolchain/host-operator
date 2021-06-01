@@ -11,25 +11,25 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/changetierrequest"
+	"github.com/codeready-toolchain/host-operator/controllers/deactivation"
+	"github.com/codeready-toolchain/host-operator/controllers/masteruserrecord"
+	"github.com/codeready-toolchain/host-operator/controllers/notification"
+	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/controllers/registrationservice"
+	"github.com/codeready-toolchain/host-operator/controllers/templateupdaterequest"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
+	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
+	"github.com/codeready-toolchain/host-operator/controllers/usersignupcleanup"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/changetierrequest"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/deactivation"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/masteruserrecord"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/notification"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/registrationservice"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/templateupdaterequest"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainconfig"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainstatus"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignupcleanup"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/version"
+	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
-	"github.com/codeready-toolchain/toolchain-common/pkg/controller/toolchaincluster"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -40,6 +40,8 @@ import (
 	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -56,8 +58,14 @@ var (
 	metricsHost               = "0.0.0.0"
 	metricsPort         int32 = 8383
 	operatorMetricsPort int32 = 8686
+
+	setupLog = ctrl.Log.WithName("setup")
+	scheme   = k8sscheme.Scheme
 )
-var setupLog = ctrl.Log.WithName("setup")
+
+func init() {
+	utilruntime.Must(apis.AddToScheme(scheme))
+}
 
 func printVersion() {
 	setupLog.Info(fmt.Sprintf("Operator Version: %s", version.Version))
@@ -143,12 +151,6 @@ func main() {
 	}
 
 	setupLog.Info("Registering Components.")
-
-	// Setup Scheme for all resources
-	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		setupLog.Error(err, "")
-		os.Exit(1)
-	}
 
 	// Setup all Controllers
 	if err = toolchaincluster.NewReconciler(

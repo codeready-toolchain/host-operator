@@ -11,8 +11,8 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/usersignup/unapproved"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/usersignup/unapproved"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"

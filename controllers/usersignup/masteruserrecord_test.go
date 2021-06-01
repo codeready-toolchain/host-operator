@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"

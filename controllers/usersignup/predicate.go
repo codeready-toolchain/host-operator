@@ -6,7 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainconfig"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	controllerPredicate "sigs.k8s.io/controller-runtime/pkg/predicate"

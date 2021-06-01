@@ -17,8 +17,8 @@ import (
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 
 	"k8s.io/apimachinery/pkg/api/errors"

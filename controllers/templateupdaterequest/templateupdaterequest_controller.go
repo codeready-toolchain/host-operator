@@ -6,8 +6,8 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-	"github.com/codeready-toolchain/host-operator/pkg/controller/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 
