@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: (devel)
+    controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
   name: templateupdaterequests.toolchain.dev.openshift.com
 spec:
@@ -28,24 +28,33 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: TemplateUpdateRequest is the Schema for the templateupdaterequests API
+        description: TemplateUpdateRequest is the Schema for the templateupdaterequests
+          API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
           spec:
-            description: TemplateUpdateRequestSpec defines the desired state of TemplateUpdateRequest It contains the new TemplateRefs to use in the MasterUserRecords
+            description: TemplateUpdateRequestSpec defines the desired state of TemplateUpdateRequest
+              It contains the new TemplateRefs to use in the MasterUserRecords
             properties:
               clusterResources:
-                description: the cluster resources template (for cluster-wide quotas, etc.)
+                description: the cluster resources template (for cluster-wide quotas,
+                  etc.)
                 properties:
                   templateRef:
-                    description: TemplateRef The name of the TierTemplate resource which exists in the host cluster and which contains the template to use
+                    description: TemplateRef The name of the TierTemplate resource
+                      which exists in the host cluster and which contains the template
+                      to use
                     type: string
                 required:
                 - templateRef
@@ -53,10 +62,13 @@ spec:
               namespaces:
                 description: The namespace templates
                 items:
-                  description: NSTemplateTierNamespace the namespace definition in an NSTemplateTier resource
+                  description: NSTemplateTierNamespace the namespace definition in
+                    an NSTemplateTier resource
                   properties:
                     templateRef:
-                      description: TemplateRef The name of the TierTemplate resource which exists in the host cluster and which contains the template to use
+                      description: TemplateRef The name of the TierTemplate resource
+                        which exists in the host cluster and which contains the template
+                        to use
                       type: string
                   required:
                   - templateRef
@@ -71,14 +83,17 @@ spec:
             - tierName
             type: object
           status:
-            description: TemplateUpdateRequestStatus defines the observed state of TemplateUpdateRequest
+            description: TemplateUpdateRequestStatus defines the observed state of
+              TemplateUpdateRequest
             properties:
               conditions:
-                description: 'Conditions is an array of current TemplateUpdateRequest conditions Supported condition types: TemplateUpdateRequestComplete'
+                description: 'Conditions is an array of current TemplateUpdateRequest
+                  conditions Supported condition types: TemplateUpdateRequestComplete'
                 items:
                   properties:
                     lastTransitionTime:
-                      description: Last time the condition transit from one status to another.
+                      description: Last time the condition transit from one status
+                        to another.
                       format: date-time
                       type: string
                     lastUpdatedTime:
@@ -86,7 +101,8 @@ spec:
                       format: date-time
                       type: string
                     message:
-                      description: Human readable message indicating details about last transition.
+                      description: Human readable message indicating details about
+                        last transition.
                       type: string
                     reason:
                       description: (brief) reason for the condition's last transition.
@@ -106,7 +122,10 @@ spec:
               syncIndexes:
                 additionalProperties:
                   type: string
-                description: SyncIndexes contains the `syncIndex` for each cluster in the MasterUserRecord. The values here are "captured" before the MasterUserRecord is updated, so we can track the update progress on the member clusters.
+                description: SyncIndexes contains the `syncIndex` for each cluster
+                  in the MasterUserRecord. The values here are "captured" before the
+                  MasterUserRecord is updated, so we can track the update progress
+                  on the member clusters.
                 type: object
                 x-kubernetes-map-type: atomic
             type: object
