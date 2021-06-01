@@ -39,6 +39,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.6.0
 )
 
+replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20210531125539-972c7c24698d
+
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
 	github.com/go-logr/logr => github.com/go-logr/logr v0.1.0
