@@ -10,7 +10,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/codeready-toolchain/host-operator/controllers/hostoperatorconfig"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
@@ -46,7 +46,7 @@ const (
 )
 
 func TestReconcile(t *testing.T) {
-	config := newHostOperatorConfigWithReset(t, test.AutomaticApproval().MaxUsersNumber(123,
+	config := newToolchainConfigWithReset(t, test.AutomaticApproval().MaxUsersNumber(123,
 		test.PerMemberCluster("member1", 321)),
 		test.Deactivation().DeactivatingNotificationDays(3))
 
@@ -423,7 +423,7 @@ func assertThatUserSignupDeactivated(t *testing.T, cl *test.FakeClient, name str
 	require.Equal(t, expected, states.Deactivated(userSignup))
 }
 
-func newHostOperatorConfigWithReset(t *testing.T, options ...test.HostConfigOption) *toolchainv1alpha1.HostOperatorConfig {
-	t.Cleanup(hostoperatorconfig.Reset)
-	return test.NewHostOperatorConfig(options...)
+func newToolchainConfigWithReset(t *testing.T, options ...test.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
+	t.Cleanup(toolchainconfig.Reset)
+	return test.NewToolchainConfig(options...)
 }

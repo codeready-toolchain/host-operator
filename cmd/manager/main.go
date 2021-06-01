@@ -13,7 +13,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/changetierrequest"
 	"github.com/codeready-toolchain/host-operator/controllers/deactivation"
-	"github.com/codeready-toolchain/host-operator/controllers/hostoperatorconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
@@ -179,13 +178,6 @@ func main() {
 		Config: crtConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Deactivation")
-		os.Exit(1)
-	}
-	if err := (&hostoperatorconfig.Reconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("HostOperatorConfig"),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "HostOperatorConfig")
 		os.Exit(1)
 	}
 	if err := (&masteruserrecord.Reconciler{
