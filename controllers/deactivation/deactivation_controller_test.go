@@ -10,7 +10,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
+	"github.com/codeready-toolchain/host-operator/controllers/hostoperatorconfig"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 

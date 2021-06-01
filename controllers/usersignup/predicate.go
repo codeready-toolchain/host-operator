@@ -1,7 +1,7 @@
 package usersignup
 
 import (
-	"github.com/codeready-toolchain/host-operator/pkg/controller/hostoperatorconfig"
+	"github.com/codeready-toolchain/host-operator/controllers/hostoperatorconfig"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
