@@ -100,7 +100,7 @@ func newRequest() reconcile.Request {
 	}
 }
 
-func newToolchainConfigWithReset(t *testing.T, options ...HostConfigOption) *toolchainv1alpha1.ToolchainConfig {
+func newToolchainConfigWithReset(t *testing.T, options ...ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
 	t.Cleanup(Reset)
 	return NewToolchainConfig(options...)
 }

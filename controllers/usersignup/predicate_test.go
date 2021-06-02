@@ -127,7 +127,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 
 func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 	// given
-	cl := test.NewFakeClient(t, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Enabled()))
+	cl := test.NewFakeClient(t, NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()))
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}
@@ -256,7 +256,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 
 func TestAutomaticApprovalPredicateWhenApprovalIsNotEnabled(t *testing.T) {
 	// given
-	cl := test.NewFakeClient(t, NewHostOperatorConfigWithReset(t, test.AutomaticApproval().Disabled()))
+	cl := test.NewFakeClient(t, NewToolchainConfigWithReset(t, test.AutomaticApproval().Disabled()))
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}
