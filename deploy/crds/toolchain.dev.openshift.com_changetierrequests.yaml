@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: (devel)
+    controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
   name: changetierrequests.toolchain.dev.openshift.com
 spec:
@@ -39,10 +39,14 @@ spec:
         description: ChangeTierRequest is used as a trigger for a tier change in MasterUserRecord/UserAccount
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -50,10 +54,13 @@ spec:
             description: ChangeTierRequestSpec defines the desired state of ChangeTierRequest
             properties:
               murName:
-                description: The murName is a name of MUR/UserAccount whose tier should be changed.
+                description: The murName is a name of MUR/UserAccount whose tier should
+                  be changed.
                 type: string
               targetCluster:
-                description: The cluster to define UserAccount whose tier should be changed. Optional. If not set then update all the UserAccounts in the MasterUserRecord.
+                description: The cluster to define UserAccount whose tier should be
+                  changed. Optional. If not set then update all the UserAccounts in
+                  the MasterUserRecord.
                 type: string
               tierName:
                 description: The tier name the tier should be changed to.
@@ -66,11 +73,13 @@ spec:
             description: ChangeTierRequestStatus defines the observed state of ChangeTierRequest
             properties:
               conditions:
-                description: 'Conditions is an array of current ChangeTierRequest conditions Supported condition types: Complete'
+                description: 'Conditions is an array of current ChangeTierRequest
+                  conditions Supported condition types: Complete'
                 items:
                   properties:
                     lastTransitionTime:
-                      description: Last time the condition transit from one status to another.
+                      description: Last time the condition transit from one status
+                        to another.
                       format: date-time
                       type: string
                     lastUpdatedTime:
@@ -78,7 +87,8 @@ spec:
                       format: date-time
                       type: string
                     message:
-                      description: Human readable message indicating details about last transition.
+                      description: Human readable message indicating details about
+                        last transition.
                       type: string
                     reason:
                       description: (brief) reason for the condition's last transition.

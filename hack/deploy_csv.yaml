@@ -11,7 +11,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: bannedusers.toolchain.dev.openshift.com
       spec:
@@ -33,10 +33,14 @@ data:
               description: BannedUser is used to maintain a list of banned e-mail addresses
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
@@ -65,7 +69,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: changetierrequests.toolchain.dev.openshift.com
       spec:
@@ -100,10 +104,14 @@ data:
               description: ChangeTierRequest is used as a trigger for a tier change in MasterUserRecord/UserAccount
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
@@ -111,10 +119,13 @@ data:
                   description: ChangeTierRequestSpec defines the desired state of ChangeTierRequest
                   properties:
                     murName:
-                      description: The murName is a name of MUR/UserAccount whose tier should be changed.
+                      description: The murName is a name of MUR/UserAccount whose tier should
+                        be changed.
                       type: string
                     targetCluster:
-                      description: The cluster to define UserAccount whose tier should be changed. Optional. If not set then update all the UserAccounts in the MasterUserRecord.
+                      description: The cluster to define UserAccount whose tier should be
+                        changed. Optional. If not set then update all the UserAccounts in
+                        the MasterUserRecord.
                       type: string
                     tierName:
                       description: The tier name the tier should be changed to.
@@ -127,11 +138,13 @@ data:
                   description: ChangeTierRequestStatus defines the observed state of ChangeTierRequest
                   properties:
                     conditions:
-                      description: 'Conditions is an array of current ChangeTierRequest conditions Supported condition types: Complete'
+                      description: 'Conditions is an array of current ChangeTierRequest
+                        conditions Supported condition types: Complete'
                       items:
                         properties:
                           lastTransitionTime:
-                            description: Last time the condition transit from one status to another.
+                            description: Last time the condition transit from one status
+                              to another.
                             format: date-time
                             type: string
                           lastUpdatedTime:
@@ -139,7 +152,8 @@ data:
                             format: date-time
                             type: string
                           message:
-                            description: Human readable message indicating details about last transition.
+                            description: Human readable message indicating details about
+                              last transition.
                             type: string
                           reason:
                             description: (brief) reason for the condition's last transition.
@@ -175,7 +189,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: hostoperatorconfigs.toolchain.dev.openshift.com
       spec:
@@ -194,18 +208,24 @@ data:
           name: v1alpha1
           schema:
             openAPIV3Schema:
-              description: HostOperatorConfig keeps all configuration parameters needed in host operator
+              description: HostOperatorConfig keeps all configuration parameters needed
+                in host operator
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
                 spec:
-                  description: HostConfig contains all configuration parameters of the host operator
+                  description: HostConfig contains all configuration parameters of the host
+                    operator
                   properties:
                     automaticApproval:
                       description: Keeps parameters necessary for automatic approval
@@ -214,28 +234,39 @@ data:
                           description: Defines if the automatic approval is enabled or not
                           type: boolean
                         maxNumberOfUsers:
-                          description: Defines the maximal number of users to be allowed for automatic approval. When the number is reached, then the automatic approval is stopped.
+                          description: Defines the maximal number of users to be allowed
+                            for automatic approval. When the number is reached, then the
+                            automatic approval is stopped.
                           properties:
                             overall:
-                              description: It is the maximal number of users provisioned in the system overall - equals to max number of MasterUserRecords in host cluster
+                              description: It is the maximal number of users provisioned
+                                in the system overall - equals to max number of MasterUserRecords
+                                in host cluster
                               type: integer
                             specificPerMemberCluster:
                               additionalProperties:
                                 type: integer
-                              description: Contains a map of maximal number of users provisioned per member cluster mapped by the cluster name - equals to max number of UserAccounts in member cluster
+                              description: Contains a map of maximal number of users provisioned
+                                per member cluster mapped by the cluster name - equals to
+                                max number of UserAccounts in member cluster
                               type: object
                               x-kubernetes-map-type: atomic
                           type: object
                         resourceCapacityThreshold:
-                          description: Contains threshold (in percentage of usage) that defines when the automatic approval should be stopped
+                          description: Contains threshold (in percentage of usage) that
+                            defines when the automatic approval should be stopped
                           properties:
                             defaultThreshold:
-                              description: It is the default capacity threshold (in percentage of usage) to be used for all member clusters if no special threshold is defined
+                              description: It is the default capacity threshold (in percentage
+                                of usage) to be used for all member clusters if no special
+                                threshold is defined
                               type: integer
                             specificPerMemberCluster:
                               additionalProperties:
                                 type: integer
-                              description: Contains a map of specific capacity thresholds (in percentage of usage) for particular member clusters mapped by their names
+                              description: Contains a map of specific capacity thresholds
+                                (in percentage of usage) for particular member clusters
+                                mapped by their names
                               type: object
                               x-kubernetes-map-type: atomic
                           type: object
@@ -244,7 +275,10 @@ data:
                       description: Keeps parameters concerned with user deactivation
                       properties:
                         deactivatingNotificationDays:
-                          description: DeactivatingNotificationDays is the number of days after a pre-deactivating notification is sent that actual deactivation occurs.  If this parameter is set to zero, then there will be no delay
+                          description: DeactivatingNotificationDays is the number of days
+                            after a pre-deactivating notification is sent that actual deactivation
+                            occurs.  If this parameter is set to zero, then there will be
+                            no delay
                           type: integer
                       type: object
                   type: object
@@ -267,7 +301,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: masteruserrecords.toolchain.dev.openshift.com
       spec:
@@ -305,13 +339,18 @@ data:
           name: v1alpha1
           schema:
             openAPIV3Schema:
-              description: MasterUserRecord keeps all information about user, user accounts and namespaces provisioned in CodeReady Toolchain
+              description: MasterUserRecord keeps all information about user, user accounts
+                and namespaces provisioned in CodeReady Toolchain
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
@@ -319,16 +358,21 @@ data:
                   description: MasterUserRecordSpec defines the desired state of MasterUserRecord
                   properties:
                     banned:
-                      description: If set to true then the corresponding user has been banned from logging in and accessing their resources
+                      description: If set to true then the corresponding user has been banned
+                        from logging in and accessing their resources
                       type: boolean
                     deprovisioned:
-                      description: If set to true then the corresponding UserAccount should be deleted "false" is assumed by default
+                      description: If set to true then the corresponding UserAccount should
+                        be deleted "false" is assumed by default
                       type: boolean
                     disabled:
-                      description: If set to true then the corresponding user should not be able to login (but the underlying UserAccounts still exists) "false" is assumed by default
+                      description: If set to true then the corresponding user should not
+                        be able to login (but the underlying UserAccounts still exists)
+                        "false" is assumed by default
                       type: boolean
                     userAccounts:
-                      description: The list of user accounts in the member clusters which belong to this MasterUserRecord
+                      description: The list of user accounts in the member clusters which
+                        belong to this MasterUserRecord
                       items:
                         properties:
                           spec:
@@ -341,13 +385,18 @@ data:
                                 description: Namespace template set
                                 properties:
                                   clusterResources:
-                                    description: the cluster resources template (for cluster-wide quotas, etc.)
+                                    description: the cluster resources template (for cluster-wide
+                                      quotas, etc.)
                                     properties:
                                       template:
-                                        description: Template contains an OpenShift Template to be used for provisioning of cluster-scoped resources
+                                        description: Template contains an OpenShift Template
+                                          to be used for provisioning of cluster-scoped
+                                          resources
                                         type: string
                                       templateRef:
-                                        description: TemplateRef The name of the TierTemplate resource which exists in the host cluster and which contains the template to use
+                                        description: TemplateRef The name of the TierTemplate
+                                          resource which exists in the host cluster and
+                                          which contains the template to use
                                         type: string
                                     required:
                                     - templateRef
@@ -355,13 +404,17 @@ data:
                                   namespaces:
                                     description: The namespace templates
                                     items:
-                                      description: NSTemplateSetNamespace the namespace definition in an NSTemplateSet resource
+                                      description: NSTemplateSetNamespace the namespace
+                                        definition in an NSTemplateSet resource
                                       properties:
                                         template:
-                                          description: Optional field. Used to specify a custom template
+                                          description: Optional field. Used to specify a
+                                            custom template
                                           type: string
                                         templateRef:
-                                          description: TemplateRef The name of the TierTemplate resource which exists in the host cluster and which contains the template to use
+                                          description: TemplateRef The name of the TierTemplate
+                                            resource which exists in the host cluster and
+                                            which contains the template to use
                                           type: string
                                       required:
                                       - templateRef
@@ -369,7 +422,8 @@ data:
                                     type: array
                                     x-kubernetes-list-type: atomic
                                   tierName:
-                                    description: The name of the tier represented by this template set
+                                    description: The name of the tier represented by this
+                                      template set
                                     type: string
                                 required:
                                 - namespaces
@@ -380,7 +434,9 @@ data:
                             - nsTemplateSet
                             type: object
                           syncIndex:
-                            description: SyncIndex is to be updated by UserAccount Controller when the member needs to trigger MasterUserRecord <-> UserAccount synchronization
+                            description: SyncIndex is to be updated by UserAccount Controller
+                              when the member needs to trigger MasterUserRecord <-> UserAccount
+                              synchronization
                             type: string
                           targetCluster:
                             description: The cluster in which the user exists
@@ -395,7 +451,8 @@ data:
                       - targetCluster
                       x-kubernetes-list-type: map
                     userID:
-                      description: UserID is the user ID from RHD Identity Provider token (“sub” claim)
+                      description: UserID is the user ID from RHD Identity Provider token
+                        (“sub” claim)
                       type: string
                   required:
                   - userID
@@ -404,11 +461,14 @@ data:
                   description: MasterUserRecordStatus defines the observed state of MasterUserRecord
                   properties:
                     conditions:
-                      description: 'Conditions is an array of current Master User Record conditions Supported condition types: Provisioning, UserAccountNotReady and Ready'
+                      description: 'Conditions is an array of current Master User Record
+                        conditions Supported condition types: Provisioning, UserAccountNotReady
+                        and Ready'
                       items:
                         properties:
                           lastTransitionTime:
-                            description: Last time the condition transit from one status to another.
+                            description: Last time the condition transit from one status
+                              to another.
                             format: date-time
                             type: string
                           lastUpdatedTime:
@@ -416,7 +476,8 @@ data:
                             format: date-time
                             type: string
                           message:
-                            description: Human readable message indicating details about last transition.
+                            description: Human readable message indicating details about
+                              last transition.
                             type: string
                           reason:
                             description: (brief) reason for the condition's last transition.
@@ -440,7 +501,8 @@ data:
                       format: date-time
                       type: string
                     userAccounts:
-                      description: The status of user accounts in the member clusters which belong to this MasterUserRecord
+                      description: The status of user accounts in the member clusters which
+                        belong to this MasterUserRecord
                       items:
                         properties:
                           cluster:
@@ -450,13 +512,15 @@ data:
                                 description: APIEndpoint is the API Endpoint of the cluster
                                 type: string
                               cheDashboardURL:
-                                description: CheDashboardURL is the Che Dashboard URL of the cluster if Che is installed
+                                description: CheDashboardURL is the Che Dashboard URL of
+                                  the cluster if Che is installed
                                 type: string
                               consoleURL:
                                 description: ConsoleURL is the web console URL of the cluster
                                 type: string
                               name:
-                                description: Name is the name of the corresponding ToolchainCluster resource
+                                description: Name is the name of the corresponding ToolchainCluster
+                                  resource
                                 type: string
                             required:
                             - apiEndpoint
@@ -464,11 +528,13 @@ data:
                             - name
                             type: object
                           conditions:
-                            description: 'Conditions is an array of current User Account conditions Supported condition types: ConditionReady'
+                            description: 'Conditions is an array of current User Account
+                              conditions Supported condition types: ConditionReady'
                             items:
                               properties:
                                 lastTransitionTime:
-                                  description: Last time the condition transit from one status to another.
+                                  description: Last time the condition transit from one
+                                    status to another.
                                   format: date-time
                                   type: string
                                 lastUpdatedTime:
@@ -476,13 +542,15 @@ data:
                                   format: date-time
                                   type: string
                                 message:
-                                  description: Human readable message indicating details about last transition.
+                                  description: Human readable message indicating details
+                                    about last transition.
                                   type: string
                                 reason:
                                   description: (brief) reason for the condition's last transition.
                                   type: string
                                 status:
-                                  description: Status of the condition, one of True, False, Unknown.
+                                  description: Status of the condition, one of True, False,
+                                    Unknown.
                                   type: string
                                 type:
                                   description: Type of condition
@@ -496,7 +564,9 @@ data:
                             - type
                             x-kubernetes-list-type: map
                           syncIndex:
-                            description: SyncIndex is used for checking if there is needed some MasterUserRecord <-> UserAccount synchronization for this specific UserAccount in the specific member cluster
+                            description: SyncIndex is used for checking if there is needed
+                              some MasterUserRecord <-> UserAccount synchronization for
+                              this specific UserAccount in the specific member cluster
                             type: string
                         required:
                         - cluster
@@ -521,7 +591,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: notifications.toolchain.dev.openshift.com
       spec:
@@ -547,10 +617,14 @@ data:
               description: Notification registers a notification in the CodeReady Toolchain
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
@@ -558,30 +632,42 @@ data:
                   description: NotificationSpec defines the desired state of Notification
                   properties:
                     content:
-                      description: Content is used when no template value is specified, in cases where the complete notification content is specified at notification creation time
+                      description: Content is used when no template value is specified,
+                        in cases where the complete notification content is specified at
+                        notification creation time
                       type: string
                     recipient:
-                      description: Recipient may be used as an alternative to UserID to specify an email address where the notification will be delivered.
+                      description: Recipient may be used as an alternative to UserID to
+                        specify an email address where the notification will be delivered.
                       type: string
                     subject:
-                      description: Subject is used when no template value is specified, in cases where the complete notification subject is specified at notification creation time
+                      description: Subject is used when no template value is specified,
+                        in cases where the complete notification subject is specified at
+                        notification creation time
                       type: string
                     template:
-                      description: Template is the name of the NotificationTemplate resource that will be used to generate the notification
+                      description: Template is the name of the NotificationTemplate resource
+                        that will be used to generate the notification
                       type: string
                     userID:
-                      description: UserID is the user ID from RHD Identity Provider token (“sub” claim).  The UserID is used by the notification service (i.e. the NotificationController) to lookup the UserSignup resource for the user, and extract from it the values required to generate the notification content and to deliver the notification
+                      description: UserID is the user ID from RHD Identity Provider token
+                        (“sub” claim).  The UserID is used by the notification service (i.e.
+                        the NotificationController) to lookup the UserSignup resource for
+                        the user, and extract from it the values required to generate the
+                        notification content and to deliver the notification
                       type: string
                   type: object
                 status:
                   description: NotificationStatus defines the observed state of Notification
                   properties:
                     conditions:
-                      description: 'Conditions is an array of current Notification conditions Supported condition types: Sent'
+                      description: 'Conditions is an array of current Notification conditions
+                        Supported condition types: Sent'
                       items:
                         properties:
                           lastTransitionTime:
-                            description: Last time the condition transit from one status to another.
+                            description: Last time the condition transit from one status
+                              to another.
                             format: date-time
                             type: string
                           lastUpdatedTime:
@@ -589,7 +675,8 @@ data:
                             format: date-time
                             type: string
                           message:
-                            description: Human readable message indicating details about last transition.
+                            description: Human readable message indicating details about
+                              last transition.
                             type: string
                           reason:
                             description: (brief) reason for the condition's last transition.
@@ -625,7 +712,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: nstemplatetiers.toolchain.dev.openshift.com
       spec:
@@ -642,13 +729,18 @@ data:
         - name: v1alpha1
           schema:
             openAPIV3Schema:
-              description: NSTemplateTier configures user environment via templates used for namespaces the user has access to
+              description: NSTemplateTier configures user environment via templates used
+                for namespaces the user has access to
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
@@ -656,24 +748,31 @@ data:
                   description: NSTemplateTierSpec defines the desired state of NSTemplateTier
                   properties:
                     clusterResources:
-                      description: the cluster resources template (for cluster-wide quotas, etc.)
+                      description: the cluster resources template (for cluster-wide quotas,
+                        etc.)
                       properties:
                         templateRef:
-                          description: TemplateRef The name of the TierTemplate resource which exists in the host cluster and which contains the template to use
+                          description: TemplateRef The name of the TierTemplate resource
+                            which exists in the host cluster and which contains the template
+                            to use
                           type: string
                       required:
                       - templateRef
                       type: object
                     deactivationTimeoutDays:
-                      description: the period (in days) after which users within the tier will be deactivated
+                      description: the period (in days) after which users within the tier
+                        will be deactivated
                       type: integer
                     namespaces:
                       description: The namespace templates
                       items:
-                        description: NSTemplateTierNamespace the namespace definition in an NSTemplateTier resource
+                        description: NSTemplateTierNamespace the namespace definition in
+                          an NSTemplateTier resource
                         properties:
                           templateRef:
-                            description: TemplateRef The name of the TierTemplate resource which exists in the host cluster and which contains the template to use
+                            description: TemplateRef The name of the TierTemplate resource
+                              which exists in the host cluster and which contains the template
+                              to use
                             type: string
                         required:
                         - templateRef
@@ -687,11 +786,14 @@ data:
                   description: NSTemplateTierStatus defines the observed state of NSTemplateTier
                   properties:
                     conditions:
-                      description: 'Conditions is an array of current NSTemplateTier conditions Supported condition types: ConditionReady NSTemplateTierSuccessfulUpdatesCount NSTemplateTierFailedUpdatesCount'
+                      description: 'Conditions is an array of current NSTemplateTier conditions
+                        Supported condition types: ConditionReady NSTemplateTierSuccessfulUpdatesCount
+                        NSTemplateTierFailedUpdatesCount'
                       items:
                         properties:
                           lastTransitionTime:
-                            description: Last time the condition transit from one status to another.
+                            description: Last time the condition transit from one status
+                              to another.
                             format: date-time
                             type: string
                           lastUpdatedTime:
@@ -699,7 +801,8 @@ data:
                             format: date-time
                             type: string
                           message:
-                            description: Human readable message indicating details about last transition.
+                            description: Human readable message indicating details about
+                              last transition.
                             type: string
                           reason:
                             description: (brief) reason for the condition's last transition.
@@ -724,7 +827,8 @@ data:
                         description: NSTemplateTierHistory a track record of an update
                         properties:
                           completionTime:
-                            description: CompletionTime is the time when the last MasterUserRecord was updated
+                            description: CompletionTime is the time when the last MasterUserRecord
+                              was updated
                             format: date-time
                             type: string
                           failedAccounts:
@@ -733,13 +837,16 @@ data:
                               type: string
                             type: array
                           failures:
-                            description: Failures is the number of MasterUserRecords which failed to be updated
+                            description: Failures is the number of MasterUserRecords which
+                              failed to be updated
                             type: integer
                           hash:
-                            description: Hash the hash matching on the templateRefs in the resource spec
+                            description: Hash the hash matching on the templateRefs in the
+                              resource spec
                             type: string
                           startTime:
-                            description: StartTime is the time when the NSTemplateTier was updated
+                            description: StartTime is the time when the NSTemplateTier was
+                              updated
                             format: date-time
                             type: string
                         required:
@@ -768,7 +875,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: registrationservices.toolchain.dev.openshift.com
       spec:
@@ -801,10 +908,14 @@ data:
               description: RegistrationService configures the registration service deployment
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
@@ -814,7 +925,8 @@ data:
                     environmentVariables:
                       additionalProperties:
                         type: string
-                      description: The environment variables are supposed to be set to registration service deployment template
+                      description: The environment variables are supposed to be set to registration
+                        service deployment template
                       type: object
                       x-kubernetes-map-type: atomic
                   type: object
@@ -822,11 +934,14 @@ data:
                   description: RegistrationServiceStatus defines the observed state of RegistrationService
                   properties:
                     conditions:
-                      description: 'Conditions is an array of current Registration Service deployment conditions Supported condition reasons: Deploying, and Deployed'
+                      description: 'Conditions is an array of current Registration Service
+                        deployment conditions Supported condition reasons: Deploying, and
+                        Deployed'
                       items:
                         properties:
                           lastTransitionTime:
-                            description: Last time the condition transit from one status to another.
+                            description: Last time the condition transit from one status
+                              to another.
                             format: date-time
                             type: string
                           lastUpdatedTime:
@@ -834,7 +949,8 @@ data:
                             format: date-time
                             type: string
                           message:
-                            description: Human readable message indicating details about last transition.
+                            description: Human readable message indicating details about
+                              last transition.
                             type: string
                           reason:
                             description: (brief) reason for the condition's last transition.
@@ -870,7 +986,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: templateupdaterequests.toolchain.dev.openshift.com
       spec:
@@ -895,24 +1011,33 @@ data:
           name: v1alpha1
           schema:
             openAPIV3Schema:
-              description: TemplateUpdateRequest is the Schema for the templateupdaterequests API
+              description: TemplateUpdateRequest is the Schema for the templateupdaterequests
+                API
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
                 spec:
-                  description: TemplateUpdateRequestSpec defines the desired state of TemplateUpdateRequest It contains the new TemplateRefs to use in the MasterUserRecords
+                  description: TemplateUpdateRequestSpec defines the desired state of TemplateUpdateRequest
+                    It contains the new TemplateRefs to use in the MasterUserRecords
                   properties:
                     clusterResources:
-                      description: the cluster resources template (for cluster-wide quotas, etc.)
+                      description: the cluster resources template (for cluster-wide quotas,
+                        etc.)
                       properties:
                         templateRef:
-                          description: TemplateRef The name of the TierTemplate resource which exists in the host cluster and which contains the template to use
+                          description: TemplateRef The name of the TierTemplate resource
+                            which exists in the host cluster and which contains the template
+                            to use
                           type: string
                       required:
                       - templateRef
@@ -920,10 +1045,13 @@ data:
                     namespaces:
                       description: The namespace templates
                       items:
-                        description: NSTemplateTierNamespace the namespace definition in an NSTemplateTier resource
+                        description: NSTemplateTierNamespace the namespace definition in
+                          an NSTemplateTier resource
                         properties:
                           templateRef:
-                            description: TemplateRef The name of the TierTemplate resource which exists in the host cluster and which contains the template to use
+                            description: TemplateRef The name of the TierTemplate resource
+                              which exists in the host cluster and which contains the template
+                              to use
                             type: string
                         required:
                         - templateRef
@@ -938,14 +1066,17 @@ data:
                   - tierName
                   type: object
                 status:
-                  description: TemplateUpdateRequestStatus defines the observed state of TemplateUpdateRequest
+                  description: TemplateUpdateRequestStatus defines the observed state of
+                    TemplateUpdateRequest
                   properties:
                     conditions:
-                      description: 'Conditions is an array of current TemplateUpdateRequest conditions Supported condition types: TemplateUpdateRequestComplete'
+                      description: 'Conditions is an array of current TemplateUpdateRequest
+                        conditions Supported condition types: TemplateUpdateRequestComplete'
                       items:
                         properties:
                           lastTransitionTime:
-                            description: Last time the condition transit from one status to another.
+                            description: Last time the condition transit from one status
+                              to another.
                             format: date-time
                             type: string
                           lastUpdatedTime:
@@ -953,7 +1084,8 @@ data:
                             format: date-time
                             type: string
                           message:
-                            description: Human readable message indicating details about last transition.
+                            description: Human readable message indicating details about
+                              last transition.
                             type: string
                           reason:
                             description: (brief) reason for the condition's last transition.
@@ -973,7 +1105,10 @@ data:
                     syncIndexes:
                       additionalProperties:
                         type: string
-                      description: SyncIndexes contains the `syncIndex` for each cluster in the MasterUserRecord. The values here are "captured" before the MasterUserRecord is updated, so we can track the update progress on the member clusters.
+                      description: SyncIndexes contains the `syncIndex` for each cluster
+                        in the MasterUserRecord. The values here are "captured" before the
+                        MasterUserRecord is updated, so we can track the update progress
+                        on the member clusters.
                       type: object
                       x-kubernetes-map-type: atomic
                   type: object
@@ -993,7 +1128,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: tiertemplates.toolchain.dev.openshift.com
       spec:
@@ -1018,10 +1153,14 @@ data:
               description: TierTemplate is the Schema for the tiertemplates API
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
@@ -1032,55 +1171,92 @@ data:
                       description: The revision of the corresponding template
                       type: string
                     template:
-                      description: Template contains an OpenShift Template to be used to provision either a user's namespace or cluster-wide resources
+                      description: Template contains an OpenShift Template to be used to
+                        provision either a user's namespace or cluster-wide resources
                       properties:
                         apiVersion:
-                          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                          description: 'APIVersion defines the versioned schema of this
+                            representation of an object. Servers should convert recognized
+                            schemas to the latest internal value, and may reject unrecognized
+                            values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                           type: string
                         kind:
-                          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                          description: 'Kind is a string value representing the REST resource
+                            this object represents. Servers may infer this from the endpoint
+                            the client submits requests to. Cannot be updated. In CamelCase.
+                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                           type: string
                         labels:
                           additionalProperties:
                             type: string
-                          description: labels is a optional set of labels that are applied to every object during the Template to Config transformation.
+                          description: labels is a optional set of labels that are applied
+                            to every object during the Template to Config transformation.
                           type: object
                         message:
-                          description: message is an optional instructional message that will be displayed when this template is instantiated. This field should inform the user how to utilize the newly created resources. Parameter substitution will be performed on the message before being displayed so that generated credentials and other parameters can be included in the output.
+                          description: message is an optional instructional message that
+                            will be displayed when this template is instantiated. This field
+                            should inform the user how to utilize the newly created resources.
+                            Parameter substitution will be performed on the message before
+                            being displayed so that generated credentials and other parameters
+                            can be included in the output.
                           type: string
                         metadata:
                           type: object
                         objects:
-                          description: objects is an array of resources to include in this template. If a namespace value is hardcoded in the object, it will be removed during template instantiation, however if the namespace value is, or contains, a ${PARAMETER_REFERENCE}, the resolved value after parameter substitution will be respected and the object will be created in that namespace.
+                          description: objects is an array of resources to include in this
+                            template. If a namespace value is hardcoded in the object, it
+                            will be removed during template instantiation, however if the
+                            namespace value is, or contains, a ${PARAMETER_REFERENCE}, the
+                            resolved value after parameter substitution will be respected
+                            and the object will be created in that namespace.
                           items:
                             type: object
                           type: array
                           x-kubernetes-preserve-unknown-fields: true
                         parameters:
-                          description: parameters is an optional array of Parameters used during the Template to Config transformation.
+                          description: parameters is an optional array of Parameters used
+                            during the Template to Config transformation.
                           items:
-                            description: Parameter defines a name/value variable that is to be processed during the Template to Config transformation.
+                            description: Parameter defines a name/value variable that is
+                              to be processed during the Template to Config transformation.
                             properties:
                               description:
                                 description: Description of a parameter. Optional.
                                 type: string
                               displayName:
-                                description: 'Optional: The name that will show in UI instead of parameter ''Name'''
+                                description: 'Optional: The name that will show in UI instead
+                                  of parameter ''Name'''
                                 type: string
                               from:
                                 description: From is an input value for the generator. Optional.
                                 type: string
                               generate:
-                                description: "generate specifies the generator to be used to generate random string from an input value specified by From field. The result string is stored into Value field. If empty, no generator is being used, leaving the result Value untouched. Optional. \n The only supported generator is \"expression\", which accepts a \"from\" value in the form of a simple regular expression containing the range expression \"[a-zA-Z0-9]\", and the length expression \"a{length}\". \n Examples: \n from             | value ----------------------------- \"test[0-9]{1}x\"  | \"test7x\" \"[0-1]{8}\"       | \"01001100\" \"0x[A-F0-9]{4}\"  | \"0xB3AF\" \"[a-zA-Z0-9]{8}\" | \"hW4yQU5i\""
+                                description: "generate specifies the generator to be used
+                                  to generate random string from an input value specified
+                                  by From field. The result string is stored into Value
+                                  field. If empty, no generator is being used, leaving the
+                                  result Value untouched. Optional. \n The only supported
+                                  generator is \"expression\", which accepts a \"from\"
+                                  value in the form of a simple regular expression containing
+                                  the range expression \"[a-zA-Z0-9]\", and the length expression
+                                  \"a{length}\". \n Examples: \n from             | value
+                                  ----------------------------- \"test[0-9]{1}x\"  | \"test7x\"
+                                  \"[0-1]{8}\"       | \"01001100\" \"0x[A-F0-9]{4}\"  |
+                                  \"0xB3AF\" \"[a-zA-Z0-9]{8}\" | \"hW4yQU5i\""
                                 type: string
                               name:
-                                description: Name must be set and it can be referenced in Template Items using ${PARAMETER_NAME}. Required.
+                                description: Name must be set and it can be referenced in
+                                  Template Items using ${PARAMETER_NAME}. Required.
                                 type: string
                               required:
-                                description: 'Optional: Indicates the parameter must have a value.  Defaults to false.'
+                                description: 'Optional: Indicates the parameter must have
+                                  a value.  Defaults to false.'
                                 type: boolean
                               value:
-                                description: Value holds the Parameter data. If specified, the generator will be ignored. The value replaces all occurrences of the Parameter ${Name} expression during the Template to Config transformation. Optional.
+                                description: Value holds the Parameter data. If specified,
+                                  the generator will be ignored. The value replaces all
+                                  occurrences of the Parameter ${Name} expression during
+                                  the Template to Config transformation. Optional.
                                 type: string
                             required:
                             - name
@@ -1090,10 +1266,12 @@ data:
                       - objects
                       type: object
                     tierName:
-                      description: 'The tier of the template. For example: "basic", "advanced", or "team"'
+                      description: 'The tier of the template. For example: "basic", "advanced",
+                        or "team"'
                       type: string
                     type:
-                      description: 'The type of the template. For example: "code", "dev", "stage" or "cluster"'
+                      description: 'The type of the template. For example: "code", "dev",
+                        "stage" or "cluster"'
                       type: string
                   required:
                   - revision
@@ -1117,7 +1295,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: toolchainclusters.toolchain.dev.openshift.com
       spec:
@@ -1139,13 +1317,18 @@ data:
           name: v1alpha1
           schema:
             openAPIV3Schema:
-              description: ToolchainCluster configures Toolchain to be aware of a Kubernetes cluster and encapsulates the details necessary to communicate with the cluster.
+              description: ToolchainCluster configures Toolchain to be aware of a Kubernetes
+                cluster and encapsulates the details necessary to communicate with the cluster.
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
@@ -1153,19 +1336,25 @@ data:
                   description: ToolchainClusterSpec defines the desired state of ToolchainCluster
                   properties:
                     apiEndpoint:
-                      description: The API endpoint of the member cluster. This can be a hostname, hostname:port, IP or IP:port.
+                      description: The API endpoint of the member cluster. This can be a
+                        hostname, hostname:port, IP or IP:port.
                       type: string
                     caBundle:
                       description: CABundle contains the certificate authority information.
                       type: string
                     disabledTLSValidations:
-                      description: DisabledTLSValidations defines a list of checks to ignore when validating the TLS connection to the member cluster.  This can be any of *, SubjectName, or ValidityPeriod. If * is specified, it is expected to be the only option in list.
+                      description: DisabledTLSValidations defines a list of checks to ignore
+                        when validating the TLS connection to the member cluster.  This
+                        can be any of *, SubjectName, or ValidityPeriod. If * is specified,
+                        it is expected to be the only option in list.
                       items:
                         type: string
                       type: array
                       x-kubernetes-list-type: set
                     secretRef:
-                      description: Name of the secret containing the token required to access the member cluster. The secret needs to exist in the same namespace as the control plane and should have a "token" key.
+                      description: Name of the secret containing the token required to access
+                        the member cluster. The secret needs to exist in the same namespace
+                        as the control plane and should have a "token" key.
                       properties:
                         name:
                           description: Name of a secret within the enclosing namespace
@@ -1178,23 +1367,27 @@ data:
                   - secretRef
                   type: object
                 status:
-                  description: ToolchainClusterStatus contains information about the current status of a cluster updated periodically by cluster controller.
+                  description: ToolchainClusterStatus contains information about the current
+                    status of a cluster updated periodically by cluster controller.
                   properties:
                     conditions:
                       description: Conditions is an array of current cluster conditions.
                       items:
-                        description: ToolchainClusterCondition describes current state of a cluster.
+                        description: ToolchainClusterCondition describes current state of
+                          a cluster.
                         properties:
                           lastProbeTime:
                             description: Last time the condition was checked.
                             format: date-time
                             type: string
                           lastTransitionTime:
-                            description: Last time the condition transit from one status to another.
+                            description: Last time the condition transit from one status
+                              to another.
                             format: date-time
                             type: string
                           message:
-                            description: Human readable message indicating details about last transition.
+                            description: Human readable message indicating details about
+                              last transition.
                             type: string
                           reason:
                             description: (brief) reason for the condition's last transition.
@@ -1233,7 +1426,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: toolchainconfigs.toolchain.dev.openshift.com
       spec:
@@ -1252,18 +1445,24 @@ data:
           name: v1alpha1
           schema:
             openAPIV3Schema:
-              description: ToolchainConfig keeps all configuration parameters needed for host and member operators
+              description: ToolchainConfig keeps all configuration parameters needed for
+                host and member operators
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
                 spec:
-                  description: ToolchainConfigSpec contains all configuration for host and member operators
+                  description: ToolchainConfigSpec contains all configuration for host and
+                    member operators
                   properties:
                     host:
                       description: Contains all host operator configuration
@@ -1272,31 +1471,44 @@ data:
                           description: Keeps parameters necessary for automatic approval
                           properties:
                             enabled:
-                              description: Defines if the automatic approval is enabled or not
+                              description: Defines if the automatic approval is enabled
+                                or not
                               type: boolean
                             maxNumberOfUsers:
-                              description: Defines the maximal number of users to be allowed for automatic approval. When the number is reached, then the automatic approval is stopped.
+                              description: Defines the maximal number of users to be allowed
+                                for automatic approval. When the number is reached, then
+                                the automatic approval is stopped.
                               properties:
                                 overall:
-                                  description: It is the maximal number of users provisioned in the system overall - equals to max number of MasterUserRecords in host cluster
+                                  description: It is the maximal number of users provisioned
+                                    in the system overall - equals to max number of MasterUserRecords
+                                    in host cluster
                                   type: integer
                                 specificPerMemberCluster:
                                   additionalProperties:
                                     type: integer
-                                  description: Contains a map of maximal number of users provisioned per member cluster mapped by the cluster name - equals to max number of UserAccounts in member cluster
+                                  description: Contains a map of maximal number of users
+                                    provisioned per member cluster mapped by the cluster
+                                    name - equals to max number of UserAccounts in member
+                                    cluster
                                   type: object
                                   x-kubernetes-map-type: atomic
                               type: object
                             resourceCapacityThreshold:
-                              description: Contains threshold (in percentage of usage) that defines when the automatic approval should be stopped
+                              description: Contains threshold (in percentage of usage) that
+                                defines when the automatic approval should be stopped
                               properties:
                                 defaultThreshold:
-                                  description: It is the default capacity threshold (in percentage of usage) to be used for all member clusters if no special threshold is defined
+                                  description: It is the default capacity threshold (in
+                                    percentage of usage) to be used for all member clusters
+                                    if no special threshold is defined
                                   type: integer
                                 specificPerMemberCluster:
                                   additionalProperties:
                                     type: integer
-                                  description: Contains a map of specific capacity thresholds (in percentage of usage) for particular member clusters mapped by their names
+                                  description: Contains a map of specific capacity thresholds
+                                    (in percentage of usage) for particular member clusters
+                                    mapped by their names
                                   type: object
                                   x-kubernetes-map-type: atomic
                               type: object
@@ -1305,37 +1517,46 @@ data:
                           description: Keeps parameters concerned with user deactivation
                           properties:
                             deactivatingNotificationDays:
-                              description: DeactivatingNotificationDays is the number of days after a pre-deactivating notification is sent that actual deactivation occurs.  If this parameter is set to zero, then there will be no delay
+                              description: DeactivatingNotificationDays is the number of
+                                days after a pre-deactivating notification is sent that
+                                actual deactivation occurs.  If this parameter is set to
+                                zero, then there will be no delay
                               type: integer
                           type: object
                       type: object
                     members:
-                      description: Contains all member operator configurations for all member clusters
+                      description: Contains all member operator configurations for all member
+                        clusters
                       properties:
                         default:
-                          description: Defines default configuration to be applied to all member clusters
+                          description: Defines default configuration to be applied to all
+                            member clusters
                           properties:
                             memberStatus:
                               description: Keeps parameters concerned with member status
                               properties:
                                 refreshPeriod:
-                                  description: Defines the period between refreshes of the member status
+                                  description: Defines the period between refreshes of the
+                                    member status
                                   type: string
                               type: object
                           type: object
                         specificPerMemberCluster:
                           additionalProperties:
-                            description: MemberOperatorConfigSpec contains all configuration parameters of the member operator
+                            description: MemberOperatorConfigSpec contains all configuration
+                              parameters of the member operator
                             properties:
                               memberStatus:
                                 description: Keeps parameters concerned with member status
                                 properties:
                                   refreshPeriod:
-                                    description: Defines the period between refreshes of the member status
+                                    description: Defines the period between refreshes of
+                                      the member status
                                     type: string
                                 type: object
                             type: object
-                          description: A map of cluster-specific member operator configurations indexed by member toolchaincluster name
+                          description: A map of cluster-specific member operator configurations
+                            indexed by member toolchaincluster name
                           type: object
                           x-kubernetes-map-type: atomic
                       type: object
@@ -1359,7 +1580,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: toolchainstatuses.toolchain.dev.openshift.com
       spec:
@@ -1387,10 +1608,14 @@ data:
               description: ToolchainStatus is used to track overall toolchain status
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
@@ -1398,14 +1623,17 @@ data:
                   description: ToolchainStatusSpec defines the desired state of ToolchainStatus
                   type: object
                 status:
-                  description: ToolchainStatusStatus defines the observed state of the toolchain, including host cluster and member cluster components
+                  description: ToolchainStatusStatus defines the observed state of the toolchain,
+                    including host cluster and member cluster components
                   properties:
                     conditions:
-                      description: 'Conditions is an array of the current overall toolchain status conditions Supported condition types: ConditionReady'
+                      description: 'Conditions is an array of the current overall toolchain
+                        status conditions Supported condition types: ConditionReady'
                       items:
                         properties:
                           lastTransitionTime:
-                            description: Last time the condition transit from one status to another.
+                            description: Last time the condition transit from one status
+                              to another.
                             format: date-time
                             type: string
                           lastUpdatedTime:
@@ -1413,7 +1641,8 @@ data:
                             format: date-time
                             type: string
                           message:
-                            description: Human readable message indicating details about last transition.
+                            description: Human readable message indicating details about
+                              last transition.
                             type: string
                           reason:
                             description: (brief) reason for the condition's last transition.
@@ -1439,11 +1668,13 @@ data:
                           description: The timestamp of the host operator build
                           type: string
                         conditions:
-                          description: 'Conditions is an array of current host operator status conditions Supported condition types: ConditionReady'
+                          description: 'Conditions is an array of current host operator
+                            status conditions Supported condition types: ConditionReady'
                           items:
                             properties:
                               lastTransitionTime:
-                                description: Last time the condition transit from one status to another.
+                                description: Last time the condition transit from one status
+                                  to another.
                                 format: date-time
                                 type: string
                               lastUpdatedTime:
@@ -1451,13 +1682,15 @@ data:
                                 format: date-time
                                 type: string
                               message:
-                                description: Human readable message indicating details about last transition.
+                                description: Human readable message indicating details about
+                                  last transition.
                                 type: string
                               reason:
                                 description: (brief) reason for the condition's last transition.
                                 type: string
                               status:
-                                description: Status of the condition, one of True, False, Unknown.
+                                description: Status of the condition, one of True, False,
+                                  Unknown.
                                 type: string
                               type:
                                 description: Type of condition
@@ -1474,10 +1707,12 @@ data:
                           description: The status of the host operator's deployment
                           type: string
                         masterUserRecordCount:
-                          description: 'Number of MasterUserRecords created within the host cluster DEPRECATED: use `ToolchainStatusStatus.Metrics` instead'
+                          description: 'Number of MasterUserRecords created within the host
+                            cluster DEPRECATED: use `ToolchainStatusStatus.Metrics` instead'
                           type: integer
                         revision:
-                          description: The commit id from the host-operator repository used to build the operator
+                          description: The commit id from the host-operator repository used
+                            to build the operator
                           type: string
                         version:
                           description: The version of the operator
@@ -1503,14 +1738,17 @@ data:
                             description: The array of member status objects
                             properties:
                               che:
-                                description: Che is the status of Che/CRW, such as installed and whether the member configuration is correct
+                                description: Che is the status of Che/CRW, such as installed
+                                  and whether the member configuration is correct
                                 properties:
                                   conditions:
-                                    description: 'Conditions is an array of current Che status conditions Supported condition types: ConditionReady'
+                                    description: 'Conditions is an array of current Che
+                                      status conditions Supported condition types: ConditionReady'
                                     items:
                                       properties:
                                         lastTransitionTime:
-                                          description: Last time the condition transit from one status to another.
+                                          description: Last time the condition transit from
+                                            one status to another.
                                           format: date-time
                                           type: string
                                         lastUpdatedTime:
@@ -1518,13 +1756,16 @@ data:
                                           format: date-time
                                           type: string
                                         message:
-                                          description: Human readable message indicating details about last transition.
+                                          description: Human readable message indicating
+                                            details about last transition.
                                           type: string
                                         reason:
-                                          description: (brief) reason for the condition's last transition.
+                                          description: (brief) reason for the condition's
+                                            last transition.
                                           type: string
                                         status:
-                                          description: Status of the condition, one of True, False, Unknown.
+                                          description: Status of the condition, one of True,
+                                            False, Unknown.
                                           type: string
                                         type:
                                           description: Type of condition
@@ -1539,11 +1780,13 @@ data:
                                     x-kubernetes-list-type: map
                                 type: object
                               conditions:
-                                description: 'Conditions is an array of current toolchain status conditions Supported condition types: ConditionReady'
+                                description: 'Conditions is an array of current toolchain
+                                  status conditions Supported condition types: ConditionReady'
                                 items:
                                   properties:
                                     lastTransitionTime:
-                                      description: Last time the condition transit from one status to another.
+                                      description: Last time the condition transit from
+                                        one status to another.
                                       format: date-time
                                       type: string
                                     lastUpdatedTime:
@@ -1551,13 +1794,16 @@ data:
                                       format: date-time
                                       type: string
                                     message:
-                                      description: Human readable message indicating details about last transition.
+                                      description: Human readable message indicating details
+                                        about last transition.
                                       type: string
                                     reason:
-                                      description: (brief) reason for the condition's last transition.
+                                      description: (brief) reason for the condition's last
+                                        transition.
                                       type: string
                                     status:
-                                      description: Status of the condition, one of True, False, Unknown.
+                                      description: Status of the condition, one of True,
+                                        False, Unknown.
                                       type: string
                                     type:
                                       description: Type of condition
@@ -1571,14 +1817,18 @@ data:
                                 - type
                                 x-kubernetes-list-type: map
                               host:
-                                description: Host is the status of the connection with the host cluster
+                                description: Host is the status of the connection with the
+                                  host cluster
                                 properties:
                                   conditions:
-                                    description: 'Conditions is an array of current member operator status conditions Supported condition types: ConditionReady'
+                                    description: 'Conditions is an array of current member
+                                      operator status conditions Supported condition types:
+                                      ConditionReady'
                                     items:
                                       properties:
                                         lastTransitionTime:
-                                          description: Last time the condition transit from one status to another.
+                                          description: Last time the condition transit from
+                                            one status to another.
                                           format: date-time
                                           type: string
                                         lastUpdatedTime:
@@ -1586,13 +1836,16 @@ data:
                                           format: date-time
                                           type: string
                                         message:
-                                          description: Human readable message indicating details about last transition.
+                                          description: Human readable message indicating
+                                            details about last transition.
                                           type: string
                                         reason:
-                                          description: (brief) reason for the condition's last transition.
+                                          description: (brief) reason for the condition's
+                                            last transition.
                                           type: string
                                         status:
-                                          description: Status of the condition, one of True, False, Unknown.
+                                          description: Status of the condition, one of True,
+                                            False, Unknown.
                                           type: string
                                         type:
                                           description: Type of condition
@@ -1607,32 +1860,40 @@ data:
                                     x-kubernetes-list-type: map
                                 type: object
                               hostConnection:
-                                description: HostConnection is the status of the connection with the host cluster
+                                description: HostConnection is the status of the connection
+                                  with the host cluster
                                 properties:
                                   conditions:
-                                    description: Conditions is an array of current cluster conditions.
+                                    description: Conditions is an array of current cluster
+                                      conditions.
                                     items:
-                                      description: ToolchainClusterCondition describes current state of a cluster.
+                                      description: ToolchainClusterCondition describes current
+                                        state of a cluster.
                                       properties:
                                         lastProbeTime:
                                           description: Last time the condition was checked.
                                           format: date-time
                                           type: string
                                         lastTransitionTime:
-                                          description: Last time the condition transit from one status to another.
+                                          description: Last time the condition transit from
+                                            one status to another.
                                           format: date-time
                                           type: string
                                         message:
-                                          description: Human readable message indicating details about last transition.
+                                          description: Human readable message indicating
+                                            details about last transition.
                                           type: string
                                         reason:
-                                          description: (brief) reason for the condition's last transition.
+                                          description: (brief) reason for the condition's
+                                            last transition.
                                           type: string
                                         status:
-                                          description: Status of the condition, one of True, False, Unknown.
+                                          description: Status of the condition, one of True,
+                                            False, Unknown.
                                           type: string
                                         type:
-                                          description: Type of cluster condition, Ready or Offline.
+                                          description: Type of cluster condition, Ready
+                                            or Offline.
                                           type: string
                                       required:
                                       - lastProbeTime
@@ -1645,17 +1906,21 @@ data:
                                 - conditions
                                 type: object
                               memberOperator:
-                                description: MemberOperator is the status of a toolchain member operator
+                                description: MemberOperator is the status of a toolchain
+                                  member operator
                                 properties:
                                   buildTimestamp:
                                     description: The timestamp of the member operator build
                                     type: string
                                   conditions:
-                                    description: 'Conditions is an array of current member operator status conditions Supported condition types: ConditionReady'
+                                    description: 'Conditions is an array of current member
+                                      operator status conditions Supported condition types:
+                                      ConditionReady'
                                     items:
                                       properties:
                                         lastTransitionTime:
-                                          description: Last time the condition transit from one status to another.
+                                          description: Last time the condition transit from
+                                            one status to another.
                                           format: date-time
                                           type: string
                                         lastUpdatedTime:
@@ -1663,13 +1928,16 @@ data:
                                           format: date-time
                                           type: string
                                         message:
-                                          description: Human readable message indicating details about last transition.
+                                          description: Human readable message indicating
+                                            details about last transition.
                                           type: string
                                         reason:
-                                          description: (brief) reason for the condition's last transition.
+                                          description: (brief) reason for the condition's
+                                            last transition.
                                           type: string
                                         status:
-                                          description: Status of the condition, one of True, False, Unknown.
+                                          description: Status of the condition, one of True,
+                                            False, Unknown.
                                           type: string
                                         type:
                                           description: Type of condition
@@ -1686,7 +1954,8 @@ data:
                                     description: The status of the member operator's deployment
                                     type: string
                                   revision:
-                                    description: The commit id from the member-operator repository used to build the operator
+                                    description: The commit id from the member-operator
+                                      repository used to build the operator
                                     type: string
                                   version:
                                     description: The version of the operator
@@ -1703,21 +1972,27 @@ data:
                                   memoryUsagePerNodeRole:
                                     additionalProperties:
                                       type: integer
-                                    description: How many percent of the available memory is used per node role (eg. worker, master)
+                                    description: How many percent of the available memory
+                                      is used per node role (eg. worker, master)
                                     type: object
                                 type: object
                               routes:
-                                description: Routes/URLs of the cluster, such as Console and Che Dashboard URLs
+                                description: Routes/URLs of the cluster, such as Console
+                                  and Che Dashboard URLs
                                 properties:
                                   cheDashboardURL:
-                                    description: CheDashboardURL is the Che Dashboard URL of the cluster if Che is installed
+                                    description: CheDashboardURL is the Che Dashboard URL
+                                      of the cluster if Che is installed
                                     type: string
                                   conditions:
-                                    description: 'Conditions is an array of current member operator status conditions Supported condition types: ConditionReady'
+                                    description: 'Conditions is an array of current member
+                                      operator status conditions Supported condition types:
+                                      ConditionReady'
                                     items:
                                       properties:
                                         lastTransitionTime:
-                                          description: Last time the condition transit from one status to another.
+                                          description: Last time the condition transit from
+                                            one status to another.
                                           format: date-time
                                           type: string
                                         lastUpdatedTime:
@@ -1725,13 +2000,16 @@ data:
                                           format: date-time
                                           type: string
                                         message:
-                                          description: Human readable message indicating details about last transition.
+                                          description: Human readable message indicating
+                                            details about last transition.
                                           type: string
                                         reason:
-                                          description: (brief) reason for the condition's last transition.
+                                          description: (brief) reason for the condition's
+                                            last transition.
                                           type: string
                                         status:
-                                          description: Status of the condition, one of True, False, Unknown.
+                                          description: Status of the condition, one of True,
+                                            False, Unknown.
                                           type: string
                                         type:
                                           description: Type of condition
@@ -1745,12 +2023,14 @@ data:
                                     - type
                                     x-kubernetes-list-type: map
                                   consoleURL:
-                                    description: ConsoleURL is the web console URL of the cluster
+                                    description: ConsoleURL is the web console URL of the
+                                      cluster
                                     type: string
                                 type: object
                             type: object
                           userAccountCount:
-                            description: Number of UserAccounts created within the member cluster
+                            description: Number of UserAccounts created within the member
+                              cluster
                             type: integer
                         required:
                         - clusterName
@@ -1765,21 +2045,27 @@ data:
                         additionalProperties:
                           type: integer
                         type: object
-                      description: Metrics is a map that stores metrics to be exposed on Prometheus.
+                      description: Metrics is a map that stores metrics to be exposed on
+                        Prometheus.
                       type: object
                       x-kubernetes-map-type: atomic
                     registrationService:
-                      description: RegistrationService is the status of the registration service
+                      description: RegistrationService is the status of the registration
+                        service
                       properties:
                         deployment:
-                          description: Deployment is the status of the registration service's deployment
+                          description: Deployment is the status of the registration service's
+                            deployment
                           properties:
                             conditions:
-                              description: 'Conditions is an array of current deployment status conditions for a host operator Supported condition types: Available, Progressing'
+                              description: 'Conditions is an array of current deployment
+                                status conditions for a host operator Supported condition
+                                types: Available, Progressing'
                               items:
                                 properties:
                                   lastTransitionTime:
-                                    description: Last time the condition transit from one status to another.
+                                    description: Last time the condition transit from one
+                                      status to another.
                                     format: date-time
                                     type: string
                                   lastUpdatedTime:
@@ -1787,13 +2073,16 @@ data:
                                     format: date-time
                                     type: string
                                   message:
-                                    description: Human readable message indicating details about last transition.
+                                    description: Human readable message indicating details
+                                      about last transition.
                                     type: string
                                   reason:
-                                    description: (brief) reason for the condition's last transition.
+                                    description: (brief) reason for the condition's last
+                                      transition.
                                     type: string
                                   status:
-                                    description: Status of the condition, one of True, False, Unknown.
+                                    description: Status of the condition, one of True, False,
+                                      Unknown.
                                     type: string
                                   type:
                                     description: Type of condition
@@ -1813,18 +2102,22 @@ data:
                           - name
                           type: object
                         health:
-                          description: Health provides health status of the registration service
+                          description: Health provides health status of the registration
+                            service
                           properties:
                             alive:
                               type: string
                             buildTime:
                               type: string
                             conditions:
-                              description: 'Conditions is an array of status conditions for the health of the registration service Supported condition types: ConditionReady'
+                              description: 'Conditions is an array of status conditions
+                                for the health of the registration service Supported condition
+                                types: ConditionReady'
                               items:
                                 properties:
                                   lastTransitionTime:
-                                    description: Last time the condition transit from one status to another.
+                                    description: Last time the condition transit from one
+                                      status to another.
                                     format: date-time
                                     type: string
                                   lastUpdatedTime:
@@ -1832,13 +2125,16 @@ data:
                                     format: date-time
                                     type: string
                                   message:
-                                    description: Human readable message indicating details about last transition.
+                                    description: Human readable message indicating details
+                                      about last transition.
                                     type: string
                                   reason:
-                                    description: (brief) reason for the condition's last transition.
+                                    description: (brief) reason for the condition's last
+                                      transition.
                                     type: string
                                   status:
-                                    description: Status of the condition, one of True, False, Unknown.
+                                    description: Status of the condition, one of True, False,
+                                      Unknown.
                                     type: string
                                   type:
                                     description: Type of condition
@@ -1865,14 +2161,18 @@ data:
                           - startTime
                           type: object
                         registrationServiceResources:
-                          description: RegistrationServiceResources is the status for resources created for the registration service
+                          description: RegistrationServiceResources is the status for resources
+                            created for the registration service
                           properties:
                             conditions:
-                              description: 'Conditions is an array of current registration service resource status conditions Supported condition types: Deployed, Deploying, DeployingFailed'
+                              description: 'Conditions is an array of current registration
+                                service resource status conditions Supported condition types:
+                                Deployed, Deploying, DeployingFailed'
                               items:
                                 properties:
                                   lastTransitionTime:
-                                    description: Last time the condition transit from one status to another.
+                                    description: Last time the condition transit from one
+                                      status to another.
                                     format: date-time
                                     type: string
                                   lastUpdatedTime:
@@ -1880,13 +2180,16 @@ data:
                                     format: date-time
                                     type: string
                                   message:
-                                    description: Human readable message indicating details about last transition.
+                                    description: Human readable message indicating details
+                                      about last transition.
                                     type: string
                                   reason:
-                                    description: (brief) reason for the condition's last transition.
+                                    description: (brief) reason for the condition's last
+                                      transition.
                                     type: string
                                   status:
-                                    description: Status of the condition, one of True, False, Unknown.
+                                    description: Status of the condition, one of True, False,
+                                      Unknown.
                                     type: string
                                   type:
                                     description: Type of condition
@@ -1922,7 +2225,7 @@ data:
       kind: CustomResourceDefinition
       metadata:
         annotations:
-          controller-gen.kubebuilder.io/version: (devel)
+          controller-gen.kubebuilder.io/version: v0.4.1
         creationTimestamp: null
         name: usersignups.toolchain.dev.openshift.com
       spec:
@@ -1984,10 +2287,14 @@ data:
               description: UserSignup registers a user in the CodeReady Toolchain
               properties:
                 apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the latest
+                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                   type: string
                 kind:
-                  description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  description: 'Kind is a string value representing the REST resource this
+                    object represents. Servers may infer this from the endpoint the client
+                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                   type: string
                 metadata:
                   type: object
@@ -2004,16 +2311,19 @@ data:
                       description: The user's first name, obtained from the identity provider.
                       type: string
                     states:
-                      description: States contains a number of values that reflect the desired state of the UserSignup.
+                      description: States contains a number of values that reflect the desired
+                        state of the UserSignup.
                       items:
                         type: string
                       type: array
                       x-kubernetes-list-type: atomic
                     targetCluster:
-                      description: The cluster in which the user is provisioned in If not set then the target cluster will be picked automatically
+                      description: The cluster in which the user is provisioned in If not
+                        set then the target cluster will be picked automatically
                       type: string
                     userid:
-                      description: The user's user ID, obtained from the identity provider from the 'sub' (subject) claim
+                      description: The user's user ID, obtained from the identity provider
+                        from the 'sub' (subject) claim
                       type: string
                     username:
                       description: The user's username, obtained from the identity provider.
@@ -2026,14 +2336,17 @@ data:
                   description: UserSignupStatus defines the observed state of UserSignup
                   properties:
                     compliantUsername:
-                      description: CompliantUsername is used to store the transformed, DNS-1123 compliant username
+                      description: CompliantUsername is used to store the transformed, DNS-1123
+                        compliant username
                       type: string
                     conditions:
-                      description: 'Conditions is an array of current UserSignup conditions Supported condition types: PendingApproval, Provisioning, Complete'
+                      description: 'Conditions is an array of current UserSignup conditions
+                        Supported condition types: PendingApproval, Provisioning, Complete'
                       items:
                         properties:
                           lastTransitionTime:
-                            description: Last time the condition transit from one status to another.
+                            description: Last time the condition transit from one status
+                              to another.
                             format: date-time
                             type: string
                           lastUpdatedTime:
@@ -2041,7 +2354,8 @@ data:
                             format: date-time
                             type: string
                           message:
-                            description: Human readable message indicating details about last transition.
+                            description: Human readable message indicating details about
+                              last transition.
                             type: string
                           reason:
                             description: (brief) reason for the condition's last transition.
