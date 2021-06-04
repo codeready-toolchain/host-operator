@@ -424,8 +424,8 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
 		containsObj(t, actual, clusterResourceQuotaRHOASOperatorObj())
 		containsObj(t, actual, clusterResourceQuotaSBOObj())
-		containsObj(t, actual, idlerObj("${USERNAME}-dev", "28800"))
-		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
+		containsObj(t, actual, idlerObj("${USERNAME}-dev", "43200"))
+		containsObj(t, actual, idlerObj("${USERNAME}-stage", "43200"))
 	case "basic", "basicdeactivationdisabled":
 		assert.Len(t, actual.Objects, 12)
 		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "25Gi"))
@@ -437,9 +437,9 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
 		containsObj(t, actual, clusterResourceQuotaSecretsObj())
 		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
-		containsObj(t, actual, idlerObj("${USERNAME}-dev", "28800"))
-		containsObj(t, actual, idlerObj("${USERNAME}-code", "28800"))
-		containsObj(t, actual, idlerObj("${USERNAME}-stage", "28800"))
+		containsObj(t, actual, idlerObj("${USERNAME}-dev", "43200"))
+		containsObj(t, actual, idlerObj("${USERNAME}-code", "43200"))
+		containsObj(t, actual, idlerObj("${USERNAME}-stage", "43200"))
 	case "team":
 		assert.Len(t, actual.Objects, 9) // No Idlers
 		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "2000m", "15Gi", "15Gi"))
