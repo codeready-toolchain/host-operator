@@ -222,8 +222,9 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "TemplateUpdateRequest")
 	}
 	if err := (&toolchainconfig.Reconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
+		Client:         mgr.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
+		GetMembersFunc: cluster.GetMemberClusters,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainConfig")
 	}
