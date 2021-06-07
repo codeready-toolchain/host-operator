@@ -10,11 +10,9 @@ objects:
     namespace: ${NAMESPACE}
   spec:
     namespaces:
-      - templateRef: ${CODE_TEMPL_REF}
       - templateRef: ${DEV_TEMPL_REF}
       - templateRef: ${STAGE_TEMPL_REF}
 parameters:
 - name: NAMESPACE
-- name: CODE_TEMPL_REF
 - name: DEV_TEMPL_REF
 - name: STAGE_TEMPL_REF
