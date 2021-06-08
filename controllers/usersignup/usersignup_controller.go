@@ -105,6 +105,14 @@ type Reconciler struct {
 	GetMemberClusters cluster.GetMemberClustersFunc
 }
 
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usersignups,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usersignups/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usersignups/finalizers,verbs=update
+
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=bannedusers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=bannedusers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=bannedusers/finalizers,verbs=update
+
 // Reconcile reads that state of the cluster for a UserSignup object and makes changes based on the state read
 // and what is in the UserSignup.Spec
 // Note:
