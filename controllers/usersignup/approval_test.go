@@ -10,6 +10,7 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/host-operator/test/config"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	. "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
