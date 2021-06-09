@@ -62,7 +62,7 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 func hasNotReachedMaxNumberOfUsersThreshold(config toolchainconfig.ToolchainConfig, counts counter.Counts) cluster.Condition {
 	return func(cluster *cluster.CachedToolchainCluster) bool {
 		if config.AutomaticApproval().MaxNumberOfUsersOverall() != 0 {
-			if config.AutomaticApproval().MaxNumberOfUsersOverall() <= counts.MasterUserRecordCount {
+			if config.AutomaticApproval().MaxNumberOfUsersOverall() <= (counts.MasterUserRecords()) {
 				return false
 			}
 		}
