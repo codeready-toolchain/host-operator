@@ -107,6 +107,7 @@ func DecrementUserAccountCount(logger logr.Logger, clusterName string) {
 		if cachedCounts.UserAccountsPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
 			cachedCounts.UserAccountsPerClusterCounts[clusterName]--
 			metrics.UserAccountGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.UserAccountsPerClusterCounts[clusterName]))
+			logger.Info("decremented UserAccount count", "value", cachedCounts.UserAccountsPerClusterCounts[clusterName])
 		} else {
 			logger.Error(fmt.Errorf("the count of UserAccounts is zero"),
 				"unable to decrement the number of UserAccounts for the given cluster", "cluster", clusterName)
@@ -125,11 +126,12 @@ func UpdateUsersPerActivationCounters(logger logr.Logger, activations int, domai
 		// increase the gauge with the given number of activations and the email address domain
 		cachedCounts.UserSignupsPerActivationAndDomainCounts[joinLabelValues(strconv.Itoa(activations), string(domain))]++
 		metrics.UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strconv.Itoa(activations), string(domain)).Inc()
-
+		logger.Info("incremented UserSignupsPerActivationAndDomainCounts", "activations", activations, "domain", domain, "value", cachedCounts.UserSignupsPerActivationAndDomainCounts[joinLabelValues(strconv.Itoa(activations), string(domain))])
 		// and decrease the gauge with the previous number of activations and the email address domain (if applicable)
 		if activations > 1 {
 			cachedCounts.UserSignupsPerActivationAndDomainCounts[joinLabelValues(strconv.Itoa(activations-1), string(domain))]--
 			metrics.UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(strconv.Itoa(activations-1), string(domain)).Dec()
+			logger.Info("decremented UserSignupsPerActivationAndDomainCounts", "activations", (activations - 1), "domain", domain, "value", cachedCounts.UserSignupsPerActivationAndDomainCounts[joinLabelValues(strconv.Itoa(activations-1), string(domain))])
 		}
 	})
 }
