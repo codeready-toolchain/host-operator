@@ -18,6 +18,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
 	uuid "github.com/satori/go.uuid"
@@ -216,7 +217,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	userSignup := NewUserSignup()
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
@@ -340,7 +341,7 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup,
-		config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
@@ -396,7 +397,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	)
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
@@ -447,7 +448,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 	userSignup := NewUserSignup()
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	fakeClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 		return fmt.Errorf("some error")
 	}
@@ -507,7 +508,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	userSignup.Labels = map[string]string{"toolchain.dev.openshift.com/approved": "false"}
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
@@ -557,7 +558,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	// given
 	userSignup := NewUserSignup()
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled())) // baseNSTemplateTier does not exist
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled())) // baseNSTemplateTier does not exist
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -626,7 +627,7 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	notReady := NewGetMemberClusters(
 		NewMemberCluster(t, "member1", v1.ConditionFalse),
 		NewMemberCluster(t, "member2", v1.ConditionFalse))
-	config := config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled().MaxUsersNumber(1))
+	config := config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled().MaxUsersNumber(1))
 	r, req, _ := prepareReconcile(t, userSignup.Name, notReady, userSignup, config, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(2)),
@@ -696,7 +697,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	noCapacity := NewGetMemberClusters(
 		NewMemberCluster(t, "member1", v1.ConditionTrue),
 		NewMemberCluster(t, "member2", v1.ConditionTrue))
-	config := config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled().ResourceCapThreshold(60))
+	config := config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled().ResourceCapThreshold(60))
 	r, req, _ := prepareReconcile(t, userSignup.Name, noCapacity, userSignup, config, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
@@ -765,7 +766,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	userSignup := NewUserSignup(Approved())
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1093,7 +1094,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	userSignup := NewUserSignup(WithTargetCluster("east"))
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1451,7 +1452,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	userSignup := NewUserSignup()
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()))
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()))
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1505,7 +1506,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	// given
 	userSignup := NewUserSignup()
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()))
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()))
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1586,7 +1587,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	}
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1652,7 +1653,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	}
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1755,7 +1756,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	userSignup := NewUserSignup(WithUsername("foo#$%^bar@redhat.com"))
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1822,7 +1823,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur,
-			config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+			config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1885,7 +1886,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 	t.Run("when MUR doesn't exist, then the condition should be set to Deactivated", func(t *testing.T) {
 		// given
-		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -1990,7 +1991,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 	t.Run("when the deactivation notification cannot be created", func(t *testing.T) {
 		// given
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup,
-			config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+			config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -2103,7 +2104,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			},
 		}
 		ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-		r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(20)),
 			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
@@ -2200,7 +2201,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 				Reason: "NotificationCRCreated",
 			},
 		}
-		r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(2)),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -2311,7 +2312,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	t.Run("when MUR exists and not deactivated, nothing should happen", func(t *testing.T) {
-		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		_, err := r.Reconcile(req)
 
 		// then
@@ -2356,7 +2357,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 		// Given
 		states.SetDeactivated(userSignup, true)
 
-		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 		InitializeCounters(t, NewToolchainStatus(
 			WithHost(WithMasterUserRecordCount(1)),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -2503,7 +2504,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur,
-		config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+		config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -2573,7 +2574,7 @@ func TestUserSignupBanned(t *testing.T) {
 		},
 	}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, bannedUser, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, bannedUser, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -2632,7 +2633,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	// given
 	userSignup := NewUserSignup(VerificationRequired())
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -2729,7 +2730,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	mur := murtest.NewMasterUserRecord(t, "foo", murtest.MetaNamespace(test.HostOperatorNs))
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, bannedUser, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, bannedUser, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -2838,7 +2839,7 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 	// given
 	userSignup := NewUserSignup()
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -2906,7 +2907,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 	mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -2989,7 +2990,7 @@ func TestDeathBy100Signups(t *testing.T) {
 
 	initObjs := make([]runtime.Object, 0, 110)
 	initObjs = append(initObjs, userSignup)
-	initObjs = append(initObjs, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()))
+	initObjs = append(initObjs, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()))
 
 	// create 100 MURs that follow the naming pattern used by `generateCompliantUsername()`: `foo`, `foo-2`, ..., `foo-100`
 	initObjs = append(initObjs, &toolchainv1alpha1.MasterUserRecord{
@@ -3103,7 +3104,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	}
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, mur2, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, mur2, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -3169,7 +3170,7 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 	// given
 	userSignup := NewUserSignup(Approved())
 
-	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithHost(WithMasterUserRecordCount(1)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{

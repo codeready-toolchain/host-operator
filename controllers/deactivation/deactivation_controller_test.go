@@ -21,6 +21,7 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
@@ -46,9 +47,9 @@ const (
 )
 
 func TestReconcile(t *testing.T) {
-	config := newToolchainConfigWithReset(t, test.AutomaticApproval().MaxUsersNumber(123,
-		test.PerMemberCluster("member1", 321)),
-		test.Deactivation().DeactivatingNotificationDays(3))
+	config := newToolchainConfigWithReset(t, config.AutomaticApproval().MaxUsersNumber(123,
+		config.PerMemberCluster("member1", 321)),
+		config.Deactivation().DeactivatingNotificationDays(3))
 
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -423,7 +424,7 @@ func assertThatUserSignupDeactivated(t *testing.T, cl *test.FakeClient, name str
 	require.Equal(t, expected, states.Deactivated(userSignup))
 }
 
-func newToolchainConfigWithReset(t *testing.T, options ...test.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
+func newToolchainConfigWithReset(t *testing.T, options ...config.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
 	t.Cleanup(toolchainconfig.Reset)
-	return test.NewToolchainConfig(options...)
+	return config.NewToolchainConfig(options...)
 }

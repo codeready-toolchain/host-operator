@@ -8,6 +8,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/stretchr/testify/assert"
@@ -19,14 +20,14 @@ import (
 )
 
 func TestSyncMemberConfigs(t *testing.T) {
-	defaultMemberConfig := test.NewMemberOperatorConfig(test.MemberStatus().RefreshPeriod("5s"))
-	specificMemberConfig := test.NewMemberOperatorConfig(test.MemberStatus().RefreshPeriod("10s"))
+	defaultMemberConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("5s"))
+	specificMemberConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("10s"))
 
 	t.Run("sync success", func(t *testing.T) {
 
 		t.Run("no member clusters available - skip sync", func(t *testing.T) {
 			// given
-			toolchainConfig := test.NewToolchainConfig(test.AutomaticApproval().Enabled().MaxUsersNumber(123, test.PerMemberCluster("member1", 321)), test.Members().Default(defaultMemberConfig.Spec), test.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
+			toolchainConfig := config.NewToolchainConfig(config.AutomaticApproval().Enabled().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)), config.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := synchronizer{
 				logger:         ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
 				getMembersFunc: NewGetMemberClusters(),
@@ -41,7 +42,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 		t.Run("synced to all members", func(t *testing.T) {
 			// given
-			toolchainConfig := test.NewToolchainConfig(test.AutomaticApproval().Enabled().MaxUsersNumber(123, test.PerMemberCluster("member1", 321)), test.Members().Default(defaultMemberConfig.Spec), test.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
+			toolchainConfig := config.NewToolchainConfig(config.AutomaticApproval().Enabled().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)), config.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := synchronizer{
 				logger:         ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
 				getMembersFunc: NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue)),
@@ -63,7 +64,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 				return fmt.Errorf("client error")
 			}
-			toolchainConfig := test.NewToolchainConfig(test.AutomaticApproval().Enabled().MaxUsersNumber(123, test.PerMemberCluster("member1", 321)), test.Members().Default(defaultMemberConfig.Spec), test.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
+			toolchainConfig := config.NewToolchainConfig(config.AutomaticApproval().Enabled().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)), config.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := synchronizer{
 				logger:         ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
 				getMembersFunc: NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberClusterWithClient(memberCl, "member2", v1.ConditionTrue)),
@@ -87,7 +88,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 			memberCl2.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 				return fmt.Errorf("client2 error")
 			}
-			toolchainConfig := test.NewToolchainConfig(test.AutomaticApproval().Enabled().MaxUsersNumber(123, test.PerMemberCluster("member1", 321)), test.Members().Default(defaultMemberConfig.Spec), test.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
+			toolchainConfig := config.NewToolchainConfig(config.AutomaticApproval().Enabled().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)), config.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := synchronizer{
 				logger:         ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
 				getMembersFunc: NewGetMemberClusters(NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue), NewMemberClusterWithClient(memberCl2, "member2", v1.ConditionTrue)),
@@ -105,7 +106,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 		t.Run("specific memberoperatorconfig exists but member cluster not found", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			toolchainConfig := test.NewToolchainConfig(test.AutomaticApproval().Enabled().MaxUsersNumber(123, test.PerMemberCluster("member1", 321)), test.Members().Default(defaultMemberConfig.Spec), test.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
+			toolchainConfig := config.NewToolchainConfig(config.AutomaticApproval().Enabled().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)), config.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := synchronizer{
 				logger:         ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
 				getMembersFunc: NewGetMemberClusters(NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)),
@@ -128,7 +129,7 @@ func TestSyncMemberConfig(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
-			memberConfig := test.NewMemberOperatorConfig(test.MemberStatus().RefreshPeriod("5s"))
+			memberConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("5s"))
 
 			// when
 			err := syncMemberConfig(memberConfig.Spec, memberCluster)
@@ -142,10 +143,10 @@ func TestSyncMemberConfig(t *testing.T) {
 		})
 
 		t.Run("memberoperatorconfig updated", func(t *testing.T) {
-			originalConfig := test.NewMemberOperatorConfig(test.MemberStatus().RefreshPeriod("10s"))
+			originalConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("10s"))
 			memberCl := test.NewFakeClient(t, originalConfig)
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
-			memberConfig := test.NewMemberOperatorConfig(test.MemberStatus().RefreshPeriod("5s"))
+			memberConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("5s"))
 
 			// when
 			err := syncMemberConfig(memberConfig.Spec, memberCluster)
@@ -166,7 +167,7 @@ func TestSyncMemberConfig(t *testing.T) {
 				return fmt.Errorf("client error")
 			}
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
-			memberConfig := test.NewMemberOperatorConfig(test.MemberStatus().RefreshPeriod("5s"))
+			memberConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("5s"))
 
 			// when
 			err := syncMemberConfig(memberConfig.Spec, memberCluster)
@@ -179,13 +180,13 @@ func TestSyncMemberConfig(t *testing.T) {
 		})
 
 		t.Run("client update error", func(t *testing.T) {
-			originalConfig := test.NewMemberOperatorConfig(test.MemberStatus().RefreshPeriod("10s"))
+			originalConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("10s"))
 			memberCl := test.NewFakeClient(t, originalConfig)
 			memberCl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				return fmt.Errorf("client update error")
 			}
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
-			memberConfig := test.NewMemberOperatorConfig(test.MemberStatus().RefreshPeriod("5s"))
+			memberConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("5s"))
 
 			// when
 			err := syncMemberConfig(memberConfig.Spec, memberCluster)

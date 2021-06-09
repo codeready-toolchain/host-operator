@@ -6,7 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -17,10 +18,10 @@ import (
 
 func TestCache(t *testing.T) {
 	// given
-	cl := NewFakeClient(t)
+	cl := test.NewFakeClient(t)
 
 	// when
-	defaultConfig, err := GetConfig(cl, HostOperatorNs)
+	defaultConfig, err := GetConfig(cl, test.HostOperatorNs)
 
 	// then
 	require.NoError(t, err)
@@ -29,41 +30,41 @@ func TestCache(t *testing.T) {
 
 	t.Run("return config that is stored in client", func(t *testing.T) {
 		// given
-		config := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(123, PerMemberCluster("member1", 321)))
-		cl := NewFakeClient(t, config)
+		cfg := newToolchainConfigWithReset(t, config.AutomaticApproval().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)))
+		cl := test.NewFakeClient(t, cfg)
 
 		// when
-		actual, err := GetConfig(cl, HostOperatorNs)
+		actual, err := GetConfig(cl, test.HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-		assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
+		assert.Equal(t, cfg.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 
 		t.Run("returns the same when the cache hasn't been updated", func(t *testing.T) {
 			// given
-			newConfig := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(666))
-			cl := NewFakeClient(t, newConfig)
+			newConfig := newToolchainConfigWithReset(t, config.AutomaticApproval().MaxUsersNumber(666))
+			cl := test.NewFakeClient(t, newConfig)
 
 			// when
-			actual, err := GetConfig(cl, HostOperatorNs)
+			actual, err := GetConfig(cl, test.HostOperatorNs)
 
 			// then
 			require.NoError(t, err)
 			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
+			assert.Equal(t, cfg.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 		})
 
 		t.Run("returns the new config when the cache was updated", func(t *testing.T) {
 			// given
-			newConfig := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(666), Deactivation().DeactivatingNotificationDays(5))
-			cl := NewFakeClient(t)
+			newConfig := newToolchainConfigWithReset(t, config.AutomaticApproval().MaxUsersNumber(666), config.Deactivation().DeactivatingNotificationDays(5))
+			cl := test.NewFakeClient(t)
 
 			// when
 			updateConfig(newConfig)
 
 			// then
-			actual, err := GetConfig(cl, HostOperatorNs)
+			actual, err := GetConfig(cl, test.HostOperatorNs)
 			require.NoError(t, err)
 			assert.Equal(t, 666, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 			assert.Empty(t, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
@@ -75,14 +76,14 @@ func TestCache(t *testing.T) {
 func TestGetConfigFailed(t *testing.T) {
 	// given
 	t.Run("config not found", func(t *testing.T) {
-		config := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(123, PerMemberCluster("member1", 321)))
-		cl := NewFakeClient(t, config)
+		cfg := newToolchainConfigWithReset(t, config.AutomaticApproval().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)))
+		cl := test.NewFakeClient(t, cfg)
 		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 			return apierrors.NewNotFound(schema.GroupResource{}, "config")
 		}
 
 		// when
-		defaultConfig, err := GetConfig(cl, HostOperatorNs)
+		defaultConfig, err := GetConfig(cl, test.HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -92,14 +93,14 @@ func TestGetConfigFailed(t *testing.T) {
 	})
 
 	t.Run("error getting config", func(t *testing.T) {
-		config := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(123, PerMemberCluster("member1", 321)))
-		cl := NewFakeClient(t, config)
+		config := newToolchainConfigWithReset(t, config.AutomaticApproval().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)))
+		cl := test.NewFakeClient(t, config)
 		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 			return fmt.Errorf("some error")
 		}
 
 		// when
-		defaultConfig, err := GetConfig(cl, HostOperatorNs)
+		defaultConfig, err := GetConfig(cl, test.HostOperatorNs)
 
 		// then
 		require.Error(t, err)
@@ -114,8 +115,8 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	var latch sync.WaitGroup
 	latch.Add(1)
 	var waitForFinished sync.WaitGroup
-	initconfig := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(1, PerMemberCluster("member", 1)))
-	cl := NewFakeClient(t, initconfig)
+	initconfig := newToolchainConfigWithReset(t, config.AutomaticApproval().MaxUsersNumber(1, config.PerMemberCluster("member", 1)))
+	cl := test.NewFakeClient(t, initconfig)
 
 	for i := 0; i < 1000; i++ {
 		waitForFinished.Add(2)
@@ -124,7 +125,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 			latch.Wait()
 
 			// when
-			config, err := GetConfig(cl, HostOperatorNs)
+			config, err := GetConfig(cl, test.HostOperatorNs)
 
 			// then
 			require.NoError(t, err)
@@ -134,7 +135,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		go func(i int) {
 			defer waitForFinished.Done()
 			latch.Wait()
-			config := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(i+1, PerMemberCluster(fmt.Sprintf("member%d", i), i)))
+			config := newToolchainConfigWithReset(t, config.AutomaticApproval().MaxUsersNumber(i+1, config.PerMemberCluster(fmt.Sprintf("member%d", i), i)))
 			updateConfig(config)
 		}(i)
 	}
@@ -142,7 +143,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	// when
 	latch.Done()
 	waitForFinished.Wait()
-	config, err := GetConfig(NewFakeClient(t), HostOperatorNs)
+	config, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
 
 	// then
 	require.NoError(t, err)

@@ -7,6 +7,7 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/host-operator/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -128,7 +129,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 
 func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 	// given
-	cl := test.NewFakeClient(t, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()))
+	cl := test.NewFakeClient(t, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Enabled()))
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}
@@ -257,7 +258,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 
 func TestAutomaticApprovalPredicateWhenApprovalIsNotEnabled(t *testing.T) {
 	// given
-	cl := test.NewFakeClient(t, config.NewToolchainConfigWithReset(t, test.AutomaticApproval().Disabled()))
+	cl := test.NewFakeClient(t, config.NewToolchainConfigWithReset(t, commonconfig.AutomaticApproval().Disabled()))
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}

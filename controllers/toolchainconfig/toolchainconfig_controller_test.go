@@ -10,6 +10,7 @@ import (
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -22,8 +23,8 @@ import (
 
 func TestReconcile(t *testing.T) {
 	// given
-	defaultMemberConfig := test.NewMemberOperatorConfig(test.MemberStatus().RefreshPeriod("5s"))
-	specificMemberConfig := test.NewMemberOperatorConfig(test.MemberStatus().RefreshPeriod("10s"))
+	defaultMemberConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("5s"))
+	specificMemberConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("10s"))
 
 	t.Run("success", func(t *testing.T) {
 
@@ -44,7 +45,7 @@ func TestReconcile(t *testing.T) {
 		})
 
 		t.Run("config exists", func(t *testing.T) {
-			config := newToolchainConfigWithReset(t, test.AutomaticApproval().Enabled().MaxUsersNumber(123, test.PerMemberCluster("member1", 321)), test.Members().Default(defaultMemberConfig.Spec), test.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
+			config := newToolchainConfigWithReset(t, config.AutomaticApproval().Enabled().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)), config.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
 			members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 			controller := newController(hostCl, members)
@@ -112,7 +113,7 @@ func TestReconcile(t *testing.T) {
 
 		t.Run("initial get failed", func(t *testing.T) {
 			// given
-			config := newToolchainConfigWithReset(t, test.AutomaticApproval().Enabled().MaxUsersNumber(123, test.PerMemberCluster("member1", 321)), test.Members().Default(defaultMemberConfig.Spec), test.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
+			config := newToolchainConfigWithReset(t, config.AutomaticApproval().Enabled().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)), config.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
 			members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 			controller := newController(hostCl, members)
@@ -133,7 +134,7 @@ func TestReconcile(t *testing.T) {
 
 		t.Run("sync failed", func(t *testing.T) {
 			// given
-			config := newToolchainConfigWithReset(t, test.AutomaticApproval().Enabled().MaxUsersNumber(123, test.PerMemberCluster("member1", 321)), test.Members().Default(defaultMemberConfig.Spec), test.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec))
+			config := newToolchainConfigWithReset(t, config.AutomaticApproval().Enabled().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)), config.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
 			members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 			controller := newController(hostCl, members)
@@ -160,9 +161,9 @@ func newRequest() reconcile.Request {
 	}
 }
 
-func newToolchainConfigWithReset(t *testing.T, options ...test.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
+func newToolchainConfigWithReset(t *testing.T, options ...config.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
 	t.Cleanup(Reset)
-	return test.NewToolchainConfig(options...)
+	return config.NewToolchainConfig(options...)
 }
 
 func matchesDefaultConfig(t *testing.T, actual ToolchainConfig) {
