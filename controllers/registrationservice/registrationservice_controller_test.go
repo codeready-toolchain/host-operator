@@ -7,6 +7,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	. "github.com/codeready-toolchain/host-operator/test"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
@@ -27,8 +28,8 @@ import (
 func TestReconcileRegistrationService(t *testing.T) {
 	// given
 	s := scheme.Scheme
-	err := toolchainv1alpha1.AddToScheme(s)
-	require.NoError(t, err)
+	require.NoError(t, apis.AddToScheme(s))
+	require.NoError(t, tmplv1.Install(s))
 	codecFactory := serializer.NewCodecFactory(s)
 	decoder := codecFactory.UniversalDeserializer()
 
@@ -43,7 +44,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 		service, request := prepareServiceAndRequest(t, s, decoder, reqService)
 
 		// when
-		result, err := service.Reconcile(request)
+		result, err := service.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -62,21 +63,21 @@ func TestReconcileRegistrationService(t *testing.T) {
 	t.Run("reconcile when both objects are present and don't update nor create anything", func(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder, reqService)
-		cclient := commonclient.NewApplyClient(service.Client, service.Scheme)
-		_, err := cclient.ApplyObject(objs[0].GetRuntimeObject().DeepCopyObject())
+		applyClient := commonclient.NewApplyClient(service.Client, service.Scheme)
+		_, err := applyClient.ApplyRuntimeObject(objs[0].GetClientObject().DeepCopyObject())
 		require.NoError(t, err)
-		_, err = cclient.ApplyObject(objs[1].GetRuntimeObject().DeepCopyObject())
+		_, err = applyClient.ApplyRuntimeObject(objs[1].GetClientObject().DeepCopyObject())
 		require.NoError(t, err)
 		fakeClient := service.Client.(*test.FakeClient)
-		fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+		fakeClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 			return fmt.Errorf("create shouldn't be called")
 		}
-		fakeClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		fakeClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("update shouldn't be called")
 		}
 
 		// when
-		result, err := service.Reconcile(request)
+		result, err := service.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -94,17 +95,17 @@ func TestReconcileRegistrationService(t *testing.T) {
 	t.Run("change ConfigMap object & don't specify environment so it uses the default one", func(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder)
-		client := commonclient.NewApplyClient(service.Client, service.Scheme)
-		_, err := client.ApplyObject(objs[0].GetRuntimeObject().DeepCopyObject())
+		applyClient := commonclient.NewApplyClient(service.Client, service.Scheme)
+		_, err := applyClient.ApplyRuntimeObject(objs[0].GetClientObject().DeepCopyObject())
 		require.NoError(t, err)
-		_, err = client.ApplyObject(objs[1].GetRuntimeObject().DeepCopyObject())
+		_, err = applyClient.ApplyRuntimeObject(objs[1].GetClientObject().DeepCopyObject())
 		require.NoError(t, err)
 		reqService := newRegistrationService(test.HostOperatorNs, "quay.io/rh/registration-service:v0.1", "", 1)
-		_, err = client.ApplyObject(reqService)
+		_, err = applyClient.ApplyObject(reqService)
 		require.NoError(t, err)
 
 		// when
-		result, err := service.Reconcile(request)
+		result, err := service.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -124,12 +125,12 @@ func TestReconcileRegistrationService(t *testing.T) {
 		// given
 		service, request := prepareServiceAndRequest(t, s, decoder, reqService)
 		fakeClient := service.Client.(*test.FakeClient)
-		fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+		fakeClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 			return fmt.Errorf("creation failed")
 		}
 
 		// when
-		_, err := service.Reconcile(request)
+		_, err := service.Reconcile(context.TODO(), request)
 
 		// then
 		require.Error(t, err)
@@ -145,7 +146,7 @@ func TestReconcileRegistrationService(t *testing.T) {
 		}
 
 		// when
-		err := service.wrapErrorWithStatusUpdate(service.Log, reqService, statusUpdater,
+		err := service.wrapErrorWithStatusUpdate(ctrl.Log, reqService, statusUpdater,
 			errors.NewBadRequest("oopsy woopsy"), "template deployment failed")
 
 		// then
@@ -196,7 +197,6 @@ func prepareServiceAndRequest(t *testing.T, s *runtime.Scheme, decoder runtime.D
 		Client:             test.NewFakeClient(t, initObjs...),
 		Scheme:             s,
 		regServiceTemplate: tmpl,
-		Log:                ctrl.Log.WithName("controllers").WithName("RegistrationService"),
 	}
 	return service, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, "registration-service")}
 }

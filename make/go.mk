@@ -17,7 +17,7 @@ $(OUT_DIR)/operator:
 		go build ${V_FLAG} \
 		-ldflags "-X ${GO_PACKAGE_PATH}/version.Commit=${GIT_COMMIT_ID} -X ${GO_PACKAGE_PATH}/version.BuildTime=${BUILD_TIME}" \
 		-o $(OUT_DIR)/bin/host-operator \
-		cmd/manager/main.go
+		main.go
 
 .PHONY: vendor
 vendor:
@@ -50,15 +50,15 @@ define git_commit
 endef
 
 .PHONY: generate-assets
-generate-assets:
+generate-assets: go-bindata
 	@echo "generating bindata for files in $(NSTEMPLATES_BASEDIR) ..."
 	@rm ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
-	@$(shell go env GOPATH)/bin/go-bindata -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_BASEDIR) $(NSTEMPLATES_BASEDIR)/...
+	@$(GO_BINDATA) -pkg nstemplatetiers -o ./pkg/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_BASEDIR) $(NSTEMPLATES_BASEDIR)/...
 	@echo "generating bindata for files in $(NSTEMPLATES_TEST_BASEDIR) ..."
 	@rm ./test/templates/nstemplatetiers/nstemplatetier_assets.go 2>/dev/null || true
-	@$(shell go env GOPATH)/bin/go-bindata -pkg nstemplatetiers_test -o ./test/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_TEST_BASEDIR) -ignore doc.go $(NSTEMPLATES_TEST_BASEDIR)/...
+	@$(GO_BINDATA) -pkg nstemplatetiers_test -o ./test/templates/nstemplatetiers/nstemplatetier_assets.go -nometadata -nocompress -prefix $(NSTEMPLATES_TEST_BASEDIR) -ignore doc.go $(NSTEMPLATES_TEST_BASEDIR)/...
 	@echo "generating notification service template data..."
-	@$(shell go env GOPATH)/bin/go-bindata -pkg notificationtemplates -o ./pkg/templates/notificationtemplates/notification_assets.go -nometadata -nocompress -prefix $(NOTIFICATION_BASEDIR) -ignore doc.go $(NOTIFICATION_BASEDIR)/...
+	@$(GO_BINDATA) -pkg notificationtemplates -o ./pkg/templates/notificationtemplates/notification_assets.go -nometadata -nocompress -prefix $(NOTIFICATION_BASEDIR) -ignore doc.go $(NOTIFICATION_BASEDIR)/...
 	@echo "generating registration service template data..."
-	@$(shell go env GOPATH)/bin/go-bindata -pkg registrationservice -o ./controllers/registrationservice/template_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
+	@$(GO_BINDATA) -pkg registrationservice -o ./controllers/registrationservice/template_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
 

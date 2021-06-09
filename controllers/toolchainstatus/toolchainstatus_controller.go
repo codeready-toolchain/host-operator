@@ -16,25 +16,25 @@ import (
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // general toolchainstatus constants
@@ -74,26 +74,11 @@ const (
 
 var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r *Reconciler) error {
-	// create a new controller
-	c, err := controller.New("toolchainstatus-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
-	// watch for changes to primary resource ToolchainStatus
-	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}}, &handler.EnqueueRequestForObject{}, predicate.GenerationChangedPredicate{})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-	return add(mgr, r)
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&toolchainv1alpha1.ToolchainStatus{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Complete(r)
 }
 
 type HTTPClient interface {
@@ -103,7 +88,6 @@ type HTTPClient interface {
 // Reconciler reconciles a ToolchainStatus object
 type Reconciler struct {
 	Client         client.Client
-	Log            logr.Logger
 	Scheme         *runtime.Scheme
 	GetMembersFunc cluster.GetMemberClustersFunc
 	Config         *crtCfg.Config
@@ -115,8 +99,8 @@ type Reconciler struct {
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainstatuses/finalizers,verbs=update
 
 // Reconcile reads the state of toolchain host and member cluster components and updates the ToolchainStatus resource with information useful for observation or troubleshooting
-func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	reqLogger := log.FromContext(ctx)
 	reqLogger.Info("Reconciling ToolchainStatus")
 	requeueTime := r.Config.GetToolchainStatusRefreshTime()
 
@@ -261,7 +245,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 		BuildTimestamp: version.BuildTime,
 	}
 	// look up name of the host operator deployment
-	hostOperatorDeploymentName, err := k8sutil.GetOperatorName()
+	hostOperatorName, err := configuration.GetOperatorName()
 	if err != nil {
 		reqLogger.Error(err, status.ErrMsgCannotGetDeployment)
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason,
@@ -270,6 +254,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 		toolchainStatus.Status.HostOperator = operatorStatus
 		return false
 	}
+	hostOperatorDeploymentName := fmt.Sprintf("%s-controller-manager", hostOperatorName)
 	operatorStatus.DeploymentName = hostOperatorDeploymentName
 
 	// check host operator deployment status
@@ -354,9 +339,9 @@ func (r *Reconciler) membersHandleStatus(logger logr.Logger, toolchainStatus *to
 			ready = false
 		}
 		if found {
-			r.Log.Info("adding member status", "member_name", memberCluster.Name, string(toolchainv1alpha1.ConditionReady), readyCond.Status)
+			logger.Info("adding member status", "member_name", memberCluster.Name, string(toolchainv1alpha1.ConditionReady), readyCond.Status)
 		} else {
-			r.Log.Info("adding member status", "member_name", memberCluster.Name, string(toolchainv1alpha1.ConditionReady), "unknown")
+			logger.Info("adding member status", "member_name", memberCluster.Name, string(toolchainv1alpha1.ConditionReady), "unknown")
 		}
 		members[memberCluster.Name] = memberStatus
 	}

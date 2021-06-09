@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -302,7 +301,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			// given
 			fakeClient := NewFakeClient(t, toolchainStatus)
 			InitializeCounters(t, toolchainStatus)
-			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				return fmt.Errorf("some error")
 			}
 			InitializeCounters(t, toolchainStatus)
@@ -320,7 +319,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		t.Run("unable to read ToolchainStatus", func(t *testing.T) {
 			// given
 			fakeClient := NewFakeClient(t, toolchainStatus, hostconfig.NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled()))
-			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
 					return fmt.Errorf("some error")
 				}

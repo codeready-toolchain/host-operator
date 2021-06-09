@@ -21,7 +21,7 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	deploymentTemplate, err := getDeploymentTemplate(s)
+	deploymentTemplate, err := getDeploymentTemplate()
 	require.NoError(t, err)
 	vars := getVars(newRegistrationService("my-namespace", "quay.io/cr-t/registration-service:123", "dev", 10))
 	processor := template.NewProcessor(s)
@@ -43,7 +43,7 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 		switch toolchainObject.GetGvk() {
 		case appsv1.SchemeGroupVersion.WithKind("Deployment"):
 			deploymentFound = true
-			deployment := fmt.Sprintf("%+v", toolchainObject.GetRuntimeObject())
+			deployment := fmt.Sprintf("%+v", toolchainObject.GetClientObject())
 			assert.Contains(t, deployment, "replicas:10")
 			assert.Contains(t, deployment, "image:quay.io/cr-t/registration-service:123")
 

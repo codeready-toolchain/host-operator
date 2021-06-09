@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -175,7 +174,7 @@ func TestSynchronizeStatus(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -225,7 +224,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -274,7 +273,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur.DeepCopy())
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -396,7 +395,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	t.Run("failed on the host side when doing update", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -412,7 +411,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	t.Run("failed on the host side when creating notification", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur.DeepCopy())
-		hostClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+		hostClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -436,7 +435,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "john")
 		userAcc := uatest.NewUserAccountFromMur(mur)
 		memberClient := test.NewFakeClient(t, userAcc)
-		memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		memberClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
 		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.TierName("admin"))
@@ -471,7 +470,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			uatest.StatusCondition(toBeNotReady("somethingFailed", "")))
 		memberClient := test.NewFakeClient(t, userAcc)
 		hostClient := test.NewFakeClient(t, provisionedMur, readyToolchainStatus)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
 		config, err := configuration.LoadConfig(hostClient)

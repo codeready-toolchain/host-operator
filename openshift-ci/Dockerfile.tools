@@ -8,7 +8,8 @@ ENV LANG=en_US.utf8 \
     GOCACHE=/tmp/.cache \
     GIT_COMMITTER_NAME=devtools \
     GIT_COMMITTER_EMAIL=devtools@redhat.com \
-    OPERATOR_SDK_VERSION=v0.19.2
+    GOLANG_VERSION=go1.16.5 \
+    OCP_VERSION=4.7.16
 
 ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 
@@ -41,32 +42,22 @@ WORKDIR /tmp
 
 # download, verify and install golang
 ENV PATH=$PATH:/usr/local/go/bin
-RUN curl -Lo go1.14.7.linux-amd64.tar.gz https://dl.google.com/go/go1.14.7.linux-amd64.tar.gz \
-    && echo "4a7fa60f323ee1416a4b1425aefc37ea359e9d64df19c326a58953a97ad41ea5 go1.14.7.linux-amd64.tar.gz" > go1.14.7.linux-amd64.sha256 \
-    && sha256sum -c go1.14.7.linux-amd64.sha256 \
-    && tar xzf go1.14.7.linux-amd64.tar.gz \
-    && tar -C /usr/local -xzf go1.14.7.linux-amd64.tar.gz \
-    && rm -f go1.14.7.linux-amd64.tar.gz \
+RUN curl -Lo ${GOLANG_VERSION}.linux-amd64.tar.gz https://dl.google.com/go/${GOLANG_VERSION}.linux-amd64.tar.gz \
+    && echo "b12c23023b68de22f74c0524f10b753e7b08b1504cb7e417eccebdd3fae49061 ${GOLANG_VERSION}.linux-amd64.tar.gz" > ${GOLANG_VERSION}.linux-amd64.sha256 \
+    && sha256sum -c ${GOLANG_VERSION}.linux-amd64.sha256 \
+    && tar xzf ${GOLANG_VERSION}.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf ${GOLANG_VERSION}.linux-amd64.tar.gz \
+    && rm -f ${GOLANG_VERSION}.linux-amd64.tar.gz \
     && go version
 
 # download, verify and install openshift client tools (oc and kubectl)
-RUN curl -L -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.5.7/openshift-client-linux.tar.gz -o openshift-client-linux.tar.gz \
-    && echo "35bded1c9f96659e3b7fbc6d2ec3a1707b65e0e8ef7f3c7ecf7b32fdf47d91e5 openshift-client-linux.tar.gz" > openshift-client-linux.sha256 \
+RUN curl -L -s https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OCP_VERSION}/openshift-client-linux.tar.gz -o openshift-client-linux.tar.gz \
+    && echo "378fc049719b297fe44e0cc712f230cd1a68d40fb83d45630e5f3fae5b1a017f openshift-client-linux.tar.gz" > openshift-client-linux.sha256 \
     && sha256sum -c openshift-client-linux.sha256 \
     && tar xzf openshift-client-linux.tar.gz \
     && mv oc /usr/bin/oc \
     && mv kubectl /usr/bin/kubectl \
     && oc version
-
-# download, verify and install operator-sdk
-RUN curl -L -s https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu -o operator-sdk \
-    && curl -L -s https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu.asc -o operator-sdk.asc \
-    && gpg --keyserver keyserver.ubuntu.com --recv-key 9AF46519 \
-    && gpg --verify operator-sdk.asc \
-    && chmod +x operator-sdk \
-    && cp operator-sdk /usr/bin/operator-sdk \
-    && rm operator-sdk \
-    && operator-sdk version
 
 RUN mkdir -p ${GOPATH}/src/${GO_PACKAGE_PATH}/
 

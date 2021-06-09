@@ -70,22 +70,21 @@ PULL_NUMBER := $(shell echo $$CLONEREFS_OPTIONS | jq '.refs[0].pulls[0].number')
 #
 ###########################################################
 
-AUTHOR_LINK := $(shell jq -r '.refs[0].pulls[0].author_link' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]')
-PULL_SHA := $(shell jq -r '.refs[0].pulls[0].sha' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]')
 E2E_REPO_PATH := ""
 
 .PHONY: test-e2e-local
 test-e2e-local: generate
 	$(MAKE) test-e2e E2E_REPO_PATH=../toolchain-e2e
 
+.PHONY: publish-current-bundles-for-e2e
+publish-current-bundles-for-e2e: generate get-e2e-repo
+	# build & publish the bundles via toolchain-e2e repo
+	$(MAKE) -C ${E2E_REPO_PATH} get-and-publish-operators HOST_REPO_PATH=${PWD}
+
 .PHONY: test-e2e
-test-e2e: generate get-e2e-repo 
+test-e2e: generate get-e2e-repo
 	# run the e2e test via toolchain-e2e repo
-ifeq ($(OPENSHIFT_BUILD_NAMESPACE),)
 	$(MAKE) -C ${E2E_REPO_PATH} test-e2e HOST_REPO_PATH=${PWD}
-else
-	$(MAKE) -C ${E2E_REPO_PATH} test-e2e HOST_REPO_PATH=${PWD} HOST_IMAGE_NAME=${IMAGE_FORMAT}host-operator
-endif
 
 .PHONY: get-e2e-repo
 get-e2e-repo:
@@ -96,11 +95,17 @@ ifeq ($(E2E_REPO_PATH),"")
 	rm -rf ${E2E_REPO_PATH}
 	# clone
 	git clone https://github.com/codeready-toolchain/toolchain-e2e.git ${E2E_REPO_PATH}
-    ifneq ($(CLONEREFS_OPTIONS),)
+    ifneq ($(CI),)
+        ifneq ($(GITHUB_ACTIONS),)
+			$(eval BRANCH_REF = refs/heads/${GITHUB_HEAD_REF})
+			$(eval AUTHOR_LINK = https://github.com/${GITHUB_ACTOR})
+        else
+			$(eval AUTHOR_LINK = $(shell jq -r '.refs[0].pulls[0].author_link' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]'))
+			@echo "using pull sha ${PULL_PULL_SHA}"
+			# get branch ref of the fork the PR was created from
+			$(eval BRANCH_REF := $(shell curl ${AUTHOR_LINK}/host-operator.git/info/refs?service=git-upload-pack --output - /dev/null 2>&1 | grep -a ${PULL_PULL_SHA} | awk '{print $$2}'))
+        endif
 		@echo "using author link ${AUTHOR_LINK}"
-		@echo "using pull sha ${PULL_SHA}"
-		# get branch ref of the fork the PR was created from
-		$(eval BRANCH_REF := $(shell curl ${AUTHOR_LINK}/host-operator.git/info/refs?service=git-upload-pack --output - /dev/null 2>&1 | grep -a ${PULL_SHA} | awk '{print $$2}'))
 		@echo "detected branch ref ${BRANCH_REF}"
 		# check if a branch with the same ref exists in the user's fork of toolchain-e2e repo
 		$(eval REMOTE_E2E_BRANCH := $(shell curl ${AUTHOR_LINK}/toolchain-e2e.git/info/refs?service=git-upload-pack --output - 2>/dev/null | grep -a "${BRANCH_REF}$$" | awk '{print $$2}'))

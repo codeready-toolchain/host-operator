@@ -14,7 +14,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -88,7 +87,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	t.Run("when creation fails then should return error", func(t *testing.T) {
 		// given
 		cl := NewFakeClient(t)
-		cl.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+		cl.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 			return fmt.Errorf("creation failed")
 		}
 

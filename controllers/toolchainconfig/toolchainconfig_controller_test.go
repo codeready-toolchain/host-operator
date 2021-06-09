@@ -17,9 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -39,7 +37,7 @@ func TestReconcile(t *testing.T) {
 			controller := newController(hostCl, members)
 
 			// when
-			res, err := controller.Reconcile(newRequest())
+			res, err := controller.Reconcile(context.TODO(), newRequest())
 
 			// then
 			require.Empty(t, res)
@@ -73,7 +71,7 @@ func TestReconcile(t *testing.T) {
 			controller := newController(hostCl, members)
 
 			// when
-			res, err := controller.Reconcile(newRequest())
+			res, err := controller.Reconcile(context.TODO(), newRequest())
 
 			// then
 			require.Equal(t, toolchainconfig.DefaultReconcile, res)
@@ -107,7 +105,7 @@ func TestReconcile(t *testing.T) {
 				require.NoError(t, err)
 
 				// when
-				res, err := controller.Reconcile(newRequest())
+				res, err := controller.Reconcile(context.TODO(), newRequest())
 
 				// then
 				require.Equal(t, toolchainconfig.DefaultReconcile, res)
@@ -139,12 +137,12 @@ func TestReconcile(t *testing.T) {
 				config.Spec.Host.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold = &threshold
 				err = hostCl.Update(context.TODO(), config)
 				require.NoError(t, err)
-				hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+				hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 					return fmt.Errorf("client error")
 				}
 
 				// when
-				res, err := controller.Reconcile(newRequest())
+				res, err := controller.Reconcile(context.TODO(), newRequest())
 
 				// then
 				require.Equal(t, toolchainconfig.DefaultReconcile, res)
@@ -180,12 +178,12 @@ func TestReconcile(t *testing.T) {
 			hostCl := test.NewFakeClient(t, config)
 			members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 			controller := newController(hostCl, members)
-			hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+			hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 				return fmt.Errorf("client error")
 			}
 
 			// when
-			res, err := controller.Reconcile(newRequest())
+			res, err := controller.Reconcile(context.TODO(), newRequest())
 
 			// then
 			require.Equal(t, toolchainconfig.DefaultReconcile, res)
@@ -203,7 +201,7 @@ func TestReconcile(t *testing.T) {
 			controller := newController(hostCl, members)
 
 			// when
-			res, err := controller.Reconcile(newRequest())
+			res, err := controller.Reconcile(context.TODO(), newRequest())
 
 			// then
 			require.NoError(t, err)
@@ -242,7 +240,6 @@ func matchesDefaultConfig(t *testing.T, actual toolchainconfig.ToolchainConfig) 
 func newController(hostCl client.Client, members cluster.GetMemberClustersFunc) toolchainconfig.Reconciler {
 	return toolchainconfig.Reconciler{
 		Client:         hostCl,
-		Log:            ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
 		GetMembersFunc: members,
 	}
 }

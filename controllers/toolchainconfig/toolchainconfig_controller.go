@@ -11,16 +11,16 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const configResourceName = "config"
@@ -28,27 +28,16 @@ const configResourceName = "config"
 // DefaultReconcile requeue every 10 seconds by default to ensure the MemberOperatorConfig on each member remains synchronized with the ToolchainConfig
 var DefaultReconcile = reconcile.Result{RequeueAfter: 10 * time.Second}
 
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	// Create a new controller
-	c, err := controller.New("toolchainconfig-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to primary resource ToolchainConfig
-	return c.Watch(&source.Kind{Type: &toolchainv1alpha1.ToolchainConfig{}}, &handler.EnqueueRequestForObject{}, &predicate.GenerationChangedPredicate{})
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-	return add(mgr, r)
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&toolchainv1alpha1.ToolchainConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Complete(r)
 }
 
 // Reconciler reconciles a ToolchainConfig object
 type Reconciler struct {
 	Client         client.Client
-	Log            logr.Logger
 	GetMembersFunc cluster.GetMemberClustersFunc
 }
 
@@ -61,8 +50,8 @@ type Reconciler struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	reqLogger := log.FromContext(ctx)
 	reqLogger.Info("Reconciling ToolchainConfig")
 
 	// Fetch the ToolchainConfig instance
@@ -91,7 +80,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if syncErrs := sync.SyncMemberConfigs(toolchainConfig); len(syncErrs) > 0 {
 		for cluster, errMsg := range syncErrs {
 			err := fmt.Errorf(errMsg)
-			reqLogger.Error(err, "error syncing to member cluster '%s'", cluster)
+			reqLogger.Error(err, "error syncing to member cluster", "cluster", cluster)
 		}
 		return DefaultReconcile, r.updateStatus(reqLogger, toolchainConfig, syncErrs, ToSyncFailure())
 	}
