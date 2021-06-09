@@ -2,7 +2,6 @@ package toolchainconfig
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -22,6 +21,9 @@ import (
 )
 
 const configResourceName = "config"
+
+// Requeue every 10 seconds by default to ensure the MemberOperatorConfig on each member remains synchronized with the ToolchainConfig
+var defaultReconcile = reconcile.Result{RequeueAfter: 10 * time.Second}
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -56,9 +58,6 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ToolchainConfig")
 
-	// Requeue every 10 seconds by default to ensure the MemberOperatorConfig on each member remains synchronized with the ToolchainConfig
-	defaultReconcile := reconcile.Result{RequeueAfter: 10 * time.Second}
-
 	// Fetch the ToolchainConfig instance
 	toolchainConfig := &toolchainv1alpha1.ToolchainConfig{}
 	err := r.Client.Get(context.TODO(), request.NamespacedName, toolchainConfig)
@@ -71,7 +70,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		return defaultReconcile, err
 	}
 	updateConfig(toolchainConfig)
 
@@ -81,9 +80,12 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		getMembersFunc: r.GetMembersFunc,
 	}
 
-	if syncErrs := sync.syncMemberConfigs(toolchainConfig.DeepCopy()); len(syncErrs) > 0 {
+	if syncErrs := sync.syncMemberConfigs(toolchainConfig); len(syncErrs) > 0 {
 		// wrapErrorWithStatusUpdate
-		return defaultReconcile, fmt.Errorf("member cluster configuration sync failed")
+		for cluster, err := range syncErrs {
+			reqLogger.Error(err, "error syncing to member cluster '%s'", cluster)
+		}
+		return defaultReconcile, nil
 	}
 	// 	if err := updateStatus(logger, toolchainConfig, msg); err != nil {
 	// 		logger.Error(err, "status update failed")

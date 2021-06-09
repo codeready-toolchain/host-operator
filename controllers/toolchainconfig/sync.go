@@ -19,16 +19,14 @@ type synchronizer struct {
 	logger         logr.Logger
 }
 
-type syncError struct {
-	cluster string
-	err     error
-}
-
 // syncMemberConfigs retrieves member operator configurations and syncs the appropriate configuration to each member cluster
-func (s *synchronizer) syncMemberConfigs(toolchainConfig *toolchainv1alpha1.ToolchainConfig) []syncError {
+// returns a map of any errors encountered indexed by cluster name
+func (s *synchronizer) syncMemberConfigs(sourceConfig *toolchainv1alpha1.ToolchainConfig) map[string]error {
+	toolchainConfig := sourceConfig.DeepCopy()
+
 	// get configs for member toolchainclusters
 	memberToolchainClusters := s.getMembersFunc()
-	syncErrors := []syncError{}
+	syncErrors := make(map[string]error, len(memberToolchainClusters))
 
 	if len(memberToolchainClusters) == 0 {
 		s.logger.Info("No toolchainclusters were found, skipping MemberOperatorConfig syncing")
@@ -48,15 +46,16 @@ func (s *synchronizer) syncMemberConfigs(toolchainConfig *toolchainv1alpha1.Tool
 
 		if err := syncMemberConfig(memberConfigSpec, toolchainCluster); err != nil {
 			s.logger.Error(err, "failed to sync MemberOperatorConfig", "cluster_name", toolchainCluster.Name)
-			syncErrors = append(syncErrors, syncError{toolchainCluster.Name, err})
+			syncErrors[toolchainCluster.Name] = err
 		}
 	}
 
 	// add errors for any MemberOperatorConfigs that haven't been synced because there is no matching toolchaincluster
 	if len(membersWithSpecificConfig) > 0 {
-		unsyncedConfigurationErrors(syncErrors, membersWithSpecificConfig)
+		for k := range membersWithSpecificConfig {
+			syncErrors[k] = fmt.Errorf("specific member configuration exists but no matching toolchaincluster was found")
+		}
 	}
-
 	return syncErrors
 }
 
@@ -82,10 +81,4 @@ func syncMemberConfig(memberConfigSpec toolchainv1alpha1.MemberOperatorConfigSpe
 	memberConfig.Spec = memberConfigSpec
 
 	return memberCluster.Client.Update(context.TODO(), memberConfig)
-}
-
-func unsyncedConfigurationErrors(syncErrors []syncError, specificPerMemberCluster map[string]toolchainv1alpha1.MemberOperatorConfigSpec) {
-	for k := range specificPerMemberCluster {
-		syncErrors = append(syncErrors, syncError{k, fmt.Errorf("member configuration does not map to a toolchaincluster")})
-	}
 }
