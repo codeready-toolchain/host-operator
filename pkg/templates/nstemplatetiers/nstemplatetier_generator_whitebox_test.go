@@ -451,9 +451,9 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	switch tier {
 	case "advanced", "base", "baseextended", "basedeactivationdisabled", "team":
 		if kind == "dev" {
-			require.Len(t, actual.Objects, 10) // dev namespace has CRW network policy
+			require.Len(t, actual.Objects, 11) // dev namespace has CRW network policy
 		} else {
-			require.Len(t, actual.Objects, 9)
+			require.Len(t, actual.Objects, 10)
 		}
 	case "test":
 		return // Don't care what objects are defined in the test tier
@@ -481,6 +481,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	containsObj(t, actual, allowSameNamespacePolicyObj(kind))
 	containsObj(t, actual, allowFromOpenshiftIngressPolicyObj(kind))
 	containsObj(t, actual, allowFromOpenshiftMonitoringPolicyObj(kind))
+	containsObj(t, actual, allowFromOlmNamespacesPolicyObj(kind))
 
 	// User Namespaces Network Policies
 	switch tier {
@@ -632,6 +633,10 @@ func allowFromCRWPolicyObj(kind string) string {
 
 func allowSameNamespacePolicyObj(kind string) string {
 	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, kind)
+}
+
+func allowFromOlmNamespacesPolicyObj(kind string) string {
+	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-olm-namespaces","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"openshift.io/scc":"anyuid"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
 }
 
 func allowOtherNamespacePolicyObj(kind string, otherNamespaceKinds ...string) string {
