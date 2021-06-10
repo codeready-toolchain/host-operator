@@ -52,6 +52,10 @@ type Reconciler struct {
 	Config *configuration.Config
 }
 
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=changetierrequests,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=changetierrequests/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=changetierrequests/finalizers,verbs=update
+
 // Reconcile reads that state of the cluster for a ChangeTierRequest object and makes changes based on the state read
 // and what is in the ChangeTierRequest.Spec
 // Note:

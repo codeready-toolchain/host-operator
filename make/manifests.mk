@@ -51,7 +51,7 @@ endif
 
 .PHONY: generate-olm-files
 ## Regenerates base template CSV and hack files
-generate-olm-files:
+generate-olm-files: generate-rbac
 	$(eval GENERATE_PARAMS = -pr ../host-operator/)
 ifneq ("$(wildcard ../api/$(PATH_TO_OLM_GENERATE_FILE))","")
 	@echo "generating OLM files using script from local api repo..."
@@ -60,3 +60,9 @@ else
 	@echo "generating OLM files using script from GH api repo (using latest version in master)..."
 	curl -sSL https://raw.githubusercontent.com/codeready-toolchain/api/master/${PATH_TO_OLM_GENERATE_FILE} | bash -s -- ${GENERATE_PARAMS}
 endif
+
+.PHONY: generate-rbac
+generate-rbac: controller-gen
+	@echo "Re-generating the deepcopy go file & the Toolchain CRD files... "
+	$(Q)$(CONTROLLER_GEN) rbac:roleName=host-operator paths=./...
+	mv config/rbac/role.yaml deploy/cluster_role.yaml
