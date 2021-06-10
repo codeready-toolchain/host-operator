@@ -74,6 +74,10 @@ type Reconciler struct {
 	Config *configuration.Config
 }
 
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/finalizers,verbs=update
+
 // Reconcile takes care of:
 // - inserting a new entry in the `status.updates` (and cleaning the 'failedAccounts` in the previous one)
 // - creating and delete the TemplateUpdateRequest to update the MasterUserRecord associated with this tier

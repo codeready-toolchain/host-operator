@@ -1,24 +1,409 @@
-kind: ClusterRole
+
+---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
+  creationTimestamp: null
   name: host-operator
 rules:
 - apiGroups:
   - ""
   resources:
-  - nodes
+  - configmaps
+  - pods
+  - secrets
+  - serviceaccounts
+  - services
+  - services/finalizers
   verbs:
-  - "list"
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
-  - apiextensions.k8s.io
+  - ""
   resources:
-  - customresourcedefinitions
+  - configmaps
+  - serviceaccounts
+  - services
   verbs:
-  - "get"
-  - "create"
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - deployments/finalizers
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - authorization.openshift.io
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  - roles
+  verbs:
+  - '*'
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - toolchain.dev.openshift.com
   resources:
-  - "*"
+  - bannedusers
   verbs:
-  - "*"
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - bannedusers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - bannedusers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - changetierrequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - changetierrequests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - changetierrequests/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - masteruserrecords
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - masteruserrecords/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - masteruserrecords/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - notifications
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - notifications/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - notifications/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - nstemplatetiers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - nstemplatetiers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - nstemplatetiers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - registrationservices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - registrationservices/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - registrationservices/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - templateupdaterequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - templateupdaterequests/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - templateupdaterequests/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - tiertemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - tiertemplates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - tiertemplates/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - toolchainclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - toolchainclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - toolchainclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - toolchainconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - toolchainconfigs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - toolchainconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - toolchainstatuses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - toolchainstatuses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - toolchainstatuses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - usersignups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - usersignups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - toolchain.dev.openshift.com
+  resources:
+  - usersignups/status
+  verbs:
+  - get
+  - patch
+  - update

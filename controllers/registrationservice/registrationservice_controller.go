@@ -93,6 +93,15 @@ type Reconciler struct {
 	regServiceTemplate *v1.Template
 }
 
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=registrationservices,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=registrationservices/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=registrationservices/finalizers,verbs=update
+
+//+kubebuilder:rbac:groups="",resources=configmaps;services;serviceaccounts,verbs=get;list;watch;update;patch;create;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io;authorization.openshift.io,resources=rolebindings;roles,verbs=*
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch;create;delete
+//+kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;update;patch;create;delete
+
 // Reconcile reads that state of the cluster for a RegistrationService object and makes changes based on the state read
 // and what is in the RegistrationService.Spec
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
