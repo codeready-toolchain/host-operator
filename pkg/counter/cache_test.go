@@ -305,6 +305,11 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 			string(metrics.Internal): 0,
 			string(metrics.External): 0,
 		}),
+		// outdated metric which should be removed during the initialization
+		WithMetric("outdated", toolchainv1alpha1.Metric{
+			"cookie":    1,
+			"chocolate": 2,
+		}),
 	)
 	initObjs := append([]runtime.Object{}, murs...)
 	initObjs = append(initObjs, usersignups...)
@@ -332,7 +337,8 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 		}).
 		HasMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 3, // all MURs have `@redhat.com` email address
-		})
+		}).
+		HasNoMetric("outdated")
 }
 
 func TestShouldNotInitializeAgain(t *testing.T) {

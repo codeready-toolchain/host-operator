@@ -190,24 +190,21 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 		metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName).Set(float64(count))
 	}
 
-	// update the toolchainStatus.Status.Metrics and metrics.UserAccountGaugeVec
-	// from the cachedCounts.UsersPerActivationCounts
-	if toolchainStatus.Status.Metrics == nil {
-		toolchainStatus.Status.Metrics = map[string]toolchainv1alpha1.Metric{}
-	}
+	// update the toolchainStatus.Status.Metrics and Pronetheus metrics
+	// from the cachedCounts
+	toolchainStatus.Status.Metrics = map[string]toolchainv1alpha1.Metric{} // reset, so any outdated/deprecated entry is automatically removed
+	// `userSignupsPerActivationAndDomain` metric
 	toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey] = toolchainv1alpha1.Metric(cachedCounts.UserSignupsPerActivationAndDomainCounts)
 	for key, count := range cachedCounts.UserSignupsPerActivationAndDomainCounts {
 		labels := splitLabelValues(key) // returns the values of the `activations` and `domain` labels
 		metrics.UserSignupsPerActivationAndDomainGaugeVec.WithLabelValues(labels...).Set(float64(count))
 	}
-
+	// `masterUserRecordsPerDomain` metric
 	toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey] = toolchainv1alpha1.Metric(cachedCounts.MasterUserRecordPerDomainCounts)
 	for domain, count := range cachedCounts.MasterUserRecordPerDomainCounts {
 		metrics.MasterUserRecordGaugeVec.WithLabelValues(domain).Set(float64(count))
 	}
-
 	log.Info("synchronized counters", "counts", cachedCounts.Counts)
-
 	return nil
 }
 

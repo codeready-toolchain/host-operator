@@ -84,6 +84,13 @@ func (a *ToolchainStatusAssertion) HasMasterUserRecordsPerDomain(expectedMetric 
 	return a
 }
 
+func (a *ToolchainStatusAssertion) HasNoMetric(key string) *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+	require.Empty(a.t, a.toolchainStatus.Status.Metrics[key])
+	return a
+}
+
 func (a *ToolchainStatusAssertion) HasUserAccountCount(memberClusterName string, expectedCount int) *ToolchainStatusAssertion {
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
