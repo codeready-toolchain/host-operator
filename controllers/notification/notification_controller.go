@@ -61,6 +61,10 @@ type Reconciler struct {
 	deliveryService DeliveryService
 }
 
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=notifications,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=notifications/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=notifications/finalizers,verbs=update
+
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Notification")

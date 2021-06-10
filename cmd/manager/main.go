@@ -51,6 +51,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	//+kubebuilder:scaffold:imports
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -65,6 +66,7 @@ var (
 
 func init() {
 	utilruntime.Must(apis.AddToScheme(scheme))
+	//+kubebuilder:scaffold:scheme
 }
 
 func printVersion() {
@@ -75,6 +77,18 @@ func printVersion() {
 	setupLog.Info(fmt.Sprintf("Commit: %s", version.Commit))
 	setupLog.Info(fmt.Sprintf("BuildTime: %s", version.BuildTime))
 }
+
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates/finalizers,verbs=update
+
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainclusters,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainclusters/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainclusters/finalizers,verbs=update
+
+//+kubebuilder:rbac:groups="",resources=secrets;configmaps;services;services/finalizers;serviceaccounts;pods,verbs=get;list;watch;update;patch;create;delete
+//+kubebuilder:rbac:groups=apps,resources=deployments;deployments/finalizers;replicasets,verbs=get;list;watch;update;patch;create;delete
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;update;patch;create;delete
 
 func main() {
 	// Add the zap logger flag set to the CLI. The flag set must
@@ -256,6 +270,7 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
 	}
+	//+kubebuilder:scaffold:builder
 
 	// Add the Metrics Service
 	if err := addMetrics(ctx, cfg); err != nil {
