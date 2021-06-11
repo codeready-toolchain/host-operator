@@ -67,14 +67,14 @@ func VerificationRequired(before time.Duration) UserSignupModifier {
 	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		states.SetVerificationRequired(userSignup, true)
 
-		deactivatedCondition := toolchainv1alpha1.Condition{
+		verificationRequired := toolchainv1alpha1.Condition{
 			Type:               toolchainv1alpha1.UserSignupComplete,
 			Status:             v1.ConditionFalse,
 			Reason:             toolchainv1alpha1.UserSignupVerificationRequiredReason,
 			LastTransitionTime: metav1.Time{Time: time.Now().Add(-before)},
 		}
 
-		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions, deactivatedCondition)
+		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions, verificationRequired)
 
 	}
 }
