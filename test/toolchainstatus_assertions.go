@@ -68,22 +68,6 @@ func (a *ToolchainStatusAssertion) HasHostOperatorStatus(expected toolchainv1alp
 	return a
 }
 
-func (a *ToolchainStatusAssertion) HasMurCount(expectedCount int) *ToolchainStatusAssertion {
-	err := a.loadToolchainStatus()
-	require.NoError(a.t, err)
-	require.NotNil(a.t, *a.toolchainStatus.Status.HostOperator)
-	assert.Equal(a.t, expectedCount, a.toolchainStatus.Status.HostOperator.MasterUserRecordCount)
-	return a
-}
-
-func (a *ToolchainStatusAssertion) HasUsersPerActivations(expectedMetric toolchainv1alpha1.Metric) *ToolchainStatusAssertion {
-	err := a.loadToolchainStatus()
-	require.NoError(a.t, err)
-	require.NotEmpty(a.t, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey])
-	assert.Equal(a.t, expectedMetric, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.UsersPerActivationMetricKey])
-	return a
-}
-
 func (a *ToolchainStatusAssertion) HasUsersPerActivationsAndDomain(expectedMetric toolchainv1alpha1.Metric) *ToolchainStatusAssertion {
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)
@@ -97,6 +81,13 @@ func (a *ToolchainStatusAssertion) HasMasterUserRecordsPerDomain(expectedMetric 
 	require.NoError(a.t, err)
 	require.NotEmpty(a.t, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey])
 	assert.Equal(a.t, expectedMetric, a.toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey])
+	return a
+}
+
+func (a *ToolchainStatusAssertion) HasNoMetric(key string) *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+	require.Empty(a.t, a.toolchainStatus.Status.Metrics[key])
 	return a
 }
 

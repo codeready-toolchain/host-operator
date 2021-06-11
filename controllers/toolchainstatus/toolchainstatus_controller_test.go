@@ -434,14 +434,14 @@ func TestToolchainStatusConditions(t *testing.T) {
 	})
 
 	t.Run("MemberStatus tests", func(t *testing.T) {
-		toolchainStatus := NewToolchainStatus()
 		registrationService := newRegistrationServiceReady()
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
 		t.Run("MemberStatus not found", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{}, hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
+			emptyToolchainStatus := NewToolchainStatus()
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{}, hostOperatorDeployment, registrationServiceDeployment, registrationService, emptyToolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -460,12 +460,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			memberStatus := newMemberStatus(ready())
 			toolchainStatus := NewToolchainStatus(
-				WithHost(WithMasterUserRecordCount(20)),
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 					string(metrics.External): 20,
-				}),
-				WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-					"1": 20,
 				}),
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 					"1,external": 20,
@@ -496,12 +492,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			memberStatus := newMemberStatus(ready())
 			toolchainStatus := NewToolchainStatus(
-				WithHost(WithMasterUserRecordCount(20)),
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 					string(metrics.External): 20,
-				}),
-				WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-					"1": 20,
 				}),
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 					"1,external": 20,
@@ -535,12 +527,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			// given
 			memberStatus := newMemberStatus(ready())
 			toolchainStatus := NewToolchainStatus(
-				WithHost(WithMasterUserRecordCount(20)),
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 					string(metrics.External): 20,
-				}),
-				WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-					"1": 20,
 				}),
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 					"1,external": 20,
@@ -594,8 +582,9 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("MemberStatus not found", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, registrationService, toolchainStatus)
-			InitializeCounters(t, toolchainStatus)
+			emptyToolchainStatus := NewToolchainStatus()
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, registrationService, emptyToolchainStatus)
+			InitializeCounters(t, emptyToolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -615,9 +604,10 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("MemberStatus not ready", func(t *testing.T) {
 			// given
+			emptyToolchainStatus := NewToolchainStatus()
 			memberStatus := newMemberStatus(notReady(toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason, "components not ready: [memberOperator]"))
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
-			InitializeCounters(t, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, emptyToolchainStatus)
+			InitializeCounters(t, emptyToolchainStatus)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -637,8 +627,9 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("synchronization with the counter fails", func(t *testing.T) {
 			// given
+			emptyToolchainStatus := NewToolchainStatus()
 			memberStatus := newMemberStatus(ready())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, emptyToolchainStatus)
 			fakeClient.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 				return fmt.Errorf("some error")
 			}
@@ -1129,30 +1120,27 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
-			HasMurCount(10).
 			HasMemberClusterStatus(
 				memberCluster("member-1", ready(), userAccountCount(8)),
 				memberCluster("member-2", ready(), userAccountCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady()).
-			HasUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 2, // users "cookie-00" and "pasta-00"
-				"2": 2, // users "cookie-01" and "pasta-01"
-				"3": 1, // users "cookie-02"
-				"4": 1, // users "cookie-03"
-				"5": 1, // etc.
-				"6": 1,
-				"7": 1,
-				"8": 1,
-			})
+			Exists().HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 2, // users "cookie-00" and "pasta-00"
+			"2,internal": 2, // users "cookie-01" and "pasta-01"
+			"3,internal": 1, // users "cookie-02"
+			"4,internal": 1, // users "cookie-03"
+			"5,internal": 1, // etc.
+			"6,internal": 1,
+			"7,internal": 1,
+			"8,internal": 1,
+		})
 
 		t.Run("sync with newly added MURs and UAs", func(t *testing.T) {
 			// given
 			counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 			counter.IncrementMasterUserRecordCount(logger, metrics.External)
 			counter.IncrementUserAccountCount(logger, "member-1")
-			toolchainStatus := NewToolchainStatus(
-				WithHost(WithMasterUserRecordCount(1)),
-			)
+			toolchainStatus := NewToolchainStatus()
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
@@ -1164,7 +1152,6 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMurCount(12).
 				HasMemberClusterStatus(
 					memberCluster("member-1", ready(), userAccountCount(9)),
 					memberCluster("member-2", ready(), userAccountCount(2))).
@@ -1177,14 +1164,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		// given
 		defer counter.Reset()
 		toolchainStatus := NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(8)),
 			WithMember("member-1", WithUserAccountCount(6)), // will increase
 			WithMember("member-2", WithUserAccountCount(2)), // will remain the same
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 5,
-				"2": 2,
-				"3": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 4,
 				"1,external": 1,
@@ -1211,16 +1192,10 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
-			HasMurCount(9). // was incremented
 			HasMemberClusterStatus(
 				memberCluster("member-1", ready(), userAccountCount(7)), // was incremented
 				memberCluster("member-2", ready(), userAccountCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady()).
-			HasUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 5, // was incremented by `counter.UpdateUsersPerActivationCounters(1)` but decremented `counter.UpdateUsersPerActivationCounters(2)`
-				"2": 3, // was incremented by `counter.UpdateUsersPerActivationCounters(2)`
-				"3": 1,
-			}).
 			HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 4, // was incremented by `counter.UpdateUsersPerActivationCounters(1)` but decremented `counter.UpdateUsersPerActivationCounters(2)`
 				"1,external": 1, // unchanged
@@ -1229,17 +1204,11 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				"3,internal": 1, // unchanged
 			})
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(9).
 			HaveUserAccountsForCluster("member-1", 7).
 			HaveUserAccountsForCluster("member-2", 2).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1,
 				string(metrics.External): 8,
-			}).
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 5,
-				"2": 3,
-				"3": 1,
 			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 4, // was incremented by `counter.UpdateUsersPerActivationCounters(1)` but decremented `counter.UpdateUsersPerActivationCounters(2)`

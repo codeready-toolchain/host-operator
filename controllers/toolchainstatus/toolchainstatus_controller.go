@@ -260,10 +260,6 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 		Revision:       version.Commit,
 		BuildTimestamp: version.BuildTime,
 	}
-	if toolchainStatus.Status.HostOperator != nil {
-		operatorStatus.MasterUserRecordCount = toolchainStatus.Status.HostOperator.MasterUserRecordCount
-	}
-
 	// look up name of the host operator deployment
 	hostOperatorDeploymentName, err := k8sutil.GetOperatorName()
 	if err != nil {
