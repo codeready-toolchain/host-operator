@@ -49,6 +49,7 @@ replace (
 )
 
 replace github.com/codeready-toolchain/toolchain-common => /Users/rajiv/go/src/github.com/codeready-toolchain/toolchain-common
+
 replace github.com/codeready-toolchain/api => /Users/rajiv/go/src/github.com/codeready-toolchain/api
 
 go 1.14
