@@ -35,12 +35,6 @@ func WithHost(options ...HostToolchainStatusOption) ToolchainStatusOption {
 
 type HostToolchainStatusOption func(*toolchainv1alpha1.HostOperatorStatus)
 
-func WithMasterUserRecordCount(count int) HostToolchainStatusOption {
-	return func(status *toolchainv1alpha1.HostOperatorStatus) {
-		status.MasterUserRecordCount = count
-	}
-}
-
 func WithMember(name string, options ...MemberToolchainStatusOption) ToolchainStatusOption {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {
 		member := toolchainv1alpha1.Member{

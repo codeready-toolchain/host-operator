@@ -46,11 +46,7 @@ func TestAddFinalizer(t *testing.T) {
 		memberClient := test.NewFakeClient(t)
 		hostClient := test.NewFakeClient(t, mur)
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1,
 			}),
@@ -73,10 +69,6 @@ func TestAddFinalizer(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -94,11 +86,7 @@ func TestAddFinalizer(t *testing.T) {
 			return fmt.Errorf("unable to add finalizer to MUR %s", mur.Name)
 		}
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -121,10 +109,6 @@ func TestAddFinalizer(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToAddFinalizerReason, "unable to add finalizer to MUR john"))
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -144,11 +128,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	memberClient := test.NewFakeClient(t)
 	hostClient := test.NewFakeClient(t, mur)
 	InitializeCounters(t, NewToolchainStatus(
-		WithHost(WithMasterUserRecordCount(1)), // will initialize counters from ToolchainStatus
 		WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-			"1": 1,
-		}),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -171,10 +151,6 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
 	AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecords(1). // unchanged
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
-			"1": 1, // unchanged
-		}).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 1, // unchanged
 		}).
@@ -190,12 +166,8 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts(test.Member2ClusterName), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	toolchainStatus := NewToolchainStatus(
-		WithHost(WithMasterUserRecordCount(1)), // will initialize counters from ToolchainStatus
 		WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
 		WithMember(test.Member2ClusterName, WithUserAccountCount(0), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-			"1": 1,
-		}),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -226,10 +198,6 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
 	AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecords(1). // unchanged
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
-			"1": 1, // unchanged
-		}).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 1, // unchanged
 		}).
@@ -248,13 +216,9 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	userAccount1 := uatest.NewUserAccountFromMur(mur)
 	userAccount3 := uatest.NewUserAccountFromMur(mur)
 	toolchainStatus := NewToolchainStatus(
-		WithHost(WithMasterUserRecordCount(1)),
 		WithMember(test.MemberClusterName, WithUserAccountCount(2), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
 		WithMember(test.Member2ClusterName, WithUserAccountCount(2), WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
 		WithMember("member3-cluster", WithUserAccountCount(2), WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-			"1": 1,
-		}),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -283,10 +247,6 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 		assert.True(t, result.Requeue)
 		assert.Equal(t, 3*time.Second, result.RequeueAfter)
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -316,10 +276,6 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 		assert.True(t, result.Requeue)
 		assert.Equal(t, 3*time.Second, result.RequeueAfter)
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -350,10 +306,6 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 		assert.True(t, result.Requeue)
 		assert.Greater(t, int64(result.RequeueAfter), int64(3*time.Second))
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -376,11 +328,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("when member cluster does not exist and UA hasn't been created yet", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -406,10 +354,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -422,11 +366,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("when member cluster does not exist and UA was already created", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -449,10 +389,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -465,11 +401,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("when member cluster is not ready and UA hasn't been created yet", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -494,10 +426,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -510,11 +438,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("when member cluster is not ready and UA was already created", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -538,10 +462,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -554,11 +474,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("status update of the MasterUserRecord failed", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -581,10 +497,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, "failed to create user bob: oopsy woopsy", err.Error())
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -597,11 +509,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("creation of the UserAccount failed", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -628,10 +536,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason, "unable to create user account john"))
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -644,11 +548,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -681,10 +581,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason, "unable to update user account john"))
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -697,11 +593,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("status synchronization between UserAccount and MasterUserRecord failed", func(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -739,10 +631,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasConditions(updatingCond).
 			HasStatusUserAccounts()
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -755,11 +643,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("deletion of MasterUserRecord fails because it cannot remove finalizer", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(2)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -797,10 +681,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason, "unable to remove finalizer from MUR john"))
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -813,11 +693,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("deletion of the UserAccount failed", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -850,10 +726,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToDeleteUserAccountsReason, "unable to delete user account john")).
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -881,13 +753,9 @@ func TestModifyUserAccounts(t *testing.T) {
 	murtest.ModifyUaInMur(mur, test.Member2ClusterName, murtest.NsLimit("admin"), murtest.TierName("basic"))
 
 	toolchainStatus := NewToolchainStatus(
-		WithHost(WithMasterUserRecordCount(1)),
 		WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
 		WithMember(test.Member2ClusterName, WithUserAccountCount(1), WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
 		WithMember("member3-cluster", WithUserAccountCount(1), WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-			"1": 1,
-		}),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -932,10 +800,6 @@ func TestModifyUserAccounts(t *testing.T) {
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 	AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecords(1). // unchanged
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{
-			"1": 1, // unchanged
-		}).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 1, // unchanged
 		}).
@@ -989,13 +853,9 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		memberClient3 := test.NewFakeClient(t, userAccount3)
 
 		toolchainStatus := NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
 			WithMember(test.Member2ClusterName, WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
 			WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -1034,10 +894,6 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			AllUserAccountsHaveStatusSyncIndex("123abc").
 			AllUserAccountsHaveCondition(userAccount.Status.Conditions[0])
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -1076,13 +932,9 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		}
 
 		toolchainStatus := NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(1)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
 			WithMember(test.Member2ClusterName, WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
 			WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 1,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -1127,10 +979,6 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		assert.Equal(t, "MasterUserRecord", notification.OwnerReferences[0].Kind)
 		assert.Equal(t, mur.Name, notification.OwnerReferences[0].Name)
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // unchanged
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 1, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 			}).
@@ -1155,11 +1003,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		memberClient := test.NewFakeClient(t, userAcc)
 		hostClient := test.NewFakeClient(t, mur)
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(2)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(2)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 2,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 				"1,external": 1,
@@ -1189,10 +1033,6 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			DoesNotHaveFinalizer()
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // decremented
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 2, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 				"1,external": 1, // unchanged
@@ -1217,11 +1057,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		hostClient := test.NewFakeClient(t, mur)
 		memberClient := test.NewFakeClient(t, userAcc)
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(2)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(2)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 2,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 				"1,external": 1,
@@ -1253,10 +1089,6 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john-wait-for-ua", hostClient).
 			DoesNotHaveFinalizer()
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(1). // decremented
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{
-				"1": 2, // unchanged
-			}).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
 				"1,external": 1, // unchanged
@@ -1281,11 +1113,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		hostClient := test.NewFakeClient(t, mur)
 		memberClient := test.NewFakeClient(t, userAcc)
 		InitializeCounters(t, NewToolchainStatus(
-			WithHost(WithMasterUserRecordCount(2)),
 			WithMember(test.MemberClusterName, WithUserAccountCount(2)),
-			WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-				"1": 2,
-			}),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 				"1,external": 1,
@@ -1310,8 +1138,6 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john-wait-for-ua", hostClient).
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecords(2).
-			HaveUsersPerActivations(toolchainv1alpha1.Metric{"1": 2}).
 			HaveUserAccountsForCluster(test.MemberClusterName, 2)
 	})
 }
@@ -1329,13 +1155,9 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 	memberClient2 := test.NewFakeClient(t, userAcc)
 	hostClient := test.NewFakeClient(t, mur)
 	InitializeCounters(t, NewToolchainStatus(
-		WithHost(WithMasterUserRecordCount(2)),
 		WithMember(test.MemberClusterName, WithUserAccountCount(2)),
 		WithMember(test.Member2ClusterName, WithUserAccountCount(2)),
 		WithMember("member3-cluster", WithUserAccountCount(2)),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-			"1": 2,
-		}),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 			"1,external": 1,
@@ -1372,8 +1194,6 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		DoesNotHaveFinalizer()
 	AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecords(1).                                  // decremented
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{"1": 2}). // unchanged
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 0, // decremented
 			string(metrics.External): 1, // unchanged
@@ -1393,11 +1213,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	userAccount := uatest.NewUserAccountFromMur(mur, uatest.DisabledUa(false))
 	memberClient := test.NewFakeClient(t, userAccount)
 	toolchainStatus := NewToolchainStatus(
-		WithHost(WithMasterUserRecordCount(1)),
 		WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-			"1": 1,
-		}),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -1419,8 +1235,6 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, userAcc.Spec.Disabled)
 	AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecords(1). // unchanged
-		HaveUsersPerActivations(toolchainv1alpha1.Metric{"1": 1}).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 1}). // unchanged
 		HaveUserAccountsForCluster(test.MemberClusterName, 1)
 }

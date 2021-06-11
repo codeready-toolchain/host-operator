@@ -12,7 +12,6 @@ import (
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
-	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,24 +40,9 @@ func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
 	}
 }
 
-func (a *CounterAssertion) HaveMasterUserRecords(number int) *CounterAssertion {
-	assert.Equal(a.t, number, a.counts.MasterUserRecordCount)
-	AssertMetricsGaugeEquals(a.t, number, metrics.MasterUserRecordGauge)
-	return a
-}
-
 func (a *CounterAssertion) HaveUserAccountsForCluster(clusterName string, number int) *CounterAssertion {
 	assert.Equal(a.t, number, a.counts.UserAccountsPerClusterCounts[clusterName])
 	AssertMetricsGaugeEquals(a.t, number, metrics.UserAccountGaugeVec.WithLabelValues(clusterName))
-	return a
-}
-
-func (a *CounterAssertion) HaveUsersPerActivations(expected toolchainv1alpha1.Metric) *CounterAssertion {
-	actual := a.counts.UsersPerActivationCounts
-	assert.Equal(a.t, map[string]int(expected), actual)
-	for activations, count := range expected {
-		AssertMetricsGaugeEquals(a.t, count, metrics.UsersPerActivationGaugeVec.WithLabelValues(activations))
-	}
 	return a
 }
 
@@ -111,11 +95,7 @@ func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1al
 }
 
 func initializeCounters(t *testing.T, cl *commontest.FakeClient, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
-	if toolchainStatus.Status.HostOperator != nil {
-		metrics.MasterUserRecordGauge.Set(float64(toolchainStatus.Status.HostOperator.MasterUserRecordCount))
-	}
 	t.Logf("toolchainStatus members: %v", toolchainStatus.Status.Members)
 	err := counter.Synchronize(cl, toolchainStatus)
 	require.NoError(t, err)
-	t.Logf("MasterUserRecordGauge=%.0f", promtestutil.ToFloat64(metrics.MasterUserRecordGauge))
 }
