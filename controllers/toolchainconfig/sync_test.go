@@ -75,7 +75,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 			// then
 			require.Len(t, syncErrors, 1)
-			assert.EqualError(t, syncErrors["member2"], "client error")
+			assert.Equal(t, syncErrors["member2"], "client error")
 		})
 
 		t.Run("sync to multiple members failed", func(t *testing.T) {
@@ -99,8 +99,8 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 			// then
 			require.Len(t, syncErrors, 2)
-			assert.EqualError(t, syncErrors["member1"], "client error")
-			assert.EqualError(t, syncErrors["member2"], "client2 error")
+			assert.Equal(t, syncErrors["member1"], "client error")
+			assert.Equal(t, syncErrors["member2"], "client2 error")
 		})
 
 		t.Run("specific memberoperatorconfig exists but member cluster not found", func(t *testing.T) {
@@ -117,7 +117,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 			// then
 			require.Len(t, syncErrors, 1)
-			assert.EqualError(t, syncErrors["member2"], "specific member configuration exists but no matching toolchaincluster was found")
+			assert.Equal(t, syncErrors["member2"], "specific member configuration exists but no matching toolchaincluster was found")
 		})
 	})
 }
@@ -143,6 +143,7 @@ func TestSyncMemberConfig(t *testing.T) {
 		})
 
 		t.Run("memberoperatorconfig updated", func(t *testing.T) {
+			// given
 			originalConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("10s"))
 			memberCl := test.NewFakeClient(t, originalConfig)
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
@@ -162,6 +163,7 @@ func TestSyncMemberConfig(t *testing.T) {
 
 	t.Run("sync fails", func(t *testing.T) {
 		t.Run("client get error", func(t *testing.T) {
+			// given
 			memberCl := test.NewFakeClient(t)
 			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 				return fmt.Errorf("client error")
@@ -180,6 +182,7 @@ func TestSyncMemberConfig(t *testing.T) {
 		})
 
 		t.Run("client update error", func(t *testing.T) {
+			// given
 			originalConfig := config.NewMemberOperatorConfig(config.MemberStatus().RefreshPeriod("10s"))
 			memberCl := test.NewFakeClient(t, originalConfig)
 			memberCl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {

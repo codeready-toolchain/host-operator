@@ -2,6 +2,7 @@ package toolchainconfig
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -10,7 +11,9 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -66,71 +69,70 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			reqLogger.Error(err, "it looks like the ToolchainConfig resource with the name 'config' was removed - the cache will use the latest version of the resource")
+			reqLogger.Error(err, "it looks like the toolchainconfig resource was removed - the cache will use the latest version of the resource")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
+		reqLogger.Error(err, "error getting the toolchainconfig resource")
 		return defaultReconcile, err
 	}
 	updateConfig(toolchainConfig)
 
 	// Sync member configs to member clusters
 	sync := synchronizer{
-		logger:         r.Log,
+		logger:         reqLogger,
 		getMembersFunc: r.GetMembersFunc,
 	}
 
 	if syncErrs := sync.syncMemberConfigs(toolchainConfig); len(syncErrs) > 0 {
-		// wrapErrorWithStatusUpdate
-		for cluster, err := range syncErrs {
+		for cluster, errMsg := range syncErrs {
+			err := fmt.Errorf(errMsg)
 			reqLogger.Error(err, "error syncing to member cluster '%s'", cluster)
 		}
-		return defaultReconcile, nil
+		return defaultReconcile, r.setSyncFailureStatusCondition(reqLogger, toolchainConfig, syncErrs)
 	}
-	// 	if err := updateStatus(logger, toolchainConfig, msg); err != nil {
-	// 		logger.Error(err, "status update failed")
-	// 	}
-
-	return defaultReconcile, nil
+	return defaultReconcile, r.setCompleteStatusCondition(reqLogger, toolchainConfig)
 }
 
-// type StatusUpdaterFunc func(logger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error
+// setSyncFailureStatusCondition sets the ToolchainConfig status condition to `SyncComplete=false/reason=syncFailure`
+func (r *Reconciler) setSyncFailureStatusCondition(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, syncErrs map[string]string) error {
+	toolchainConfig.Status.SyncErrors = syncErrs
+	toolchainConfig.Status.Conditions = []toolchainv1alpha1.Condition{ToSyncFailure()}
+	err := r.Client.Status().Update(context.TODO(), toolchainConfig)
+	if err != nil {
+		reqLogger.Error(err, "failed to update status for toolchainconfig to sync failed")
+	}
+	return err
+}
 
-// // wrapErrorWithStatusUpdate wraps the error and updates the ToolchainConfig status. If the update failed then logs the error.
-// func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, updateStatus StatusUpdaterFunc, err error, format string, args ...interface{}) error {
-// 	if err == nil {
-// 		return nil
-// 	}
-// 	if err := updateStatus(logger, toolchainConfig, err.Error()); err != nil {
-// 		logger.Error(err, "status update failed")
-// 	}
-// 	if format != "" {
-// 		return errs.Wrapf(err, format, args...)
-// 	}
-// 	return err
-// }
+// setCompleteStatusCondition sets the ToolchainConfig status condition to `SyncComplete=true/reason=synced` and clears all previous conditions of the same type
+func (r *Reconciler) setCompleteStatusCondition(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig) error {
+	toolchainConfig.Status.SyncErrors = map[string]string{}
+	toolchainConfig.Status.Conditions = []toolchainv1alpha1.Condition{ToBeComplete()}
+	err := r.Client.Status().Update(context.TODO(), toolchainConfig)
+	if err != nil {
+		reqLogger.Error(err, "failed to update status for toolchainconfig to sync completed")
+	}
+	return err
+}
 
-// func (r *Reconciler) setStatusFailedAndSyncErrors(reason string) StatusUpdaterFunc {
-// 	return func(logger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
-// 		return updateStatusConditions(
-// 			logger,
-// 			r.Client,
-// 			toolchainConfig,
-// 			toBeNotReady(reason, message))
-// 	}
-// }
+// ToBeComplete condition when the update completed with success
+func ToBeComplete() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:               toolchainv1alpha1.ToolchainConfigSyncComplete,
+		Status:             corev1.ConditionTrue,
+		Reason:             toolchainv1alpha1.ToolchainConfigSyncedReason,
+		LastTransitionTime: metav1.Now(),
+	}
+}
 
-// // updateStatusConditions updates user account status conditions with the new conditions
-// func updateStatusConditions(logger logr.Logger, cl client.Client, toolchainConfig *toolchainv1alpha1.ToolchainConfig, newConditions ...toolchainv1alpha1.Condition) error {
-// 	var updated bool
-// 	toolchainConfig.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(toolchainConfig.Status.Conditions, newConditions...)
-// 	if !updated {
-// 		// Nothing changed
-// 		logger.Info("ToolchainConfig status conditions unchanged")
-// 		return nil
-// 	}
-// 	logger.Info("updating MUR status conditions", "generation", toolchainConfig.Generation, "resource_version", toolchainConfig.ResourceVersion)
-// 	err := cl.Status().Update(context.TODO(), toolchainConfig)
-// 	logger.Info("updated MUR status conditions", "generation", toolchainConfig.Generation, "resource_version", toolchainConfig.ResourceVersion)
-// 	return err
-// }
+// ToFailure condition when an error occurred
+func ToSyncFailure() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:               toolchainv1alpha1.ToolchainConfigSyncComplete,
+		Status:             corev1.ConditionFalse,
+		Reason:             toolchainv1alpha1.ToolchainConfigSyncFailedReason,
+		Message:            "errors occurred while syncing MemberOperatorConfigs to the member clusters",
+		LastTransitionTime: metav1.Now(),
+	}
+}

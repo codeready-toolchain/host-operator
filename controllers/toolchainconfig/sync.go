@@ -2,7 +2,6 @@ package toolchainconfig
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,12 +20,12 @@ type synchronizer struct {
 
 // syncMemberConfigs retrieves member operator configurations and syncs the appropriate configuration to each member cluster
 // returns a map of any errors encountered indexed by cluster name
-func (s *synchronizer) syncMemberConfigs(sourceConfig *toolchainv1alpha1.ToolchainConfig) map[string]error {
+func (s *synchronizer) syncMemberConfigs(sourceConfig *toolchainv1alpha1.ToolchainConfig) map[string]string {
 	toolchainConfig := sourceConfig.DeepCopy()
 
 	// get configs for member toolchainclusters
 	memberToolchainClusters := s.getMembersFunc()
-	syncErrors := make(map[string]error, len(memberToolchainClusters))
+	syncErrors := make(map[string]string, len(memberToolchainClusters))
 
 	if len(memberToolchainClusters) == 0 {
 		s.logger.Info("No toolchainclusters were found, skipping MemberOperatorConfig syncing")
@@ -46,14 +45,14 @@ func (s *synchronizer) syncMemberConfigs(sourceConfig *toolchainv1alpha1.Toolcha
 
 		if err := syncMemberConfig(memberConfigSpec, toolchainCluster); err != nil {
 			s.logger.Error(err, "failed to sync MemberOperatorConfig", "cluster_name", toolchainCluster.Name)
-			syncErrors[toolchainCluster.Name] = err
+			syncErrors[toolchainCluster.Name] = err.Error()
 		}
 	}
 
 	// add errors for any MemberOperatorConfigs that haven't been synced because there is no matching toolchaincluster
 	if len(membersWithSpecificConfig) > 0 {
 		for k := range membersWithSpecificConfig {
-			syncErrors[k] = fmt.Errorf("specific member configuration exists but no matching toolchaincluster was found")
+			syncErrors[k] = "specific member configuration exists but no matching toolchaincluster was found"
 		}
 	}
 	return syncErrors
