@@ -110,6 +110,10 @@ type Reconciler struct {
 	HTTPClientImpl HTTPClient
 }
 
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainstatuses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainstatuses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainstatuses/finalizers,verbs=update
+
 // Reconcile reads the state of toolchain host and member cluster components and updates the ToolchainStatus resource with information useful for observation or troubleshooting
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
@@ -256,10 +260,6 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 		Revision:       version.Commit,
 		BuildTimestamp: version.BuildTime,
 	}
-	if toolchainStatus.Status.HostOperator != nil {
-		operatorStatus.MasterUserRecordCount = toolchainStatus.Status.HostOperator.MasterUserRecordCount
-	}
-
 	// look up name of the host operator deployment
 	hostOperatorDeploymentName, err := k8sutil.GetOperatorName()
 	if err != nil {

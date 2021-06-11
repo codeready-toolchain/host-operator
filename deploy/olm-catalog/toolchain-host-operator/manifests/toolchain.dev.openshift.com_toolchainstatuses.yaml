@@ -129,10 +129,6 @@ spec:
                   deploymentName:
                     description: The status of the host operator's deployment
                     type: string
-                  masterUserRecordCount:
-                    description: 'Number of MasterUserRecords created within the host
-                      cluster DEPRECATED: use `ToolchainStatusStatus.Metrics` instead'
-                    type: integer
                   revision:
                     description: The commit id from the host-operator repository used
                       to build the operator

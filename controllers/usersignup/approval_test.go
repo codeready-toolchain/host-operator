@@ -23,13 +23,9 @@ func TestGetClusterIfApproved(t *testing.T) {
 	// given
 	signup := NewUserSignup()
 	toolchainStatus := NewToolchainStatus(
-		WithHost(WithMasterUserRecordCount(900)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 100,
 			string(metrics.External): 800,
-		}),
-		WithMetric(toolchainv1alpha1.UsersPerActivationMetricKey, toolchainv1alpha1.Metric{
-			"1": 900,
 		}),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 200,

@@ -52,6 +52,10 @@ type Reconciler struct {
 	GetMembersFunc cluster.GetMemberClustersFunc
 }
 
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs/finalizers,verbs=update
+
 // Reconcile reads that state of the cluster for a ToolchainConfig object and makes changes based on the state read
 // and what is in the ToolchainConfig.Spec
 // Note:

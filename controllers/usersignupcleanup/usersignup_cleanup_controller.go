@@ -11,7 +11,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/go-logr/logr"
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,6 +54,10 @@ type Reconciler struct {
 	Config *crtCfg.Config
 }
 
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=masteruserrecords,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=masteruserrecords/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=masteruserrecords/finalizers,verbs=update
+
 // Reconcile reads that state of the cluster for a UserSignup object and makes changes based on the state read
 // and what is in the UserSignup.Spec
 // Note:
@@ -79,7 +82,9 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
-	if states.VerificationRequired(instance) && !states.Approved(instance) {
+	// Check if the UserSignup is waiting for phone verification to be finished
+	// Check also if the status doesn't contain the approved condition set to true - it there is, then it means that it's reactivated UserSignup and we should skip it here
+	if states.VerificationRequired(instance) && !condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupApproved) {
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
 
@@ -101,12 +106,15 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		}, nil
 	}
 
-	if states.Deactivated(instance) {
+	// Check if the UserSignup is:
+	// * either deactivated
+	// * or if it is waiting for phone verification to be finished and at the same time the status contains the approved condition set to true
+	//   (in other words the UserSignup is reactivated but the phone verification hasn't been finished)
+	if states.Deactivated(instance) || (states.VerificationRequired(instance) && condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupApproved)) {
 		// Find the UserSignupComplete condition
 		cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
-
-		if !found || cond.Status != apiv1.ConditionTrue || cond.Reason != toolchainv1alpha1.UserSignupUserDeactivatedReason {
-			// We cannot find the status condition with "deactivated" reason, simply return
+		if !found {
+			// We cannot find the status Complete condition
 			return reconcile.Result{}, nil
 		}
 
