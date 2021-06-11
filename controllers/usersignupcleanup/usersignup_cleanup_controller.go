@@ -82,6 +82,8 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
+	// Check if the UserSignup is waiting for phone verification to be finished
+	// Check also if the status doesn't contain the approved condition set to true - it there is, then it means that it's reactivated UserSignup and we should skip it here
 	if states.VerificationRequired(instance) && !condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupApproved) {
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
@@ -104,6 +106,10 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		}, nil
 	}
 
+	// Check if the UserSignup is:
+	// * either deactivated
+	// * or if it is waiting for phone verification to be finished and at the same time the status contains the approved condition set to true
+	//   (in other words the UserSignup is reactivated but the phone verification hasn't been finished)
 	if states.Deactivated(instance) || (states.VerificationRequired(instance) && condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupApproved)) {
 		// Find the UserSignupComplete condition
 		cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
