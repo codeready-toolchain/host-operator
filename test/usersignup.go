@@ -29,14 +29,15 @@ func Approved() UserSignupModifier {
 	}
 }
 
-func ApprovedAutomatically() UserSignupModifier {
+func ApprovedAutomatically(before time.Duration) UserSignupModifier {
 	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		states.SetApproved(userSignup, true)
 		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
-				Status: v1.ConditionTrue,
-				Reason: "ApprovedAutomatically",
+				Type:               toolchainv1alpha1.UserSignupApproved,
+				Status:             v1.ConditionTrue,
+				Reason:             "ApprovedAutomatically",
+				LastTransitionTime: metav1.Time{Time: time.Now().Add(-before)},
 			})
 	}
 }
@@ -62,9 +63,19 @@ func DeactivatedWithLastTransitionTime(before time.Duration) UserSignupModifier 
 	}
 }
 
-func VerificationRequired() UserSignupModifier {
+func VerificationRequired(before time.Duration) UserSignupModifier {
 	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		states.SetVerificationRequired(userSignup, true)
+
+		verificationRequired := toolchainv1alpha1.Condition{
+			Type:               toolchainv1alpha1.UserSignupComplete,
+			Status:             v1.ConditionFalse,
+			Reason:             toolchainv1alpha1.UserSignupVerificationRequiredReason,
+			LastTransitionTime: metav1.Time{Time: time.Now().Add(-before)},
+		}
+
+		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions, verificationRequired)
+
 	}
 }
 
