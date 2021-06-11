@@ -132,12 +132,32 @@ func TestUserCleanup(t *testing.T) {
 		res, err := r.Reconcile(req)
 		require.NoError(t, err)
 
-		// Confirm the UserSignup has been deleted
+		// Confirm the UserSignup has not been deleted
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 		err = r.Client.Get(context.Background(), key, userSignup)
 		require.NoError(t, err)
 		require.NotNil(t, userSignup)
 		expectRequeue(t, res, 10)
+	})
+
+	t.Run("test that reactivated, unverified UserSignup long time ago is deleted", func(t *testing.T) {
+
+		userSignup := test2.NewUserSignup(
+			test2.CreatedBefore(threeYears),
+			test2.ApprovedAutomatically(days(396)),
+			test2.VerificationRequired(days(366)),
+		)
+
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+
+		_, err := r.Reconcile(req)
+		require.NoError(t, err)
+
+		// Confirm the UserSignup has been deleted
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		err = r.Client.Get(context.Background(), key, userSignup)
+		require.Error(t, err)
+		require.True(t, errors.IsNotFound(err))
 	})
 
 	t.Run("test that an old, verified but unapproved UserSignup is not deleted", func(t *testing.T) {
