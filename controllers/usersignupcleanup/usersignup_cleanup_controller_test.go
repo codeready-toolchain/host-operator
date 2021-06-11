@@ -38,7 +38,7 @@ func TestUserCleanup(t *testing.T) {
 			test2.CreatedBefore(threeYears),
 			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			test2.SignupComplete(""),
-			test2.ApprovedAutomatically(),
+			test2.ApprovedAutomatically(threeYears),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -55,7 +55,7 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that user cleanup doesn't delete a recently deactivated UserSignup", func(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
-			test2.ApprovedAutomatically(),
+			test2.ApprovedAutomatically(threeYears),
 			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			test2.DeactivatedWithLastTransitionTime(time.Duration(5*time.Minute)),
 			test2.CreatedBefore(threeYears),
@@ -70,22 +70,15 @@ func TestUserCleanup(t *testing.T) {
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 		require.NoError(t, r.Client.Get(context.Background(), key, userSignup))
 		require.NotNil(t, userSignup)
-		require.True(t, res.Requeue)
 
-		// We expect the requeue duration to be approximately equal to the default retention time of 365 days. Let's
-		// accept any value here between the range of 364 days and 366 days
-		durLower := time.Duration(364 * time.Hour * 24)
-		durUpper := time.Duration(366 * time.Hour * 24)
-
-		require.Greater(t, res.RequeueAfter, durLower)
-		require.Less(t, res.RequeueAfter, durUpper)
+		expectRequeue(t, res, 0)
 	})
 
 	t.Run("test that an old, deactivated UserSignup is deleted", func(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
 			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
-			test2.ApprovedAutomatically(),
+			test2.ApprovedAutomatically(threeYears),
 			test2.DeactivatedWithLastTransitionTime(threeYears),
 			test2.CreatedBefore(threeYears),
 		)
@@ -107,8 +100,8 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that an old, unverified UserSignup is deleted", func(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
-			test2.CreatedBefore(threeYears),
-			test2.VerificationRequired(),
+			test2.CreatedBefore(days(8)),
+			test2.VerificationRequired(days(8)),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -124,6 +117,27 @@ func TestUserCleanup(t *testing.T) {
 		require.IsType(t, &errors.StatusError{}, err)
 		statusErr := err.(*errors.StatusError)
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
+	})
+
+	t.Run("test that recently reactivated, unverified UserSignup is NOT deleted", func(t *testing.T) {
+
+		userSignup := test2.NewUserSignup(
+			test2.CreatedBefore(threeYears),
+			test2.ApprovedAutomatically(days(40)),
+			test2.VerificationRequired(days(10)),
+		)
+
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+
+		res, err := r.Reconcile(req)
+		require.NoError(t, err)
+
+		// Confirm the UserSignup has been deleted
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		err = r.Client.Get(context.Background(), key, userSignup)
+		require.NoError(t, err)
+		require.NotNil(t, userSignup)
+		expectRequeue(t, res, 10)
 	})
 
 	t.Run("test that an old, verified but unapproved UserSignup is not deleted", func(t *testing.T) {
@@ -150,7 +164,7 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test propagation policy", func(t *testing.T) {
 		userSignup := test2.NewUserSignup(
 			test2.CreatedBefore(threeYears),
-			test2.VerificationRequired(),
+			test2.VerificationRequired(days(8)),
 		)
 
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
@@ -170,6 +184,21 @@ func TestUserCleanup(t *testing.T) {
 		assert.True(t, deleted)
 	})
 
+}
+
+func expectRequeue(t *testing.T, res reconcile.Result, minusDays int) {
+	// We expect the requeue duration to be approximately equal to the default retention time of 365 days. Let's
+	// accept any value here between the range of 364 days and 366 days
+	durLower := time.Duration(days(364 - minusDays))
+	durUpper := time.Duration(days(366 - minusDays))
+
+	require.True(t, res.Requeue)
+	require.Greater(t, res.RequeueAfter, durLower)
+	require.Less(t, res.RequeueAfter, durUpper)
+}
+
+func days(days int) time.Duration {
+	return time.Hour * time.Duration(days*24)
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) { // nolint: unparam

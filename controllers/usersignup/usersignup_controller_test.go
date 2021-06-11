@@ -2356,7 +2356,7 @@ func TestUserSignupBanned(t *testing.T) {
 
 func TestUserSignupVerificationRequired(t *testing.T) {
 	// given
-	userSignup := NewUserSignup(VerificationRequired())
+	userSignup := NewUserSignup(VerificationRequired(0))
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(

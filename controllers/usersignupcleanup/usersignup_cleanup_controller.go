@@ -11,7 +11,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/go-logr/logr"
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -83,7 +82,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
-	if states.VerificationRequired(instance) && !states.Approved(instance) {
+	if states.VerificationRequired(instance) && !condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupApproved) {
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
 
@@ -105,12 +104,11 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		}, nil
 	}
 
-	if states.Deactivated(instance) {
+	if states.Deactivated(instance) || (states.VerificationRequired(instance) && condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupApproved)) {
 		// Find the UserSignupComplete condition
 		cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
-
-		if !found || cond.Status != apiv1.ConditionTrue || cond.Reason != toolchainv1alpha1.UserSignupUserDeactivatedReason {
-			// We cannot find the status condition with "deactivated" reason, simply return
+		if !found {
+			// We cannot find the status Complete condition
 			return reconcile.Result{}, nil
 		}
 
