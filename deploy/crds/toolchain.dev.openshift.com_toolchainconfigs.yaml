@@ -150,6 +150,50 @@ spec:
             type: object
           status:
             description: ToolchainConfigStatus defines the observed state of ToolchainConfig
+            properties:
+              conditions:
+                description: 'Conditions is an array of the current ToolchainConfig
+                  conditions Supported condition types: ConditionReady'
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transit from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdatedTime:
+                      description: Last time the condition was updated
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        last transition.
+                      type: string
+                    reason:
+                      description: (brief) reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              syncErrors:
+                additionalProperties:
+                  type: string
+                description: SyncErrors is a map of sync errors indexed by toolchaincluster
+                  name that indicates whether an attempt to sync configuration to
+                  a member cluster failed
+                type: object
+                x-kubernetes-map-type: atomic
             type: object
         type: object
         x-kubernetes-preserve-unknown-fields: true
