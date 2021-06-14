@@ -45,7 +45,7 @@ func TestReconcile(t *testing.T) {
 			actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
 			require.NoError(t, err)
 			matchesDefaultConfig(t, actual)
-			AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).NotExists()
+			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).NotExists()
 
 			// check member1 config
 			_, err = getMemberConfig(member1)
@@ -81,7 +81,7 @@ func TestReconcile(t *testing.T) {
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
 			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-			AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToBeComplete()).HasNoSyncErrors()
+			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToBeComplete()).HasNoSyncErrors()
 
 			// check member1 config
 			member1Cfg, err := getMemberConfig(member1)
@@ -116,7 +116,7 @@ func TestReconcile(t *testing.T) {
 				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 				assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 				assert.Equal(t, 100, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-				AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToBeComplete()).HasNoSyncErrors()
+				testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToBeComplete()).HasNoSyncErrors()
 
 				// check member1 config is unchanged
 				member1Cfg, err := getMemberConfig(member1)
@@ -172,9 +172,9 @@ func TestReconcile(t *testing.T) {
 		t.Run("initial get failed", func(t *testing.T) {
 			// given
 			config := newToolchainConfigWithReset(t,
-				config.AutomaticApproval().Enabled().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)),
-				config.Members().Default(defaultMemberConfig.Spec),
-				config.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
+				testconfig.AutomaticApproval().Enabled().MaxUsersNumber(123, testconfig.PerMemberCluster("member1", 321)),
+				testconfig.Members().Default(defaultMemberConfig.Spec),
+				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
 			members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 			controller := newController(hostCl, members)
@@ -195,7 +195,7 @@ func TestReconcile(t *testing.T) {
 
 		t.Run("sync failed", func(t *testing.T) {
 			// given
-			config := newToolchainConfigWithReset(t, config.AutomaticApproval().Enabled().MaxUsersNumber(123, config.PerMemberCluster("member1", 321)), config.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec))
+			config := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled().MaxUsersNumber(123, testconfig.PerMemberCluster("member1", 321)), testconfig.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
 			members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 			controller := newController(hostCl, members)
@@ -212,7 +212,7 @@ func TestReconcile(t *testing.T) {
 			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 			assert.Equal(t, 80, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-			AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToSyncFailure()).HasSyncErrors(map[string]string{"missing-member": "specific member configuration exists but no matching toolchaincluster was found"})
+			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToSyncFailure()).HasSyncErrors(map[string]string{"missing-member": "specific member configuration exists but no matching toolchaincluster was found"})
 		})
 	})
 }
