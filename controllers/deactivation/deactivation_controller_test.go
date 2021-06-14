@@ -8,23 +8,21 @@ import (
 	"testing"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
-
-	"github.com/codeready-toolchain/toolchain-common/pkg/states"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
-
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -46,9 +44,9 @@ const (
 )
 
 func TestReconcile(t *testing.T) {
-	config := newToolchainConfigWithReset(t, test.AutomaticApproval().MaxUsersNumber(123,
-		test.PerMemberCluster("member1", 321)),
-		test.Deactivation().DeactivatingNotificationDays(3))
+	config := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxUsersNumber(123,
+		testconfig.PerMemberCluster("member1", 321)),
+		testconfig.Deactivation().DeactivatingNotificationDays(3))
 
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -200,7 +198,7 @@ func TestReconcile(t *testing.T) {
 					userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
 						{
 							Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-							Status:             v1.ConditionTrue,
+							Status:             corev1.ConditionTrue,
 							LastTransitionTime: metav1.Time{Time: time.Now()},
 							Reason:             toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason,
 						},
@@ -230,7 +228,7 @@ func TestReconcile(t *testing.T) {
 						userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
 							{
 								Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-								Status:             v1.ConditionTrue,
+								Status:             corev1.ConditionTrue,
 								LastTransitionTime: metav1.Time{Time: time.Now().Add(time.Duration(-3) * time.Hour * 24)},
 								Reason:             toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason,
 							},
@@ -423,7 +421,7 @@ func assertThatUserSignupDeactivated(t *testing.T, cl *test.FakeClient, name str
 	require.Equal(t, expected, states.Deactivated(userSignup))
 }
 
-func newToolchainConfigWithReset(t *testing.T, options ...test.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
+func newToolchainConfigWithReset(t *testing.T, options ...testconfig.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
 	t.Cleanup(toolchainconfig.Reset)
-	return test.NewToolchainConfig(options...)
+	return testconfig.NewToolchainConfig(options...)
 }

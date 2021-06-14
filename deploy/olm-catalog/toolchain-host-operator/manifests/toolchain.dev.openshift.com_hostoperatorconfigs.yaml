@@ -95,6 +95,15 @@ spec:
                       no delay
                     type: integer
                 type: object
+              metrics:
+                description: Keeps parameters concerned with metrics
+                properties:
+                  forceSynchronization:
+                    description: ForceSynchronization is a flag used to trigger synchronization
+                      of the metrics based on the resources rather than on the content
+                      of `ToolchainStatus.status.metrics`
+                    type: boolean
+                type: object
             type: object
           status:
             description: HostOperatorConfigStatus defines the observed state of HostOperatorConfig

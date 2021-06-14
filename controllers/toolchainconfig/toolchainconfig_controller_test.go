@@ -7,6 +7,8 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,7 +19,7 @@ import (
 
 func TestReconcileWhenToolchainConfigIsAvailable(t *testing.T) {
 	// given
-	config := newToolchainConfigWithReset(t, AutomaticApproval().MaxUsersNumber(123, PerMemberCluster("member1", 321)))
+	config := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxUsersNumber(123, testconfig.PerMemberCluster("member1", 321)))
 	cl := NewFakeClient(t, config)
 	controller := Reconciler{
 		Client: cl,
@@ -100,9 +102,9 @@ func newRequest() reconcile.Request {
 	}
 }
 
-func newToolchainConfigWithReset(t *testing.T, options ...ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
+func newToolchainConfigWithReset(t *testing.T, options ...testconfig.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
 	t.Cleanup(Reset)
-	return NewToolchainConfig(options...)
+	return testconfig.NewToolchainConfig(options...)
 }
 
 func matchesDefaultConfig(t *testing.T, actual ToolchainConfig) {

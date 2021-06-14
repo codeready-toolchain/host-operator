@@ -14,8 +14,12 @@ func (c *ToolchainConfig) Deactivation() DeactivationConfig {
 	return DeactivationConfig{c.cfg.Host.Deactivation}
 }
 
+func (c *ToolchainConfig) Metrics() MetricsConfig {
+	return MetricsConfig{c.cfg.Host.Metrics}
+}
+
 type AutoApprovalConfig struct {
-	approval toolchainv1alpha1.AutomaticApproval
+	approval toolchainv1alpha1.AutomaticApprovalConfig
 }
 
 func (a AutoApprovalConfig) IsEnabled() bool {
@@ -39,11 +43,19 @@ func (a AutoApprovalConfig) MaxNumberOfUsersSpecificPerMemberCluster() map[strin
 }
 
 type DeactivationConfig struct {
-	dctv toolchainv1alpha1.Deactivation
+	dctv toolchainv1alpha1.DeactivationConfig
 }
 
 func (d DeactivationConfig) DeactivatingNotificationInDays() int {
 	return getInt(d.dctv.DeactivatingNotificationDays, 3)
+}
+
+type MetricsConfig struct {
+	metrics toolchainv1alpha1.MetricsConfig
+}
+
+func (d MetricsConfig) ForceSynchronization() bool {
+	return getBool(d.metrics.ForceSynchronization, false)
 }
 
 func getBool(value *bool, defaultValue bool) bool {
