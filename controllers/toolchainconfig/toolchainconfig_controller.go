@@ -119,21 +119,25 @@ func (r *Reconciler) updateStatus(reqLogger logr.Logger, toolchainConfig *toolch
 
 // ToBeComplete condition when the update completed with success
 func ToBeComplete() toolchainv1alpha1.Condition {
+	currentTime := metav1.Now()
 	return toolchainv1alpha1.Condition{
 		Type:               toolchainv1alpha1.ToolchainConfigSyncComplete,
 		Status:             corev1.ConditionTrue,
 		Reason:             toolchainv1alpha1.ToolchainConfigSyncedReason,
-		LastTransitionTime: metav1.Now(),
+		LastTransitionTime: currentTime,
+		LastUpdatedTime:    &currentTime,
 	}
 }
 
 // ToFailure condition when an error occurred
 func ToSyncFailure() toolchainv1alpha1.Condition {
+	currentTime := metav1.Now()
 	return toolchainv1alpha1.Condition{
 		Type:               toolchainv1alpha1.ToolchainConfigSyncComplete,
 		Status:             corev1.ConditionFalse,
 		Reason:             toolchainv1alpha1.ToolchainConfigSyncFailedReason,
 		Message:            "errors occurred while syncing MemberOperatorConfigs to the member clusters",
-		LastTransitionTime: metav1.Now(),
+		LastTransitionTime: currentTime,
+		LastUpdatedTime:    &currentTime,
 	}
 }
