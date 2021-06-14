@@ -7,7 +7,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/host-operator/test"
-
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/config"
@@ -224,9 +223,9 @@ func newRequest() reconcile.Request {
 	}
 }
 
-func newToolchainConfigWithReset(t *testing.T, options ...config.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
+func newToolchainConfigWithReset(t *testing.T, options ...testconfig.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
 	t.Cleanup(Reset)
-	return config.NewToolchainConfig(options...)
+	return testconfig.NewToolchainConfig(options...)
 }
 
 func matchesDefaultConfig(t *testing.T, actual ToolchainConfig) {
