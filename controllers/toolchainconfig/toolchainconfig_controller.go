@@ -3,11 +3,13 @@ package toolchainconfig
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
@@ -93,26 +95,21 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			err := fmt.Errorf(errMsg)
 			reqLogger.Error(err, "error syncing to member cluster '%s'", cluster)
 		}
-		return defaultReconcile, r.setSyncFailureStatusCondition(reqLogger, toolchainConfig, syncErrs)
+		return defaultReconcile, r.updateStatus(reqLogger, toolchainConfig, syncErrs, ToSyncFailure())
 	}
-	return defaultReconcile, r.setCompleteStatusCondition(reqLogger, toolchainConfig)
+	return defaultReconcile, r.updateStatus(reqLogger, toolchainConfig, map[string]string{}, ToBeComplete())
 }
 
-// setSyncFailureStatusCondition sets the ToolchainConfig status condition to `SyncComplete=false/reason=syncFailure`
-func (r *Reconciler) setSyncFailureStatusCondition(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, syncErrs map[string]string) error {
+func (r *Reconciler) updateStatus(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, syncErrs map[string]string, newCondition toolchainv1alpha1.Condition) error {
+	var conditionUpdated bool
+	syncErrsUpdated := reflect.DeepEqual(syncErrs, toolchainConfig.Status.SyncErrors)
+
 	toolchainConfig.Status.SyncErrors = syncErrs
-	toolchainConfig.Status.Conditions = []toolchainv1alpha1.Condition{ToSyncFailure()}
-	err := r.Client.Status().Update(context.TODO(), toolchainConfig)
-	if err != nil {
-		reqLogger.Error(err, "failed to update status for toolchainconfig to sync failed")
+	toolchainConfig.Status.Conditions, conditionUpdated = condition.AddOrUpdateStatusConditions(toolchainConfig.Status.Conditions, newCondition)
+	if !conditionUpdated && !syncErrsUpdated {
+		// Nothing changed
+		return nil
 	}
-	return err
-}
-
-// setCompleteStatusCondition sets the ToolchainConfig status condition to `SyncComplete=true/reason=synced` and clears all previous conditions of the same type
-func (r *Reconciler) setCompleteStatusCondition(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig) error {
-	toolchainConfig.Status.SyncErrors = map[string]string{}
-	toolchainConfig.Status.Conditions = []toolchainv1alpha1.Condition{ToBeComplete()}
 	err := r.Client.Status().Update(context.TODO(), toolchainConfig)
 	if err != nil {
 		reqLogger.Error(err, "failed to update status for toolchainconfig to sync completed")

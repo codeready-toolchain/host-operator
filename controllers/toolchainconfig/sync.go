@@ -37,7 +37,7 @@ func (s *synchronizer) syncMemberConfigs(sourceConfig *toolchainv1alpha1.Toolcha
 	for _, toolchainCluster := range memberToolchainClusters {
 		memberConfigSpec := toolchainConfig.Spec.Members.Default
 
-		if c, ok := membersWithSpecificConfig[toolchainCluster.Name]; toolchainCluster.Type == cluster.Member && ok {
+		if c, ok := membersWithSpecificConfig[toolchainCluster.Name]; ok {
 			// member-specific configuration values override default configuration
 			memberConfigSpec = c
 			delete(membersWithSpecificConfig, toolchainCluster.Name)
