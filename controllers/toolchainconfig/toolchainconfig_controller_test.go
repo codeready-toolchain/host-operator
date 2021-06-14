@@ -100,6 +100,8 @@ func TestReconcile(t *testing.T) {
 				require.NoError(t, err)
 				threshold := 100
 				config.Spec.Host.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold = &threshold
+				newRefreshPeriod := "20s"
+				config.Spec.Members.Default.MemberStatus.RefreshPeriod = &newRefreshPeriod
 				err = hostCl.Update(context.TODO(), config)
 				require.NoError(t, err)
 
@@ -122,10 +124,10 @@ func TestReconcile(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, "10s", *member1Cfg.Spec.MemberStatus.RefreshPeriod)
 
-				// check member2 config is unchanged
+				// check member2 config is updated
 				member2Cfg, err := getMemberConfig(member2)
 				assert.NoError(t, err)
-				assert.Equal(t, "5s", *member2Cfg.Spec.MemberStatus.RefreshPeriod)
+				assert.Equal(t, "20s", *member2Cfg.Spec.MemberStatus.RefreshPeriod)
 			})
 
 			t.Run("subsequent get fail - cache should be same", func(t *testing.T) {
@@ -161,7 +163,7 @@ func TestReconcile(t *testing.T) {
 				// check member2 config is unchanged
 				member2Cfg, err := getMemberConfig(member2)
 				assert.NoError(t, err)
-				assert.Equal(t, "5s", *member2Cfg.Spec.MemberStatus.RefreshPeriod)
+				assert.Equal(t, "20s", *member2Cfg.Spec.MemberStatus.RefreshPeriod)
 			})
 		})
 	})
