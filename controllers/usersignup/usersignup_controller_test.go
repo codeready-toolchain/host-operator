@@ -44,7 +44,6 @@ func newNsTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, nsType, revision),
 		}
 	}
-	fmt.Printf("Hello")
 
 	return &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
