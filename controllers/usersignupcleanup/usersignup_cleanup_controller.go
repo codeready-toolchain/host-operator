@@ -82,9 +82,11 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
+	activations, activationsAnnotationPresent := instance.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]
+
 	// Check if the UserSignup is waiting for phone verification to be finished
-	// Check also if the status doesn't contain the approved condition set to true - it there is, then it means that it's reactivated UserSignup and we should skip it here
-	if states.VerificationRequired(instance) && !condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupApproved) {
+	// Check also if the UserSignup doesn't have at least one activation - if it has, then it means that it's reactivated UserSignup and we should skip it here
+	if states.VerificationRequired(instance) && (!activationsAnnotationPresent || activations == "0") {
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
 
@@ -108,9 +110,9 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	// Check if the UserSignup is:
 	// * either deactivated
-	// * or if it is waiting for phone verification to be finished and at the same time the status contains the approved condition set to true
+	// * or if it is waiting for phone verification to be finished and at the same it has at least one activation stored in the annotation
 	//   (in other words the UserSignup is reactivated but the phone verification hasn't been finished)
-	if states.Deactivated(instance) || (states.VerificationRequired(instance) && condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupApproved)) {
+	if states.Deactivated(instance) || (states.VerificationRequired(instance) && activationsAnnotationPresent && activations != "0") {
 		// Find the UserSignupComplete condition
 		cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
 		if !found {

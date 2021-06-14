@@ -102,6 +102,7 @@ func TestUserCleanup(t *testing.T) {
 		userSignup := test2.NewUserSignup(
 			test2.CreatedBefore(days(8)),
 			test2.VerificationRequired(days(8)),
+			test2.WithActivations("0"),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -125,6 +126,7 @@ func TestUserCleanup(t *testing.T) {
 			test2.CreatedBefore(threeYears),
 			test2.ApprovedAutomatically(days(40)),
 			test2.VerificationRequired(days(10)),
+			test2.WithActivations("1"),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -146,6 +148,7 @@ func TestUserCleanup(t *testing.T) {
 			test2.CreatedBefore(threeYears),
 			test2.ApprovedAutomatically(days(396)),
 			test2.VerificationRequired(days(366)),
+			test2.WithActivations("2"),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
