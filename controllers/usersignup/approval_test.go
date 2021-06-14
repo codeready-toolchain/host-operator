@@ -9,6 +9,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,10 +36,10 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("with one cluster and enough capacity", func(t *testing.T) {
 		// given
 		toolchainConfig := NewToolchainConfigWithReset(t,
-			AutomaticApproval().
+			testconfig.AutomaticApproval().
 				Enabled().
-				MaxUsersNumber(2000, PerMemberCluster("member1", 1000)).
-				ResourceCapThreshold(80, PerMemberCluster("member1", 70)))
+				MaxUsersNumber(2000, testconfig.PerMemberCluster("member1", 1000)).
+				ResourceCapThreshold(80, testconfig.PerMemberCluster("member1", 70)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 
@@ -56,10 +57,10 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("with two clusters and enough capacity in both of them so it returns the first one", func(t *testing.T) {
 		// given
 		toolchainConfig := NewToolchainConfigWithReset(t,
-			AutomaticApproval().
+			testconfig.AutomaticApproval().
 				Enabled().
-				MaxUsersNumber(2000, PerMemberCluster("member1", 1000), PerMemberCluster("member2", 1000)).
-				ResourceCapThreshold(80, PerMemberCluster("member1", 70), PerMemberCluster("member2", 75)))
+				MaxUsersNumber(2000, testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
+				ResourceCapThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
@@ -76,10 +77,10 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("with two clusters where the first one reaches resource threshold", func(t *testing.T) {
 		// given
 		toolchainConfig := NewToolchainConfigWithReset(t,
-			AutomaticApproval().
+			testconfig.AutomaticApproval().
 				Enabled().
-				MaxUsersNumber(2000, PerMemberCluster("member1", 1000), PerMemberCluster("member2", 1000)).
-				ResourceCapThreshold(80, PerMemberCluster("member1", 60), PerMemberCluster("member2", 75)))
+				MaxUsersNumber(2000, testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
+				ResourceCapThreshold(80, testconfig.PerMemberCluster("member1", 60), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
@@ -96,10 +97,10 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("with two clusters where the first one reaches max number of UserAccounts", func(t *testing.T) {
 		// given
 		toolchainConfig := NewToolchainConfigWithReset(t,
-			AutomaticApproval().
+			testconfig.AutomaticApproval().
 				Enabled().
-				MaxUsersNumber(2000, PerMemberCluster("member1", 700), PerMemberCluster("member2", 1000)).
-				ResourceCapThreshold(80, PerMemberCluster("member1", 90), PerMemberCluster("member2", 95)))
+				MaxUsersNumber(2000, testconfig.PerMemberCluster("member1", 700), testconfig.PerMemberCluster("member2", 1000)).
+				ResourceCapThreshold(80, testconfig.PerMemberCluster("member1", 90), testconfig.PerMemberCluster("member2", 95)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
@@ -116,10 +117,10 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("with two clusters, none of them is returned since it reaches max number of MURs", func(t *testing.T) {
 		// given
 		toolchainConfig := NewToolchainConfigWithReset(t,
-			AutomaticApproval().
+			testconfig.AutomaticApproval().
 				Enabled().
-				MaxUsersNumber(800, PerMemberCluster("member1", 6000), PerMemberCluster("member2", 1000)).
-				ResourceCapThreshold(80, PerMemberCluster("member1", 60), PerMemberCluster("member2", 75)))
+				MaxUsersNumber(800, testconfig.PerMemberCluster("member1", 6000), testconfig.PerMemberCluster("member2", 1000)).
+				ResourceCapThreshold(80, testconfig.PerMemberCluster("member1", 60), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
@@ -136,7 +137,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("with two clusters and enough capacity only in second one using the default values", func(t *testing.T) {
 		// given
 		toolchainConfig := NewToolchainConfigWithReset(t,
-			AutomaticApproval().
+			testconfig.AutomaticApproval().
 				Enabled().
 				MaxUsersNumber(2000).
 				ResourceCapThreshold(62))
@@ -156,7 +157,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("with two clusters and enough capacity in none of them using the default memory values", func(t *testing.T) {
 		// given
 		toolchainConfig := NewToolchainConfigWithReset(t,
-			AutomaticApproval().
+			testconfig.AutomaticApproval().
 				Enabled().
 				MaxUsersNumber(5000).
 				ResourceCapThreshold(1))
@@ -222,7 +223,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("automatic approval not enabled, user approved but no cluster has capacity", func(t *testing.T) {
 		// given
 		toolchainConfig := NewToolchainConfigWithReset(t,
-			AutomaticApproval().ResourceCapThreshold(50))
+			testconfig.AutomaticApproval().ResourceCapThreshold(50))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
@@ -240,7 +241,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("automatic approval not enabled, user approved and second cluster has capacity", func(t *testing.T) {
 		// given
 		toolchainConfig := NewToolchainConfigWithReset(t,
-			AutomaticApproval().
+			testconfig.AutomaticApproval().
 				MaxUsersNumber(2000).
 				ResourceCapThreshold(62))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
@@ -260,7 +261,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("automatic approval not enabled, user approved, no cluster has capacity but targetCluster is specified", func(t *testing.T) {
 		// given
 		toolchainConfig := NewToolchainConfigWithReset(t,
-			AutomaticApproval().MaxUsersNumber(1000))
+			testconfig.AutomaticApproval().MaxUsersNumber(1000))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
@@ -278,10 +279,10 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("with two clusters and enough capacity in both of them but first one is not ready", func(t *testing.T) {
 		// given
 		toolchainConfig := NewToolchainConfigWithReset(t,
-			AutomaticApproval().
+			testconfig.AutomaticApproval().
 				Enabled().
-				MaxUsersNumber(2000, PerMemberCluster("member1", 1000), PerMemberCluster("member2", 1000)).
-				ResourceCapThreshold(80, PerMemberCluster("member1", 70), PerMemberCluster("member2", 75)))
+				MaxUsersNumber(2000, testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
+				ResourceCapThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionFalse), NewMemberCluster(t, "member2", v1.ConditionTrue))
@@ -317,7 +318,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 		t.Run("unable to read ToolchainStatus", func(t *testing.T) {
 			// given
-			fakeClient := NewFakeClient(t, toolchainStatus, NewToolchainConfigWithReset(t, AutomaticApproval().Enabled()))
+			fakeClient := NewFakeClient(t, toolchainStatus, NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled()))
 			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
 					return fmt.Errorf("some error")
@@ -342,7 +343,7 @@ func TestGetClusterIfApprovedWhenCounterIsNotInitialized(t *testing.T) {
 	// given
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
-	fakeClient := NewFakeClient(t, toolchainStatus, NewToolchainConfigWithReset(t, AutomaticApproval().Enabled()))
+	fakeClient := NewFakeClient(t, toolchainStatus, NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled()))
 	clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 	// when
