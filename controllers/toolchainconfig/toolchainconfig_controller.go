@@ -3,7 +3,6 @@ package toolchainconfig
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -101,18 +100,11 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *Reconciler) updateStatus(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, syncErrs map[string]string, newCondition toolchainv1alpha1.Condition) error {
-	var conditionUpdated bool
-	syncErrsUpdated := reflect.DeepEqual(syncErrs, toolchainConfig.Status.SyncErrors)
-
 	toolchainConfig.Status.SyncErrors = syncErrs
-	toolchainConfig.Status.Conditions, conditionUpdated = condition.AddOrUpdateStatusConditions(toolchainConfig.Status.Conditions, newCondition)
-	if !conditionUpdated && !syncErrsUpdated {
-		// Nothing changed
-		return nil
-	}
+	toolchainConfig.Status.Conditions = condition.AddOrUpdateStatusConditionsWithLastUpdatedTimestamp(toolchainConfig.Status.Conditions, newCondition)
 	err := r.Client.Status().Update(context.TODO(), toolchainConfig)
 	if err != nil {
-		reqLogger.Error(err, "failed to update status for toolchainconfig to sync completed")
+		reqLogger.Error(err, "failed to update status for toolchainconfig")
 	}
 	return err
 }
