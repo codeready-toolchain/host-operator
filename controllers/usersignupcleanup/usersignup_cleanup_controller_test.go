@@ -6,26 +6,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/codeready-toolchain/toolchain-common/pkg/states"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	test2 "github.com/codeready-toolchain/host-operator/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
+	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func TestUserCleanup(t *testing.T) {
@@ -99,24 +98,48 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that an old, unverified UserSignup is deleted", func(t *testing.T) {
 
-		userSignup := test2.NewUserSignup(
-			test2.CreatedBefore(days(8)),
-			test2.VerificationRequired(days(8)),
-		)
+		t.Run("without phone verification initiated", func(t *testing.T) {
+			// given
+			userSignup := test2.NewUserSignup(
+				test2.CreatedBefore(days(8)),
+				test2.VerificationRequired(days(8)),
+			)
+			r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+			// when
+			_, err := r.Reconcile(req)
+			require.NoError(t, err)
+			// then
+			// confirm the UserSignup has been deleted
+			key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+			err = r.Client.Get(context.Background(), key, userSignup)
+			require.True(t, errors.IsNotFound(err))
+			assert.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
+			// and verify the metrics
+			assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // unchanged
+			assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) // incremented
+		})
 
-		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
-
-		_, err := r.Reconcile(req)
-		require.NoError(t, err)
-
-		// Confirm the UserSignup has been deleted
-		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-		err = r.Client.Get(context.Background(), key, userSignup)
-		require.Error(t, err)
-		require.True(t, errors.IsNotFound(err))
-		require.IsType(t, &errors.StatusError{}, err)
-		statusErr := err.(*errors.StatusError)
-		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
+		t.Run("with phone verification initiated", func(t *testing.T) {
+			// given
+			userSignup := test2.NewUserSignup(
+				test2.CreatedBefore(days(8)),
+				test2.VerificationRequired(days(8)),
+				test2.WithAnnotation(toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey, "12345"),
+			)
+			r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+			// when
+			_, err := r.Reconcile(req)
+			require.NoError(t, err)
+			// then
+			// confirm the UserSignup has been deleted
+			key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+			err = r.Client.Get(context.Background(), key, userSignup)
+			require.True(t, errors.IsNotFound(err))
+			assert.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
+			// and verify the metrics
+			assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // incremented
+			assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) // unchanged
+		})
 	})
 
 	t.Run("test that recently reactivated, unverified UserSignup is NOT deleted", func(t *testing.T) {
