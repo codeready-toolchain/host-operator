@@ -6,98 +6,220 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	. "github.com/codeready-toolchain/host-operator/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func TestReconcileWhenToolchainConfigIsAvailable(t *testing.T) {
+func TestReconcile(t *testing.T) {
 	// given
-	config := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxUsersNumber(123, testconfig.PerMemberCluster("member1", 321)))
-	cl := NewFakeClient(t, config)
-	controller := Reconciler{
-		Client: cl,
-		Log:    ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-	}
+	defaultMemberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("5s"))
+	specificMemberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("10s"))
 
-	// when
-	_, err := controller.Reconcile(newRequest())
+	t.Run("success", func(t *testing.T) {
 
-	// then
-	require.NoError(t, err)
-	actual, err := GetConfig(NewFakeClient(t), HostOperatorNs)
-	require.NoError(t, err)
-	assert.False(t, actual.AutomaticApproval().IsEnabled())
-	assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-	assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
+		t.Run("config not found", func(t *testing.T) {
+			hostCl := test.NewFakeClient(t)
+			member1 := NewMemberCluster(t, "member1", v1.ConditionTrue)
+			member2 := NewMemberCluster(t, "member2", v1.ConditionTrue)
+			members := NewGetMemberClusters(member1, member2)
+			controller := newController(hostCl, members)
 
-	t.Run("update with new version", func(t *testing.T) {
-		// given
-		threshold := 100
-		config.Spec.Host.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold = &threshold
-		err := cl.Update(context.TODO(), config)
-		require.NoError(t, err)
+			// when
+			res, err := controller.Reconcile(newRequest())
 
-		// when
-		_, err = controller.Reconcile(newRequest())
+			// then
+			require.Empty(t, res)
+			require.NoError(t, err)
+			actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			require.NoError(t, err)
+			matchesDefaultConfig(t, actual)
+			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).NotExists()
 
-		// then
-		require.NoError(t, err)
-		actual, err := GetConfig(NewFakeClient(t), HostOperatorNs)
-		require.NoError(t, err)
-		assert.False(t, actual.AutomaticApproval().IsEnabled())
-		assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-		assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-		assert.Equal(t, 100, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
+			// check member1 config
+			_, err = getMemberConfig(member1)
+			assert.Error(t, err)
+			assert.True(t, errors.IsNotFound(err))
+
+			// check member2 config
+			_, err = getMemberConfig(member2)
+			assert.Error(t, err)
+			assert.True(t, errors.IsNotFound(err))
+
+		})
+
+		t.Run("config exists", func(t *testing.T) {
+			config := newToolchainConfigWithReset(t,
+				testconfig.AutomaticApproval().Enabled().MaxUsersNumber(123, testconfig.PerMemberCluster("member1", 321)),
+				testconfig.Members().Default(defaultMemberConfig.Spec),
+				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
+			hostCl := test.NewFakeClient(t, config)
+			member1 := NewMemberCluster(t, "member1", v1.ConditionTrue)
+			member2 := NewMemberCluster(t, "member2", v1.ConditionTrue)
+			members := NewGetMemberClusters(member1, member2)
+			controller := newController(hostCl, members)
+
+			// when
+			res, err := controller.Reconcile(newRequest())
+
+			// then
+			require.Equal(t, defaultReconcile, res)
+			require.NoError(t, err)
+			actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			require.NoError(t, err)
+			assert.True(t, actual.AutomaticApproval().IsEnabled())
+			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
+			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
+			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToBeComplete()).HasNoSyncErrors()
+
+			// check member1 config
+			member1Cfg, err := getMemberConfig(member1)
+			assert.NoError(t, err)
+			assert.Equal(t, "10s", *member1Cfg.Spec.MemberStatus.RefreshPeriod)
+
+			// check member2 config
+			member2Cfg, err := getMemberConfig(member2)
+			assert.NoError(t, err)
+			assert.Equal(t, "5s", *member2Cfg.Spec.MemberStatus.RefreshPeriod)
+
+			t.Run("cache updated with new version", func(t *testing.T) {
+				// given
+				err := hostCl.Get(context.TODO(), types.NamespacedName{Name: config.Name, Namespace: config.Namespace}, config)
+				require.NoError(t, err)
+				threshold := 100
+				config.Spec.Host.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold = &threshold
+				newRefreshPeriod := "20s"
+				config.Spec.Members.Default.MemberStatus.RefreshPeriod = &newRefreshPeriod
+				err = hostCl.Update(context.TODO(), config)
+				require.NoError(t, err)
+
+				// when
+				res, err := controller.Reconcile(newRequest())
+
+				// then
+				require.Equal(t, defaultReconcile, res)
+				require.NoError(t, err)
+				actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+				require.NoError(t, err)
+				assert.True(t, actual.AutomaticApproval().IsEnabled())
+				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
+				assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
+				assert.Equal(t, 100, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
+				testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToBeComplete()).HasNoSyncErrors()
+
+				// check member1 config is unchanged
+				member1Cfg, err := getMemberConfig(member1)
+				assert.NoError(t, err)
+				assert.Equal(t, "10s", *member1Cfg.Spec.MemberStatus.RefreshPeriod)
+
+				// check member2 config is updated
+				member2Cfg, err := getMemberConfig(member2)
+				assert.NoError(t, err)
+				assert.Equal(t, "20s", *member2Cfg.Spec.MemberStatus.RefreshPeriod)
+			})
+
+			t.Run("subsequent get fail - cache should be same", func(t *testing.T) {
+				// given
+				err := hostCl.Get(context.TODO(), types.NamespacedName{Name: config.Name, Namespace: config.Namespace}, config)
+				require.NoError(t, err)
+				threshold := 100
+				config.Spec.Host.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold = &threshold
+				err = hostCl.Update(context.TODO(), config)
+				require.NoError(t, err)
+				hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+					return fmt.Errorf("client error")
+				}
+
+				// when
+				res, err := controller.Reconcile(newRequest())
+
+				// then
+				require.Equal(t, defaultReconcile, res)
+				require.EqualError(t, err, "client error")
+				actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+				require.NoError(t, err)
+				assert.True(t, actual.AutomaticApproval().IsEnabled())
+				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
+				assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
+				assert.Equal(t, 100, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
+
+				// check member1 config is unchanged
+				member1Cfg, err := getMemberConfig(member1)
+				assert.NoError(t, err)
+				assert.Equal(t, "10s", *member1Cfg.Spec.MemberStatus.RefreshPeriod)
+
+				// check member2 config is unchanged
+				member2Cfg, err := getMemberConfig(member2)
+				assert.NoError(t, err)
+				assert.Equal(t, "20s", *member2Cfg.Spec.MemberStatus.RefreshPeriod)
+			})
+		})
 	})
-}
 
-func TestReconcileWhenReturnsError(t *testing.T) {
-	// given
-	cl := NewFakeClient(t)
-	cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-		return fmt.Errorf("some error")
-	}
-	controller := Reconciler{
-		Client: cl,
-		Log:    ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-	}
+	t.Run("failures", func(t *testing.T) {
 
-	// when
-	_, err := controller.Reconcile(newRequest())
+		t.Run("initial get failed", func(t *testing.T) {
+			// given
+			config := newToolchainConfigWithReset(t,
+				testconfig.AutomaticApproval().Enabled().MaxUsersNumber(123, testconfig.PerMemberCluster("member1", 321)),
+				testconfig.Members().Default(defaultMemberConfig.Spec),
+				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
+			hostCl := test.NewFakeClient(t, config)
+			members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+			controller := newController(hostCl, members)
+			hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+				return fmt.Errorf("client error")
+			}
 
-	// then
-	require.Error(t, err)
-	actual, err := GetConfig(NewFakeClient(t), HostOperatorNs)
-	require.NoError(t, err)
-	matchesDefaultConfig(t, actual)
-}
+			// when
+			res, err := controller.Reconcile(newRequest())
 
-func TestReconcileWhenToolchainConfigIsNotPresent(t *testing.T) {
-	// given
-	controller := Reconciler{
-		Client: NewFakeClient(t),
-		Log:    ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-	}
+			// then
+			require.Equal(t, defaultReconcile, res)
+			require.EqualError(t, err, "client error")
+			actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			require.NoError(t, err)
+			matchesDefaultConfig(t, actual)
+		})
 
-	// when
-	_, err := controller.Reconcile(newRequest())
+		t.Run("sync failed", func(t *testing.T) {
+			// given
+			config := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled().MaxUsersNumber(123, testconfig.PerMemberCluster("member1", 321)), testconfig.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec))
+			hostCl := test.NewFakeClient(t, config)
+			members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+			controller := newController(hostCl, members)
 
-	// then
-	require.NoError(t, err)
-	actual, err := GetConfig(NewFakeClient(t), HostOperatorNs)
-	require.NoError(t, err)
-	matchesDefaultConfig(t, actual)
+			// when
+			res, err := controller.Reconcile(newRequest())
+
+			// then
+			require.NoError(t, err)
+			require.Equal(t, defaultReconcile, res)
+			actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			require.NoError(t, err)
+			assert.True(t, actual.AutomaticApproval().IsEnabled())
+			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
+			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
+			assert.Equal(t, 80, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
+			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToSyncFailure()).HasSyncErrors(map[string]string{"missing-member": "specific member configuration exists but no matching toolchaincluster was found"})
+		})
+	})
 }
 
 func newRequest() reconcile.Request {
 	return reconcile.Request{
-		NamespacedName: NamespacedName(HostOperatorNs, "config"),
+		NamespacedName: test.NamespacedName(test.HostOperatorNs, "config"),
 	}
 }
 
@@ -113,4 +235,18 @@ func matchesDefaultConfig(t *testing.T, actual ToolchainConfig) {
 	assert.Equal(t, 80, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
 	assert.Empty(t, actual.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
 	assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationInDays())
+}
+
+func newController(hostCl client.Client, members cluster.GetMemberClustersFunc) Reconciler {
+	return Reconciler{
+		Client:         hostCl,
+		Log:            ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
+		GetMembersFunc: members,
+	}
+}
+
+func getMemberConfig(cluster *cluster.CachedToolchainCluster) (*toolchainv1alpha1.MemberOperatorConfig, error) {
+	memberConfig := &toolchainv1alpha1.MemberOperatorConfig{}
+	err := cluster.Client.Get(context.TODO(), test.NamespacedName(cluster.OperatorNamespace, "config"), memberConfig)
+	return memberConfig, err
 }
