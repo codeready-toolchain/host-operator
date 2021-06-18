@@ -5,9 +5,8 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/states"
-
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"

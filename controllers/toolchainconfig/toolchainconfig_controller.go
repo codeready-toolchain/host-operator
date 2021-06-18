@@ -2,10 +2,17 @@ package toolchainconfig
 
 import (
 	"context"
+	"fmt"
+	"time"
+
+	"github.com/go-logr/logr"
+
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
-	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -15,6 +22,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+const configResourceName = "config"
+
+// Requeue every 10 seconds by default to ensure the MemberOperatorConfig on each member remains synchronized with the ToolchainConfig
+var DefaultReconcile = reconcile.Result{RequeueAfter: 10 * time.Second}
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -35,8 +47,9 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 
 // Reconciler reconciles a ToolchainConfig object
 type Reconciler struct {
-	Client client.Client
-	Log    logr.Logger
+	Client         client.Client
+	Log            logr.Logger
+	GetMembersFunc cluster.GetMemberClustersFunc
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -60,12 +73,56 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			reqLogger.Error(err, "it looks like the ToolchainConfig resource with the name 'config' was removed - the cache will use the latest version of the resource")
+			reqLogger.Error(err, "it looks like the toolchainconfig resource was removed - the cache will use the latest version of the resource")
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		reqLogger.Error(err, "error getting the toolchainconfig resource")
+		return DefaultReconcile, err
 	}
-	updateConfig(toolchainConfig)
-	return reconcile.Result{}, nil
+	UpdateConfig(toolchainConfig)
+
+	// Sync member configs to member clusters
+	sync := Synchronizer{
+		logger:         reqLogger,
+		getMembersFunc: r.GetMembersFunc,
+	}
+
+	if syncErrs := sync.SyncMemberConfigs(toolchainConfig); len(syncErrs) > 0 {
+		for cluster, errMsg := range syncErrs {
+			err := fmt.Errorf(errMsg)
+			reqLogger.Error(err, "error syncing to member cluster '%s'", cluster)
+		}
+		return DefaultReconcile, r.updateStatus(reqLogger, toolchainConfig, syncErrs, ToSyncFailure())
+	}
+	return DefaultReconcile, r.updateStatus(reqLogger, toolchainConfig, map[string]string{}, ToBeComplete())
+}
+
+func (r *Reconciler) updateStatus(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, syncErrs map[string]string, newCondition toolchainv1alpha1.Condition) error {
+	toolchainConfig.Status.SyncErrors = syncErrs
+	toolchainConfig.Status.Conditions = condition.AddOrUpdateStatusConditionsWithLastUpdatedTimestamp(toolchainConfig.Status.Conditions, newCondition)
+	err := r.Client.Status().Update(context.TODO(), toolchainConfig)
+	if err != nil {
+		reqLogger.Error(err, "failed to update status for toolchainconfig")
+	}
+	return err
+}
+
+// ToBeComplete condition when the update completed with success
+func ToBeComplete() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ToolchainConfigSyncComplete,
+		Status: corev1.ConditionTrue,
+		Reason: toolchainv1alpha1.ToolchainConfigSyncedReason,
+	}
+}
+
+// ToFailure condition when an error occurred
+func ToSyncFailure() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ToolchainConfigSyncComplete,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.ToolchainConfigSyncFailedReason,
+		Message: "errors occurred while syncing MemberOperatorConfigs to the member clusters",
+	}
 }

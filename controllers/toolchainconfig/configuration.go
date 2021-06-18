@@ -6,6 +6,12 @@ type ToolchainConfig struct {
 	cfg *toolchainv1alpha1.ToolchainConfigSpec
 }
 
+func NewToolchainConfig(cfg *toolchainv1alpha1.ToolchainConfigSpec) ToolchainConfig {
+	return ToolchainConfig{
+		cfg: cfg,
+	}
+}
+
 func (c *ToolchainConfig) AutomaticApproval() AutoApprovalConfig {
 	return AutoApprovalConfig{c.cfg.Host.AutomaticApproval}
 }
