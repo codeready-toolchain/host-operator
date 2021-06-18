@@ -25,7 +25,7 @@ import (
 
 const configResourceName = "config"
 
-// Requeue every 10 seconds by default to ensure the MemberOperatorConfig on each member remains synchronized with the ToolchainConfig
+// DefaultReconcile requeue every 10 seconds by default to ensure the MemberOperatorConfig on each member remains synchronized with the ToolchainConfig
 var DefaultReconcile = reconcile.Result{RequeueAfter: 10 * time.Second}
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
