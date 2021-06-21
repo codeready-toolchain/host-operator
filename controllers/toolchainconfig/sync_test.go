@@ -1,4 +1,4 @@
-package toolchainconfig
+package toolchainconfig_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
@@ -30,13 +31,13 @@ func TestSyncMemberConfigs(t *testing.T) {
 			toolchainConfig := testconfig.NewToolchainConfig(
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
-			s := synchronizer{
-				logger:         ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-				getMembersFunc: NewGetMemberClusters(),
-			}
+			s := toolchainconfig.NewSynchronizer(
+				ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
+				NewGetMemberClusters(),
+			)
 
 			// when
-			syncErrors := s.syncMemberConfigs(toolchainConfig)
+			syncErrors := s.SyncMemberConfigs(toolchainConfig)
 
 			// then
 			require.Empty(t, syncErrors)
@@ -47,13 +48,13 @@ func TestSyncMemberConfigs(t *testing.T) {
 			toolchainConfig := testconfig.NewToolchainConfig(
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
-			s := synchronizer{
-				logger:         ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-				getMembersFunc: NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue)),
-			}
+			s := toolchainconfig.NewSynchronizer(
+				ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
+				NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue)),
+			)
 
 			// when
-			syncErrors := s.syncMemberConfigs(toolchainConfig)
+			syncErrors := s.SyncMemberConfigs(toolchainConfig)
 
 			// then
 			require.Empty(t, syncErrors)
@@ -71,13 +72,13 @@ func TestSyncMemberConfigs(t *testing.T) {
 			toolchainConfig := testconfig.NewToolchainConfig(
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
-			s := synchronizer{
-				logger:         ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-				getMembersFunc: NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberClusterWithClient(memberCl, "member2", v1.ConditionTrue)),
-			}
+			s := toolchainconfig.NewSynchronizer(
+				ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
+				NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberClusterWithClient(memberCl, "member2", v1.ConditionTrue)),
+			)
 
 			// when
-			syncErrors := s.syncMemberConfigs(toolchainConfig)
+			syncErrors := s.SyncMemberConfigs(toolchainConfig)
 
 			// then
 			require.Len(t, syncErrors, 1)
@@ -97,13 +98,13 @@ func TestSyncMemberConfigs(t *testing.T) {
 			toolchainConfig := testconfig.NewToolchainConfig(
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
-			s := synchronizer{
-				logger:         ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-				getMembersFunc: NewGetMemberClusters(NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue), NewMemberClusterWithClient(memberCl2, "member2", v1.ConditionTrue)),
-			}
+			s := toolchainconfig.NewSynchronizer(
+				ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
+				NewGetMemberClusters(NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue), NewMemberClusterWithClient(memberCl2, "member2", v1.ConditionTrue)),
+			)
 
 			// when
-			syncErrors := s.syncMemberConfigs(toolchainConfig)
+			syncErrors := s.SyncMemberConfigs(toolchainConfig)
 
 			// then
 			require.Len(t, syncErrors, 2)
@@ -117,13 +118,13 @@ func TestSyncMemberConfigs(t *testing.T) {
 			toolchainConfig := testconfig.NewToolchainConfig(
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
-			s := synchronizer{
-				logger:         ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-				getMembersFunc: NewGetMemberClusters(NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)),
-			}
+			s := toolchainconfig.NewSynchronizer(
+				ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
+				NewGetMemberClusters(NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)),
+			)
 
 			// when
-			syncErrors := s.syncMemberConfigs(toolchainConfig)
+			syncErrors := s.SyncMemberConfigs(toolchainConfig)
 
 			// then
 			require.Len(t, syncErrors, 1)
@@ -142,7 +143,7 @@ func TestSyncMemberConfig(t *testing.T) {
 			memberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
-			err := syncMemberConfig(memberConfig.Spec, memberCluster)
+			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
 
 			// then
 			require.NoError(t, err)
@@ -160,7 +161,7 @@ func TestSyncMemberConfig(t *testing.T) {
 			memberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
-			err := syncMemberConfig(memberConfig.Spec, memberCluster)
+			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
 
 			// then
 			require.NoError(t, err)
@@ -182,7 +183,7 @@ func TestSyncMemberConfig(t *testing.T) {
 			memberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
-			err := syncMemberConfig(memberConfig.Spec, memberCluster)
+			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
 
 			// then
 			require.EqualError(t, err, "client error")
@@ -202,7 +203,7 @@ func TestSyncMemberConfig(t *testing.T) {
 			memberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
-			err := syncMemberConfig(memberConfig.Spec, memberCluster)
+			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
 
 			// then
 			require.EqualError(t, err, "client update error")
