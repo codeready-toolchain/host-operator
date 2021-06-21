@@ -1,4 +1,4 @@
-package toolchainconfig
+package toolchainconfig_test
 
 import (
 	"context"
@@ -6,8 +6,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,7 +23,7 @@ func TestCache(t *testing.T) {
 	cl := NewFakeClient(t)
 
 	// when
-	defaultConfig, err := GetConfig(cl, HostOperatorNs)
+	defaultConfig, err := toolchainconfig.GetConfig(cl, HostOperatorNs)
 
 	// then
 	require.NoError(t, err)
@@ -34,7 +36,7 @@ func TestCache(t *testing.T) {
 		cl := NewFakeClient(t, config)
 
 		// when
-		actual, err := GetConfig(cl, HostOperatorNs)
+		actual, err := toolchainconfig.GetConfig(cl, HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -47,7 +49,7 @@ func TestCache(t *testing.T) {
 			cl := NewFakeClient(t, newConfig)
 
 			// when
-			actual, err := GetConfig(cl, HostOperatorNs)
+			actual, err := toolchainconfig.GetConfig(cl, HostOperatorNs)
 
 			// then
 			require.NoError(t, err)
@@ -61,10 +63,10 @@ func TestCache(t *testing.T) {
 			cl := NewFakeClient(t)
 
 			// when
-			updateConfig(newConfig)
+			toolchainconfig.UpdateConfig(newConfig)
 
 			// then
-			actual, err := GetConfig(cl, HostOperatorNs)
+			actual, err := toolchainconfig.GetConfig(cl, HostOperatorNs)
 			require.NoError(t, err)
 			assert.Equal(t, 666, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 			assert.Empty(t, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
@@ -83,7 +85,7 @@ func TestGetConfigFailed(t *testing.T) {
 		}
 
 		// when
-		defaultConfig, err := GetConfig(cl, HostOperatorNs)
+		defaultConfig, err := toolchainconfig.GetConfig(cl, HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -100,7 +102,7 @@ func TestGetConfigFailed(t *testing.T) {
 		}
 
 		// when
-		defaultConfig, err := GetConfig(cl, HostOperatorNs)
+		defaultConfig, err := toolchainconfig.GetConfig(cl, HostOperatorNs)
 
 		// then
 		require.Error(t, err)
@@ -125,7 +127,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 			latch.Wait()
 
 			// when
-			config, err := GetConfig(cl, HostOperatorNs)
+			config, err := toolchainconfig.GetConfig(cl, HostOperatorNs)
 
 			// then
 			require.NoError(t, err)
@@ -136,14 +138,14 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 			defer waitForFinished.Done()
 			latch.Wait()
 			config := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxUsersNumber(i+1, testconfig.PerMemberCluster(fmt.Sprintf("member%d", i), i)))
-			updateConfig(config)
+			toolchainconfig.UpdateConfig(config)
 		}(i)
 	}
 
 	// when
 	latch.Done()
 	waitForFinished.Wait()
-	config, err := GetConfig(NewFakeClient(t), HostOperatorNs)
+	config, err := toolchainconfig.GetConfig(NewFakeClient(t), HostOperatorNs)
 
 	// then
 	require.NoError(t, err)
