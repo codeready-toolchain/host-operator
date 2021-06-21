@@ -22,7 +22,7 @@ var mapperLog = ctrl.Log.WithName("UserSignupToMasterUserRecordMapper")
 func (b UserSignupToMasterUserRecordMapper) Map(obj handler.MapObject) []reconcile.Request {
 	if userSignup, ok := obj.Object.(*toolchainv1alpha1.UserSignup); ok {
 		// look-up any associated MasterUserRecord using the UserSignup's Status.CompliantUsername value
-		var mur *toolchainv1alpha1.MasterUserRecord
+		mur := &toolchainv1alpha1.MasterUserRecord{}
 
 		if err := b.client.Get(context.TODO(), client.ObjectKey{
 			Namespace: userSignup.Namespace,
