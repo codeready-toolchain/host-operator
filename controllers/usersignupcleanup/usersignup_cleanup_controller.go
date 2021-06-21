@@ -8,6 +8,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/go-logr/logr"
@@ -144,6 +145,10 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 // DeleteUserSignup deletes the specified UserSignup
 func (r *Reconciler) DeleteUserSignup(userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger) error {
+	// before deleting the resource, we want to "remember" if the user triggered a phone verification or not,
+	// based on the presence of the `toolchain.dev.openshift.com/verification-code` annotation
+	_, phoneVerificationTriggered := userSignup.Annotations[toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey]
+
 	propagationPolicy := metav1.DeletePropagationForeground
 	err := r.Client.Delete(context.TODO(), userSignup, &client.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
@@ -151,6 +156,13 @@ func (r *Reconciler) DeleteUserSignup(userSignup *toolchainv1alpha1.UserSignup, 
 	if err != nil {
 		return err
 	}
-	logger.Info("Deleted UserSignup", "Name", userSignup.Name)
+	logger.Info("Deleted UserSignup", "name", userSignup.Name)
+	// increment the appropriate counter, based whether the phone verification was triggered or not
+	if phoneVerificationTriggered {
+		metrics.UserSignupDeletedWithInitiatingVerificationTotal.Inc()
+	} else {
+		metrics.UserSignupDeletedWithoutInitiatingVerificationTotal.Inc()
+	}
+	logger.Info("incremented counter", "name", userSignup.Name, "phone verification triggered", phoneVerificationTriggered)
 	return nil
 }
