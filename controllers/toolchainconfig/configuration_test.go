@@ -1,8 +1,9 @@
-package toolchainconfig
+package toolchainconfig_test
 
 import (
 	"testing"
 
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 
 	"github.com/stretchr/testify/assert"
@@ -11,7 +12,7 @@ import (
 func TestAutomaticApprovalConfig(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		cfg := newToolchainConfigWithReset(t)
-		toolchainCfg := ToolchainConfig{cfg: &cfg.Spec}
+		toolchainCfg := toolchainconfig.NewToolchainConfig(&cfg.Spec)
 
 		assert.False(t, toolchainCfg.AutomaticApproval().IsEnabled())
 		assert.Equal(t, 1000, toolchainCfg.AutomaticApproval().MaxNumberOfUsersOverall())
@@ -21,7 +22,7 @@ func TestAutomaticApprovalConfig(t *testing.T) {
 	})
 	t.Run("non-default", func(t *testing.T) {
 		cfg := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled().MaxUsersNumber(123, testconfig.PerMemberCluster("member1", 321)).ResourceCapThreshold(456, testconfig.PerMemberCluster("member1", 654)))
-		toolchainCfg := ToolchainConfig{cfg: &cfg.Spec}
+		toolchainCfg := toolchainconfig.NewToolchainConfig(&cfg.Spec)
 
 		assert.True(t, toolchainCfg.AutomaticApproval().IsEnabled())
 		assert.Equal(t, 123, toolchainCfg.AutomaticApproval().MaxNumberOfUsersOverall())
@@ -34,13 +35,13 @@ func TestAutomaticApprovalConfig(t *testing.T) {
 func TestDeactivationConfig(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		cfg := newToolchainConfigWithReset(t)
-		toolchainCfg := ToolchainConfig{cfg: &cfg.Spec}
+		toolchainCfg := toolchainconfig.NewToolchainConfig(&cfg.Spec)
 
 		assert.Equal(t, 3, toolchainCfg.Deactivation().DeactivatingNotificationInDays())
 	})
 	t.Run("non-default", func(t *testing.T) {
 		cfg := newToolchainConfigWithReset(t, testconfig.Deactivation().DeactivatingNotificationDays(5))
-		toolchainCfg := ToolchainConfig{cfg: &cfg.Spec}
+		toolchainCfg := toolchainconfig.NewToolchainConfig(&cfg.Spec)
 
 		assert.Equal(t, 5, toolchainCfg.Deactivation().DeactivatingNotificationInDays())
 	})
