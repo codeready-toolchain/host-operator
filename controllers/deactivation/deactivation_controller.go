@@ -50,7 +50,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err := c.Watch(
 		&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
 		&handler.EnqueueRequestsFromMapFunc{
-			ToRequests: UserSignupToMasterUserRecordMapper{client: mgr.GetClient()},
+			ToRequests: UserSignupToMasterUserRecordMapper{},
 		}); err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	. "github.com/codeready-toolchain/host-operator/test"
@@ -27,27 +26,7 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 			},
 		}
 
-		mur := &toolchainv1alpha1.MasterUserRecord{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: userSignup.Namespace,
-			},
-			Spec:   toolchainv1alpha1.MasterUserRecordSpec{},
-			Status: toolchainv1alpha1.MasterUserRecordStatus{},
-		}
-
-		userSignup2 := &toolchainv1alpha1.UserSignup{
-			ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
-			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username: "alice.mayweather.doe@redhat.com",
-			},
-		}
-
-		c := test.NewFakeClient(t, userSignup, userSignup2, mur)
-
-		mapper := &UserSignupToMasterUserRecordMapper{
-			client: c,
-		}
+		mapper := &UserSignupToMasterUserRecordMapper{}
 
 		// This is required for the mapper to function
 		restore := test.SetEnvVarAndRestore(t, k8sutil.WatchNamespaceEnvVar, test.HostOperatorNs)
@@ -59,8 +38,33 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 
 		require.Len(t, req, 1)
 		require.Equal(t, types.NamespacedName{
-			Namespace: mur.Namespace,
-			Name:      mur.Name,
+			Namespace: userSignup.Namespace,
+			Name:      "foo",
 		}, req[0].NamespacedName)
 	})
+
+	t.Run("test UserSignup doesn't have compliant username", func(t *testing.T) {
+		userSignup := &toolchainv1alpha1.UserSignup{
+			ObjectMeta: NewUserSignupObjectMeta("", "bravo@redhat.com"),
+			Spec: toolchainv1alpha1.UserSignupSpec{
+				Username: "bravo@redhat.com",
+			},
+			Status: toolchainv1alpha1.UserSignupStatus{
+				CompliantUsername: "",
+			},
+		}
+
+		mapper := &UserSignupToMasterUserRecordMapper{}
+
+		// This is required for the mapper to function
+		restore := test.SetEnvVarAndRestore(t, k8sutil.WatchNamespaceEnvVar, test.HostOperatorNs)
+		defer restore()
+
+		req := mapper.Map(handler.MapObject{
+			Object: userSignup,
+		})
+
+		require.Len(t, req, 0)
+	})
+
 }
