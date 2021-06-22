@@ -1,1 +1,1 @@
-Notice: Your Developer Sandbox for Red Hat OpenShift Beta account is provisioned
+Notice: Your Developer Sandbox for Red Hat OpenShift account is provisioned
