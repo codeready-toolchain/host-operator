@@ -22,7 +22,7 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -196,7 +196,7 @@ func TestReconcile(t *testing.T) {
 					userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
 						{
 							Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-							Status:             v1.ConditionTrue,
+							Status:             corev1.ConditionTrue,
 							LastTransitionTime: metav1.Time{Time: time.Now()},
 							Reason:             toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason,
 						},
@@ -226,7 +226,7 @@ func TestReconcile(t *testing.T) {
 						userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
 							{
 								Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-								Status:             v1.ConditionTrue,
+								Status:             corev1.ConditionTrue,
 								LastTransitionTime: metav1.Time{Time: time.Now().Add(time.Duration(-3) * time.Hour * 24)},
 								Reason:             toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason,
 							},

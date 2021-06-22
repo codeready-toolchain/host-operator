@@ -10,6 +10,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -301,11 +302,6 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	murs := CreateMultipleMurs(t, "user-", 3, "member-1")
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member-1", WithUserAccountCount(0)),
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.Internal): 0,
-			string(metrics.External): 0,
-		}),
-		// outdated metric which should be removed during the initialization
 		WithMetric("outdated", toolchainv1alpha1.Metric{
 			"cookie":    1,
 			"chocolate": 2,
@@ -313,6 +309,65 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	)
 	initObjs := append([]runtime.Object{}, murs...)
 	initObjs = append(initObjs, usersignups...)
+
+	// when
+	InitializeCounters(t, toolchainStatus, initObjs...)
+
+	// then
+	AssertThatCountersAndMetrics(t).
+		HaveUserAccountsForCluster("member-1", 3).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 1,
+			"2,internal": 1,
+			"3,internal": 1,
+		}).
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			string(metrics.Internal): 3, // all MURs have `@redhat.com` email address
+		})
+	AssertThatGivenToolchainStatus(t, toolchainStatus).
+		HasUserAccountCount("member-1", 3).
+		HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 1,
+			"2,internal": 1,
+			"3,internal": 1,
+		}).
+		HasMasterUserRecordsPerDomain(map[string]int{
+			string(metrics.Internal): 3, // all MURs have `@redhat.com` email address
+		}).
+		HasNoMetric("outdated")
+}
+
+func TestForceInitializeCounterByLoadingExistingResources(t *testing.T) {
+	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	//this will be ignored by resetting when initializing counters
+	counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
+	counter.IncrementUserAccountCount(logger, "member-1")
+
+	usersignups := CreateMultipleUserSignups("user-", 3) // all users have an `@redhat.com` email address
+	murs := CreateMultipleMurs(t, "user-", 3, "member-1")
+	// all expected metrics are set ...
+	toolchainStatus := NewToolchainStatus(
+		WithMember("member-1", WithUserAccountCount(0)),
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			string(metrics.Internal): 1,
+			string(metrics.External): 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+			"1,internal": 1,
+		}),
+		// outdated metric which should be removed during the initialization
+		WithMetric("outdated", toolchainv1alpha1.Metric{
+			"cookie":    1,
+			"chocolate": 2,
+		}),
+	)
+	// ... but config flag will force synchronization from resources
+	toolchainConfig := testconfig.NewToolchainConfig(testconfig.Metrics().ForceSynchronization(true))
+	initObjs := append([]runtime.Object{}, murs...)
+	initObjs = append(initObjs, usersignups...)
+	initObjs = append(initObjs, toolchainConfig)
 
 	// when
 	InitializeCounters(t, toolchainStatus, initObjs...)

@@ -13,14 +13,21 @@ import (
 	"github.com/go-logr/logr"
 )
 
-type synchronizer struct {
+type Synchronizer struct {
 	getMembersFunc cluster.GetMemberClustersFunc
 	logger         logr.Logger
 }
 
-// syncMemberConfigs retrieves member operator configurations and syncs the appropriate configuration to each member cluster
+func NewSynchronizer(logger logr.Logger, getMembersFunc cluster.GetMemberClustersFunc) Synchronizer {
+	return Synchronizer{
+		getMembersFunc: getMembersFunc,
+		logger:         logger,
+	}
+}
+
+// SyncMemberConfigs retrieves member operator configurations and syncs the appropriate configuration to each member cluster
 // returns a map of any errors encountered indexed by cluster name
-func (s *synchronizer) syncMemberConfigs(sourceConfig *toolchainv1alpha1.ToolchainConfig) map[string]string {
+func (s *Synchronizer) SyncMemberConfigs(sourceConfig *toolchainv1alpha1.ToolchainConfig) map[string]string {
 	toolchainConfig := sourceConfig.DeepCopy()
 
 	// get configs for member toolchainclusters
@@ -43,7 +50,7 @@ func (s *synchronizer) syncMemberConfigs(sourceConfig *toolchainv1alpha1.Toolcha
 			delete(membersWithSpecificConfig, toolchainCluster.Name)
 		}
 
-		if err := syncMemberConfig(memberConfigSpec, toolchainCluster); err != nil {
+		if err := SyncMemberConfig(memberConfigSpec, toolchainCluster); err != nil {
 			s.logger.Error(err, "failed to sync MemberOperatorConfig", "cluster_name", toolchainCluster.Name)
 			syncErrors[toolchainCluster.Name] = err.Error()
 		}
@@ -58,7 +65,7 @@ func (s *synchronizer) syncMemberConfigs(sourceConfig *toolchainv1alpha1.Toolcha
 	return syncErrors
 }
 
-func syncMemberConfig(memberConfigSpec toolchainv1alpha1.MemberOperatorConfigSpec, memberCluster *cluster.CachedToolchainCluster) error {
+func SyncMemberConfig(memberConfigSpec toolchainv1alpha1.MemberOperatorConfigSpec, memberCluster *cluster.CachedToolchainCluster) error {
 	memberConfig := &toolchainv1alpha1.MemberOperatorConfig{}
 	if err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: configResourceName}, memberConfig); err != nil {
 		if errors.IsNotFound(err) {
