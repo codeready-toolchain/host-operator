@@ -3,6 +3,8 @@ package deactivation
 import (
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -15,6 +17,10 @@ import (
 )
 
 func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
+	// This is required for the mapper to function
+	restore := test.SetEnvVarAndRestore(t, k8sutil.WatchNamespaceEnvVar, test.HostOperatorNs)
+	defer restore()
+
 	t.Run("test UserSignupToMasterUserRecordMapper maps correctly", func(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: NewUserSignupObjectMeta("", "foo@redhat.com"),
@@ -27,10 +33,6 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 		}
 
 		mapper := &UserSignupToMasterUserRecordMapper{}
-
-		// This is required for the mapper to function
-		restore := test.SetEnvVarAndRestore(t, k8sutil.WatchNamespaceEnvVar, test.HostOperatorNs)
-		defer restore()
 
 		req := mapper.Map(handler.MapObject{
 			Object: userSignup,
@@ -56,12 +58,30 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 
 		mapper := &UserSignupToMasterUserRecordMapper{}
 
-		// This is required for the mapper to function
-		restore := test.SetEnvVarAndRestore(t, k8sutil.WatchNamespaceEnvVar, test.HostOperatorNs)
-		defer restore()
-
 		req := mapper.Map(handler.MapObject{
 			Object: userSignup,
+		})
+
+		require.Len(t, req, 0)
+	})
+
+	t.Run("test non-UserSignup doesn't map", func(t *testing.T) {
+
+		mur := &toolchainv1alpha1.MasterUserRecord{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "echo",
+				Namespace:         test.HostOperatorNs,
+				CreationTimestamp: metav1.Now(),
+			},
+			Spec: toolchainv1alpha1.MasterUserRecordSpec{
+				UserID: "echo",
+			},
+			Status: toolchainv1alpha1.MasterUserRecordStatus{},
+		}
+
+		mapper := &UserSignupToMasterUserRecordMapper{}
+		req := mapper.Map(handler.MapObject{
+			Object: mur,
 		})
 
 		require.Len(t, req, 0)
