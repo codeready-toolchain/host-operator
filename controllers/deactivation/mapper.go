@@ -20,7 +20,7 @@ func (b UserSignupToMasterUserRecordMapper) Map(obj handler.MapObject) []reconci
 	if userSignup, ok := obj.Object.(*toolchainv1alpha1.UserSignup); ok {
 
 		if userSignup.Status.CompliantUsername != "" {
-			return []reconcile.Request{reconcile.Request{
+			return []reconcile.Request{{
 				NamespacedName: types.NamespacedName{Namespace: userSignup.Namespace, Name: userSignup.Status.CompliantUsername},
 			}}
 		}
