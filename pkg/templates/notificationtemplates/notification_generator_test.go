@@ -23,7 +23,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			assert.True(t, found)
-			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift Beta account is deactivated", template.Subject)
+			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account is deactivated", template.Subject)
 			assert.Contains(t, template.Content, "Your account is now deactivated and all your data on Developer Sandbox for Red Hat OpenShift has been deleted.")
 		})
 		t.Run("get userprovisioned notification template", func(t *testing.T) {
@@ -34,7 +34,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			assert.True(t, found)
-			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift Beta account is provisioned", template.Subject)
+			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account is provisioned", template.Subject)
 			assert.Contains(t, template.Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
 		})
 		t.Run("ensure cache is used", func(t *testing.T) {
@@ -47,7 +47,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			require.NotEmpty(t, template["userprovisioned"])
-			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift Beta account is provisioned", template["userprovisioned"].Subject)
+			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account is provisioned", template["userprovisioned"].Subject)
 			assert.Contains(t, template["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
 			assert.Equal(t, template["userprovisioned"], *UserProvisioned)
 		})
