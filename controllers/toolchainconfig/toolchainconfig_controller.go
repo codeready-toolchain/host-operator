@@ -25,8 +25,8 @@ import (
 
 const configResourceName = "config"
 
-// Requeue every 10 seconds by default to ensure the MemberOperatorConfig on each member remains synchronized with the ToolchainConfig
-var defaultReconcile = reconcile.Result{RequeueAfter: 10 * time.Second}
+// DefaultReconcile requeue every 10 seconds by default to ensure the MemberOperatorConfig on each member remains synchronized with the ToolchainConfig
+var DefaultReconcile = reconcile.Result{RequeueAfter: 10 * time.Second}
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
@@ -78,24 +78,24 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		}
 		// Error reading the object - requeue the request.
 		reqLogger.Error(err, "error getting the toolchainconfig resource")
-		return defaultReconcile, err
+		return DefaultReconcile, err
 	}
-	updateConfig(toolchainConfig)
+	UpdateConfig(toolchainConfig)
 
 	// Sync member configs to member clusters
-	sync := synchronizer{
+	sync := Synchronizer{
 		logger:         reqLogger,
 		getMembersFunc: r.GetMembersFunc,
 	}
 
-	if syncErrs := sync.syncMemberConfigs(toolchainConfig); len(syncErrs) > 0 {
+	if syncErrs := sync.SyncMemberConfigs(toolchainConfig); len(syncErrs) > 0 {
 		for cluster, errMsg := range syncErrs {
 			err := fmt.Errorf(errMsg)
 			reqLogger.Error(err, "error syncing to member cluster '%s'", cluster)
 		}
-		return defaultReconcile, r.updateStatus(reqLogger, toolchainConfig, syncErrs, ToSyncFailure())
+		return DefaultReconcile, r.updateStatus(reqLogger, toolchainConfig, syncErrs, ToSyncFailure())
 	}
-	return defaultReconcile, r.updateStatus(reqLogger, toolchainConfig, map[string]string{}, ToBeComplete())
+	return DefaultReconcile, r.updateStatus(reqLogger, toolchainConfig, map[string]string{}, ToBeComplete())
 }
 
 func (r *Reconciler) updateStatus(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, syncErrs map[string]string, newCondition toolchainv1alpha1.Condition) error {

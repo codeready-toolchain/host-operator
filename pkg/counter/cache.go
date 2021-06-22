@@ -8,7 +8,9 @@ import (
 	"sync"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	"github.com/pkg/errors"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -225,9 +227,14 @@ func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainSt
 	}
 
 	// initialize the cached counters from the UserSignup and MasterUserRecord resources.
+	config, err := toolchainconfig.GetConfig(cl, toolchainStatus.Namespace)
+	if err != nil {
+		return errors.Wrap(err, "unable to initialize counter cache")
+	}
 	_, masterUserRecordsPerDomainMetricExists := toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey]
 	_, usersPerActivationAndDomainMetricKeyExists := toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey]
-	if !usersPerActivationAndDomainMetricKeyExists ||
+	if config.Metrics().ForceSynchronization() ||
+		!usersPerActivationAndDomainMetricKeyExists ||
 		!masterUserRecordsPerDomainMetricExists {
 		return initializeFromResources(cl, toolchainStatus.Namespace)
 	}

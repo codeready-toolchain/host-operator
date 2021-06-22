@@ -1,4 +1,4 @@
-package toolchainconfig
+package toolchainconfig_test
 
 import (
 	"context"
@@ -6,11 +6,13 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -42,7 +44,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.Empty(t, res)
 			require.NoError(t, err)
-			actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
 			require.NoError(t, err)
 			matchesDefaultConfig(t, actual)
 			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).NotExists()
@@ -74,14 +76,14 @@ func TestReconcile(t *testing.T) {
 			res, err := controller.Reconcile(newRequest())
 
 			// then
-			require.Equal(t, defaultReconcile, res)
+			require.Equal(t, toolchainconfig.DefaultReconcile, res)
 			require.NoError(t, err)
-			actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
 			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToBeComplete()).HasNoSyncErrors()
+			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(toolchainconfig.ToBeComplete()).HasNoSyncErrors()
 
 			// check member1 config
 			member1Cfg, err := getMemberConfig(member1)
@@ -108,15 +110,15 @@ func TestReconcile(t *testing.T) {
 				res, err := controller.Reconcile(newRequest())
 
 				// then
-				require.Equal(t, defaultReconcile, res)
+				require.Equal(t, toolchainconfig.DefaultReconcile, res)
 				require.NoError(t, err)
-				actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+				actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
 				require.NoError(t, err)
 				assert.True(t, actual.AutomaticApproval().IsEnabled())
 				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 				assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 				assert.Equal(t, 100, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-				testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToBeComplete()).HasNoSyncErrors()
+				testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(toolchainconfig.ToBeComplete()).HasNoSyncErrors()
 
 				// check member1 config is unchanged
 				member1Cfg, err := getMemberConfig(member1)
@@ -145,9 +147,9 @@ func TestReconcile(t *testing.T) {
 				res, err := controller.Reconcile(newRequest())
 
 				// then
-				require.Equal(t, defaultReconcile, res)
+				require.Equal(t, toolchainconfig.DefaultReconcile, res)
 				require.EqualError(t, err, "client error")
-				actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+				actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
 				require.NoError(t, err)
 				assert.True(t, actual.AutomaticApproval().IsEnabled())
 				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
@@ -186,9 +188,9 @@ func TestReconcile(t *testing.T) {
 			res, err := controller.Reconcile(newRequest())
 
 			// then
-			require.Equal(t, defaultReconcile, res)
+			require.Equal(t, toolchainconfig.DefaultReconcile, res)
 			require.EqualError(t, err, "client error")
-			actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
 			require.NoError(t, err)
 			matchesDefaultConfig(t, actual)
 		})
@@ -205,14 +207,14 @@ func TestReconcile(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			require.Equal(t, defaultReconcile, res)
-			actual, err := GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			require.Equal(t, toolchainconfig.DefaultReconcile, res)
+			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
 			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 			assert.Equal(t, 80, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(ToSyncFailure()).HasSyncErrors(map[string]string{"missing-member": "specific member configuration exists but no matching toolchaincluster was found"})
+			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(toolchainconfig.ToSyncFailure()).HasSyncErrors(map[string]string{"missing-member": "specific member configuration exists but no matching toolchaincluster was found"})
 		})
 	})
 }
@@ -224,11 +226,11 @@ func newRequest() reconcile.Request {
 }
 
 func newToolchainConfigWithReset(t *testing.T, options ...testconfig.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
-	t.Cleanup(Reset)
+	t.Cleanup(toolchainconfig.Reset)
 	return testconfig.NewToolchainConfig(options...)
 }
 
-func matchesDefaultConfig(t *testing.T, actual ToolchainConfig) {
+func matchesDefaultConfig(t *testing.T, actual toolchainconfig.ToolchainConfig) {
 	assert.False(t, actual.AutomaticApproval().IsEnabled())
 	assert.Equal(t, 1000, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 	assert.Empty(t, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
@@ -237,8 +239,8 @@ func matchesDefaultConfig(t *testing.T, actual ToolchainConfig) {
 	assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationInDays())
 }
 
-func newController(hostCl client.Client, members cluster.GetMemberClustersFunc) Reconciler {
-	return Reconciler{
+func newController(hostCl client.Client, members cluster.GetMemberClustersFunc) toolchainconfig.Reconciler {
+	return toolchainconfig.Reconciler{
 		Client:         hostCl,
 		Log:            ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
 		GetMembersFunc: members,
