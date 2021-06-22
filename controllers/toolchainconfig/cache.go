@@ -32,7 +32,7 @@ func (c *cache) get() *toolchainv1alpha1.ToolchainConfig {
 	return c.config.DeepCopy()
 }
 
-func updateConfig(config *toolchainv1alpha1.ToolchainConfig) {
+func UpdateConfig(config *toolchainv1alpha1.ToolchainConfig) {
 	configCache.set(config)
 }
 
