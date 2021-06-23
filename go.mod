@@ -50,4 +50,6 @@ replace (
 
 replace github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20210623180217-d2e311d87bf2
 
+replace github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20210623181313-8bb6244b2211
+
 go 1.14
