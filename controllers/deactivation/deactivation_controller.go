@@ -46,6 +46,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// Watch for changes to the secondary resource UserSignup and requeue its MasterUserRecord
+	if err := c.Watch(
+		&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
+		&handler.EnqueueRequestsFromMapFunc{
+			ToRequests: UserSignupToMasterUserRecordMapper{},
+		}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -178,19 +187,17 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			return reconcile.Result{}, err
 		}
 
-		// Requeue so that the deactivation due time can be calculated after the notification has been sent.
+		// Upon the next reconciliation, the deactivation due time can be calculated after the notification has been sent.
 		// The sequence of events from here are:
 		// 1. This controller has now set the UserSignup state to deactivating if it's not already set
-		// 2. Reconciliation is requeued
-		// 3. UserSignup controller picks up that the deactivating state has been set, and responds by:
+		// 2. UserSignup controller picks up that the deactivating state has been set, and responds by:
 		//		a) creating a pre-deactivating notification for the user, and
 		//		b) setting the "deactivating notification created" status condition to true.
-		// 4. This  controller reconciles again, and if it doesn't find the notification created status condition as
-		//    expected, requeues again, otherwise:
-		// 5. This controller calculates the amount of time that has passed since the deactivating notification was sent,
+		// 3. This controller watches UserSignup as a secondary resource, so will be reconciled again once the
+		//    UserSignup is updated.
+		// 4. This controller calculates the amount of time that has passed since the deactivating notification was sent,
 		//  based on the LastTransitionTime of the condition. If enough time has now passed, it sets the UserSignup to deactivated.
-
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Duration(10) * time.Second}, nil
+		return reconcile.Result{}, nil
 	}
 
 	deactivatingCondition, found := condition.FindConditionByType(usersignup.Status.Conditions,
@@ -198,9 +205,9 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if !found || deactivatingCondition.Status != corev1.ConditionTrue ||
 		deactivatingCondition.Reason != toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason {
 		// If the UserSignup has been marked as deactivating, however the deactivating notification hasn't been
-		// created yet, then requeue - the notification should be created shortly by the UserSignup controller
-		// once the "deactivating" state has been set
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Duration(10) * time.Second}, nil
+		// created yet, then wait - the notification should be created shortly by the UserSignup controller
+		// once the "deactivating" state has been set which should cause a new reconciliation to be triggered here
+		return reconcile.Result{}, nil
 	}
 
 	deactivationDueTime := deactivatingCondition.LastTransitionTime.Time.Add(time.Duration(deactivatingNotificationDays*24) * time.Hour)
