@@ -1566,7 +1566,7 @@ data:
                                   type: string
                                 bufferReplicas:
                                   description: Represents the number of autoscaler buffer
-                                    pods
+                                    replicas to request
                                   type: integer
                                 deploy:
                                   description: Defines the flag that determines whether
@@ -1577,10 +1577,15 @@ data:
                               description: Keeps parameters concerned with Che/CRW
                               properties:
                                 cheSecret:
+                                  description: Defines all secrets related to Che configuration
                                   properties:
                                     cheAdminPasswordKey:
+                                      description: The key for the Che admin password in
+                                        the secret values map
                                       type: string
                                     cheAdminUsernameKey:
+                                      description: The key for the Che admin username in
+                                        the secret values map
                                       type: string
                                     ref:
                                       description: Reference is the name of the secret resource
@@ -1667,7 +1672,7 @@ data:
                                     type: string
                                   bufferReplicas:
                                     description: Represents the number of autoscaler buffer
-                                      pods
+                                      replicas to request
                                     type: integer
                                   deploy:
                                     description: Defines the flag that determines whether
@@ -1678,10 +1683,15 @@ data:
                                 description: Keeps parameters concerned with Che/CRW
                                 properties:
                                   cheSecret:
+                                    description: Defines all secrets related to Che configuration
                                     properties:
                                       cheAdminPasswordKey:
+                                        description: The key for the Che admin password
+                                          in the secret values map
                                         type: string
                                       cheAdminUsernameKey:
+                                        description: The key for the Che admin username
+                                          in the secret values map
                                         type: string
                                       ref:
                                         description: Reference is the name of the secret
