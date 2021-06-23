@@ -351,7 +351,11 @@ func (r *Reconciler) membersHandleStatus(logger logr.Logger, toolchainStatus *to
 			logger.Error(fmt.Errorf("member cluster %s not ready", memberCluster.Name), "the memberstatus ready condition is not true")
 			ready = false
 		}
-		r.Log.Info("adding member status", "member_name", memberCluster.Name, string(memberStatus.Conditions[0].Type), memberStatus.Conditions[0].Status)
+		if readyCond, found := condition.FindConditionByType(memberStatusObj.Status.Conditions, toolchainv1alpha1.ConditionReady); found {
+			r.Log.Info("adding member status", "member_name", memberCluster.Name, string(readyCond.Type), readyCond.Status)
+		} else {
+			r.Log.Info("adding member status", "member_name", memberCluster.Name, "Ready condition", "empty")
+		}
 		members[memberCluster.Name] = memberStatus
 	}
 
