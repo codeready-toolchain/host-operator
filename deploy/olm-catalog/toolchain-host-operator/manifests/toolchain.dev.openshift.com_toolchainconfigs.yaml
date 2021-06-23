@@ -118,14 +118,14 @@ spec:
                     description: Defines default configuration to be applied to all
                       member clusters
                     properties:
-                      authConfig:
+                      auth:
                         description: Keeps parameters concerned with authentication
                         properties:
-                          idP:
+                          idp:
                             description: Represents the configured identity provider
                             type: string
                         type: object
-                      autoscalerConfig:
+                      autoscaler:
                         description: Keeps parameters concerned with the autoscaler
                         properties:
                           bufferMemory:
@@ -144,7 +144,21 @@ spec:
                       che:
                         description: Keeps parameters concerned with Che/CRW
                         properties:
-                          cheSecret:
+                          keycloakRouteName:
+                            description: Defines the Che/CRW Keycloak route name
+                            type: string
+                          namespace:
+                            description: Defines the Che/CRW operator namespace
+                            type: string
+                          required:
+                            description: Defines a flag that indicates whether the
+                              Che/CRW operator is required to be installed on the
+                              cluster. May be used in monitoring.
+                            type: boolean
+                          routeName:
+                            description: Defines the Che/CRW route name
+                            type: string
+                          secret:
                             description: Defines all secrets related to Che configuration
                             properties:
                               cheAdminPasswordKey:
@@ -160,20 +174,6 @@ spec:
                                   to look up
                                 type: string
                             type: object
-                          keycloakRouteName:
-                            description: Defines the Che/CRW Keycloak route name
-                            type: string
-                          namespace:
-                            description: Defines the Che/CRW operator namespace
-                            type: string
-                          required:
-                            description: Defines a flag that indicates whether the
-                              Che/CRW operator is required to be installed on the
-                              cluster. May be used in monitoring.
-                            type: boolean
-                          routeName:
-                            description: Defines the Che/CRW route name
-                            type: string
                           userDeletionEnabled:
                             description: Defines a flag to turn the Che user deletion
                               logic on/off
@@ -197,7 +197,7 @@ spec:
                               member status
                             type: string
                         type: object
-                      toolchainClusterConfig:
+                      toolchainCluster:
                         description: Keeps parameters concerned with the toolchaincluster
                         properties:
                           healthCheckPeriod:
@@ -224,14 +224,14 @@ spec:
                       description: MemberOperatorConfigSpec contains all configuration
                         parameters of the member operator
                       properties:
-                        authConfig:
+                        auth:
                           description: Keeps parameters concerned with authentication
                           properties:
-                            idP:
+                            idp:
                               description: Represents the configured identity provider
                               type: string
                           type: object
-                        autoscalerConfig:
+                        autoscaler:
                           description: Keeps parameters concerned with the autoscaler
                           properties:
                             bufferMemory:
@@ -250,7 +250,21 @@ spec:
                         che:
                           description: Keeps parameters concerned with Che/CRW
                           properties:
-                            cheSecret:
+                            keycloakRouteName:
+                              description: Defines the Che/CRW Keycloak route name
+                              type: string
+                            namespace:
+                              description: Defines the Che/CRW operator namespace
+                              type: string
+                            required:
+                              description: Defines a flag that indicates whether the
+                                Che/CRW operator is required to be installed on the
+                                cluster. May be used in monitoring.
+                              type: boolean
+                            routeName:
+                              description: Defines the Che/CRW route name
+                              type: string
+                            secret:
                               description: Defines all secrets related to Che configuration
                               properties:
                                 cheAdminPasswordKey:
@@ -266,20 +280,6 @@ spec:
                                     resource to look up
                                   type: string
                               type: object
-                            keycloakRouteName:
-                              description: Defines the Che/CRW Keycloak route name
-                              type: string
-                            namespace:
-                              description: Defines the Che/CRW operator namespace
-                              type: string
-                            required:
-                              description: Defines a flag that indicates whether the
-                                Che/CRW operator is required to be installed on the
-                                cluster. May be used in monitoring.
-                              type: boolean
-                            routeName:
-                              description: Defines the Che/CRW route name
-                              type: string
                             userDeletionEnabled:
                               description: Defines a flag to turn the Che user deletion
                                 logic on/off
@@ -303,7 +303,7 @@ spec:
                                 the member status
                               type: string
                           type: object
-                        toolchainClusterConfig:
+                        toolchainCluster:
                           description: Keeps parameters concerned with the toolchaincluster
                           properties:
                             healthCheckPeriod:
