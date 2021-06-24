@@ -346,15 +346,17 @@ func (r *Reconciler) membersHandleStatus(logger logr.Logger, toolchainStatus *to
 			ResourceUsage: memberStatusObj.Status.ResourceUsage,
 			Routes:        memberStatusObj.Status.Routes,
 		}
-		if condition.IsNotTrue(memberStatusObj.Status.Conditions, toolchainv1alpha1.ConditionReady) {
+
+		readyCond, found := condition.FindConditionByType(memberStatusObj.Status.Conditions, toolchainv1alpha1.ConditionReady)
+		if !found || readyCond.Status != corev1.ConditionTrue {
 			// the memberstatus is not ready so set the component error to bubble up the error to the overall toolchain status
 			logger.Error(fmt.Errorf("member cluster %s not ready", memberCluster.Name), "the memberstatus ready condition is not true")
 			ready = false
 		}
-		if readyCond, found := condition.FindConditionByType(memberStatusObj.Status.Conditions, toolchainv1alpha1.ConditionReady); found {
-			r.Log.Info("adding member status", "member_name", memberCluster.Name, string(readyCond.Type), readyCond.Status)
+		if found {
+			r.Log.Info("adding member status", "member_name", memberCluster.Name, string(toolchainv1alpha1.ConditionReady), readyCond.Status)
 		} else {
-			r.Log.Info("adding member status", "member_name", memberCluster.Name, "Ready condition", "empty")
+			r.Log.Info("adding member status", "member_name", memberCluster.Name, string(toolchainv1alpha1.ConditionReady), "unknown")
 		}
 		members[memberCluster.Name] = memberStatus
 	}
