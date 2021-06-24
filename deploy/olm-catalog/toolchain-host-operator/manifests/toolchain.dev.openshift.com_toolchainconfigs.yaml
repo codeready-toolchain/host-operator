@@ -118,6 +118,77 @@ spec:
                     description: Defines default configuration to be applied to all
                       member clusters
                     properties:
+                      auth:
+                        description: Keeps parameters concerned with authentication
+                        properties:
+                          idp:
+                            description: Represents the configured identity provider
+                            type: string
+                        type: object
+                      autoscaler:
+                        description: Keeps parameters concerned with the autoscaler
+                        properties:
+                          bufferMemory:
+                            description: Represents how much memory should be required
+                              by the autoscaler buffer
+                            type: string
+                          bufferReplicas:
+                            description: Represents the number of autoscaler buffer
+                              replicas to request
+                            type: integer
+                          deploy:
+                            description: Defines the flag that determines whether
+                              to deploy the autoscaler buffer
+                            type: boolean
+                        type: object
+                      che:
+                        description: Keeps parameters concerned with Che/CRW
+                        properties:
+                          keycloakRouteName:
+                            description: Defines the Che/CRW Keycloak route name
+                            type: string
+                          namespace:
+                            description: Defines the Che/CRW operator namespace
+                            type: string
+                          required:
+                            description: Defines a flag that indicates whether the
+                              Che/CRW operator is required to be installed on the
+                              cluster. May be used in monitoring.
+                            type: boolean
+                          routeName:
+                            description: Defines the Che/CRW route name
+                            type: string
+                          secret:
+                            description: Defines all secrets related to Che configuration
+                            properties:
+                              cheAdminPasswordKey:
+                                description: The key for the Che admin password in
+                                  the secret values map
+                                type: string
+                              cheAdminUsernameKey:
+                                description: The key for the Che admin username in
+                                  the secret values map
+                                type: string
+                              ref:
+                                description: Reference is the name of the secret resource
+                                  to look up
+                                type: string
+                            type: object
+                          userDeletionEnabled:
+                            description: Defines a flag to turn the Che user deletion
+                              logic on/off
+                            type: boolean
+                        type: object
+                      console:
+                        description: Keeps parameters concerned with the console
+                        properties:
+                          namespace:
+                            description: Defines the console route namespace
+                            type: string
+                          routeName:
+                            description: Defines the console route name
+                            type: string
+                        type: object
                       memberStatus:
                         description: Keeps parameters concerned with member status
                         properties:
@@ -126,18 +197,131 @@ spec:
                               member status
                             type: string
                         type: object
+                      toolchainCluster:
+                        description: Keeps parameters concerned with the toolchaincluster
+                        properties:
+                          healthCheckPeriod:
+                            description: Defines the period in between health checks
+                            type: string
+                          healthCheckTimeout:
+                            description: Defines the timeout for each health check
+                            type: string
+                        type: object
+                      webhook:
+                        description: Keeps parameters concerned with the webhook
+                        properties:
+                          deploy:
+                            description: Defines the flag that determines whether
+                              to deploy the Webhook
+                            type: boolean
+                          image:
+                            description: Defines the Webhook image
+                            type: string
+                        type: object
                     type: object
                   specificPerMemberCluster:
                     additionalProperties:
                       description: MemberOperatorConfigSpec contains all configuration
                         parameters of the member operator
                       properties:
+                        auth:
+                          description: Keeps parameters concerned with authentication
+                          properties:
+                            idp:
+                              description: Represents the configured identity provider
+                              type: string
+                          type: object
+                        autoscaler:
+                          description: Keeps parameters concerned with the autoscaler
+                          properties:
+                            bufferMemory:
+                              description: Represents how much memory should be required
+                                by the autoscaler buffer
+                              type: string
+                            bufferReplicas:
+                              description: Represents the number of autoscaler buffer
+                                replicas to request
+                              type: integer
+                            deploy:
+                              description: Defines the flag that determines whether
+                                to deploy the autoscaler buffer
+                              type: boolean
+                          type: object
+                        che:
+                          description: Keeps parameters concerned with Che/CRW
+                          properties:
+                            keycloakRouteName:
+                              description: Defines the Che/CRW Keycloak route name
+                              type: string
+                            namespace:
+                              description: Defines the Che/CRW operator namespace
+                              type: string
+                            required:
+                              description: Defines a flag that indicates whether the
+                                Che/CRW operator is required to be installed on the
+                                cluster. May be used in monitoring.
+                              type: boolean
+                            routeName:
+                              description: Defines the Che/CRW route name
+                              type: string
+                            secret:
+                              description: Defines all secrets related to Che configuration
+                              properties:
+                                cheAdminPasswordKey:
+                                  description: The key for the Che admin password
+                                    in the secret values map
+                                  type: string
+                                cheAdminUsernameKey:
+                                  description: The key for the Che admin username
+                                    in the secret values map
+                                  type: string
+                                ref:
+                                  description: Reference is the name of the secret
+                                    resource to look up
+                                  type: string
+                              type: object
+                            userDeletionEnabled:
+                              description: Defines a flag to turn the Che user deletion
+                                logic on/off
+                              type: boolean
+                          type: object
+                        console:
+                          description: Keeps parameters concerned with the console
+                          properties:
+                            namespace:
+                              description: Defines the console route namespace
+                              type: string
+                            routeName:
+                              description: Defines the console route name
+                              type: string
+                          type: object
                         memberStatus:
                           description: Keeps parameters concerned with member status
                           properties:
                             refreshPeriod:
                               description: Defines the period between refreshes of
                                 the member status
+                              type: string
+                          type: object
+                        toolchainCluster:
+                          description: Keeps parameters concerned with the toolchaincluster
+                          properties:
+                            healthCheckPeriod:
+                              description: Defines the period in between health checks
+                              type: string
+                            healthCheckTimeout:
+                              description: Defines the timeout for each health check
+                              type: string
+                          type: object
+                        webhook:
+                          description: Keeps parameters concerned with the webhook
+                          properties:
+                            deploy:
+                              description: Defines the flag that determines whether
+                                to deploy the Webhook
+                              type: boolean
+                            image:
+                              description: Defines the Webhook image
                               type: string
                           type: object
                       type: object
