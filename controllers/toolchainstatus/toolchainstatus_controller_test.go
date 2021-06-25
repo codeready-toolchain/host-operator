@@ -671,6 +671,26 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
+		t.Run("MemberStatus with no condition", func(t *testing.T) {
+			// given
+			memberStatus := newMemberStatus()
+			toolchainStatus := NewToolchainStatus()
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
+			InitializeCounters(t, toolchainStatus)
+
+			// when
+			res, err := reconciler.Reconcile(req)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, requeueResult, res)
+			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+				HasConditions(componentsNotReady(string(memberConnectionsTag))).
+				HasHostOperatorStatus(hostOperatorStatusReady()).
+				HasMemberClusterStatus(memberCluster("member-1"), memberCluster("member-2")).
+				HasRegistrationServiceStatus(registrationServiceReady())
+		})
+
 		t.Run("All components ready but one member is missing", func(t *testing.T) {
 			// given
 			registrationService := newRegistrationServiceReady()
