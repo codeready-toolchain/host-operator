@@ -1078,7 +1078,6 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 
 		err = memberClient.Delete(context.TODO(), userAcc)
 		require.NoError(t, err)
-
 		result2, err2 := cntrl.Reconcile(newMurRequest(mur))
 
 		// then
@@ -1139,6 +1138,38 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 			HasFinalizer()
 		AssertThatCountersAndMetrics(t).
 			HaveUserAccountsForCluster(test.MemberClusterName, 2)
+	})
+
+	t.Run("test UserAccount deletion has foreground propagation policy", func(t *testing.T) {
+		// given
+		logf.SetLogger(zap.New(zap.UseDevMode(true)))
+		s := apiScheme(t)
+		mur := murtest.NewMasterUserRecord(t, "john-wait-for-ua",
+			murtest.ToBeDeleted())
+		userAcc := uatest.NewUserAccountFromMur(mur)
+
+		hostClient := test.NewFakeClient(t, mur)
+		memberClient := test.NewFakeClient(t, userAcc)
+
+		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
+			ClusterClient(test.MemberClusterName, memberClient))
+
+		deleted := false
+		memberClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+			deleted = true
+			require.Len(t, opts, 1)
+			deleteOptions, ok := opts[0].(*client.DeleteOptions)
+			require.True(t, ok)
+			require.NotNil(t, deleteOptions)
+			require.NotNil(t, deleteOptions.PropagationPolicy)
+			assert.Equal(t, metav1.DeletePropagationForeground, *deleteOptions.PropagationPolicy)
+			return nil
+		}
+		// when
+		_, err := cntrl.Reconcile(newMurRequest(mur))
+		//then
+		require.NoError(t, err)
+		assert.True(t, deleted)
 	})
 }
 
