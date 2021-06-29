@@ -216,6 +216,9 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 			if err := s.hostClient.Create(context.TODO(), notification); err != nil {
 				return false, err
 			}
+		} else {
+			s.logger.Info(fmt.Sprintf("The %s notification for user %s was not created because it already exists: %v",
+				toolchainv1alpha1.NotificationTypeProvisioned, s.record.Name, notificationList.Items[0]))
 		}
 		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisionedNotificationCreated())
 	}
