@@ -290,6 +290,83 @@ data:
                             of `ToolchainStatus.status.metrics`
                           type: boolean
                       type: object
+                    notifications:
+                      description: Keeps parameters concerned with notifications
+                      properties:
+                        adminEmail:
+                          description: The administrator email address for system notifications
+                          type: string
+                        durationBeforeNotificationDeletion:
+                          description: DurationBeforeNotificationDeletion is notification
+                            delivery service to use for notifications
+                          type: string
+                        notificationDeliveryService:
+                          description: NotificationDeliveryService is notification delivery
+                            service to use for notifications
+                          type: string
+                        secret:
+                          description: Defines all secrets related to notification configuration
+                          properties:
+                            mailgunAPIKey:
+                              description: The key for the host operator mailgun api key
+                                used for creating an instance of mailgun
+                              type: string
+                            mailgunDomain:
+                              description: The key for the host operator mailgun domain
+                                used for creating an instance of mailgun
+                              type: string
+                            mailgunReplyToEmail:
+                              description: The key for the reply-to email address that will
+                                be set in sent notifications
+                              type: string
+                            mailgunSenderEmail:
+                              description: The key for the host operator mailgun senders
+                                email
+                              type: string
+                            ref:
+                              description: Reference is the name of the secret resource
+                                to look up
+                              type: string
+                          type: object
+                      type: object
+                    registrationService:
+                      description: Keeps parameters necessary for the registration service
+                      properties:
+                        registrationServiceURL:
+                          description: RegistrationServiceURL is the URL used to a ccess
+                            the registration service
+                          type: string
+                      type: object
+                    tiers:
+                      description: Keeps parameters concerned with tiers
+                      properties:
+                        durationBeforeChangeRequestDeletion:
+                          description: DurationBeforeChangeRequestDeletion specifies the
+                            duration before a ChangeTierRequest resource is deleted
+                          type: string
+                        templateUpdateRequestMaxPoolSize:
+                          description: TemplateUpdateRequestMaxPoolSize specifies the maximum
+                            number of concurrent TemplateUpdateRequests when updating MasterUserRecords
+                          type: string
+                      type: object
+                    toolchainStatus:
+                      description: Keeps parameters concerned with the toolchainstatus
+                      properties:
+                        toolchainStatusRefreshTime:
+                          description: ToolchainStatusRefreshTime specifies how often the
+                            ToolchainStatus should load and refresh the current hosted-toolchain
+                            status
+                          type: string
+                      type: object
+                    users:
+                      description: Keeps parameters concerned with user management
+                      properties:
+                        masterUserRecordUpdateFailureThreshold:
+                          description: MasterUserRecordUpdateFailureThreshold specifies
+                            the number of allowed failures before stopping attempts to update
+                            a MasterUserRecord
+                          type: integer
+                      type: object
                   type: object
                 status:
                   description: HostOperatorConfigStatus defines the observed state of HostOperatorConfig
@@ -1541,6 +1618,84 @@ data:
                                 than on the content of `ToolchainStatus.status.metrics`
                               type: boolean
                           type: object
+                        notifications:
+                          description: Keeps parameters concerned with notifications
+                          properties:
+                            adminEmail:
+                              description: The administrator email address for system notifications
+                              type: string
+                            durationBeforeNotificationDeletion:
+                              description: DurationBeforeNotificationDeletion is notification
+                                delivery service to use for notifications
+                              type: string
+                            notificationDeliveryService:
+                              description: NotificationDeliveryService is notification delivery
+                                service to use for notifications
+                              type: string
+                            secret:
+                              description: Defines all secrets related to notification configuration
+                              properties:
+                                mailgunAPIKey:
+                                  description: The key for the host operator mailgun api
+                                    key used for creating an instance of mailgun
+                                  type: string
+                                mailgunDomain:
+                                  description: The key for the host operator mailgun domain
+                                    used for creating an instance of mailgun
+                                  type: string
+                                mailgunReplyToEmail:
+                                  description: The key for the reply-to email address that
+                                    will be set in sent notifications
+                                  type: string
+                                mailgunSenderEmail:
+                                  description: The key for the host operator mailgun senders
+                                    email
+                                  type: string
+                                ref:
+                                  description: Reference is the name of the secret resource
+                                    to look up
+                                  type: string
+                              type: object
+                          type: object
+                        registrationService:
+                          description: Keeps parameters necessary for the registration service
+                          properties:
+                            registrationServiceURL:
+                              description: RegistrationServiceURL is the URL used to a ccess
+                                the registration service
+                              type: string
+                          type: object
+                        tiers:
+                          description: Keeps parameters concerned with tiers
+                          properties:
+                            durationBeforeChangeRequestDeletion:
+                              description: DurationBeforeChangeRequestDeletion specifies
+                                the duration before a ChangeTierRequest resource is deleted
+                              type: string
+                            templateUpdateRequestMaxPoolSize:
+                              description: TemplateUpdateRequestMaxPoolSize specifies the
+                                maximum number of concurrent TemplateUpdateRequests when
+                                updating MasterUserRecords
+                              type: string
+                          type: object
+                        toolchainStatus:
+                          description: Keeps parameters concerned with the toolchainstatus
+                          properties:
+                            toolchainStatusRefreshTime:
+                              description: ToolchainStatusRefreshTime specifies how often
+                                the ToolchainStatus should load and refresh the current
+                                hosted-toolchain status
+                              type: string
+                          type: object
+                        users:
+                          description: Keeps parameters concerned with user management
+                          properties:
+                            masterUserRecordUpdateFailureThreshold:
+                              description: MasterUserRecordUpdateFailureThreshold specifies
+                                the number of allowed failures before stopping attempts
+                                to update a MasterUserRecord
+                              type: integer
+                          type: object
                       type: object
                     members:
                       description: Contains all member operator configurations for all member
@@ -1646,9 +1801,6 @@ data:
                                   description: Defines the flag that determines whether
                                     to deploy the Webhook
                                   type: boolean
-                                image:
-                                  description: Defines the Webhook image
-                                  type: string
                               type: object
                           type: object
                         specificPerMemberCluster:
@@ -1752,9 +1904,6 @@ data:
                                     description: Defines the flag that determines whether
                                       to deploy the Webhook
                                     type: boolean
-                                  image:
-                                    description: Defines the Webhook image
-                                    type: string
                                 type: object
                             type: object
                           description: A map of cluster-specific member operator configurations
