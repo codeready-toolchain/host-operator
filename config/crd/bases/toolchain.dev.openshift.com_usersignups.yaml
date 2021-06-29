@@ -1,0 +1,168 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: usersignups.toolchain.dev.openshift.com
+spec:
+  group: toolchain.dev.openshift.com
+  names:
+    kind: UserSignup
+    listKind: UserSignupList
+    plural: usersignups
+    singular: usersignup
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.username
+      name: Username
+      type: string
+    - jsonPath: .spec.givenName
+      name: First Name
+      priority: 1
+      type: string
+    - jsonPath: .spec.familyName
+      name: Last Name
+      priority: 1
+      type: string
+    - jsonPath: .spec.company
+      name: Company
+      priority: 1
+      type: string
+    - jsonPath: .spec.targetCluster
+      name: TargetCluster
+      priority: 1
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Complete")].status
+      name: Complete
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Complete")].reason
+      name: Reason
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Approved")].status
+      name: Approved
+      priority: 1
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Approved")].reason
+      name: ApprovedBy
+      priority: 1
+      type: string
+    - jsonPath: .spec.states
+      name: States
+      priority: 1
+      type: string
+    - jsonPath: .status.compliantUsername
+      name: CompliantUsername
+      type: string
+    - jsonPath: .metadata.annotations.toolchain\.dev\.openshift\.com/user-email
+      name: Email
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: UserSignup registers a user in the CodeReady Toolchain
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: UserSignupSpec defines the desired state of UserSignup
+            properties:
+              company:
+                description: The user's company name, obtained from the identity provider.
+                type: string
+              familyName:
+                description: The user's last name, obtained from the identity provider.
+                type: string
+              givenName:
+                description: The user's first name, obtained from the identity provider.
+                type: string
+              states:
+                description: States contains a number of values that reflect the desired
+                  state of the UserSignup.
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: atomic
+              targetCluster:
+                description: The cluster in which the user is provisioned in If not
+                  set then the target cluster will be picked automatically
+                type: string
+              userid:
+                description: The user's user ID, obtained from the identity provider
+                  from the 'sub' (subject) claim
+                type: string
+              username:
+                description: The user's username, obtained from the identity provider.
+                type: string
+            required:
+            - userid
+            - username
+            type: object
+          status:
+            description: UserSignupStatus defines the observed state of UserSignup
+            properties:
+              compliantUsername:
+                description: CompliantUsername is used to store the transformed, DNS-1123
+                  compliant username
+                type: string
+              conditions:
+                description: 'Conditions is an array of current UserSignup conditions
+                  Supported condition types: PendingApproval, Provisioning, Complete'
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transit from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdatedTime:
+                      description: Last time the condition was updated
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        last transition.
+                      type: string
+                    reason:
+                      description: (brief) reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            type: object
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
