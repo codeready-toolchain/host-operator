@@ -194,7 +194,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 		if err := s.hostClient.List(context.TODO(), notificationList, opts); err != nil {
 			return false, err
 		}
-		// if there is no existing notification with that labels
+		// if there is no existing notification with these labels
 		if len(notificationList.Items) == 0 {
 			notification := &toolchainv1alpha1.Notification{
 				ObjectMeta: v1.ObjectMeta{
