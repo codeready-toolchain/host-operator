@@ -185,7 +185,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 	if condition.IsNotTrue(s.record.Status.Conditions, toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated) {
 		labels := map[string]string{
 			toolchainv1alpha1.NotificationUserNameLabelKey: s.record.Name,
-			toolchainv1alpha1.NotificationTypeLabelKey: toolchainv1alpha1.NotificationTypeProvisioned,
+			toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeProvisioned,
 		}
 		opts := client.MatchingLabels(labels)
 		notificationList := &toolchainv1alpha1.NotificationList{}

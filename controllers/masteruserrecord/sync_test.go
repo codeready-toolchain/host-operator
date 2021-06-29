@@ -305,8 +305,8 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	}}
 	dummyNotification := &toolchainv1alpha1.Notification{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("dummy-%s", toolchainv1alpha1.NotificationTypeProvisioned),
-			Namespace:    test.HostOperatorNs,
+			Name:      fmt.Sprintf("dummy-%s", toolchainv1alpha1.NotificationTypeProvisioned),
+			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
 				toolchainv1alpha1.NotificationUserNameLabelKey: "dummy",
 				toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeProvisioned,
@@ -353,8 +353,8 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		// given
 		notification := &toolchainv1alpha1.Notification{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("%s-%s", mur.Name, toolchainv1alpha1.NotificationTypeProvisioned),
-				Namespace:    test.HostOperatorNs,
+				Name:      fmt.Sprintf("%s-%s", mur.Name, toolchainv1alpha1.NotificationTypeProvisioned),
+				Namespace: test.HostOperatorNs,
 				Labels: map[string]string{
 					toolchainv1alpha1.NotificationUserNameLabelKey: mur.Name,
 					toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeProvisioned,
