@@ -316,8 +316,11 @@ func (r *Reconciler) deleteUserAccount(logger logr.Logger, targetCluster, name s
 		}
 		return requeueTime, nil
 	}
-
-	if err := memberCluster.Client.Delete(context.TODO(), userAcc); err != nil {
+	propagationPolicy := v1.DeletePropagationForeground
+	err = memberCluster.Client.Delete(context.TODO(), userAcc, &client.DeleteOptions{
+		PropagationPolicy: &propagationPolicy,
+	})
+	if err != nil {
 		return 0, err
 	}
 	counter.DecrementUserAccountCount(logger, targetCluster)
