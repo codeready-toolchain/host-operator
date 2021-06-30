@@ -1,0 +1,22 @@
+# This kustomization.yaml is not intended to be run by itself,
+# since it depends on service name and namespace that are out of this kustomize package.
+# It should be run by config/default
+resources:
+- bases/toolchain.dev.openshift.com_bannedusers.yaml
+- bases/toolchain.dev.openshift.com_changetierrequests.yaml
+- bases/toolchain.dev.openshift.com_hostoperatorconfigs.yaml
+- bases/toolchain.dev.openshift.com_masteruserrecords.yaml
+- bases/toolchain.dev.openshift.com_notifications.yaml
+- bases/toolchain.dev.openshift.com_nstemplatetiers.yaml
+- bases/toolchain.dev.openshift.com_registrationservices.yaml
+- bases/toolchain.dev.openshift.com_templateupdaterequests.yaml
+- bases/toolchain.dev.openshift.com_tiertemplates.yaml
+- bases/toolchain.dev.openshift.com_toolchainclusters.yaml
+- bases/toolchain.dev.openshift.com_toolchainconfigs.yaml
+- bases/toolchain.dev.openshift.com_toolchainstatuses.yaml
+- bases/toolchain.dev.openshift.com_usersignups.yaml
+#+kubebuilder:scaffold:crdkustomizeresource
+
+# the following config is for teaching kustomize how to do kustomization for CRDs.
+configurations:
+- kustomizeconfig.yaml
