@@ -79,8 +79,6 @@ spec:
                   notification content and to deliver the notification Deprecated:
                   replaced by Context'
                 type: string
-            required:
-            - recipient
             type: object
           status:
             description: NotificationStatus defines the observed state of Notification
