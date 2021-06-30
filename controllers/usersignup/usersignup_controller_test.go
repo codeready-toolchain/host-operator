@@ -62,17 +62,17 @@ func newNsTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 var baseNSTemplateTier = newNsTemplateTier("base", "dev", "stage")
 
 func TestUserSignupCreateMUROk(t *testing.T) {
-
+	member := NewMemberCluster(t, "member1", v1.ConditionTrue)
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	for testname, userSignup := range map[string]*toolchainv1alpha1.UserSignup{
-		"with valid activation annotation":   NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2")), // this is a returning user
-		"with invalid activation annotation": NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "?")), // annotation value is not an 'int'
-		"without activation annotation":      NewUserSignup(Approved(), WithTargetCluster("east"), WithStateLabel("not-ready"), WithoutAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey)),   // no annotation on this user, so the value will not be incremented
+		"with valid activation annotation":   NewUserSignup(Approved(), WithTargetCluster("member1"), WithStateLabel("not-ready"), WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2")), // this is a returning user
+		"with invalid activation annotation": NewUserSignup(Approved(), WithTargetCluster("member1"), WithStateLabel("not-ready"), WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "?")), // annotation value is not an 'int'
+		"without activation annotation":      NewUserSignup(Approved(), WithTargetCluster("member1"), WithStateLabel("not-ready"), WithoutAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey)),   // no annotation on this user, so the value will not be incremented
 	} {
 		t.Run(testname, func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
 			InitializeCounters(t, NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 					"1,internal": 0,
@@ -147,11 +147,13 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 
 func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	// given
+	member := NewMemberCluster(t, "member1", v1.ConditionTrue)
+	defer counter.Reset()
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	userSignup := NewUserSignup(BeingDeleted(), WithTargetCluster("east"),
+	userSignup := NewUserSignup(BeingDeleted(), Approved(),
 		WithStateLabel("not-ready"),
 		WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
-	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
@@ -180,6 +182,7 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 12,
 		})
+
 }
 
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
