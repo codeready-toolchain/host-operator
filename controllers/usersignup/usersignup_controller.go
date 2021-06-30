@@ -139,7 +139,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	logger = logger.WithValues("username", userSignup.Spec.Username)
 
 	if util.IsBeingDeleted(userSignup) {
-		logger.Error(err, "The UserSignup is being deleted")
+		logger.Info("The UserSignup is being deleted")
 		return reconcile.Result{}, nil
 	}
 
