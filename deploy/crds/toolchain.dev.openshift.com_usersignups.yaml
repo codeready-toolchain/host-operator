@@ -1,3 +1,4 @@
+
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -5,28 +6,64 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: notifications.toolchain.dev.openshift.com
+  name: usersignups.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
   names:
-    kind: Notification
-    listKind: NotificationList
-    plural: notifications
-    singular: notification
+    kind: UserSignup
+    listKind: UserSignupList
+    plural: usersignups
+    singular: usersignup
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.userID
-      name: User ID
+    - jsonPath: .spec.username
+      name: Username
+      type: string
+    - jsonPath: .spec.givenName
+      name: First Name
       priority: 1
       type: string
-    - jsonPath: .status.conditions[?(@.type=="Sent")].status
-      name: Sent
+    - jsonPath: .spec.familyName
+      name: Last Name
+      priority: 1
+      type: string
+    - jsonPath: .spec.company
+      name: Company
+      priority: 1
+      type: string
+    - jsonPath: .spec.targetCluster
+      name: TargetCluster
+      priority: 1
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Complete")].status
+      name: Complete
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Complete")].reason
+      name: Reason
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Approved")].status
+      name: Approved
+      priority: 1
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Approved")].reason
+      name: ApprovedBy
+      priority: 1
+      type: string
+    - jsonPath: .spec.states
+      name: States
+      priority: 1
+      type: string
+    - jsonPath: .status.compliantUsername
+      name: CompliantUsername
+      type: string
+    - jsonPath: .metadata.annotations.toolchain\.dev\.openshift\.com/user-email
+      name: Email
       type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Notification registers a notification in the CodeReady Toolchain
+        description: UserSignup registers a user in the CodeReady Toolchain
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -41,52 +78,49 @@ spec:
           metadata:
             type: object
           spec:
-            description: NotificationSpec defines the desired state of Notification
+            description: UserSignupSpec defines the desired state of UserSignup
             properties:
-              content:
-                description: Content is used when no template value is specified,
-                  in cases where the complete notification content is specified at
-                  notification creation time
+              company:
+                description: The user's company name, obtained from the identity provider.
                 type: string
-              context:
-                additionalProperties:
+              familyName:
+                description: The user's last name, obtained from the identity provider.
+                type: string
+              givenName:
+                description: The user's first name, obtained from the identity provider.
+                type: string
+              states:
+                description: States contains a number of values that reflect the desired
+                  state of the UserSignup.
+                items:
                   type: string
-                description: Context is used to set a number of arbitrary values to
-                  be passed to the notification content text formatter, for inclusion
-                  in the body of the notification.
-                type: object
-              recipient:
-                description: Recipient is used to specify the email address where
-                  the notification will be delivered.  It must comply with section
-                  3.4.1 of RFC2822, and should be formatted to include the user's
-                  first and last names, e.g. "John Smith <jsmith@example.com>"
+                type: array
+                x-kubernetes-list-type: atomic
+              targetCluster:
+                description: The cluster in which the user is provisioned in If not
+                  set then the target cluster will be picked automatically
                 type: string
-              subject:
-                description: Subject is used when no template value is specified,
-                  in cases where the complete notification subject is specified at
-                  notification creation time
+              userid:
+                description: The user's user ID, obtained from the identity provider
+                  from the 'sub' (subject) claim
                 type: string
-              template:
-                description: Template is the name of the NotificationTemplate resource
-                  that will be used to generate the notification
-                type: string
-              userID:
-                description: 'UserID is the user ID from RHD Identity Provider token
-                  (“sub” claim).  The UserID is used by the notification service (i.e.
-                  the NotificationController) to lookup the UserSignup resource for
-                  the user, and extract from it the values required to generate the
-                  notification content and to deliver the notification Deprecated:
-                  replaced by Context'
+              username:
+                description: The user's username, obtained from the identity provider.
                 type: string
             required:
-            - recipient
+            - userid
+            - username
             type: object
           status:
-            description: NotificationStatus defines the observed state of Notification
+            description: UserSignupStatus defines the observed state of UserSignup
             properties:
+              compliantUsername:
+                description: CompliantUsername is used to store the transformed, DNS-1123
+                  compliant username
+                type: string
               conditions:
-                description: 'Conditions is an array of current Notification conditions
-                  Supported condition types: Sent'
+                description: 'Conditions is an array of current UserSignup conditions
+                  Supported condition types: PendingApproval, Provisioning, Complete'
                 items:
                   properties:
                     lastTransitionTime:

@@ -1,0 +1,643 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: toolchainstatuses.toolchain.dev.openshift.com
+spec:
+  group: toolchain.dev.openshift.com
+  names:
+    kind: ToolchainStatus
+    listKind: ToolchainStatusList
+    plural: toolchainstatuses
+    singular: toolchainstatus
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.hostOperator.masterUserRecordCount
+      name: MURs
+      type: integer
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].lastUpdatedTime
+      name: Last Updated
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ToolchainStatus is used to track overall toolchain status
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ToolchainStatusSpec defines the desired state of ToolchainStatus
+            type: object
+          status:
+            description: ToolchainStatusStatus defines the observed state of the toolchain,
+              including host cluster and member cluster components
+            properties:
+              conditions:
+                description: 'Conditions is an array of the current overall toolchain
+                  status conditions Supported condition types: ConditionReady'
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transit from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdatedTime:
+                      description: Last time the condition was updated
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        last transition.
+                      type: string
+                    reason:
+                      description: (brief) reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              hostOperator:
+                description: HostOperator is the status of a toolchain host operator
+                properties:
+                  buildTimestamp:
+                    description: The timestamp of the host operator build
+                    type: string
+                  conditions:
+                    description: 'Conditions is an array of current host operator
+                      status conditions Supported condition types: ConditionReady'
+                    items:
+                      properties:
+                        lastTransitionTime:
+                          description: Last time the condition transit from one status
+                            to another.
+                          format: date-time
+                          type: string
+                        lastUpdatedTime:
+                          description: Last time the condition was updated
+                          format: date-time
+                          type: string
+                        message:
+                          description: Human readable message indicating details about
+                            last transition.
+                          type: string
+                        reason:
+                          description: (brief) reason for the condition's last transition.
+                          type: string
+                        status:
+                          description: Status of the condition, one of True, False,
+                            Unknown.
+                          type: string
+                        type:
+                          description: Type of condition
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - type
+                    x-kubernetes-list-type: map
+                  deploymentName:
+                    description: The status of the host operator's deployment
+                    type: string
+                  revision:
+                    description: The commit id from the host-operator repository used
+                      to build the operator
+                    type: string
+                  version:
+                    description: The version of the operator
+                    type: string
+                required:
+                - buildTimestamp
+                - deploymentName
+                - revision
+                - version
+                type: object
+              members:
+                description: Members is an array of member status objects
+                items:
+                  description: Member contains the status of a member cluster
+                  properties:
+                    apiEndpoint:
+                      description: ApiEndpoint is the server API URL of the cluster
+                      type: string
+                    clusterName:
+                      description: The cluster identifier
+                      type: string
+                    memberStatus:
+                      description: The array of member status objects
+                      properties:
+                        che:
+                          description: Che is the status of Che/CRW, such as installed
+                            and whether the member configuration is correct
+                          properties:
+                            conditions:
+                              description: 'Conditions is an array of current Che
+                                status conditions Supported condition types: ConditionReady'
+                              items:
+                                properties:
+                                  lastTransitionTime:
+                                    description: Last time the condition transit from
+                                      one status to another.
+                                    format: date-time
+                                    type: string
+                                  lastUpdatedTime:
+                                    description: Last time the condition was updated
+                                    format: date-time
+                                    type: string
+                                  message:
+                                    description: Human readable message indicating
+                                      details about last transition.
+                                    type: string
+                                  reason:
+                                    description: (brief) reason for the condition's
+                                      last transition.
+                                    type: string
+                                  status:
+                                    description: Status of the condition, one of True,
+                                      False, Unknown.
+                                    type: string
+                                  type:
+                                    description: Type of condition
+                                    type: string
+                                required:
+                                - status
+                                - type
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - type
+                              x-kubernetes-list-type: map
+                          type: object
+                        conditions:
+                          description: 'Conditions is an array of current toolchain
+                            status conditions Supported condition types: ConditionReady'
+                          items:
+                            properties:
+                              lastTransitionTime:
+                                description: Last time the condition transit from
+                                  one status to another.
+                                format: date-time
+                                type: string
+                              lastUpdatedTime:
+                                description: Last time the condition was updated
+                                format: date-time
+                                type: string
+                              message:
+                                description: Human readable message indicating details
+                                  about last transition.
+                                type: string
+                              reason:
+                                description: (brief) reason for the condition's last
+                                  transition.
+                                type: string
+                              status:
+                                description: Status of the condition, one of True,
+                                  False, Unknown.
+                                type: string
+                              type:
+                                description: Type of condition
+                                type: string
+                            required:
+                            - status
+                            - type
+                            type: object
+                          type: array
+                          x-kubernetes-list-map-keys:
+                          - type
+                          x-kubernetes-list-type: map
+                        host:
+                          description: Host is the status of the connection with the
+                            host cluster
+                          properties:
+                            conditions:
+                              description: 'Conditions is an array of current member
+                                operator status conditions Supported condition types:
+                                ConditionReady'
+                              items:
+                                properties:
+                                  lastTransitionTime:
+                                    description: Last time the condition transit from
+                                      one status to another.
+                                    format: date-time
+                                    type: string
+                                  lastUpdatedTime:
+                                    description: Last time the condition was updated
+                                    format: date-time
+                                    type: string
+                                  message:
+                                    description: Human readable message indicating
+                                      details about last transition.
+                                    type: string
+                                  reason:
+                                    description: (brief) reason for the condition's
+                                      last transition.
+                                    type: string
+                                  status:
+                                    description: Status of the condition, one of True,
+                                      False, Unknown.
+                                    type: string
+                                  type:
+                                    description: Type of condition
+                                    type: string
+                                required:
+                                - status
+                                - type
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - type
+                              x-kubernetes-list-type: map
+                          type: object
+                        hostConnection:
+                          description: HostConnection is the status of the connection
+                            with the host cluster
+                          properties:
+                            conditions:
+                              description: Conditions is an array of current cluster
+                                conditions.
+                              items:
+                                description: ToolchainClusterCondition describes current
+                                  state of a cluster.
+                                properties:
+                                  lastProbeTime:
+                                    description: Last time the condition was checked.
+                                    format: date-time
+                                    type: string
+                                  lastTransitionTime:
+                                    description: Last time the condition transit from
+                                      one status to another.
+                                    format: date-time
+                                    type: string
+                                  message:
+                                    description: Human readable message indicating
+                                      details about last transition.
+                                    type: string
+                                  reason:
+                                    description: (brief) reason for the condition's
+                                      last transition.
+                                    type: string
+                                  status:
+                                    description: Status of the condition, one of True,
+                                      False, Unknown.
+                                    type: string
+                                  type:
+                                    description: Type of cluster condition, Ready
+                                      or Offline.
+                                    type: string
+                                required:
+                                - lastProbeTime
+                                - status
+                                - type
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - conditions
+                          type: object
+                        memberOperator:
+                          description: MemberOperator is the status of a toolchain
+                            member operator
+                          properties:
+                            buildTimestamp:
+                              description: The timestamp of the member operator build
+                              type: string
+                            conditions:
+                              description: 'Conditions is an array of current member
+                                operator status conditions Supported condition types:
+                                ConditionReady'
+                              items:
+                                properties:
+                                  lastTransitionTime:
+                                    description: Last time the condition transit from
+                                      one status to another.
+                                    format: date-time
+                                    type: string
+                                  lastUpdatedTime:
+                                    description: Last time the condition was updated
+                                    format: date-time
+                                    type: string
+                                  message:
+                                    description: Human readable message indicating
+                                      details about last transition.
+                                    type: string
+                                  reason:
+                                    description: (brief) reason for the condition's
+                                      last transition.
+                                    type: string
+                                  status:
+                                    description: Status of the condition, one of True,
+                                      False, Unknown.
+                                    type: string
+                                  type:
+                                    description: Type of condition
+                                    type: string
+                                required:
+                                - status
+                                - type
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - type
+                              x-kubernetes-list-type: map
+                            deploymentName:
+                              description: The status of the member operator's deployment
+                              type: string
+                            revision:
+                              description: The commit id from the member-operator
+                                repository used to build the operator
+                              type: string
+                            version:
+                              description: The version of the operator
+                              type: string
+                          required:
+                          - buildTimestamp
+                          - deploymentName
+                          - revision
+                          - version
+                          type: object
+                        resourceUsage:
+                          description: Resource usage of the cluster
+                          properties:
+                            memoryUsagePerNodeRole:
+                              additionalProperties:
+                                type: integer
+                              description: How many percent of the available memory
+                                is used per node role (eg. worker, master)
+                              type: object
+                          type: object
+                        routes:
+                          description: Routes/URLs of the cluster, such as Console
+                            and Che Dashboard URLs
+                          properties:
+                            cheDashboardURL:
+                              description: CheDashboardURL is the Che Dashboard URL
+                                of the cluster if Che is installed
+                              type: string
+                            conditions:
+                              description: 'Conditions is an array of current member
+                                operator status conditions Supported condition types:
+                                ConditionReady'
+                              items:
+                                properties:
+                                  lastTransitionTime:
+                                    description: Last time the condition transit from
+                                      one status to another.
+                                    format: date-time
+                                    type: string
+                                  lastUpdatedTime:
+                                    description: Last time the condition was updated
+                                    format: date-time
+                                    type: string
+                                  message:
+                                    description: Human readable message indicating
+                                      details about last transition.
+                                    type: string
+                                  reason:
+                                    description: (brief) reason for the condition's
+                                      last transition.
+                                    type: string
+                                  status:
+                                    description: Status of the condition, one of True,
+                                      False, Unknown.
+                                    type: string
+                                  type:
+                                    description: Type of condition
+                                    type: string
+                                required:
+                                - status
+                                - type
+                                type: object
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - type
+                              x-kubernetes-list-type: map
+                            consoleURL:
+                              description: ConsoleURL is the web console URL of the
+                                cluster
+                              type: string
+                          type: object
+                      type: object
+                    userAccountCount:
+                      description: Number of UserAccounts created within the member
+                        cluster
+                      type: integer
+                  required:
+                  - clusterName
+                  - memberStatus
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - clusterName
+                x-kubernetes-list-type: map
+              metrics:
+                additionalProperties:
+                  additionalProperties:
+                    type: integer
+                  type: object
+                description: Metrics is a map that stores metrics to be exposed on
+                  Prometheus.
+                type: object
+                x-kubernetes-map-type: atomic
+              registrationService:
+                description: RegistrationService is the status of the registration
+                  service
+                properties:
+                  deployment:
+                    description: Deployment is the status of the registration service's
+                      deployment
+                    properties:
+                      conditions:
+                        description: 'Conditions is an array of current deployment
+                          status conditions for a host operator Supported condition
+                          types: Available, Progressing'
+                        items:
+                          properties:
+                            lastTransitionTime:
+                              description: Last time the condition transit from one
+                                status to another.
+                              format: date-time
+                              type: string
+                            lastUpdatedTime:
+                              description: Last time the condition was updated
+                              format: date-time
+                              type: string
+                            message:
+                              description: Human readable message indicating details
+                                about last transition.
+                              type: string
+                            reason:
+                              description: (brief) reason for the condition's last
+                                transition.
+                              type: string
+                            status:
+                              description: Status of the condition, one of True, False,
+                                Unknown.
+                              type: string
+                            type:
+                              description: Type of condition
+                              type: string
+                          required:
+                          - status
+                          - type
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - type
+                        x-kubernetes-list-type: map
+                      name:
+                        description: The host operator deployment name
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  health:
+                    description: Health provides health status of the registration
+                      service
+                    properties:
+                      alive:
+                        type: string
+                      buildTime:
+                        type: string
+                      conditions:
+                        description: 'Conditions is an array of status conditions
+                          for the health of the registration service Supported condition
+                          types: ConditionReady'
+                        items:
+                          properties:
+                            lastTransitionTime:
+                              description: Last time the condition transit from one
+                                status to another.
+                              format: date-time
+                              type: string
+                            lastUpdatedTime:
+                              description: Last time the condition was updated
+                              format: date-time
+                              type: string
+                            message:
+                              description: Human readable message indicating details
+                                about last transition.
+                              type: string
+                            reason:
+                              description: (brief) reason for the condition's last
+                                transition.
+                              type: string
+                            status:
+                              description: Status of the condition, one of True, False,
+                                Unknown.
+                              type: string
+                            type:
+                              description: Type of condition
+                              type: string
+                          required:
+                          - status
+                          - type
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - type
+                        x-kubernetes-list-type: map
+                      environment:
+                        type: string
+                      revision:
+                        type: string
+                      startTime:
+                        type: string
+                    required:
+                    - alive
+                    - buildTime
+                    - environment
+                    - revision
+                    - startTime
+                    type: object
+                  registrationServiceResources:
+                    description: RegistrationServiceResources is the status for resources
+                      created for the registration service
+                    properties:
+                      conditions:
+                        description: 'Conditions is an array of current registration
+                          service resource status conditions Supported condition types:
+                          Deployed, Deploying, DeployingFailed'
+                        items:
+                          properties:
+                            lastTransitionTime:
+                              description: Last time the condition transit from one
+                                status to another.
+                              format: date-time
+                              type: string
+                            lastUpdatedTime:
+                              description: Last time the condition was updated
+                              format: date-time
+                              type: string
+                            message:
+                              description: Human readable message indicating details
+                                about last transition.
+                              type: string
+                            reason:
+                              description: (brief) reason for the condition's last
+                                transition.
+                              type: string
+                            status:
+                              description: Status of the condition, one of True, False,
+                                Unknown.
+                              type: string
+                            type:
+                              description: Type of condition
+                              type: string
+                          required:
+                          - status
+                          - type
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - type
+                        x-kubernetes-list-type: map
+                    type: object
+                required:
+                - deployment
+                - health
+                - registrationServiceResources
+                type: object
+            type: object
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

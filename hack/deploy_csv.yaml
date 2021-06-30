@@ -668,14 +668,14 @@ data:
                         that will be used to generate the notification
                       type: string
                     userID:
-                      description: UserID is the user ID from RHD Identity Provider token
+                      description: 'UserID is the user ID from RHD Identity Provider token
                         (“sub” claim).  The UserID is used by the notification service (i.e.
                         the NotificationController) to lookup the UserSignup resource for
                         the user, and extract from it the values required to generate the
-                        notification content and to deliver the notification Deprecated
+                        notification content and to deliver the notification Deprecated:
+                        replaced by Context'
                       type: string
                   required:
-                  - context
                   - recipient
                   type: object
                 status:
