@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup/unapproved"
@@ -136,6 +137,11 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 	logger = logger.WithValues("username", userSignup.Spec.Username)
+
+	if util.IsBeingDeleted(userSignup) {
+		logger.Info("The UserSignup is being deleted")
+		return reconcile.Result{}, nil
+	}
 
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
