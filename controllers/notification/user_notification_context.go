@@ -58,7 +58,7 @@ func NewUserNotificationContext(client client.Client, userID, namespace string, 
 }
 
 func (c *UserNotificationContext) DeliveryEmail() string {
-	return fmt.Sprintf("%s %s<%s>",
+	return fmt.Sprintf("\"%s %s\"<%s>",
 		c.FirstName,
 		c.LastName,
 		c.UserEmail)
