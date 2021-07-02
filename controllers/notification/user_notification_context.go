@@ -3,8 +3,6 @@ package notification
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -59,17 +57,13 @@ func NewUserNotificationContext(client client.Client, userID, namespace string, 
 }
 
 func (c *UserNotificationContext) DeliveryEmail() string {
-	return fmt.Sprintf("\"%s %s\"<%s>",
-		strings.Replace(c.FirstName, "\"", "", -1),
-		strings.Replace(c.LastName, "\"", "", -1),
-		c.UserEmail)
+	return c.UserEmail
 }
 
 func (c *UserNotificationContext) KeysAndValues() []interface{} {
 	return []interface{}{
 		"UserID", c.UserID,
 		"UserEmail", c.UserEmail,
-		"DeliveryEmail", c.DeliveryEmail(),
 		"FirstName", c.FirstName,
 		"LastName", c.LastName,
 		"CompanyName", c.CompanyName,

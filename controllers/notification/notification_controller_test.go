@@ -161,7 +161,7 @@ func TestNotificationDelivery(t *testing.T) {
 		e := events[0]
 		require.IsType(t, &events2.Accepted{}, e)
 		accepted := e.(*events2.Accepted)
-		require.Equal(t, "\"Foo Bar\"<foo@redhat.com>", accepted.Recipient)
+		require.Equal(t, "foo@redhat.com", accepted.Recipient)
 		require.Equal(t, "redhat.com", accepted.RecipientDomain)
 		require.Equal(t, "foo", accepted.Message.Headers.Subject)
 		require.Equal(t, "noreply@foo.com", accepted.Message.Headers.From)

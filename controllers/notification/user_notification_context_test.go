@@ -66,13 +66,13 @@ func TestNotificationContext(t *testing.T) {
 		require.Equal(t, "usersignups.toolchain.dev.openshift.com \"other\" not found", err.Error())
 	})
 
-	t.Run("full email address", func(t *testing.T) {
+	t.Run("email address correct", func(t *testing.T) {
 		// when
 		notificationCtx, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace, config)
 
 		// then
 		require.NoError(t, err)
-		require.Equal(t, "\"John Smith\"<jsmith@redhat.com>", notificationCtx.DeliveryEmail())
+		require.Equal(t, "jsmith@redhat.com", notificationCtx.DeliveryEmail())
 	})
 
 	t.Run("no configuration provided", func(t *testing.T) {
@@ -82,29 +82,6 @@ func TestNotificationContext(t *testing.T) {
 		// then
 		require.Error(t, err)
 		assert.Equal(t, "configuration was not provided", err.Error())
-	})
-
-	t.Run("email address corrected when user's first and last name contain quotes", func(t *testing.T) {
-
-		// given
-		userSignup2 := &toolchainv1alpha1.UserSignup{
-			ObjectMeta: newObjectMeta("jane", "jdoe@redhat.com"),
-			Spec: toolchainv1alpha1.UserSignupSpec{
-				Username:      "jdoe@redhat.com",
-				TargetCluster: "east",
-				FamilyName:    "\"Doe\"",
-				GivenName:     "\"Jane\"",
-			},
-		}
-
-		client := prepareReconcile(t, userSignup2)
-
-		// when
-		notificationCtx, err := NewUserNotificationContext(client, userSignup2.Name, operatorNamespace, config)
-
-		// then
-		require.NoError(t, err)
-		require.Equal(t, "\"Jane Doe\"<jdoe@redhat.com>", notificationCtx.DeliveryEmail())
 	})
 }
 
