@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -59,8 +60,8 @@ func NewUserNotificationContext(client client.Client, userID, namespace string, 
 
 func (c *UserNotificationContext) DeliveryEmail() string {
 	return fmt.Sprintf("\"%s %s\"<%s>",
-		c.FirstName,
-		c.LastName,
+		strings.Replace(c.FirstName, "\"", "", -1),
+		strings.Replace(c.LastName, "\"", "", -1),
 		c.UserEmail)
 }
 
