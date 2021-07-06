@@ -46,3 +46,15 @@ func AssertNoNotificationsExist(t test.T, cl client.Client) {
 	require.NoError(t, err)
 	require.Len(t, notifications.Items, 0)
 }
+
+func OnlyOneNotificationExists(t test.T, cl client.Client, userName, notificationType string) {
+	notifications := &toolchainv1alpha1.NotificationList{}
+	labels := map[string]string{
+		toolchainv1alpha1.NotificationUserNameLabelKey: userName,
+		// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
+		toolchainv1alpha1.NotificationTypeLabelKey: notificationType,
+	}
+	err := cl.List(context.TODO(), notifications, client.MatchingLabels(labels))
+	require.NoError(t, err)
+	require.Len(t, notifications.Items, 1)
+}
