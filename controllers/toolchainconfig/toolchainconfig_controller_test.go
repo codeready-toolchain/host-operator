@@ -225,11 +225,6 @@ func newRequest() reconcile.Request {
 	}
 }
 
-func newToolchainConfigWithReset(t *testing.T, options ...testconfig.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
-	t.Cleanup(toolchainconfig.Reset)
-	return testconfig.NewToolchainConfig(options...)
-}
-
 func matchesDefaultConfig(t *testing.T, actual toolchainconfig.ToolchainConfig) {
 	assert.False(t, actual.AutomaticApproval().IsEnabled())
 	assert.Equal(t, 1000, actual.AutomaticApproval().MaxNumberOfUsersOverall())

@@ -22,7 +22,6 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/mod v0.4.1 // indirect
@@ -49,6 +48,7 @@ replace (
 )
 
 replace github.com/codeready-toolchain/api => /Users/rajiv/go/src/github.com/codeready-toolchain/api
+
 replace github.com/codeready-toolchain/toolchain-common => /Users/rajiv/go/src/github.com/codeready-toolchain/toolchain-common
 
 go 1.14

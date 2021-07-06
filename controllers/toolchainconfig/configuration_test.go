@@ -11,7 +11,7 @@ import (
 
 func TestAutomaticApprovalConfig(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
-		cfg := newToolchainConfigWithReset(t)
+		cfg := NewToolchainConfigWithReset(t)
 		toolchainCfg := toolchainconfig.NewToolchainConfig(&cfg.Spec)
 
 		assert.False(t, toolchainCfg.AutomaticApproval().IsEnabled())
@@ -21,7 +21,7 @@ func TestAutomaticApprovalConfig(t *testing.T) {
 		assert.Empty(t, toolchainCfg.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
 	})
 	t.Run("non-default", func(t *testing.T) {
-		cfg := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)).ResourceCapacityThreshold(456, testconfig.PerMemberCluster("member1", 654)))
+		cfg := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)).ResourceCapacityThreshold(456, testconfig.PerMemberCluster("member1", 654)))
 		toolchainCfg := toolchainconfig.NewToolchainConfig(&cfg.Spec)
 
 		assert.True(t, toolchainCfg.AutomaticApproval().IsEnabled())
@@ -34,13 +34,13 @@ func TestAutomaticApprovalConfig(t *testing.T) {
 
 func TestDeactivationConfig(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
-		cfg := newToolchainConfigWithReset(t)
+		cfg := NewToolchainConfigWithReset(t)
 		toolchainCfg := toolchainconfig.NewToolchainConfig(&cfg.Spec)
 
 		assert.Equal(t, 3, toolchainCfg.Deactivation().DeactivatingNotificationDays())
 	})
 	t.Run("non-default", func(t *testing.T) {
-		cfg := newToolchainConfigWithReset(t, testconfig.Deactivation().DeactivatingNotificationDays(5))
+		cfg := NewToolchainConfigWithReset(t, testconfig.Deactivation().DeactivatingNotificationDays(5))
 		toolchainCfg := toolchainconfig.NewToolchainConfig(&cfg.Spec)
 
 		assert.Equal(t, 5, toolchainCfg.Deactivation().DeactivatingNotificationDays())

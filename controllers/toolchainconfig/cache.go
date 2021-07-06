@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	common "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	errs "github.com/pkg/errors"
 
@@ -20,23 +21,25 @@ var cacheLog = logf.Log.WithName("cache_toolchainconfig")
 
 type cache struct {
 	sync.RWMutex
-	config *toolchainv1alpha1.ToolchainConfig
+	config  *toolchainv1alpha1.ToolchainConfig
+	secrets map[string]map[string]string // map of secret key-value pairs indexed by secret name
 }
 
-func (c *cache) set(config *toolchainv1alpha1.ToolchainConfig) {
+func (c *cache) set(config *toolchainv1alpha1.ToolchainConfig, secrets map[string]map[string]string) {
 	c.Lock()
 	defer c.Unlock()
 	c.config = config.DeepCopy()
+	c.secrets = common.CopyOf(secrets)
 }
 
-func (c *cache) get() *toolchainv1alpha1.ToolchainConfig {
+func (c *cache) get() (*toolchainv1alpha1.ToolchainConfig, map[string]map[string]string) {
 	c.RLock()
 	defer c.RUnlock()
-	return c.config.DeepCopy()
+	return c.config.DeepCopy(), common.CopyOf(c.secrets)
 }
 
-func UpdateConfig(config *toolchainv1alpha1.ToolchainConfig) {
-	configCache.set(config)
+func updateConfig(config *toolchainv1alpha1.ToolchainConfig, secrets map[string]map[string]string) {
+	configCache.set(config, secrets)
 }
 
 func loadLatest(cl client.Client) error {
@@ -53,7 +56,13 @@ func loadLatest(cl client.Client) error {
 		}
 		return err
 	}
-	configCache.set(config)
+
+	allSecrets, err := common.LoadSecrets(cl, namespace)
+	if err != nil {
+		return err
+	}
+
+	configCache.set(config, allSecrets)
 	return nil
 }
 
@@ -62,17 +71,17 @@ func loadLatest(cl client.Client) error {
 // If the resource is not found, then returns the default config.
 // If any failure happens while getting the ToolchainConfig resource, then returns an error.
 func GetConfig(cl client.Client) (ToolchainConfig, error) {
-	config := configCache.get()
+	config, secrets := configCache.get()
 	if config == nil {
 		if err := loadLatest(cl); err != nil {
-			return ToolchainConfig{cfg: &toolchainv1alpha1.ToolchainConfigSpec{}}, err
+			return ToolchainConfig{cfg: &toolchainv1alpha1.ToolchainConfigSpec{}, secrets: secrets}, err
 		}
-		config = configCache.get()
+		config, secrets = configCache.get()
 	}
 	if config == nil {
-		return ToolchainConfig{cfg: &toolchainv1alpha1.ToolchainConfigSpec{}}, nil
+		return ToolchainConfig{cfg: &toolchainv1alpha1.ToolchainConfigSpec{}, secrets: secrets}, nil
 	}
-	return ToolchainConfig{cfg: &config.Spec}, nil
+	return ToolchainConfig{cfg: &config.Spec, secrets: secrets}, nil
 }
 
 // Reset resets the cache.
