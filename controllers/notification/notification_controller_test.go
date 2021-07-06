@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/mailgun/mailgun-go/v4"
 	events2 "github.com/mailgun/mailgun-go/v4/events"
 	"k8s.io/apimachinery/pkg/types"
@@ -39,16 +40,15 @@ func (s *MockDeliveryService) Send(notificationCtx Context, notification *toolch
 }
 
 func TestNotificationSuccess(t *testing.T) {
-	// given
-	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_NOTIFICATION_DELETION", "10s")
-	defer restore()
+	toolchainConfig := testconfig.NewToolchainConfig(testconfig.Notifications().DurationBeforeNotificationDeletion("10s"))
 
+	// given
 	t.Run("will not do anything and return requeue with shorter duration that 10s", func(t *testing.T) {
 		// given
 		notification := newNotification("jane", "")
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
-		controller, request, cl := newController(t, notification, ds)
+		controller, request, cl := newController(t, notification, ds, toolchainConfig)
 
 		// when
 		result, err := controller.Reconcile(request)
@@ -68,7 +68,7 @@ func TestNotificationSuccess(t *testing.T) {
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
-		controller, request, cl := newController(t, notification, ds)
+		controller, request, cl := newController(t, notification, ds, toolchainConfig)
 
 		// when
 		result, err := controller.Reconcile(request)
@@ -81,8 +81,7 @@ func TestNotificationSuccess(t *testing.T) {
 }
 
 func TestNotificationSentFailure(t *testing.T) {
-	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_NOTIFICATION_DELETION", "10s")
-	defer restore()
+	toolchainConfig := testconfig.NewToolchainConfig(testconfig.Notifications().DurationBeforeNotificationDeletion("10s"))
 
 	t.Run("will return an error since it cannot delete the Notification after successfully sending", func(t *testing.T) {
 		// given
@@ -91,7 +90,7 @@ func TestNotificationSentFailure(t *testing.T) {
 		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
-		controller, request, cl := newController(t, notification, ds)
+		controller, request, cl := newController(t, notification, ds, toolchainConfig)
 		cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("error")
 		}
@@ -214,8 +213,7 @@ func TestNotificationDelivery(t *testing.T) {
 	t.Run("test notification with environment e2e", func(t *testing.T) {
 
 		// given
-		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_ENVIRONMENT", "e2e-tests")
-		defer restore()
+		toolchainConfig := testconfig.NewToolchainConfig(testconfig.Environment(testconfig.E2E))
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: newObjectMeta("abc123", "jane@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
@@ -227,7 +225,7 @@ func TestNotificationDelivery(t *testing.T) {
 		}
 		notification := newNotification("abc123", "test")
 		// pass in nil for deliveryService since send won't be used (sending skipped)
-		controller, request, client := newController(t, notification, nil, userSignup)
+		controller, request, client := newController(t, notification, nil, userSignup, toolchainConfig)
 
 		// when
 		result, err := controller.Reconcile(request)
@@ -252,7 +250,8 @@ func TestNotificationDelivery(t *testing.T) {
 	t.Run("test notification delivery fails for invalid user ID", func(t *testing.T) {
 		// given
 		notification := newNotification("abc123", "test")
-		controller, request, client := newController(t, notification, ds)
+		toolchainConfig := testconfig.NewToolchainConfig(testconfig.Environment(testconfig.E2E))
+		controller, request, client := newController(t, notification, ds, toolchainConfig)
 
 		// when
 		result, err := controller.Reconcile(request)
@@ -408,17 +407,16 @@ func newAdminNotification(recipient, subject, content string) *toolchainv1alpha1
 
 func newController(t *testing.T, notification *toolchainv1alpha1.Notification, deliveryService DeliveryService,
 	initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, append(initObjs, notification)...)
-	config, err := configuration.LoadConfig(cl)
-	require.NoError(t, err)
 
 	controller := &Reconciler{
 		Client:          cl,
 		Scheme:          s,
-		Config:          config,
 		deliveryService: deliveryService,
 		Log:             ctrl.Log.WithName("controllers").WithName("Notification"),
 	}

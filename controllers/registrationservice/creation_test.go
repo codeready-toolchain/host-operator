@@ -7,7 +7,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/test"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -25,15 +24,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := NewFakeClient(t)
-	config, err := configuration.LoadConfig(cl)
-	require.NoError(t, err)
 
 	t.Run("create with default values", func(t *testing.T) {
 		// given
 		cl := NewFakeClient(t)
 
 		// when
-		err = CreateOrUpdateResources(cl, s, HostOperatorNs, config)
+		err = CreateOrUpdateResources(cl, s, HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -72,7 +69,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		defer restore()
 
 		// when
-		err = CreateOrUpdateResources(cl, s, HostOperatorNs, config)
+		err = CreateOrUpdateResources(cl, s, HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -93,7 +90,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		}
 
 		// when
-		err = CreateOrUpdateResources(cl, s, HostOperatorNs, config)
+		err = CreateOrUpdateResources(cl, s, HostOperatorNs)
 
 		// then
 		require.Error(t, err)

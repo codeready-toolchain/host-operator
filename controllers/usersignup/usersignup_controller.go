@@ -10,9 +10,11 @@ import (
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
+	errs "github.com/pkg/errors"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup/unapproved"
-	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
@@ -101,7 +103,6 @@ type Reconciler struct {
 	*StatusUpdater
 	Log               logr.Logger
 	Scheme            *runtime.Scheme
-	CrtConfig         *crtCfg.Config
 	GetMemberClusters cluster.GetMemberClustersFunc
 }
 
@@ -456,8 +457,13 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 func (r *Reconciler) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
 	replaced := usersignup.TransformUsername(instance.Spec.Username)
 
+	config, err := toolchainconfig.GetConfig(r.Client)
+	if err != nil {
+		return "", errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+
 	// Check for any forbidden prefixes
-	for _, prefix := range r.CrtConfig.GetForbiddenUsernamePrefixes() {
+	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
 		if strings.HasPrefix(replaced, prefix) {
 			replaced = fmt.Sprintf("%s%s", "crt-", replaced)
 			break
@@ -465,7 +471,7 @@ func (r *Reconciler) generateCompliantUsername(instance *toolchainv1alpha1.UserS
 	}
 
 	// Check for any forbidden suffixes
-	for _, suffix := range r.CrtConfig.GetForbiddenUsernameSuffixes() {
+	for _, suffix := range config.Users().ForbiddenUsernameSuffixes() {
 		if strings.HasSuffix(replaced, suffix) {
 			replaced = fmt.Sprintf("%s%s", replaced, "-crt")
 			break

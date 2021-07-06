@@ -3,10 +3,11 @@ package notification
 import (
 	"bytes"
 	"errors"
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"text/template"
 
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,7 +50,7 @@ func NewNotificationDeliveryServiceFactory(client client.Client, config Delivery
 
 func (f *DeliveryServiceFactory) CreateNotificationDeliveryService() (DeliveryService, error) {
 	switch f.Config.GetNotificationDeliveryService() {
-	case configuration.NotificationDeliveryServiceMailgun:
+	case toolchainconfig.NotificationDeliveryServiceMailgun:
 		return NewMailgunNotificationDeliveryService(f.Config, &DefaultTemplateLoader{}), nil
 	}
 	return nil, errors.New("invalid notification delivery service configuration")

@@ -13,7 +13,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/registrationservice"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
@@ -21,6 +21,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/stretchr/testify/assert"
@@ -64,11 +65,12 @@ var logger = logf.Log.WithName("toolchainstatus_controller_test")
 
 func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTPClient,
 	memberClusters []string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := scheme.Scheme
 	err := toolchainv1alpha1.AddToScheme(s)
 	require.NoError(t, err)
 	fakeClient := test.NewFakeClient(t, initObjs...)
-	hostConfig, err := configuration.LoadConfig(fakeClient)
 	require.NoError(t, err)
 
 	r := &Reconciler{
@@ -82,8 +84,7 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 			}
 			return clusters
 		},
-		Config: hostConfig,
-		Log:    ctrl.Log.WithName("controllers").WithName("ToolchainStatus"),
+		Log: ctrl.Log.WithName("controllers").WithName("ToolchainStatus"),
 	}
 	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }
@@ -130,11 +131,13 @@ func TestNoToolchainStatusFound(t *testing.T) {
 
 	t.Run("No toolchainstatus resource found - right name but not found", func(t *testing.T) {
 		// given
-		expectedErrMsg := "get failed"
-		requestName := configuration.ToolchainStatusName
+		requestName := toolchainconfig.ToolchainStatusName
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
 		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
-			return fmt.Errorf(expectedErrMsg)
+			if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
+				return fmt.Errorf("get failed")
+			}
+			return fakeClient.Client.Get(ctx, key, obj)
 		}
 
 		// when
@@ -142,7 +145,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		require.Equal(t, expectedErrMsg, err.Error())
+		require.Equal(t, "get failed", err.Error())
 		assert.Equal(t, reconcile.Result{}, res)
 	})
 }
@@ -152,7 +155,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := configuration.ToolchainStatusName
+	requestName := toolchainconfig.ToolchainStatusName
 
 	t.Run("All components ready", func(t *testing.T) {
 		// given
@@ -753,7 +756,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := configuration.ToolchainStatusName
+	requestName := toolchainconfig.ToolchainStatusName
 
 	registrationService := newRegistrationServiceReady()
 	toolchainStatus := NewToolchainStatus()
@@ -839,7 +842,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	defer counter.Reset()
-	requestName := configuration.ToolchainStatusName
+	requestName := toolchainconfig.ToolchainStatusName
 
 	registrationService := newRegistrationServiceReady()
 	toolchainStatus := NewToolchainStatus()
@@ -909,15 +912,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			t.Run("Notification not created when admin.email not configured", func(t *testing.T) {
 
 				assertInvalidEmailReturnErr := func(email string) {
-					invalidConfig := &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "notification_test_config",
-							Namespace: test.HostOperatorNs,
-						},
-						Data: map[string]string{
-							"admin.email": email,
-						},
-					}
+					invalidConfig := testconfig.NewToolchainConfig(testconfig.Notifications().AdminEmail(email))
 
 					// given
 					hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
@@ -1113,7 +1108,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := configuration.ToolchainStatusName
+	requestName := toolchainconfig.ToolchainStatusName
 	registrationService := newRegistrationServiceReady()
 	hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 	registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())

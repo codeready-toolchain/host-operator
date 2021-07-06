@@ -7,7 +7,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 
@@ -57,7 +57,6 @@ type Reconciler struct {
 	Client client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-	Config *configuration.Config
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=templateupdaterequests,verbs=get;list;watch;create;update;patch;delete
@@ -88,6 +87,11 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, errs.Wrap(err, "unable to get the current TemplateUpdateRequest")
 	}
 
+	config, err := toolchainconfig.GetConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+
 	// lookup the MasterUserRecord with the same name as the TemplateUpdateRequest tur
 	mur := &toolchainv1alpha1.MasterUserRecord{}
 	if err = r.Client.Get(context.TODO(), request.NamespacedName, mur); err != nil {
@@ -114,7 +118,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 			if err2 := r.addFailureStatusCondition(tur, err); err2 != nil {
 				return reconcile.Result{}, err2
 			}
-			if maxUpdateFailuresReached(*tur, r.Config.GetMasterUserRecordUpdateFailureThreshold()) {
+			if maxUpdateFailuresReached(*tur, config.Users().MasterUserRecordUpdateFailureThreshold()) {
 				// exit reconcile loop but don't requeue
 				// in other words, give up with the MasterUserRecord update :(
 				return reconcile.Result{}, nil

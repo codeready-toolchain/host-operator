@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
@@ -41,8 +42,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), r.Config)
+func (r *Reconciler) SetupWithManager(mgr manager.Manager, config toolchainconfig.ToolchainConfig) error {
+	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), toolchainconfig.DeliveryServiceFactoryConfig{config})
 	svc, err := factory.CreateNotificationDeliveryService()
 	if err != nil {
 		return err
@@ -57,7 +58,6 @@ type Reconciler struct {
 	Client          client.Client
 	Log             logr.Logger
 	Scheme          *runtime.Scheme
-	Config          *configuration.Config
 	deliveryService DeliveryService
 }
 
@@ -83,10 +83,15 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
+	config, err := toolchainconfig.GetConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+
 	// if is sent, then check when status was changed and delete it if the requested duration has passed
 	completeCond, found := condition.FindConditionByType(notification.Status.Conditions, toolchainv1alpha1.NotificationSent)
 	if found && completeCond.Status == corev1.ConditionTrue {
-		deleted, requeueAfter, err := r.checkTransitionTimeAndDelete(reqLogger, notification, completeCond)
+		deleted, requeueAfter, err := r.checkTransitionTimeAndDelete(reqLogger, config.Notifications().DurationBeforeNotificationDeletion(), notification, completeCond)
 		if deleted {
 			return reconcile.Result{}, err
 		}
@@ -104,7 +109,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if notification.Spec.Recipient != "" {
 		notCtx = NewAdminNotificationContext(notification.Spec.Recipient)
 	} else {
-		notCtx, err = NewUserNotificationContext(r.Client, notification.Spec.UserID, request.Namespace, r.Config)
+		notCtx, err = NewUserNotificationContext(r.Client, notification.Spec.UserID, request.Namespace)
 		if err != nil {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
 				r.setStatusNotificationContextError, err, "failed to create notification context")
@@ -112,7 +117,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	// if the environment is set to e2e do not attempt sending via mailgun
-	if r.Config.GetEnvironment() != "e2e-tests" {
+	if config.Environment() != "e2e-tests" {
 		// Send the notification via the configured delivery service
 		err = r.deliveryService.Send(notCtx, notification)
 		if err != nil {
@@ -130,7 +135,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	return reconcile.Result{
 		Requeue:      true,
-		RequeueAfter: r.Config.GetDurationBeforeNotificationDeletion(),
+		RequeueAfter: config.Notifications().DurationBeforeNotificationDeletion(),
 	}, r.updateStatus(reqLogger, notification, r.setStatusNotificationSent)
 }
 
@@ -138,23 +143,23 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 // the duration before the notification should be deleted. If so, the notification is deleted.
 // Returns bool indicating if the notification was deleted, the time before the notification
 // can be deleted and error
-func (r *Reconciler) checkTransitionTimeAndDelete(log logr.Logger, notification *toolchainv1alpha1.Notification,
+func (r *Reconciler) checkTransitionTimeAndDelete(log logr.Logger, durationBeforeNotificationDeletion time.Duration, notification *toolchainv1alpha1.Notification,
 	completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
 
 	log.Info("the Notification is sent so we can deal with its deletion")
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
-	if timeSinceCompletion >= r.Config.GetDurationBeforeNotificationDeletion() {
+	if timeSinceCompletion >= durationBeforeNotificationDeletion {
 		log.Info("the Notification has been sent for a longer time than the 'durationBeforeNotificationDeletion', so it's ready to be deleted",
-			"durationBeforeNotificationDeletion", r.Config.GetDurationBeforeNotificationDeletion().String())
+			"durationBeforeNotificationDeletion", durationBeforeNotificationDeletion.String())
 		if err := r.Client.Delete(context.TODO(), notification, &client.DeleteOptions{}); err != nil {
 			return false, 0, errs.Wrapf(err, "unable to delete Notification object '%s'", notification.Name)
 		}
 		return true, 0, nil
 	}
-	diff := r.Config.GetDurationBeforeNotificationDeletion() - timeSinceCompletion
+	diff := durationBeforeNotificationDeletion - timeSinceCompletion
 	log.Info("the Notification has been completed for shorter time than 'durationBeforeNotificationDeletion', so it's going to be reconciled again",
-		"durationBeforeNotificationDeletion", r.Config.GetDurationBeforeNotificationDeletion().String(), "reconcileAfter", diff.String())
+		"durationBeforeNotificationDeletion", durationBeforeNotificationDeletion.String(), "reconcileAfter", diff.String())
 	return false, diff, nil
 }
 

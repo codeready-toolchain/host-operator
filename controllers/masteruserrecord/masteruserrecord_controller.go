@@ -6,7 +6,6 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -66,7 +65,6 @@ type Reconciler struct {
 	Log                   logr.Logger
 	Scheme                *runtime.Scheme
 	RetrieveMemberCluster func(name string) (*cluster.CachedToolchainCluster, bool)
-	Config                *configuration.Config
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=masteruserrecords,verbs=get;list;watch;create;update;patch;delete
@@ -199,7 +197,6 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 		recordSpecUserAcc: murAccount,
 		logger:            logger,
 		scheme:            r.Scheme,
-		config:            r.Config,
 	}
 	if err := sync.synchronizeSpec(); err != nil {
 		// note: if we got an error while sync'ing the spec, then we may not be able to update the MUR status it here neither.

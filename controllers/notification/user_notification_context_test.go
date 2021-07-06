@@ -9,8 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -39,12 +37,10 @@ func TestNotificationContext(t *testing.T) {
 	}
 	states.SetApproved(userSignup, true)
 	client := prepareReconcile(t, userSignup)
-	config, err := configuration.LoadConfig(test.NewFakeClient(t))
-	require.NoError(t, err)
 
 	t.Run("user found", func(t *testing.T) {
 		// when
-		notificationCtx, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace, config)
+		notificationCtx, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace)
 
 		// then
 		require.NoError(t, err)
@@ -59,7 +55,7 @@ func TestNotificationContext(t *testing.T) {
 
 	t.Run("user not found", func(t *testing.T) {
 		// when
-		_, err := NewUserNotificationContext(client, "other", operatorNamespace, config)
+		_, err := NewUserNotificationContext(client, "other", operatorNamespace)
 
 		// then
 		require.Error(t, err)
@@ -68,7 +64,7 @@ func TestNotificationContext(t *testing.T) {
 
 	t.Run("full email address", func(t *testing.T) {
 		// when
-		notificationCtx, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace, config)
+		notificationCtx, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace)
 
 		// then
 		require.NoError(t, err)
@@ -77,7 +73,7 @@ func TestNotificationContext(t *testing.T) {
 
 	t.Run("no configuration provided", func(t *testing.T) {
 		// when
-		_, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace, nil)
+		_, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace)
 
 		// then
 		require.Error(t, err)

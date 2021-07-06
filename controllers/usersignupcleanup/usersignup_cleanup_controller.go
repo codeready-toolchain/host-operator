@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
+	errs "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
@@ -52,7 +53,6 @@ type Reconciler struct {
 	Client client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-	Config *crtCfg.Config
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=masteruserrecords,verbs=get;list;watch;create;update;patch;delete
@@ -83,13 +83,18 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
+	config, err := toolchainconfig.GetConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+
 	// Check if the UserSignup is waiting for phone verification to be finished
 	// Check also if the status doesn't contain the approved condition set to true - it there is, then it means that it's reactivated UserSignup and we should skip it here
 	if states.VerificationRequired(instance) && !condition.IsTrue(instance.Status.Conditions, toolchainv1alpha1.UserSignupApproved) {
 
 		createdTime := instance.ObjectMeta.CreationTimestamp
 
-		unverifiedThreshold := time.Now().Add(-time.Duration(r.Config.GetUserSignupUnverifiedRetentionDays()*24) * time.Hour)
+		unverifiedThreshold := time.Now().Add(-time.Duration(config.Deactivation().UserSignupUnverifiedRetentionDays()*24) * time.Hour)
 
 		if createdTime.Time.Before(unverifiedThreshold) {
 			reqLogger.Info("Deleting UserSignup due to exceeding unverified retention period")
@@ -121,8 +126,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 		// If the LastTransitionTime of the deactivated status condition is older than the configured threshold,
 		// then delete the UserSignup
-
-		deactivatedThreshold := time.Now().Add(-time.Duration(r.Config.GetUserSignupDeactivatedRetentionDays()*24) * time.Hour)
+		deactivatedThreshold := time.Now().Add(-time.Duration(config.Deactivation().UserSignupDeactivatedRetentionDays()*24) * time.Hour)
 
 		if cond.LastTransitionTime.Time.Before(deactivatedThreshold) {
 			reqLogger.Info("Deleting UserSignup due to exceeding deactivated retention period")

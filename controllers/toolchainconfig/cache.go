@@ -5,6 +5,9 @@ import (
 	"sync"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	errs "github.com/pkg/errors"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,7 +39,12 @@ func UpdateConfig(config *toolchainv1alpha1.ToolchainConfig) {
 	configCache.set(config)
 }
 
-func loadLatest(cl client.Client, namespace string) error {
+func loadLatest(cl client.Client) error {
+	namespace, err := k8sutil.GetWatchNamespace()
+	if err != nil {
+		return errs.Wrap(err, "Failed to get watch namespace")
+	}
+
 	config := &toolchainv1alpha1.ToolchainConfig{}
 	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "config"}, config); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -53,11 +61,10 @@ func loadLatest(cl client.Client, namespace string) error {
 // If no config is stored in the cache, then it retrieves it from the cluster and stores in the cache.
 // If the resource is not found, then returns the default config.
 // If any failure happens while getting the ToolchainConfig resource, then returns an error.
-func GetConfig(cl client.Client, namespace string) (ToolchainConfig, error) {
+func GetConfig(cl client.Client) (ToolchainConfig, error) {
 	config := configCache.get()
 	if config == nil {
-		err := loadLatest(cl, namespace)
-		if err != nil {
+		if err := loadLatest(cl); err != nil {
 			return ToolchainConfig{cfg: &toolchainv1alpha1.ToolchainConfigSpec{}}, err
 		}
 		config = configCache.get()

@@ -3,12 +3,12 @@ package usersignupcleanup
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	test2 "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
@@ -245,6 +245,7 @@ func days(days int) time.Duration {
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) { // nolint: unparam
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	metrics.Reset()
 
 	s := scheme.Scheme
@@ -252,12 +253,9 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 	require.NoError(t, err)
 
 	fakeClient := test.NewFakeClient(t, initObjs...)
-	config, err := configuration.LoadConfig(fakeClient)
-	require.NoError(t, err)
 
 	r := &Reconciler{
 		Scheme: s,
-		Config: config,
 		Client: fakeClient,
 		Log:    ctrl.Log.WithName("controllers").WithName("UserSignupCleanup"),
 	}

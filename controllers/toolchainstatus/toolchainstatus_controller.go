@@ -11,7 +11,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/registrationservice"
-	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -106,7 +106,6 @@ type Reconciler struct {
 	Log            logr.Logger
 	Scheme         *runtime.Scheme
 	GetMembersFunc cluster.GetMemberClustersFunc
-	Config         *crtCfg.Config
 	HTTPClientImpl HTTPClient
 }
 
@@ -118,11 +117,16 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling ToolchainStatus")
-	requeueTime := r.Config.GetToolchainStatusRefreshTime()
+
+	config, err := toolchainconfig.GetConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+	requeueTime := config.ToolchainStatus().ToolchainStatusRefreshTime()
 
 	// fetch the ToolchainStatus
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, toolchainStatus)
+	err = r.Client.Get(context.TODO(), request.NamespacedName, toolchainStatus)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -377,9 +381,15 @@ func getAPIEndpoint(clusterName string, memberClusters []*cluster.CachedToolchai
 
 func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, status toolchainStatusNotificationType) error {
-	if !isValidEmailAddress(r.Config.GetAdminEmail()) {
+
+	config, err := toolchainconfig.GetConfig(r.Client)
+	if err != nil {
+		return errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+
+	if !isValidEmailAddress(config.Notifications().AdminEmail()) {
 		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
-			r.Config.GetAdminEmail()))
+			config.Notifications().AdminEmail()))
 	}
 
 	tsValue := time.Now().Format("20060102150405")
@@ -408,7 +418,7 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 			Namespace: toolchainStatus.Namespace,
 		},
 		Spec: toolchainv1alpha1.NotificationSpec{
-			Recipient: r.Config.GetAdminEmail(),
+			Recipient: config.Notifications().AdminEmail(),
 			Subject:   subjectString,
 			Content:   contentString,
 		},

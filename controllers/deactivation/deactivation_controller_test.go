@@ -11,7 +11,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
@@ -44,7 +43,7 @@ const (
 )
 
 func TestReconcile(t *testing.T) {
-	config := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxUsersNumber(123,
+	config := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
 		testconfig.PerMemberCluster("member1", 321)),
 		testconfig.Deactivation().DeactivatingNotificationDays(3))
 
@@ -135,6 +134,10 @@ func TestReconcile(t *testing.T) {
 		// a user that belongs to the deactivation domain excluded list
 		t.Run("user deactivation excluded", func(t *testing.T) {
 			// given
+			config := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
+				testconfig.PerMemberCluster("member1", 321)),
+				testconfig.Deactivation().DeactivatingNotificationDays(3),
+			)
 			restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DEACTIVATION_DOMAINS_EXCLUDED", "@redhat.com")
 			defer restore()
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
@@ -360,12 +363,10 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, initObjs...)
-	cfg, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
 	r := &Reconciler{
 		Client: cl,
 		Scheme: s,
-		Config: cfg,
 		Log:    ctrl.Log.WithName("controllers").WithName("Deactivation"),
 	}
 	return r, reconcile.Request{
@@ -417,9 +418,4 @@ func assertThatUserSignupDeactivated(t *testing.T, cl *test.FakeClient, name str
 	err := cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: operatorNamespace}, userSignup)
 	require.NoError(t, err)
 	require.Equal(t, expected, states.Deactivated(userSignup))
-}
-
-func newToolchainConfigWithReset(t *testing.T, options ...testconfig.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
-	t.Cleanup(toolchainconfig.Reset)
-	return testconfig.NewToolchainConfig(options...)
 }

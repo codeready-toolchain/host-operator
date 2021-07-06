@@ -3,13 +3,13 @@ package templateupdaterequest_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/templateupdaterequest"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	turtest "github.com/codeready-toolchain/host-operator/test/templateupdaterequest"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -664,16 +664,14 @@ func TestReconcile(t *testing.T) {
 }
 
 func prepareReconcile(t *testing.T, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *test.FakeClient) {
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, initObjs...)
-	config, err := configuration.LoadConfig(cl)
-	require.NoError(t, err)
 	r := &templateupdaterequest.Reconciler{
 		Client: cl,
 		Scheme: s,
-		Config: config,
 		Log:    ctrl.Log.WithName("controllers").WithName("TemplateUpdateRequest"),
 	}
 	return r, reconcile.Request{

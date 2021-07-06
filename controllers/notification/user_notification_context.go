@@ -2,11 +2,11 @@ package notification
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	errs "github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,14 +25,16 @@ type UserNotificationContext struct {
 
 // NewUserNotificationContext creates a new UserNotificationContext by looking up the UserSignup with the specified userID
 // and using it to populate the context fields
-func NewUserNotificationContext(client client.Client, userID, namespace string, config *configuration.Config) (*UserNotificationContext, error) {
-	if config == nil {
-		return nil, errors.New("configuration was not provided")
+func NewUserNotificationContext(client client.Client, userID, namespace string) (*UserNotificationContext, error) {
+
+	config, err := toolchainconfig.GetConfig(client)
+	if err != nil {
+		return nil, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}
 
 	// Lookup the UserSignup resource with the specified userID
 	instance := &toolchainv1alpha1.UserSignup{}
-	err := client.Get(context.TODO(), types.NamespacedName{
+	err = client.Get(context.TODO(), types.NamespacedName{
 		Namespace: namespace,
 		Name:      userID,
 	}, instance)
@@ -52,7 +54,7 @@ func NewUserNotificationContext(client client.Client, userID, namespace string, 
 		notificationCtx.UserEmail = emailLbl
 	}
 
-	notificationCtx.RegistrationURL = config.GetRegistrationServiceURL()
+	notificationCtx.RegistrationURL = config.RegistrationService().RegistrationServiceURL()
 
 	return notificationCtx, nil
 }

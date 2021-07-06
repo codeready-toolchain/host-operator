@@ -44,7 +44,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.Empty(t, res)
 			require.NoError(t, err)
-			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t))
 			require.NoError(t, err)
 			matchesDefaultConfig(t, actual)
 			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).NotExists()
@@ -63,7 +63,7 @@ func TestReconcile(t *testing.T) {
 
 		t.Run("config exists", func(t *testing.T) {
 			config := newToolchainConfigWithReset(t,
-				testconfig.AutomaticApproval().Enabled().MaxUsersNumber(123, testconfig.PerMemberCluster("member1", 321)),
+				testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)),
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
@@ -78,7 +78,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.Equal(t, toolchainconfig.DefaultReconcile, res)
 			require.NoError(t, err)
-			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t))
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
 			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
@@ -112,7 +112,7 @@ func TestReconcile(t *testing.T) {
 				// then
 				require.Equal(t, toolchainconfig.DefaultReconcile, res)
 				require.NoError(t, err)
-				actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+				actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t))
 				require.NoError(t, err)
 				assert.True(t, actual.AutomaticApproval().IsEnabled())
 				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
@@ -149,7 +149,7 @@ func TestReconcile(t *testing.T) {
 				// then
 				require.Equal(t, toolchainconfig.DefaultReconcile, res)
 				require.EqualError(t, err, "client error")
-				actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+				actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t))
 				require.NoError(t, err)
 				assert.True(t, actual.AutomaticApproval().IsEnabled())
 				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
@@ -174,7 +174,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("initial get failed", func(t *testing.T) {
 			// given
 			config := newToolchainConfigWithReset(t,
-				testconfig.AutomaticApproval().Enabled().MaxUsersNumber(123, testconfig.PerMemberCluster("member1", 321)),
+				testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)),
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
@@ -190,14 +190,14 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.Equal(t, toolchainconfig.DefaultReconcile, res)
 			require.EqualError(t, err, "client error")
-			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t))
 			require.NoError(t, err)
 			matchesDefaultConfig(t, actual)
 		})
 
 		t.Run("sync failed", func(t *testing.T) {
 			// given
-			config := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled().MaxUsersNumber(123, testconfig.PerMemberCluster("member1", 321)), testconfig.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec))
+			config := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)), testconfig.Members().Default(defaultMemberConfig.Spec), config.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
 			members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 			controller := newController(hostCl, members)
@@ -208,7 +208,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.Equal(t, toolchainconfig.DefaultReconcile, res)
-			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t), test.HostOperatorNs)
+			actual, err := toolchainconfig.GetConfig(test.NewFakeClient(t))
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
 			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
@@ -236,7 +236,7 @@ func matchesDefaultConfig(t *testing.T, actual toolchainconfig.ToolchainConfig) 
 	assert.Empty(t, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 	assert.Equal(t, 80, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
 	assert.Empty(t, actual.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
-	assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationInDays())
+	assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationDays())
 }
 
 func newController(hostCl client.Client, members cluster.GetMemberClustersFunc) toolchainconfig.Reconciler {

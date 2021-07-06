@@ -8,10 +8,12 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
 	"github.com/spf13/cast"
@@ -32,15 +34,14 @@ import (
 func TestChangeTierSuccess(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_CHANGE_REQUEST_DELETION", "10s")
-	defer restore()
+	config := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 
 	t.Run("the controller should change tier in MUR", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "john")
 		changeTierRequest := newChangeTierRequest("john", "team")
-		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(request)
@@ -57,7 +58,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
-		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(request)
@@ -73,7 +74,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("another-cluster"))
-		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(request)
@@ -91,7 +92,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		changeTierRequest.Status.Conditions = []toolchainv1alpha1.Condition{toBeComplete()}
-		controller, request, cl := newController(t, changeTierRequest, mur)
+		controller, request, cl := newController(t, changeTierRequest, config, mur)
 
 		// when
 		result, err := controller.Reconcile(request)
@@ -112,7 +113,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		changeTierRequest.Status.Conditions = []toolchainv1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
-		controller, request, cl := newController(t, changeTierRequest, mur)
+		controller, request, cl := newController(t, changeTierRequest, config, mur)
 
 		// when
 		result, err := controller.Reconcile(request)
@@ -127,14 +128,13 @@ func TestChangeTierSuccess(t *testing.T) {
 }
 
 func TestChangeTierFailure(t *testing.T) {
-	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_CHANGE_REQUEST_DELETION", "10s")
-	defer restore()
+	config := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
 
 	t.Run("the change will fail since the provided MUR doesn't exist", func(t *testing.T) {
 		// given
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		controller, request, cl := newController(t, changeTierRequest, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, teamTier)
 
 		// when
 		_, err := controller.Reconcile(request)
@@ -149,7 +149,7 @@ func TestChangeTierFailure(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
-		controller, request, cl := newController(t, changeTierRequest, mur)
+		controller, request, cl := newController(t, changeTierRequest, config, mur)
 
 		// when
 		_, err := controller.Reconcile(request)
@@ -165,7 +165,7 @@ func TestChangeTierFailure(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("some-other-cluster"))
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(request)
@@ -184,7 +184,7 @@ func TestChangeTierFailure(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "johny")
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
 		cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			_, ok := obj.(*toolchainv1alpha1.MasterUserRecord)
 			if ok {
@@ -209,7 +209,7 @@ func TestChangeTierFailure(t *testing.T) {
 		changeTierRequest.Status.Conditions = []toolchainv1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
 		cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("error")
 		}
@@ -356,12 +356,9 @@ func newController(t *testing.T, changeTier *toolchainv1alpha1.ChangeTierRequest
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, append(initObjs, changeTier)...)
-	config, err := configuration.LoadConfig(cl)
-	require.NoError(t, err)
 	controller := &Reconciler{
 		Client: cl,
 		Scheme: s,
-		Config: config,
 		Log:    ctrl.Log.WithName("controllers").WithName("ChangeTierRequest"),
 	}
 	request := reconcile.Request{

@@ -3,6 +3,7 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -1284,13 +1284,11 @@ func apiScheme(t *testing.T) *runtime.Scheme {
 }
 
 func newController(t *testing.T, hostCl client.Client, s *runtime.Scheme, getMemberCluster GetMemberClusterFunc, memberCl ...ClientForCluster) Reconciler {
-	config, err := configuration.LoadConfig(hostCl)
-	require.NoError(t, err)
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	return Reconciler{
 		Client:                hostCl,
 		Scheme:                s,
 		RetrieveMemberCluster: getMemberCluster(memberCl...),
-		Config:                config,
 		Log:                   ctrl.Log.WithName("controllers").WithName("MasterUserRecord"),
 	}
 }
