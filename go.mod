@@ -32,6 +32,6 @@ require (
 
 replace github.com/codeready-toolchain/api => github.com/matousjobanek/api v0.0.0-20210706080942-cd9fdc6e0953
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20210706081505-e50ca0f5c2d4
+replace github.com/codeready-toolchain/toolchain-common => github.com/matousjobanek/toolchain-common v0.0.0-20210707065838-79793648c8cb
 
 go 1.16
