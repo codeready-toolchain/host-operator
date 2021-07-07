@@ -130,11 +130,16 @@ func BeingDeleted() UserSignupModifier {
 	}
 }
 
+func WithActivations(value string) UserSignupModifier {
+	return WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, value)
+}
+
 func WithAnnotation(key, value string) UserSignupModifier {
 	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		userSignup.Annotations[key] = value
 	}
 }
+
 func WithoutAnnotation(key string) UserSignupModifier {
 	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		delete(userSignup.Annotations, key)
