@@ -29,7 +29,6 @@ func TestReconcileRegistrationService(t *testing.T) {
 	// given
 	s := scheme.Scheme
 	require.NoError(t, apis.AddToScheme(s))
-	require.NoError(t, tmplv1.Install(s))
 	codecFactory := serializer.NewCodecFactory(s)
 	decoder := codecFactory.UniversalDeserializer()
 
