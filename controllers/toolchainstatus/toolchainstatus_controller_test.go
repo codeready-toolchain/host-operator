@@ -19,10 +19,10 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -41,10 +40,11 @@ import (
 var requeueResult = reconcile.Result{RequeueAfter: 5 * time.Second}
 
 const (
-	defaultHostOperatorName        = "host-operator"
-	defaultRegistrationServiceName = "registration-service"
-	unreadyStatusNotification      = "toolchainstatus-unready"
-	restoredStatusNotification     = "toolchainstatus-restore"
+	defaultHostOperatorName           = "host-operator"
+	defaultHostOperatorDeploymentName = "host-operator-controller-manager"
+	defaultRegistrationServiceName    = "registration-service"
+	unreadyStatusNotification         = "toolchainstatus-unready"
+	restoredStatusNotification        = "toolchainstatus-restore"
 )
 
 type fakeHTTPClient struct {
@@ -83,7 +83,6 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 			return clusters
 		},
 		Config: hostConfig,
-		Log:    ctrl.Log.WithName("controllers").WithName("ToolchainStatus"),
 	}
 	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }
@@ -121,7 +120,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 		reconciler, req, _ := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
 
 		// when
-		res, err := reconciler.Reconcile(req)
+		res, err := reconciler.Reconcile(context.TODO(), req)
 
 		// then - there should not be any error, the controller should only log that the resource was not found
 		require.NoError(t, err)
@@ -133,12 +132,12 @@ func TestNoToolchainStatusFound(t *testing.T) {
 		expectedErrMsg := "get failed"
 		requestName := configuration.ToolchainStatusName
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
-		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 			return fmt.Errorf(expectedErrMsg)
 		}
 
 		// when
-		res, err := reconciler.Reconcile(req)
+		res, err := reconciler.Reconcile(context.TODO(), req)
 
 		// then
 		require.Error(t, err)
@@ -150,21 +149,21 @@ func TestNoToolchainStatusFound(t *testing.T) {
 func TestToolchainStatusConditions(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
+	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	requestName := configuration.ToolchainStatusName
 
 	t.Run("All components ready", func(t *testing.T) {
 		// given
 		registrationService := newRegistrationServiceReady()
-		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatus(ready())
 		toolchainStatus := NewToolchainStatus()
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when
-		res, err := reconciler.Reconcile(req)
+		res, err := reconciler.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -184,11 +183,11 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Host operator deployment not found - deployment env var not set", func(t *testing.T) {
 			// given
-			resetFunc := test.UnsetEnvVarAndRestore(t, k8sutil.OperatorNameEnvVar)
+			resetFunc := test.UnsetEnvVarAndRestore(t, commonconfig.OperatorNameEnvVar)
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			resetFunc()
@@ -206,50 +205,50 @@ func TestToolchainStatusConditions(t *testing.T) {
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
-				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorName, "DeploymentNotFound", "unable to get the deployment: deployments.apps \"host-operator\" not found")).
+				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorDeploymentName, "DeploymentNotFound", "unable to get the deployment: deployments.apps \"host-operator-controller-manager\" not found")).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
 		t.Run("Host operator deployment not ready", func(t *testing.T) {
 			// given
-			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
+			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
-				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorName, "DeploymentNotReady", "deployment has unready status conditions: Available")).
+				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorDeploymentName, "DeploymentNotReady", "deployment has unready status conditions: Available")).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
 		t.Run("Host operator deployment not progressing", func(t *testing.T) {
 			// given
-			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentNotProgressingCondition())
+			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentNotProgressingCondition())
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
 			assert.Equal(t, requeueResult, res)
 			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
-				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorName, "DeploymentNotReady", "deployment has unready status conditions: Progressing")).
+				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorDeploymentName, "DeploymentNotReady", "deployment has unready status conditions: Progressing")).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
@@ -259,14 +258,14 @@ func TestToolchainStatusConditions(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
 		toolchainStatus := NewToolchainStatus()
 		memberStatus := newMemberStatus(ready())
-		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
 		t.Run("Registration service deployment not found", func(t *testing.T) {
 			// given
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationService, memberStatus, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -284,7 +283,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -302,7 +301,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -318,7 +317,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 	t.Run("RegistrationService resource tests", func(t *testing.T) {
 		toolchainStatus := NewToolchainStatus()
 		memberStatus := newMemberStatus(ready())
-		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
 		t.Run("Registration service resource not found", func(t *testing.T) {
@@ -326,7 +325,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -344,7 +343,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -359,7 +358,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 	t.Run("RegistrationService health tests", func(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
-		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatus(ready())
 		toolchainStatus := NewToolchainStatus()
@@ -369,7 +368,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, httpClientError(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -386,7 +385,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBadCode(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, registrationService, memberStatus, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -403,7 +402,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseInvalid(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -420,7 +419,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBodyNotAlive(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -435,7 +434,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 	t.Run("MemberStatus tests", func(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
-		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 
 		t.Run("MemberStatus not found", func(t *testing.T) {
@@ -444,7 +443,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{}, hostOperatorDeployment, registrationServiceDeployment, registrationService, emptyToolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -473,7 +472,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -508,7 +507,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -542,7 +541,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -568,7 +567,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -587,7 +586,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			InitializeCounters(t, emptyToolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -610,7 +609,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			InitializeCounters(t, emptyToolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -630,12 +629,12 @@ func TestToolchainStatusConditions(t *testing.T) {
 			emptyToolchainStatus := NewToolchainStatus()
 			memberStatus := newMemberStatus(ready())
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, emptyToolchainStatus)
-			fakeClient.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			fakeClient.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 				return fmt.Errorf("some error")
 			}
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -659,7 +658,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -679,7 +678,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			InitializeCounters(t, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -694,7 +693,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("All components ready but one member is missing", func(t *testing.T) {
 			// given
 			registrationService := newRegistrationServiceReady()
-			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 			registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 			memberStatus := newMemberStatus(ready())
 			toolchainStatus := NewToolchainStatus()
@@ -709,7 +708,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				InitializeCounters(t, toolchainStatus)
 
 				// when
-				res, err := reconciler.Reconcile(req)
+				res, err := reconciler.Reconcile(context.TODO(), req)
 
 				// then
 				require.NoError(t, err)
@@ -734,7 +733,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				InitializeCounters(t, toolchainStatus)
 
 				// when
-				res, err := reconciler.Reconcile(req)
+				res, err := reconciler.Reconcile(context.TODO(), req)
 
 				// then
 				require.NoError(t, err)
@@ -751,7 +750,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
-	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
+	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	requestName := configuration.ToolchainStatusName
 
@@ -760,7 +759,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 	memberStatus := newMemberStatus(ready())
 	registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName,
 		status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-	hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+	hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 		status.DeploymentAvailableCondition())
 
 	t.Run("Timestamp set for new status object", func(t *testing.T) {
@@ -772,7 +771,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 			registrationService, toolchainStatus)
 
 		// when
-		_, err := reconciler.Reconcile(req)
+		_, err := reconciler.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -796,7 +795,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 			hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when no ready condition changed
-		_, err := reconciler.Reconcile(req)
+		_, err := reconciler.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -814,7 +813,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		ready.LastTransitionTime = before
 		ready.LastUpdatedTime = &before
 		conditions := []toolchainv1alpha1.Condition{ready}
-		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 			status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 		reconciler, req, fakeClient := prepareReconcileWithStatusConditions(t, requestName,
 			[]string{"member-1", "member-2"},
@@ -822,7 +821,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 			hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 		// when the ready condition becomes not-ready
-		_, err := reconciler.Reconcile(req)
+		_, err := reconciler.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -836,7 +835,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 
 func TestToolchainStatusNotifications(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
-	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
+	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	defer counter.Reset()
 	requestName := configuration.ToolchainStatusName
@@ -849,7 +848,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 	t.Run("Notification workflow", func(t *testing.T) {
 		// given
-		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 			status.DeploymentAvailableCondition())
 
 		os.Setenv("HOST_OPERATOR_CONFIG_MAP_NAME", "notification_test_config")
@@ -870,7 +869,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			registrationService, toolchainStatus)
 
 		// when
-		res, err := reconciler.Reconcile(req)
+		res, err := reconciler.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -888,7 +887,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 		t.Run("Notification not created when host operator deployment not ready within threshold", func(t *testing.T) {
 			// given
-			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 				status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
@@ -896,7 +895,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 				registrationService, toolchainStatus, config)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -920,7 +919,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 					}
 
 					// given
-					hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+					hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 						status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 
 					// Reload the toolchain status
@@ -934,7 +933,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						registrationService, toolchainStatus, invalidConfig)
 
 					// when
-					res, err := reconciler.Reconcile(req)
+					res, err := reconciler.Reconcile(context.TODO(), req)
 
 					// then
 					require.Error(t, err)
@@ -955,7 +954,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 			t.Run("Notification created when host operator deployment not ready beyond threshold", func(t *testing.T) {
 				// given
-				hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+				hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 					status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 
 				// Reload the toolchain status
@@ -969,7 +968,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 					registrationService, toolchainStatus, config)
 
 				// when
-				res, err := reconciler.Reconcile(req)
+				res, err := reconciler.Reconcile(context.TODO(), req)
 
 				// then
 				require.NoError(t, err)
@@ -985,7 +984,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 				require.Equal(t, notification.Spec.Recipient, "admin@dev.sandbox.com")
 
 				t.Run("Toolchain status now ok again, notification should be removed", func(t *testing.T) {
-					hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+					hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 						status.DeploymentAvailableCondition())
 
 					// Reload the toolchain status
@@ -997,7 +996,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						registrationService, toolchainStatus)
 
 					// when
-					res, err := reconciler.Reconcile(req)
+					res, err := reconciler.Reconcile(context.TODO(), req)
 
 					// then
 					require.NoError(t, err)
@@ -1016,7 +1015,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 					t.Run("Toolchain status not ready again for extended period, notification is created", func(t *testing.T) {
 						// given
-						hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
+						hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 							status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 
 						// Reload the toolchain status
@@ -1029,7 +1028,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 							registrationService, toolchainStatus, config)
 
 						// when
-						_, err := reconciler.Reconcile(req)
+						_, err := reconciler.Reconcile(context.TODO(), req)
 
 						require.NoError(t, err)
 						// Confirm there is no notification
@@ -1049,7 +1048,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 							registrationService, toolchainStatus, config)
 
 						// when
-						res, err = reconciler.Reconcile(req)
+						res, err = reconciler.Reconcile(context.TODO(), req)
 
 						// then
 						require.NoError(t, err)
@@ -1111,11 +1110,11 @@ func assertToolchainStatusNotificationNotCreated(t *testing.T, fakeClient *test.
 func TestSynchronizationWithCounter(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	restore := test.SetEnvVarsAndRestore(t, test.Env(k8sutil.OperatorNameEnvVar, defaultHostOperatorName))
+	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	requestName := configuration.ToolchainStatusName
 	registrationService := newRegistrationServiceReady()
-	hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+	hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 	registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 	memberStatus := newMemberStatus(ready())
 
@@ -1132,7 +1131,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, initObjects...)
 
 		// when
-		res, err := reconciler.Reconcile(req)
+		res, err := reconciler.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -1164,7 +1163,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
 
 			// when
-			res, err := reconciler.Reconcile(req)
+			res, err := reconciler.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -1204,7 +1203,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		counter.IncrementUserAccountCount(logger, "member-1")
 		counter.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal)
 		counter.UpdateUsersPerActivationCounters(logger, 2, metrics.Internal)
-		res, err := reconciler.Reconcile(req)
+		res, err := reconciler.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -1435,7 +1434,7 @@ func hostOperatorStatusReady() toolchainv1alpha1.HostOperatorStatus {
 			},
 		},
 		BuildTimestamp: version.BuildTime,
-		DeploymentName: defaultHostOperatorName,
+		DeploymentName: defaultHostOperatorDeploymentName,
 		Revision:       version.Commit,
 		Version:        version.Version,
 	}

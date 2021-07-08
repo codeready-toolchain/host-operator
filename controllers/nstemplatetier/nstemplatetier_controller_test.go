@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -48,7 +47,7 @@ func TestReconcile(t *testing.T) {
 			initObjs := []runtime.Object{basicTier}
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding an entry in `status.updates`
@@ -82,7 +81,7 @@ func TestReconcile(t *testing.T) {
 			initObjs := []runtime.Object{basicTier}
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{Requeue: true}, res) // explicit requeue after the adding an entry in `status.updates`
@@ -111,7 +110,7 @@ func TestReconcile(t *testing.T) {
 				murtest.Account("cluster1", *previousBasicTier))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
@@ -130,7 +129,7 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "other-%d", *basicTier, turtest.TierName("other"))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
@@ -149,7 +148,7 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.DeletionTimestamp("user-0"))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
@@ -171,7 +170,7 @@ func TestReconcile(t *testing.T) {
 
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
@@ -189,7 +188,7 @@ func TestReconcile(t *testing.T) {
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			r, req, cl := prepareReconcile(t, basicTier.Name, basicTier)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
@@ -219,7 +218,7 @@ func TestReconcile(t *testing.T) {
 				murtest.Account("cluster1", *otherTier))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
@@ -246,7 +245,7 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 20, "user-%d", murtest.Account("cluster1", *basicTier))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
@@ -274,7 +273,7 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier)...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
@@ -302,7 +301,7 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier)...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
@@ -329,7 +328,7 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
@@ -361,7 +360,7 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
@@ -380,7 +379,7 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"), turtest.Complete("user-1"))...)
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-			cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+			cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 				if tur, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
 					if tur.Name == "user-0" {
 						return errors.NewNotFound(schema.GroupResource{}, "user-0")
@@ -394,7 +393,7 @@ func TestReconcile(t *testing.T) {
 			}
 
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
@@ -414,7 +413,7 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"), turtest.Failed("user-0"))...) // "user-0" failed twice
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
@@ -441,14 +440,14 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 				initObjs := []runtime.Object{basicTier}
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return errors.NewNotFound(schema.GroupResource{}, key.Name)
 					}
 					return cl.Client.Get(ctx, key, obj)
 				}
 				// when
-				res, err := r.Reconcile(req)
+				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
@@ -459,14 +458,14 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 				initObjs := []runtime.Object{basicTier}
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Get(ctx, key, obj)
 				}
 				// when
-				res, err := r.Reconcile(req)
+				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.Error(t, err)
 				assert.EqualError(t, err, "unable to get the current NSTemplateTier: mock error")
@@ -485,14 +484,14 @@ func TestReconcile(t *testing.T) {
 				murtest.Account("cluster1", *previousBasicTier))...)
 
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-			cl.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.MasterUserRecordList); ok {
 					return fmt.Errorf("mock error")
 				}
 				return cl.Client.List(ctx, list, opts...)
 			}
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.Error(t, err)
 			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get MasterUserRecords to update: mock error")
@@ -508,14 +507,14 @@ func TestReconcile(t *testing.T) {
 				murtest.Account("cluster1", *previousBasicTier))...)
 
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-			cl.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.TemplateUpdateRequestList); ok {
 					return fmt.Errorf("mock error")
 				}
 				return cl.Client.List(ctx, list, opts...)
 			}
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.Error(t, err)
 			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get active TemplateUpdateRequests: mock error")
@@ -531,14 +530,14 @@ func TestReconcile(t *testing.T) {
 				murtest.Account("cluster1", *previousBasicTier))...)
 
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-			cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
+			cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
 					return fmt.Errorf("mock error") // must not be a `NotFoundError` in this test
 				}
 				return cl.Client.Get(ctx, key, obj)
 			}
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.Error(t, err)
 			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get TemplateUpdateRequest for MasterUserRecord 'user-0': mock error")
@@ -555,14 +554,14 @@ func TestReconcile(t *testing.T) {
 			initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
 
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-			cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+			cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
 					return fmt.Errorf("mock error") // must not be a `NotFoundError` in this test
 				}
 				return cl.Client.Delete(ctx, obj, opts...)
 			}
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.Error(t, err)
 			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get active TemplateUpdateRequests: unable to delete the TemplateUpdateRequest resource 'user-0': mock error")
@@ -578,14 +577,14 @@ func TestReconcile(t *testing.T) {
 				initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "new-user-%d",
 					murtest.Account("cluster1", *basicTier))...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+				cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Status().Update(ctx, obj, opts...)
 				}
 				// when
-				res, err := r.Reconcile(req)
+				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.Error(t, err)
 				assert.EqualError(t, err, "unable to insert a new entry in status.updates after NSTemplateTier changed: mock error")
@@ -597,14 +596,14 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+				cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Status().Update(ctx, obj, opts...)
 				}
 				// when
-				res, err := r.Reconcile(req)
+				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.Error(t, err)
 				assert.EqualError(t, err, "unable to mark latest status.update as complete: mock error")
@@ -623,7 +622,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	cl := test.NewFakeClient(t, initObjs...)
 	// (partial) support the `limit` and `continue` when listing MasterUserRecords
 	// Here, the result's `continue` is the initial `continue` + `limit`
-	cl.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+	cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 		if murs, ok := list.(*toolchainv1alpha1.MasterUserRecordList); ok {
 			c := 0
 			if murs.Continue != "" {
@@ -652,7 +651,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 		// default behaviour
 		return cl.Client.List(ctx, list, opts...)
 	}
-	cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+	cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 		if tur, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
 			t.Logf("setting deletion timestamp on TemplateUpdateRequest '%s'", tur.Name)
 			now := metav1.Now()
@@ -667,7 +666,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 		Client: cl,
 		Scheme: s,
 		Config: config,
-		Log:    ctrl.Log.WithName("controllers").WithName("NSTemplateTier"),
 	}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{

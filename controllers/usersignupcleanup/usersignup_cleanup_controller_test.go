@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -42,7 +41,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup still exists
@@ -62,7 +61,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		res, err := r.Reconcile(req)
+		res, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup still exists
@@ -84,7 +83,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup has been deleted
@@ -106,7 +105,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup has been deleted
@@ -127,7 +126,7 @@ func TestUserCleanup(t *testing.T) {
 		)
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 		// when
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 		// then
 		// confirm the UserSignup has been deleted
@@ -149,7 +148,7 @@ func TestUserCleanup(t *testing.T) {
 		)
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 		// when
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 		// then
 		// confirm the UserSignup has been deleted
@@ -173,7 +172,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		res, err := r.Reconcile(req)
+		res, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup has not been deleted
@@ -195,7 +194,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup has been deleted
@@ -215,7 +214,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		res, err := r.Reconcile(req)
+		res, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup has not been deleted
@@ -234,7 +233,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
 		deleted := false
-		fakeClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+		fakeClient.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 			deleted = true
 			require.Len(t, opts, 1)
 			deleteOptions, ok := opts[0].(*client.DeleteOptions)
@@ -244,7 +243,7 @@ func TestUserCleanup(t *testing.T) {
 			assert.Equal(t, v1.DeletePropagationForeground, *deleteOptions.PropagationPolicy)
 			return nil
 		}
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 		assert.True(t, deleted)
 	})
@@ -281,7 +280,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 		Scheme: s,
 		Config: config,
 		Client: fakeClient,
-		Log:    ctrl.Log.WithName("controllers").WithName("UserSignupCleanup"),
 	}
 	return r, newReconcileRequest(name), fakeClient
 }

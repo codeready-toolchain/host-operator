@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -84,7 +83,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 				})))
 
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 
 			// then verify that the MUR exists and is complete
 			require.NoError(t, err)
@@ -166,7 +165,7 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 		})))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -201,7 +200,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	))
 
 	// when - The first reconcile creates the MasterUserRecord
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -265,7 +264,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
-		res, err = r.Reconcile(req)
+		res, err = r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -323,7 +322,7 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.Error(t, err)
@@ -371,7 +370,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.Error(t, err)
@@ -404,7 +403,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, hostconfig.NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
-	fakeClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+	fakeClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 		return fmt.Errorf("some error")
 	}
 	InitializeCounters(t, NewToolchainStatus(
@@ -417,7 +416,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.Error(t, err)
@@ -463,7 +462,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.Error(t, err)
@@ -505,7 +504,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	// error reported, and request is requeued and userSignup status was updated
@@ -567,7 +566,7 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	))
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	// it should not return an error but just wait for another reconcile triggered by updated ToolchainStatus
@@ -629,7 +628,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	))
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	// it should not return an error but just wait for another reconcile triggered by updated ToolchainStatus
@@ -689,7 +688,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	))
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -741,7 +740,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
-		res, err = r.Reconcile(req)
+		res, err = r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -805,7 +804,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	))
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -857,7 +856,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
-		res, err = r.Reconcile(req)
+		res, err = r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -920,7 +919,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	))
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -985,7 +984,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	))
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -1038,7 +1037,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
-		res, err = r.Reconcile(req)
+		res, err = r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -1100,7 +1099,7 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 	))
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -1158,7 +1157,7 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+	fakeClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.MasterUserRecord:
 			return errors.New("unable to create mur")
@@ -1168,7 +1167,7 @@ func TestUserSignupMURCreateFails(t *testing.T) {
 	}
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.Error(t, err)
@@ -1205,7 +1204,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+	fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.MasterUserRecord:
 			return errors.New("failed to lookup MUR")
@@ -1215,7 +1214,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 	}
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.Error(t, err)
@@ -1252,7 +1251,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
@@ -1262,7 +1261,7 @@ func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	}
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.Error(t, err)
@@ -1298,7 +1297,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			return errors.New("failed to update UserSignup status")
@@ -1308,7 +1307,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 	}
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.Error(t, err)
@@ -1344,7 +1343,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 		switch obj := obj.(type) {
 		case *toolchainv1alpha1.UserSignup:
 			for _, cond := range obj.Status.Conditions {
@@ -1359,7 +1358,7 @@ func TestUserSignupSetStatusNoClustersAvailableFails(t *testing.T) {
 	}
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.Error(t, err)
@@ -1418,7 +1417,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -1476,7 +1475,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -1509,7 +1508,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
-		_, err = r.Reconcile(req)
+		_, err = r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -1567,7 +1566,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -1626,7 +1625,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		))
 
 		// when
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -1681,7 +1680,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		))
 
 		// when
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -1777,7 +1776,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			}),
 		))
 
-		fakeClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+		fakeClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 			switch obj.(type) {
 			case *toolchainv1alpha1.Notification:
 				return errors.New("unable to create deactivation notification")
@@ -1787,7 +1786,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 		}
 
 		// when
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 
 		// then
 		require.Error(t, err)
@@ -1884,7 +1883,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		))
 
 		// when
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -1969,7 +1968,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 			}),
 		))
 
-		fakeClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		fakeClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			switch obj.(type) {
 			case *toolchainv1alpha1.UserSignup:
 				return errors.New("failed to update UserSignup status")
@@ -1979,7 +1978,7 @@ func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 		}
 
 		// when
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 
 		// then
 		require.Error(t, err)
@@ -2063,7 +2062,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 
 	t.Run("when MUR exists and not deactivated, nothing should happen", func(t *testing.T) {
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, hostconfig.NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled()), baseNSTemplateTier)
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -2119,7 +2118,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 
 		t.Run("first reconcile - status should be deactivating and mur should be deleted", func(t *testing.T) {
 			// when
-			_, err := r.Reconcile(req)
+			_, err := r.Reconcile(context.TODO(), req)
 
 			// then
 			require.NoError(t, err)
@@ -2172,7 +2171,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 		})
 
 		t.Run("second reconcile - condition should be deactivated and deactivation notification created", func(t *testing.T) {
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 
@@ -2254,7 +2253,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -2323,7 +2322,7 @@ func TestUserSignupBanned(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -2374,7 +2373,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -2463,7 +2462,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
@@ -2505,7 +2504,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 
 	t.Run("second reconcile", func(t *testing.T) {
 		// when
-		_, err = r.Reconcile(req)
+		_, err = r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		err = r.Client.Get(context.TODO(), key, userSignup)
@@ -2559,12 +2558,12 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+	fakeClient.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 		return errors.New("err happened")
 	}
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.Error(t, err)
@@ -2619,7 +2618,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+	fakeClient.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.MasterUserRecord:
 			return errors.New("unable to delete mur")
@@ -2630,7 +2629,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 
 	t.Run("first reconcile - status should show message about mur deletion failure", func(t *testing.T) {
 		// when
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.Error(t, err)
 
 		// then
@@ -2665,7 +2664,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			})
 
 		t.Run("second reconcile - there should not be a notification created since the mur deletion failed even if reconciled again", func(t *testing.T) {
-			_, err := r.Reconcile(req)
+			_, err := r.Reconcile(context.TODO(), req)
 			require.Error(t, err)
 			ntest.AssertNoNotificationsExist(t, r.Client)
 			// the metrics should be the same, deactivation should only be counted once
@@ -2719,7 +2718,7 @@ func TestDeathBy100Signups(t *testing.T) {
 	))
 
 	// when
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.Error(t, err)
@@ -2801,7 +2800,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	assert.EqualError(t, err, "Multiple MasterUserRecords found: multiple matching MasterUserRecord resources found")
@@ -2859,7 +2858,7 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(req)
+	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	assert.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
@@ -2937,7 +2936,6 @@ func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMe
 		Scheme:            s,
 		CrtConfig:         config,
 		GetMemberClusters: getMemberClusters,
-		Log:               ctrl.Log.WithName("controllers").WithName("UserSignup"),
 	}
 	return r, newReconcileRequest(name), fakeClient
 }
@@ -2978,7 +2976,7 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 			))
 
 			// when
-			_, err := r.Reconcile(req)
+			_, err := r.Reconcile(context.TODO(), req)
 			require.NoError(t, err)
 
 			// then verify that the username has been prefixed - first lookup the UserSignup again
@@ -3024,7 +3022,7 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 			))
 
 			// when
-			_, err := r.Reconcile(req)
+			_, err := r.Reconcile(context.TODO(), req)
 			require.NoError(t, err)
 
 			// then verify that the username has been suffixed - first lookup the UserSignup again
@@ -3081,7 +3079,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	))
 
 	// 1st reconcile should effectively be a no op because the MUR name and UserSignup CompliantUsername match and status is all good
-	res, err := r.Reconcile(req)
+	res, err := r.Reconcile(context.TODO(), req)
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -3100,7 +3098,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.NoError(t, err)
 
 	// 2nd reconcile should handle the deleted MUR and provision a new one
-	res, err = r.Reconcile(req)
+	res, err = r.Reconcile(context.TODO(), req)
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -3125,7 +3123,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.Equal(t, userSignup.Status.CompliantUsername, "foo-old")
 
 	// 3rd reconcile should update the CompliantUsername on the UserSignup status
-	res, err = r.Reconcile(req)
+	res, err = r.Reconcile(context.TODO(), req)
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -3149,7 +3147,7 @@ func TestMigrateMur(t *testing.T) {
 
 	expectedMur := mur.DeepCopy()
 	expectedMur.Generation = 1
-	expectedMur.ResourceVersion = "1"
+	expectedMur.ResourceVersion = "1000"
 	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName = "base"
 	expectedMur.Spec.UserAccounts[0].Spec.NSLimit = "default"
 	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []toolchainv1alpha1.NSTemplateSetNamespace{
@@ -3170,7 +3168,7 @@ func TestMigrateMur(t *testing.T) {
 		InitializeCounters(t, NewToolchainStatus())
 
 		// when
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		// then verify that the MUR exists and is complete
 		require.NoError(t, err)
 		murs := &toolchainv1alpha1.MasterUserRecordList{}

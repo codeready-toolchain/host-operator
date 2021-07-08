@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -73,7 +72,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
 			// when
 			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			expectedTime := (time.Duration((expectedDeactivationTimeoutBasicTier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
@@ -92,7 +91,7 @@ func TestReconcile(t *testing.T) {
 			r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar, config)
 			// when
 			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			expectedTime := (time.Duration((expectedDeactivationTimeoutOtherTier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
@@ -110,7 +109,7 @@ func TestReconcile(t *testing.T) {
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, noDeactivationTier, mur, userSignupFoobar, config)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
@@ -124,7 +123,7 @@ func TestReconcile(t *testing.T) {
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.UserIDFromUserSignup(userSignupFoobar))
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
@@ -142,7 +141,7 @@ func TestReconcile(t *testing.T) {
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupRedhat.Name
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupRedhat, config)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
@@ -164,7 +163,7 @@ func TestReconcile(t *testing.T) {
 
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.False(t, res.Requeue)
@@ -177,7 +176,7 @@ func TestReconcile(t *testing.T) {
 			t.Run("reconciliation should be requeued when notification not yet sent", func(t *testing.T) {
 				r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
 				// when
-				res, err := r.Reconcile(req)
+				res, err := r.Reconcile(context.TODO(), req)
 				// then
 				require.NoError(t, err)
 				require.False(t, res.Requeue)
@@ -205,7 +204,7 @@ func TestReconcile(t *testing.T) {
 					r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
 
 					// when
-					res, err := r.Reconcile(req)
+					res, err := r.Reconcile(context.TODO(), req)
 					// then
 					require.NoError(t, err)
 					require.False(t, res.Requeue)
@@ -235,7 +234,7 @@ func TestReconcile(t *testing.T) {
 						r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
 
 						// when
-						res, err := r.Reconcile(req)
+						res, err := r.Reconcile(context.TODO(), req)
 						// then
 						require.NoError(t, err)
 						require.False(t, res.Requeue)
@@ -251,7 +250,7 @@ func TestReconcile(t *testing.T) {
 
 						t.Run("usersignup already deactivated", func(t *testing.T) {
 							// additional reconciles should find the usersignup is already deactivated
-							res, err := r.Reconcile(req)
+							res, err := r.Reconcile(context.TODO(), req)
 							// then
 							require.NoError(t, err)
 							require.False(t, res.Requeue, "requeue should not be set")
@@ -271,7 +270,7 @@ func TestReconcile(t *testing.T) {
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar, config)
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.NoError(t, err)
 			require.False(t, res.Requeue, "requeue should not be set")
@@ -292,7 +291,7 @@ func TestReconcile(t *testing.T) {
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, mur, userSignupFoobar, config)
 			// when
-			_, err := r.Reconcile(req)
+			_, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.Error(t, err)
 			require.Contains(t, err.Error(), `nstemplatetiers.toolchain.dev.openshift.com "basic" not found`)
@@ -306,7 +305,7 @@ func TestReconcile(t *testing.T) {
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				_, ok := obj.(*toolchainv1alpha1.UserSignup)
 				if ok {
 					return fmt.Errorf("usersignup get error")
@@ -319,7 +318,7 @@ func TestReconcile(t *testing.T) {
 				return nil
 			}
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "usersignup get error")
@@ -334,7 +333,7 @@ func TestReconcile(t *testing.T) {
 			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
-			cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 				_, ok := obj.(*toolchainv1alpha1.UserSignup)
 				if ok {
 					return fmt.Errorf("usersignup update error")
@@ -342,7 +341,7 @@ func TestReconcile(t *testing.T) {
 				return nil
 			}
 			// when
-			res, err := r.Reconcile(req)
+			res, err := r.Reconcile(context.TODO(), req)
 			// then
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "usersignup update error")
@@ -366,7 +365,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 		Client: cl,
 		Scheme: s,
 		Config: cfg,
-		Log:    ctrl.Log.WithName("controllers").WithName("Deactivation"),
 	}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{
