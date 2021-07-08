@@ -3,8 +3,7 @@ PATH_TO_CD_GENERATE_FILE=generate-cd-release-manifests.sh
 PATH_TO_BUNDLE_FILE=push-bundle-and-index-image.sh
 PATH_TO_INSTALL_OPERATOR=install-operator.sh
 
-#OWNER_AND_BRANCH_LOCATION=codeready-toolchain/api/master
-OWNER_AND_BRANCH_LOCATION=MatousJobanek/api/operator-sdk-1.8.0
+OWNER_AND_BRANCH_LOCATION=codeready-toolchain/api/master
 GH_SCRIPTS_URL=https://raw.githubusercontent.com/${OWNER_AND_BRANCH_LOCATION}/scripts
 
 TMP_DIR?=/tmp
