@@ -80,7 +80,12 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		reqLogger.Error(err, "error getting the toolchainconfig resource")
 		return DefaultReconcile, err
 	}
-	UpdateConfig(toolchainConfig)
+
+	// load the latest config and secrets into the cache
+	if err := loadLatest(r.Client); err != nil {
+		reqLogger.Error(err, "failed to load the latest configuration")
+		return DefaultReconcile, err
+	}
 
 	// Sync member configs to member clusters
 	sync := Synchronizer{

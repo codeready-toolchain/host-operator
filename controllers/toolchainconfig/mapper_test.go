@@ -15,8 +15,7 @@ import (
 func TestSecretToToolchainConfigMapper(t *testing.T) {
 	// when
 	secretData := map[string][]byte{
-		"che-admin-username": []byte("cheadmin"),
-		"che-admin-password": []byte("password"),
+		"mailgunAPIKey": []byte("abc123"),
 	}
 	secret := test.CreateSecret("test-secret", test.HostOperatorNs, secretData)
 
@@ -29,7 +28,7 @@ func TestSecretToToolchainConfigMapper(t *testing.T) {
 
 		require.Len(t, req, 1)
 		require.Equal(t, types.NamespacedName{
-			Namespace: test.MemberOperatorNs,
+			Namespace: test.HostOperatorNs,
 			Name:      "config",
 		}, req[0].NamespacedName)
 	})

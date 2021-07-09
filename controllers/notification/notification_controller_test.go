@@ -9,6 +9,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
@@ -40,7 +41,7 @@ func (s *MockDeliveryService) Send(notificationCtx Context, notification *toolch
 }
 
 func TestNotificationSuccess(t *testing.T) {
-	toolchainConfig := testconfig.NewToolchainConfig(testconfig.Notifications().DurationBeforeNotificationDeletion("10s"))
+	toolchainConfig := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.Notifications().DurationBeforeNotificationDeletion("10s"))
 
 	// given
 	t.Run("will not do anything and return requeue with shorter duration that 10s", func(t *testing.T) {
@@ -81,7 +82,7 @@ func TestNotificationSuccess(t *testing.T) {
 }
 
 func TestNotificationSentFailure(t *testing.T) {
-	toolchainConfig := testconfig.NewToolchainConfig(testconfig.Notifications().DurationBeforeNotificationDeletion("10s"))
+	toolchainConfig := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.Notifications().DurationBeforeNotificationDeletion("10s"))
 
 	t.Run("will return an error since it cannot delete the Notification after successfully sending", func(t *testing.T) {
 		// given
@@ -213,7 +214,7 @@ func TestNotificationDelivery(t *testing.T) {
 	t.Run("test notification with environment e2e", func(t *testing.T) {
 
 		// given
-		toolchainConfig := testconfig.NewToolchainConfig(testconfig.Environment(testconfig.E2E))
+		toolchainConfig := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.Environment(testconfig.E2E))
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: newObjectMeta("abc123", "jane@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
@@ -250,7 +251,7 @@ func TestNotificationDelivery(t *testing.T) {
 	t.Run("test notification delivery fails for invalid user ID", func(t *testing.T) {
 		// given
 		notification := newNotification("abc123", "test")
-		toolchainConfig := testconfig.NewToolchainConfig(testconfig.Environment(testconfig.E2E))
+		toolchainConfig := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.Environment(testconfig.E2E))
 		controller, request, client := newController(t, notification, ds, toolchainConfig)
 
 		// when

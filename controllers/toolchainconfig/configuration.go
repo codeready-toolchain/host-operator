@@ -27,9 +27,10 @@ type ToolchainConfig struct {
 	secrets map[string]map[string]string
 }
 
-func NewToolchainConfig(cfg *toolchainv1alpha1.ToolchainConfigSpec) ToolchainConfig {
+func NewToolchainConfig(cfg *toolchainv1alpha1.ToolchainConfigSpec, secrets map[string]map[string]string) ToolchainConfig {
 	return ToolchainConfig{
-		cfg: cfg,
+		cfg:     cfg,
+		secrets: secrets,
 	}
 }
 

@@ -855,22 +855,13 @@ func TestToolchainStatusNotifications(t *testing.T) {
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
 			status.DeploymentAvailableCondition())
 
-		os.Setenv("HOST_OPERATOR_CONFIG_MAP_NAME", "notification_test_config")
 		os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 
-		config := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "notification_test_config",
-				Namespace: test.HostOperatorNs,
-			},
-			Data: map[string]string{
-				"admin.email": "admin@dev.sandbox.com",
-			},
-		}
+		toolchainConfig := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.Notifications().AdminEmail("admin@dev.sandbox.com"))
 
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 			[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-			registrationService, toolchainStatus)
+			registrationService, toolchainStatus, toolchainConfig)
 
 		// when
 		res, err := reconciler.Reconcile(req)
@@ -896,7 +887,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 				[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-				registrationService, toolchainStatus, config)
+				registrationService, toolchainStatus, toolchainConfig)
 
 			// when
 			res, err := reconciler.Reconcile(req)
@@ -912,7 +903,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			t.Run("Notification not created when admin.email not configured", func(t *testing.T) {
 
 				assertInvalidEmailReturnErr := func(email string) {
-					invalidConfig := testconfig.NewToolchainConfig(testconfig.Notifications().AdminEmail(email))
+					toolchainconfig.Reset() // clear the config cache so that this invalid config will be picked up
+					invalidConfig := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.Notifications().AdminEmail(email))
 
 					// given
 					hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorName,
@@ -933,7 +925,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 					// then
 					require.Error(t, err)
-					require.Equal(t, fmt.Sprintf("Failed to create user deactivation notification: cannot create notification "+
+					require.Equal(t, fmt.Sprintf("Failed to create toolchain status unready notification: cannot create notification "+
 						"due to configuration error - admin.email [%s] is invalid or not set", email),
 						err.Error())
 					assert.Equal(t, requeueResult, res)
@@ -961,7 +953,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 					[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-					registrationService, toolchainStatus, config)
+					registrationService, toolchainStatus, toolchainConfig)
 
 				// when
 				res, err := reconciler.Reconcile(req)
@@ -1021,7 +1013,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						// Reconcile in order to update the ready status to false
 						reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 							[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-							registrationService, toolchainStatus, config)
+							registrationService, toolchainStatus, toolchainConfig)
 
 						// when
 						_, err := reconciler.Reconcile(req)
@@ -1041,7 +1033,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						// Reconcile once more
 						reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(),
 							[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-							registrationService, toolchainStatus, config)
+							registrationService, toolchainStatus, toolchainConfig)
 
 						// when
 						res, err = reconciler.Reconcile(req)

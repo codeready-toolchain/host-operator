@@ -28,7 +28,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 		t.Run("no member clusters available - skip sync", func(t *testing.T) {
 			// given
-			toolchainConfig := testconfig.NewToolchainConfig(
+			toolchainConfig := toolchainconfig.NewToolchainConfigWithReset(t,
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
@@ -45,7 +45,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 		t.Run("synced to all members", func(t *testing.T) {
 			// given
-			toolchainConfig := testconfig.NewToolchainConfig(
+			toolchainConfig := toolchainconfig.NewToolchainConfigWithReset(t,
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
@@ -69,7 +69,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 				return fmt.Errorf("client error")
 			}
-			toolchainConfig := testconfig.NewToolchainConfig(
+			toolchainConfig := toolchainconfig.NewToolchainConfigWithReset(t,
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
@@ -95,7 +95,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 			memberCl2.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtime.Object) error {
 				return fmt.Errorf("client2 error")
 			}
-			toolchainConfig := testconfig.NewToolchainConfig(
+			toolchainConfig := toolchainconfig.NewToolchainConfigWithReset(t,
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
@@ -115,7 +115,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 		t.Run("specific memberoperatorconfig exists but member cluster not found", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			toolchainConfig := testconfig.NewToolchainConfig(
+			toolchainConfig := toolchainconfig.NewToolchainConfigWithReset(t,
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(

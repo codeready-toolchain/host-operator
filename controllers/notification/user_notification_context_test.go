@@ -3,11 +3,10 @@ package notification
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"os"
 	"testing"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
-
-	"github.com/stretchr/testify/assert"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -70,15 +69,6 @@ func TestNotificationContext(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "John Smith<jsmith@redhat.com>", notificationCtx.DeliveryEmail())
 	})
-
-	t.Run("no configuration provided", func(t *testing.T) {
-		// when
-		_, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace)
-
-		// then
-		require.Error(t, err)
-		assert.Equal(t, "configuration was not provided", err.Error())
-	})
 }
 
 func newObjectMeta(name, email string) metav1.ObjectMeta {
@@ -107,5 +97,6 @@ func prepareReconcile(t *testing.T, initObjs ...runtime.Object) *test.FakeClient
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
+	os.Setenv("WATCH_NAMESPACE", operatorNamespace)
 	return test.NewFakeClient(t, initObjs...)
 }

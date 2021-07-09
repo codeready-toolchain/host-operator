@@ -86,6 +86,8 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 
 	t.Run("test BannedUserToUserSignupMapper returns nil when watch namespace not set ", func(t *testing.T) {
 		c := test.NewFakeClient(t)
+		restore := test.UnsetEnvVarAndRestore(t, "WATCH_NAMESPACE")
+		t.Cleanup(restore)
 
 		mapper := &BannedUserToUserSignupMapper{
 			client: c,

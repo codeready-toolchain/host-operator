@@ -213,7 +213,7 @@ func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *t
 					// set the failed to create notification status condition
 					return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
 						r.setStatusUnreadyNotificationCreationFailed, err,
-						"Failed to create user deactivation notification")
+						"Failed to create toolchain status unready notification")
 				}
 
 				if err := r.setStatusToolchainStatusUnreadyNotificationCreated(reqLogger, toolchainStatus); err != nil {

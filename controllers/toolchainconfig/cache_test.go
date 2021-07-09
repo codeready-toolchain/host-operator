@@ -1,4 +1,4 @@
-package toolchainconfig_test
+package toolchainconfig
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 
 	"github.com/stretchr/testify/assert"
@@ -22,8 +22,8 @@ import (
 
 func TestCache(t *testing.T) {
 	// given
-	os.Setenv("WATCH_NAMESPACE", HostOperatorNs)
-	cl := NewFakeClient(t)
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
+	cl := test.NewFakeClient(t)
 
 	// when
 	defaultConfig, err := GetConfig(cl)
@@ -33,10 +33,10 @@ func TestCache(t *testing.T) {
 	assert.Equal(t, 1000, defaultConfig.AutomaticApproval().MaxNumberOfUsersOverall())
 	assert.Empty(t, defaultConfig.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 
-	t.Run("return config that is stored in client", func(t *testing.T) {
+	t.Run("return config that is stored in cache", func(t *testing.T) {
 		// given
 		config := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)))
-		cl := NewFakeClient(t, config)
+		cl := test.NewFakeClient(t, config)
 
 		// when
 		actual, err := GetConfig(cl)
@@ -49,7 +49,7 @@ func TestCache(t *testing.T) {
 		t.Run("returns the same when the cache hasn't been updated", func(t *testing.T) {
 			// given
 			newConfig := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(666))
-			cl := NewFakeClient(t, newConfig)
+			cl := test.NewFakeClient(t, newConfig)
 
 			// when
 			actual, err := GetConfig(cl)
@@ -62,11 +62,22 @@ func TestCache(t *testing.T) {
 
 		t.Run("returns the new config when the cache was updated", func(t *testing.T) {
 			// given
-			newConfig := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(666), testconfig.Deactivation().DeactivatingNotificationDays(5))
-			cl := NewFakeClient(t)
+			newConfig := NewToolchainConfigWithReset(t,
+				testconfig.AutomaticApproval().MaxNumberOfUsers(666),
+				testconfig.Deactivation().DeactivatingNotificationDays(5),
+				testconfig.Notifications().Secret().
+					Ref("notification-secret").
+					MailgunAPIKey("mailgunAPIKey"),
+			)
+			cl := test.NewFakeClient(t)
+			secretData := map[string]map[string]string{
+				"notification-secret": {
+					"mailgunAPIKey": "abc123",
+				},
+			}
 
 			// when
-			updateConfig(newConfig)
+			updateConfig(newConfig, secretData)
 
 			// then
 			actual, err := GetConfig(cl)
@@ -74,6 +85,7 @@ func TestCache(t *testing.T) {
 			assert.Equal(t, 666, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 			assert.Empty(t, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 			assert.Equal(t, 5, actual.Deactivation().DeactivatingNotificationDays())
+			assert.Equal(t, "abc123", actual.Notifications().MailgunAPIKey()) // secret value
 		})
 	})
 }
@@ -82,7 +94,7 @@ func TestGetConfigFailed(t *testing.T) {
 	// given
 	t.Run("config not found", func(t *testing.T) {
 		config := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)))
-		cl := NewFakeClient(t, config)
+		cl := test.NewFakeClient(t, config)
 		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 			return apierrors.NewNotFound(schema.GroupResource{}, "config")
 		}
@@ -99,7 +111,7 @@ func TestGetConfigFailed(t *testing.T) {
 
 	t.Run("error getting config", func(t *testing.T) {
 		config := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)))
-		cl := NewFakeClient(t, config)
+		cl := test.NewFakeClient(t, config)
 		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 			return fmt.Errorf("some error")
 		}
@@ -116,7 +128,92 @@ func TestGetConfigFailed(t *testing.T) {
 	t.Run("load secrets error", func(t *testing.T) {
 		config := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)))
 		// given
-		cl := NewFakeClient(t, config)
+		cl := test.NewFakeClient(t, config)
+		cl.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			return fmt.Errorf("list error")
+		}
+
+		// when
+		err := loadLatest(cl)
+
+		// then
+		require.EqualError(t, err, "list error")
+	})
+}
+
+func TestLoadLatest(t *testing.T) {
+	t.Run("config found", func(t *testing.T) {
+		initconfig := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(1100))
+		// given
+		cl := test.NewFakeClient(t, initconfig)
+
+		// when
+		err := loadLatest(cl)
+
+		// then
+		require.NoError(t, err)
+		actual, err := GetConfig(cl)
+		require.NoError(t, err)
+		assert.Equal(t, 1100, actual.AutomaticApproval().MaxNumberOfUsersOverall())
+
+		t.Run("returns the same when the config hasn't been updated", func(t *testing.T) {
+			// when
+			err := loadLatest(cl)
+
+			// then
+			require.NoError(t, err)
+			actual, err = GetConfig(cl)
+			require.NoError(t, err)
+			assert.Equal(t, 1100, actual.AutomaticApproval().MaxNumberOfUsersOverall())
+		})
+
+		t.Run("returns the new value when the config has been updated", func(t *testing.T) {
+			// get
+			changedConfig := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(2000))
+			err := cl.Update(context.TODO(), changedConfig)
+			require.NoError(t, err)
+
+			// when
+			err = loadLatest(cl)
+
+			// then
+			require.NoError(t, err)
+			actual, err = GetConfig(cl)
+			require.NoError(t, err)
+			assert.Equal(t, 2000, actual.AutomaticApproval().MaxNumberOfUsersOverall())
+		})
+	})
+
+	t.Run("config not found", func(t *testing.T) {
+		// given
+		cl := test.NewFakeClient(t)
+
+		// when
+		err := loadLatest(cl)
+
+		// then
+		require.NoError(t, err)
+	})
+
+	t.Run("get config error", func(t *testing.T) {
+		initconfig := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(100))
+		// given
+		cl := test.NewFakeClient(t, initconfig)
+		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+			return fmt.Errorf("get error")
+		}
+
+		// when
+		err := loadLatest(cl)
+
+		// then
+		require.EqualError(t, err, "get error")
+	})
+
+	t.Run("load secrets error", func(t *testing.T) {
+		initconfig := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(100))
+		// given
+		cl := test.NewFakeClient(t, initconfig)
 		cl.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
 			return fmt.Errorf("list error")
 		}
@@ -135,7 +232,7 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	latch.Add(1)
 	var waitForFinished sync.WaitGroup
 	initconfig := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(1, testconfig.PerMemberCluster("member", 1)))
-	cl := NewFakeClient(t, initconfig)
+	cl := test.NewFakeClient(t, initconfig)
 
 	for i := 0; i < 1000; i++ {
 		waitForFinished.Add(2)
@@ -155,14 +252,14 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 			defer waitForFinished.Done()
 			latch.Wait()
 			config := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(i+1, testconfig.PerMemberCluster(fmt.Sprintf("member%d", i), i)))
-			updateConfig(config)
+			updateConfig(config, map[string]map[string]string{})
 		}(i)
 	}
 
 	// when
 	latch.Done()
 	waitForFinished.Wait()
-	config, err := GetConfig(NewFakeClient(t))
+	config, err := GetConfig(test.NewFakeClient(t))
 
 	// then
 	require.NoError(t, err)
@@ -174,7 +271,7 @@ func newSecret(name string, data map[string][]byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: HostOperatorNs,
+			Namespace: test.HostOperatorNs,
 		},
 		Data: data,
 	}
