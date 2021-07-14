@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"

@@ -1289,6 +1289,5 @@ func newController(t *testing.T, hostCl client.Client, s *runtime.Scheme, getMem
 		Client:                hostCl,
 		Scheme:                s,
 		RetrieveMemberCluster: getMemberCluster(memberCl...),
-		Log:                   ctrl.Log.WithName("controllers").WithName("MasterUserRecord"),
 	}
 }

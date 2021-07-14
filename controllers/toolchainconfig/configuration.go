@@ -20,7 +20,7 @@ const (
 	NotificationDeliveryServiceMailgun = "mailgun"
 )
 
-var log = logf.Log.WithName("configuration")
+var logger = logf.Log.WithName("configuration")
 
 type ToolchainConfig struct {
 	cfg     *toolchainv1alpha1.ToolchainConfigSpec
@@ -35,7 +35,7 @@ func NewToolchainConfig(cfg *toolchainv1alpha1.ToolchainConfigSpec, secrets map[
 }
 
 func (c *ToolchainConfig) Print() {
-	log.Info("Toolchain configuration variables", "ToolchainConfigSpec", c.cfg)
+	logger.Info("Toolchain configuration variables", "ToolchainConfigSpec", c.cfg)
 }
 
 func (c *ToolchainConfig) Environment() string {

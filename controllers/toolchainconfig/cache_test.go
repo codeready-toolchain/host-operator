@@ -128,7 +128,7 @@ func TestGetConfigFailed(t *testing.T) {
 		config := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)))
 		// given
 		cl := test.NewFakeClient(t, config)
-		cl.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+		cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 			return fmt.Errorf("list error")
 		}
 
@@ -198,7 +198,7 @@ func TestLoadLatest(t *testing.T) {
 		initconfig := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(100))
 		// given
 		cl := test.NewFakeClient(t, initconfig)
-		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 			return fmt.Errorf("get error")
 		}
 
@@ -213,7 +213,7 @@ func TestLoadLatest(t *testing.T) {
 		initconfig := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(100))
 		// given
 		cl := test.NewFakeClient(t, initconfig)
-		cl.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+		cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 			return fmt.Errorf("list error")
 		}
 

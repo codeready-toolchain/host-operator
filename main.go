@@ -203,7 +203,6 @@ func main() {
 			Client: mgr.GetClient(),
 		},
 		Scheme:            mgr.GetScheme(),
-		Log:               ctrl.Log.WithName("controllers").WithName("UserSignup"),
 		GetMemberClusters: cluster.GetMemberClusters,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignup")
@@ -274,7 +273,9 @@ func main() {
 // returns the loaded crt configuration
 func getCRTConfiguration(config *rest.Config) (toolchainconfig.ToolchainConfig, error) {
 	// create client that will be used for retrieving the host operator secret
-	cl, err := client.New(config, client.Options{})
+	cl, err := client.New(config, client.Options{
+		Scheme: scheme,
+	})
 	if err != nil {
 		return toolchainconfig.ToolchainConfig{}, err
 	}

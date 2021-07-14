@@ -42,7 +42,7 @@ func updateConfig(config *toolchainv1alpha1.ToolchainConfig, secrets map[string]
 }
 
 func loadLatest(cl client.Client) error {
-	namespace, err := common.GetWatchNamespace()GetWatchNamespace()
+	namespace, err := common.GetWatchNamespace()
 	if err != nil {
 		return errs.Wrap(err, "Failed to get watch namespace")
 	}

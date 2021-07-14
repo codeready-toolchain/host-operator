@@ -358,7 +358,6 @@ func newController(t *testing.T, changeTier *toolchainv1alpha1.ChangeTierRequest
 	controller := &Reconciler{
 		Client: cl,
 		Scheme: s,
-		Log:    ctrl.Log.WithName("controllers").WithName("ChangeTierRequest"),
 	}
 	request := reconcile.Request{
 		NamespacedName: test.NamespacedName(test.HostOperatorNs, changeTier.Name),

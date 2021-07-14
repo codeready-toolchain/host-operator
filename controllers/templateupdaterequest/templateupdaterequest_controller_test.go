@@ -671,7 +671,6 @@ func prepareReconcile(t *testing.T, initObjs ...runtime.Object) (reconcile.Recon
 	r := &templateupdaterequest.Reconciler{
 		Client: cl,
 		Scheme: s,
-		Log:    ctrl.Log.WithName("controllers").WithName("TemplateUpdateRequest"),
 	}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{

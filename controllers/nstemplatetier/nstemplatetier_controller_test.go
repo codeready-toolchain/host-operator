@@ -664,7 +664,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	r := &nstemplatetier.Reconciler{
 		Client: cl,
 		Scheme: s,
-		Log:    ctrl.Log.WithName("controllers").WithName("NSTemplateTier"),
 	}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{

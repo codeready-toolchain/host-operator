@@ -366,7 +366,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	r := &Reconciler{
 		Client: cl,
 		Scheme: s,
-		Log:    ctrl.Log.WithName("controllers").WithName("Deactivation"),
 	}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{

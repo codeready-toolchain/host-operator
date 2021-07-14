@@ -9,7 +9,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 )
 
 func TestSecretToToolchainConfigMapper(t *testing.T) {
@@ -17,15 +16,15 @@ func TestSecretToToolchainConfigMapper(t *testing.T) {
 	secretData := map[string][]byte{
 		"mailgunAPIKey": []byte("abc123"),
 	}
-	secret := test.CreateSecret("test-secret", test.HostOperatorNs, secretData)
 
 	t.Run("test secret maps correctly", func(t *testing.T) {
-		mapper := &SecretToToolchainConfigMapper{}
+		//given
+		secret := test.CreateSecret("test-secret", test.HostOperatorNs, secretData)
 
-		req := mapper.Map(handler.MapObject{
-			Object: secret,
-		})
+		// when
+		req := MapSecretToToolchainConfig()(secret)
 
+		// then
 		require.Len(t, req, 1)
 		require.Equal(t, types.NamespacedName{
 			Namespace: test.HostOperatorNs,
@@ -34,14 +33,13 @@ func TestSecretToToolchainConfigMapper(t *testing.T) {
 	})
 
 	t.Run("a non-secret resource is not mapped", func(t *testing.T) {
-		mapper := &SecretToToolchainConfigMapper{}
-
+		// given
 		pod := &corev1.Pod{}
 
-		req := mapper.Map(handler.MapObject{
-			Object: pod,
-		})
+		// when
+		req := MapSecretToToolchainConfig()(pod)
 
+		// then
 		require.Len(t, req, 0)
 	})
 }
