@@ -6,7 +6,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	common "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	errs "github.com/pkg/errors"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -43,7 +42,7 @@ func updateConfig(config *toolchainv1alpha1.ToolchainConfig, secrets map[string]
 }
 
 func loadLatest(cl client.Client) error {
-	namespace, err := k8sutil.GetWatchNamespace()
+	namespace, err := common.GetWatchNamespace()GetWatchNamespace()
 	if err != nil {
 		return errs.Wrap(err, "Failed to get watch namespace")
 	}

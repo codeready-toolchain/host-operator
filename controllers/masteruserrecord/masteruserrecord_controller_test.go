@@ -59,7 +59,7 @@ func TestAddFinalizer(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		result, err := cntrl.Reconcile(newMurRequest(mur))
+		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.NoError(t, err)
@@ -82,7 +82,7 @@ func TestAddFinalizer(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "john")
 		hostClient := test.NewFakeClient(t, mur)
 		memberClient := test.NewFakeClient(t)
-		hostClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to add finalizer to MUR %s", mur.Name)
 		}
 		InitializeCounters(t, NewToolchainStatus(
@@ -98,7 +98,7 @@ func TestAddFinalizer(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Error(t, err)
@@ -140,7 +140,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		ClusterClient(test.MemberClusterName, memberClient))
 
 	// when
-	_, err := cntrl.Reconcile(newMurRequest(mur))
+	_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 	// then
 	require.NoError(t, err)
@@ -184,7 +184,7 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 		ClusterClient(test.MemberClusterName, memberClient), ClusterClient(test.Member2ClusterName, memberClient2))
 
 	// when reconciling
-	result, err := cntrl.Reconcile(newMurRequest(mur))
+	result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 	// then
 	require.NoError(t, err)
 	assert.False(t, result.Requeue)
@@ -240,7 +240,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 			ClusterClient("member3-cluster", memberClient3))
 
 		// when
-		result, err := cntrl.Reconcile(newMurRequest(mur))
+		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.NoError(t, err)
@@ -269,7 +269,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 			ClusterClient("member3-cluster", memberClient3))
 
 		// when
-		result, err := cntrl.Reconcile(newMurRequest(mur))
+		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.NoError(t, err)
@@ -299,7 +299,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 			ClusterClient("member3-cluster", memberClient3))
 
 		// when
-		result, err := cntrl.Reconcile(newMurRequest(mur))
+		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.NoError(t, err)
@@ -342,7 +342,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Error(t, err)
@@ -379,7 +379,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Error(t, err)
@@ -414,7 +414,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Error(t, err)
@@ -451,7 +451,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Error(t, err)
@@ -517,7 +517,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 				string(metrics.Internal): 1,
 			})))
 		memberClient := test.NewFakeClient(t)
-		memberClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+		memberClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 			return fmt.Errorf("unable to create user account %s", mur.Name)
 		}
 
@@ -525,7 +525,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Error(t, err)
@@ -557,7 +557,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			})))
 		userAcc := uatest.NewUserAccountFromMur(mur)
 		memberClient := test.NewFakeClient(t, userAcc)
-		memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		memberClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
 		modifiedMur := murtest.NewMasterUserRecord(t, "john", murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
@@ -568,7 +568,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(modifiedMur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(modifiedMur))
 
 		// then
 		require.Error(t, err)
@@ -609,7 +609,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		hostClient := test.NewFakeClient(t, provisionedMur, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			hostClient.MockStatusUpdate = nil // mock only once
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
@@ -618,7 +618,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(provisionedMur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(provisionedMur))
 
 		// then
 		require.Error(t, err)
@@ -656,7 +656,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		hostClient := test.NewFakeClient(t, mur)
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
-		hostClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to remove finalizer from MUR %s", mur.Name)
 		}
 
@@ -664,12 +664,12 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		result1, err1 := cntrl.Reconcile(newMurRequest(mur)) // first reconcile will be requeued to wait for UserAccount deletion
+		result1, err1 := cntrl.Reconcile(context.TODO(), newMurRequest(mur)) // first reconcile will be requeued to wait for UserAccount deletion
 		require.NoError(t, err1)
 		assert.True(t, result1.Requeue)
 		assert.Equal(t, int64(result1.RequeueAfter), int64(10*time.Second))
 
-		result2, err2 := cntrl.Reconcile(newMurRequest(mur)) // second reconcile
+		result2, err2 := cntrl.Reconcile(context.TODO(), newMurRequest(mur)) // second reconcile
 
 		// then
 		require.Empty(t, result2)
@@ -706,7 +706,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		hostClient := test.NewFakeClient(t, mur)
 
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
-		memberClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+		memberClient.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("unable to delete user account %s", mur.Name)
 		}
 
@@ -714,7 +714,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Error(t, err)
@@ -775,7 +775,7 @@ func TestModifyUserAccounts(t *testing.T) {
 		ClusterClient("member3-cluster", memberClient3))
 
 	// when ensuring 1st account
-	_, err := cntrl.Reconcile(newMurRequest(mur))
+	_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 	// then
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
@@ -783,7 +783,7 @@ func TestModifyUserAccounts(t *testing.T) {
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
 
 	// when ensuring 2nd account
-	_, err = cntrl.Reconcile(newMurRequest(mur))
+	_, err = cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 	// then
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
@@ -791,7 +791,7 @@ func TestModifyUserAccounts(t *testing.T) {
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec)
 
 	// when ensuring 3rd account
-	_, err = cntrl.Reconcile(newMurRequest(mur))
+	_, err = cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 	// then
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient3).
@@ -870,7 +870,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			ClusterClient("member3-cluster", memberClient3))
 
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.NoError(t, err)
@@ -952,7 +952,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			ClusterClient(test.Member2ClusterName, memberClient2))
 
 		// when
-		_, err = cntrl.Reconcile(newMurRequest(mur))
+		_, err = cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		// the original error status should be cleaned
@@ -1017,12 +1017,12 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		result1, err1 := cntrl.Reconcile(newMurRequest(mur))
+		result1, err1 := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 		require.NoError(t, err1)
 		assert.True(t, result1.Requeue)
 		assert.Equal(t, int64(result1.RequeueAfter), int64(10*time.Second))
 
-		result2, err2 := cntrl.Reconcile(newMurRequest(mur))
+		result2, err2 := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Empty(t, result2)
@@ -1071,14 +1071,14 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		result1, err := cntrl.Reconcile(newMurRequest(mur))
+		result1, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 		require.NoError(t, err)
 		assert.True(t, result1.Requeue)
 		assert.Equal(t, int64(result1.RequeueAfter), int64(10*time.Second))
 
 		err = memberClient.Delete(context.TODO(), userAcc)
 		require.NoError(t, err)
-		result2, err2 := cntrl.Reconcile(newMurRequest(mur))
+		result2, err2 := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Empty(t, result2)
@@ -1126,7 +1126,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
-		result, err := cntrl.Reconcile(newMurRequest(mur))
+		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Empty(t, result)
@@ -1155,7 +1155,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 			ClusterClient(test.MemberClusterName, memberClient))
 
 		deleted := false
-		memberClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+		memberClient.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 			deleted = true
 			require.Len(t, opts, 1)
 			deleteOptions, ok := opts[0].(*client.DeleteOptions)
@@ -1166,7 +1166,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 			return nil
 		}
 		// when
-		_, err := cntrl.Reconcile(newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 		//then
 		require.NoError(t, err)
 		assert.True(t, deleted)
@@ -1202,17 +1202,17 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 		ClusterClient(test.MemberClusterName, memberClient), ClusterClient(test.Member2ClusterName, memberClient2))
 
 	// when
-	result1, err1 := cntrl.Reconcile(newMurRequest(mur)) // first reconcile will wait for first useraccount to be deleted
+	result1, err1 := cntrl.Reconcile(context.TODO(), newMurRequest(mur)) // first reconcile will wait for first useraccount to be deleted
 	require.NoError(t, err1)
 	assert.True(t, result1.Requeue)
 	assert.Equal(t, int64(result1.RequeueAfter), int64(10*time.Second))
 
-	result2, err2 := cntrl.Reconcile(newMurRequest(mur)) // second reconcile will wait for second useraccount to be deleted
+	result2, err2 := cntrl.Reconcile(context.TODO(), newMurRequest(mur)) // second reconcile will wait for second useraccount to be deleted
 	require.NoError(t, err2)
 	assert.True(t, result2.Requeue)
 	assert.Equal(t, int64(result2.RequeueAfter), int64(10*time.Second))
 
-	result3, err3 := cntrl.Reconcile(newMurRequest(mur))
+	result3, err3 := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 	// then
 	require.Empty(t, result3)
@@ -1258,7 +1258,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 		ClusterClient(test.MemberClusterName, memberClient))
 
 	// when
-	res, err := cntrl.Reconcile(newMurRequest(mur))
+	res, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 	require.NoError(t, err)
 	assert.Equal(t, reconcile.Result{Requeue: false}, res)
 	userAcc := &toolchainv1alpha1.UserAccount{}

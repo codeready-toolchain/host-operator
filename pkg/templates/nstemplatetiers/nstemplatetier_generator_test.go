@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -280,7 +279,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
 				// given
 				clt := testsupport.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+				clt.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
@@ -304,7 +303,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 						Name:      "advanced",
 					},
 				})
-				clt.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+				clt.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
@@ -325,7 +324,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
 				// given
 				clt := testsupport.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+				clt.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.TierTemplate); ok {
 						// simulate a client/server error
 						return errors.Errorf("an error")

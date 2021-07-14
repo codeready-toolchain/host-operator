@@ -12,6 +12,7 @@ import (
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commonTemplate "github.com/codeready-toolchain/toolchain-common/pkg/template"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/kubectl/pkg/scheme"
 
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/pkg/errors"
@@ -289,9 +290,9 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 			return fmt.Errorf("there is an unexpected number of NSTemplateTier object to be applied for tier name '%s'; expected: 1; actual: %d", tierName, len(tierData.nstmplTierObjs))
 		}
 
-		unstructuredObj, ok := tierData.nstmplTierObjs[0].GetRuntimeObject().(*unstructured.Unstructured)
+		unstructuredObj, ok := tierData.nstmplTierObjs[0].GetClientObject().(*unstructured.Unstructured)
 		if !ok {
-			return fmt.Errorf("unable to cast NSTemplateTier '%s' to Unstructured object '%+v'", tierName, tierData.nstmplTierObjs[0].GetRuntimeObject())
+			return fmt.Errorf("unable to cast NSTemplateTier '%s' to Unstructured object '%+v'", tierName, tierData.nstmplTierObjs[0].GetClientObject())
 		}
 		tier := &toolchainv1alpha1.NSTemplateTier{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, tier); err != nil {
@@ -341,7 +342,7 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 //     - templateRef: basic-stage-4d49fe0
 // ------
 func (t *tierGenerator) newNSTemplateTier(tierName string, contents *tierData) ([]commonclient.ToolchainObject, error) {
-	decoder := serializer.NewCodecFactory(t.scheme).UniversalDeserializer()
+	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer()
 	if reflect.DeepEqual(contents.rawTemplates.nsTemplateTier, template{}) {
 		return nil, fmt.Errorf("tier %s is missing a tier.yaml file", tierName)
 	}

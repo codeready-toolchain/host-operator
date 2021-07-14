@@ -8,6 +8,8 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/redhat-cop/operator-utils/pkg/util"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
@@ -16,14 +18,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // ----------------------------------------------------------------------------------------------------------------------------
@@ -36,40 +36,17 @@ import (
 // .. if the MasterUserRecord failed to updated: increment the failure counter and retain the resource name
 // ----------------------------------------------------------------------------------------------------------------------------
 
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	// Create a new NSTemplateTiers controller
-	c, err := controller.New("nstemplatetier-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes on the primary resources (NSTemplateTier)
-	if err := c.Watch(&source.Kind{Type: &toolchainv1alpha1.NSTemplateTier{}},
-		&handler.EnqueueRequestForObject{},
-		predicate.GenerationChangedPredicate{}); err != nil {
-		return err
-	}
-	// Watch for changes on the secondary resources (TemplateUpdateRequest) and requeue the owner NSTemplateTier
-	// we DO need to track changes in the status, so we can't use the `GenerationChangedPredicate`
-	if err := c.Watch(&source.Kind{Type: &toolchainv1alpha1.TemplateUpdateRequest{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &toolchainv1alpha1.NSTemplateTier{},
-	}); err != nil {
-		return err
-	}
-	return nil
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-	return add(mgr, r)
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&toolchainv1alpha1.NSTemplateTier{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Owns(&toolchainv1alpha1.TemplateUpdateRequest{}).
+		Complete(r)
 }
 
 // Reconciler reconciles a NSTemplateTier object (only when this latter's specs were updated)
 type Reconciler struct {
 	Client client.Client
-	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
@@ -82,8 +59,8 @@ type Reconciler struct {
 // - creating and delete the TemplateUpdateRequest to update the MasterUserRecord associated with this tier
 // - updating the `Failed` counter in the `status.updates` when a MasterUserRecord failed to update
 // - setting the `completionTime` when all MasterUserRecord have been processed
-func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	logger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
 
 	// fetch the NSTemplateTier tier
 	tier := &toolchainv1alpha1.NSTemplateTier{}

@@ -89,13 +89,38 @@ spec:
               deactivation:
                 description: Keeps parameters concerned with user deactivation
                 properties:
+                  UserSignupUnverifiedRetentionDays:
+                    description: UserSignupUnverifiedRetentionDays is used to configure
+                      how many days we should keep unverified (i.e. the user hasn't
+                      completed the user verification process via the registration
+                      service) UserSignup resources before deleting them.  It is intended
+                      for this parameter to define an aggressive cleanup schedule
+                      for unverified user signups, and the default configuration value
+                      for this parameter reflects this.
+                    type: integer
                   deactivatingNotificationDays:
                     description: DeactivatingNotificationDays is the number of days
                       after a pre-deactivating notification is sent that actual deactivation
                       occurs.  If this parameter is set to zero, then there will be
                       no delay
                     type: integer
+                  deactivationDomainsExcluded:
+                    description: 'DeactivationDomainsExcluded is a string of comma-separated
+                      domains that should be excluded from automatic user deactivation
+                      For example: "@redhat.com,@ibm.com"'
+                    type: string
+                  userSignupDeactivatedRetentionDays:
+                    description: UserSignupDeactivatedRetentionDays is used to configure
+                      how many days we should keep deactivated UserSignup resources
+                      before deleting them.  This parameter value should reflect an
+                      extended period of time sufficient for gathering user metrics
+                      before removing the resources from the cluster.
+                    type: integer
                 type: object
+              environment:
+                description: Environment specifies the host-operator environment such
+                  as prod, stage, unit-tests, e2e-tests, dev, etc
+                type: string
               metrics:
                 description: Keeps parameters concerned with metrics
                 properties:
@@ -104,6 +129,95 @@ spec:
                       of the metrics based on the resources rather than on the content
                       of `ToolchainStatus.status.metrics`
                     type: boolean
+                type: object
+              notifications:
+                description: Keeps parameters concerned with notifications
+                properties:
+                  adminEmail:
+                    description: The administrator email address for system notifications
+                    type: string
+                  durationBeforeNotificationDeletion:
+                    description: DurationBeforeNotificationDeletion is notification
+                      delivery service to use for notifications
+                    type: string
+                  notificationDeliveryService:
+                    description: NotificationDeliveryService is notification delivery
+                      service to use for notifications
+                    type: string
+                  secret:
+                    description: Defines all secrets related to notification configuration
+                    properties:
+                      mailgunAPIKey:
+                        description: The key for the host operator mailgun api key
+                          used for creating an instance of mailgun
+                        type: string
+                      mailgunDomain:
+                        description: The key for the host operator mailgun domain
+                          used for creating an instance of mailgun
+                        type: string
+                      mailgunReplyToEmail:
+                        description: The key for the reply-to email address that will
+                          be set in sent notifications
+                        type: string
+                      mailgunSenderEmail:
+                        description: The key for the host operator mailgun senders
+                          email
+                        type: string
+                      ref:
+                        description: Reference is the name of the secret resource
+                          to look up
+                        type: string
+                    type: object
+                type: object
+              registrationService:
+                description: Keeps parameters necessary for the registration service
+                properties:
+                  registrationServiceURL:
+                    description: RegistrationServiceURL is the URL used to a ccess
+                      the registration service
+                    type: string
+                type: object
+              tiers:
+                description: Keeps parameters concerned with tiers
+                properties:
+                  durationBeforeChangeTierRequestDeletion:
+                    description: DurationBeforeChangeTierRequestDeletion specifies
+                      the duration before a ChangeTierRequest resource is deleted
+                    type: string
+                  templateUpdateRequestMaxPoolSize:
+                    description: TemplateUpdateRequestMaxPoolSize specifies the maximum
+                      number of concurrent TemplateUpdateRequests when updating MasterUserRecords
+                    type: integer
+                type: object
+              toolchainStatus:
+                description: Keeps parameters concerned with the toolchainstatus
+                properties:
+                  toolchainStatusRefreshTime:
+                    description: ToolchainStatusRefreshTime specifies how often the
+                      ToolchainStatus should load and refresh the current hosted-toolchain
+                      status
+                    type: string
+                type: object
+              users:
+                description: Keeps parameters concerned with user management
+                properties:
+                  forbiddenUsernamePrefixes:
+                    description: ForbiddenUsernamePrefixes is a comma-separated string
+                      that defines the prefixes that a username may not have when
+                      signing up. If a username has a forbidden prefix, then the username
+                      compliance prefix is added to the username
+                    type: string
+                  forbiddenUsernameSuffixes:
+                    description: ForbiddenUsernameSuffixes is a comma-separated string
+                      that defines the suffixes that a username may not have when
+                      signing up.  If a username has a forbidden suffix, then the
+                      username compliance suffix is added to the username
+                    type: string
+                  masterUserRecordUpdateFailureThreshold:
+                    description: MasterUserRecordUpdateFailureThreshold specifies
+                      the number of allowed failures before stopping attempts to update
+                      a MasterUserRecord
+                    type: integer
                 type: object
             type: object
           status:

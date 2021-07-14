@@ -3,7 +3,6 @@ package unapproved
 import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -21,10 +20,8 @@ func NewUserSignupMapper(client client.Client) UserSignupMapper {
 	}
 }
 
-var _ handler.Mapper = UserSignupMapper{}
-
-func (b UserSignupMapper) Map(obj handler.MapObject) []reconcile.Request {
-	userSignup := b.unapprovedCache.getOldestPendingApproval(obj.Meta.GetNamespace())
+func (b UserSignupMapper) MapToOldestUnapproved(obj client.Object) []reconcile.Request {
+	userSignup := b.unapprovedCache.getOldestPendingApproval(obj.GetNamespace())
 	if userSignup == nil {
 		return []reconcile.Request{}
 	}

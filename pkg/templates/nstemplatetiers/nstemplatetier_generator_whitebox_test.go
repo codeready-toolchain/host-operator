@@ -213,7 +213,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 			for _, tierData := range tc.templatesByTier {
 
 				for _, nstmplTierObj := range tierData.nstmplTierObjs {
-					tierObj := nstmplTierObj.GetRuntimeObject()
+					tierObj := nstmplTierObj.GetClientObject()
 
 					// verify tier configuration
 					nstmplTier := runtimeObjectToNSTemplateTier(t, s, tierObj)
@@ -267,7 +267,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 					objects := tc.templatesByTier[tier].nstmplTierObjs
 					require.Len(t, objects, 1, "expected only 1 NSTemplateTier toolchain object")
 					// when
-					actual := runtimeObjectToNSTemplateTier(t, s, objects[0].GetRuntimeObject())
+					actual := runtimeObjectToNSTemplateTier(t, s, objects[0].GetClientObject())
 
 					// then
 					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, namespaceRevisions[tier], clusterResourceQuotaRevisions[tier])
@@ -666,7 +666,7 @@ func TestNewNSTemplateTiers(t *testing.T) {
 			tierData, found := tc.templatesByTier[name]
 			tierObjs := tierData.nstmplTierObjs
 			require.Len(t, tierObjs, 1, "expected only 1 NSTemplateTier toolchain object")
-			tier := runtimeObjectToNSTemplateTier(t, s, tierObjs[0].GetRuntimeObject())
+			tier := runtimeObjectToNSTemplateTier(t, s, tierObjs[0].GetClientObject())
 
 			require.True(t, found)
 			assert.Equal(t, name, tier.ObjectMeta.Name)

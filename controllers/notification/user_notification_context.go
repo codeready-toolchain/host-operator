@@ -60,17 +60,13 @@ func NewUserNotificationContext(client client.Client, userID, namespace string) 
 }
 
 func (c *UserNotificationContext) DeliveryEmail() string {
-	return fmt.Sprintf("%s %s<%s>",
-		c.FirstName,
-		c.LastName,
-		c.UserEmail)
+	return c.UserEmail
 }
 
 func (c *UserNotificationContext) KeysAndValues() []interface{} {
 	return []interface{}{
 		"UserID", c.UserID,
 		"UserEmail", c.UserEmail,
-		"DeliveryEmail", c.DeliveryEmail(),
 		"FirstName", c.FirstName,
 		"LastName", c.LastName,
 		"CompanyName", c.CompanyName,

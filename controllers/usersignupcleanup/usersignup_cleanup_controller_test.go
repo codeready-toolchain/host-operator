@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -42,7 +41,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup still exists
@@ -62,7 +61,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		res, err := r.Reconcile(req)
+		res, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup still exists
@@ -84,7 +83,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup has been deleted
@@ -98,48 +97,68 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that an old, unverified UserSignup is deleted", func(t *testing.T) {
 
-		t.Run("without phone verification initiated", func(t *testing.T) {
-			// given
-			userSignup := test2.NewUserSignup(
-				test2.CreatedBefore(days(8)),
-				test2.VerificationRequired(days(8)),
-			)
-			r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
-			// when
-			_, err := r.Reconcile(req)
-			require.NoError(t, err)
-			// then
-			// confirm the UserSignup has been deleted
-			key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-			err = r.Client.Get(context.Background(), key, userSignup)
-			require.True(t, errors.IsNotFound(err))
-			assert.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
-			// and verify the metrics
-			assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // unchanged
-			assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) // incremented
-		})
+		userSignup := test2.NewUserSignup(
+			test2.CreatedBefore(days(8)),
+			test2.VerificationRequired(days(8)),
+			test2.WithActivations("0"),
+		)
 
-		t.Run("with phone verification initiated", func(t *testing.T) {
-			// given
-			userSignup := test2.NewUserSignup(
-				test2.CreatedBefore(days(8)),
-				test2.VerificationRequired(days(8)),
-				test2.WithAnnotation(toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey, "12345"),
-			)
-			r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
-			// when
-			_, err := r.Reconcile(req)
-			require.NoError(t, err)
-			// then
-			// confirm the UserSignup has been deleted
-			key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
-			err = r.Client.Get(context.Background(), key, userSignup)
-			require.True(t, errors.IsNotFound(err))
-			assert.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
-			// and verify the metrics
-			assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // incremented
-			assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) // unchanged
-		})
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+
+		_, err := r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+
+		// Confirm the UserSignup has been deleted
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		err = r.Client.Get(context.Background(), key, userSignup)
+		require.Error(t, err)
+		require.True(t, errors.IsNotFound(err))
+		require.IsType(t, &errors.StatusError{}, err)
+		statusErr := err.(*errors.StatusError)
+		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
+	})
+
+	t.Run("without phone verification initiated", func(t *testing.T) {
+		// given
+		userSignup := test2.NewUserSignup(
+			test2.CreatedBefore(days(8)),
+			test2.VerificationRequired(days(8)),
+		)
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+		// when
+		_, err := r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+		// then
+		// confirm the UserSignup has been deleted
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		err = r.Client.Get(context.Background(), key, userSignup)
+		require.True(t, errors.IsNotFound(err))
+		assert.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
+		// and verify the metrics
+		assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // unchanged
+		assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) // incremented
+	})
+
+	t.Run("with phone verification initiated", func(t *testing.T) {
+		// given
+		userSignup := test2.NewUserSignup(
+			test2.CreatedBefore(days(8)),
+			test2.VerificationRequired(days(8)),
+			test2.WithAnnotation(toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey, "12345"),
+		)
+		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
+		// when
+		_, err := r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+		// then
+		// confirm the UserSignup has been deleted
+		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+		err = r.Client.Get(context.Background(), key, userSignup)
+		require.True(t, errors.IsNotFound(err))
+		assert.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
+		// and verify the metrics
+		assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // incremented
+		assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithoutInitiatingVerificationTotal)) // unchanged
 	})
 
 	t.Run("test that recently reactivated, unverified UserSignup is NOT deleted", func(t *testing.T) {
@@ -148,11 +167,12 @@ func TestUserCleanup(t *testing.T) {
 			test2.CreatedBefore(threeYears),
 			test2.ApprovedAutomatically(days(40)),
 			test2.VerificationRequired(days(10)),
+			test2.WithActivations("1"),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		res, err := r.Reconcile(req)
+		res, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup has not been deleted
@@ -169,11 +189,12 @@ func TestUserCleanup(t *testing.T) {
 			test2.CreatedBefore(threeYears),
 			test2.ApprovedAutomatically(days(396)),
 			test2.VerificationRequired(days(366)),
+			test2.WithActivations("2"),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup has been deleted
@@ -193,7 +214,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 
-		res, err := r.Reconcile(req)
+		res, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 
 		// Confirm the UserSignup has not been deleted
@@ -212,7 +233,7 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
 		deleted := false
-		fakeClient.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+		fakeClient.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 			deleted = true
 			require.Len(t, opts, 1)
 			deleteOptions, ok := opts[0].(*client.DeleteOptions)
@@ -222,7 +243,7 @@ func TestUserCleanup(t *testing.T) {
 			assert.Equal(t, v1.DeletePropagationForeground, *deleteOptions.PropagationPolicy)
 			return nil
 		}
-		_, err := r.Reconcile(req)
+		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
 		assert.True(t, deleted)
 	})
@@ -257,7 +278,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (*R
 	r := &Reconciler{
 		Scheme: s,
 		Client: fakeClient,
-		Log:    ctrl.Log.WithName("controllers").WithName("UserSignupCleanup"),
 	}
 	return r, newReconcileRequest(name), fakeClient
 }

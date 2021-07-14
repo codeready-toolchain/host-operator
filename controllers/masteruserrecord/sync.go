@@ -182,32 +182,42 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 	}
 
 	if condition.IsNotTrue(s.record.Status.Conditions, toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated) {
-		notification := &toolchainv1alpha1.Notification{
-			ObjectMeta: v1.ObjectMeta{
-				GenerateName: fmt.Sprintf("%s-%s-", s.record.Name, toolchainv1alpha1.NotificationTypeProvisioned),
-				Namespace:    s.record.Namespace,
-				Labels: map[string]string{
-					// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
-					toolchainv1alpha1.NotificationUserNameLabelKey: s.record.Name,
-					// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
-					toolchainv1alpha1.NotificationTypeLabelKey: toolchainv1alpha1.NotificationTypeProvisioned,
+		labels := map[string]string{
+			toolchainv1alpha1.NotificationUserNameLabelKey: s.record.Name,
+			toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeProvisioned,
+		}
+		opts := client.MatchingLabels(labels)
+		notificationList := &toolchainv1alpha1.NotificationList{}
+		if err := s.hostClient.List(context.TODO(), notificationList, opts); err != nil {
+			return false, err
+		}
+		// if there is no existing notification with these labels
+		if len(notificationList.Items) == 0 {
+			notification := &toolchainv1alpha1.Notification{
+				ObjectMeta: v1.ObjectMeta{
+					GenerateName: fmt.Sprintf("%s-%s-", s.record.Name, toolchainv1alpha1.NotificationTypeProvisioned),
+					Namespace:    s.record.Namespace,
+					Labels:       labels,
 				},
-			},
-			Spec: toolchainv1alpha1.NotificationSpec{
-				// The UserID property actually refers to the UserSignup resource name.  This will be renamed
-				// (or removed) in a future PR
-				UserID:   s.record.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
-				Template: notificationtemplates.UserProvisioned.Name,
-			},
-		}
+				Spec: toolchainv1alpha1.NotificationSpec{
+					// The UserID property actually refers to the UserSignup resource name.  This will be renamed
+					// (or removed) in a future PR
+					UserID:   s.record.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
+					Template: notificationtemplates.UserProvisioned.Name,
+				},
+			}
 
-		err := controllerutil.SetControllerReference(s.record, notification, s.scheme)
-		if err != nil {
-			return false, err
-		}
+			err := controllerutil.SetControllerReference(s.record, notification, s.scheme)
+			if err != nil {
+				return false, err
+			}
 
-		if err := s.hostClient.Create(context.TODO(), notification); err != nil {
-			return false, err
+			if err := s.hostClient.Create(context.TODO(), notification); err != nil {
+				return false, err
+			}
+		} else {
+			s.logger.Info(fmt.Sprintf("The %s notification for user %s was not created because it already exists: %v",
+				toolchainv1alpha1.NotificationTypeProvisioned, s.record.Name, notificationList.Items[0]))
 		}
 		s.record.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.record.Status.Conditions, toBeProvisionedNotificationCreated())
 	}

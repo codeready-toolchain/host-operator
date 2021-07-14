@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -95,7 +94,7 @@ func TestGetConfigFailed(t *testing.T) {
 	t.Run("config not found", func(t *testing.T) {
 		config := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)))
 		cl := test.NewFakeClient(t, config)
-		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 			return apierrors.NewNotFound(schema.GroupResource{}, "config")
 		}
 
@@ -112,7 +111,7 @@ func TestGetConfigFailed(t *testing.T) {
 	t.Run("error getting config", func(t *testing.T) {
 		config := NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)))
 		cl := test.NewFakeClient(t, config)
-		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 			return fmt.Errorf("some error")
 		}
 

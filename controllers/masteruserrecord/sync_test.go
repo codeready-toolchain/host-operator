@@ -8,6 +8,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/host-operator/test"
+	. "github.com/codeready-toolchain/host-operator/test/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -16,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -173,7 +173,7 @@ func TestSynchronizeStatus(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -223,7 +223,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -272,7 +272,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 	t.Run("failed on the host side", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur.DeepCopy())
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -301,12 +301,22 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		},
 		UserAccountStatus: userAccount.Status,
 	}}
+	dummyNotification := &toolchainv1alpha1.Notification{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("dummy-%s", toolchainv1alpha1.NotificationTypeProvisioned),
+			Namespace: test.HostOperatorNs,
+			Labels: map[string]string{
+				toolchainv1alpha1.NotificationUserNameLabelKey: "dummy",
+				toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeProvisioned,
+			},
+		},
+	}
 
 	uatest.Modify(userAccount, uatest.StatusCondition(toBeProvisioned()))
 
 	t.Run("successful", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, dummyNotification)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
@@ -317,11 +327,12 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, preSyncTime.Time.Before(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
 		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned)
 	})
 
 	t.Run("ProvisionedTime should not be updated when synced more than once", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, dummyNotification)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 		provisionTime := metav1.NewTime(time.Now().Add(-time.Hour))
 		sync.record.Status.ProvisionedTime = &provisionTime
@@ -333,12 +344,57 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		require.True(t, preSyncTime.Time.After(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be after the ProvisionedTime because this is simulating the case where the record was already provisioned before")
 		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
 		assert.Equal(t, provisionTime.Time, sync.record.Status.ProvisionedTime.Time) // timestamp should be the same
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned)
+	})
+
+	t.Run("When notification was already created, but the update of status failed before, which means that the condition is not set", func(t *testing.T) {
+		// given
+		notification := &toolchainv1alpha1.Notification{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-%s", mur.Name, toolchainv1alpha1.NotificationTypeProvisioned),
+				Namespace: test.HostOperatorNs,
+				Labels: map[string]string{
+					toolchainv1alpha1.NotificationUserNameLabelKey: mur.Name,
+					toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeProvisioned,
+				},
+			},
+		}
+		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, dummyNotification, notification)
+		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+		// when
+		preSyncTime := metav1.Now()
+		err := sync.synchronizeStatus()
+
+		// then
+		require.NoError(t, err)
+		require.True(t, preSyncTime.Time.Before(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned)
+	})
+
+	t.Run("no new notification created when condition is already set", func(t *testing.T) {
+		// given
+		murCopy := mur.DeepCopy()
+		murCopy.Status.Conditions = append(murCopy.Status.Conditions, toBeProvisionedNotificationCreated())
+		hostClient := test.NewFakeClient(t, murCopy, readyToolchainStatus)
+		sync, memberClient := prepareSynchronizer(t, userAccount, murCopy, hostClient)
+
+		// when
+		preSyncTime := metav1.Now()
+		err := sync.synchronizeStatus()
+
+		// then
+		require.NoError(t, err)
+		require.True(t, preSyncTime.Time.Before(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
+		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, murCopy, toBeProvisioned(), toBeProvisionedNotificationCreated())
+		AssertNoNotificationsExist(t, hostClient)
 	})
 
 	t.Run("failed on the host side when doing update", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -348,12 +404,13 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 		// then
 		require.Error(t, err)
+		AssertNoNotificationsExist(t, hostClient)
 	})
 
 	t.Run("failed on the host side when creating notification", func(t *testing.T) {
 		// given
 		hostClient := test.NewFakeClient(t, mur.DeepCopy())
-		hostClient.MockCreate = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+		hostClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 			return fmt.Errorf("some error")
 		}
 		sync, _ := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -363,6 +420,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 		// then
 		require.Error(t, err)
+		AssertNoNotificationsExist(t, hostClient)
 	})
 }
 
@@ -376,7 +434,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "john")
 		userAcc := uatest.NewUserAccountFromMur(mur)
 		memberClient := test.NewFakeClient(t, userAcc)
-		memberClient.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		memberClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
 		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.TierName("admin"))
@@ -408,7 +466,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			uatest.StatusCondition(toBeNotReady("somethingFailed", "")))
 		memberClient := test.NewFakeClient(t, userAcc)
 		hostClient := test.NewFakeClient(t, provisionedMur, readyToolchainStatus)
-		hostClient.MockStatusUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
 		sync := Synchronizer{
