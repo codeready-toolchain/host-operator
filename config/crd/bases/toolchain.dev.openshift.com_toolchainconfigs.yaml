@@ -178,10 +178,146 @@ spec:
                   registrationService:
                     description: Keeps parameters necessary for the registration service
                     properties:
+                      analytics:
+                        description: Keeps parameters necessary for the registration
+                          service analytics config
+                        properties:
+                          segmentWriteKey:
+                            description: SegmentWriteKey specifies the segment write
+                              key
+                            type: string
+                          woopraDomain:
+                            description: WoopraDomain specifies the woopra domain
+                              name
+                            type: string
+                        type: object
+                      auth:
+                        description: Keeps parameters necessary for the registration
+                          service authentication config
+                        properties:
+                          authClientConfigContentType:
+                            description: AuthClientConfigContentType specifies the
+                              auth config config content type
+                            type: string
+                          authClientConfigRaw:
+                            description: AuthClientConfigRaw specifies the URL used
+                              to a access the registration service
+                            type: string
+                          authClientLibraryURL:
+                            description: AuthClientLibraryURL specifies the auth library
+                              location
+                            type: string
+                          authClientPublicKeysURL:
+                            description: AuthClientPublicKeysURL specifies the public
+                              keys URL
+                            type: string
+                        type: object
+                      environment:
+                        description: Environment specifies the environment such as
+                          prod, stage, unit-tests, e2e-tests, dev, etc
+                        type: string
+                      logLevel:
+                        description: LogLevel specifies the logging level
+                        type: string
+                      namespace:
+                        description: Namespace specifies the namespace in which the
+                          registration service and host operator is running
+                        type: string
                       registrationServiceURL:
                         description: RegistrationServiceURL is the URL used to a ccess
                           the registration service
                         type: string
+                      server:
+                        description: Keeps parameters necessary for the registration
+                          service server config
+                        properties:
+                          gracefulTimeout:
+                            description: GracefulTimeout specifies the duration for
+                              which the server gracefully wait for existing connections
+                              to finish - e.g. 15s or 1m.
+                            type: string
+                          httpAddress:
+                            description: HttpAddress specifies the HTTP address (as
+                              set via default, config file, or environment variable)
+                              that the app-server binds to (e.g. "0.0.0.0:8080")
+                            type: string
+                          httpCompressResponses:
+                            description: HttpCompressResponses when true HTTP responses
+                              should be compressed for clients that support it via
+                              the 'Accept-Encoding' header
+                            type: boolean
+                          httpIdleTimeout:
+                            description: HttpIdleTimeout specifies the duration for
+                              the idle timeout.
+                            type: string
+                          httpReadTimeout:
+                            description: HttpReadTimeout specifies the duration for
+                              the read timeout.
+                            type: string
+                          httpWriteTimeout:
+                            description: Url specifies the duration for the write
+                              timeout.
+                            type: string
+                        type: object
+                      verification:
+                        description: Keeps parameters necessary for the registration
+                          service verification config
+                        properties:
+                          secret:
+                            description: Defines all secrets related to the registration
+                              service verification configuration
+                            properties:
+                              ref:
+                                description: Reference is the name of the secret resource
+                                  to look up
+                                type: string
+                              twilioAccountSID:
+                                description: TwilioAccountSID specifies the Twilio
+                                  account identifier, used for sending phone verification
+                                  messages
+                                type: string
+                              twilioAuthToken:
+                                description: TwilioAuthToken specifies the Twilio
+                                  authentication token, used for sending phone verification
+                                  messages
+                                type: string
+                              twilioFromNumber:
+                                description: TwilioFromNumber specifies the phone
+                                  number or alphanumeric "Sender ID" for sending phone
+                                  verification messages
+                                type: string
+                            type: object
+                          verificationAttemptsAllowed:
+                            description: VerificationAttemptsAllowed specifies the
+                              number of times a user may attempt to correctly enter
+                              a verification code, if they fail then they must request
+                              another code
+                            type: integer
+                          verificationCodeExpiresInMin:
+                            description: VerificationCodeExpiresInMin specifies an
+                              int representing the number of minutes before a verification
+                              code should be expired
+                            type: integer
+                          verificationDailyLimit:
+                            description: VerificationDailyLimit specifies the number
+                              of times a user may initiate a phone verification request
+                              within a 24 hour period
+                            type: integer
+                          verificationEnabled:
+                            description: VerificationEnabled specifies whether the
+                              phone verification feature is enabled or not
+                            type: boolean
+                          verificationExcludedEmailDomains:
+                            description: VerificationExcludedEmailDomains specifies
+                              the list of email address domains for which phone verification
+                              is not required
+                            type: string
+                          verificationMessageTemplate:
+                            description: VerificationMessageTemplate specifies the
+                              message template used to generate the content sent to
+                              users via SMS for phone verification
+                            type: string
+                        type: object
                     type: object
                   tiers:
                     description: Keeps parameters concerned with tiers
