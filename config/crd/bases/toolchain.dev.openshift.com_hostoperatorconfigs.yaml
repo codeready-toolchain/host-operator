@@ -219,37 +219,6 @@ spec:
                     description: RegistrationServiceURL is the URL used to a ccess
                       the registration service
                     type: string
-                  server:
-                    description: Keeps parameters necessary for the registration service
-                      server config
-                    properties:
-                      gracefulTimeout:
-                        description: GracefulTimeout specifies the duration for which
-                          the server gracefully wait for existing connections to finish
-                          - e.g. 15s or 1m.
-                        type: string
-                      httpAddress:
-                        description: HttpAddress specifies the HTTP address (as set
-                          via default, config file, or environment variable) that
-                          the app-server binds to (e.g. "0.0.0.0:8080")
-                        type: string
-                      httpCompressResponses:
-                        description: HttpCompressResponses when true HTTP responses
-                          should be compressed for clients that support it via the
-                          'Accept-Encoding' header
-                        type: boolean
-                      httpIdleTimeout:
-                        description: HttpIdleTimeout specifies the duration for the
-                          idle timeout.
-                        type: string
-                      httpReadTimeout:
-                        description: HttpReadTimeout specifies the duration for the
-                          read timeout.
-                        type: string
-                      httpWriteTimeout:
-                        description: Url specifies the duration for the write timeout.
-                        type: string
-                    type: object
                   verification:
                     description: Keeps parameters necessary for the registration service
                       verification config
