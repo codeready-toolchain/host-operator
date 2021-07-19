@@ -66,13 +66,13 @@ func TestNotificationContext(t *testing.T) {
 		require.Equal(t, "usersignups.toolchain.dev.openshift.com \"other\" not found", err.Error())
 	})
 
-	t.Run("full email address", func(t *testing.T) {
+	t.Run("email address correct", func(t *testing.T) {
 		// when
 		notificationCtx, err := NewUserNotificationContext(client, userSignup.Name, operatorNamespace, config)
 
 		// then
 		require.NoError(t, err)
-		require.Equal(t, "John Smith<jsmith@redhat.com>", notificationCtx.DeliveryEmail())
+		require.Equal(t, "jsmith@redhat.com", notificationCtx.DeliveryEmail())
 	})
 
 	t.Run("no configuration provided", func(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup/unapproved"
@@ -19,6 +20,8 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -26,8 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -39,67 +42,27 @@ type StatusUpdaterFunc func(userAcc *toolchainv1alpha1.UserSignup, message strin
 
 const defaultTierName = "base"
 
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	// Create a new controller
-	c, err := controller.New("usersignup-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to primary resource UserSignup
-	if err := c.Watch(
-		&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
-		&handler.EnqueueRequestForObject{},
-		UserSignupChangedPredicate{}); err != nil {
-		return err
-	}
-
-	// Watch for changes to the secondary resource MasterUserRecord and requeue the owner UserSignup
-	if err := c.Watch(
-		&source.Kind{Type: &toolchainv1alpha1.MasterUserRecord{}},
-		&handler.EnqueueRequestForOwner{
-			IsController: true,
-			OwnerType:    &toolchainv1alpha1.UserSignup{},
-		}); err != nil {
-		return err
-	}
-
-	if err := c.Watch(
-		&source.Kind{Type: &toolchainv1alpha1.BannedUser{}},
-		&handler.EnqueueRequestsFromMapFunc{
-			ToRequests: BannedUserToUserSignupMapper{client: mgr.GetClient()},
-		}); err != nil {
-		return err
-	}
-
-	mapToOldestUnapproved := &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: unapproved.NewUserSignupMapper(mgr.GetClient()),
-	}
-	whenAutomaticApprovalIsEnabled := &OnlyWhenAutomaticApprovalIsEnabled{
-		client: mgr.GetClient(),
-	}
-
-	// Watch for updates in ToolchainStatus CR to check if there is any member cluster with free capacity
-	if err := c.Watch(
-		&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
-		mapToOldestUnapproved,
-		whenAutomaticApprovalIsEnabled); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-	return add(mgr, r)
+	unapprovedMapper := unapproved.NewUserSignupMapper(mgr.GetClient())
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&toolchainv1alpha1.UserSignup{}, builder.WithPredicates(UserSignupChangedPredicate{})).
+		Owns(&toolchainv1alpha1.MasterUserRecord{}).
+		Watches(
+			&source.Kind{Type: &toolchainv1alpha1.BannedUser{}},
+			handler.EnqueueRequestsFromMapFunc(MapBannedUserToUserSignup(mgr.GetClient()))).
+		Watches(
+			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
+			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.MapToOldestUnapproved),
+			builder.WithPredicates(&OnlyWhenAutomaticApprovalIsEnabled{
+				client: mgr.GetClient(),
+			})).
+		Complete(r)
 }
 
 // Reconciler reconciles a UserSignup object
 type Reconciler struct {
 	*StatusUpdater
-	Log               logr.Logger
 	Scheme            *runtime.Scheme
 	CrtConfig         *crtCfg.Config
 	GetMemberClusters cluster.GetMemberClustersFunc
@@ -118,8 +81,8 @@ type Reconciler struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	logger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
 	logger.Info("Reconciling UserSignup")
 
 	// Fetch the UserSignup instance
@@ -136,6 +99,11 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 	logger = logger.WithValues("username", userSignup.Spec.Username)
+
+	if util.IsBeingDeleted(userSignup) {
+		logger.Info("The UserSignup is being deleted")
+		return reconcile.Result{}, nil
+	}
 
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {

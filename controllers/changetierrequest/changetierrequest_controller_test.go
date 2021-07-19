@@ -22,7 +22,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -43,7 +42,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
 		// when
-		_, err := controller.Reconcile(request)
+		_, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -60,7 +59,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
 		// when
-		_, err := controller.Reconcile(request)
+		_, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -76,7 +75,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
 		// when
-		_, err := controller.Reconcile(request)
+		_, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -94,7 +93,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		controller, request, cl := newController(t, changeTierRequest, mur)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -115,7 +114,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		controller, request, cl := newController(t, changeTierRequest, mur)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -137,7 +136,7 @@ func TestChangeTierFailure(t *testing.T) {
 		controller, request, cl := newController(t, changeTierRequest, teamTier)
 
 		// when
-		_, err := controller.Reconcile(request)
+		_, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.Error(t, err)
@@ -152,7 +151,7 @@ func TestChangeTierFailure(t *testing.T) {
 		controller, request, cl := newController(t, changeTierRequest, mur)
 
 		// when
-		_, err := controller.Reconcile(request)
+		_, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.Error(t, err)
@@ -168,7 +167,7 @@ func TestChangeTierFailure(t *testing.T) {
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
 
 		// when
-		_, err := controller.Reconcile(request)
+		_, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.Error(t, err)
@@ -185,7 +184,7 @@ func TestChangeTierFailure(t *testing.T) {
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
-		cl.MockUpdate = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+		cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			_, ok := obj.(*toolchainv1alpha1.MasterUserRecord)
 			if ok {
 				return fmt.Errorf("error")
@@ -194,7 +193,7 @@ func TestChangeTierFailure(t *testing.T) {
 		}
 
 		// when
-		_, err := controller.Reconcile(request)
+		_, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.Error(t, err)
@@ -210,12 +209,12 @@ func TestChangeTierFailure(t *testing.T) {
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 		controller, request, cl := newController(t, changeTierRequest, mur, teamTier)
-		cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+		cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("error")
 		}
 
 		// when
-		_, err := controller.Reconcile(request)
+		_, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.Error(t, err)
@@ -362,7 +361,6 @@ func newController(t *testing.T, changeTier *toolchainv1alpha1.ChangeTierRequest
 		Client: cl,
 		Scheme: s,
 		Config: config,
-		Log:    ctrl.Log.WithName("controllers").WithName("ChangeTierRequest"),
 	}
 	request := reconcile.Request{
 		NamespacedName: test.NamespacedName(test.HostOperatorNs, changeTier.Name),

@@ -16,45 +16,37 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/kubectl/pkg/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-func getDeploymentTemplate(s *runtime.Scheme) (*v1.Template, error) {
+func getDeploymentTemplate() (*v1.Template, error) {
 	deployment, err := Asset("registration-service.yaml")
 	if err != nil {
 		return nil, err
 	}
-	decoder := serializer.NewCodecFactory(s).UniversalDeserializer()
+	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer()
 	deploymentTemplate := &v1.Template{}
 	_, _, err = decoder.Decode([]byte(deployment), nil, deploymentTemplate)
 	return deploymentTemplate, err
 }
 
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r *Reconciler) error {
-	deploymentTemplate, err := getDeploymentTemplate(mgr.GetScheme())
+// SetupWithManager sets up the controller with the Manager.
+func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+	deploymentTemplate, err := getDeploymentTemplate()
 	if err != nil {
 		return errs.Wrap(err, "unable to decode the registration service deployment")
 	}
 	r.regServiceTemplate = deploymentTemplate
 
-	// Create a new controller
-	c, err := controller.New("registrationservice-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to primary resource RegistrationService
-	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.RegistrationService{}}, &handler.EnqueueRequestForObject{}, predicate.GenerationChangedPredicate{})
-	if err != nil {
-		return err
-	}
+	build := ctrl.NewControllerManagedBy(mgr).
+		For(&toolchainv1alpha1.RegistrationService{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
 	// process with default variables - we need to get just the list of objects - we don't care about their content
 	processor := template.NewProcessor(r.Scheme)
@@ -65,30 +57,17 @@ func add(mgr manager.Manager, r *Reconciler) error {
 
 	// call watch for all objects contained within the template
 	for _, toolchainObject := range toolchainObjects {
-		if toolchainObject.GetRuntimeObject() == nil {
+		if toolchainObject.GetClientObject() == nil {
 			continue
 		}
-		err = c.Watch(&source.Kind{Type: toolchainObject.GetRuntimeObject()}, &handler.EnqueueRequestForOwner{
-			IsController: true,
-			OwnerType:    &toolchainv1alpha1.RegistrationService{},
-		})
-		if err != nil {
-			return err
-		}
+		build.Owns(toolchainObject.GetClientObject())
 	}
-
-	return nil
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-	return add(mgr, r)
+	return build.Complete(r)
 }
 
 // Reconciler reconciles a RegistrationService object
 type Reconciler struct {
 	Client             client.Client
-	Log                logr.Logger
 	Scheme             *runtime.Scheme
 	regServiceTemplate *v1.Template
 }
@@ -104,8 +83,8 @@ type Reconciler struct {
 
 // Reconcile reads that state of the cluster for a RegistrationService object and makes changes based on the state read
 // and what is in the RegistrationService.Spec
-func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	reqLogger := log.FromContext(ctx)
 	reqLogger.Info("Reconciling RegistrationService")
 
 	// Fetch the RegistrationService regService
@@ -132,7 +111,7 @@ func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	// create all objects that are within the template, and update only when the object has changed.
 	var updated []string
 	for _, toolchainObject := range toolchainObjects {
-		createdOrUpdated, err := cl.ApplyObject(toolchainObject.GetRuntimeObject(), applycl.SetOwner(regService))
+		createdOrUpdated, err := cl.ApplyObject(toolchainObject.GetClientObject(), applycl.SetOwner(regService))
 		if err != nil {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, regService, r.setStatusFailed(toolchainv1alpha1.RegistrationServiceDeployingFailedReason), err, "cannot deploy registration service template")
 		}

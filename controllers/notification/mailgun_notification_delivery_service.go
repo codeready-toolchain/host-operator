@@ -3,8 +3,9 @@ package notification
 import (
 	"context"
 	"fmt"
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"time"
+
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
 	"github.com/mailgun/mailgun-go/v4"
 )

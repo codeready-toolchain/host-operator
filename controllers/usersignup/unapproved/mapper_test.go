@@ -9,9 +9,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 )
 
 func TestMapperReturnsOldest(t *testing.T) {
@@ -23,9 +21,7 @@ func TestMapperReturnsOldest(t *testing.T) {
 	mapper := NewUserSignupMapper(cl)
 
 	// when
-	requests := mapper.Map(handler.MapObject{
-		Meta: NewToolchainStatus().GetObjectMeta(),
-	})
+	requests := mapper.MapToOldestUnapproved(NewToolchainStatus())
 
 	// then
 	require.Len(t, requests, 1)
@@ -43,9 +39,7 @@ func TestMapperReturnsEmptyRequestsWhenNoPendingIsFound(t *testing.T) {
 	mapper := NewUserSignupMapper(cl)
 
 	// when
-	requests := mapper.Map(handler.MapObject{
-		Meta: NewToolchainStatus().GetObjectMeta(),
-	})
+	requests := mapper.MapToOldestUnapproved(NewToolchainStatus())
 
 	// then
 	assert.Empty(t, requests)
@@ -54,15 +48,13 @@ func TestMapperReturnsEmptyRequestsWhenNoPendingIsFound(t *testing.T) {
 func TestMapperReturnsEmptyRequestsWhenClientReturnsError(t *testing.T) {
 	// given
 	cl := test.NewFakeClient(t)
-	cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+	cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 		return fmt.Errorf("some error")
 	}
 	mapper := NewUserSignupMapper(cl)
 
 	// when
-	requests := mapper.Map(handler.MapObject{
-		Meta: NewToolchainStatus().GetObjectMeta(),
-	})
+	requests := mapper.MapToOldestUnapproved(NewToolchainStatus())
 
 	// then
 	assert.Empty(t, requests)

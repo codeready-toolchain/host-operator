@@ -10,57 +10,13 @@ This is the CodeReady Toolchain Host Operator repository. It contains the OpenSh
 
 == Build
 
-Requires Go version 1.14 - download for your development environment https://golang.org/dl/[here].
+Requires Go version 1.16 - download for your development environment https://golang.org/dl/[here].
 
 This repository uses https://github.com/golang/go/wiki/Modules[Go modules]. You may need to `export GO111MODULE=on` to turn modules support "on".
 
 == Development
 
 The dev.mk targets in the toolchain-e2e repository can be used to build and deploy the host and member operators for development, or use the guide- https://github.com/codeready-toolchain/toolchain-e2e/blob/master/dev_install.adoc
-
-
-== OLM catalog files
-
-There is one operator bundle stored in link:./deploy/olm-catalog/toolchain-host-operator/[] directory that is used as a base template for generating all new versions of the operator bundle.
-
-The CSV that is part of the bundle gathers information from multiple files inside of this repository, so make sure that it's still in sync. Every time when any of the following files is changed, run `make generate-olm-files` to update the whole operator bundle as well as the link:./hack/[hack] files to the latest version:
-
-* role.yaml
-* cluster_role.yaml
-* the actual CSV
-* any of the CRDs
-* any of the CR examples
-
-== Installing operator
-
-To install the host operator via OperatorHub you need to have OpenShift 4.2+ running and access to a docker registry.
-Since the operator is no available in OperatorHub nor in any registry by default, you need to deploy the image to the docker registry, create `CatalogSource` and `ClusterServiceVersion` in the `openshift-marketplace` namespace and then create `OperatorGroup` and `Subscription` in the namespace you want to install the operator to.
-Before running any make target, make sure that you have `QUAY_NAMESPACE` variable set to your quay username (or set to any namespace you want to push the image to).
-
-```bash
-$ export QUAY_NAMESPACE=<quay-username>
-```
-
-Prerequisites:
-
-* Make sure the target OpenShift 4.2+ cluster is accessible via `oc` command.
-* Log in to the target OpenShift cluster with cluster admin privileges
-* Set the `QUAY_NAMESPACE` variable properly - see above
-* Login to quay.io via `docker login quay.io` (in case you want to use quay as the docker registry)
-
-Then, to install the operator run:
-```bash
-$ make install-operator
-```
-
-NOTE: The first push to quay will create `host-operator` repository that is private by default, so go to https://quay.io/repository/<your-username>/host-operator?tab=settings and set the repository visibility to public
-
-That Makefile target takes care of several steps that can be executed separately:
-
-* build the image: `$ make docker-image`
-* push the image to registry: `$ make docker-push`
-* create `CatalogSource` and `ConfigMap` with `ClusterServiceVersion` and all CRDs in the `openshift-marketplace`: `$ make deploy-csv`
-* and as the last step the actual installation via creating `OperatorGroup` and `Subscription` in the test namespace.
 
 == Releasing operator
 
@@ -80,23 +36,6 @@ NOTE: If the problem occurred when releasing registration-service, then don't do
 2. Checkout to the problematic (missing) commit that failed in the pipeline and that has to be manually released.
 3. Run `make docker-push QUAY_NAMESPACE=codeready-toolchain`
 4. Run `make push-to-quay-staging QUAY_NAMESPACE=codeready-toolchain`
-
-=== OpenShift internal docker registry
-
-In case you want to use the OpenShift internal docker registry instead of quay, you can achieve the same thing via running:
-```bash
-$ make install-operator-using-os-registry
-```
-In case you have issues with the certificate while logging/pushing to the OpenShift internal docker registry, please follow these instructions:
-```bash
-TO_REGISTRY=$(oc get images.config.openshift.io/cluster  -o jsonpath={.status.externalRegistryHostnames[0]})
-oc get secret router-certs-default -n openshift-ingress -o json |jq -r '.data["tls.crt"]' | base64 -d >ca.crt
-sudo cp ca.crt /etc/pki/ca-trust/source/anchors/${TO_REGISTRY}.crt
-sudo update-ca-trust enable
-sudo systemctl daemon-reload
-sudo systemctl restart docker
-docker login -u kubeadmin -p $(oc whoami -t) ${TO_REGISTRY}
-```
 
 === End-to-End tests
 
@@ -122,15 +61,6 @@ If the branch with the same name does not exist, then it only clones the latest 
 If you still don't know what to do with e2e tests in some use-cases, go to <<What to do>> section where all use-cases are covered.
 
 ==== Prerequisites if running locally
-
-===== Minishift
-If you are running this tests locally on minishift, make sure that you have exposed minishift's docker-env, so that deployment can use locally built image. You can expose it by running following command.
-`eval $(minishift docker-env)`
-
-
-NOTE: This is not required for openshift-ci environment
-
-===== OpenShift 4.2+
 
 * Make sure you have set the `QUAY_NAMESPACE` variable: `export QUAY_NAMESPACE=<quay-username>`
 * Log in to the target OpenShift cluster with cluster admin privileges
@@ -170,33 +100,3 @@ If you are still confused by the e2e location, execution and branch pairing, see
 *** 3. push all changes into both forks of the repositories https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] and https://github.com/codeready-toolchain/host-operator[host-operator]
 *** 4. create a PR for https://github.com/codeready-toolchain/host-operator[host-operator]
 *** 5. create a PR for https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e]
-
-=== Verifying the OpenShift CI configuration
-
- It's possible to verify the OpenShift CI config from the developer's laptop while all the jobs are executed on the remote, online CI platform:
-
-1. checkout and build the https://github.com/openshift/ci-tools[CI Operator] command line tool
-2. login to https://console.svc.ci.openshift.org (via GH OAuth) and copy the login command (you may need to switch to the `application console`)
-3. login with the command aferementioned
-4. run the CI jobs with
-+
-```
-ci-operator --config ../../openshift/release/ci-operator/config/codeready-toolchain/host-operator/codeready-toolchain-host-operator-master.yaml --git-ref=codeready-toolchain/host-operator@master
-```
-
-assuming that the https://github.com/openshift/release[OpenShift Release] repo was checked you.
-
-NOTE: you can ignore the RBAC issues that are displayed in the console
-
-=== Adding cluster to SaaS
-
-The CodeReady Toolchain architecture contains two types of clusters `host` and `member`.
-To connect these two clusters together it is necessary to run a script link:https://raw.githubusercontent.com/codeready-toolchain/toolchain-common/master/scripts/add-cluster.sh[add-cluster.sh] that is part of the link:https://github.com/codeready-toolchain/toolchain-common[toolchain-common] repository.
-For more detailed information about the script see the link:https://github.com/codeready-toolchain/toolchain-common#add-clustersh[README "Script add-cluster.sh" chapter].
-
-There are two Makefile targets available in this repository that execute the script:
-
-*  `$ make add-member-to-host` that executes `../toolchain-common/scripts/add-cluster.sh member member-cluster`
-*  `$ make add-host-to-member` that executes `../toolchain-common/scripts/add-cluster.sh host host-cluster`
-
-NOTE: In order to run them, you need to have the link:https://github.com/codeready-toolchain/toolchain-common[toolchain-common] repository cloned to the same parent directory as this repository exists in.

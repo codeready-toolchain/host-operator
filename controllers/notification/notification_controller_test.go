@@ -26,7 +26,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -51,7 +50,7 @@ func TestNotificationSuccess(t *testing.T) {
 		controller, request, cl := newController(t, notification, ds)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -71,7 +70,7 @@ func TestNotificationSuccess(t *testing.T) {
 		controller, request, cl := newController(t, notification, ds)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -92,12 +91,12 @@ func TestNotificationSentFailure(t *testing.T) {
 
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, request, cl := newController(t, notification, ds)
-		cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+		cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("error")
 		}
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.Error(t, err)
@@ -130,7 +129,7 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, request, client := newController(t, notification, ds, userSignup)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -161,7 +160,7 @@ func TestNotificationDelivery(t *testing.T) {
 		e := events[0]
 		require.IsType(t, &events2.Accepted{}, e)
 		accepted := e.(*events2.Accepted)
-		require.Equal(t, "Foo Bar<foo@redhat.com>", accepted.Recipient)
+		require.Equal(t, "foo@redhat.com", accepted.Recipient)
 		require.Equal(t, "redhat.com", accepted.RecipientDomain)
 		require.Equal(t, "foo", accepted.Message.Headers.Subject)
 		require.Equal(t, "noreply@foo.com", accepted.Message.Headers.From)
@@ -174,7 +173,7 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, request, client := newController(t, notification, ds)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -230,7 +229,7 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, request, client := newController(t, notification, nil, userSignup)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.NoError(t, err)
@@ -255,7 +254,7 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, request, client := newController(t, notification, ds)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.Error(t, err)
@@ -292,7 +291,7 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, request, client := newController(t, notification, mds, userSignup)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := controller.Reconcile(context.TODO(), request)
 
 		// then
 		require.Error(t, err)
@@ -420,7 +419,6 @@ func newController(t *testing.T, notification *toolchainv1alpha1.Notification, d
 		Scheme:          s,
 		Config:          config,
 		deliveryService: deliveryService,
-		Log:             ctrl.Log.WithName("controllers").WithName("Notification"),
 	}
 	request := reconcile.Request{
 		NamespacedName: test.NamespacedName(test.HostOperatorNs, notification.Name),
