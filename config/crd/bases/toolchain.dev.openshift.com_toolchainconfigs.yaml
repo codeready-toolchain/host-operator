@@ -231,6 +231,36 @@ spec:
                         description: Keeps parameters necessary for the registration
                           service verification config
                         properties:
+                          attemptsAllowed:
+                            description: VerificationAttemptsAllowed specifies the
+                              number of times a user may attempt to correctly enter
+                              a verification code, if they fail then they must request
+                              another code
+                            type: integer
+                          codeExpiresInMin:
+                            description: VerificationCodeExpiresInMin specifies an
+                              int representing the number of minutes before a verification
+                              code should be expired
+                            type: integer
+                          dailyLimit:
+                            description: VerificationDailyLimit specifies the number
+                              of times a user may initiate a phone verification request
+                              within a 24 hour period
+                            type: integer
+                          enabled:
+                            description: VerificationEnabled specifies whether the
+                              phone verification feature is enabled or not
+                            type: boolean
+                          excludedEmailDomains:
+                            description: VerificationExcludedEmailDomains specifies
+                              the list of email address domains for which phone verification
+                              is not required
+                            type: string
+                          messageTemplate:
+                            description: VerificationMessageTemplate specifies the
+                              message template used to generate the content sent to
+                              users via SMS for phone verification
+                            type: string
                           secret:
                             description: Defines all secrets related to the registration
                               service verification configuration
@@ -255,36 +285,6 @@ spec:
                                   verification messages
                                 type: string
                             type: object
-                          verificationAttemptsAllowed:
-                            description: VerificationAttemptsAllowed specifies the
-                              number of times a user may attempt to correctly enter
-                              a verification code, if they fail then they must request
-                              another code
-                            type: integer
-                          verificationCodeExpiresInMin:
-                            description: VerificationCodeExpiresInMin specifies an
-                              int representing the number of minutes before a verification
-                              code should be expired
-                            type: integer
-                          verificationDailyLimit:
-                            description: VerificationDailyLimit specifies the number
-                              of times a user may initiate a phone verification request
-                              within a 24 hour period
-                            type: integer
-                          verificationEnabled:
-                            description: VerificationEnabled specifies whether the
-                              phone verification feature is enabled or not
-                            type: boolean
-                          verificationExcludedEmailDomains:
-                            description: VerificationExcludedEmailDomains specifies
-                              the list of email address domains for which phone verification
-                              is not required
-                            type: string
-                          verificationMessageTemplate:
-                            description: VerificationMessageTemplate specifies the
-                              message template used to generate the content sent to
-                              users via SMS for phone verification
-                            type: string
                         type: object
                     type: object
                   tiers:
