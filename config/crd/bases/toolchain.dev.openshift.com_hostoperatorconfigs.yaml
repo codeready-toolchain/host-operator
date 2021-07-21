@@ -279,6 +279,10 @@ spec:
               tiers:
                 description: Keeps parameters concerned with tiers
                 properties:
+                  defaultTier:
+                    description: DefaultTier specifies the default tier to assign
+                      for new users
+                    type: string
                   durationBeforeChangeTierRequestDeletion:
                     description: DurationBeforeChangeTierRequestDeletion specifies
                       the duration before a ChangeTierRequest resource is deleted
