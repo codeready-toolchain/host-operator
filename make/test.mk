@@ -98,7 +98,7 @@ ifeq ($(E2E_REPO_PATH),"")
     ifneq ($(CI),)
         ifneq ($(GITHUB_ACTIONS),)
 			$(eval BRANCH_REF = refs/heads/${GITHUB_HEAD_REF})
-			$(eval AUTHOR_LINK = https://github.com/${GITHUB_ACTOR})
+			$(eval AUTHOR_LINK = https://github.com/${AUTHOR})
         else
 			$(eval AUTHOR_LINK = $(shell jq -r '.refs[0].pulls[0].author_link' <<< $${CLONEREFS_OPTIONS} | tr -d '[:space:]'))
 			@echo "using pull sha ${PULL_PULL_SHA}"
