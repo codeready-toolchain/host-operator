@@ -37,9 +37,9 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 6)
+			require.Len(t, tmpls, 7)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "base", "baseextended", "basedeactivationdisabled", "team", "test"} {
+			for _, tier := range []string{"advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled", "team", "test"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
@@ -197,6 +197,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 			expectedDeactivationTimeoutsByTier := map[string]int{
 				"base":                     30,
 				"baseextended":             180,
+				"baseextendedidling":       30,
 				"basedeactivationdisabled": 0,
 				"advanced":                 0,
 				"team":                     0,
@@ -395,7 +396,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	switch tier {
 	case "test":
 		// skip because this tier is for testing purposes only and the template can change often
-	case "base", "baseextended", "basedeactivationdisabled":
+	case "base", "baseextended", "baseextendedidling", "basedeactivationdisabled":
 		assert.Len(t, actual.Objects, 13)
 		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
 		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
@@ -408,8 +409,13 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
 		containsObj(t, actual, clusterResourceQuotaRHOASOperatorObj())
 		containsObj(t, actual, clusterResourceQuotaSBOObj())
-		containsObj(t, actual, idlerObj("${USERNAME}-dev", "43200"))
-		containsObj(t, actual, idlerObj("${USERNAME}-stage", "43200"))
+		if tier == "baseextendedidling" {
+			containsObj(t, actual, idlerObj("${USERNAME}-dev", "86400"))
+			containsObj(t, actual, idlerObj("${USERNAME}-stage", "86400"))
+		} else {
+			containsObj(t, actual, idlerObj("${USERNAME}-dev", "43200"))
+			containsObj(t, actual, idlerObj("${USERNAME}-stage", "43200"))
+		}
 	case "team":
 		assert.Len(t, actual.Objects, 9) // No Idlers
 		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "2000m", "15Gi", "15Gi"))
@@ -449,7 +455,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// Template objects count
 	switch tier {
-	case "advanced", "base", "baseextended", "basedeactivationdisabled", "team":
+	case "advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled", "team":
 		if kind == "dev" {
 			require.Len(t, actual.Objects, 10) // dev namespace has CRW network policy
 		} else {
@@ -484,7 +490,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// User Namespaces Network Policies
 	switch tier {
-	case "advanced", "base", "baseextended", "basedeactivationdisabled", "team":
+	case "advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled", "team":
 		switch kind {
 		case "dev":
 			containsObj(t, actual, allowFromCRWPolicyObj(kind))
