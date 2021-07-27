@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
+	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -365,7 +365,7 @@ func TestForceInitializeCounterByLoadingExistingResources(t *testing.T) {
 		}),
 	)
 	// ... but config flag will force synchronization from resources
-	toolchainConfig := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.Metrics().ForceSynchronization(true))
+	toolchainConfig := commontoolchaincfg.NewToolchainConfigWithReset(t, testconfig.Metrics().ForceSynchronization(true))
 	initObjs := append([]runtime.Object{}, murs...)
 	initObjs = append(initObjs, usersignups...)
 	initObjs = append(initObjs, toolchainConfig)

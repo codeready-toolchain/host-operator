@@ -9,6 +9,7 @@ import (
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -76,7 +77,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// load the latest config and secrets into the cache
-	if err := loadLatest(r.Client); err != nil {
+	if _, err := commontoolchaincfg.LoadLatest(r.Client); err != nil {
 		reqLogger.Error(err, "failed to load the latest configuration")
 		return DefaultReconcile, err
 	}

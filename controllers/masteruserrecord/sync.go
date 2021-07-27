@@ -9,10 +9,10 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -124,7 +124,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
 	if status.Cluster.Name != "" {
 		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
-		if err := s.hostClient.Get(context.TODO(), types.NamespacedName{Namespace: s.record.Namespace, Name: toolchainconfig.ToolchainStatusName}, toolchainStatus); err != nil {
+		if err := s.hostClient.Get(context.TODO(), types.NamespacedName{Namespace: s.record.Namespace, Name: commontoolchaincfg.ToolchainStatusName}, toolchainStatus); err != nil {
 			return status, errors.Wrapf(err, "unable to read ToolchainStatus resource")
 		}
 

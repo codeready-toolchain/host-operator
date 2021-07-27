@@ -14,13 +14,13 @@ import (
 	errs "github.com/pkg/errors"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup/unapproved"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -425,7 +425,7 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 func (r *Reconciler) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
 	replaced := usersignup.TransformUsername(instance.Spec.Username)
 
-	config, err := toolchainconfig.GetConfig(r.Client)
+	config, err := commontoolchaincfg.GetConfig(r.Client)
 	if err != nil {
 		return "", errs.Wrapf(err, "unable to get ToolchainConfig")
 	}

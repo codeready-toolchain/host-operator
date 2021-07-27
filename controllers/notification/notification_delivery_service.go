@@ -7,8 +7,9 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
+
+	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -50,7 +51,7 @@ func NewNotificationDeliveryServiceFactory(client client.Client, config Delivery
 
 func (f *DeliveryServiceFactory) CreateNotificationDeliveryService() (DeliveryService, error) {
 	switch f.Config.GetNotificationDeliveryService() {
-	case toolchainconfig.NotificationDeliveryServiceMailgun:
+	case commontoolchaincfg.NotificationDeliveryServiceMailgun:
 		return NewMailgunNotificationDeliveryService(f.Config, &DefaultTemplateLoader{}), nil
 	}
 	return nil, errors.New("invalid notification delivery service configuration")

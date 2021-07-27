@@ -8,6 +8,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -23,7 +24,7 @@ import (
 )
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler) SetupWithManager(mgr manager.Manager, config toolchainconfig.ToolchainConfig) error {
+func (r *Reconciler) SetupWithManager(mgr manager.Manager, config commontoolchaincfg.ToolchainConfig) error {
 	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), toolchainconfig.DeliveryServiceFactoryConfig{config})
 	svc, err := factory.CreateNotificationDeliveryService()
 	if err != nil {
@@ -65,7 +66,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	config, err := toolchainconfig.GetConfig(r.Client)
+	config, err := commontoolchaincfg.GetConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}

@@ -9,11 +9,11 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
@@ -42,7 +42,7 @@ const (
 )
 
 func TestReconcile(t *testing.T) {
-	config := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
+	config := commontoolchaincfg.NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
 		testconfig.PerMemberCluster("member1", 321)),
 		testconfig.Deactivation().DeactivatingNotificationDays(3))
 
@@ -133,7 +133,7 @@ func TestReconcile(t *testing.T) {
 		// a user that belongs to the deactivation domain excluded list
 		t.Run("user deactivation excluded", func(t *testing.T) {
 			// given
-			config := toolchainconfig.NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
+			config := commontoolchaincfg.NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
 				testconfig.PerMemberCluster("member1", 321)),
 				testconfig.Deactivation().DeactivatingNotificationDays(3),
 			)

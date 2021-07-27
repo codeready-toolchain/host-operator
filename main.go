@@ -27,6 +27,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -229,7 +230,7 @@ func main() {
 
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
-		if err := toolchainstatus.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, toolchainconfig.ToolchainStatusName); err != nil {
+		if err := toolchainstatus.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, commontoolchaincfg.ToolchainStatusName); err != nil {
 			setupLog.Error(err, "cannot create/update ToolchainStatus resource")
 			os.Exit(1)
 		}
@@ -271,14 +272,14 @@ func main() {
 
 // getCRTConfiguration creates the client used for configuration and
 // returns the loaded crt configuration
-func getCRTConfiguration(config *rest.Config) (toolchainconfig.ToolchainConfig, error) {
+func getCRTConfiguration(config *rest.Config) (commontoolchaincfg.ToolchainConfig, error) {
 	// create client that will be used for retrieving the host operator secret
 	cl, err := client.New(config, client.Options{
 		Scheme: scheme,
 	})
 	if err != nil {
-		return toolchainconfig.ToolchainConfig{}, err
+		return commontoolchaincfg.ToolchainConfig{}, err
 	}
 
-	return toolchainconfig.GetConfig(cl)
+	return commontoolchaincfg.GetConfig(cl)
 }

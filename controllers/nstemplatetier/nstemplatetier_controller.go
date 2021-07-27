@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -74,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, errs.Wrap(err, "unable to get the current NSTemplateTier")
 	}
 
-	config, err := toolchainconfig.GetConfig(r.Client)
+	config, err := commontoolchaincfg.GetConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}
@@ -136,7 +136,7 @@ func (r *Reconciler) ensureStatusUpdateRecord(logger logr.Logger, tier *toolchai
 // If not, then it creates a TemplateUpdateRequest resource for the first MasterUserRecord not up-to-date with the tier, and
 // returns `false, nil` so the controller will wait for the next reconcile loop to create subsequent TemplateUpdateRequest resources,
 // until the `MaxPoolSize` threashold is reached (returns `false, nil`) or no other MasterUserRecord needs to be updated (returns `true,nil`)
-func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config toolchainconfig.ToolchainConfig, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
+func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config commontoolchaincfg.ToolchainConfig, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
 	if activeTemplateUpdateRequests, deleted, err := r.activeTemplateUpdateRequests(logger, config, tier); err != nil {
 		return false, errs.Wrap(err, "unable to get active TemplateUpdateRequests")
 	} else if deleted {
@@ -211,7 +211,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 // - the number of active TemplateUpdateRequests (ie, not complete, failed or being deleted)
 // - `true` if a TemplateUpdateRequest was deleted
 // - err if something bad happened
-func (r *Reconciler) activeTemplateUpdateRequests(logger logr.Logger, config toolchainconfig.ToolchainConfig, tier *toolchainv1alpha1.NSTemplateTier) (int, bool, error) {
+func (r *Reconciler) activeTemplateUpdateRequests(logger logr.Logger, config commontoolchaincfg.ToolchainConfig, tier *toolchainv1alpha1.NSTemplateTier) (int, bool, error) {
 	// fetch the list of TemplateUpdateRequest owned by the NSTemplateTier tier
 	templateUpdateRequests := toolchainv1alpha1.TemplateUpdateRequestList{}
 	if err := r.Client.List(context.TODO(), &templateUpdateRequests, client.MatchingLabels{

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -14,12 +13,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -54,7 +54,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciling Deactivation")
 
-	config, err := toolchainconfig.GetConfig(r.Client)
+	config, err := commontoolchaincfg.GetConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}
