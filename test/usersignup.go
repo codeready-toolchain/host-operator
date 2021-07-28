@@ -7,11 +7,11 @@ import (
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+	"github.com/gofrs/uuid"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
-	uuid "github.com/satori/go.uuid"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -177,7 +177,7 @@ func NewUserSignup(modifiers ...UserSignupModifier) *toolchainv1alpha1.UserSignu
 
 func NewUserSignupObjectMeta(name, email string) metav1.ObjectMeta {
 	if name == "" {
-		name = uuid.NewV4().String()
+		name = uuid.Must(uuid.NewV4()).String()
 	}
 
 	md5hash := md5.New()

@@ -20,8 +20,8 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	"github.com/gofrs/uuid"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -1457,7 +1457,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
-				toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String(),
+				toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.Must(uuid.NewV4()).String(),
 				"toolchain.dev.openshift.com/approved":          "true",
 			},
 		},
@@ -2690,7 +2690,7 @@ func TestDeathBy100Signups(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String()},
+			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.Must(uuid.NewV4()).String()},
 		},
 	})
 
@@ -2699,7 +2699,7 @@ func TestDeathBy100Signups(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("foo-%d", i),
 				Namespace: test.HostOperatorNs,
-				Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String()},
+				Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.Must(uuid.NewV4()).String()},
 			},
 		})
 	}

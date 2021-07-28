@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gofrs/uuid"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
@@ -13,7 +15,6 @@ import (
 	testsupport "github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +61,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 		t.Run("create only", func(t *testing.T) {
 			// given
-			namespace := "host-operator" + uuid.NewV4().String()[:7]
+			namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
 			clt := testsupport.NewFakeClient(t)
 			// verify that no NSTemplateTier resources exist prior to creation
 			nsTmplTiers := toolchainv1alpha1.NSTemplateTierList{}
@@ -126,7 +127,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 		t.Run("create then update with same tier templates", func(t *testing.T) {
 			// given
-			namespace := "host-operator" + uuid.NewV4().String()[:7]
+			namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
 			clt := testsupport.NewFakeClient(t)
 
 			// when
@@ -171,7 +172,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 		t.Run("create then update with new tier templates", func(t *testing.T) {
 			// given
-			namespace := "host-operator" + uuid.NewV4().String()[:7]
+			namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
 			clt := testsupport.NewFakeClient(t)
 
 			// when
@@ -255,7 +256,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 	t.Run("failures", func(t *testing.T) {
 
-		namespace := "host-operator" + uuid.NewV4().String()[:7]
+		namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
 
 		t.Run("failed to read assets", func(t *testing.T) {
 			// given
