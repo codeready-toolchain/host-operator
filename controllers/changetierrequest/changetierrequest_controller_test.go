@@ -3,6 +3,7 @@ package changetierrequest
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -351,6 +352,7 @@ func newChangeTierRequest(murName, tierName string, options ...changeTierRequest
 }
 
 func newController(t *testing.T, changeTier *toolchainv1alpha1.ChangeTierRequest, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)

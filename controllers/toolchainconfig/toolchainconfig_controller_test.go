@@ -3,6 +3,7 @@ package toolchainconfig_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -235,6 +236,7 @@ func matchesDefaultConfig(t *testing.T, actual commontoolchaincfg.ToolchainConfi
 }
 
 func newController(hostCl client.Client, members cluster.GetMemberClustersFunc) toolchainconfig.Reconciler {
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	return toolchainconfig.Reconciler{
 		Client:         hostCl,
 		GetMembersFunc: members,
