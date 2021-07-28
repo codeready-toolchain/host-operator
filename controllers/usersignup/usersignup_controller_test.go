@@ -2268,7 +2268,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	require.Len(t, notifications.Items, 1)
 
 	require.Equal(t, "userdeactivating", notifications.Items[0].Spec.Template)
-	require.Equal(t, userSignup.Name, notifications.Items[0].Spec.UserID)
+	require.Equal(t, userSignup.Name, notifications.Items[0].Spec.Context["UserID"])
 
 	// Confirm the status is correct
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,

@@ -3,8 +3,9 @@ package notification
 import (
 	"bytes"
 	"errors"
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"text/template"
+
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
@@ -27,7 +28,7 @@ func (l *DefaultTemplateLoader) GetNotificationTemplate(name string) (*notificat
 }
 
 type DeliveryService interface {
-	Send(notificationCtx Context, notification *toolchainv1alpha1.Notification) error
+	Send(notification *toolchainv1alpha1.Notification) error
 }
 
 type DeliveryServiceFactory struct {
@@ -59,7 +60,7 @@ type BaseNotificationDeliveryService struct {
 	TemplateLoader TemplateLoader
 }
 
-func (s *BaseNotificationDeliveryService) GenerateContent(notificationCtx interface{},
+func (s *BaseNotificationDeliveryService) GenerateContent(context map[string]string,
 	templateDefinition string) (string, error) {
 
 	tmpl, err := template.New("template").Parse(templateDefinition)
@@ -69,7 +70,7 @@ func (s *BaseNotificationDeliveryService) GenerateContent(notificationCtx interf
 
 	var buf bytes.Buffer
 
-	err = tmpl.Execute(&buf, notificationCtx)
+	err = tmpl.Execute(&buf, context)
 	if err != nil {
 		return "", err
 	}

@@ -21,6 +21,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/text v0.3.5 // indirect
 	gopkg.in/yaml.v2 v2.4.0
+	gorm.io/gorm v1.21.12
 	honnef.co/go/tools v0.1.3 // indirect
 	k8s.io/api v0.20.2
 	k8s.io/apiextensions-apiserver v0.20.2

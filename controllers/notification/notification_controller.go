@@ -81,25 +81,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}, nil
 	}
 
-	var notCtx Context
-	// Send the notification - first create the notification context
-	if notification.Spec.Recipient != "" {
-		notCtx = NewAdminNotificationContext(notification.Spec.Recipient)
-	} else {
-		notCtx, err = NewUserNotificationContext(r.Client, notification.Spec.UserID, request.Namespace, r.Config)
-		if err != nil {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
-				r.setStatusNotificationContextError, err, "failed to create notification context")
-		}
-	}
-
 	// if the environment is set to e2e do not attempt sending via mailgun
 	if r.Config.GetEnvironment() != "e2e-tests" {
 		// Send the notification via the configured delivery service
-		err = r.deliveryService.Send(notCtx, notification)
+		err = r.deliveryService.Send(notification)
 		if err != nil {
 			reqLogger.Error(err, "delivery service failed to send notification",
-				notCtx.KeysAndValues()...,
+				notification.Spec.Context,
 			)
 
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,
@@ -170,17 +158,6 @@ func (r *Reconciler) setStatusNotificationDeletionFailed(notification *toolchain
 			Type:    toolchainv1alpha1.NotificationDeletionError,
 			Status:  corev1.ConditionTrue,
 			Reason:  toolchainv1alpha1.NotificationDeletionErrorReason,
-			Message: msg,
-		})
-}
-
-func (r *Reconciler) setStatusNotificationContextError(notification *toolchainv1alpha1.Notification, msg string) error {
-	return r.updateStatusConditions(
-		notification,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.NotificationSent,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.NotificationContextErrorReason,
 			Message: msg,
 		})
 }
