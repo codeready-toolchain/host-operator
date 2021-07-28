@@ -1726,7 +1726,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		notification := notifications.Items[0]
 		require.Contains(t, notification.Name, "john-doe-deactivated-")
 		assert.True(t, len(notification.Name) > len("john-doe-deactivated-"))
-		require.Equal(t, userSignup.Name, notification.Spec.UserID)
+		require.Equal(t, userSignup.Name, notification.Spec.Context["UserID"])
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
 }
