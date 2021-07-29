@@ -376,15 +376,6 @@ func deliveryErrorCond(msg string) toolchainv1alpha1.Condition {
 	}
 }
 
-func contextErrorCond(msg string) toolchainv1alpha1.Condition {
-	return toolchainv1alpha1.Condition{
-		Type:    toolchainv1alpha1.NotificationSent,
-		Status:  corev1.ConditionFalse,
-		Reason:  toolchainv1alpha1.NotificationContextErrorReason,
-		Message: msg,
-	}
-}
-
 func deletionCond(msg string) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:               toolchainv1alpha1.NotificationDeletionError,
