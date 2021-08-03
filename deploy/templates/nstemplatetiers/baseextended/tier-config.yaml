@@ -1,0 +1,7 @@
+from:
+  name: base
+to:
+  name: baseextended
+  parameters:
+  - name: DEACTIVATION_TIMEOUT_DAYS
+    value: 180

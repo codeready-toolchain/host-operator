@@ -37,23 +37,23 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 		expectedTemplateRefs := map[string]map[string][]string{
 			"advanced": {
-				"clusterresources": {"advanced-clusterresources-654321a"},
+				"clusterresources": {"advanced-clusterresources-654321a-654321a"},
 				"namespaces": {
-					"advanced-dev-123456b",
-					"advanced-stage-123456c",
+					"advanced-dev-123456b-123456b",
+					"advanced-stage-123456c-123456c",
 				},
 			},
 			"team": {
-				"clusterresources": {"team-clusterresources-654321c"},
+				"clusterresources": {"team-clusterresources-654321c-654321c"},
 				"namespaces": {
-					"team-dev-123456g",
-					"team-stage-123456h",
+					"team-dev-123456g-123456g",
+					"team-stage-123456h-123456h",
 				},
 			},
 			"nocluster": {
 				"namespaces": {
-					"nocluster-dev-123456j",
-					"nocluster-stage-1234567",
+					"nocluster-dev-123456j-123456j",
+					"nocluster-stage-1234567-1234567",
 				},
 			},
 		}
@@ -92,14 +92,14 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			}
 			fmt.Printf("names: %v\n", names)
 			assert.ElementsMatch(t, []string{
-				"advanced-clusterresources-654321a",
-				"advanced-dev-123456b",
-				"advanced-stage-123456c",
-				"team-clusterresources-654321c",
-				"team-dev-123456g",
-				"team-stage-123456h",
-				"nocluster-dev-123456j",
-				"nocluster-stage-1234567",
+				"advanced-clusterresources-654321a-654321a",
+				"advanced-dev-123456b-123456b",
+				"advanced-stage-123456c-123456c",
+				"team-clusterresources-654321c-654321c",
+				"team-dev-123456g-123456g",
+				"team-stage-123456h-123456h",
+				"nocluster-dev-123456j-123456j",
+				"nocluster-stage-1234567-1234567",
 			}, names)
 
 			// verify that 3 NSTemplateTier CRs were created: "advanced", "team", "nocluster"
@@ -210,23 +210,23 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 			expectedTemplateRefs := map[string]map[string][]string{
 				"advanced": {
-					"clusterresources": {"advanced-clusterresources-111111a"},
+					"clusterresources": {"advanced-clusterresources-111111a-111111a"},
 					"namespaces": {
-						"advanced-dev-222222a",
-						"advanced-stage-222222b",
+						"advanced-dev-222222a-222222a",
+						"advanced-stage-222222b-222222b",
 					},
 				},
 				"team": {
-					"clusterresources": {"team-clusterresources-111111b"},
+					"clusterresources": {"team-clusterresources-111111b-111111b"},
 					"namespaces": {
-						"team-dev-222222c",
-						"team-stage-222222d",
+						"team-dev-222222c-222222c",
+						"team-stage-222222d-222222d",
 					},
 				},
 				"nocluster": {
 					"namespaces": {
-						"nocluster-dev-222222e",
-						"nocluster-stage-222222f",
+						"nocluster-dev-222222e-222222e",
+						"nocluster-stage-222222f-222222f",
 					},
 				},
 			}
@@ -336,7 +336,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
 				// then
 				require.Error(t, err)
-				assert.Regexp(t, fmt.Sprintf("unable to create the '\\w+-\\w+-\\w+' TierTemplate in namespace '%s'", namespace), err.Error()) // we can't tell for sure which namespace will fail first, but the error should match the given regex
+				assert.Regexp(t, fmt.Sprintf("unable to create the '\\w+-\\w+-\\w+-\\w+' TierTemplate in namespace '%s'", namespace), err.Error()) // we can't tell for sure which namespace will fail first, but the error should match the given regex
 			})
 		})
 	})
