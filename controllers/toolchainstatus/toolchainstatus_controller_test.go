@@ -19,7 +19,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
-	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
@@ -130,7 +129,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 
 	t.Run("No toolchainstatus resource found - right name but not found", func(t *testing.T) {
 		// given
-		requestName := commontoolchaincfg.ToolchainStatusName
+		requestName := commonconfig.ToolchainStatusName
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
 		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 			if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
@@ -154,7 +153,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := commontoolchaincfg.ToolchainStatusName
+	requestName := commonconfig.ToolchainStatusName
 
 	t.Run("All components ready", func(t *testing.T) {
 		// given
@@ -755,7 +754,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
 	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := commontoolchaincfg.ToolchainStatusName
+	requestName := commonconfig.ToolchainStatusName
 
 	registrationService := newRegistrationServiceReady()
 	toolchainStatus := NewToolchainStatus()
@@ -841,7 +840,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	defer counter.Reset()
-	requestName := commontoolchaincfg.ToolchainStatusName
+	requestName := commonconfig.ToolchainStatusName
 
 	registrationService := newRegistrationServiceReady()
 	toolchainStatus := NewToolchainStatus()
@@ -856,7 +855,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 		os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 
-		toolchainConfig := commontoolchaincfg.NewToolchainConfigWithReset(t, testconfig.Notifications().AdminEmail("admin@dev.sandbox.com"))
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail("admin@dev.sandbox.com"))
 
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 			[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
@@ -902,8 +901,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			t.Run("Notification not created when admin.email not configured", func(t *testing.T) {
 
 				assertInvalidEmailReturnErr := func(email string) {
-					commontoolchaincfg.Reset() // clear the config cache so that this invalid config will be picked up
-					invalidConfig := commontoolchaincfg.NewToolchainConfigWithReset(t, testconfig.Notifications().AdminEmail(email))
+					commonconfig.Reset() // clear the config cache so that this invalid config will be picked up
+					invalidConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail(email))
 
 					// given
 					hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
@@ -1099,7 +1098,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := commontoolchaincfg.ToolchainStatusName
+	requestName := commonconfig.ToolchainStatusName
 	registrationService := newRegistrationServiceReady()
 	hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 	registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())

@@ -15,8 +15,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
-	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -102,7 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	reqLogger := log.FromContext(ctx)
 	reqLogger.Info("Reconciling ToolchainStatus")
 
-	config, err := commontoolchaincfg.GetConfig(r.Client)
+	config, err := commonconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}
@@ -249,7 +248,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 		BuildTimestamp: version.BuildTime,
 	}
 	// look up name of the host operator deployment
-	hostOperatorName, err := configuration.GetOperatorName()
+	hostOperatorName, err := commonconfig.GetOperatorName()
 	if err != nil {
 		reqLogger.Error(err, status.ErrMsgCannotGetDeployment)
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason,
@@ -367,7 +366,7 @@ func getAPIEndpoint(clusterName string, memberClusters []*cluster.CachedToolchai
 func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, status toolchainStatusNotificationType) error {
 
-	config, err := commontoolchaincfg.GetConfig(r.Client)
+	config, err := commonconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return errs.Wrapf(err, "unable to get ToolchainConfig")
 	}

@@ -6,7 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	controllerPredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -83,7 +83,7 @@ func (p OnlyWhenAutomaticApprovalIsEnabled) Generic(e event.GenericEvent) bool {
 }
 
 func (p OnlyWhenAutomaticApprovalIsEnabled) checkIfAutomaticApprovalIsEnabled(namespace string) bool {
-	config, err := commontoolchaincfg.GetConfig(p.client)
+	config, err := commonconfig.GetToolchainConfig(p.client)
 	if err != nil {
 		configLog.Error(err, "unable to get ToolchainConfig", "namespace", namespace)
 		return false

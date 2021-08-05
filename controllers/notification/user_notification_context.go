@@ -4,7 +4,7 @@ import (
 	"context"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 
 	errs "github.com/pkg/errors"
 
@@ -27,7 +27,7 @@ type UserNotificationContext struct {
 // and using it to populate the context fields
 func NewUserNotificationContext(client client.Client, userID, namespace string) (*UserNotificationContext, error) {
 
-	config, err := commontoolchaincfg.GetConfig(client)
+	config, err := commonconfig.GetToolchainConfig(client)
 	if err != nil {
 		return nil, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}

@@ -8,7 +8,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	. "github.com/codeready-toolchain/host-operator/test"
-	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,7 +28,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 		t.Run("no member clusters available - skip sync", func(t *testing.T) {
 			// given
-			toolchainConfig := commontoolchaincfg.NewToolchainConfigWithReset(t,
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
@@ -45,7 +45,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 
 		t.Run("synced to all members", func(t *testing.T) {
 			// given
-			toolchainConfig := commontoolchaincfg.NewToolchainConfigWithReset(t,
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
@@ -69,7 +69,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 				return fmt.Errorf("client error")
 			}
-			toolchainConfig := commontoolchaincfg.NewToolchainConfigWithReset(t,
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
@@ -95,7 +95,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 			memberCl2.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 				return fmt.Errorf("client2 error")
 			}
-			toolchainConfig := commontoolchaincfg.NewToolchainConfigWithReset(t,
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
@@ -115,7 +115,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 		t.Run("specific memberoperatorconfig exists but member cluster not found", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			toolchainConfig := commontoolchaincfg.NewToolchainConfigWithReset(t,
+			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(

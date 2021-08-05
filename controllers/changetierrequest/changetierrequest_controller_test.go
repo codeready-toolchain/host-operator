@@ -12,7 +12,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
-	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -34,7 +34,7 @@ import (
 func TestChangeTierSuccess(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	config := commontoolchaincfg.NewToolchainConfigWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 
 	t.Run("the controller should change tier in MUR", func(t *testing.T) {
@@ -128,7 +128,7 @@ func TestChangeTierSuccess(t *testing.T) {
 }
 
 func TestChangeTierFailure(t *testing.T) {
-	config := commontoolchaincfg.NewToolchainConfigWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
 
 	t.Run("the change will fail since the provided MUR doesn't exist", func(t *testing.T) {
 		// given

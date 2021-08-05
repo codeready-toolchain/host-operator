@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	commontoolchaincfg "github.com/codeready-toolchain/toolchain-common/pkg/configuration/toolchainconfig"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
@@ -54,7 +54,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciling Deactivation")
 
-	config, err := commontoolchaincfg.GetConfig(r.Client)
+	config, err := commonconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}

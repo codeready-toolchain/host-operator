@@ -34,12 +34,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		test.AssertThatRegistrationService(t, "registration-service", cl).
-			HasImage("").
-			HasEnvironment("").
-			HasReplicas("").
-			HasAuthConfig("").
-			HasAuthLibraryURL("").
-			HasAuthPublicKeysURL("")
+			HasImage("")
 
 	})
 
@@ -60,11 +55,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		_, err := client.ApplyObject(regService)
 		require.NoError(t, err)
 		restore := SetEnvVarsAndRestore(t,
-			Env("REGISTRATION_SERVICE_IMAGE", "quay.io/rh/registration-service:v0.1"),
-			Env("REGISTRATION_SERVICE_ENVIRONMENT", "test"),
-			Env("REGISTRATION_SERVICE_AUTH_CLIENT_LIBRARY_URL", "url/to/library/location"),
-			Env("REGISTRATION_SERVICE_AUTH_CLIENT_CONFIG_RAW", `{"my":"cool-config"}`),
-			Env("REGISTRATION_SERVICE_AUTH_CLIENT_PUBLIC_KEYS_URL", "url/to/public/key/location"))
+			Env("REGISTRATION_SERVICE_IMAGE", "quay.io/rh/registration-service:v0.1"))
 		defer restore()
 
 		// when
@@ -73,12 +64,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		test.AssertThatRegistrationService(t, "registration-service", cl).
-			HasImage("quay.io/rh/registration-service:v0.1").
-			HasEnvironment("test").
-			HasReplicas("").
-			HasAuthConfig(`{"my":"cool-config"}`).
-			HasAuthLibraryURL("url/to/library/location").
-			HasAuthPublicKeysURL("url/to/public/key/location")
+			HasImage("quay.io/rh/registration-service:v0.1")
 	})
 
 	t.Run("when creation fails then should return error", func(t *testing.T) {
