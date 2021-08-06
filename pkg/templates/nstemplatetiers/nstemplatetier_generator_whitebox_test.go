@@ -37,9 +37,9 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 7)
+			require.Len(t, tmpls, 6)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled", "team", "test"} {
+			for _, tier := range []string{"advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled", "test"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
@@ -82,10 +82,10 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 3)
+			require.Len(t, tmpls, 2)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 
-			for _, tier := range []string{"advanced", "team", "nocluster"} {
+			for _, tier := range []string{"advanced", "nocluster"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
@@ -219,7 +219,6 @@ func TestNewNSTemplateTier(t *testing.T) {
 				"baseextendedidling":       30,
 				"basedeactivationdisabled": 0,
 				"advanced":                 0,
-				"team":                     0,
 				"test":                     30,
 			}
 
@@ -441,17 +440,6 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		} else {
 			containsParam(t, actual, "IDLER_TIMEOUT_SECONDS", "43200")
 		}
-	case "team":
-		assert.Len(t, actual.Objects, 9) // No Idlers
-		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "2000m", "15Gi", "15Gi"))
-		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
-		containsObj(t, actual, clusterResourceQuotaReplicasObj())
-		containsObj(t, actual, clusterResourceQuotaRoutesObj())
-		containsObj(t, actual, clusterResourceQuotaJobsObj())
-		containsObj(t, actual, clusterResourceQuotaServicesObj())
-		containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
-		containsObj(t, actual, clusterResourceQuotaSecretsObj())
-		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
 	case "advanced":
 		assert.Len(t, actual.Objects, 9) // No Idlers
 		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
@@ -487,7 +475,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// Template objects count
 	switch tier {
-	case "advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled", "team":
+	case "advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled":
 		if kind == "dev" {
 			require.Len(t, actual.Objects, 10) // dev namespace has CRW network policy
 		} else {
@@ -510,9 +498,6 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	memoryLimit := "750Mi"
 	memoryRequest := "64Mi"
 	cpuRequest := "10m"
-	if tier == "team" {
-		memoryLimit = "1Gi"
-	}
 	containsObj(t, actual, limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest))
 
 	// NetworkPolicies
@@ -522,7 +507,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// User Namespaces Network Policies
 	switch tier {
-	case "advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled", "team":
+	case "advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled":
 		switch kind {
 		case "dev":
 			containsObj(t, actual, allowFromCRWPolicyObj(kind))
@@ -550,9 +535,6 @@ func assertTestClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, a
 	assert.Equal(t, expected, actual)
 	cpuLimit := "4000m"
 	memoryLimit := "7Gi"
-	if tier == "team" {
-		cpuLimit = "2000m"
-	}
 	containsObj(t, actual, testClusterResourceQuotaObj(cpuLimit, memoryLimit))
 }
 
@@ -708,8 +690,8 @@ func TestNewNSTemplateTiers(t *testing.T) {
 		tc, err := newTierGenerator(s, nil, namespace, assets)
 		require.NoError(t, err)
 		// then
-		require.Len(t, tc.templatesByTier, 3)
-		for _, name := range []string{"advanced", "team", "nocluster"} {
+		require.Len(t, tc.templatesByTier, 2)
+		for _, name := range []string{"advanced", "nocluster"} {
 			tierData, found := tc.templatesByTier[name]
 			tierObjs := tierData.nstmplTierObjs
 			require.Len(t, tierObjs, 1, "expected only 1 NSTemplateTier toolchain object")
@@ -736,11 +718,6 @@ var ExpectedRevisions = map[string]map[string]string{
 		"dev":     "123456b",
 		"stage":   "123456c",
 		"cluster": "654321a",
-	},
-	"team": {
-		"dev":     "123456g",
-		"stage":   "123456h",
-		"cluster": "654321c",
 	},
 	"nocluster": {
 		"dev":   "123456j",
