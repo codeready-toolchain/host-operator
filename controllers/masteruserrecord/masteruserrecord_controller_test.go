@@ -160,6 +160,50 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		HaveUserAccountsForCluster(test.MemberClusterName, 2) // UserAccount was created
 }
 
+func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
+	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	s := apiScheme(t)
+	for _, syncIndex := range []string{"0", "deleted"} {
+		mur := murtest.NewMasterUserRecord(t, "john")
+		mur.Spec.UserAccounts[0].SyncIndex = syncIndex
+		require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
+		memberClient := test.NewFakeClient(t)
+		hostClient := test.NewFakeClient(t, mur)
+		InitializeCounters(t, NewToolchainStatus(
+			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,internal": 1,
+			}),
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1,
+			})))
+
+		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
+			ClusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+
+		// then
+		require.NoError(t, err)
+		uatest.AssertThatUserAccount(t, "john", memberClient).
+			Exists().
+			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
+			HasFinalizer()
+		AssertThatCountersAndMetrics(t).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,internal": 1, // unchanged
+			}).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1, // unchanged
+			}).
+			HaveUserAccountsForCluster(test.MemberClusterName, 1) // unchanged
+	}
+}
+
 func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -229,7 +273,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	memberClient3 := test.NewFakeClient(t, userAccount3)
 	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 
-	t.Run("when deletion timestamp is less than 3 seconds old", func(t *testing.T) {
+	t.Run("when userAccount is accidentally being deleted then don't change the counter", func(t *testing.T) {
 		// given
 		InitializeCounters(t, toolchainStatus)
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
@@ -240,41 +284,10 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 			ClusterClient("member3-cluster", memberClient3))
 
 		// when
-		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.NoError(t, err)
-		assert.True(t, result.Requeue)
-		assert.Equal(t, 3*time.Second, result.RequeueAfter)
-		AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-				"1,internal": 1, // unchanged
-			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.Member2ClusterName, 1). // decremented
-			HaveUserAccountsForCluster("member3-cluster", 2)
-	})
-
-	t.Run("when deletion timestamp is more than 3 seconds old", func(t *testing.T) {
-		// given
-		InitializeCounters(t, toolchainStatus)
-		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
-		userAccount2.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(-3 * time.Second)}
-		memberClient2 := test.NewFakeClient(t, userAccount2)
-		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient1),
-			ClusterClient(test.Member2ClusterName, memberClient2),
-			ClusterClient("member3-cluster", memberClient3))
-
-		// when
-		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
-
-		// then
-		require.NoError(t, err)
-		assert.True(t, result.Requeue)
-		assert.Equal(t, 3*time.Second, result.RequeueAfter)
 		AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
@@ -284,36 +297,6 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 			}).
 			HaveUserAccountsForCluster(test.MemberClusterName, 2).
 			HaveUserAccountsForCluster(test.Member2ClusterName, 2).
-			HaveUserAccountsForCluster("member3-cluster", 2)
-	})
-
-	t.Run("when deletion timestamp is in the future", func(t *testing.T) {
-		// given
-		InitializeCounters(t, toolchainStatus)
-		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
-		userAccount2.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(2 * time.Second)}
-		memberClient2 := test.NewFakeClient(t, userAccount2)
-		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient1),
-			ClusterClient(test.Member2ClusterName, memberClient2),
-			ClusterClient("member3-cluster", memberClient3))
-
-		// when
-		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
-
-		// then
-		require.NoError(t, err)
-		assert.True(t, result.Requeue)
-		assert.Greater(t, int64(result.RequeueAfter), int64(3*time.Second))
-		AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-				"1,internal": 1, // unchanged
-			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 2).
-			HaveUserAccountsForCluster(test.Member2ClusterName, 1).
 			HaveUserAccountsForCluster("member3-cluster", 2)
 	})
 }
