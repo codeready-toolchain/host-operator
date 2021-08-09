@@ -16,6 +16,7 @@ import (
 type Option = func(notification *toolchainv1alpha1.Notification) error
 
 type Builder interface {
+	WithName(name string) Builder
 	WithTemplate(template string) Builder
 	WithSubjectAndContent(subject, content string) Builder
 	WithNotificationType(notificationType string) Builder
@@ -65,18 +66,28 @@ func (b *notificationBuilderImpl) Create(recipient string) (*toolchainv1alpha1.N
 }
 
 func generateName(notification *toolchainv1alpha1.Notification) {
-	username, found := notification.Spec.Context["UserName"]
-	if found {
-		notificationType, found := notification.Labels[toolchainv1alpha1.NotificationTypeLabelKey]
+	if notification.ObjectMeta.Name == "" {
+		username, found := notification.Spec.Context["UserName"]
 		if found {
-			notification.ObjectMeta.GenerateName = fmt.Sprintf("%s-%s-", username, notificationType)
+			notificationType, found := notification.Labels[toolchainv1alpha1.NotificationTypeLabelKey]
+			if found {
+				notification.ObjectMeta.GenerateName = fmt.Sprintf("%s-%s-", username, notificationType)
+				return
+			}
+			notification.ObjectMeta.GenerateName = fmt.Sprintf("%s-untyped", username)
 			return
 		}
-		notification.ObjectMeta.GenerateName = fmt.Sprintf("%s-untyped", username)
-		return
-	}
 
-	notification.ObjectMeta.GenerateName = fmt.Sprintf("%s-untyped", uuid.Must(uuid.NewV4()).String())
+		notification.ObjectMeta.GenerateName = fmt.Sprintf("%s-untyped", uuid.Must(uuid.NewV4()).String())
+	}
+}
+
+func (b *notificationBuilderImpl) WithName(name string) Builder {
+	b.options = append(b.options, func(n *toolchainv1alpha1.Notification) error {
+		n.ObjectMeta.Name = name
+		return nil
+	})
+	return b
 }
 
 func (b *notificationBuilderImpl) WithTemplate(template string) Builder {

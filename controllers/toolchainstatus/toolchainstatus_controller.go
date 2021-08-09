@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"time"
 
+	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/registrationservice"
 	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -31,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -387,29 +388,18 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 		return fmt.Errorf("invalid ToolchainStatusNotification status type - %s", status)
 	}
 
-	notification := &toolchainv1alpha1.Notification{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("toolchainstatus-%s-%s", string(status), tsValue),
-			Namespace: toolchainStatus.Namespace,
-		},
-		Spec: toolchainv1alpha1.NotificationSpec{
-			Recipient: r.Config.GetAdminEmail(),
-			Subject:   subjectString,
-			Content:   contentString,
-		},
-	}
+	notification, err := notify.NewNotificationBuilder(r.Client, toolchainStatus.Namespace).
+		WithName(fmt.Sprintf("toolchainstatus-%s-%s", string(status), tsValue)).
+		WithControllerReference(toolchainStatus, r.Scheme).
+		WithSubjectAndContent(subjectString, contentString).
+		Create(r.Config.GetAdminEmail())
 
-	if err := controllerutil.SetControllerReference(toolchainStatus, notification, r.Scheme); err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to set owner reference for toolchain status %s notification resource", status))
-		return err
-	}
-
-	if err := r.Client.Create(context.TODO(), notification); err != nil {
+	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to create toolchain status %s notification resource", status))
 		return err
 	}
 
-	logger.Info(fmt.Sprintf("Toolchain status %s notification resource created", status))
+	logger.Info(fmt.Sprintf("Toolchain status[%s] notification resource created", notification.Name))
 	return nil
 }
 
