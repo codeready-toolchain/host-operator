@@ -35,10 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const (
-	operatorNamespace = "toolchain-host-operator"
-)
-
 type MockDeliveryService struct {
 }
 
@@ -62,7 +58,7 @@ func TestNotificationSuccess(t *testing.T) {
 		require.NoError(t, cl.Update(context.TODO(), notification))
 
 		// when
-		result, err := reconcileNotification(context.TODO(), controller, notification)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.NoError(t, err)
@@ -85,7 +81,7 @@ func TestNotificationSuccess(t *testing.T) {
 		require.NoError(t, cl.Update(context.TODO(), notification))
 
 		// when
-		result, err := reconcileNotification(context.TODO(), controller, notification)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.NoError(t, err)
@@ -115,7 +111,7 @@ func TestNotificationSentFailure(t *testing.T) {
 		require.NoError(t, cl.Update(context.TODO(), notification))
 
 		// when
-		result, err := reconcileNotification(context.TODO(), controller, notification)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.Error(t, err)
@@ -148,13 +144,13 @@ func TestNotificationDelivery(t *testing.T) {
 		controller, client := newController(t, ds, userSignup)
 
 		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
-			WithUserContext(userSignup.Name).
+			WithUserContext(userSignup).
 			WithSubjectAndContent("foo", "test content").
 			Create("foo@redhat.com")
 		require.NoError(t, err)
 
 		// when
-		result, err := reconcileNotification(context.TODO(), controller, notification)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.NoError(t, err)
@@ -162,7 +158,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
@@ -201,7 +197,7 @@ func TestNotificationDelivery(t *testing.T) {
 		require.NoError(t, err)
 
 		// when
-		result, err := reconcileNotification(context.TODO(), controller, notification)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.NoError(t, err)
@@ -209,7 +205,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
@@ -260,7 +256,7 @@ func TestNotificationDelivery(t *testing.T) {
 		require.NoError(t, err)
 
 		// when
-		result, err := reconcileNotification(context.TODO(), controller, notification)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.NoError(t, err)
@@ -268,7 +264,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
@@ -277,17 +273,6 @@ func TestNotificationDelivery(t *testing.T) {
 
 		ntest.AssertThatNotification(t, instance.Name, client).
 			HasConditions(sentCond())
-	})
-
-	t.Run("test notification builder fails for invalid usersignup name", func(t *testing.T) {
-		// given
-		_, client := newController(t, nil)
-
-		_, err := NewNotificationBuilder(client, test.HostOperatorNs).
-			WithUserContext("invalid").
-			Create("abc123")
-		require.Error(t, err)
-		require.Equal(t, "usersignups.toolchain.dev.openshift.com \"invalid\" not found", err.Error())
 	})
 
 	t.Run("test notification delivery fails for delivery service failure", func(t *testing.T) {
@@ -309,7 +294,7 @@ func TestNotificationDelivery(t *testing.T) {
 		require.NoError(t, err)
 
 		// when
-		result, err := reconcileNotification(context.TODO(), controller, notification)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.Error(t, err)
@@ -318,7 +303,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
@@ -405,8 +390,8 @@ func newController(t *testing.T, deliveryService DeliveryService,
 	return controller, cl
 }
 
-func reconcileNotification(ctx context.Context, reconciler *Reconciler, notification *toolchainv1alpha1.Notification) (ctrl.Result, error) {
-	return reconciler.Reconcile(ctx, reconcile.Request{
+func reconcileNotification(reconciler *Reconciler, notification *toolchainv1alpha1.Notification) (ctrl.Result, error) {
+	return reconciler.Reconcile(context.TODO(), reconcile.Request{
 		NamespacedName: test.NamespacedName(test.HostOperatorNs, notification.Name),
 	})
 }
@@ -423,7 +408,7 @@ func newObjectMeta(name, email string) v1.ObjectMeta {
 
 	return v1.ObjectMeta{
 		Name:      name,
-		Namespace: operatorNamespace,
+		Namespace: test.HostOperatorNs,
 		Annotations: map[string]string{
 			toolchainv1alpha1.UserSignupUserEmailAnnotationKey: email,
 		},

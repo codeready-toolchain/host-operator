@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	notpkg "github.com/codeready-toolchain/host-operator/controllers/notification"
+	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -552,11 +552,11 @@ func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRec
 }
 
 func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
-	notification, err := notpkg.NewNotificationBuilder(r.Client, userSignup.Namespace).
+	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
 		WithTemplate(notificationtemplates.UserDeactivating.Name).
 		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivating).
 		WithControllerReference(userSignup, r.Scheme).
-		WithUserContext(userSignup.Name).
+		WithUserContext(userSignup).
 		Create(userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 	if err != nil {
@@ -569,11 +569,11 @@ func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, userSignup
 }
 
 func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
-	notification, err := notpkg.NewNotificationBuilder(r.Client, userSignup.Namespace).
+	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
 		WithTemplate(notificationtemplates.UserDeactivated.Name).
 		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivated).
 		WithControllerReference(userSignup, r.Scheme).
-		WithUserContext(userSignup.Name).
+		WithUserContext(userSignup).
 		Create(userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 	if err != nil {

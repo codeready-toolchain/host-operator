@@ -87,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		err = r.deliveryService.Send(notification)
 		if err != nil {
 			reqLogger.Error(err, "delivery service failed to send notification",
-				notification.Spec.Context,
+				"notification spec", notification.Spec,
 			)
 
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, notification,

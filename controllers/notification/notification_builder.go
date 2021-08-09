@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	"k8s.io/apimachinery/pkg/runtime"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -23,7 +21,7 @@ type Builder interface {
 	WithNotificationType(notificationType string) Builder
 	WithControllerReference(owner v1.Object, scheme *runtime.Scheme) Builder
 	WithKeysAndValues(keysAndValues map[string]string) Builder
-	WithUserContext(userID string) Builder
+	WithUserContext(userSignup *toolchainv1alpha1.UserSignup) Builder
 	Create(recipient string) (*toolchainv1alpha1.Notification, error)
 }
 
@@ -123,28 +121,18 @@ func (b *notificationBuilderImpl) WithKeysAndValues(keysAndValues map[string]str
 	return b
 }
 
-func (b *notificationBuilderImpl) WithUserContext(userID string) Builder {
+func (b *notificationBuilderImpl) WithUserContext(userSignup *toolchainv1alpha1.UserSignup) Builder {
 	b.options = append(b.options, func(n *toolchainv1alpha1.Notification) error {
-		// Lookup the UserSignup resource with the specified userID
-		instance := &toolchainv1alpha1.UserSignup{}
-		err := b.client.Get(context.TODO(), types.NamespacedName{
-			Namespace: b.namespace,
-			Name:      userID,
-		}, instance)
 
-		if err != nil {
-			return err
-		}
+		n.Spec.Context["UserID"] = userSignup.Spec.Userid
+		n.Spec.Context["UserName"] = userSignup.Status.CompliantUsername
+		n.Spec.Context["FirstName"] = userSignup.Spec.GivenName
+		n.Spec.Context["LastName"] = userSignup.Spec.FamilyName
+		n.Spec.Context["CompanyName"] = userSignup.Spec.Company
 
-		n.Spec.Context["UserID"] = userID
-		n.Spec.Context["UserName"] = instance.Status.CompliantUsername
-		n.Spec.Context["FirstName"] = instance.Spec.GivenName
-		n.Spec.Context["LastName"] = instance.Spec.FamilyName
-		n.Spec.Context["CompanyName"] = instance.Spec.Company
+		n.ObjectMeta.Labels[toolchainv1alpha1.NotificationUserNameLabelKey] = userSignup.Status.CompliantUsername
 
-		n.ObjectMeta.Labels[toolchainv1alpha1.NotificationUserNameLabelKey] = instance.Status.CompliantUsername
-
-		if emailLbl, exists := instance.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
+		if emailLbl, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
 			n.Spec.Context["UserEmail"] = emailLbl
 		}
 
