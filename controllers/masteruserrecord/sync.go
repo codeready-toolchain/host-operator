@@ -206,18 +206,14 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 				return false, err
 			}
 
-			notification, err := notify.NewNotificationBuilder(s.hostClient, s.record.Namespace).
+			_, err = notify.NewNotificationBuilder(s.hostClient, s.record.Namespace).
 				WithNotificationType(toolchainv1alpha1.NotificationTypeProvisioned).
 				WithControllerReference(s.record, s.scheme).
 				WithTemplate(notificationtemplates.UserProvisioned.Name).
 				WithUserContext(userSignup).
-				Create(userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+				Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 			if err != nil {
-				return false, err
-			}
-
-			if err := s.hostClient.Create(context.TODO(), notification); err != nil {
 				return false, err
 			}
 		} else {
