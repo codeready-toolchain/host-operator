@@ -1,6 +1,9 @@
 name: publish-operators-for-e2e-tests
 on:
-  pull_request_target
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [assigned, opened, synchronize, reopened, edited, ready_for_review]
 
 env:
   GOPATH: /tmp/go
@@ -11,14 +14,10 @@ jobs:
     name: Build & push operator bundles for e2e tests
 
     runs-on: ubuntu-18.04
-
+    if: ${{ github.event.comment == '' || github.event.comment.body == '/retest' || github.event.comment.body == '/test all' || github.event.comment.body == '/test e2e' }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
-      with:
-        ref: ${{github.event.pull_request.head.ref}}
-        repository: ${{github.event.pull_request.head.repo.full_name}}
-        fetch-depth: 0
+      uses: codeready-toolchain/matousjobanek/checkout-code@checkout-code
 
     - name: Install Go
       uses: actions/setup-go@v2
