@@ -89,15 +89,6 @@ spec:
               deactivation:
                 description: Keeps parameters concerned with user deactivation
                 properties:
-                  UserSignupUnverifiedRetentionDays:
-                    description: UserSignupUnverifiedRetentionDays is used to configure
-                      how many days we should keep unverified (i.e. the user hasn't
-                      completed the user verification process via the registration
-                      service) UserSignup resources before deleting them.  It is intended
-                      for this parameter to define an aggressive cleanup schedule
-                      for unverified user signups, and the default configuration value
-                      for this parameter reflects this.
-                    type: integer
                   deactivatingNotificationDays:
                     description: DeactivatingNotificationDays is the number of days
                       after a pre-deactivating notification is sent that actual deactivation
@@ -115,6 +106,15 @@ spec:
                       before deleting them.  This parameter value should reflect an
                       extended period of time sufficient for gathering user metrics
                       before removing the resources from the cluster.
+                    type: integer
+                  userSignupUnverifiedRetentionDays:
+                    description: UserSignupUnverifiedRetentionDays is used to configure
+                      how many days we should keep unverified (i.e. the user hasn't
+                      completed the user verification process via the registration
+                      service) UserSignup resources before deleting them.  It is intended
+                      for this parameter to define an aggressive cleanup schedule
+                      for unverified user signups, and the default configuration value
+                      for this parameter reflects this.
                     type: integer
                 type: object
               environment:
@@ -213,11 +213,16 @@ spec:
                     type: string
                   namespace:
                     description: Namespace specifies the namespace in which the registration
-                      service and host operator is running
+                      service and host operator is running Consumed by host operator
+                      and set as env var on registration-service deployment
                     type: string
                   registrationServiceURL:
                     description: RegistrationServiceURL is the URL used to a ccess
                       the registration service
+                    type: string
+                  replicas:
+                    description: Replicas specifies the number of replicas to use
+                      for the registration service deployment
                     type: string
                   verification:
                     description: Keeps parameters necessary for the registration service
