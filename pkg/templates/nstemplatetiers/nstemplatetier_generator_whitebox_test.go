@@ -8,13 +8,14 @@ import (
 	"testing"
 	texttemplate "text/template"
 
+	"github.com/gofrs/uuid"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
 
 	templatev1 "github.com/openshift/api/template/v1"
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -210,7 +211,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 		t.Run("with prod assets", func(t *testing.T) {
 			// given
-			namespace := "host-operator-" + uuid.NewV4().String()[:7]
+			namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 			assets := assets.NewAssets(AssetNames, Asset)
 
 			expectedDeactivationTimeoutsByTier := map[string]int{
@@ -267,7 +268,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 		t.Run("with test assets", func(t *testing.T) {
 			// given
-			namespace := "host-operator-" + uuid.NewV4().String()[:7]
+			namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 			tc, err := newTierGenerator(s, nil, namespace, assets)
 			require.NoError(t, err)
@@ -307,7 +308,7 @@ func TestNewTierTemplate(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	namespace := "host-operator-" + uuid.NewV4().String()[:7]
+	namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 
 	t.Run("ok", func(t *testing.T) {
 
@@ -684,7 +685,7 @@ func TestNewNSTemplateTiers(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		// given
-		namespace := "host-operator-" + uuid.NewV4().String()[:7]
+		namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 		assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 		// when
 		tc, err := newTierGenerator(s, nil, namespace, assets)

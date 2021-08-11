@@ -289,8 +289,16 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	// given
 	apiScheme(t)
+
+	// A basic userSignup to set as the mur owner
+	userSignup := NewUserSignup()
+	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+		CompliantUsername: "john",
+	}
+
 	mur := murtest.NewMasterUserRecord(t, "john",
 		murtest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")))
+	mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignup.Name
 
 	userAccount := uatest.NewUserAccountFromMur(mur,
 		uatest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")), uatest.ResourceVersion("123abc"))
@@ -317,7 +325,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 	t.Run("successful", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, dummyNotification)
+		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus, dummyNotification)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when
@@ -333,7 +341,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 
 	t.Run("ProvisionedTime should not be updated when synced more than once", func(t *testing.T) {
 		// given
-		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, dummyNotification)
+		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus, dummyNotification)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 		provisionTime := metav1.NewTime(time.Now().Add(-time.Hour))
 		sync.record.Status.ProvisionedTime = &provisionTime
@@ -360,7 +368,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 				},
 			},
 		}
-		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus, dummyNotification, notification)
+		hostClient := test.NewFakeClient(t, userSignup, mur, readyToolchainStatus, dummyNotification, notification)
 		sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 		// when

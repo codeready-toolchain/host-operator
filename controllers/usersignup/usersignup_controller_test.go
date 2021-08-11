@@ -20,8 +20,8 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	"github.com/gofrs/uuid"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -1457,7 +1457,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
-				toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String(),
+				toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.Must(uuid.NewV4()).String(),
 				"toolchain.dev.openshift.com/approved":          "true",
 			},
 		},
@@ -1726,7 +1726,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		notification := notifications.Items[0]
 		require.Contains(t, notification.Name, "john-doe-deactivated-")
 		assert.True(t, len(notification.Name) > len("john-doe-deactivated-"))
-		require.Equal(t, userSignup.Name, notification.Spec.UserID)
+		require.Equal(t, userSignup.Spec.Userid, notification.Spec.Context["UserID"])
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
 }
@@ -2268,7 +2268,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	require.Len(t, notifications.Items, 1)
 
 	require.Equal(t, "userdeactivating", notifications.Items[0].Spec.Template)
-	require.Equal(t, userSignup.Name, notifications.Items[0].Spec.UserID)
+	require.Equal(t, userSignup.Spec.Userid, notifications.Items[0].Spec.Context["UserID"])
 
 	// Confirm the status is correct
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -2690,7 +2690,7 @@ func TestDeathBy100Signups(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String()},
+			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.Must(uuid.NewV4()).String()},
 		},
 	})
 
@@ -2699,7 +2699,7 @@ func TestDeathBy100Signups(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("foo-%d", i),
 				Namespace: test.HostOperatorNs,
-				Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.NewV4().String()},
+				Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.Must(uuid.NewV4()).String()},
 			},
 		})
 	}

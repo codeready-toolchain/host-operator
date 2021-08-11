@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"time"
 
+	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
@@ -20,7 +22,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // consoleClient to be used to test connection to a public Web Console
@@ -194,26 +195,25 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 		}
 		// if there is no existing notification with these labels
 		if len(notificationList.Items) == 0 {
-			notification := &toolchainv1alpha1.Notification{
-				ObjectMeta: v1.ObjectMeta{
-					GenerateName: fmt.Sprintf("%s-%s-", s.record.Name, toolchainv1alpha1.NotificationTypeProvisioned),
-					Namespace:    s.record.Namespace,
-					Labels:       labels,
-				},
-				Spec: toolchainv1alpha1.NotificationSpec{
-					// The UserID property actually refers to the UserSignup resource name.  This will be renamed
-					// (or removed) in a future PR
-					UserID:   s.record.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
-					Template: notificationtemplates.UserProvisioned.Name,
-				},
-			}
 
-			err := controllerutil.SetControllerReference(s.record, notification, s.scheme)
+			// Lookup the UserSignup
+			userSignup := &toolchainv1alpha1.UserSignup{}
+			err := s.hostClient.Get(context.TODO(), types.NamespacedName{
+				Namespace: s.record.Namespace,
+				Name:      s.record.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
+			}, userSignup)
 			if err != nil {
 				return false, err
 			}
 
-			if err := s.hostClient.Create(context.TODO(), notification); err != nil {
+			_, err = notify.NewNotificationBuilder(s.hostClient, s.record.Namespace).
+				WithNotificationType(toolchainv1alpha1.NotificationTypeProvisioned).
+				WithControllerReference(s.record, s.scheme).
+				WithTemplate(notificationtemplates.UserProvisioned.Name).
+				WithUserContext(userSignup).
+				Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+
+			if err != nil {
 				return false, err
 			}
 		} else {

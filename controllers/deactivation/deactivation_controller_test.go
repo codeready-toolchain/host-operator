@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofrs/uuid"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -20,7 +22,6 @@ import (
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -376,7 +377,7 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 
 func newObjectMeta(name, email string) metav1.ObjectMeta {
 	if name == "" {
-		name = uuid.NewV4().String()
+		name = uuid.Must(uuid.NewV4()).String()
 	}
 
 	md5hash := md5.New()
