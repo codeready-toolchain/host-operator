@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofrs/uuid"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/configuration"
@@ -890,6 +888,12 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 
 	t.Run("outdated mur status error cleaned", func(t *testing.T) {
 		// given
+		// A basic userSignup to set as the mur owner
+		userSignup := NewUserSignup()
+		userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+			CompliantUsername: "john",
+		}
+
 		// MUR with ready condition set to false with an error
 		// all MUR.Status.UserAccount[] conditions are already in sync with the corresponding UserAccounts and set to Ready
 		mur := murtest.NewMasterUserRecord(t, "john",
@@ -898,9 +902,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			murtest.AdditionalAccounts(test.Member2ClusterName))
 		userAccount := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
-		owner, err := uuid.NewV4()
-		require.NoError(t, err)
-		mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = owner.String()
+		mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignup.Name
 		mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
 			{
 				Cluster:           toolchainv1alpha1.Cluster{Name: test.MemberClusterName},
@@ -924,7 +926,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1,
 			}))
-		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
+		hostClient := test.NewFakeClient(t, userSignup, mur, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		memberClient := test.NewFakeClient(t, userAccount)
@@ -935,7 +937,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			ClusterClient(test.Member2ClusterName, memberClient2))
 
 		// when
-		_, err = cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		// the original error status should be cleaned
@@ -953,7 +955,6 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		require.Len(t, notifications.Items, 1)
 		notification := notifications.Items[0]
 		require.NoError(t, err)
-		assert.Equal(t, owner.String(), notification.Spec.UserID)
 		assert.Equal(t, "userprovisioned", notification.Spec.Template)
 		assert.Contains(t, notification.Name, userAccount.Name+"-provisioned-")
 		assert.True(t, len(notification.Name) > len(userAccount.Name+"-provisioned-"))
@@ -1086,6 +1087,13 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		// given
 		logf.SetLogger(zap.New(zap.UseDevMode(true)))
 		s := apiScheme(t)
+
+		// A basic userSignup to set as the mur owner
+		userSignup := NewUserSignup()
+		userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+			CompliantUsername: "john-wait-for-ua",
+		}
+
 		mur := murtest.NewMasterUserRecord(t, "john-wait-for-ua",
 			murtest.ToBeDeleted())
 		userAcc := uatest.NewUserAccountFromMur(mur)

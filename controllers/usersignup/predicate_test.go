@@ -3,13 +3,14 @@ package usersignup
 import (
 	"testing"
 
+	"github.com/gofrs/uuid"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/host-operator/test"
 	hostconfig "github.com/codeready-toolchain/host-operator/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +20,7 @@ import (
 func TestUserSignupChangedPredicate(t *testing.T) {
 	// when
 	pred := &UserSignupChangedPredicate{}
-	userSignupName := uuid.NewV4().String()
+	userSignupName := uuid.Must(uuid.NewV4()).String()
 
 	userSignupOld := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{

@@ -65,7 +65,7 @@ func NewMailgunNotificationDeliveryService(config DeliveryServiceFactoryConfig, 
 	}
 }
 
-func (s *MailgunNotificationDeliveryService) Send(notificationCtx Context, notification *toolchainv1alpha1.Notification) error {
+func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha1.Notification) error {
 
 	var subject, body string
 
@@ -79,12 +79,12 @@ func (s *MailgunNotificationDeliveryService) Send(notificationCtx Context, notif
 			return fmt.Errorf("notification template [%s] not found", notification.Spec.Template)
 		}
 
-		subject, err = s.base.GenerateContent(notificationCtx, template.Subject)
+		subject, err = s.base.GenerateContent(notification.Spec.Context, template.Subject)
 		if err != nil {
 			return err
 		}
 
-		body, err = s.base.GenerateContent(notificationCtx, template.Content)
+		body, err = s.base.GenerateContent(notification.Spec.Context, template.Content)
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func (s *MailgunNotificationDeliveryService) Send(notificationCtx Context, notif
 	}
 
 	// The message object allows you to add attachments and Bcc recipients
-	message := s.Mailgun.NewMessage(s.SenderEmail, subject, "", notificationCtx.DeliveryEmail())
+	message := s.Mailgun.NewMessage(s.SenderEmail, subject, "", notification.Spec.Recipient)
 
 	if s.ReplyToEmail != "" {
 		message.SetReplyTo(s.ReplyToEmail)
