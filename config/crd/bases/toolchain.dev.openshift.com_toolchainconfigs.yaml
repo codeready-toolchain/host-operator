@@ -232,7 +232,8 @@ spec:
                       replicas:
                         description: Replicas specifies the number of replicas to
                           use for the registration service deployment
-                        type: string
+                        format: int32
+                        type: integer
                       verification:
                         description: Keeps parameters necessary for the registration
                           service verification config
