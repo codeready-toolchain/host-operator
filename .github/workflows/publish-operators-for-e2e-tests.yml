@@ -66,8 +66,26 @@ jobs:
     - name: Prepare tools
       uses: codeready-toolchain/toolchain-cicd/prepare-tools-action@master
 
-    - name: Publish current operator bundles for host & member
+    # Execute composite action using values from PR event
+    # Is executed only for PR events - in that case the comment field is empty
+    - name: Publish current operator bundles for host & member based on PR event
       uses: codeready-toolchain/toolchain-cicd/publish-operators-for-e2e-tests@master
+      if: ${{ github.event.comment == '' }}
       with:
         quay-token: ${{ secrets.TEST_QUAY_TOKEN }}
         quay-namespace: codeready-toolchain-test
+        sha: ${{ github.event.pull_request.head.sha }}
+        pr-number: ${{ github.event.pull_request.number }}
+        author: ${{ github.event.pull_request.head.user.login }}
+
+    # Execute composite action using values from PR event
+    # Is executed only for comment events - in that case the pull_request field is empty
+    - name: Publish current operator bundles for host & member based on comment event
+      uses: codeready-toolchain/toolchain-cicd/publish-operators-for-e2e-tests@master
+      if: ${{ github.event.pull_request == '' }}
+      with:
+        quay-token: ${{ secrets.TEST_QUAY_TOKEN }}
+        quay-namespace: codeready-toolchain-test
+        sha: ${{ fromJson(steps.request.outputs.data).head.sha }}
+        pr-number: ${{ fromJson(steps.request.outputs.data).number }}
+        author: ${{ fromJson(steps.request.outputs.data).head.user.login }}
