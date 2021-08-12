@@ -2,7 +2,7 @@ package test
 
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +13,7 @@ type ToolchainStatusOption func(*toolchainv1alpha1.ToolchainStatus)
 func NewToolchainStatus(options ...ToolchainStatusOption) *toolchainv1alpha1.ToolchainStatus {
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      commonconfig.ToolchainStatusName,
+			Name:      toolchainconfig.ToolchainStatusName,
 			Namespace: test.HostOperatorNs,
 		},
 	}

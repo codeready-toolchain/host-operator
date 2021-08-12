@@ -229,7 +229,7 @@ func main() {
 
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
-		if err := toolchainstatus.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, commonconfig.ToolchainStatusName); err != nil {
+		if err := toolchainstatus.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, toolchainconfig.ToolchainStatusName); err != nil {
 			setupLog.Error(err, "cannot create/update ToolchainStatus resource")
 			os.Exit(1)
 		}
@@ -271,14 +271,14 @@ func main() {
 
 // getCRTConfiguration creates the client used for configuration and
 // returns the loaded crt configuration
-func getCRTConfiguration(config *rest.Config) (commonconfig.ToolchainConfig, error) {
+func getCRTConfiguration(config *rest.Config) (toolchainconfig.ToolchainConfig, error) {
 	// create client that will be used for retrieving the host operator secret
 	cl, err := client.New(config, client.Options{
 		Scheme: scheme,
 	})
 	if err != nil {
-		return commonconfig.ToolchainConfig{}, err
+		return toolchainconfig.ToolchainConfig{}, err
 	}
 
-	return commonconfig.GetToolchainConfig(cl)
+	return toolchainconfig.GetToolchainConfig(cl)
 }

@@ -14,7 +14,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/redhat-cop/operator-utils v1.1.3-0.20210602122509-2eaf121122d2
-	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cast v1.3.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect

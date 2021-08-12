@@ -27,8 +27,8 @@ import (
 
 func TestReconcile(t *testing.T) {
 	// given
-	defaultMemberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("5s"))
-	specificMemberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("10s"))
+	defaultMemberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
+	specificMemberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("10s"))
 
 	t.Run("success", func(t *testing.T) {
 
@@ -45,7 +45,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.Empty(t, res)
 			require.NoError(t, err)
-			actual, err := commonconfig.GetToolchainConfig(test.NewFakeClient(t))
+			actual, err := toolchainconfig.GetToolchainConfig(test.NewFakeClient(t))
 			require.NoError(t, err)
 			matchesDefaultConfig(t, actual)
 			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).NotExists()
@@ -79,7 +79,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.Equal(t, toolchainconfig.DefaultReconcile, res)
 			require.NoError(t, err)
-			actual, err := commonconfig.GetToolchainConfig(test.NewFakeClient(t))
+			actual, err := toolchainconfig.GetToolchainConfig(test.NewFakeClient(t))
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
 			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
@@ -113,7 +113,7 @@ func TestReconcile(t *testing.T) {
 				// then
 				require.Equal(t, toolchainconfig.DefaultReconcile, res)
 				require.NoError(t, err)
-				actual, err := commonconfig.GetToolchainConfig(test.NewFakeClient(t))
+				actual, err := toolchainconfig.GetToolchainConfig(test.NewFakeClient(t))
 				require.NoError(t, err)
 				assert.True(t, actual.AutomaticApproval().IsEnabled())
 				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
@@ -150,7 +150,7 @@ func TestReconcile(t *testing.T) {
 				// then
 				require.Equal(t, toolchainconfig.DefaultReconcile, res)
 				require.EqualError(t, err, "client error")
-				actual, err := commonconfig.GetToolchainConfig(test.NewFakeClient(t))
+				actual, err := toolchainconfig.GetToolchainConfig(test.NewFakeClient(t))
 				require.NoError(t, err)
 				assert.True(t, actual.AutomaticApproval().IsEnabled())
 				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
@@ -191,7 +191,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.Equal(t, toolchainconfig.DefaultReconcile, res)
 			require.EqualError(t, err, "client error")
-			actual, err := commonconfig.GetToolchainConfig(test.NewFakeClient(t))
+			actual, err := toolchainconfig.GetToolchainConfig(test.NewFakeClient(t))
 			require.NoError(t, err)
 			matchesDefaultConfig(t, actual)
 		})
@@ -209,7 +209,7 @@ func TestReconcile(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.Equal(t, toolchainconfig.DefaultReconcile, res)
-			actual, err := commonconfig.GetToolchainConfig(test.NewFakeClient(t))
+			actual, err := toolchainconfig.GetToolchainConfig(test.NewFakeClient(t))
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
 			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
@@ -226,7 +226,7 @@ func newRequest() reconcile.Request {
 	}
 }
 
-func matchesDefaultConfig(t *testing.T, actual commonconfig.ToolchainConfig) {
+func matchesDefaultConfig(t *testing.T, actual toolchainconfig.ToolchainConfig) {
 	assert.False(t, actual.AutomaticApproval().IsEnabled())
 	assert.Equal(t, 1000, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 	assert.Empty(t, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())

@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/pkg/errors"
 
 	"github.com/go-logr/logr"
@@ -227,7 +227,7 @@ func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainSt
 	}
 
 	// initialize the cached counters from the UserSignup and MasterUserRecord resources.
-	config, err := commonconfig.GetToolchainConfig(cl)
+	config, err := toolchainconfig.GetToolchainConfig(cl)
 	if err != nil {
 		return errors.Wrap(err, "unable to initialize counter cache")
 	}

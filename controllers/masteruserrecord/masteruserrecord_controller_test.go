@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gofrs/uuid"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
@@ -160,6 +158,50 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		HaveUserAccountsForCluster(test.MemberClusterName, 2) // UserAccount was created
 }
 
+func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
+	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	s := apiScheme(t)
+	for _, syncIndex := range []string{"0", "deleted"} {
+		mur := murtest.NewMasterUserRecord(t, "john")
+		mur.Spec.UserAccounts[0].SyncIndex = syncIndex
+		require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
+		memberClient := test.NewFakeClient(t)
+		hostClient := test.NewFakeClient(t, mur)
+		InitializeCounters(t, NewToolchainStatus(
+			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,internal": 1,
+			}),
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1,
+			})))
+
+		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
+			ClusterClient(test.MemberClusterName, memberClient))
+
+		// when
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+
+		// then
+		require.NoError(t, err)
+		uatest.AssertThatUserAccount(t, "john", memberClient).
+			Exists().
+			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
+		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
+			HasFinalizer()
+		AssertThatCountersAndMetrics(t).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,internal": 1, // unchanged
+			}).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1, // unchanged
+			}).
+			HaveUserAccountsForCluster(test.MemberClusterName, 1) // unchanged
+	}
+}
+
 func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -229,7 +271,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	memberClient3 := test.NewFakeClient(t, userAccount3)
 	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 
-	t.Run("when deletion timestamp is less than 3 seconds old", func(t *testing.T) {
+	t.Run("when userAccount is accidentally being deleted then don't change the counter", func(t *testing.T) {
 		// given
 		InitializeCounters(t, toolchainStatus)
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
@@ -240,41 +282,10 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 			ClusterClient("member3-cluster", memberClient3))
 
 		// when
-		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.NoError(t, err)
-		assert.True(t, result.Requeue)
-		assert.Equal(t, 3*time.Second, result.RequeueAfter)
-		AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-				"1,internal": 1, // unchanged
-			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.Member2ClusterName, 1). // decremented
-			HaveUserAccountsForCluster("member3-cluster", 2)
-	})
-
-	t.Run("when deletion timestamp is more than 3 seconds old", func(t *testing.T) {
-		// given
-		InitializeCounters(t, toolchainStatus)
-		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
-		userAccount2.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(-3 * time.Second)}
-		memberClient2 := test.NewFakeClient(t, userAccount2)
-		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient1),
-			ClusterClient(test.Member2ClusterName, memberClient2),
-			ClusterClient("member3-cluster", memberClient3))
-
-		// when
-		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
-
-		// then
-		require.NoError(t, err)
-		assert.True(t, result.Requeue)
-		assert.Equal(t, 3*time.Second, result.RequeueAfter)
 		AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
@@ -284,36 +295,6 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 			}).
 			HaveUserAccountsForCluster(test.MemberClusterName, 2).
 			HaveUserAccountsForCluster(test.Member2ClusterName, 2).
-			HaveUserAccountsForCluster("member3-cluster", 2)
-	})
-
-	t.Run("when deletion timestamp is in the future", func(t *testing.T) {
-		// given
-		InitializeCounters(t, toolchainStatus)
-		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
-		userAccount2.DeletionTimestamp = &metav1.Time{Time: time.Now().Add(2 * time.Second)}
-		memberClient2 := test.NewFakeClient(t, userAccount2)
-		cntrl := newController(t, hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient1),
-			ClusterClient(test.Member2ClusterName, memberClient2),
-			ClusterClient("member3-cluster", memberClient3))
-
-		// when
-		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
-
-		// then
-		require.NoError(t, err)
-		assert.True(t, result.Requeue)
-		assert.Greater(t, int64(result.RequeueAfter), int64(3*time.Second))
-		AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-				"1,internal": 1, // unchanged
-			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 2).
-			HaveUserAccountsForCluster(test.Member2ClusterName, 1).
 			HaveUserAccountsForCluster("member3-cluster", 2)
 	})
 }
@@ -907,6 +888,12 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 
 	t.Run("outdated mur status error cleaned", func(t *testing.T) {
 		// given
+		// A basic userSignup to set as the mur owner
+		userSignup := NewUserSignup()
+		userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+			CompliantUsername: "john",
+		}
+
 		// MUR with ready condition set to false with an error
 		// all MUR.Status.UserAccount[] conditions are already in sync with the corresponding UserAccounts and set to Ready
 		mur := murtest.NewMasterUserRecord(t, "john",
@@ -915,9 +902,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			murtest.AdditionalAccounts(test.Member2ClusterName))
 		userAccount := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
-		owner, err := uuid.NewV4()
-		require.NoError(t, err)
-		mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = owner.String()
+		mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignup.Name
 		mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
 			{
 				Cluster:           toolchainv1alpha1.Cluster{Name: test.MemberClusterName},
@@ -941,7 +926,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1,
 			}))
-		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
+		hostClient := test.NewFakeClient(t, userSignup, mur, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
 		memberClient := test.NewFakeClient(t, userAccount)
@@ -952,7 +937,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			ClusterClient(test.Member2ClusterName, memberClient2))
 
 		// when
-		_, err = cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		// the original error status should be cleaned
@@ -970,7 +955,6 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		require.Len(t, notifications.Items, 1)
 		notification := notifications.Items[0]
 		require.NoError(t, err)
-		assert.Equal(t, owner.String(), notification.Spec.UserID)
 		assert.Equal(t, "userprovisioned", notification.Spec.Template)
 		assert.Contains(t, notification.Name, userAccount.Name+"-provisioned-")
 		assert.True(t, len(notification.Name) > len(userAccount.Name+"-provisioned-"))
@@ -1103,6 +1087,13 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		// given
 		logf.SetLogger(zap.New(zap.UseDevMode(true)))
 		s := apiScheme(t)
+
+		// A basic userSignup to set as the mur owner
+		userSignup := NewUserSignup()
+		userSignup.Status = toolchainv1alpha1.UserSignupStatus{
+			CompliantUsername: "john-wait-for-ua",
+		}
+
 		mur := murtest.NewMasterUserRecord(t, "john-wait-for-ua",
 			murtest.ToBeDeleted())
 		userAcc := uatest.NewUserAccountFromMur(mur)

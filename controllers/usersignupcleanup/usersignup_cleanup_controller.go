@@ -7,9 +7,9 @@ import (
 	errs "github.com/pkg/errors"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -65,7 +65,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 	reqLogger = reqLogger.WithValues("username", instance.Spec.Username)
 
-	config, err := commonconfig.GetToolchainConfig(r.Client)
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}

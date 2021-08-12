@@ -7,8 +7,8 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -69,7 +69,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, errs.Wrap(err, "unable to get the current TemplateUpdateRequest")
 	}
 
-	config, err := commonconfig.GetToolchainConfig(r.Client)
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}

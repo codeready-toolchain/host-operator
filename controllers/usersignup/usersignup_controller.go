@@ -8,6 +8,9 @@ import (
 	"strconv"
 	"strings"
 
+	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 
@@ -20,14 +23,12 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -425,7 +426,7 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 func (r *Reconciler) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
 	replaced := usersignup.TransformUsername(instance.Spec.Username)
 
-	config, err := commonconfig.GetToolchainConfig(r.Client)
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return "", errs.Wrapf(err, "unable to get ToolchainConfig")
 	}
@@ -557,66 +558,36 @@ func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRec
 }
 
 func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
-	notification := &toolchainv1alpha1.Notification{
-		ObjectMeta: v1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-%s-", userSignup.Status.CompliantUsername, toolchainv1alpha1.NotificationTypeDeactivating),
-			Namespace:    userSignup.Namespace,
-			Labels: map[string]string{
-				// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
-				toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
-				// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
-				toolchainv1alpha1.NotificationTypeLabelKey: toolchainv1alpha1.NotificationTypeDeactivating,
-			},
-		},
-		Spec: toolchainv1alpha1.NotificationSpec{
-			UserID:   userSignup.Name,
-			Template: notificationtemplates.UserDeactivating.Name,
-		},
-	}
+	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
+		WithTemplate(notificationtemplates.UserDeactivating.Name).
+		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivating).
+		WithControllerReference(userSignup, r.Scheme).
+		WithUserContext(userSignup).
+		Create(userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
-	if err := controllerutil.SetControllerReference(userSignup, notification, r.Scheme); err != nil {
-		logger.Error(err, "Failed to set owner reference for deactivating notification resource")
-		return err
-	}
-
-	if err := r.Client.Create(context.TODO(), notification); err != nil {
+	if err != nil {
 		logger.Error(err, "Failed to create deactivating notification resource")
 		return err
 	}
 
-	logger.Info("Deactivating notification resource created")
+	logger.Info(fmt.Sprintf("Deactivating notification resource [%s] created", notification.Name))
 	return nil
 }
 
 func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
-	notification := &toolchainv1alpha1.Notification{
-		ObjectMeta: v1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-%s-", userSignup.Status.CompliantUsername, toolchainv1alpha1.NotificationTypeDeactivated),
-			Namespace:    userSignup.Namespace,
-			Labels: map[string]string{
-				// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
-				toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
-				// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
-				toolchainv1alpha1.NotificationTypeLabelKey: toolchainv1alpha1.NotificationTypeDeactivated,
-			},
-		},
-		Spec: toolchainv1alpha1.NotificationSpec{
-			UserID:   userSignup.Name,
-			Template: notificationtemplates.UserDeactivated.Name,
-		},
-	}
+	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
+		WithTemplate(notificationtemplates.UserDeactivated.Name).
+		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivated).
+		WithControllerReference(userSignup, r.Scheme).
+		WithUserContext(userSignup).
+		Create(userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
-	if err := controllerutil.SetControllerReference(userSignup, notification, r.Scheme); err != nil {
-		logger.Error(err, "Failed to set owner reference for deactivation notification resource")
+	if err != nil {
+		logger.Error(err, "Failed to create deactivated notification resource")
 		return err
 	}
 
-	if err := r.Client.Create(context.TODO(), notification); err != nil {
-		logger.Error(err, "Failed to create deactivation notification resource")
-		return err
-	}
-
-	logger.Info("Deactivation notification resource created")
+	logger.Info(fmt.Sprintf("Deactivated notification resource [%s] created", notification.Name))
 	return nil
 }
 

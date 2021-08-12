@@ -1,11 +1,7 @@
 package toolchainconfig
 
-import (
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
-)
-
 type DeliveryServiceFactoryConfig struct {
-	commonconfig.ToolchainConfig
+	ToolchainConfig
 }
 
 func (d DeliveryServiceFactoryConfig) GetNotificationDeliveryService() string {

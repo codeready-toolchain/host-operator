@@ -4,9 +4,9 @@ import (
 	"context"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,7 +33,7 @@ func (c targetCluster) getClusterName() string {
 // capacity thresholds and the actual use if there is any suitable member cluster. If it is not then it returns false as the first value and
 // targetCluster unknown as the second value.
 func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSignup, getMemberClusters cluster.GetMemberClustersFunc) (bool, targetCluster, error) {
-	config, err := commonconfig.GetToolchainConfig(cl)
+	config, err := toolchainconfig.GetToolchainConfig(cl)
 	if err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to get ToolchainConfig")
 	}
@@ -43,7 +43,7 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 	}
 
 	status := &toolchainv1alpha1.ToolchainStatus{}
-	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: commonconfig.ToolchainStatusName}, status); err != nil {
+	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to read ToolchainStatus resource")
 	}
 	counts, err := counter.GetCounts()
@@ -58,7 +58,7 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 	return true, targetCluster(clusterName), nil
 }
 
-func hasNotReachedMaxNumberOfUsersThreshold(config commonconfig.ToolchainConfig, counts counter.Counts) cluster.Condition {
+func hasNotReachedMaxNumberOfUsersThreshold(config toolchainconfig.ToolchainConfig, counts counter.Counts) cluster.Condition {
 	return func(cluster *cluster.CachedToolchainCluster) bool {
 		if config.AutomaticApproval().MaxNumberOfUsersOverall() != 0 {
 			if config.AutomaticApproval().MaxNumberOfUsersOverall() <= (counts.MasterUserRecords()) {
@@ -71,7 +71,7 @@ func hasNotReachedMaxNumberOfUsersThreshold(config commonconfig.ToolchainConfig,
 	}
 }
 
-func hasEnoughResources(config commonconfig.ToolchainConfig, status *toolchainv1alpha1.ToolchainStatus) cluster.Condition {
+func hasEnoughResources(config toolchainconfig.ToolchainConfig, status *toolchainv1alpha1.ToolchainStatus) cluster.Condition {
 	return func(cluster *cluster.CachedToolchainCluster) bool {
 		threshold, found := config.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster()[cluster.Name]
 		if !found {

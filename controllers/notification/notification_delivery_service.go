@@ -7,9 +7,8 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
-
-	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -29,7 +28,7 @@ func (l *DefaultTemplateLoader) GetNotificationTemplate(name string) (*notificat
 }
 
 type DeliveryService interface {
-	Send(notificationCtx Context, notification *toolchainv1alpha1.Notification) error
+	Send(notification *toolchainv1alpha1.Notification) error
 }
 
 type DeliveryServiceFactory struct {
@@ -51,7 +50,7 @@ func NewNotificationDeliveryServiceFactory(client client.Client, config Delivery
 
 func (f *DeliveryServiceFactory) CreateNotificationDeliveryService() (DeliveryService, error) {
 	switch f.Config.GetNotificationDeliveryService() {
-	case commonconfig.NotificationDeliveryServiceMailgun:
+	case toolchainconfig.NotificationDeliveryServiceMailgun:
 		return NewMailgunNotificationDeliveryService(f.Config, &DefaultTemplateLoader{}), nil
 	}
 	return nil, errors.New("invalid notification delivery service configuration")
@@ -61,7 +60,7 @@ type BaseNotificationDeliveryService struct {
 	TemplateLoader TemplateLoader
 }
 
-func (s *BaseNotificationDeliveryService) GenerateContent(notificationCtx interface{},
+func (s *BaseNotificationDeliveryService) GenerateContent(context map[string]string,
 	templateDefinition string) (string, error) {
 
 	tmpl, err := template.New("template").Parse(templateDefinition)
@@ -71,7 +70,7 @@ func (s *BaseNotificationDeliveryService) GenerateContent(notificationCtx interf
 
 	var buf bytes.Buffer
 
-	err = tmpl.Execute(&buf, notificationCtx)
+	err = tmpl.Execute(&buf, context)
 	if err != nil {
 		return "", err
 	}

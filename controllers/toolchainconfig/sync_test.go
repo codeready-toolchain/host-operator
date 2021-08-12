@@ -21,8 +21,8 @@ import (
 )
 
 func TestSyncMemberConfigs(t *testing.T) {
-	defaultMemberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("5s"))
-	specificMemberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("10s"))
+	defaultMemberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
+	specificMemberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("10s"))
 
 	t.Run("sync success", func(t *testing.T) {
 
@@ -140,7 +140,7 @@ func TestSyncMemberConfig(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
-			memberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("5s"))
+			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
 			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
@@ -155,10 +155,10 @@ func TestSyncMemberConfig(t *testing.T) {
 
 		t.Run("memberoperatorconfig updated", func(t *testing.T) {
 			// given
-			originalConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("10s"))
+			originalConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("10s"))
 			memberCl := test.NewFakeClient(t, originalConfig)
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
-			memberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("5s"))
+			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
 			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
@@ -180,7 +180,7 @@ func TestSyncMemberConfig(t *testing.T) {
 				return fmt.Errorf("client error")
 			}
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
-			memberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("5s"))
+			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
 			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
@@ -194,13 +194,13 @@ func TestSyncMemberConfig(t *testing.T) {
 
 		t.Run("client update error", func(t *testing.T) {
 			// given
-			originalConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("10s"))
+			originalConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("10s"))
 			memberCl := test.NewFakeClient(t, originalConfig)
 			memberCl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 				return fmt.Errorf("client update error")
 			}
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
-			memberConfig := testconfig.NewMemberOperatorConfig(testconfig.MemberStatus().RefreshPeriod("5s"))
+			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
 			err := toolchainconfig.SyncMemberConfig(memberConfig.Spec, memberCluster)
