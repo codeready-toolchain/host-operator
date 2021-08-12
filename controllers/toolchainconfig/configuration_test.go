@@ -21,7 +21,7 @@ func TestGetToolchainConfig(t *testing.T) {
 	defer restore()
 	t.Run("no config object - default config", func(t *testing.T) {
 		// given
-		commonconfig.Reset()
+		commonconfig.ResetCache()
 		cl := test.NewFakeClient(t)
 
 		// when
@@ -35,7 +35,7 @@ func TestGetToolchainConfig(t *testing.T) {
 
 	t.Run("config object retrieved", func(t *testing.T) {
 		// given
-		commonconfig.Reset()
+		commonconfig.ResetCache()
 		toolchainCfgObj := testconfig.NewToolchainConfigObj(t, testconfig.Environment("e2e-tests"), testconfig.Notifications().Secret().Ref("notifications-secret").MailgunAPIKey("mailgunAPIKey"))
 		secret := test.CreateSecret("notifications-secret", test.HostOperatorNs, map[string][]byte{
 			"mailgunAPIKey": []byte("abc123"),
@@ -77,7 +77,7 @@ func TestGetToolchainConfig(t *testing.T) {
 
 	t.Run("error retrieving config object", func(t *testing.T) {
 		// given
-		commonconfig.Reset()
+		commonconfig.ResetCache()
 		toolchainCfgObj := testconfig.NewToolchainConfigObj(t, testconfig.Environment("e2e-tests"))
 		cl := test.NewFakeClient(t, toolchainCfgObj)
 		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
@@ -127,7 +127,7 @@ func TestForceLoadToolchainConfig(t *testing.T) {
 	defer restore()
 	t.Run("no config object - default config", func(t *testing.T) {
 		// given
-		commonconfig.Reset()
+		commonconfig.ResetCache()
 		cl := test.NewFakeClient(t)
 
 		// when
@@ -141,7 +141,7 @@ func TestForceLoadToolchainConfig(t *testing.T) {
 
 	t.Run("config object retrieved", func(t *testing.T) {
 		// given
-		commonconfig.Reset()
+		commonconfig.ResetCache()
 		toolchainCfgObj := testconfig.NewToolchainConfigObj(t, testconfig.Environment("e2e-tests"), testconfig.Notifications().Secret().Ref("notifications-secret").MailgunAPIKey("mailgunAPIKey"))
 		secret := test.CreateSecret("notifications-secret", test.HostOperatorNs, map[string][]byte{
 			"mailgunAPIKey": []byte("abc123"),
@@ -184,7 +184,7 @@ func TestForceLoadToolchainConfig(t *testing.T) {
 
 	t.Run("error retrieving config object", func(t *testing.T) {
 		// given
-		commonconfig.Reset()
+		commonconfig.ResetCache()
 		toolchainCfgObj := testconfig.NewToolchainConfigObj(t, testconfig.Environment("e2e-tests"))
 		cl := test.NewFakeClient(t, toolchainCfgObj)
 		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {

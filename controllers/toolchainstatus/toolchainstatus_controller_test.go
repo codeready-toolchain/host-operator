@@ -902,7 +902,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			t.Run("Notification not created when admin.email not configured", func(t *testing.T) {
 
 				assertInvalidEmailReturnErr := func(email string) {
-					commonconfig.Reset() // clear the config cache so that this invalid config will be picked up
+					commonconfig.ResetCache() // clear the config cache so that this invalid config will be picked up
 					invalidConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail(email))
 
 					// given

@@ -28,6 +28,6 @@ require (
 	sigs.k8s.io/controller-runtime v0.8.3
 )
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20210812023344-1b53fe4fac8f
+replace github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20210812024016-7517e18ebf72
 
 go 1.16
