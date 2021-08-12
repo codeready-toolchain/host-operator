@@ -16,8 +16,35 @@ jobs:
     runs-on: ubuntu-18.04
     if: ${{ github.event.comment == '' || github.event.comment.body == '/retest' || github.event.comment.body == '/test all' || github.event.comment.body == '/test e2e' }}
     steps:
-    - name: Checkout code
-      uses: codeready-toolchain/toolchain-cicd/checkout-code@master
+    # Checkout from PR event - in that case the comment field is empty
+    - name: Checkout code from PR event
+      uses: actions/checkout@v2
+      if: ${{ github.event.comment == '' }}
+      with:
+        ref: ${{github.event.pull_request.head.ref}}
+        repository: ${{github.event.pull_request.head.repo.full_name}}
+        fetch-depth: 0
+
+    # If the workflow was triggered based on comment, then we need to get the information about the PR
+    # Is executed only for comment events - in that case the pull_request field is empty
+    - name: Send Github API Request to get PR data
+      id: request
+      uses: octokit/request-action@v2.0.0
+      if: ${{ github.event.pull_request == '' }}
+      with:
+        route: ${{ github.event.issue.pull_request.url }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # Checkout the code based on the data retrieved from the previous step
+    # Is executed only for comment events - in that case the pull_request field is empty
+    - name: Checkout code from PR
+      uses: actions/checkout@v2
+      if: ${{ github.event.pull_request == '' }}
+      with:
+        repository: ${{ fromJson(steps.request.outputs.data).head.repo.full_name }}
+        ref: ${{ fromJson(steps.request.outputs.data).head.ref }}
+        fetch-depth: 0
 
     - name: Install Go
       uses: actions/setup-go@v2
