@@ -24,7 +24,7 @@ import (
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager, config toolchainconfig.ToolchainConfig) error {
-	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), toolchainconfig.DeliveryServiceFactoryConfig{config})
+	factory := NewNotificationDeliveryServiceFactory(mgr.GetClient(), toolchainconfig.DeliveryServiceFactoryConfig{ToolchainConfig: config})
 	svc, err := factory.CreateNotificationDeliveryService()
 	if err != nil {
 		return err
