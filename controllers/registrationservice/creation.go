@@ -1,6 +1,7 @@
 package registrationservice
 
 import (
+	"fmt"
 	"os"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -15,9 +16,14 @@ import (
 const ResourceName = "registration-service"
 
 func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace string) error {
+	config, err := toolchainconfig.GetToolchainConfig(client)
+	if err != nil {
+		return err
+	}
 	envs := map[string]string{}
 	image := os.Getenv(toolchainconfig.RegistrationServiceImageEnvKey)
 	envs["IMAGE"] = image
+	envs["REPLICAS"] = fmt.Sprint(config.RegistrationService().Replicas())
 
 	regService := &toolchainv1alpha1.RegistrationService{
 		ObjectMeta: v1.ObjectMeta{
@@ -28,6 +34,6 @@ func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace 
 			EnvironmentVariables: envs,
 		}}
 	commonclient := commonclient.NewApplyClient(client, s)
-	_, err := commonclient.ApplyObject(regService)
+	_, err = commonclient.ApplyObject(regService)
 	return err
 }
