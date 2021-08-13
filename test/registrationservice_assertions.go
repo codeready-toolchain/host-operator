@@ -50,3 +50,10 @@ func (a *RegServiceAssertion) HasImage(image string) *RegServiceAssertion {
 	assert.Equal(a.t, image, a.RegistrationService.Spec.EnvironmentVariables["IMAGE"])
 	return a
 }
+
+func (a *RegServiceAssertion) HasReplicas(replicas string) *RegServiceAssertion {
+	err := a.loadRegServiceAssertion()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, replicas, a.RegistrationService.Spec.EnvironmentVariables["REPLICAS"])
+	return a
+}
