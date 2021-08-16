@@ -372,7 +372,6 @@ func TestRegistrationService(t *testing.T) {
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.Equal(t, "prod", toolchainCfg.RegistrationService().Environment())
-		assert.Equal(t, "toolchain-host-operator", toolchainCfg.RegistrationService().Namespace())
 	})
 	t.Run("non-default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.RegistrationService().
@@ -382,7 +381,6 @@ func TestRegistrationService(t *testing.T) {
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.Equal(t, "e2e-tests", toolchainCfg.RegistrationService().Environment())
-		assert.Equal(t, "another-namespace", toolchainCfg.RegistrationService().Namespace())
 	})
 }
 

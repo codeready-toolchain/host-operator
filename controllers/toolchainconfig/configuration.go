@@ -225,10 +225,6 @@ func (r RegistrationServiceConfig) Environment() string {
 	return commonconfig.GetString(r.c.Environment, "prod")
 }
 
-func (r RegistrationServiceConfig) Namespace() string {
-	return commonconfig.GetString(r.c.Namespace, "toolchain-host-operator")
-}
-
 func (r RegistrationServiceConfig) Replicas() int32 {
 	return commonconfig.GetInt32(r.c.Replicas, 3)
 }
