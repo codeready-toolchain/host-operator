@@ -1,6 +1,7 @@
 package toolchainconfig
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -72,7 +73,9 @@ func newToolchainConfig(config runtime.Object, secrets map[string]map[string]str
 }
 
 func (c *ToolchainConfig) Print() {
-	logger.Info("Toolchain configuration variables", "ToolchainConfigSpec", c.cfg)
+	indentedJSON, _ := json.MarshalIndent(c.cfg, "", "\t")
+	logger.Info("Toolchain configuration variables")
+	fmt.Printf(string(indentedJSON))
 }
 
 func (c *ToolchainConfig) Environment() string {
