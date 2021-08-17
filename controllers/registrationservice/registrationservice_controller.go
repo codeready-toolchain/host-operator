@@ -101,13 +101,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	// process template with variables taken from the RegistrationService CRD
-	cl := applycl.NewApplyClient(r.Client, r.Scheme)
-	toolchainObjects, err := template.NewProcessor(r.Scheme).Process(r.regServiceTemplate.DeepCopy(), getVars(regService))
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// create all objects that are within the template, and update only when the object has changed.
 	var updated []string
 	for _, toolchainObject := range toolchainObjects {
@@ -128,23 +121,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	reqLogger.Info("All objects in registration service template has been created and are up-to-date")
 	return reconcile.Result{}, updateStatusConditions(r.Client, regService, toBeDeployed())
-}
-
-type templateVars map[string]string
-
-func getVars(regService *toolchainv1alpha1.RegistrationService) map[string]string {
-	var vars templateVars = map[string]string{}
-	vars.addIfNotEmpty("NAMESPACE", regService.Namespace)
-	for key, value := range regService.Spec.EnvironmentVariables {
-		vars.addIfNotEmpty(key, value)
-	}
-	return vars
-}
-
-func (v *templateVars) addIfNotEmpty(key, value string) {
-	if value != "" {
-		(*v)[key] = value
-	}
 }
 
 // updateStatusConditions updates RegistrationService status conditions with the new conditions
