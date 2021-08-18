@@ -45,8 +45,3 @@ bundle: clean-bundle generate-rbac kustomize ## Generate bundle manifests and me
 publish-current-bundle: FIRST_RELEASE=true
 publish-current-bundle: CHANNEL=alpha
 publish-current-bundle: generate-cd-release-manifests push-bundle-and-index-image
-
-.PHONY: install-current-operator
-## Installs operator from apha channel
-install-current-operator: CHANNEL=alpha
-install-current-operator: install-operator
