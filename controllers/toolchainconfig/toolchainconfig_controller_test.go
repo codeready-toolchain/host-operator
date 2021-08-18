@@ -84,7 +84,7 @@ func TestReconcile(t *testing.T) {
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
 			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(toolchainconfig.ToBeComplete()).HasNoSyncErrors()
+			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(toolchainconfig.ToSyncComplete()).HasNoSyncErrors()
 
 			// check member1 config
 			member1Cfg, err := getMemberConfig(member1)
@@ -119,7 +119,7 @@ func TestReconcile(t *testing.T) {
 				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
 				assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 				assert.Equal(t, 100, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-				testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(toolchainconfig.ToBeComplete()).HasNoSyncErrors()
+				testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).Exists().HasConditions(toolchainconfig.ToSyncComplete()).HasNoSyncErrors()
 
 				// check member1 config is unchanged
 				member1Cfg, err := getMemberConfig(member1)

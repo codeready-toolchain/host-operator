@@ -13,7 +13,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
-	"github.com/codeready-toolchain/host-operator/controllers/registrationservice"
 	"github.com/codeready-toolchain/host-operator/controllers/templateupdaterequest"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
@@ -172,12 +171,6 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NSTemplateTier")
 	}
-	if err := (&registrationservice.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "RegistrationService")
-	}
 	if err := (&templateupdaterequest.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -234,14 +227,6 @@ func main() {
 			os.Exit(1)
 		}
 		setupLog.Info("Created/updated the ToolchainStatus resource")
-
-		// create or update Registration service during the operator deployment
-		setupLog.Info("Creating/updating the RegistrationService resource")
-		if err := registrationservice.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace); err != nil {
-			setupLog.Error(err, "cannot create/update RegistrationService resource")
-			os.Exit(1)
-		}
-		setupLog.Info("Created/updated the RegistrationService resources")
 
 		// create or update all NSTemplateTiers on the cluster at startup
 		setupLog.Info("Creating/updating the NSTemplateTier resources")
