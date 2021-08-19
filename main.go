@@ -180,6 +180,7 @@ func main() {
 	if err := (&toolchainconfig.Reconciler{
 		Client:         mgr.GetClient(),
 		GetMembersFunc: cluster.GetMemberClusters,
+		Scheme:         mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainConfig")
 	}

@@ -40,7 +40,6 @@ var DefaultReconcile = reconcile.Result{RequeueAfter: 10 * time.Second}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-
 	deploymentTemplate, err := registrationservice.GetDeploymentTemplate()
 	if err != nil {
 		return errs.Wrap(err, "unable to decode the registration service deployment")
@@ -66,6 +65,11 @@ type Reconciler struct {
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs/finalizers,verbs=update
+
+//+kubebuilder:rbac:groups="",resources=configmaps;services;serviceaccounts,verbs=get;list;watch;update;patch;create;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io;authorization.openshift.io,resources=rolebindings;roles,verbs=*
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch;create;delete
+//+kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;update;patch;create;delete
 
 // Reconcile reads that state of the cluster for a ToolchainConfig object and makes changes based on the state read
 // and what is in the ToolchainConfig.Spec
