@@ -10,15 +10,15 @@ import (
 	"time"
 
 	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/registrationservice"
-	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -91,7 +91,6 @@ type Reconciler struct {
 	Client         client.Client
 	Scheme         *runtime.Scheme
 	GetMembersFunc cluster.GetMemberClustersFunc
-	Config         *crtCfg.Config
 	HTTPClientImpl HTTPClient
 }
 
@@ -103,11 +102,16 @@ type Reconciler struct {
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := log.FromContext(ctx)
 	reqLogger.Info("Reconciling ToolchainStatus")
-	requeueTime := r.Config.GetToolchainStatusRefreshTime()
+
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+	requeueTime := config.ToolchainStatus().ToolchainStatusRefreshTime()
 
 	// fetch the ToolchainStatus
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, toolchainStatus)
+	err = r.Client.Get(context.TODO(), request.NamespacedName, toolchainStatus)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -194,7 +198,7 @@ func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *t
 					// set the failed to create notification status condition
 					return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
 						r.setStatusUnreadyNotificationCreationFailed, err,
-						"Failed to create user deactivation notification")
+						"Failed to create toolchain status unready notification")
 				}
 
 				if err := r.setStatusToolchainStatusUnreadyNotificationCreated(reqLogger, toolchainStatus); err != nil {
@@ -246,7 +250,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 		BuildTimestamp: version.BuildTime,
 	}
 	// look up name of the host operator deployment
-	hostOperatorName, err := configuration.GetOperatorName()
+	hostOperatorName, err := commonconfig.GetOperatorName()
 	if err != nil {
 		reqLogger.Error(err, status.ErrMsgCannotGetDeployment)
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason,
@@ -363,9 +367,15 @@ func getAPIEndpoint(clusterName string, memberClusters []*cluster.CachedToolchai
 
 func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, status toolchainStatusNotificationType) error {
-	if !isValidEmailAddress(r.Config.GetAdminEmail()) {
+
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+
+	if !isValidEmailAddress(config.Notifications().AdminEmail()) {
 		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
-			r.Config.GetAdminEmail()))
+			config.Notifications().AdminEmail()))
 	}
 
 	tsValue := time.Now().Format("20060102150405")
@@ -392,7 +402,7 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 		WithName(fmt.Sprintf("toolchainstatus-%s-%s", string(status), tsValue)).
 		WithControllerReference(toolchainStatus, r.Scheme).
 		WithSubjectAndContent(subjectString, contentString).
-		Create(r.Config.GetAdminEmail())
+		Create(config.Notifications().AdminEmail())
 
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to create toolchain status %s notification resource", status))

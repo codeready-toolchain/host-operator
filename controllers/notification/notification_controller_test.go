@@ -13,10 +13,11 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/gofrs/uuid"
 	"github.com/mailgun/mailgun-go/v4"
 	events2 "github.com/mailgun/mailgun-go/v4/events"
@@ -43,14 +44,13 @@ func (s *MockDeliveryService) Send(notification *toolchainv1alpha1.Notification)
 }
 
 func TestNotificationSuccess(t *testing.T) {
-	// given
-	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_NOTIFICATION_DELETION", "10s")
-	defer restore()
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().DurationBeforeNotificationDeletion("10s"))
 
+	// given
 	t.Run("will not do anything and return requeue with shorter duration that 10s", func(t *testing.T) {
 		// given
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
-		controller, cl := newController(t, ds)
+		controller, cl := newController(t, ds, toolchainConfig)
 
 		notification, err := NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane")
 		require.NoError(t, err)
@@ -72,7 +72,7 @@ func TestNotificationSuccess(t *testing.T) {
 	t.Run("sent notification deleted when deletion timeout passed", func(t *testing.T) {
 		// given
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
-		controller, cl := newController(t, ds)
+		controller, cl := newController(t, ds, toolchainConfig)
 
 		notification, err := NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane")
 		require.NoError(t, err)
@@ -91,13 +91,12 @@ func TestNotificationSuccess(t *testing.T) {
 }
 
 func TestNotificationSentFailure(t *testing.T) {
-	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_NOTIFICATION_DELETION", "10s")
-	defer restore()
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().DurationBeforeNotificationDeletion("10s"))
 
 	t.Run("will return an error since it cannot delete the Notification after successfully sending", func(t *testing.T) {
 		// given
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
-		controller, cl := newController(t, ds)
+		controller, cl := newController(t, ds, toolchainConfig)
 		cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("error")
 		}
@@ -237,8 +236,7 @@ func TestNotificationDelivery(t *testing.T) {
 	t.Run("test notification with environment e2e", func(t *testing.T) {
 
 		// given
-		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_ENVIRONMENT", "e2e-tests")
-		defer restore()
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment(testconfig.E2E))
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: newObjectMeta("abc123", "jane@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
@@ -249,7 +247,7 @@ func TestNotificationDelivery(t *testing.T) {
 			},
 		}
 		// pass in nil for deliveryService since send won't be used (sending skipped)
-		controller, client := newController(t, nil, userSignup)
+		controller, client := newController(t, nil, userSignup, toolchainConfig)
 
 		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
 			Create("abc123")
@@ -373,17 +371,17 @@ func deletionCond(msg string) toolchainv1alpha1.Condition {
 
 func newController(t *testing.T, deliveryService DeliveryService,
 	initObjs ...runtime.Object) (*Reconciler, *test.FakeClient) {
+	restore := test.SetEnvVarAndRestore(t, commonconfig.WatchNamespaceEnvVar, test.HostOperatorNs)
+	t.Cleanup(restore)
+
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, initObjs...)
-	config, err := configuration.LoadConfig(cl)
-	require.NoError(t, err)
 
 	controller := &Reconciler{
 		Client:          cl,
 		Scheme:          s,
-		Config:          config,
 		deliveryService: deliveryService,
 	}
 

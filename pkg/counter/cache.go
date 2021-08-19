@@ -227,7 +227,7 @@ func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainSt
 	}
 
 	// initialize the cached counters from the UserSignup and MasterUserRecord resources.
-	config, err := toolchainconfig.GetConfig(cl, toolchainStatus.Namespace)
+	config, err := toolchainconfig.GetToolchainConfig(cl)
 	if err != nil {
 		return errors.Wrap(err, "unable to initialize counter cache")
 	}

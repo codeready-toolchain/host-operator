@@ -7,8 +7,8 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,7 +37,6 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 type Reconciler struct {
 	Client client.Client
 	Scheme *runtime.Scheme
-	Config *configuration.Config
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=changetierrequests,verbs=get;list;watch;create;update;patch;delete
@@ -53,9 +52,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	reqLogger := log.FromContext(ctx)
 	reqLogger.Info("Reconciling ChangeTierRequest")
 
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+
 	// Fetch the ChangeTierRequest instance
 	changeTierRequest := &toolchainv1alpha1.ChangeTierRequest{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, changeTierRequest)
+	err = r.Client.Get(context.TODO(), request.NamespacedName, changeTierRequest)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -70,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// if is complete, then check when status was changed and delete it if the requested duration has passed
 	completeCond, found := condition.FindConditionByType(changeTierRequest.Status.Conditions, toolchainv1alpha1.ChangeTierRequestComplete)
 	if found && completeCond.Status == corev1.ConditionTrue {
-		deleted, requeueAfter, err := r.checkTransitionTimeAndDelete(reqLogger, changeTierRequest, completeCond)
+		deleted, requeueAfter, err := r.checkTransitionTimeAndDelete(reqLogger, config.Tiers().DurationBeforeChangeTierRequestDeletion(), changeTierRequest, completeCond)
 		if deleted {
 			return reconcile.Result{}, err
 		}
@@ -97,7 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	return reconcile.Result{
 		Requeue:      true,
-		RequeueAfter: r.Config.GetDurationBeforeChangeTierRequestDeletion(),
+		RequeueAfter: config.Tiers().DurationBeforeChangeTierRequestDeletion(),
 	}, nil
 }
 
@@ -105,21 +109,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // the duration before the changetierrequest should be deleted. If so, the changetierrequest is deleted.
 // Returns bool indicating if the changetierrequest was deleted, the time before the changetierrequest
 // can be deleted and error
-func (r *Reconciler) checkTransitionTimeAndDelete(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
+func (r *Reconciler) checkTransitionTimeAndDelete(logger logr.Logger, durationBeforeChangeTierRequestDeletion time.Duration, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, completeCond toolchainv1alpha1.Condition) (bool, time.Duration, error) {
 	logger.Info("the ChangeTierRequest is completed so we can deal with its deletion")
 	timeSinceCompletion := time.Since(completeCond.LastTransitionTime.Time)
 
-	if timeSinceCompletion >= r.Config.GetDurationBeforeChangeTierRequestDeletion() {
+	if timeSinceCompletion >= durationBeforeChangeTierRequestDeletion {
 		logger.Info("the ChangeTierRequest has been completed for a longer time than the 'durationBeforeChangeRequestDeletion', so it's ready to be deleted",
-			"durationBeforeChangeRequestDeletion", r.Config.GetDurationBeforeChangeTierRequestDeletion().String())
+			"durationBeforeChangeRequestDeletion", durationBeforeChangeTierRequestDeletion.String())
 		if err := r.Client.Delete(context.TODO(), changeTierRequest, &client.DeleteOptions{}); err != nil {
 			return false, 0, errs.Wrapf(err, "unable to delete ChangeTierRequest object '%s'", changeTierRequest.Name)
 		}
 		return true, 0, nil
 	}
-	diff := r.Config.GetDurationBeforeChangeTierRequestDeletion() - timeSinceCompletion
+	diff := durationBeforeChangeTierRequestDeletion - timeSinceCompletion
 	logger.Info("the ChangeTierRequest has been completed for shorter time than 'durationBeforeChangeRequestDeletion', so it's going to be reconciled again",
-		"durationBeforeChangeRequestDeletion", r.Config.GetDurationBeforeChangeTierRequestDeletion().String(), "reconcileAfter", diff.String())
+		"durationBeforeChangeRequestDeletion", durationBeforeChangeTierRequestDeletion.String(), "reconcileAfter", diff.String())
 	return false, diff, nil
 }
 

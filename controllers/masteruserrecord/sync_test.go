@@ -7,7 +7,6 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	. "github.com/codeready-toolchain/host-operator/test"
 	. "github.com/codeready-toolchain/host-operator/test/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -448,8 +447,6 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		}
 		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.TierName("admin"))
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
-		config, err := configuration.LoadConfig(hostClient)
-		require.NoError(t, err)
 
 		sync := Synchronizer{
 			record:            mur,
@@ -459,11 +456,10 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			recordSpecUserAcc: mur.Spec.UserAccounts[0],
 			logger:            l,
 			scheme:            scheme,
-			config:            config,
 		}
 
 		// when
-		err = sync.synchronizeSpec()
+		err := sync.synchronizeSpec()
 
 		// then
 		require.Error(t, err)
@@ -481,8 +477,6 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
-		config, err := configuration.LoadConfig(hostClient)
-		require.NoError(t, err)
 		sync := Synchronizer{
 			record:            provisionedMur,
 			hostClient:        hostClient,
@@ -491,7 +485,6 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 			recordSpecUserAcc: provisionedMur.Spec.UserAccounts[0],
 			logger:            l,
 			scheme:            scheme,
-			config:            config,
 		}
 
 		t.Run("with empty set of UserAccounts statuses", func(t *testing.T) {
@@ -568,8 +561,6 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 				} {
 					memberClient := test.NewFakeClient(t, userAccount)
 					hostClient := test.NewFakeClient(t, mur, toolchainStatus)
-					config, err := configuration.LoadConfig(hostClient)
-					require.NoError(t, err)
 					sync := Synchronizer{
 						record:            mur,
 						hostClient:        hostClient,
@@ -578,11 +569,10 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 						recordSpecUserAcc: mur.Spec.UserAccounts[0],
 						logger:            l,
 						scheme:            scheme,
-						config:            config,
 					}
 
 					// when
-					err = sync.synchronizeStatus()
+					err := sync.synchronizeStatus()
 
 					// then
 					assert.Error(t, err)
@@ -612,8 +602,6 @@ func TestRoutes(t *testing.T) {
 		mur := masterUserRec.DeepCopy()
 
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
-		config, err := configuration.LoadConfig(hostClient)
-		require.NoError(t, err)
 		sync := Synchronizer{
 			record:            mur.DeepCopy(),
 			hostClient:        hostClient,
@@ -621,11 +609,10 @@ func TestRoutes(t *testing.T) {
 			memberUserAcc:     userAccount,
 			recordSpecUserAcc: mur.Spec.UserAccounts[0],
 			logger:            l,
-			config:            config,
 		}
 
 		// when
-		err = sync.synchronizeStatus()
+		err := sync.synchronizeStatus()
 
 		// then
 		require.NoError(t, err)
@@ -650,8 +637,6 @@ func TestRoutes(t *testing.T) {
 		mur := masterUserRec.DeepCopy()
 
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
-		config, err := configuration.LoadConfig(hostClient)
-		require.NoError(t, err)
 		sync := Synchronizer{
 			record:            mur,
 			hostClient:        hostClient,
@@ -659,11 +644,10 @@ func TestRoutes(t *testing.T) {
 			memberUserAcc:     userAccount,
 			recordSpecUserAcc: mur.Spec.UserAccounts[0],
 			logger:            l,
-			config:            config,
 		}
 
 		// when
-		err = sync.synchronizeStatus()
+		err := sync.synchronizeStatus()
 
 		// then
 		require.NoError(t, err)
@@ -688,8 +672,6 @@ func TestRoutes(t *testing.T) {
 		mur := masterUserRec.DeepCopy()
 
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
-		config, err := configuration.LoadConfig(hostClient)
-		require.NoError(t, err)
 		sync := Synchronizer{
 			record:            mur,
 			hostClient:        hostClient,
@@ -697,11 +679,10 @@ func TestRoutes(t *testing.T) {
 			memberUserAcc:     userAccount,
 			recordSpecUserAcc: mur.Spec.UserAccounts[0],
 			logger:            l,
-			config:            config,
 		}
 
 		// when
-		err = sync.synchronizeStatus()
+		err := sync.synchronizeStatus()
 
 		// then
 		require.Error(t, err)
@@ -725,8 +706,6 @@ func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccoun
 	toolchainStatus := NewToolchainStatus(
 		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "http://che-toolchain-che.member-cluster/", ToBeReady())))
 	memberClient := test.NewFakeClient(t, userAccount, toolchainStatus)
-	config, err := configuration.LoadConfig(hostClient)
-	require.NoError(t, err)
 
 	return Synchronizer{
 		record:            copiedMur,
@@ -736,7 +715,6 @@ func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccoun
 		recordSpecUserAcc: copiedMur.Spec.UserAccounts[0],
 		logger:            zap.New(zap.UseDevMode(true)),
 		scheme:            apiScheme(t),
-		config:            config,
 	}, memberClient
 }
 

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	cfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	. "github.com/codeready-toolchain/host-operator/test"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/require"
@@ -20,7 +20,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	name := cfg.ToolchainStatusName
+	name := toolchainconfig.ToolchainStatusName
 
 	t.Run("creation", func(t *testing.T) {
 		// given

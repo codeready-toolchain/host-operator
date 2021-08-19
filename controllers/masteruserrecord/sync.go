@@ -9,9 +9,9 @@ import (
 	"time"
 
 	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -40,7 +40,6 @@ type Synchronizer struct {
 	record            *toolchainv1alpha1.MasterUserRecord
 	scheme            *runtime.Scheme
 	logger            logr.Logger
-	config            *configuration.Config
 }
 
 // synchronizeSpec synhronizes the useraccount in the MasterUserRecord with the corresponding UserAccount on the member cluster.
@@ -126,7 +125,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
 	if status.Cluster.Name != "" {
 		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
-		if err := s.hostClient.Get(context.TODO(), types.NamespacedName{Namespace: s.record.Namespace, Name: configuration.ToolchainStatusName}, toolchainStatus); err != nil {
+		if err := s.hostClient.Get(context.TODO(), types.NamespacedName{Namespace: s.record.Namespace, Name: toolchainconfig.ToolchainStatusName}, toolchainStatus); err != nil {
 			return status, errors.Wrapf(err, "unable to read ToolchainStatus resource")
 		}
 

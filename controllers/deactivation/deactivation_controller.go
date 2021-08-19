@@ -6,21 +6,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	errors2 "github.com/pkg/errors"
+	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -45,7 +44,6 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 type Reconciler struct {
 	Client client.Client
 	Scheme *runtime.Scheme
-	Config *configuration.Config
 }
 
 // Reconcile reads the state of the cluster for a MUR object and determines whether to trigger deactivation or requeue based on its current status
@@ -56,9 +54,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciling Deactivation")
 
-	config, err := toolchainconfig.GetConfig(r.Client, request.Namespace)
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
-		return reconcile.Result{}, errors2.Wrapf(err, "unable to get ToolchainConfig")
+		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}
 
 	// Fetch the MasterUserRecord instance
@@ -104,7 +102,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Check the domain exclusion list, if the user's email matches then they cannot be automatically deactivated
 	if emailLbl, exists := usersignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]; exists {
-		for _, domain := range r.Config.GetDeactivationDomainsExcludedList() {
+		for _, domain := range config.Deactivation().DeactivationDomainsExcluded() {
 			if strings.HasSuffix(emailLbl, domain) {
 				logger.Info("user cannot be automatically deactivated because they belong to the exclusion list", "domain", domain)
 				return reconcile.Result{}, nil
@@ -143,7 +141,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	timeSinceProvisioned := time.Since(provisionedTimestamp.Time)
 
-	deactivatingNotificationDays := config.Deactivation().DeactivatingNotificationInDays()
+	deactivatingNotificationDays := config.Deactivation().DeactivatingNotificationDays()
 	deactivatingNotificationTimeout := time.Duration((deactivationTimeoutDays-deactivatingNotificationDays)*24) * time.Hour
 
 	if timeSinceProvisioned < deactivatingNotificationTimeout {

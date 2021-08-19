@@ -5,18 +5,18 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/gofrs/uuid"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
@@ -44,7 +44,7 @@ const (
 )
 
 func TestReconcile(t *testing.T) {
-	config := newToolchainConfigWithReset(t, testconfig.AutomaticApproval().MaxUsersNumber(123,
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
 		testconfig.PerMemberCluster("member1", 321)),
 		testconfig.Deactivation().DeactivatingNotificationDays(3))
 
@@ -135,6 +135,10 @@ func TestReconcile(t *testing.T) {
 		// a user that belongs to the deactivation domain excluded list
 		t.Run("user deactivation excluded", func(t *testing.T) {
 			// given
+			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
+				testconfig.PerMemberCluster("member1", 321)),
+				testconfig.Deactivation().DeactivatingNotificationDays(3),
+			)
 			restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DEACTIVATION_DOMAINS_EXCLUDED", "@redhat.com")
 			defer restore()
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
@@ -355,17 +359,16 @@ func TestReconcile(t *testing.T) {
 }
 
 func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (reconcile.Reconciler, reconcile.Request, *test.FakeClient) {
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	metrics.Reset()
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, initObjs...)
-	cfg, err := configuration.LoadConfig(cl)
 	require.NoError(t, err)
 	r := &Reconciler{
 		Client: cl,
 		Scheme: s,
-		Config: cfg,
 	}
 	return r, reconcile.Request{
 		NamespacedName: types.NamespacedName{
@@ -416,9 +419,4 @@ func assertThatUserSignupDeactivated(t *testing.T, cl *test.FakeClient, name str
 	err := cl.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: operatorNamespace}, userSignup)
 	require.NoError(t, err)
 	require.Equal(t, expected, states.Deactivated(userSignup))
-}
-
-func newToolchainConfigWithReset(t *testing.T, options ...testconfig.ToolchainConfigOption) *toolchainv1alpha1.ToolchainConfig {
-	t.Cleanup(toolchainconfig.Reset)
-	return testconfig.NewToolchainConfig(options...)
 }
