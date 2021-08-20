@@ -14,8 +14,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 
-	errs "github.com/pkg/errors"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup/unapproved"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
@@ -42,8 +40,6 @@ import (
 )
 
 type StatusUpdaterFunc func(userAcc *toolchainv1alpha1.UserSignup, message string) error
-
-const defaultTierName = "base"
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
@@ -113,6 +109,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	banned, err := r.isUserBanned(logger, userSignup)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -155,7 +156,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
-	if exists, err := r.checkIfMurAlreadyExists(logger, userSignup, banned); exists || err != nil {
+	if exists, err := r.checkIfMurAlreadyExists(logger, config, userSignup, banned); exists || err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -193,7 +194,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusDeactivated)
 	}
 
-	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, userSignup)
+	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, config, userSignup)
 }
 
 // Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
@@ -247,7 +248,7 @@ func (r *Reconciler) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1
 // If there is already one then it returns 'true' as the first returned value, but before doing that it checks if the MUR should be deleted or not
 // or if the MUR requires some migration changes or additional fixes.
 // If no MUR for the given UserSignup is found, then it returns 'false' as the first returned value.
-func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup,
 	banned bool) (bool, error) {
 	// List all MasterUserRecord resources that have an owner label equal to the UserSignup.Name
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
@@ -293,7 +294,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *
 		}
 
 		// look-up the `basic` NSTemplateTier to get the NS templates
-		nstemplateTier, err := getNsTemplateTier(r.Client, defaultTierName, userSignup.Namespace)
+		nstemplateTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
 		if err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 		}
@@ -319,7 +320,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *
 	return false, nil
 }
 
-func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
 	// Check if the user requires phone verification, and do not proceed further if they do
 	if states.VerificationRequired(userSignup) {
 		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
@@ -370,14 +371,14 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *t
 		return err
 	}
 
-	// look-up the `base` NSTemplateTier to get the NS templates
-	nstemplateTier, err := getNsTemplateTier(r.Client, defaultTierName, userSignup.Namespace)
+	// look-up the default NSTemplateTier to get the NS templates
+	nstemplateTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 	}
 
 	// Provision the MasterUserRecord
-	return r.provisionMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, reqLogger)
+	return r.provisionMasterUserRecord(config, userSignup, targetCluster.getClusterName(), nstemplateTier, reqLogger)
 }
 
 func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, state string) error {
@@ -423,13 +424,8 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 	return nstemplateTier, err
 }
 
-func (r *Reconciler) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
+func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainConfig, instance *toolchainv1alpha1.UserSignup) (string, error) {
 	replaced := usersignup.TransformUsername(instance.Spec.Username)
-
-	config, err := toolchainconfig.GetToolchainConfig(r.Client)
-	if err != nil {
-		return "", errs.Wrapf(err, "unable to get ToolchainConfig")
-	}
 
 	// Check for any forbidden prefixes
 	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
@@ -478,13 +474,13 @@ func (r *Reconciler) generateCompliantUsername(instance *toolchainv1alpha1.UserS
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
-func (r *Reconciler) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string,
+func (r *Reconciler) provisionMasterUserRecord(config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster string,
 	nstemplateTier *toolchainv1alpha1.NSTemplateTier, logger logr.Logger) error {
 
 	// TODO Update the MasterUserRecord with NSTemplateTier values
 	// SEE https://jira.coreos.com/browse/CRT-74
 
-	compliantUsername, err := r.generateCompliantUsername(userSignup)
+	compliantUsername, err := r.generateCompliantUsername(config, userSignup)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error generating compliant username for %s", userSignup.Spec.Username)
