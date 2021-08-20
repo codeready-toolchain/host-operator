@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -91,27 +89,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// TODO temporary fix, remove this block of code after all notifications have been migrated
 	if notification.Spec.Recipient == "" {
 		// IF the recipient is not set, then make a "best effort" to lookup the corresponding UserSignup if there is one
-		userID, found := notification.Spec.Context["UserID"]
+		email, found := notification.Spec.Context["UserEmail"]
 		if found {
-			// Try to lookup the UserSignup using the UserID value
-			userSignup := &toolchainv1alpha1.UserSignup{}
-			err := r.Client.Get(context.TODO(), types.NamespacedName{
-				Namespace: request.Namespace,
-				Name:      userID,
-			}, userSignup)
-			if err != nil {
-				if !errors.IsNotFound(err) {
-					// Error reading the object - requeue the request.
-					return reconcile.Result{}, err
-				}
-				// Request object not found, just proceed with reconciliation as normal.  This probably means the
-				// notification will fail but there's not much we can do about it
-			} else {
-				// The UserSignup was found, set the email address
-				notification.Spec.Recipient = userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]
-				// We won't save the notification resource here, as the Recipient value is ONLY used by the delivery service,
-				// and the local notification variable is what gets passed in there
-			}
+			notification.Spec.Recipient = email
 		}
 	}
 
