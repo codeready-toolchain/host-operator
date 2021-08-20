@@ -86,15 +86,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}, nil
 	}
 
-	// TODO temporary fix, remove this block of code after all notifications have been migrated
-	if notification.Spec.Recipient == "" {
-		// IF the recipient is not set, then make a "best effort" to lookup the corresponding UserSignup if there is one
-		email, found := notification.Spec.Context["UserEmail"]
-		if found {
-			notification.Spec.Recipient = email
-		}
-	}
-
 	// if the environment is set to e2e do not attempt sending via mailgun
 	if config.Environment() != "e2e-tests" {
 		// Send the notification via the configured delivery service
