@@ -42,8 +42,8 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	templateLoader := NewMockTemplateLoader(
 		&notificationtemplates.NotificationTemplate{
 			Subject: "foo",
-			Content: "bar",
-			Name:    "test",
+			Content: "a message sent to {{.ReplyTo}}",
+			Name:    "replyto",
 		},
 		&notificationtemplates.NotificationTemplate{
 			Subject: "Hi there, {{invalid_expression}}",
@@ -134,6 +134,26 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 		// then
 		require.Error(t, err)
 		require.Equal(t, "template: template:1: function \"invalid_expression\" not defined", err.Error())
+	})
+
+	t.Run("test mailgun notification delivery service send with reply-to address", func(t *testing.T) {
+		// when
+		config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345",
+			"noreply@foo.com", "info@foo.com", "mailgun")
+
+		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
+		err := mgds.Send(&toolchainv1alpha1.Notification{
+			Spec: toolchainv1alpha1.NotificationSpec{
+				Recipient: "foo@acme.com",
+				Subject:   "test",
+				Content:   "abc",
+				Context:   notCtx,
+			},
+		})
+
+		// then
+		require.NoError(t, err)
+
 	})
 
 	t.Run("test mailgun notification delivery service send with reply-to address", func(t *testing.T) {
