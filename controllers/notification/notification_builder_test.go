@@ -25,6 +25,24 @@ func TestNotificationBuilder(t *testing.T) {
 		require.Equal(t, "foo@acme.com", notification.Spec.Recipient)
 	})
 
+	t.Run("test create fails with empty email address", func(t *testing.T) {
+		// when
+		_, err := NewNotificationBuilder(client, test.HostOperatorNs).Create("")
+
+		// then
+		require.Error(t, err)
+		require.Equal(t, "The specified recipient [] is not a valid email address", err.Error())
+	})
+
+	t.Run("test create fails with invalid email address", func(t *testing.T) {
+		// when
+		_, err := NewNotificationBuilder(client, test.HostOperatorNs).Create("foo")
+
+		// then
+		require.Error(t, err)
+		require.Equal(t, "The specified recipient [foo] is not a valid email address", err.Error())
+	})
+
 	t.Run("test notification builder with user context", func(t *testing.T) {
 		// when
 		userSignup := test2.NewUserSignup()
