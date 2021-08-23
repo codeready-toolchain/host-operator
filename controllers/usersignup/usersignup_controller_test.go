@@ -594,7 +594,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	}
 
 	for _, v := range variations {
-		t.Run(fmt.Sprintf("TestUserSignupFailedMissingNSTemplateTier/%s", v.description), func(t *testing.T) {
+		t.Run(v.description, func(t *testing.T) {
 			// given
 			userSignup := NewUserSignup()
 			ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
