@@ -559,7 +559,7 @@ func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, userSignup
 		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivating).
 		WithControllerReference(userSignup, r.Scheme).
 		WithUserContext(userSignup).
-		Create(userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+		Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 	if err != nil {
 		logger.Error(err, "Failed to create deactivating notification resource")
@@ -576,7 +576,7 @@ func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, userSignup 
 		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivated).
 		WithControllerReference(userSignup, r.Scheme).
 		WithUserContext(userSignup).
-		Create(userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+		Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 	if err != nil {
 		logger.Error(err, "Failed to create deactivated notification resource")
