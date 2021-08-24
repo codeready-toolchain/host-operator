@@ -229,6 +229,10 @@ func (r RegistrationServiceConfig) Replicas() int32 {
 	return commonconfig.GetInt32(r.c.Replicas, 3)
 }
 
+func (r RegistrationServiceConfig) RegistrationServiceURL() string {
+	return commonconfig.GetString(r.c.RegistrationServiceURL, "https://registration.crt-placeholder.com")
+}
+
 type TiersConfig struct {
 	tiers toolchainv1alpha1.TiersConfig
 }
