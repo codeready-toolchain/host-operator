@@ -48,9 +48,9 @@ func AssertNoNotificationsExist(t test.T, cl client.Client) {
 	require.Len(t, notifications.Items, 0)
 }
 
-type NotificationAssertion func(test.T, toolchainv1alpha1.Notification)
+type Assert func(test.T, toolchainv1alpha1.Notification)
 
-func OnlyOneNotificationExists(t test.T, cl client.Client, userName, notificationType string, assertions ...NotificationAssertion) {
+func OnlyOneNotificationExists(t test.T, cl client.Client, userName, notificationType string, assertions ...Assert) {
 	notifications := &toolchainv1alpha1.NotificationList{}
 	labels := map[string]string{
 		toolchainv1alpha1.NotificationUserNameLabelKey: userName,
@@ -66,7 +66,7 @@ func OnlyOneNotificationExists(t test.T, cl client.Client, userName, notificatio
 	}
 }
 
-func HasContext(key, expected string) NotificationAssertion {
+func HasContext(key, expected string) Assert {
 	return func(t test.T, not toolchainv1alpha1.Notification) {
 		assert.Equal(t, expected, not.Spec.Context[key])
 	}
