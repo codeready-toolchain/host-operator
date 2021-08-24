@@ -372,15 +372,21 @@ func TestRegistrationService(t *testing.T) {
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.Equal(t, "prod", toolchainCfg.RegistrationService().Environment())
+		assert.Equal(t, "https://registration.crt-placeholder.com", toolchainCfg.RegistrationService().RegistrationServiceURL())
+		assert.Equal(t, int32(3), toolchainCfg.RegistrationService().Replicas())
 	})
 	t.Run("non-default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.RegistrationService().
 			Environment("e2e-tests").
+			RegistrationServiceURL("https://registration.crt.com").
+			Replicas(2).
 			Namespace("another-namespace"))
 
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.Equal(t, "e2e-tests", toolchainCfg.RegistrationService().Environment())
+		assert.Equal(t, "https://registration.crt.com", toolchainCfg.RegistrationService().RegistrationServiceURL())
+		assert.Equal(t, int32(2), toolchainCfg.RegistrationService().Replicas())
 	})
 }
 
