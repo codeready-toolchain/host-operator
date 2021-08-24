@@ -18,6 +18,8 @@ const (
 
 	// NotificationDeliveryServiceMailgun is the notification delivery service to use during production
 	NotificationDeliveryServiceMailgun = "mailgun"
+
+	NotificationContextRegistrationURLKey = "RegistrationURL"
 )
 
 var logger = logf.Log.WithName("toolchainconfig")

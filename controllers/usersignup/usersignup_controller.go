@@ -559,7 +559,7 @@ func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRec
 
 func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
 	keysAndVals := map[string]string{
-		"RegistrationURL": config.RegistrationService().RegistrationServiceURL(),
+		toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
 	}
 
 	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
@@ -581,7 +581,7 @@ func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, config too
 
 func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
 	keysAndVals := map[string]string{
-		"RegistrationURL": config.RegistrationService().RegistrationServiceURL(),
+		toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
 	}
 
 	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).

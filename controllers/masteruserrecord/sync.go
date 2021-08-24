@@ -202,7 +202,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 			}
 
 			keysAndVals := map[string]string{
-				"RegistrationURL": config.RegistrationService().RegistrationServiceURL(),
+				toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
 			}
 
 			// Lookup the UserSignup
