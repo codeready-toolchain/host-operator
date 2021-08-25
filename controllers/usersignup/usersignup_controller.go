@@ -103,11 +103,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	config, err := toolchainconfig.GetToolchainConfig(r.Client)
-	if err != nil {
-		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
-	}
-
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
