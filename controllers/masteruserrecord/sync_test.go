@@ -335,7 +335,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, preSyncTime.Time.Before(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be before the ProvisionedTime")
 		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
-		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned)
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
 	})
 
 	t.Run("ProvisionedTime should not be updated when synced more than once", func(t *testing.T) {
@@ -352,7 +352,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		require.True(t, preSyncTime.Time.After(sync.record.Status.ProvisionedTime.Time), "the timestamp just before syncing should be after the ProvisionedTime because this is simulating the case where the record was already provisioned before")
 		verifySyncMurStatusWithUserAccountStatus(t, memberClient, hostClient, userAccount, mur, toBeProvisioned(), toBeProvisionedNotificationCreated())
 		assert.Equal(t, provisionTime.Time, sync.record.Status.ProvisionedTime.Time) // timestamp should be the same
-		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned)
+		OnlyOneNotificationExists(t, hostClient, mur.Name, toolchainv1alpha1.NotificationTypeProvisioned, HasContext("RegistrationURL", "https://registration.crt-placeholder.com"))
 	})
 
 	t.Run("When notification was already created, but the update of status failed before, which means that the condition is not set", func(t *testing.T) {
