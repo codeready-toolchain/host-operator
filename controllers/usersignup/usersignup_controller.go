@@ -103,6 +103,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
@@ -142,7 +147,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if states.Deactivating(userSignup) && condition.IsNotTrue(userSignup.Status.Conditions,
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated) {
 
-		if err := r.sendDeactivatingNotification(logger, userSignup); err != nil {
+		if err := r.sendDeactivatingNotification(logger, config, userSignup); err != nil {
 			logger.Error(err, "Failed to create user deactivating notification")
 
 			// set the failed to create notification status condition
@@ -179,7 +184,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, err
 		}
 		if condition.IsNotTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
-			if err := r.sendDeactivatedNotification(logger, userSignup); err != nil {
+			if err := r.sendDeactivatedNotification(logger, config, userSignup); err != nil {
 				logger.Error(err, "Failed to create user deactivation notification")
 
 				// set the failed to create notification status condition
@@ -553,12 +558,17 @@ func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRec
 	return nil
 }
 
-func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
+	keysAndVals := map[string]string{
+		toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
+	}
+
 	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
 		WithTemplate(notificationtemplates.UserDeactivating.Name).
 		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivating).
 		WithControllerReference(userSignup, r.Scheme).
 		WithUserContext(userSignup).
+		WithKeysAndValues(keysAndVals).
 		Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 	if err != nil {
@@ -570,12 +580,17 @@ func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, userSignup
 	return nil
 }
 
-func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
+	keysAndVals := map[string]string{
+		toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
+	}
+
 	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
 		WithTemplate(notificationtemplates.UserDeactivated.Name).
 		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivated).
 		WithControllerReference(userSignup, r.Scheme).
 		WithUserContext(userSignup).
+		WithKeysAndValues(keysAndVals).
 		Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 	if err != nil {

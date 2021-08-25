@@ -1836,6 +1836,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.Contains(t, notification.Name, "john-doe-deactivated-")
 		assert.True(t, len(notification.Name) > len("john-doe-deactivated-"))
 		require.Equal(t, userSignup.Spec.Userid, notification.Spec.Context["UserID"])
+		require.Equal(t, "https://registration.crt-placeholder.com", notification.Spec.Context["RegistrationURL"])
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
 }
