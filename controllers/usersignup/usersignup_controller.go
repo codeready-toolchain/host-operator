@@ -427,11 +427,6 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainConfig, instance *toolchainv1alpha1.UserSignup) (string, error) {
 	replaced := usersignup.TransformUsername(instance.Spec.Username)
 
-	config, err := toolchainconfig.GetToolchainConfig(r.Client)
-	if err != nil {
-		return "", errs.Wrapf(err, "unable to get ToolchainConfig")
-	}
-
 	// Check for any forbidden prefixes
 	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
 		if strings.HasPrefix(replaced, prefix) {
