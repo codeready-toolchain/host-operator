@@ -489,11 +489,16 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 		})
 }
 
-func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
+func TestNonDefaultNSTemplateTier(t *testing.T) {
+
 	// given
+	customTier := newNsTemplateTier("custom", "dev", "stage")
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultTier("custom"))
 	userSignup := NewUserSignup()
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true))) // baseNSTemplateTier does not exist
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config, customTier) // use custom tier
+
+	commonconfig.ResetCache() // reset the config cache so that the update config is picked up
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -504,25 +509,51 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	))
 
 	// when
-	_, err := r.Reconcile(context.TODO(), req)
+	res, err := r.Reconcile(context.TODO(), req)
 
 	// then
-	// error reported, and request is requeued and userSignup status was updated
-	require.Error(t, err)
+	require.NoError(t, err)
+	require.Equal(t, reconcile.Result{}, res)
+
+	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	t.Logf("usersignup status: %+v", userSignup.Status)
+	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+
+	murs := &toolchainv1alpha1.MasterUserRecordList{}
+	err = r.Client.List(context.TODO(), murs)
+	require.NoError(t, err)
+	require.Len(t, murs.Items, 1)
+
+	mur := murs.Items[0]
+	require.Equal(t, test.HostOperatorNs, mur.Namespace)
+	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
+	require.Len(t, mur.Spec.UserAccounts, 1)
+	assert.Equal(t, "custom", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
+	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 2)
+	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
+		toolchainv1alpha1.NSTemplateSetNamespace{
+			TemplateRef: "custom-dev-123abc1",
+			Template:    "",
+		})
+	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
+		toolchainv1alpha1.NSTemplateSetNamespace{
+			TemplateRef: "custom-stage-123abc2",
+			Template:    "",
+		})
+	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
+	assert.Equal(t, "custom-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
+
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.UserSignupApproved,
 			Status: v1.ConditionTrue,
 			Reason: "ApprovedAutomatically",
-		},
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  v1.ConditionFalse,
-			Reason:  "NoTemplateTierAvailable",
-			Message: "nstemplatetiers.toolchain.dev.openshift.com \"base\" not found",
 		},
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
@@ -534,17 +565,95 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 			Status: v1.ConditionFalse,
 			Reason: "UserIsActive",
 		})
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal) // incremented, even though the provisioning failed due to missing NSTemplateTier
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)   // incremented, even though the provisioning failed due to missing NSTemplateTier
-	AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-			string(metrics.External): 1,
-		}).
-		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-			"1,external": 1,
-			"1,internal": 1,
+
+	AssertThatCountersAndMetrics(t).HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+		string(metrics.External): 1,
+		string(metrics.Internal): 1,
+	})
+}
+
+func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
+
+	type variation struct {
+		description string
+		tierName    string
+		config      *toolchainv1alpha1.ToolchainConfig
+	}
+
+	variations := []variation{
+		{
+			description: "default tier",
+			tierName:    "base",
+			config:      commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
+		},
+		{
+			description: "non-default tier",
+			tierName:    "nonexistent",
+			config:      commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultTier("nonexistent")),
+		},
+	}
+
+	for _, v := range variations {
+		t.Run(v.description, func(t *testing.T) {
+			// given
+			userSignup := NewUserSignup()
+			ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+			r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, v.config) // baseNSTemplateTier and non-default tier do not exist
+
+			commonconfig.ResetCache() // reset the config cache so that the update config is picked up
+			InitializeCounters(t, NewToolchainStatus(
+				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+					string(metrics.External): 1,
+				}),
+				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+					"1,external": 1,
+				}),
+			))
+
+			// when
+			_, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			// error reported, and request is requeued and userSignup status was updated
+			require.Error(t, err)
+			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			require.NoError(t, err)
+			t.Logf("usersignup status: %+v", userSignup.Status)
+			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+				toolchainv1alpha1.Condition{
+					Type:   toolchainv1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+				toolchainv1alpha1.Condition{
+					Type:    toolchainv1alpha1.UserSignupComplete,
+					Status:  v1.ConditionFalse,
+					Reason:  "NoTemplateTierAvailable",
+					Message: fmt.Sprintf("nstemplatetiers.toolchain.dev.openshift.com \"%s\" not found", v.tierName),
+				},
+				toolchainv1alpha1.Condition{
+					Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+					Status: v1.ConditionFalse,
+					Reason: "UserNotInPreDeactivation",
+				},
+				toolchainv1alpha1.Condition{
+					Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+					Status: v1.ConditionFalse,
+					Reason: "UserIsActive",
+				})
+			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal) // incremented, even though the provisioning failed due to missing NSTemplateTier
+			AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)   // incremented, even though the provisioning failed due to missing NSTemplateTier
+			AssertThatCountersAndMetrics(t).
+				HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+					string(metrics.External): 1,
+				}).
+				HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+					"1,external": 1,
+					"1,internal": 1,
+				})
 		})
+	}
 }
 
 func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
@@ -1727,6 +1836,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.Contains(t, notification.Name, "john-doe-deactivated-")
 		assert.True(t, len(notification.Name) > len("john-doe-deactivated-"))
 		require.Equal(t, userSignup.Spec.Userid, notification.Spec.Context["UserID"])
+		require.Equal(t, "https://registration.crt-placeholder.com", notification.Spec.Context["RegistrationURL"])
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
 }
