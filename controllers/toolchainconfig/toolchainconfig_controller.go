@@ -3,6 +3,7 @@ package toolchainconfig
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -156,6 +157,8 @@ type templateVars map[string]string
 
 func getVars(namespace string, cfg ToolchainConfig) templateVars {
 	var vars templateVars = map[string]string{}
+	image := os.Getenv(RegistrationServiceImageEnvKey)
+	vars["IMAGE"] = image
 	vars.addIfNotEmpty("NAMESPACE", namespace)
 	vars.addIfNotEmpty("REPLICAS", fmt.Sprint(cfg.RegistrationService().Replicas()))
 	return vars
