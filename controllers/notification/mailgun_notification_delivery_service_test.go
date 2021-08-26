@@ -1,7 +1,11 @@
 package notification
 
 import (
+	"net/http"
+	"net/url"
 	"testing"
+
+	"gopkg.in/h2non/gock.v1"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
@@ -26,6 +30,8 @@ func NewMailgunAPIBaseOption(url string) MailgunOption {
 func TestMailgunNotificationDeliveryService(t *testing.T) {
 	// given
 	mgs := mailgun.NewMockServer()
+	defer mgs.Stop()
+
 	mockServerOption := NewMailgunAPIBaseOption(mgs.URL())
 	invalidServerOption := NewMailgunAPIBaseOption("https://127.0.0.1:60000/v3")
 
@@ -42,8 +48,8 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	templateLoader := NewMockTemplateLoader(
 		&notificationtemplates.NotificationTemplate{
 			Subject: "foo",
-			Content: "bar",
-			Name:    "test",
+			Content: "a message sent to {{.ReplyTo}}",
+			Name:    "replyto",
 		},
 		&notificationtemplates.NotificationTemplate{
 			Subject: "Hi there, {{invalid_expression}}",
@@ -153,6 +159,38 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
+	})
+
+	t.Run("test mailgun notification delivery service with template containing reply-to address", func(t *testing.T) {
+		// when
+		config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345",
+			"noreply@foo.com", "info@foo.com", "mailgun")
+
+		gock.Intercept()
+		gock.New(mgs.URL()).Reply(http.StatusOK).AddHeader("Content-Type", "application/json").
+			BodyString("{\"ID\" : \"<123>\", \"Message\" : \"Queued. Thank you.\"}")
+		defer gock.Off()
+
+		var formValues url.Values
+		obs := func(request *http.Request, mock gock.Mock) {
+			err := request.ParseMultipartForm(-1)
+			require.NoError(t, err)
+			formValues = request.Form
+		}
+		gock.Observe(obs)
+
+		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
+		err := mgds.Send(&toolchainv1alpha1.Notification{
+			Spec: toolchainv1alpha1.NotificationSpec{
+				Recipient: "foo@acme.com",
+				Template:  "replyto",
+				Context:   notCtx,
+			},
+		})
+
+		// then
+		require.NoError(t, err)
+		require.Equal(t, "a message sent to info@foo.com", formValues.Get("html"))
 
 	})
 }

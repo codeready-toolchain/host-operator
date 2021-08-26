@@ -10,6 +10,10 @@ import (
 	"github.com/mailgun/mailgun-go/v4"
 )
 
+const (
+	ContextReplyTo = "ReplyTo"
+)
+
 type MailgunDeliveryError struct {
 	id           string
 	response     string
@@ -79,12 +83,21 @@ func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha
 			return fmt.Errorf("notification template [%s] not found", notification.Spec.Template)
 		}
 
-		subject, err = s.base.GenerateContent(notification.Spec.Context, template.Subject)
+		// Copy the context to a local variable, we will add some more values to it here
+		context := notification.Spec.Context
+
+		if s.ReplyToEmail != "" {
+			context[ContextReplyTo] = s.ReplyToEmail
+		} else {
+			context[ContextReplyTo] = s.SenderEmail
+		}
+
+		subject, err = s.base.GenerateContent(context, template.Subject)
 		if err != nil {
 			return err
 		}
 
-		body, err = s.base.GenerateContent(notification.Spec.Context, template.Content)
+		body, err = s.base.GenerateContent(context, template.Content)
 		if err != nil {
 			return err
 		}
