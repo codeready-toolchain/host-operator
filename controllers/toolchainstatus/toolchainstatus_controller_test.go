@@ -13,7 +13,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/registrationservice"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
@@ -22,6 +22,7 @@ import (
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,11 +65,12 @@ var logger = logf.Log.WithName("toolchainstatus_controller_test")
 
 func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTPClient,
 	memberClusters []string, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := scheme.Scheme
 	err := toolchainv1alpha1.AddToScheme(s)
 	require.NoError(t, err)
 	fakeClient := test.NewFakeClient(t, initObjs...)
-	hostConfig, err := configuration.LoadConfig(fakeClient)
 	require.NoError(t, err)
 
 	r := &Reconciler{
@@ -82,7 +84,6 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 			}
 			return clusters
 		},
-		Config: hostConfig,
 	}
 	return r, reconcile.Request{NamespacedName: test.NamespacedName(test.HostOperatorNs, requestName)}, fakeClient
 }
@@ -129,11 +130,13 @@ func TestNoToolchainStatusFound(t *testing.T) {
 
 	t.Run("No toolchainstatus resource found - right name but not found", func(t *testing.T) {
 		// given
-		expectedErrMsg := "get failed"
-		requestName := configuration.ToolchainStatusName
+		requestName := toolchainconfig.ToolchainStatusName
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
 		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
-			return fmt.Errorf(expectedErrMsg)
+			if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
+				return fmt.Errorf("get failed")
+			}
+			return fakeClient.Client.Get(ctx, key, obj)
 		}
 
 		// when
@@ -141,7 +144,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		require.Equal(t, expectedErrMsg, err.Error())
+		require.Equal(t, "get failed", err.Error())
 		assert.Equal(t, reconcile.Result{}, res)
 	})
 }
@@ -151,7 +154,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := configuration.ToolchainStatusName
+	requestName := toolchainconfig.ToolchainStatusName
 
 	t.Run("All components ready", func(t *testing.T) {
 		// given
@@ -752,7 +755,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 	// set the operator name environment variable for all the tests which is used to get the host operator deployment name
 	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := configuration.ToolchainStatusName
+	requestName := toolchainconfig.ToolchainStatusName
 
 	registrationService := newRegistrationServiceReady()
 	toolchainStatus := NewToolchainStatus()
@@ -838,7 +841,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
 	defer counter.Reset()
-	requestName := configuration.ToolchainStatusName
+	requestName := toolchainconfig.ToolchainStatusName
 
 	registrationService := newRegistrationServiceReady()
 	toolchainStatus := NewToolchainStatus()
@@ -851,22 +854,13 @@ func TestToolchainStatusNotifications(t *testing.T) {
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 			status.DeploymentAvailableCondition())
 
-		os.Setenv("HOST_OPERATOR_CONFIG_MAP_NAME", "notification_test_config")
 		os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 
-		config := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "notification_test_config",
-				Namespace: test.HostOperatorNs,
-			},
-			Data: map[string]string{
-				"admin.email": "admin@dev.sandbox.com",
-			},
-		}
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail("admin@dev.sandbox.com"))
 
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 			[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-			registrationService, toolchainStatus)
+			registrationService, toolchainStatus, toolchainConfig)
 
 		// when
 		res, err := reconciler.Reconcile(context.TODO(), req)
@@ -892,7 +886,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 				[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-				registrationService, toolchainStatus, config)
+				registrationService, toolchainStatus, toolchainConfig)
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -908,15 +902,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			t.Run("Notification not created when admin.email not configured", func(t *testing.T) {
 
 				assertInvalidEmailReturnErr := func(email string) {
-					invalidConfig := &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "notification_test_config",
-							Namespace: test.HostOperatorNs,
-						},
-						Data: map[string]string{
-							"admin.email": email,
-						},
-					}
+					commonconfig.ResetCache() // clear the config cache so that this invalid config will be picked up
+					invalidConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail(email))
 
 					// given
 					hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
@@ -937,7 +924,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 					// then
 					require.Error(t, err)
-					require.Equal(t, fmt.Sprintf("Failed to create user deactivation notification: cannot create notification "+
+					require.Equal(t, fmt.Sprintf("Failed to create toolchain status unready notification: cannot create notification "+
 						"due to configuration error - admin.email [%s] is invalid or not set", email),
 						err.Error())
 					assert.Equal(t, requeueResult, res)
@@ -965,7 +952,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 					[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-					registrationService, toolchainStatus, config)
+					registrationService, toolchainStatus, toolchainConfig)
 
 				// when
 				res, err := reconciler.Reconcile(context.TODO(), req)
@@ -1025,7 +1012,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						// Reconcile in order to update the ready status to false
 						reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
 							[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-							registrationService, toolchainStatus, config)
+							registrationService, toolchainStatus, toolchainConfig)
 
 						// when
 						_, err := reconciler.Reconcile(context.TODO(), req)
@@ -1045,7 +1032,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						// Reconcile once more
 						reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(),
 							[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-							registrationService, toolchainStatus, config)
+							registrationService, toolchainStatus, toolchainConfig)
 
 						// when
 						res, err = reconciler.Reconcile(context.TODO(), req)
@@ -1112,7 +1099,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	restore := test.SetEnvVarsAndRestore(t, test.Env(commonconfig.OperatorNameEnvVar, defaultHostOperatorName))
 	defer restore()
-	requestName := configuration.ToolchainStatusName
+	requestName := toolchainconfig.ToolchainStatusName
 	registrationService := newRegistrationServiceReady()
 	hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 	registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())

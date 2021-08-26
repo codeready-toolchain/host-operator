@@ -7,7 +7,8 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/host-operator/test"
-	hostconfig "github.com/codeready-toolchain/host-operator/test/config"
+
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 
@@ -105,7 +106,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 
 func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 	// given
-	cl := test.NewFakeClient(t, hostconfig.NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().Enabled()))
+	cl := test.NewFakeClient(t, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}
@@ -195,7 +196,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 
 func TestAutomaticApprovalPredicateWhenApprovalIsNotEnabled(t *testing.T) {
 	// given
-	cl := test.NewFakeClient(t, hostconfig.NewToolchainConfigWithReset(t, testconfig.AutomaticApproval().Disabled()))
+	cl := test.NewFakeClient(t, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(false)))
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}

@@ -1,10 +1,11 @@
 package registrationservice
 
 import (
-	"strings"
+	"fmt"
+	"os"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,11 +15,15 @@ import (
 // ResourceName is the name used for the registration service resource
 const ResourceName = "registration-service"
 
-func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace string, confg *configuration.Config) error {
-	envs := map[string]string{}
-	for key, value := range confg.GetAllRegistrationServiceParameters() {
-		envs[strings.TrimPrefix(key, configuration.RegServiceEnvPrefix+"_")] = value
+func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace string) error {
+	config, err := toolchainconfig.GetToolchainConfig(client)
+	if err != nil {
+		return err
 	}
+	envs := map[string]string{}
+	image := os.Getenv(toolchainconfig.RegistrationServiceImageEnvKey)
+	envs["IMAGE"] = image
+	envs["REPLICAS"] = fmt.Sprint(config.RegistrationService().Replicas())
 
 	regService := &toolchainv1alpha1.RegistrationService{
 		ObjectMeta: v1.ObjectMeta{
@@ -29,6 +34,6 @@ func CreateOrUpdateResources(client client.Client, s *runtime.Scheme, namespace 
 			EnvironmentVariables: envs,
 		}}
 	commonclient := commonclient.NewApplyClient(client, s)
-	_, err := commonclient.ApplyObject(regService)
+	_, err = commonclient.ApplyObject(regService)
 	return err
 }

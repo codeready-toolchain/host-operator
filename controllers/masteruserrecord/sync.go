@@ -9,13 +9,14 @@ import (
 	"time"
 
 	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/pkg/errors"
+	errs "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
@@ -40,7 +41,6 @@ type Synchronizer struct {
 	record            *toolchainv1alpha1.MasterUserRecord
 	scheme            *runtime.Scheme
 	logger            logr.Logger
-	config            *configuration.Config
 }
 
 // synchronizeSpec synhronizes the useraccount in the MasterUserRecord with the corresponding UserAccount on the member cluster.
@@ -126,7 +126,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountStatusEmbedded) (toolchainv1alpha1.UserAccountStatusEmbedded, error) {
 	if status.Cluster.Name != "" {
 		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
-		if err := s.hostClient.Get(context.TODO(), types.NamespacedName{Namespace: s.record.Namespace, Name: configuration.ToolchainStatusName}, toolchainStatus); err != nil {
+		if err := s.hostClient.Get(context.TODO(), types.NamespacedName{Namespace: s.record.Namespace, Name: toolchainconfig.ToolchainStatusName}, toolchainStatus); err != nil {
 			return status, errors.Wrapf(err, "unable to read ToolchainStatus resource")
 		}
 
@@ -196,9 +196,18 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 		// if there is no existing notification with these labels
 		if len(notificationList.Items) == 0 {
 
+			config, err := toolchainconfig.GetToolchainConfig(s.hostClient)
+			if err != nil {
+				return false, errs.Wrapf(err, "unable to get ToolchainConfig")
+			}
+
+			keysAndVals := map[string]string{
+				toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
+			}
+
 			// Lookup the UserSignup
 			userSignup := &toolchainv1alpha1.UserSignup{}
-			err := s.hostClient.Get(context.TODO(), types.NamespacedName{
+			err = s.hostClient.Get(context.TODO(), types.NamespacedName{
 				Namespace: s.record.Namespace,
 				Name:      s.record.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey],
 			}, userSignup)
@@ -211,6 +220,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 				WithControllerReference(s.record, s.scheme).
 				WithTemplate(notificationtemplates.UserProvisioned.Name).
 				WithUserContext(userSignup).
+				WithKeysAndValues(keysAndVals).
 				Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 			if err != nil {

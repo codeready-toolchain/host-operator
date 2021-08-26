@@ -1,6 +1,9 @@
 name: publish-operators-for-e2e-tests
 on:
-  pull_request_target
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 env:
   GOPATH: /tmp/go
@@ -11,13 +14,36 @@ jobs:
     name: Build & push operator bundles for e2e tests
 
     runs-on: ubuntu-18.04
-
+    if: ${{ github.event.comment == '' || github.event.comment.body == '/retest' || github.event.comment.body == '/test all' || github.event.comment.body == '/test e2e' }}
     steps:
-    - name: Checkout code
+    # Checkout from PR event - in that case the comment field is empty
+    - name: Checkout code from PR event
       uses: actions/checkout@v2
+      if: ${{ github.event.comment == '' }}
       with:
         ref: ${{github.event.pull_request.head.ref}}
         repository: ${{github.event.pull_request.head.repo.full_name}}
+        fetch-depth: 0
+
+    # If the workflow was triggered based on comment, then we need to get the information about the PR
+    # Is executed only for comment events - in that case the pull_request field is empty
+    - name: Send Github API Request to get PR data
+      id: request
+      uses: octokit/request-action@v2.0.0
+      if: ${{ github.event.pull_request == '' }}
+      with:
+        route: ${{ github.event.issue.pull_request.url }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # Checkout the code based on the data retrieved from the previous step
+    # Is executed only for comment events - in that case the pull_request field is empty
+    - name: Checkout code from PR
+      uses: actions/checkout@v2
+      if: ${{ github.event.pull_request == '' }}
+      with:
+        repository: ${{ fromJson(steps.request.outputs.data).head.repo.full_name }}
+        ref: ${{ fromJson(steps.request.outputs.data).head.ref }}
         fetch-depth: 0
 
     - name: Install Go
@@ -40,8 +66,26 @@ jobs:
     - name: Prepare tools
       uses: codeready-toolchain/toolchain-cicd/prepare-tools-action@master
 
-    - name: Publish current operator bundles for host & member
+    # Execute composite action using values from PR event
+    # Is executed only for PR events - in that case the comment field is empty
+    - name: Publish current operator bundles for host & member based on PR event
       uses: codeready-toolchain/toolchain-cicd/publish-operators-for-e2e-tests@master
+      if: ${{ github.event.comment == '' }}
       with:
         quay-token: ${{ secrets.TEST_QUAY_TOKEN }}
         quay-namespace: codeready-toolchain-test
+        sha: ${{ github.event.pull_request.head.sha }}
+        pr-number: ${{ github.event.pull_request.number }}
+        author: ${{ github.event.pull_request.head.user.login }}
+
+    # Execute composite action using values from PR event
+    # Is executed only for comment events - in that case the pull_request field is empty
+    - name: Publish current operator bundles for host & member based on comment event
+      uses: codeready-toolchain/toolchain-cicd/publish-operators-for-e2e-tests@master
+      if: ${{ github.event.pull_request == '' }}
+      with:
+        quay-token: ${{ secrets.TEST_QUAY_TOKEN }}
+        quay-namespace: codeready-toolchain-test
+        sha: ${{ fromJson(steps.request.outputs.data).head.sha }}
+        pr-number: ${{ fromJson(steps.request.outputs.data).number }}
+        author: ${{ fromJson(steps.request.outputs.data).head.user.login }}

@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
@@ -84,12 +86,14 @@ func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
 }
 
 func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus, initObjs ...runtime.Object) {
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	counter.Reset()
 	t.Cleanup(counter.Reset)
 	initializeCounters(t, commontest.NewFakeClient(t, initObjs...), toolchainStatus)
 }
 
 func InitializeCountersWithoutReset(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus) {
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	t.Cleanup(counter.Reset)
 	initializeCounters(t, commontest.NewFakeClient(t), toolchainStatus)
 }

@@ -20,7 +20,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignupcleanup"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
@@ -95,6 +94,12 @@ func main() {
 
 	printVersion()
 
+	namespace, err := commonconfig.GetWatchNamespace()
+	if err != nil {
+		setupLog.Error(err, "Failed to get watch namespace")
+		os.Exit(1)
+	}
+
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -108,13 +113,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	crtConfig.PrintConfig()
-
-	namespace, err := commonconfig.GetWatchNamespace()
-	if err != nil {
-		setupLog.Error(err, "Failed to get watch namespace")
-		os.Exit(1)
-	}
+	crtConfig.Print()
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -142,7 +141,6 @@ func main() {
 	if err := (&changetierrequest.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Config: crtConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ChangeTierRequest")
 		os.Exit(1)
@@ -150,7 +148,6 @@ func main() {
 	if err := (&deactivation.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Config: crtConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Deactivation")
 		os.Exit(1)
@@ -158,7 +155,6 @@ func main() {
 	if err := (&masteruserrecord.Reconciler{
 		Client:                mgr.GetClient(),
 		Scheme:                mgr.GetScheme(),
-		Config:                crtConfig,
 		RetrieveMemberCluster: cluster.GetCachedToolchainCluster,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MasterUserRecord")
@@ -167,14 +163,12 @@ func main() {
 	if err := (&notification.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Config: crtConfig,
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, crtConfig); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Notification")
 	}
 	if err := (&nstemplatetier.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Config: crtConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NSTemplateTier")
 	}
@@ -187,7 +181,6 @@ func main() {
 	if err := (&templateupdaterequest.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Config: crtConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TemplateUpdateRequest")
 	}
@@ -200,7 +193,6 @@ func main() {
 	if err := (&toolchainstatus.Reconciler{
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
-		Config:         crtConfig,
 		HTTPClientImpl: &http.Client{},
 		GetMembersFunc: cluster.GetMemberClusters,
 	}).SetupWithManager(mgr); err != nil {
@@ -211,7 +203,6 @@ func main() {
 			Client: mgr.GetClient(),
 		},
 		Scheme:            mgr.GetScheme(),
-		CrtConfig:         crtConfig,
 		GetMemberClusters: cluster.GetMemberClusters,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignup")
@@ -219,7 +210,6 @@ func main() {
 	if err := (&usersignupcleanup.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Config: crtConfig,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
 	}
@@ -239,8 +229,7 @@ func main() {
 
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
-		toolchainStatusName := configuration.ToolchainStatusName
-		if err := toolchainstatus.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, toolchainStatusName); err != nil {
+		if err := toolchainstatus.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, toolchainconfig.ToolchainStatusName); err != nil {
 			setupLog.Error(err, "cannot create/update ToolchainStatus resource")
 			os.Exit(1)
 		}
@@ -248,7 +237,7 @@ func main() {
 
 		// create or update Registration service during the operator deployment
 		setupLog.Info("Creating/updating the RegistrationService resource")
-		if err := registrationservice.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, crtConfig); err != nil {
+		if err := registrationservice.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace); err != nil {
 			setupLog.Error(err, "cannot create/update RegistrationService resource")
 			os.Exit(1)
 		}
@@ -282,12 +271,14 @@ func main() {
 
 // getCRTConfiguration creates the client used for configuration and
 // returns the loaded crt configuration
-func getCRTConfiguration(config *rest.Config) (*configuration.Config, error) {
+func getCRTConfiguration(config *rest.Config) (toolchainconfig.ToolchainConfig, error) {
 	// create client that will be used for retrieving the host operator secret
-	cl, err := client.New(config, client.Options{})
+	cl, err := client.New(config, client.Options{
+		Scheme: scheme,
+	})
 	if err != nil {
-		return nil, err
+		return toolchainconfig.ToolchainConfig{}, err
 	}
 
-	return configuration.LoadConfig(cl)
+	return toolchainconfig.GetToolchainConfig(cl)
 }

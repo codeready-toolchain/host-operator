@@ -83,7 +83,7 @@ func (p OnlyWhenAutomaticApprovalIsEnabled) Generic(e event.GenericEvent) bool {
 }
 
 func (p OnlyWhenAutomaticApprovalIsEnabled) checkIfAutomaticApprovalIsEnabled(namespace string) bool {
-	config, err := toolchainconfig.GetConfig(p.client, namespace)
+	config, err := toolchainconfig.GetToolchainConfig(p.client)
 	if err != nil {
 		configLog.Error(err, "unable to get ToolchainConfig", "namespace", namespace)
 		return false

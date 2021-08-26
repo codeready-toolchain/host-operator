@@ -57,31 +57,3 @@ func (a *RegServiceAssertion) HasReplicas(replicas string) *RegServiceAssertion 
 	assert.Equal(a.t, replicas, a.RegistrationService.Spec.EnvironmentVariables["REPLICAS"])
 	return a
 }
-
-func (a *RegServiceAssertion) HasEnvironment(env string) *RegServiceAssertion {
-	err := a.loadRegServiceAssertion()
-	require.NoError(a.t, err)
-	assert.Equal(a.t, env, a.RegistrationService.Spec.EnvironmentVariables["ENVIRONMENT"])
-	return a
-}
-
-func (a *RegServiceAssertion) HasAuthLibraryURL(libURL string) *RegServiceAssertion {
-	err := a.loadRegServiceAssertion()
-	require.NoError(a.t, err)
-	assert.Equal(a.t, libURL, a.RegistrationService.Spec.EnvironmentVariables["AUTH_CLIENT_LIBRARY_URL"])
-	return a
-}
-
-func (a *RegServiceAssertion) HasAuthPublicKeysURL(publicKeysURL string) *RegServiceAssertion {
-	err := a.loadRegServiceAssertion()
-	require.NoError(a.t, err)
-	assert.Equal(a.t, publicKeysURL, a.RegistrationService.Spec.EnvironmentVariables["AUTH_CLIENT_PUBLIC_KEYS_URL"])
-	return a
-}
-
-func (a *RegServiceAssertion) HasAuthConfig(config string) *RegServiceAssertion {
-	err := a.loadRegServiceAssertion()
-	require.NoError(a.t, err)
-	assert.Equal(a.t, config, a.RegistrationService.Spec.EnvironmentVariables["AUTH_CLIENT_CONFIG_RAW"])
-	return a
-}

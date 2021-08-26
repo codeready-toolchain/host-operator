@@ -9,13 +9,13 @@ import (
 	"strings"
 
 	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup/unapproved"
-	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
@@ -41,8 +41,6 @@ import (
 
 type StatusUpdaterFunc func(userAcc *toolchainv1alpha1.UserSignup, message string) error
 
-const defaultTierName = "base"
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	unapprovedMapper := unapproved.NewUserSignupMapper(mgr.GetClient())
@@ -65,7 +63,6 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 type Reconciler struct {
 	*StatusUpdater
 	Scheme            *runtime.Scheme
-	CrtConfig         *crtCfg.Config
 	GetMemberClusters cluster.GetMemberClustersFunc
 }
 
@@ -112,6 +109,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	banned, err := r.isUserBanned(logger, userSignup)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -140,7 +142,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if states.Deactivating(userSignup) && condition.IsNotTrue(userSignup.Status.Conditions,
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated) {
 
-		if err := r.sendDeactivatingNotification(logger, userSignup); err != nil {
+		if err := r.sendDeactivatingNotification(logger, config, userSignup); err != nil {
 			logger.Error(err, "Failed to create user deactivating notification")
 
 			// set the failed to create notification status condition
@@ -154,7 +156,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
-	if exists, err := r.checkIfMurAlreadyExists(logger, userSignup, banned); exists || err != nil {
+	if exists, err := r.checkIfMurAlreadyExists(logger, config, userSignup, banned); exists || err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -177,7 +179,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, err
 		}
 		if condition.IsNotTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
-			if err := r.sendDeactivatedNotification(logger, userSignup); err != nil {
+			if err := r.sendDeactivatedNotification(logger, config, userSignup); err != nil {
 				logger.Error(err, "Failed to create user deactivation notification")
 
 				// set the failed to create notification status condition
@@ -192,7 +194,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusDeactivated)
 	}
 
-	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, userSignup)
+	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, config, userSignup)
 }
 
 // Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
@@ -246,7 +248,7 @@ func (r *Reconciler) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1
 // If there is already one then it returns 'true' as the first returned value, but before doing that it checks if the MUR should be deleted or not
 // or if the MUR requires some migration changes or additional fixes.
 // If no MUR for the given UserSignup is found, then it returns 'false' as the first returned value.
-func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
+func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup,
 	banned bool) (bool, error) {
 	// List all MasterUserRecord resources that have an owner label equal to the UserSignup.Name
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
@@ -291,8 +293,8 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *
 			return true, err
 		}
 
-		// look-up the `basic` NSTemplateTier to get the NS templates
-		nstemplateTier, err := getNsTemplateTier(r.Client, defaultTierName, userSignup.Namespace)
+		// look-up the default NSTemplateTier to get the NS templates
+		nstemplateTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
 		if err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 		}
@@ -318,7 +320,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, userSignup *
 	return false, nil
 }
 
-func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
 	// Check if the user requires phone verification, and do not proceed further if they do
 	if states.VerificationRequired(userSignup) {
 		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
@@ -369,14 +371,14 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, userSignup *t
 		return err
 	}
 
-	// look-up the `base` NSTemplateTier to get the NS templates
-	nstemplateTier, err := getNsTemplateTier(r.Client, defaultTierName, userSignup.Namespace)
+	// look-up the default NSTemplateTier to get the NS templates
+	nstemplateTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 	}
 
 	// Provision the MasterUserRecord
-	return r.provisionMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, reqLogger)
+	return r.provisionMasterUserRecord(config, userSignup, targetCluster.getClusterName(), nstemplateTier, reqLogger)
 }
 
 func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, state string) error {
@@ -422,11 +424,11 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 	return nstemplateTier, err
 }
 
-func (r *Reconciler) generateCompliantUsername(instance *toolchainv1alpha1.UserSignup) (string, error) {
+func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainConfig, instance *toolchainv1alpha1.UserSignup) (string, error) {
 	replaced := usersignup.TransformUsername(instance.Spec.Username)
 
 	// Check for any forbidden prefixes
-	for _, prefix := range r.CrtConfig.GetForbiddenUsernamePrefixes() {
+	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
 		if strings.HasPrefix(replaced, prefix) {
 			replaced = fmt.Sprintf("%s%s", "crt-", replaced)
 			break
@@ -434,7 +436,7 @@ func (r *Reconciler) generateCompliantUsername(instance *toolchainv1alpha1.UserS
 	}
 
 	// Check for any forbidden suffixes
-	for _, suffix := range r.CrtConfig.GetForbiddenUsernameSuffixes() {
+	for _, suffix := range config.Users().ForbiddenUsernameSuffixes() {
 		if strings.HasSuffix(replaced, suffix) {
 			replaced = fmt.Sprintf("%s%s", replaced, "-crt")
 			break
@@ -472,13 +474,13 @@ func (r *Reconciler) generateCompliantUsername(instance *toolchainv1alpha1.UserS
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
-func (r *Reconciler) provisionMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string,
+func (r *Reconciler) provisionMasterUserRecord(config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster string,
 	nstemplateTier *toolchainv1alpha1.NSTemplateTier, logger logr.Logger) error {
 
 	// TODO Update the MasterUserRecord with NSTemplateTier values
 	// SEE https://jira.coreos.com/browse/CRT-74
 
-	compliantUsername, err := r.generateCompliantUsername(userSignup)
+	compliantUsername, err := r.generateCompliantUsername(config, userSignup)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error generating compliant username for %s", userSignup.Spec.Username)
@@ -551,13 +553,18 @@ func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRec
 	return nil
 }
 
-func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
+	keysAndVals := map[string]string{
+		toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
+	}
+
 	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
 		WithTemplate(notificationtemplates.UserDeactivating.Name).
 		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivating).
 		WithControllerReference(userSignup, r.Scheme).
 		WithUserContext(userSignup).
-		Create(userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+		WithKeysAndValues(keysAndVals).
+		Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 	if err != nil {
 		logger.Error(err, "Failed to create deactivating notification resource")
@@ -568,13 +575,18 @@ func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, userSignup
 	return nil
 }
 
-func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
+	keysAndVals := map[string]string{
+		toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
+	}
+
 	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
 		WithTemplate(notificationtemplates.UserDeactivated.Name).
 		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivated).
 		WithControllerReference(userSignup, r.Scheme).
 		WithUserContext(userSignup).
-		Create(userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+		WithKeysAndValues(keysAndVals).
+		Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 	if err != nil {
 		logger.Error(err, "Failed to create deactivated notification resource")
