@@ -317,48 +317,6 @@ func TestToolchainStatusConditions(t *testing.T) {
 		})
 	})
 
-	t.Run("RegistrationService resource tests", func(t *testing.T) {
-		toolchainStatus := NewToolchainStatus()
-		memberStatus := newMemberStatus(ready())
-		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
-
-		t.Run("Registration service resource not found", func(t *testing.T) {
-			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus)
-
-			// when
-			res, err := reconciler.Reconcile(context.TODO(), req)
-
-			// then
-			require.NoError(t, err)
-			assert.Equal(t, requeueResult, res)
-			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasConditions(componentsNotReady(string(registrationServiceTag))).
-				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceResourcesNotReady("RegServiceResourceNotFound", "registrationservices.toolchain.dev.openshift.com \"registration-service\" not found"))
-		})
-
-		t.Run("Registration service resource not ready", func(t *testing.T) {
-			// given
-			registrationService := newRegistrationServiceNotReady()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, registrationService, toolchainStatus)
-
-			// when
-			res, err := reconciler.Reconcile(context.TODO(), req)
-
-			// then
-			require.NoError(t, err)
-			assert.Equal(t, requeueResult, res)
-			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
-				HasConditions(componentsNotReady(string(registrationServiceTag))).
-				HasHostOperatorStatus(hostOperatorStatusReady()).
-				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceResourcesNotReady("RegServiceNotReady", "registration service resource not ready"))
-		})
-	})
-
 	t.Run("RegistrationService health tests", func(t *testing.T) {
 		registrationService := newRegistrationServiceReady()
 		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
@@ -1534,18 +1492,12 @@ func registrationServiceReady() toolchainv1alpha1.HostRegistrationServiceStatus 
 		},
 	}
 
-	res := toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.ConditionReady,
-		Status: corev1.ConditionTrue,
-		Reason: "RegServiceReady",
-	}
-
 	health := toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionTrue,
 		Reason: "RegServiceReady",
 	}
-	return registrationServiceStatus(deploy, res, health)
+	return registrationServiceStatus(deploy, health)
 }
 
 func registrationServiceDeploymentNotReady(reason, msg string) toolchainv1alpha1.HostRegistrationServiceStatus {
@@ -1559,43 +1511,12 @@ func registrationServiceDeploymentNotReady(reason, msg string) toolchainv1alpha1
 		},
 	}
 
-	res := toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.ConditionReady,
-		Status: corev1.ConditionTrue,
-		Reason: "RegServiceReady",
-	}
-
 	health := toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionTrue,
 		Reason: "RegServiceReady",
 	}
-	return registrationServiceStatus(deploy, res, health)
-}
-
-func registrationServiceResourcesNotReady(reason, msg string) toolchainv1alpha1.HostRegistrationServiceStatus {
-	deploy := regTestDeployStatus{
-		deploymentName: defaultRegistrationServiceName,
-		condition: toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.ConditionReady,
-			Status: corev1.ConditionTrue,
-			Reason: "DeploymentReady",
-		},
-	}
-
-	res := toolchainv1alpha1.Condition{
-		Type:    toolchainv1alpha1.ConditionReady,
-		Status:  corev1.ConditionFalse,
-		Reason:  reason,
-		Message: msg,
-	}
-
-	health := toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.ConditionReady,
-		Status: corev1.ConditionTrue,
-		Reason: "RegServiceReady",
-	}
-	return registrationServiceStatus(deploy, res, health)
+	return registrationServiceStatus(deploy, health)
 }
 
 func registrationServiceHealthNotReady(msg string) toolchainv1alpha1.HostRegistrationServiceStatus {
@@ -1608,29 +1529,20 @@ func registrationServiceHealthNotReady(msg string) toolchainv1alpha1.HostRegistr
 		},
 	}
 
-	res := toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.ConditionReady,
-		Status: corev1.ConditionTrue,
-		Reason: "RegServiceReady",
-	}
-
 	health := toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ConditionReady,
 		Status:  corev1.ConditionFalse,
 		Reason:  "RegServiceNotReady",
 		Message: msg,
 	}
-	return registrationServiceStatus(deploy, res, health)
+	return registrationServiceStatus(deploy, health)
 }
 
-func registrationServiceStatus(deploy regTestDeployStatus, res toolchainv1alpha1.Condition, health toolchainv1alpha1.Condition) toolchainv1alpha1.HostRegistrationServiceStatus {
+func registrationServiceStatus(deploy regTestDeployStatus, health toolchainv1alpha1.Condition) toolchainv1alpha1.HostRegistrationServiceStatus {
 	return toolchainv1alpha1.HostRegistrationServiceStatus{
 		Deployment: toolchainv1alpha1.RegistrationServiceDeploymentStatus{
 			Name:       deploy.deploymentName,
 			Conditions: []toolchainv1alpha1.Condition{deploy.condition},
-		},
-		RegistrationServiceResources: toolchainv1alpha1.RegistrationServiceResourcesStatus{
-			Conditions: []toolchainv1alpha1.Condition{res},
 		},
 		Health: toolchainv1alpha1.RegistrationServiceHealth{
 			Conditions: []toolchainv1alpha1.Condition{health},

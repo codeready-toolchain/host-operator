@@ -283,7 +283,7 @@ func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, tool
 		httpClientImpl:   r.HTTPClientImpl,
 	}
 
-	// gather the functions for handling registration service status eg. resource templates, deployment, health endpoint
+	// gather the functions for handling registration service status eg. deployment, health endpoint
 	substatusHandlers := []statusHandlerFunc{
 		s.addRegistrationServiceDeploymentStatus,
 		s.addRegistrationServiceHealthStatus,
