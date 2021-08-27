@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -297,6 +298,40 @@ func TestReconcile(t *testing.T) {
 					toolchainconfig.ToRegServiceDeploying("updated resources: [ServiceAccount: registration-service Role: registration-service RoleBinding: registration-service Deployment: registration-service Service: registration-service Route: registration-service]")).
 				HasSyncErrors(map[string]string{"missing-member": "specific member configuration exists but no matching toolchaincluster was found"})
 		})
+	})
+}
+
+func TestWrapErrorWithUpdateStatus(t *testing.T) {
+	// given
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)))
+	hostCl := test.NewFakeClient(t, config)
+	members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+	controller := newController(t, hostCl, members)
+	log := logf.Log.WithName("test")
+
+	t.Run("status updated", func(t *testing.T) {
+		statusUpdater := func(toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
+			assert.Equal(t, "failed to load the latest configuration: underlying error", message)
+			return nil
+		}
+
+		// test
+		err := controller.WrapErrorWithStatusUpdate(log, config, statusUpdater, fmt.Errorf("underlying error"), "failed to load the latest configuration")
+
+		require.Error(t, err)
+		assert.Equal(t, "failed to load the latest configuration: underlying error", err.Error())
+	})
+
+	t.Run("status update failed", func(t *testing.T) {
+		statusUpdater := func(toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
+			return fmt.Errorf("unable to update status")
+		}
+
+		// when
+		err := controller.WrapErrorWithStatusUpdate(log, config, statusUpdater, fmt.Errorf("underlying error"), "failed to load the latest configuration")
+
+		// then
+		require.EqualError(t, err, "failed to load the latest configuration: underlying error")
 	})
 }
 

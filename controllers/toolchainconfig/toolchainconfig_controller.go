@@ -91,7 +91,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// Load the latest config and secrets into the cache
 	cfg, err := ForceLoadToolchainConfig(r.Client)
 	if err != nil {
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to load the latest configuration")
+		return reconcile.Result{}, r.WrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to load the latest configuration")
 	}
 
 	// Deploy registration service
@@ -126,7 +126,7 @@ func (r *Reconciler) ensureRegistrationService(reqLogger logr.Logger, toolchainC
 	cl := applycl.NewApplyClient(r.Client, r.Scheme)
 	toolchainObjects, err := template.NewProcessor(r.Scheme).Process(regServiceTemplate.DeepCopy(), vars)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to process registration service template")
+		return r.WrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to process registration service template")
 	}
 
 	// create all objects that are within the template, and update only when the object has changed.
@@ -134,7 +134,7 @@ func (r *Reconciler) ensureRegistrationService(reqLogger logr.Logger, toolchainC
 	for _, toolchainObject := range toolchainObjects {
 		createdOrUpdated, err := cl.ApplyObject(toolchainObject.GetClientObject(), applycl.SetOwner(toolchainConfig))
 		if err != nil {
-			return r.wrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to apply registration service object %s", toolchainObject.GetName())
+			return r.WrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to apply registration service object %s", toolchainObject.GetName())
 		}
 		if createdOrUpdated {
 			updated = append(updated, fmt.Sprintf("%s: %s", toolchainObject.GetGvk().Kind, toolchainObject.GetName()))
@@ -185,14 +185,15 @@ func (r *Reconciler) updateStatusCondition(toolchainConfig *toolchainv1alpha1.To
 	return r.Client.Status().Update(context.TODO(), toolchainConfig)
 }
 
-func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, statusUpdater func(toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error, err error, format string, args ...interface{}) error {
-	if err == nil {
+func (r *Reconciler) WrapErrorWithStatusUpdate(logger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, statusUpdater func(toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error, providedError error, format string, args ...interface{}) error {
+	if providedError == nil {
 		return nil
 	}
-	if err := statusUpdater(toolchainConfig, err.Error()); err != nil {
+	wrappedErr := errs.Wrapf(providedError, format, args...)
+	if err := statusUpdater(toolchainConfig, wrappedErr.Error()); err != nil {
 		logger.Error(err, "status update failed")
 	}
-	return errs.Wrapf(err, format, args...)
+	return wrappedErr
 }
 
 // ToSyncComplete condition when the sync completed with success
