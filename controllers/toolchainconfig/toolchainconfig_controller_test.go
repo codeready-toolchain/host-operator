@@ -268,7 +268,7 @@ func TestReconcile(t *testing.T) {
 			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).
 				Exists().
 				HasConditions(
-					toolchainconfig.ToRegServiceDeployFailure("unable to create resource of kind: ServiceAccount, version: v1: create error")).
+					toolchainconfig.ToRegServiceDeployFailure("failed to apply registration service object registration-service: unable to create resource of kind: ServiceAccount, version: v1: create error")).
 				HasNoSyncErrors()
 		})
 
@@ -309,6 +309,18 @@ func TestWrapErrorWithUpdateStatus(t *testing.T) {
 	controller := newController(t, hostCl, members)
 	log := logf.Log.WithName("test")
 
+	t.Run("no error provided", func(t *testing.T) {
+		statusUpdater := func(toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
+			assert.Equal(t, "failed to load the latest configuration: underlying error", message)
+			return nil
+		}
+
+		// test
+		err := controller.WrapErrorWithStatusUpdate(log, config, statusUpdater, nil, "failed to load the latest configuration")
+
+		require.Nil(t, err)
+	})
+
 	t.Run("status updated", func(t *testing.T) {
 		statusUpdater := func(toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
 			assert.Equal(t, "failed to load the latest configuration: underlying error", message)
@@ -318,8 +330,7 @@ func TestWrapErrorWithUpdateStatus(t *testing.T) {
 		// test
 		err := controller.WrapErrorWithStatusUpdate(log, config, statusUpdater, fmt.Errorf("underlying error"), "failed to load the latest configuration")
 
-		require.Error(t, err)
-		assert.Equal(t, "failed to load the latest configuration: underlying error", err.Error())
+		require.EqualError(t, err, "failed to load the latest configuration: underlying error")
 	})
 
 	t.Run("status update failed", func(t *testing.T) {
