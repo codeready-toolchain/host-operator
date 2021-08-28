@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	v1 "github.com/openshift/api/template/v1"
 	errs "github.com/pkg/errors"
 
 	"github.com/codeready-toolchain/host-operator/pkg/templates/registrationservice"
@@ -39,6 +40,13 @@ var DefaultReconcile = reconcile.Result{RequeueAfter: 10 * time.Second}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+
+	regServiceTemplate, err := registrationservice.GetDeploymentTemplate()
+	if err != nil {
+		return errs.Wrap(err, "unable to decode the registration service deployment")
+	}
+	r.regServiceTemplate = regServiceTemplate
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.ToolchainConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&source.Kind{Type: &corev1.Secret{}},
@@ -49,9 +57,10 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 
 // Reconciler reconciles a ToolchainConfig object
 type Reconciler struct {
-	Client         client.Client
-	GetMembersFunc cluster.GetMemberClustersFunc
-	Scheme         *runtime.Scheme
+	Client             client.Client
+	GetMembersFunc     cluster.GetMemberClustersFunc
+	Scheme             *runtime.Scheme
+	regServiceTemplate *v1.Template
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -117,14 +126,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 }
 
 func (r *Reconciler) ensureRegistrationService(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, vars templateVars) error {
-	regServiceTemplate, err := registrationservice.GetDeploymentTemplate()
-	if err != nil {
-		return errs.Wrap(err, "unable to decode the registration service deployment")
-	}
-
 	// process template with variables taken from the RegistrationService CRD
 	cl := applycl.NewApplyClient(r.Client, r.Scheme)
-	toolchainObjects, err := template.NewProcessor(r.Scheme).Process(regServiceTemplate.DeepCopy(), vars)
+	toolchainObjects, err := template.NewProcessor(r.Scheme).Process(r.regServiceTemplate.DeepCopy(), vars)
 	if err != nil {
 		return r.WrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to process registration service template")
 	}
