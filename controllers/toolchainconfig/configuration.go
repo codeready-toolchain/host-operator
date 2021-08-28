@@ -77,7 +77,7 @@ func newToolchainConfig(config runtime.Object, secrets map[string]map[string]str
 func (c *ToolchainConfig) Print() {
 	indentedJSON, _ := json.MarshalIndent(c.cfg, "", "\t")
 	logger.Info("Toolchain configuration variables")
-	fmt.Printf(string(indentedJSON))
+	fmt.Println(string(indentedJSON))
 }
 
 func (c *ToolchainConfig) Environment() string {

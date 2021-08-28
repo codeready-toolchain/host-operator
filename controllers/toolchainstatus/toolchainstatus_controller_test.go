@@ -1282,26 +1282,6 @@ func newRegistrationServiceReady() *toolchainv1alpha1.RegistrationService {
 	}
 }
 
-func newRegistrationServiceNotReady() *toolchainv1alpha1.RegistrationService {
-	notReadyStatus := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceNotReadyReason, "registration service resource not ready")
-	return &toolchainv1alpha1.RegistrationService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      registrationservice.ResourceName,
-			Namespace: test.HostOperatorNs,
-			Labels: map[string]string{
-				"foo": "bar",
-			},
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "RegistrationService",
-			APIVersion: "toolchain.dev.openshift.com/v1alpha1",
-		},
-		Status: toolchainv1alpha1.RegistrationServiceStatus{
-			Conditions: []toolchainv1alpha1.Condition{*notReadyStatus},
-		},
-	}
-}
-
 func httpClientError() *fakeHTTPClient {
 	return &fakeHTTPClient{
 		err: fmt.Errorf("http client error"),
