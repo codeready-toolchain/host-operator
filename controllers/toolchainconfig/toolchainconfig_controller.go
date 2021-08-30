@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	v1 "github.com/openshift/api/template/v1"
+	templatev1 "github.com/openshift/api/template/v1"
 	errs "github.com/pkg/errors"
 
 	"github.com/codeready-toolchain/host-operator/pkg/templates/registrationservice"
@@ -60,7 +60,7 @@ type Reconciler struct {
 	Client             client.Client
 	GetMembersFunc     cluster.GetMemberClustersFunc
 	Scheme             *runtime.Scheme
-	regServiceTemplate *v1.Template
+	regServiceTemplate *templatev1.Template
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs,verbs=get;list;watch;create;update;patch;delete
