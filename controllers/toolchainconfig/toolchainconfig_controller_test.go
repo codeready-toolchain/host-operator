@@ -9,6 +9,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/registrationservice"
 	. "github.com/codeready-toolchain/host-operator/test"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -369,10 +370,14 @@ func newController(t *testing.T, hostCl client.Client, members cluster.GetMember
 	err = clientgoscheme.AddToScheme(s)
 	require.NoError(t, err)
 
+	regServiceTemplate, err := registrationservice.GetDeploymentTemplate()
+	require.NoError(t, err)
+
 	return toolchainconfig.Reconciler{
-		Client:         hostCl,
-		GetMembersFunc: members,
-		Scheme:         s,
+		Client:             hostCl,
+		GetMembersFunc:     members,
+		Scheme:             s,
+		RegServiceTemplate: regServiceTemplate,
 	}
 }
 
