@@ -13,8 +13,8 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/registrationservice"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/registrationservice"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -283,9 +283,8 @@ func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, tool
 		httpClientImpl:   r.HTTPClientImpl,
 	}
 
-	// gather the functions for handling registration service status eg. resource templates, deployment, health endpoint
+	// gather the functions for handling registration service status eg. deployment, health endpoint
 	substatusHandlers := []statusHandlerFunc{
-		s.addRegistrationServiceResourceStatus,
 		s.addRegistrationServiceDeploymentStatus,
 		s.addRegistrationServiceHealthStatus,
 	}
@@ -555,29 +554,6 @@ func customMemberStatus(conditions ...toolchainv1alpha1.Condition) toolchainv1al
 type regServiceSubstatusHandler struct {
 	httpClientImpl   HTTPClient
 	controllerClient client.Client
-}
-
-// addRegistrationServiceResourceStatus handles the RegistrationService.RegistrationServiceResources part of the toolchainstatus
-func (s regServiceSubstatusHandler) addRegistrationServiceResourceStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
-	// get the registrationservice resource
-	registrationServiceName := types.NamespacedName{Namespace: toolchainStatus.Namespace, Name: registrationservice.ResourceName}
-	registrationService := &toolchainv1alpha1.RegistrationService{}
-	err := s.controllerClient.Get(context.TODO(), registrationServiceName, registrationService)
-	if err != nil {
-		reqLogger.Error(err, "unable to get the registrationservice resource")
-		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceResourceNotFoundReason, err.Error())
-		toolchainStatus.Status.RegistrationService.RegistrationServiceResources.Conditions = []toolchainv1alpha1.Condition{*errCondition}
-		return false
-	}
-
-	// use the registrationservice resource directly in the toolchainstatus
-	toolchainStatus.Status.RegistrationService.RegistrationServiceResources.Conditions = registrationService.Status.Conditions
-	if condition.IsNotTrue(registrationService.Status.Conditions, toolchainv1alpha1.ConditionReady) {
-		reqLogger.Error(fmt.Errorf("deployment is not ready"), "the registrationservice resource is not ready")
-		return false
-	}
-
-	return true
 }
 
 // addRegistrationServiceDeploymentStatus handles the RegistrationService.Deployment part of the toolchainstatus

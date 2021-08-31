@@ -3,19 +3,27 @@ package toolchainconfig
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/go-logr/logr"
+	templatev1 "github.com/openshift/api/template/v1"
+	errs "github.com/pkg/errors"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
-	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/registrationservice"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	applycl "github.com/codeready-toolchain/toolchain-common/pkg/client"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/template"
+
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -32,6 +40,13 @@ var DefaultReconcile = reconcile.Result{RequeueAfter: 10 * time.Second}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
+
+	regServiceTemplate, err := registrationservice.GetDeploymentTemplate()
+	if err != nil {
+		return errs.Wrap(err, "unable to decode the registration service deployment")
+	}
+	r.RegServiceTemplate = regServiceTemplate
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.ToolchainConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&source.Kind{Type: &corev1.Secret{}},
@@ -42,13 +57,20 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 
 // Reconciler reconciles a ToolchainConfig object
 type Reconciler struct {
-	Client         client.Client
-	GetMembersFunc cluster.GetMemberClustersFunc
+	Client             client.Client
+	GetMembersFunc     cluster.GetMemberClustersFunc
+	Scheme             *runtime.Scheme
+	RegServiceTemplate *templatev1.Template
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainconfigs/finalizers,verbs=update
+
+//+kubebuilder:rbac:groups="",resources=configmaps;services;serviceaccounts,verbs=get;list;watch;update;patch;create;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io;authorization.openshift.io,resources=rolebindings;roles,verbs=*
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch;create;delete
+//+kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;update;patch;create;delete
 
 // Reconcile reads that state of the cluster for a ToolchainConfig object and makes changes based on the state read
 // and what is in the ToolchainConfig.Spec
@@ -75,10 +97,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return DefaultReconcile, err
 	}
 
-	// load the latest config and secrets into the cache
-	if _, err := ForceLoadToolchainConfig(r.Client); err != nil {
-		reqLogger.Error(err, "failed to load the latest configuration")
-		return DefaultReconcile, err
+	// Load the latest config and secrets into the cache
+	cfg, err := ForceLoadToolchainConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, r.WrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to load the latest configuration")
+	}
+
+	// Deploy registration service
+	if err := r.ensureRegistrationService(reqLogger, toolchainConfig, getVars(request.Namespace, cfg)); err != nil {
+		// immediately reconcile again if there was an error
+		return reconcile.Result{}, err
 	}
 
 	// Sync member configs to member clusters
@@ -90,25 +118,90 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if syncErrs := sync.SyncMemberConfigs(toolchainConfig); len(syncErrs) > 0 {
 		for cluster, errMsg := range syncErrs {
 			err := fmt.Errorf(errMsg)
-			reqLogger.Error(err, "error syncing to member cluster", "cluster", cluster)
+			reqLogger.Error(err, "error syncing configuration to member cluster", "cluster", cluster)
 		}
-		return DefaultReconcile, r.updateStatus(reqLogger, toolchainConfig, syncErrs, ToSyncFailure())
+		return DefaultReconcile, r.updateSyncStatus(toolchainConfig, syncErrs, ToSyncFailure())
 	}
-	return DefaultReconcile, r.updateStatus(reqLogger, toolchainConfig, map[string]string{}, ToBeComplete())
+	return DefaultReconcile, r.updateSyncStatus(toolchainConfig, map[string]string{}, ToSyncComplete())
 }
 
-func (r *Reconciler) updateStatus(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, syncErrs map[string]string, newCondition toolchainv1alpha1.Condition) error {
-	toolchainConfig.Status.SyncErrors = syncErrs
-	toolchainConfig.Status.Conditions = condition.AddOrUpdateStatusConditionsWithLastUpdatedTimestamp(toolchainConfig.Status.Conditions, newCondition)
-	err := r.Client.Status().Update(context.TODO(), toolchainConfig)
+func (r *Reconciler) ensureRegistrationService(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, vars templateVars) error {
+	// process template with variables taken from the RegistrationService CRD
+	cl := applycl.NewApplyClient(r.Client, r.Scheme)
+	toolchainObjects, err := template.NewProcessor(r.Scheme).Process(r.RegServiceTemplate.DeepCopy(), vars)
 	if err != nil {
-		reqLogger.Error(err, "failed to update status for toolchainconfig")
+		return r.WrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to process registration service template")
 	}
-	return err
+
+	// create all objects that are within the template, and update only when the object has changed.
+	var updated []string
+	for _, toolchainObject := range toolchainObjects {
+		createdOrUpdated, err := cl.ApplyObject(toolchainObject.GetClientObject(), applycl.SetOwner(toolchainConfig))
+		if err != nil {
+			return r.WrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to apply registration service object %s", toolchainObject.GetName())
+		}
+		if createdOrUpdated {
+			updated = append(updated, fmt.Sprintf("%s: %s", toolchainObject.GetGvk().Kind, toolchainObject.GetName()))
+		}
+	}
+	if len(updated) > 0 {
+		reqLogger.Info("Updated registration service resources", "updated resources", updated)
+		return r.updateStatusCondition(toolchainConfig, ToRegServiceDeploying(fmt.Sprintf("updated resources: %s", updated)), false)
+	}
+
+	reqLogger.Info("All objects in registration service template have been created and are up-to-date")
+	return r.updateStatusCondition(toolchainConfig, ToRegServiceDeployComplete(), false)
 }
 
-// ToBeComplete condition when the update completed with success
-func ToBeComplete() toolchainv1alpha1.Condition {
+type templateVars map[string]string
+
+func getVars(namespace string, cfg ToolchainConfig) templateVars {
+	var vars templateVars = map[string]string{}
+	image := os.Getenv(RegistrationServiceImageEnvKey)
+	vars["IMAGE"] = image
+	vars.addIfNotEmpty("NAMESPACE", namespace)
+	vars.addIfNotEmpty("REPLICAS", fmt.Sprint(cfg.RegistrationService().Replicas()))
+	return vars
+}
+
+func (v *templateVars) addIfNotEmpty(key, value string) {
+	if value != "" {
+		(*v)[key] = value
+	}
+}
+
+func (r *Reconciler) setStatusDeployRegistrationServiceFailed(toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error {
+	return r.updateStatusCondition(toolchainConfig, ToRegServiceDeployFailure(message), false)
+}
+
+func (r *Reconciler) updateSyncStatus(toolchainConfig *toolchainv1alpha1.ToolchainConfig, syncErrs map[string]string, newCondition toolchainv1alpha1.Condition) error {
+	toolchainConfig.Status.SyncErrors = syncErrs
+	return r.updateStatusCondition(toolchainConfig, newCondition, true)
+}
+
+func (r *Reconciler) updateStatusCondition(toolchainConfig *toolchainv1alpha1.ToolchainConfig, newCondition toolchainv1alpha1.Condition, updateSyncErrors bool) error {
+	var updatedConditions bool
+	toolchainConfig.Status.Conditions, updatedConditions = condition.AddOrUpdateStatusConditions(toolchainConfig.Status.Conditions, newCondition)
+	if !updatedConditions && !updateSyncErrors {
+		// Nothing changed
+		return nil
+	}
+	return r.Client.Status().Update(context.TODO(), toolchainConfig)
+}
+
+func (r *Reconciler) WrapErrorWithStatusUpdate(logger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, statusUpdater func(toolchainConfig *toolchainv1alpha1.ToolchainConfig, message string) error, providedError error, format string, args ...interface{}) error {
+	if providedError == nil {
+		return nil
+	}
+	wrappedErr := errs.Wrapf(providedError, format, args...)
+	if err := statusUpdater(toolchainConfig, wrappedErr.Error()); err != nil {
+		logger.Error(err, "status update failed")
+	}
+	return wrappedErr
+}
+
+// ToSyncComplete condition when the sync completed with success
+func ToSyncComplete() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ToolchainConfigSyncComplete,
 		Status: corev1.ConditionTrue,
@@ -116,12 +209,41 @@ func ToBeComplete() toolchainv1alpha1.Condition {
 	}
 }
 
-// ToFailure condition when an error occurred
+// ToSyncFailure condition when a sync error occurred while syncing
 func ToSyncFailure() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ToolchainConfigSyncComplete,
 		Status:  corev1.ConditionFalse,
 		Reason:  toolchainv1alpha1.ToolchainConfigSyncFailedReason,
 		Message: "errors occurred while syncing MemberOperatorConfigs to the member clusters",
+	}
+}
+
+// ToRegServiceDeployComplete condition when deploying is completed
+func ToRegServiceDeployComplete() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ToolchainConfigRegServiceDeploy,
+		Status: corev1.ConditionTrue,
+		Reason: toolchainv1alpha1.ToolchainConfigRegServiceDeployedReason,
+	}
+}
+
+// ToRegServiceDeploying condition when deploying is in progress
+func ToRegServiceDeploying(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ToolchainConfigRegServiceDeploy,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.RegistrationServiceDeployingReason,
+		Message: msg,
+	}
+}
+
+// ToRegServiceDeployFailure condition when an error occurred
+func ToRegServiceDeployFailure(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ToolchainConfigRegServiceDeploy,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.ToolchainConfigRegServiceDeployFailedReason,
+		Message: msg,
 	}
 }
