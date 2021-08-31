@@ -74,7 +74,7 @@ func newToolchainConfig(config runtime.Object, secrets map[string]map[string]str
 }
 
 func (c *ToolchainConfig) Print() {
-	logger.Info("Toolchain configuration variables", "ToolchainConfigSpec", c.cfg)
+	logger.Info("Toolchain configuration", "config", c.cfg)
 }
 
 func (c *ToolchainConfig) Environment() string {

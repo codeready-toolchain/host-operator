@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
 	"github.com/stretchr/testify/assert"
@@ -12,7 +11,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -21,9 +19,9 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	deploymentTemplate, err := getDeploymentTemplate()
+	deploymentTemplate, err := GetDeploymentTemplate()
 	require.NoError(t, err)
-	vars := getVars(newRegistrationService("my-namespace", "quay.io/cr-t/registration-service:123", "dev", 10))
+	vars := getVars("my-namespace", "quay.io/cr-t/registration-service:123", "10")
 	processor := template.NewProcessor(s)
 
 	// when
@@ -62,21 +60,10 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 	assert.True(t, roleBindingFound, "a RoleBinding wasn't found")
 }
 
-func newRegistrationService(namespace, image, env string, replicas int) *toolchainv1alpha1.RegistrationService {
-	return &toolchainv1alpha1.RegistrationService{
-		TypeMeta: metav1.TypeMeta{
-			Kind: "RegistrationService",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      "registration-service",
-		},
-		Spec: toolchainv1alpha1.RegistrationServiceSpec{
-			EnvironmentVariables: map[string]string{
-				"IMAGE":       image,
-				"ENVIRONMENT": env,
-				"REPLICAS":    fmt.Sprintf("%d", replicas),
-			},
-		},
+func getVars(namespace, image, replicas string) map[string]string {
+	return map[string]string{
+		"IMAGE":     image,
+		"NAMESPACE": namespace,
+		"REPLICAS":  replicas,
 	}
 }
