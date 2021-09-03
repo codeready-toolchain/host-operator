@@ -111,9 +111,6 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
-github.com/codeready-toolchain/api v0.0.0-20210811194925-19aeb221d584/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
-github.com/codeready-toolchain/api v0.0.0-20210830151135-fc17385bbc65 h1:H96RCgP2sgjvbFHXosHN5yRTXXv3Q3FBAEWWK3iHG8Q=
-github.com/codeready-toolchain/api v0.0.0-20210830151135-fc17385bbc65/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20210816150728-75450e8d842e h1:SuDK0YqGpQK0OxNFi59ltcwHJeJ5WvfbG+e2+ATEbH0=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20210816150728-75450e8d842e/go.mod h1:sfSHDs+ksRHzZbpbFsOXtSylQcvpQ6aaXa2TimVCCyI=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
