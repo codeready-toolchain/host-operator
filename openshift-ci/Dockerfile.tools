@@ -1,4 +1,4 @@
-FROM quay.io/centos/centos:7 as build-tools
+FROM registry.access.redhat.com/ubi8/ubi:latest as build-tools
 
 LABEL maintainer "Devtools <devtools@redhat.com>"
 LABEL author "Devtools <devtools@redhat.com>"
@@ -12,30 +12,18 @@ ENV LANG=en_US.utf8 \
 
 ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 
-RUN yum install epel-release -y \
-    && yum install https://repo.ius.io/ius-release-el7.rpm -y \
-    && yum install --enablerepo=centosplus -y --quiet \
+RUN yum install -y \
     findutils \
-    git224-all \
+    git \
     make \
     procps-ng \
     tar \
     wget \
     which \
     bc \
-    kubectl \
-    yamllint \
-    python36-virtualenv \
     jq \
     gcc \
-    pip3 \
     && yum clean all
-
-# Install yq that will be used for parsing/reading yaml files.
-RUN pip3 install yq
-
-# Install operator-courier that will be used in CD for nightly builds
-RUN pip3 install operator-courier
 
 WORKDIR /tmp
 
