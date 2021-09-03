@@ -27,14 +27,6 @@ resources:
     namespaced: true
   controller: true
   group: toolchain.dev.openshift.com
-  kind: HostOperatorConfig
-  path: ../github.com/codeready-toolchain/api/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  group: toolchain.dev.openshift.com
   kind: MasterUserRecord
   path: ../github.com/codeready-toolchain/api/api/v1alpha1
   version: v1alpha1
@@ -52,14 +44,6 @@ resources:
   controller: true
   group: toolchain.dev.openshift.com
   kind: NSTemplateTier
-  path: ../github.com/codeready-toolchain/api/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  group: toolchain.dev.openshift.com
-  kind: RegistrationService
   path: ../github.com/codeready-toolchain/api/api/v1alpha1
   version: v1alpha1
 - api:
