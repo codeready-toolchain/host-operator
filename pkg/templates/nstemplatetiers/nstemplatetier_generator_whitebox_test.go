@@ -45,31 +45,31 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 					for _, kind := range []string{"dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
 							switch tier {
-							case "baseextended", "baseextendedidling", "basedeactivationdisabled":
-								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
-								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
-							default:
+							case "base", "test":
 								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
 								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
+							default:
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
 							}
 						})
 					}
 					t.Run("cluster", func(t *testing.T) {
 						switch tier {
-						case "baseextended", "baseextendedidling", "basedeactivationdisabled":
-							assert.Nil(t, tmpls[tier].rawTemplates.clusterTemplate)
-						default:
+						case "base", "test":
 							require.NotNil(t, tmpls[tier].rawTemplates.clusterTemplate)
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.revision)
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.content)
+						default:
+							assert.Nil(t, tmpls[tier].rawTemplates.clusterTemplate)
 						}
 					})
-					t.Run("tier-config", func(t *testing.T) {
+					t.Run("based-on-tier", func(t *testing.T) {
 						switch tier {
-						case "baseextended", "baseextendedidling", "basedeactivationdisabled":
-							require.NotNil(t, tmpls[tier].tierConfig)
+						case "base", "test":
+							require.Nil(t, tmpls[tier].basedOnTier)
 						default:
-							require.Nil(t, tmpls[tier].tierConfig)
+							require.NotNil(t, tmpls[tier].basedOnTier)
 						}
 					})
 				})
@@ -336,7 +336,7 @@ func TestNewTierTemplate(t *testing.T) {
 							assert.NotEmpty(t, actual.Spec.Type)
 							assert.NotEmpty(t, actual.Spec.Template)
 							switch actual.Spec.Type {
-							case "dev", "code", "stage":
+							case "dev", "stage":
 								assertNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
 							case "clusterresources":
 								assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
@@ -407,68 +407,61 @@ func TestNewTierTemplate(t *testing.T) {
 
 func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
 	switch tier {
-	case "baseextended", "baseextendedidling", "basedeactivationdisabled":
-		// todo
-	default:
+	case "base", "test":
 		expected := templatev1.Template{}
 		content, err := Asset(fmt.Sprintf("%s/cluster.yaml", tier))
 		require.NoError(t, err)
 		_, _, err = decoder.Decode(content, nil, &expected)
 		require.NoError(t, err)
 		assert.Equal(t, expected, actual)
+	default:
+		// todo
 	}
 
 	switch tier {
 	case "test":
 		// skip because this tier is for testing purposes only and the template can change often
-	case "base", "baseextended", "baseextendedidling", "basedeactivationdisabled":
-		assert.Len(t, actual.Objects, 13)
-		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
-		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
-		containsObj(t, actual, clusterResourceQuotaReplicasObj())
-		containsObj(t, actual, clusterResourceQuotaRoutesObj())
-		containsObj(t, actual, clusterResourceQuotaJobsObj())
-		containsObj(t, actual, clusterResourceQuotaServicesObj())
-		containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
-		containsObj(t, actual, clusterResourceQuotaSecretsObj())
-		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
-		containsObj(t, actual, clusterResourceQuotaRHOASOperatorObj())
-		containsObj(t, actual, clusterResourceQuotaSBOObj())
-		containsObj(t, actual, idlerObj("${USERNAME}-dev"))
-		containsObj(t, actual, idlerObj("${USERNAME}-stage"))
-		if tier == "baseextendedidling" {
-			containsParam(t, actual, "IDLER_TIMEOUT_SECONDS", "86400")
-		} else {
-			containsParam(t, actual, "IDLER_TIMEOUT_SECONDS", "43200")
-		}
+	case "base", "baseextended", "basedeactivationdisabled":
+		assertDefaultObjects(t, actual, "43200")
+	case "baseextendedidling":
+		assertDefaultObjects(t, actual, "86400")
 	case "advanced":
-		assert.Len(t, actual.Objects, 9) // No Idlers
-		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
-		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
-		containsObj(t, actual, clusterResourceQuotaReplicasObj())
-		containsObj(t, actual, clusterResourceQuotaRoutesObj())
-		containsObj(t, actual, clusterResourceQuotaJobsObj())
-		containsObj(t, actual, clusterResourceQuotaServicesObj())
-		containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
-		containsObj(t, actual, clusterResourceQuotaSecretsObj())
-		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
+		assertDefaultObjects(t, actual, "0")
 	default:
 		t.Errorf("unexpected tier: '%s'", tier)
 	}
 }
 
+func assertDefaultObjects(t *testing.T, actual templatev1.Template, idlerParamValue string) {
+	assert.Len(t, actual.Objects, 13)
+	containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
+	containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
+	containsObj(t, actual, clusterResourceQuotaReplicasObj())
+	containsObj(t, actual, clusterResourceQuotaRoutesObj())
+	containsObj(t, actual, clusterResourceQuotaJobsObj())
+	containsObj(t, actual, clusterResourceQuotaServicesObj())
+	containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
+	containsObj(t, actual, clusterResourceQuotaSecretsObj())
+	containsObj(t, actual, clusterResourceQuotaConfigMapObj())
+	containsObj(t, actual, clusterResourceQuotaRHOASOperatorObj())
+	containsObj(t, actual, clusterResourceQuotaSBOObj())
+	containsObj(t, actual, idlerObj("${USERNAME}-dev"))
+	containsObj(t, actual, idlerObj("${USERNAME}-stage"))
+	containsParam(t, actual, "IDLER_TIMEOUT_SECONDS", idlerParamValue)
+}
+
 func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
 
 	switch tier {
-	case "baseextended", "baseextendedidling", "basedeactivationdisabled":
-		// todo
-	default:
+	case "base", "test":
 		content, err := Asset(fmt.Sprintf("%s/ns_%s.yaml", tier, kind))
 		require.NoError(t, err)
 		expected := templatev1.Template{}
 		_, _, err = decoder.Decode(content, nil, &expected)
 		require.NoError(t, err)
 		assert.Equal(t, expected, actual)
+	default:
+		// todo
 	}
 
 	// Assert expected objects in the template

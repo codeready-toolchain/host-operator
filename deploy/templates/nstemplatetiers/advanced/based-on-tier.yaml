@@ -1,0 +1,9 @@
+from:
+  name: base
+to:
+  name: advanced
+  parameters:
+  - name: DEACTIVATION_TIMEOUT_DAYS
+    value: 0
+  - name: IDLER_TIMEOUT_SECONDS
+    value: 0
