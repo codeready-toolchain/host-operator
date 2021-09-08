@@ -109,22 +109,31 @@ func newTierGenerator(s *runtime.Scheme, client client.Client, namespace string,
 	return c, nil
 }
 
-//from:
-//  name: base
-//to:
-//  name: baseextendedidling
-//  replace:
-//    idlerTimeoutSeconds: 43200
+// BasedOnTier defines which tier is supposed to be reused and which parameters should be modified
+// An example:
+//
+// from:
+//   name: base
+// to:
+//   name: baseextendedidling
+//   parameters:
+//     - name: IDLER_TIMEOUT_SECONDS
+//       value: 43200
+//
+// Which defines that for creating baseextendedidling tier the base tier should be used and
+// the parameter IDLER_TIMEOUT_SECONDS should be set to 43200
 type BasedOnTier struct {
 	Revision string
 	From     From `json:"from"`
 	To       To   `json:"to"`
 }
 
+// From define which tier should be reused
 type From struct {
 	Name string `json:"name"`
 }
 
+// To defines the target tier and the parameters to be set
 type To struct {
 	Name       string                 `json:"name"`
 	Parameters []templatev1.Parameter `json:"parameters,omitempty" protobuf:"bytes,4,rep,name=parameters"`
@@ -230,8 +239,8 @@ func (t *tierGenerator) initTierTemplates() error {
 		var parameters []templatev1.Parameter
 		if tierData.basedOnTier != nil {
 			parameters = tierData.basedOnTier.To.Parameters
-			tierData = t.templatesByTier[tierData.basedOnTier.From.Name]
 			basedOnTierFileRevision = tierData.rawTemplates.basedOnTier.revision
+			tierData = t.templatesByTier[tierData.basedOnTier.From.Name]
 		}
 		tierTemplates, err := t.newTierTemplates(basedOnTierFileRevision, tierData, tier, parameters)
 		if err != nil {
@@ -294,7 +303,7 @@ func (t *tierGenerator) newTierTemplate(decoder runtime.Decoder, basedOnTierFile
 	if basedOnTierFileRevision == "" {
 		basedOnTierFileRevision = tmpl.revision
 	}
-	revision := fmt.Sprintf("%s-%s", tmpl.revision, basedOnTierFileRevision)
+	revision := fmt.Sprintf("%s-%s", basedOnTierFileRevision, tmpl.revision)
 	name := NewTierTemplateName(tier, kind, revision)
 	tmplObj := &templatev1.Template{}
 	_, _, err := decoder.Decode(tmpl.content, nil, tmplObj)
@@ -317,6 +326,7 @@ func (t *tierGenerator) newTierTemplate(decoder runtime.Decoder, basedOnTierFile
 	}, nil
 }
 
+// setParams sets the value for each of the keys in the given parameter set to the template, but only if the key exists there
 func setParams(parametersToSet []templatev1.Parameter, tmpl *templatev1.Template) {
 	for _, paramToSet := range parametersToSet {
 		for i, param := range tmpl.Parameters {
@@ -324,7 +334,6 @@ func setParams(parametersToSet []templatev1.Parameter, tmpl *templatev1.Template
 				tmpl.Parameters[i].Value = paramToSet.Value
 				break
 			}
-			tmpl.Parameters = append(tmpl.Parameters, paramToSet)
 		}
 	}
 }
@@ -413,11 +422,11 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 //     name: basic
 //   spec:
 //     clusterResources:
-//       templateRef: basic-clusterresources-07cac69
+//       templateRef: basic-clusterresources-07cac69-07cac69
 //     namespaces:
-//     - templateRef: basic-code-cb6fbd2
-//     - templateRef: basic-dev-4d49fe0
-//     - templateRef: basic-stage-4d49fe0
+//     - templateRef: basic-code-cb6fbd2-cb6fbd2
+//     - templateRef: basic-dev-4d49fe0-4d49fe0
+//     - templateRef: basic-stage-4d49fe0-4d49fe0
 // ------
 func (t *tierGenerator) newNSTemplateTier(sourceTierName, tierName string, nsTemplateTier template, tierTemplates []*toolchainv1alpha1.TierTemplate, parameters []templatev1.Parameter) ([]commonclient.ToolchainObject, error) {
 	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer()

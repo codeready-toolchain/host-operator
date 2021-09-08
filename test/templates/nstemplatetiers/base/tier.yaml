@@ -1,14 +1,15 @@
 kind: Template
 apiVersion: v1
 metadata:
-  name: advanced-tier
+  name: base-tier
 objects:
 - kind: NSTemplateTier
   apiVersion: toolchain.dev.openshift.com/v1alpha1
   metadata:
-    name: advanced
+    name: base
     namespace: ${NAMESPACE}
   spec:
+    deactivationTimeoutDays: ${{DEACTIVATION_TIMEOUT_DAYS}}
     clusterResources:
       templateRef: ${CLUSTER_TEMPL_REF}
     namespaces:
@@ -19,3 +20,5 @@ parameters:
 - name: CLUSTER_TEMPL_REF
 - name: DEV_TEMPL_REF
 - name: STAGE_TEMPL_REF
+- name: DEACTIVATION_TIMEOUT_DAYS
+  value: "30"

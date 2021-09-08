@@ -38,10 +38,10 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 		expectedTemplateRefs := map[string]map[string][]string{
 			"advanced": {
-				"clusterresources": {"advanced-clusterresources-654321a-654321a"},
+				"clusterresources": {"advanced-clusterresources-abcd123-654321a"},
 				"namespaces": {
-					"advanced-dev-123456b-123456b",
-					"advanced-stage-123456c-123456c",
+					"advanced-dev-abcd123-123456b",
+					"advanced-stage-abcd123-123456c",
 				},
 			},
 			"nocluster": {
@@ -79,16 +79,19 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			tierTmpls = toolchainv1alpha1.TierTemplateList{}
 			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, len(testnstemplatetiers.AssetNames())-3) // exclude `metadata.yml` and `tier.yaml` from the AssetNames, they do not result in a TemplateTier resource
-			names := make([]string, len(testnstemplatetiers.AssetNames())-3)
+			require.Len(t, tierTmpls.Items, 8) // 3 items for advanced and base tiers + 2 for nocluster tier
+			names := make([]string, len(testnstemplatetiers.AssetNames())-1)
 			for i, tierTmpl := range tierTmpls.Items {
 				names[i] = tierTmpl.Name
 			}
 			fmt.Printf("names: %v\n", names)
 			assert.ElementsMatch(t, []string{
-				"advanced-clusterresources-654321a-654321a",
-				"advanced-dev-123456b-123456b",
-				"advanced-stage-123456c-123456c",
+				"advanced-clusterresources-abcd123-654321a",
+				"advanced-dev-abcd123-123456b",
+				"advanced-stage-abcd123-123456c",
+				"base-clusterresources-654321a-654321a",
+				"base-dev-123456b-123456b",
+				"base-stage-123456c-123456c",
 				"nocluster-dev-123456j-123456j",
 				"nocluster-stage-1234567-1234567",
 			}, names)
@@ -133,7 +136,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			tierTmpls := toolchainv1alpha1.TierTemplateList{}
 			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, len(testnstemplatetiers.AssetNames())-3) // exclude `metadata.yml` and `tier.yaml` from the AssetNames, it does not result in a TemplateTier resource
+			require.Len(t, tierTmpls.Items, 8) // 3 items for advanced and base tiers + 2 for nocluster tier
 			for _, tierTmpl := range tierTmpls.Items {
 				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
 			}
@@ -172,11 +175,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			// given a new set of tier templates (same content but new revisions, which is what we'll want to check here)
 			testassets = assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
 				if name == "metadata.yaml" {
-					return []byte(`advanced/cluster: "111111a"` + "\n" +
-						`advanced/ns_dev: "222222a"` + "\n" +
-						`advanced/ns_stage: "222222b"` + "\n" +
-						`nocluster/ns_dev: "222222e"` + "\n" +
-						`nocluster/ns_stage: "222222f"`), nil
+					return []byte(
+						`advanced/based-on-tier: "0001111"` + "\n" +
+							`base/cluster: "111111a"` + "\n" +
+							`base/ns_dev: "222222a"` + "\n" +
+							`base/ns_stage: "222222b"` + "\n" +
+							`nocluster/ns_dev: "222222e"` + "\n" +
+							`nocluster/ns_stage: "222222f"`), nil
 				}
 				// return default content for other assets
 				return testnstemplatetiers.Asset(name)
@@ -191,17 +196,25 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			tierTmpls := toolchainv1alpha1.TierTemplateList{}
 			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, 2*(len(testnstemplatetiers.AssetNames())-3)) // 2 sets of TierTemplates, but exclude the `metadata.yml`s and `tier.yaml`s from the AssetNames, they don't result in a TemplateTier resource
+			require.Len(t, tierTmpls.Items, 16) // two versions of: 3 items for advanced and base tiers + 2 for nocluster tier
 			for _, tierTmpl := range tierTmpls.Items {
 				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
 			}
 
 			expectedTemplateRefs := map[string]map[string][]string{
 				"advanced": {
-					"clusterresources": {"advanced-clusterresources-111111a-111111a"},
+					"clusterresources": {"advanced-clusterresources-0001111-111111a"},
 					"namespaces": {
-						"advanced-dev-222222a-222222a",
-						"advanced-stage-222222b-222222b",
+						"advanced-dev-0001111-222222a",
+						"advanced-stage-0001111-222222b",
+					},
+				},
+
+				"base": {
+					"clusterresources": {"base-clusterresources-111111a-111111a"},
+					"namespaces": {
+						"base-dev-222222a-222222a",
+						"base-stage-222222b-222222b",
 					},
 				},
 				"nocluster": {
