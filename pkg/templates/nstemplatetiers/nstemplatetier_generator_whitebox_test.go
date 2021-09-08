@@ -65,7 +65,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 							assert.Nil(t, tmpls[tier].rawTemplates.clusterTemplate)
 						}
 					})
-					t.Run("based-on-tier", func(t *testing.T) {
+					t.Run("based_on_tier", func(t *testing.T) {
 						switch tier {
 						case "base", "test":
 							require.Nil(t, tmpls[tier].basedOnTier)
@@ -109,11 +109,11 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.content)
 						}
 					})
-					t.Run("based-on-tier", func(t *testing.T) {
+					t.Run("based_on_tier", func(t *testing.T) {
 						if tier != "advanced" {
 							assert.Empty(t, tmpls[tier].rawTemplates.basedOnTier)
 						} else {
-							assert.Equal(t, ExpectedRevisions[tier]["based-on-tier"], tmpls[tier].rawTemplates.basedOnTier.revision)
+							assert.Equal(t, ExpectedRevisions[tier]["based_on_tier"], tmpls[tier].rawTemplates.basedOnTier.revision)
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.basedOnTier.content)
 						}
 					})
@@ -412,7 +412,7 @@ func TestNewTierTemplate(t *testing.T) {
 		t.Run("invalid template", func(t *testing.T) {
 			// given
 			fakeAssets := assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
-				if name == "metadata.yaml" || strings.HasSuffix(name, "based-on-tier.yaml") {
+				if name == "metadata.yaml" || strings.HasSuffix(name, "based_on_tier.yaml") {
 					return testnstemplatetiers.Asset(name)
 				}
 				// error occurs when fetching the content of the 'advanced-code.yaml' template
@@ -577,7 +577,7 @@ func assertTestNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual t
 }
 
 func expectedTemplateFromBasedOnTierConfig(t *testing.T, tier, templateFileName string) string {
-	basedOnTierContent, err := Asset(fmt.Sprintf("%s/based-on-tier.yaml", tier))
+	basedOnTierContent, err := Asset(fmt.Sprintf("%s/based_on_tier.yaml", tier))
 	require.NoError(t, err)
 	basedOnTier := BasedOnTier{}
 	require.NoError(t, yaml.Unmarshal(basedOnTierContent, &basedOnTier))
@@ -750,7 +750,7 @@ func TestNewNSTemplateTiers(t *testing.T) {
 
 var ExpectedRevisions = map[string]map[string]string{
 	"advanced": {
-		"based-on-tier": "abcd123",
+		"based_on_tier": "abcd123",
 	},
 	"base": {
 		"dev":     "123456b",

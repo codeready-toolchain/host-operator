@@ -1,4 +1,4 @@
-advanced/based-on-tier: "abcd123"
+advanced/based_on_tier: "abcd123"
 base/cluster: "654321a"
 base/ns_dev: "123456b"
 base/ns_stage: "123456c"

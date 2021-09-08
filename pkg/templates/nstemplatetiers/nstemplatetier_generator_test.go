@@ -176,7 +176,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			testassets = assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
 				if name == "metadata.yaml" {
 					return []byte(
-						`advanced/based-on-tier: "0001111"` + "\n" +
+						`advanced/based_on_tier: "0001111"` + "\n" +
 							`base/cluster: "111111a"` + "\n" +
 							`base/ns_dev: "222222a"` + "\n" +
 							`base/ns_stage: "222222b"` + "\n" +

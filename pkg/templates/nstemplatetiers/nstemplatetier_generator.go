@@ -209,7 +209,7 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 			results[tier].rawTemplates.clusterTemplate = &tmpl
 		case filename == "tier.yaml":
 			results[tier].rawTemplates.nsTemplateTier = tmpl
-		case filename == "based-on-tier.yaml":
+		case filename == "based_on_tier.yaml":
 			basedOnTier := &BasedOnTier{}
 			if err := yaml.Unmarshal(content, basedOnTier); err != nil {
 				return nil, err
