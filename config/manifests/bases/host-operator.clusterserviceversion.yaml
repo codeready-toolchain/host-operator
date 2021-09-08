@@ -20,12 +20,6 @@ spec:
       kind: ChangeTierRequest
       name: changetierrequests.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: HostOperatorConfig keeps all configuration parameters needed in
-        host operator
-      displayName: Host Operator Config
-      kind: HostOperatorConfig
-      name: hostoperatorconfigs.toolchain.dev.openshift.com
-      version: v1alpha1
     - description: MasterUserRecord keeps all information about user, user accounts
         and namespaces provisioned in CodeReady Toolchain
       displayName: Master User Record
@@ -42,11 +36,6 @@ spec:
       displayName: Namespace Template Tier
       kind: NSTemplateTier
       name: nstemplatetiers.toolchain.dev.openshift.com
-      version: v1alpha1
-    - description: RegistrationService configures the registration service deployment
-      displayName: Registration Service
-      kind: RegistrationService
-      name: registrationservices.toolchain.dev.openshift.com
       version: v1alpha1
     - description: TemplateUpdateRequest is the Schema for the templateupdaterequests
         API

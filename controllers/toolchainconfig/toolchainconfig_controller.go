@@ -233,7 +233,7 @@ func ToRegServiceDeploying(msg string) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ToolchainConfigRegServiceDeploy,
 		Status:  corev1.ConditionFalse,
-		Reason:  toolchainv1alpha1.RegistrationServiceDeployingReason,
+		Reason:  toolchainv1alpha1.ToolchainConfigRegServiceDeployingReason,
 		Message: msg,
 	}
 }
