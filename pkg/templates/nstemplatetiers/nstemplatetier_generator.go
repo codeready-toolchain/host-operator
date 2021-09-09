@@ -71,8 +71,8 @@ type tierData struct {
 type templates struct {
 	namespaceTemplates map[string]template // namespace templates (including roles, etc.) indexed by type ("dev", "code", "stage")
 	clusterTemplate    *template           // other cluster-scoped resources, in a single template file
-	nsTemplateTier     template            // NSTemplateTier resource with tier-scoped configuration and references to namespace and cluster templates in its spec, in a single template file
-	basedOnTier        template            // a special config defining which tier should be reused and which parameters should be overridden
+	nsTemplateTier     *template           // NSTemplateTier resource with tier-scoped configuration and references to namespace and cluster templates in its spec, in a single template file
+	basedOnTier        *template           // a special config defining which tier should be reused and which parameters should be overridden
 }
 
 // template: a template's content and its latest git revision
@@ -208,16 +208,26 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 		case filename == "cluster.yaml":
 			results[tier].rawTemplates.clusterTemplate = &tmpl
 		case filename == "tier.yaml":
-			results[tier].rawTemplates.nsTemplateTier = tmpl
+			results[tier].rawTemplates.nsTemplateTier = &tmpl
 		case filename == "based_on_tier.yaml":
 			basedOnTier := &BasedOnTier{}
 			if err := yaml.Unmarshal(content, basedOnTier); err != nil {
 				return nil, err
 			}
-			results[tier].rawTemplates.basedOnTier = tmpl
+			results[tier].rawTemplates.basedOnTier = &tmpl
 			results[tier].basedOnTier = basedOnTier
 		default:
 			return nil, errors.Errorf("unable to load templates: unknown scope for file '%s'", name)
+		}
+	}
+
+	// check that none of the tiers uses combination of based_on_tier.yaml file together with any template file
+	for tier, tierData := range results {
+		if tierData.rawTemplates.basedOnTier != nil &&
+			(tierData.rawTemplates.clusterTemplate != nil ||
+				len(tierData.rawTemplates.namespaceTemplates) > 0 ||
+				tierData.rawTemplates.nsTemplateTier != nil) {
+			return nil, fmt.Errorf("the tier %s contains a mix of based_on_tier.yaml file together with a regular template file", tier)
 		}
 	}
 
@@ -358,7 +368,7 @@ func (t *tierGenerator) initNSTemplateTiers() error {
 			nsTemplateTier = fromData.rawTemplates.nsTemplateTier
 			sourceTierName = fromData.name
 		}
-		tmpl, err := t.newNSTemplateTier(sourceTierName, tierName, nsTemplateTier, tierTemplates, parameters)
+		tmpl, err := t.newNSTemplateTier(sourceTierName, tierName, *nsTemplateTier, tierTemplates, parameters)
 		if err != nil {
 			return err
 		}

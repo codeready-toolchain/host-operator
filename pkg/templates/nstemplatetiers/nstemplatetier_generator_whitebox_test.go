@@ -8,6 +8,7 @@ import (
 	"testing"
 	texttemplate "text/template"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/ghodss/yaml"
 	"github.com/gofrs/uuid"
 
@@ -212,6 +213,35 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			assert.Contains(t, err.Error(), "unable to load templates: unknown scope for file 'advanced/foo.yaml'")
 		})
 
+		t.Run("should fail when tier contians a mix of based_on_tier.yaml file together with a regular template file", func(t *testing.T) {
+			// given
+			s := scheme.Scheme
+			err := apis.AddToScheme(s)
+			require.NoError(t, err)
+			clt := test.NewFakeClient(t)
+
+			for _, tmplName := range []string{"cluster.yaml", "ns_dev.yaml", "ns_stage.yaml", "tier.yaml"} {
+				t.Run("for template name "+tmplName, func(t *testing.T) {
+					// given
+					testassets := assets.NewAssets(func() []string {
+						return append(testnstemplatetiers.AssetNames(), fmt.Sprintf("advanced/%s", tmplName))
+
+					}, func(path string) (bytes []byte, e error) {
+						fmt.Println(path)
+						if path == "advanced/"+tmplName {
+							return []byte(""), nil
+						}
+						return testnstemplatetiers.Asset(path)
+					})
+
+					// when
+					_, err := newTierGenerator(s, clt, test.HostOperatorNs, testassets)
+
+					// then
+					require.EqualError(t, err, "the tier advanced contains a mix of based_on_tier.yaml file together with a regular template file")
+				})
+			}
+		})
 	})
 }
 
