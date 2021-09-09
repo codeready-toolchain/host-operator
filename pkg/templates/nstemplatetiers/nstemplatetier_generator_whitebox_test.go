@@ -213,7 +213,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			assert.Contains(t, err.Error(), "unable to load templates: unknown scope for file 'advanced/foo.yaml'")
 		})
 
-		t.Run("should fail when tier contians a mix of based_on_tier.yaml file together with a regular template file", func(t *testing.T) {
+		t.Run("should fail when tier contains a mix of based_on_tier.yaml file together with a regular template file", func(t *testing.T) {
 			// given
 			s := scheme.Scheme
 			err := apis.AddToScheme(s)
