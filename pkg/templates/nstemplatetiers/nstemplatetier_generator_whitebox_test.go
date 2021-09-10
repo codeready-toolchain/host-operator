@@ -40,9 +40,9 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 6)
+			require.Len(t, tmpls, 8)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled", "test"} {
+			for _, tier := range []string{"advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "test"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
@@ -260,6 +260,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 			expectedDeactivationTimeoutsByTier := map[string]int{
 				"base":                     30,
+				"baselarge":                30,
 				"baseextended":             180,
 				"baseextendedidling":       30,
 				"basedeactivationdisabled": 0,
@@ -475,19 +476,21 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	case "test":
 		// skip because this tier is for testing purposes only and the template can change often
 	case "base", "baseextended", "basedeactivationdisabled":
-		assertDefaultObjects(t, actual, "43200")
+		assertDefaultObjects(t, actual, "43200", "7Gi")
+	case "baselarge":
+		assertDefaultObjects(t, actual, "43200", "16Gi")
 	case "baseextendedidling":
-		assertDefaultObjects(t, actual, "86400")
+		assertDefaultObjects(t, actual, "86400", "7Gi")
 	case "advanced":
-		assertDefaultObjects(t, actual, "0")
+		assertDefaultObjects(t, actual, "0", "7Gi")
 	default:
 		t.Errorf("unexpected tier: '%s'", tier)
 	}
 }
 
-func assertDefaultObjects(t *testing.T, actual templatev1.Template, idlerParamValue string) {
+func assertDefaultObjects(t *testing.T, actual templatev1.Template, idlerParamValue, memoryLimit string) {
 	assert.Len(t, actual.Objects, 13)
-	containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
+	containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", memoryLimit, "15Gi"))
 	containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
 	containsObj(t, actual, clusterResourceQuotaReplicasObj())
 	containsObj(t, actual, clusterResourceQuotaRoutesObj())
@@ -523,7 +526,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// Template objects count
 	switch tier {
-	case "advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled":
+	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled":
 		if kind == "dev" {
 			require.Len(t, actual.Objects, 10) // dev namespace has CRW network policy
 		} else {

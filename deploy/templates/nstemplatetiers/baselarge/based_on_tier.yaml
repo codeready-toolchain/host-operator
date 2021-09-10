@@ -3,10 +3,6 @@ from:
 to:
   name: baselarge
   parameters:
-  - name: DEACTIVATION_TIMEOUT_DAYS
-    value: 0
-  - name: IDLER_TIMEOUT_SECONDS
-    value: 0
   - name: MEMORY_LIMIT
     value: "16Gi"
   - name: MEMORY_REQUEST
