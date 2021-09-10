@@ -3,7 +3,7 @@ kind: Template
 metadata:
   labels:
     toolchain.dev.openshift.com/provider: codeready-toolchain
-  name: advanced-cluster-resources
+  name: base-cluster-resources
 objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
@@ -12,7 +12,7 @@ objects:
   spec:
     quota:
       hard:
-        limits.cpu: 4000m
+        limits.cpu: ${CPU_LIMIT}
         limits.memory: 7Gi
         requests.storage: 7Gi
         persistentvolumeclaims: "5"
@@ -23,3 +23,5 @@ objects:
 parameters:
 - name: USERNAME
   required: true
+- name: CPU_LIMIT
+  value: 4000m

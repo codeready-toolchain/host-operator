@@ -156,13 +156,16 @@ objects:
   metadata:
     name: ${USERNAME}-dev
   spec:
-    timeoutSeconds: 43200 # 12 hours
+    timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
     name: ${USERNAME}-stage
   spec:
-    timeoutSeconds: 43200 # 12 hours
+    timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
 parameters:
 - name: USERNAME
   required: true
+- name: IDLER_TIMEOUT_SECONDS
+  # 12 hours
+  value: "43200"
