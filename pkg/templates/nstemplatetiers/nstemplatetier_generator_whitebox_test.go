@@ -40,9 +40,9 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 6)
+			require.Len(t, tmpls, 7)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled", "test"} {
+			for _, tier := range []string{"advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "test"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
@@ -260,6 +260,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 			expectedDeactivationTimeoutsByTier := map[string]int{
 				"base":                     30,
+				"baselarge":                30,
 				"baseextended":             180,
 				"baseextendedidling":       30,
 				"basedeactivationdisabled": 0,
@@ -284,7 +285,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 					require.NotNil(t, nstmplTier)
 					assert.Equal(t, namespace, nstmplTier.Namespace)
 					expectedDeactivationTimeout, ok := expectedDeactivationTimeoutsByTier[nstmplTier.Name]
-					require.True(t, ok, "encountered an unexpected tier")
+					require.True(t, ok, "encountered an unexpected tier: %s", nstmplTier.Name)
 					assert.Equal(t, expectedDeactivationTimeout, nstmplTier.Spec.DeactivationTimeoutDays)
 
 					// verify tier templates
@@ -475,19 +476,21 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	case "test":
 		// skip because this tier is for testing purposes only and the template can change often
 	case "base", "baseextended", "basedeactivationdisabled":
-		assertDefaultObjects(t, actual, "43200")
+		assertDefaultObjects(t, actual, "43200", "7Gi")
+	case "baselarge":
+		assertDefaultObjects(t, actual, "43200", "16Gi")
 	case "baseextendedidling":
-		assertDefaultObjects(t, actual, "86400")
+		assertDefaultObjects(t, actual, "86400", "7Gi")
 	case "advanced":
-		assertDefaultObjects(t, actual, "0")
+		assertDefaultObjects(t, actual, "0", "7Gi")
 	default:
 		t.Errorf("unexpected tier: '%s'", tier)
 	}
 }
 
-func assertDefaultObjects(t *testing.T, actual templatev1.Template, idlerParamValue string) {
+func assertDefaultObjects(t *testing.T, actual templatev1.Template, idlerParamValue, memoryLimit string) {
 	assert.Len(t, actual.Objects, 13)
-	containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
+	containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "15Gi"))
 	containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
 	containsObj(t, actual, clusterResourceQuotaReplicasObj())
 	containsObj(t, actual, clusterResourceQuotaRoutesObj())
@@ -501,6 +504,8 @@ func assertDefaultObjects(t *testing.T, actual templatev1.Template, idlerParamVa
 	containsObj(t, actual, idlerObj("${USERNAME}-dev"))
 	containsObj(t, actual, idlerObj("${USERNAME}-stage"))
 	containsParam(t, actual, "IDLER_TIMEOUT_SECONDS", idlerParamValue)
+	containsParam(t, actual, "MEMORY_LIMIT", memoryLimit)
+	containsParam(t, actual, "MEMORY_REQUEST", memoryLimit)
 }
 
 func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
@@ -523,7 +528,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// Template objects count
 	switch tier {
-	case "advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled":
+	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled":
 		if kind == "dev" {
 			require.Len(t, actual.Objects, 10) // dev namespace has CRW network policy
 		} else {
@@ -555,7 +560,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// User Namespaces Network Policies
 	switch tier {
-	case "advanced", "base", "baseextended", "baseextendedidling", "basedeactivationdisabled":
+	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled":
 		switch kind {
 		case "dev":
 			containsObj(t, actual, allowFromCRWPolicyObj(kind))
@@ -637,8 +642,8 @@ func limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest string
 	return fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"%s","memory":"%s"},"type":"Container"}]}}`, kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest)
 }
 
-func clusterResourceQuotaComputeObj(cpuLimit, cpuRequest, memoryLimit, storageLimit string) string { // nolint: unparam
-	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-compute"},"spec":{"quota":{"hard":{"count/persistentvolumeclaims":"5","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"%[4]s"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit, storageLimit)
+func clusterResourceQuotaComputeObj(cpuLimit, cpuRequest, storageLimit string) string { // nolint: unparam
+	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-compute"},"spec":{"quota":{"hard":{"count/persistentvolumeclaims":"5","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"${MEMORY_LIMIT}","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"${MEMORY_REQUEST}","requests.storage":"%[3]s"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, storageLimit)
 }
 
 func clusterResourceQuotaDeploymentsObj() string {

@@ -1,0 +1,9 @@
+from:
+  name: base
+to:
+  name: baselarge
+  parameters:
+  - name: MEMORY_LIMIT
+    value: "16Gi"
+  - name: MEMORY_REQUEST
+    value: "16Gi"
