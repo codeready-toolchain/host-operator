@@ -285,7 +285,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 					require.NotNil(t, nstmplTier)
 					assert.Equal(t, namespace, nstmplTier.Namespace)
 					expectedDeactivationTimeout, ok := expectedDeactivationTimeoutsByTier[nstmplTier.Name]
-					require.True(t, ok, "encountered an unexpected tier")
+					require.True(t, ok, "encountered an unexpected tier: %s", nstmplTier.Name)
 					assert.Equal(t, expectedDeactivationTimeout, nstmplTier.Spec.DeactivationTimeoutDays)
 
 					// verify tier templates
