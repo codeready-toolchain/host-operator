@@ -83,9 +83,7 @@ const (
 <div><span style="font-weight:bold;padding-right:10px">Reason:</span>{{.Reason}}</div>
 <div><span style="font-weight:bold;padding-right:10px">Message:</span>{{.Message}}</div>
 </div>
-
-{{end}}
-`
+{{end}}`
 )
 
 var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
