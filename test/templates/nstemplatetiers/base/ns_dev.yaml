@@ -3,19 +3,19 @@ kind: Template
 metadata:
   labels:
     toolchain.dev.openshift.com/provider: codeready-toolchain
-  name: advanced-stage
+  name: base-dev
 objects:
 - apiVersion: v1
   kind: Namespace
   metadata:
     annotations:
-      openshift.io/description: ${USERNAME}-stage
-      openshift.io/display-name: ${USERNAME}-stage
+      openshift.io/description: ${USERNAME}-dev
+      openshift.io/display-name: ${USERNAME}-dev
       openshift.io/requester: ${USERNAME}
     labels:
       toolchain.dev.openshift.com/provider: codeready-toolchain
-      name: ${USERNAME}-stage
-    name: ${USERNAME}-stage
+      name: ${USERNAME}-dev
+    name: ${USERNAME}-dev
 parameters:
 - name: USERNAME
   required: true

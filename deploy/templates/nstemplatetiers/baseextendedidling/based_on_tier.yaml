@@ -1,0 +1,8 @@
+from:
+  name: base
+to:
+  name: baseextendedidling
+  parameters:
+  - name: IDLER_TIMEOUT_SECONDS
+    # 24 hours
+    value: "86400"
