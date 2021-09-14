@@ -1181,7 +1181,7 @@ func TestExtractStatusMetadata(t *testing.T) {
 	t.Run("test status metadata for ToolchainStatus not ready", func(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus()
-		condition.AddOrUpdateStatusConditions(toolchainStatus.Status.Conditions, toolchainv1alpha1.Condition{
+		toolchainStatus.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(toolchainStatus.Status.Conditions, toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  "SomeReason",
@@ -1194,6 +1194,119 @@ func TestExtractStatusMetadata(t *testing.T) {
 		require.Equal(t, "SomeReason", meta[0].Reason)
 		require.Equal(t, "A message", meta[0].Message)
 		require.Equal(t, "ToolchainStatus", meta[0].ComponentName)
+	})
+
+	t.Run("test status metadata for host operator not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(WithHost())
+		toolchainStatus.Status.HostOperator.Conditions, _ = condition.AddOrUpdateStatusConditions(
+			toolchainStatus.Status.HostOperator.Conditions, toolchainv1alpha1.Condition{
+				Type:    toolchainv1alpha1.ConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  "HostNotReadyReason",
+				Message: "Host error message",
+			})
+
+		meta := ExtractStatusMetadata(toolchainStatus)
+		require.Len(t, meta, 1)
+		require.Equal(t, "", meta[0].ComponentType)
+		require.Equal(t, "HostNotReadyReason", meta[0].Reason)
+		require.Equal(t, "Host error message", meta[0].Message)
+		require.Equal(t, "Host Operator", meta[0].ComponentName)
+	})
+
+	t.Run("test status metadata for one of two members not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(
+			WithMember("member-sandbox.aaa.openshiftapps.com"),
+			WithMember("member-sandbox.bbb.openshiftapps.com"))
+		toolchainStatus.Status.Members[0].MemberStatus.Conditions, _ = condition.AddOrUpdateStatusConditions(
+			toolchainStatus.Status.Members[0].MemberStatus.Conditions, toolchainv1alpha1.Condition{
+				Type:    toolchainv1alpha1.ConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  "MemberNotReadyReason",
+				Message: "Member error message",
+			})
+
+		meta := ExtractStatusMetadata(toolchainStatus)
+		require.Len(t, meta, 1)
+		require.Equal(t, "Member", meta[0].ComponentType)
+		require.Equal(t, "MemberNotReadyReason", meta[0].Reason)
+		require.Equal(t, "Member error message", meta[0].Message)
+		require.Equal(t, "member-sandbox.aaa.openshiftapps.com", meta[0].ComponentName)
+	})
+
+	t.Run("test status metadata for member route not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(WithMember("member-sandbox.ccc.openshiftapps.com",
+			WithRoutes("https://console.url", "https://che.url",
+				toolchainv1alpha1.Condition{
+					Type:    toolchainv1alpha1.ConditionReady,
+					Status:  corev1.ConditionFalse,
+					Reason:  "RouteNotReadyReason",
+					Message: "Route error message",
+				})))
+
+		meta := ExtractStatusMetadata(toolchainStatus)
+		require.Len(t, meta, 1)
+		require.Equal(t, "Member Route", meta[0].ComponentType)
+		require.Equal(t, "RouteNotReadyReason", meta[0].Reason)
+		require.Equal(t, "Route error message", meta[0].Message)
+		require.Equal(t, "member-sandbox.ccc.openshiftapps.com", meta[0].ComponentName)
+	})
+
+	t.Run("test status metadata for registration service deployment not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(WithRegistrationService(WithDeploymentCondition(
+			toolchainv1alpha1.Condition{
+				Type:    toolchainv1alpha1.ConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  "DeploymentNotReadyReason",
+				Message: "Deployment error message",
+			})))
+
+		meta := ExtractStatusMetadata(toolchainStatus)
+		require.Len(t, meta, 1)
+		require.Equal(t, "Registration service", meta[0].ComponentType)
+		require.Equal(t, "DeploymentNotReadyReason", meta[0].Reason)
+		require.Equal(t, "Deployment error message", meta[0].Message)
+		require.Equal(t, "deployment", meta[0].ComponentName)
+	})
+
+	t.Run("test status metadata for registration service health not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(WithRegistrationService(WithHealthCondition(
+			toolchainv1alpha1.Condition{
+				Type:    toolchainv1alpha1.ConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  "HealthNotReadyReason",
+				Message: "Health error message",
+			})))
+
+		meta := ExtractStatusMetadata(toolchainStatus)
+		require.Len(t, meta, 1)
+		require.Equal(t, "Registration service", meta[0].ComponentType)
+		require.Equal(t, "HealthNotReadyReason", meta[0].Reason)
+		require.Equal(t, "Health error message", meta[0].Message)
+		require.Equal(t, "health", meta[0].ComponentName)
+	})
+
+	t.Run("test status metadata for registration service resources not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus(WithRegistrationService(WithRegistrationServiceResourcesCondition(
+			toolchainv1alpha1.Condition{
+				Type:    toolchainv1alpha1.ConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  "ResourcesNotReadyReason",
+				Message: "Resources error message",
+			})))
+
+		meta := ExtractStatusMetadata(toolchainStatus)
+		require.Len(t, meta, 1)
+		require.Equal(t, "Registration service", meta[0].ComponentType)
+		require.Equal(t, "ResourcesNotReadyReason", meta[0].Reason)
+		require.Equal(t, "Resources error message", meta[0].Message)
+		require.Equal(t, "resources", meta[0].ComponentName)
 	})
 }
 

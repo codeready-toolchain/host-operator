@@ -3,6 +3,7 @@ package test
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	condition2 "github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +35,41 @@ func WithHost(options ...HostToolchainStatusOption) ToolchainStatusOption {
 }
 
 type HostToolchainStatusOption func(*toolchainv1alpha1.HostOperatorStatus)
+
+func WithRegistrationService(options ...RegistrationServiceToolchainStatusOption) ToolchainStatusOption {
+	return func(status *toolchainv1alpha1.ToolchainStatus) {
+		regService := &toolchainv1alpha1.HostRegistrationServiceStatus{
+			Deployment:                   toolchainv1alpha1.RegistrationServiceDeploymentStatus{},
+			RegistrationServiceResources: toolchainv1alpha1.RegistrationServiceResourcesStatus{},
+			Health:                       toolchainv1alpha1.RegistrationServiceHealth{},
+		}
+		for _, modify := range options {
+			modify(regService)
+		}
+
+		status.Status.RegistrationService = regService
+	}
+}
+
+type RegistrationServiceToolchainStatusOption func(status *toolchainv1alpha1.HostRegistrationServiceStatus)
+
+func WithDeploymentCondition(condition toolchainv1alpha1.Condition) RegistrationServiceToolchainStatusOption {
+	return func(status *toolchainv1alpha1.HostRegistrationServiceStatus) {
+		status.Deployment.Conditions, _ = condition2.AddOrUpdateStatusConditions(status.Deployment.Conditions, condition)
+	}
+}
+
+func WithRegistrationServiceResourcesCondition(condition toolchainv1alpha1.Condition) RegistrationServiceToolchainStatusOption {
+	return func(status *toolchainv1alpha1.HostRegistrationServiceStatus) {
+		status.RegistrationServiceResources.Conditions, _ = condition2.AddOrUpdateStatusConditions(status.RegistrationServiceResources.Conditions, condition)
+	}
+}
+
+func WithHealthCondition(condition toolchainv1alpha1.Condition) RegistrationServiceToolchainStatusOption {
+	return func(status *toolchainv1alpha1.HostRegistrationServiceStatus) {
+		status.Health.Conditions, _ = condition2.AddOrUpdateStatusConditions(status.Health.Conditions, condition)
+	}
+}
 
 func WithMember(name string, options ...MemberToolchainStatusOption) ToolchainStatusOption {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {

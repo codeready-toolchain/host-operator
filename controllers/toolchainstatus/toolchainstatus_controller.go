@@ -462,66 +462,74 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []Compon
 		})
 	}
 
-	cond, found = condition.FindConditionByType(instance.Status.HostOperator.Conditions, toolchainv1alpha1.ConditionReady)
-	if found && cond.Status != corev1.ConditionTrue {
-		result = append(result, ComponentNotReadyStatus{
-			ComponentType: "",
-			ComponentName: "Host Operator",
-			Reason:        cond.Reason,
-			Message:       cond.Message,
-		})
-	}
-
-	for _, member := range instance.Status.Members {
-		cond, found := condition.FindConditionByType(member.MemberStatus.Conditions, toolchainv1alpha1.ConditionReady)
+	if instance.Status.HostOperator != nil {
+		cond, found = condition.FindConditionByType(instance.Status.HostOperator.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
 			result = append(result, ComponentNotReadyStatus{
-				ComponentType: "Member",
-				ComponentName: member.ClusterName,
-				Reason:        cond.Reason,
-				Message:       cond.Message,
-			})
-		}
-
-		cond, found = condition.FindConditionByType(member.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady)
-		if found && cond.Status != corev1.ConditionTrue {
-			result = append(result, ComponentNotReadyStatus{
-				ComponentType: "Member Route",
-				ComponentName: member.ClusterName,
+				ComponentType: "",
+				ComponentName: "Host Operator",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
 			})
 		}
 	}
 
-	cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Deployment.Conditions, toolchainv1alpha1.ConditionReady)
-	if found && cond.Status != corev1.ConditionTrue {
-		result = append(result, ComponentNotReadyStatus{
-			ComponentType: "Registration service",
-			ComponentName: "deployment",
-			Reason:        cond.Reason,
-			Message:       cond.Message,
-		})
+	if instance.Status.Members != nil {
+		for _, member := range instance.Status.Members {
+			cond, found := condition.FindConditionByType(member.MemberStatus.Conditions, toolchainv1alpha1.ConditionReady)
+			if found && cond.Status != corev1.ConditionTrue {
+				result = append(result, ComponentNotReadyStatus{
+					ComponentType: "Member",
+					ComponentName: member.ClusterName,
+					Reason:        cond.Reason,
+					Message:       cond.Message,
+				})
+			}
+
+			if member.MemberStatus.Routes != nil {
+				cond, found = condition.FindConditionByType(member.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady)
+				if found && cond.Status != corev1.ConditionTrue {
+					result = append(result, ComponentNotReadyStatus{
+						ComponentType: "Member Route",
+						ComponentName: member.ClusterName,
+						Reason:        cond.Reason,
+						Message:       cond.Message,
+					})
+				}
+			}
+		}
 	}
 
-	cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Health.Conditions, toolchainv1alpha1.ConditionReady)
-	if found && cond.Status != corev1.ConditionTrue {
-		result = append(result, ComponentNotReadyStatus{
-			ComponentType: "Registration service",
-			ComponentName: "health",
-			Reason:        cond.Reason,
-			Message:       cond.Message,
-		})
-	}
+	if instance.Status.RegistrationService != nil {
+		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Deployment.Conditions, toolchainv1alpha1.ConditionReady)
+		if found && cond.Status != corev1.ConditionTrue {
+			result = append(result, ComponentNotReadyStatus{
+				ComponentType: "Registration service",
+				ComponentName: "deployment",
+				Reason:        cond.Reason,
+				Message:       cond.Message,
+			})
+		}
 
-	cond, found = condition.FindConditionByType(instance.Status.RegistrationService.RegistrationServiceResources.Conditions, toolchainv1alpha1.ConditionReady)
-	if found && cond.Status != corev1.ConditionTrue {
-		result = append(result, ComponentNotReadyStatus{
-			ComponentType: "Registration service",
-			ComponentName: "resources",
-			Reason:        cond.Reason,
-			Message:       cond.Message,
-		})
+		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Health.Conditions, toolchainv1alpha1.ConditionReady)
+		if found && cond.Status != corev1.ConditionTrue {
+			result = append(result, ComponentNotReadyStatus{
+				ComponentType: "Registration service",
+				ComponentName: "health",
+				Reason:        cond.Reason,
+				Message:       cond.Message,
+			})
+		}
+
+		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.RegistrationServiceResources.Conditions, toolchainv1alpha1.ConditionReady)
+		if found && cond.Status != corev1.ConditionTrue {
+			result = append(result, ComponentNotReadyStatus{
+				ComponentType: "Registration service",
+				ComponentName: "resources",
+				Reason:        cond.Reason,
+				Message:       cond.Message,
+			})
+		}
 	}
 
 	return result
