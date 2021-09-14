@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
@@ -1172,6 +1174,26 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				"2,external": 1, // unchanged
 				"3,internal": 1, // unchanged
 			})
+	})
+}
+
+func TestExtractStatusMetadata(t *testing.T) {
+	t.Run("test status metadata for ToolchainStatus not ready", func(t *testing.T) {
+		// given
+		toolchainStatus := NewToolchainStatus()
+		condition.AddOrUpdateStatusConditions(toolchainStatus.Status.Conditions, toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.ConditionReady,
+			Status:  corev1.ConditionFalse,
+			Reason:  "SomeReason",
+			Message: "A message",
+		})
+
+		meta := ExtractStatusMetadata(toolchainStatus)
+		require.Len(t, meta, 1)
+		require.Equal(t, "", meta[0].ComponentType)
+		require.Equal(t, "SomeReason", meta[0].Reason)
+		require.Equal(t, "A message", meta[0].Message)
+		require.Equal(t, "ToolchainStatus", meta[0].ComponentName)
 	})
 }
 

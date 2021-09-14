@@ -1,12 +1,14 @@
 package toolchainstatus
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"text/template"
 	"time"
 
 	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
@@ -23,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -71,6 +72,20 @@ type toolchainStatusNotificationType string
 const (
 	unreadyStatus  toolchainStatusNotificationType = "unready"
 	restoredStatus toolchainStatusNotificationType = "restored"
+)
+
+const (
+	statusNotificationTemplate = `<h3>The following issues have been detected in the ToolchainStatus<h3>
+{{range .}}
+<h4>{{.ComponentType}} {{.ComponentName}} not ready</h4>
+
+<div style="padding-left: 40px">
+<div><span style="font-weight:bold;padding-right:10px">Reason:</span>{{.Reason}}</div>
+<div><span style="font-weight:bold;padding-right:10px">Message:</span>{{.Message}}</div>
+</div>
+
+{{end}}
+`
 )
 
 var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
@@ -384,11 +399,10 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	case unreadyStatus:
 		toolchainStatus = toolchainStatus.DeepCopy()
 		toolchainStatus.ManagedFields = nil // we don't need these managed fields in the notification
-		statusYaml, err := yaml.Marshal(toolchainStatus)
+		contentString, err = GenerateUnreadyNotificationContent(ExtractStatusMetadata(toolchainStatus))
 		if err != nil {
 			return err
 		}
-		contentString = "<div><pre><code>" + string(statusYaml) + "</code></pre></div>" // wrap with div/pre/code tags so the formatting remains intact in the delivered mail
 		subjectString = adminUnreadyNotificationSubject
 	case restoredStatus:
 		contentString = "<div><pre>ToolchainStatus is back to ready status.</pre></div>"
@@ -410,6 +424,107 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 
 	logger.Info(fmt.Sprintf("Toolchain status[%s] notification resource created", notification.Name))
 	return nil
+}
+
+type ComponentNotReadyStatus struct {
+	ComponentType string
+	ComponentName string
+	Reason        string
+	Message       string
+}
+
+func GenerateUnreadyNotificationContent(statusMeta []ComponentNotReadyStatus) (string, error) {
+	tmpl, err := template.New("status").Parse(statusNotificationTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	var output bytes.Buffer
+
+	err = tmpl.Execute(&output, statusMeta)
+	if err != nil {
+		return "", err
+	}
+
+	return output.String(), nil
+}
+
+func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []ComponentNotReadyStatus {
+	result := []ComponentNotReadyStatus{}
+
+	cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	if found && cond.Status != corev1.ConditionTrue {
+		result = append(result, ComponentNotReadyStatus{
+			ComponentType: "",
+			ComponentName: "ToolchainStatus",
+			Reason:        cond.Reason,
+			Message:       cond.Message,
+		})
+	}
+
+	cond, found = condition.FindConditionByType(instance.Status.HostOperator.Conditions, toolchainv1alpha1.ConditionReady)
+	if found && cond.Status != corev1.ConditionTrue {
+		result = append(result, ComponentNotReadyStatus{
+			ComponentType: "",
+			ComponentName: "Host Operator",
+			Reason:        cond.Reason,
+			Message:       cond.Message,
+		})
+	}
+
+	for _, member := range instance.Status.Members {
+		cond, found := condition.FindConditionByType(member.MemberStatus.Conditions, toolchainv1alpha1.ConditionReady)
+		if found && cond.Status != corev1.ConditionTrue {
+			result = append(result, ComponentNotReadyStatus{
+				ComponentType: "Member",
+				ComponentName: member.ClusterName,
+				Reason:        cond.Reason,
+				Message:       cond.Message,
+			})
+		}
+
+		cond, found = condition.FindConditionByType(member.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady)
+		if found && cond.Status != corev1.ConditionTrue {
+			result = append(result, ComponentNotReadyStatus{
+				ComponentType: "Member Route",
+				ComponentName: member.ClusterName,
+				Reason:        cond.Reason,
+				Message:       cond.Message,
+			})
+		}
+	}
+
+	cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Deployment.Conditions, toolchainv1alpha1.ConditionReady)
+	if found && cond.Status != corev1.ConditionTrue {
+		result = append(result, ComponentNotReadyStatus{
+			ComponentType: "Registration service",
+			ComponentName: "deployment",
+			Reason:        cond.Reason,
+			Message:       cond.Message,
+		})
+	}
+
+	cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Health.Conditions, toolchainv1alpha1.ConditionReady)
+	if found && cond.Status != corev1.ConditionTrue {
+		result = append(result, ComponentNotReadyStatus{
+			ComponentType: "Registration service",
+			ComponentName: "health",
+			Reason:        cond.Reason,
+			Message:       cond.Message,
+		})
+	}
+
+	cond, found = condition.FindConditionByType(instance.Status.RegistrationService.RegistrationServiceResources.Conditions, toolchainv1alpha1.ConditionReady)
+	if found && cond.Status != corev1.ConditionTrue {
+		result = append(result, ComponentNotReadyStatus{
+			ComponentType: "Registration service",
+			ComponentName: "resources",
+			Reason:        cond.Reason,
+			Message:       cond.Message,
+		})
+	}
+
+	return result
 }
 
 func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, members map[string]toolchainv1alpha1.MemberStatusStatus, memberClusters []*cluster.CachedToolchainCluster) bool {
