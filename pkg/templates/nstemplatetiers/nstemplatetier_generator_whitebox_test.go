@@ -227,7 +227,6 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 						return append(testnstemplatetiers.AssetNames(), fmt.Sprintf("advanced/%s", tmplName))
 
 					}, func(path string) (bytes []byte, e error) {
-						fmt.Println(path)
 						if path == "advanced/"+tmplName {
 							return []byte(""), nil
 						}
@@ -530,9 +529,9 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	switch tier {
 	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled":
 		if kind == "dev" {
-			require.Len(t, actual.Objects, 10) // dev namespace has CRW network policy
+			require.Len(t, actual.Objects, 13) // dev namespace has CRW network policy
 		} else {
-			require.Len(t, actual.Objects, 9)
+			require.Len(t, actual.Objects, 12)
 		}
 	case "test":
 		return // Don't care what objects are defined in the test tier
@@ -577,6 +576,11 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	// Role & RoleBinding with additional permissions to edit roles/rolebindings
 	containsObj(t, actual, rbacEditRoleObj(kind))
 	containsObj(t, actual, userRbacEditRoleBindingObj(kind))
+
+	// crtadmins related Role & RoleBindings
+	containsObj(t, actual, execPodsRoleObj(kind))
+	containsObj(t, actual, crtadminViewRoleBindingObj(kind))
+	containsObj(t, actual, crtadminPodsRoleBindingObj(kind))
 }
 
 func assertTestClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
@@ -715,6 +719,18 @@ func userRbacEditRoleBindingObj(kind string) string {
 
 func rbacEditRoleObj(kind string) string {
 	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"rbac-edit","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":["authorization.openshift.io","rbac.authorization.k8s.io"],"resources":["roles","rolebindings"],"verbs":["get","list","watch","create","update","patch","delete"]}]}`, kind)
+}
+
+func execPodsRoleObj(kind string) string {
+	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"exec-pods","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":[""],"resources":["pods/exec"],"verbs":["get","list","watch","create","delete","update"]}]}`, kind)
+}
+
+func crtadminViewRoleBindingObj(kind string) string {
+	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-view","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"view"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`, kind)
+}
+
+func crtadminPodsRoleBindingObj(kind string) string {
+	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-pods","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"Role","name":"exec-pods"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`, kind)
 }
 
 func allowFromOpenshiftMonitoringPolicyObj(kind string) string {
