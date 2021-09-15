@@ -518,16 +518,6 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []Compon
 				Message:       cond.Message,
 			})
 		}
-
-		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.RegistrationServiceResources.Conditions, toolchainv1alpha1.ConditionReady)
-		if found && cond.Status != corev1.ConditionTrue {
-			result = append(result, ComponentNotReadyStatus{
-				ComponentType: "Registration service",
-				ComponentName: "resources",
-				Reason:        cond.Reason,
-				Message:       cond.Message,
-			})
-		}
 	}
 
 	return result

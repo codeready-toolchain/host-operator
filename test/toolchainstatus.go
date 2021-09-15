@@ -59,12 +59,6 @@ func WithDeploymentCondition(condition toolchainv1alpha1.Condition) Registration
 	}
 }
 
-func WithRegistrationServiceResourcesCondition(condition toolchainv1alpha1.Condition) RegistrationServiceToolchainStatusOption {
-	return func(status *toolchainv1alpha1.HostRegistrationServiceStatus) {
-		status.RegistrationServiceResources.Conditions, _ = condition2.AddOrUpdateStatusConditions(status.RegistrationServiceResources.Conditions, condition)
-	}
-}
-
 func WithHealthCondition(condition toolchainv1alpha1.Condition) RegistrationServiceToolchainStatusOption {
 	return func(status *toolchainv1alpha1.HostRegistrationServiceStatus) {
 		status.Health.Conditions, _ = condition2.AddOrUpdateStatusConditions(status.Health.Conditions, condition)
