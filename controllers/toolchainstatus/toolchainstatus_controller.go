@@ -488,7 +488,7 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []Compon
 				cond, found = condition.FindConditionByType(member.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady)
 				if found && cond.Status != corev1.ConditionTrue {
 					result = append(result, ComponentNotReadyStatus{
-						ComponentType: "Member Route",
+						ComponentType: "Member Routes",
 						ComponentName: member.ClusterName,
 						Reason:        cond.Reason,
 						Message:       cond.Message,
