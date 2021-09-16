@@ -479,7 +479,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	case "baselarge":
 		assertDefaultObjects(t, actual, "43200", "16Gi")
 	case "baseextendedidling":
-		assertDefaultObjects(t, actual, "86400", "7Gi")
+		assertDefaultObjects(t, actual, "518400", "7Gi")
 	case "advanced":
 		assertDefaultObjects(t, actual, "0", "7Gi")
 	default:
