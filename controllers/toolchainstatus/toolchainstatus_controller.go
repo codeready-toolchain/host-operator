@@ -11,6 +11,8 @@ import (
 	"text/template"
 	"time"
 
+	"k8s.io/client-go/rest"
+
 	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 
@@ -76,12 +78,19 @@ const (
 
 const (
 	statusNotificationTemplate = `<h3>The following issues have been detected in the ToolchainStatus<h3>
-{{range .}}
+{{range $key, $value := .clusterURLs}}
+<div><span style="font-weight:bold;padding-right:10px">{{$key}}:</span>{{$value}}</div>
+{{end}}
+
+{{range .components}}
 <h4>{{.ComponentType}} {{.ComponentName}} not ready</h4>
 
 <div style="padding-left: 40px">
 <div><span style="font-weight:bold;padding-right:10px">Reason:</span>{{.Reason}}</div>
 <div><span style="font-weight:bold;padding-right:10px">Message:</span>{{.Message}}</div>
+{{range $key, $value := .Details}}
+<div><span style="font-weight:bold;padding-right:10px">{{$key}}:</span>{{$value}}</div>
+{{end}}
 </div>
 {{end}}`
 )
@@ -397,7 +406,9 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	case unreadyStatus:
 		toolchainStatus = toolchainStatus.DeepCopy()
 		toolchainStatus.ManagedFields = nil // we don't need these managed fields in the notification
-		contentString, err = GenerateUnreadyNotificationContent(ExtractStatusMetadata(toolchainStatus))
+
+		clusterURLs := ClusterURLs(toolchainStatus)
+		contentString, err = GenerateUnreadyNotificationContent(clusterURLs, ExtractStatusMetadata(toolchainStatus))
 		if err != nil {
 			return err
 		}
@@ -424,14 +435,31 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	return nil
 }
 
+func ClusterURLs(instance *toolchainv1alpha1.ToolchainStatus) map[string]string {
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		result := map[string]string{}
+
+		for _, mbr := range instance.Status.Members {
+			result["Member cluster"] = mbr.ClusterName
+		}
+
+		return result
+	}
+	return map[string]string{
+		"Cluster URL": cfg.Host,
+	}
+}
+
 type ComponentNotReadyStatus struct {
 	ComponentType string
 	ComponentName string
 	Reason        string
 	Message       string
+	Details       map[string]string
 }
 
-func GenerateUnreadyNotificationContent(statusMeta []ComponentNotReadyStatus) (string, error) {
+func GenerateUnreadyNotificationContent(clusterURLs map[string]string, statusMeta []*ComponentNotReadyStatus) (string, error) {
 	tmpl, err := template.New("status").Parse(statusNotificationTemplate)
 	if err != nil {
 		return "", err
@@ -439,7 +467,12 @@ func GenerateUnreadyNotificationContent(statusMeta []ComponentNotReadyStatus) (s
 
 	var output bytes.Buffer
 
-	err = tmpl.Execute(&output, statusMeta)
+	templateContext := map[string]interface{}{
+		"clusterURLs": clusterURLs,
+		"components":  statusMeta,
+	}
+
+	err = tmpl.Execute(&output, templateContext)
 	if err != nil {
 		return "", err
 	}
@@ -447,12 +480,12 @@ func GenerateUnreadyNotificationContent(statusMeta []ComponentNotReadyStatus) (s
 	return output.String(), nil
 }
 
-func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []ComponentNotReadyStatus {
-	result := []ComponentNotReadyStatus{}
+func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*ComponentNotReadyStatus {
+	result := []*ComponentNotReadyStatus{}
 
 	cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	if found && cond.Status != corev1.ConditionTrue {
-		result = append(result, ComponentNotReadyStatus{
+		result = append(result, &ComponentNotReadyStatus{
 			ComponentType: "",
 			ComponentName: "ToolchainStatus",
 			Reason:        cond.Reason,
@@ -463,7 +496,7 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []Compon
 	if instance.Status.HostOperator != nil {
 		cond, found = condition.FindConditionByType(instance.Status.HostOperator.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
-			result = append(result, ComponentNotReadyStatus{
+			result = append(result, &ComponentNotReadyStatus{
 				ComponentType: "",
 				ComponentName: "Host Operator",
 				Reason:        cond.Reason,
@@ -476,7 +509,7 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []Compon
 		for _, member := range instance.Status.Members {
 			cond, found := condition.FindConditionByType(member.MemberStatus.Conditions, toolchainv1alpha1.ConditionReady)
 			if found && cond.Status != corev1.ConditionTrue {
-				result = append(result, ComponentNotReadyStatus{
+				result = append(result, &ComponentNotReadyStatus{
 					ComponentType: "Member",
 					ComponentName: member.ClusterName,
 					Reason:        cond.Reason,
@@ -487,11 +520,15 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []Compon
 			if member.MemberStatus.Routes != nil {
 				cond, found = condition.FindConditionByType(member.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady)
 				if found && cond.Status != corev1.ConditionTrue {
-					result = append(result, ComponentNotReadyStatus{
+					result = append(result, &ComponentNotReadyStatus{
 						ComponentType: "Member Routes",
 						ComponentName: member.ClusterName,
 						Reason:        cond.Reason,
 						Message:       cond.Message,
+						Details: map[string]string{
+							"Che dashboard URL": member.MemberStatus.Routes.CheDashboardURL,
+							"Console URL":       member.MemberStatus.Routes.ConsoleURL,
+						},
 					})
 				}
 			}
@@ -501,7 +538,7 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []Compon
 	if instance.Status.RegistrationService != nil {
 		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Deployment.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
-			result = append(result, ComponentNotReadyStatus{
+			result = append(result, &ComponentNotReadyStatus{
 				ComponentType: "Registration service",
 				ComponentName: "deployment",
 				Reason:        cond.Reason,
@@ -511,12 +548,19 @@ func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []Compon
 
 		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Health.Conditions, toolchainv1alpha1.ConditionReady)
 		if found && cond.Status != corev1.ConditionTrue {
-			result = append(result, ComponentNotReadyStatus{
+			result = append(result, &ComponentNotReadyStatus{
 				ComponentType: "Registration service",
 				ComponentName: "health",
 				Reason:        cond.Reason,
 				Message:       cond.Message,
 			})
+		}
+	}
+
+	// Safety check - confirm the status metadata has all nil details values initialized to an empty map
+	for _, meta := range result {
+		if meta.Details == nil {
+			meta.Details = map[string]string{}
 		}
 	}
 

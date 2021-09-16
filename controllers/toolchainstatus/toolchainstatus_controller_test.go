@@ -1218,7 +1218,13 @@ func TestExtractStatusMetadata(t *testing.T) {
 	t.Run("test status metadata for one of two members not ready", func(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus(
-			WithMember("member-sandbox.aaa.openshiftapps.com"),
+			WithMember("member-sandbox.aaa.openshiftapps.com",
+				WithRoutes("http://console.url", "http://che.dashboard.url",
+					toolchainv1alpha1.Condition{
+						Type:    toolchainv1alpha1.ConditionReady,
+						Status:  corev1.ConditionFalse,
+						Reason:  "RoutesNotReadyReason",
+						Message: "Member routes error message"})),
 			WithMember("member-sandbox.bbb.openshiftapps.com"))
 		toolchainStatus.Status.Members[0].MemberStatus.Conditions, _ = condition.AddOrUpdateStatusConditions(
 			toolchainStatus.Status.Members[0].MemberStatus.Conditions, toolchainv1alpha1.Condition{
@@ -1229,11 +1235,20 @@ func TestExtractStatusMetadata(t *testing.T) {
 			})
 
 		meta := ExtractStatusMetadata(toolchainStatus)
-		require.Len(t, meta, 1)
+		require.Len(t, meta, 2)
 		require.Equal(t, "Member", meta[0].ComponentType)
 		require.Equal(t, "MemberNotReadyReason", meta[0].Reason)
 		require.Equal(t, "Member error message", meta[0].Message)
 		require.Equal(t, "member-sandbox.aaa.openshiftapps.com", meta[0].ComponentName)
+
+		require.Equal(t, "Member Routes", meta[1].ComponentType)
+		require.Equal(t, "member-sandbox.aaa.openshiftapps.com", meta[1].ComponentName)
+		require.Equal(t, "RoutesNotReadyReason", meta[1].Reason)
+		require.Equal(t, "Member routes error message", meta[1].Message)
+
+		require.Equal(t, "http://che.dashboard.url", meta[1].Details["Che dashboard URL"])
+		require.Equal(t, "http://console.url", meta[1].Details["Console URL"])
+		require.Len(t, meta[1].Details, 2)
 	})
 
 	t.Run("test status metadata for member route not ready", func(t *testing.T) {
@@ -1331,9 +1346,9 @@ func TestGenerateUnreadyNotificationContent(t *testing.T) {
 
 		meta := ExtractStatusMetadata(toolchainStatus)
 		require.Len(t, meta, 4)
-		content, err := GenerateUnreadyNotificationContent(meta)
+		content, err := GenerateUnreadyNotificationContent(ClusterURLs(toolchainStatus), meta)
 		require.NoError(t, err)
-		require.Len(t, content, 1181)
+		require.Len(t, content, 1512)
 	})
 }
 
