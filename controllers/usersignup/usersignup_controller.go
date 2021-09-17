@@ -554,46 +554,73 @@ func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRec
 }
 
 func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
-	keysAndVals := map[string]string{
-		toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
+	labels := map[string]string{
+		toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
+		toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeDeactivating,
 	}
-
-	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
-		WithTemplate(notificationtemplates.UserDeactivating.Name).
-		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivating).
-		WithControllerReference(userSignup, r.Scheme).
-		WithUserContext(userSignup).
-		WithKeysAndValues(keysAndVals).
-		Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
-
-	if err != nil {
-		logger.Error(err, "Failed to create deactivating notification resource")
+	opts := client.MatchingLabels(labels)
+	notificationList := &toolchainv1alpha1.NotificationList{}
+	if err := r.Client.List(context.TODO(), notificationList, opts); err != nil {
 		return err
 	}
 
-	logger.Info(fmt.Sprintf("Deactivating notification resource [%s] created", notification.Name))
+	// if there is no existing notification with these labels
+	if len(notificationList.Items) == 0 {
+
+		keysAndVals := map[string]string{
+			toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
+		}
+
+		notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
+			WithTemplate(notificationtemplates.UserDeactivating.Name).
+			WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivating).
+			WithControllerReference(userSignup, r.Scheme).
+			WithUserContext(userSignup).
+			WithKeysAndValues(keysAndVals).
+			Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+
+		if err != nil {
+			logger.Error(err, "Failed to create deactivating notification resource")
+			return err
+		}
+
+		logger.Info(fmt.Sprintf("Deactivating notification resource [%s] created", notification.Name))
+	}
 	return nil
 }
 
 func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
-	keysAndVals := map[string]string{
-		toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
+	labels := map[string]string{
+		toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
+		toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeDeactivated,
 	}
-
-	notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
-		WithTemplate(notificationtemplates.UserDeactivated.Name).
-		WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivated).
-		WithControllerReference(userSignup, r.Scheme).
-		WithUserContext(userSignup).
-		WithKeysAndValues(keysAndVals).
-		Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
-
-	if err != nil {
-		logger.Error(err, "Failed to create deactivated notification resource")
+	opts := client.MatchingLabels(labels)
+	notificationList := &toolchainv1alpha1.NotificationList{}
+	if err := r.Client.List(context.TODO(), notificationList, opts); err != nil {
 		return err
 	}
 
-	logger.Info(fmt.Sprintf("Deactivated notification resource [%s] created", notification.Name))
+	// if there is no existing notification with these labels
+	if len(notificationList.Items) == 0 {
+		keysAndVals := map[string]string{
+			toolchainconfig.NotificationContextRegistrationURLKey: config.RegistrationService().RegistrationServiceURL(),
+		}
+
+		notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
+			WithTemplate(notificationtemplates.UserDeactivated.Name).
+			WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivated).
+			WithControllerReference(userSignup, r.Scheme).
+			WithUserContext(userSignup).
+			WithKeysAndValues(keysAndVals).
+			Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
+
+		if err != nil {
+			logger.Error(err, "Failed to create deactivated notification resource")
+			return err
+		}
+
+		logger.Info(fmt.Sprintf("Deactivated notification resource [%s] created", notification.Name))
+	}
 	return nil
 }
 

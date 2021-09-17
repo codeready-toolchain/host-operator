@@ -1839,6 +1839,78 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.Equal(t, "https://registration.crt-placeholder.com", notification.Spec.Context["RegistrationURL"])
 		assert.Equal(t, "userdeactivated", notification.Spec.Template)
 	})
+
+	t.Run("second deactivated notification not created when it already exists", func(t *testing.T) {
+		// given
+		userSignup2 := NewUserSignup(Deactivated())
+		userSignup2.Status = toolchainv1alpha1.UserSignupStatus{
+			Conditions: []toolchainv1alpha1.Condition{
+				{
+					Type:   toolchainv1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+				},
+				{
+					Type:   toolchainv1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "john-smythe",
+		}
+		key2 := test.NamespacedName(test.HostOperatorNs, userSignup2.Name)
+
+		existingNotification := &toolchainv1alpha1.Notification{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: test.HostOperatorNs,
+				Name:      "john-smythe-deactivated-123",
+				Labels: map[string]string{
+					toolchainv1alpha1.NotificationUserNameLabelKey: userSignup2.Status.CompliantUsername,
+					toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeDeactivated,
+				},
+			},
+		}
+
+		r, req, _ := prepareReconcile(t, userSignup2.Name, NewGetMemberClusters(), userSignup2,
+			commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
+			baseNSTemplateTier, existingNotification)
+
+		// when
+		_, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+
+		// Lookup the UserSignup
+		err = r.Client.Get(context.TODO(), key2, userSignup2)
+		require.NoError(t, err)
+		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+
+		// Confirm the status has been set to Deactivated
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: "Deactivated",
+			},
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionTrue,
+				Reason: "NotificationCRCreated",
+			})
+
+		// A deactivated notification should have been created
+		notifications := &toolchainv1alpha1.NotificationList{}
+		err = r.Client.List(context.TODO(), notifications)
+		require.NoError(t, err)
+		require.Len(t, notifications.Items, 1)
+		notification := notifications.Items[0]
+		require.Equal(t, "john-smythe-deactivated-123", notification.Name)
+	})
 }
 
 func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
