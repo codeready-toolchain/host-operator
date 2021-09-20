@@ -5,16 +5,13 @@ import (
 	"errors"
 	"testing"
 
-	. "github.com/codeready-toolchain/host-operator/test"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	. "github.com/codeready-toolchain/host-operator/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -49,18 +46,14 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 
 		c := test.NewFakeClient(t, userSignup, userSignup2)
 
-		mapper := &BannedUserToUserSignupMapper{
-			client: c,
-		}
-
 		// This is required for the mapper to function
-		restore := test.SetEnvVarAndRestore(t, k8sutil.WatchNamespaceEnvVar, test.HostOperatorNs)
+		restore := test.SetEnvVarAndRestore(t, configuration.WatchNamespaceEnvVar, test.HostOperatorNs)
 		defer restore()
 
-		req := mapper.Map(handler.MapObject{
-			Object: bannedUser,
-		})
+		// when
+		req := MapBannedUserToUserSignup(c)(bannedUser)
 
+		// then
 		require.Len(t, req, 1)
 		require.Equal(t, types.NamespacedName{
 			Namespace: userSignup.Namespace,
@@ -70,30 +63,26 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 
 	t.Run("test BannedUserToUserSignupMapper returns nil when client list fails", func(t *testing.T) {
 		c := test.NewFakeClient(t)
-		c.MockList = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+		c.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 			return errors.New("err happened")
 		}
 
-		mapper := &BannedUserToUserSignupMapper{
-			client: c,
-		}
-		req := mapper.Map(handler.MapObject{
-			Object: bannedUser,
-		})
+		// when
+		req := MapBannedUserToUserSignup(c)(bannedUser)
 
+		// then
 		require.Nil(t, req)
 	})
 
 	t.Run("test BannedUserToUserSignupMapper returns nil when watch namespace not set ", func(t *testing.T) {
 		c := test.NewFakeClient(t)
+		restore := test.UnsetEnvVarAndRestore(t, "WATCH_NAMESPACE")
+		t.Cleanup(restore)
 
-		mapper := &BannedUserToUserSignupMapper{
-			client: c,
-		}
-		req := mapper.Map(handler.MapObject{
-			Object: bannedUser,
-		})
+		// when
+		req := MapBannedUserToUserSignup(c)(bannedUser)
 
+		// then
 		require.Nil(t, req)
 	})
 }

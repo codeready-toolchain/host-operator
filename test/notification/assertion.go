@@ -6,6 +6,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,4 +46,28 @@ func AssertNoNotificationsExist(t test.T, cl client.Client) {
 	err := cl.List(context.TODO(), notifications)
 	require.NoError(t, err)
 	require.Len(t, notifications.Items, 0)
+}
+
+type Assert func(test.T, toolchainv1alpha1.Notification)
+
+func OnlyOneNotificationExists(t test.T, cl client.Client, userName, notificationType string, assertions ...Assert) {
+	notifications := &toolchainv1alpha1.NotificationList{}
+	labels := map[string]string{
+		toolchainv1alpha1.NotificationUserNameLabelKey: userName,
+		// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
+		toolchainv1alpha1.NotificationTypeLabelKey: notificationType,
+	}
+	err := cl.List(context.TODO(), notifications, client.MatchingLabels(labels))
+	require.NoError(t, err)
+	require.Len(t, notifications.Items, 1)
+
+	for _, a := range assertions {
+		a(t, notifications.Items[0])
+	}
+}
+
+func HasContext(key, expected string) Assert {
+	return func(t test.T, not toolchainv1alpha1.Notification) {
+		assert.Equal(t, expected, not.Spec.Context[key])
+	}
 }

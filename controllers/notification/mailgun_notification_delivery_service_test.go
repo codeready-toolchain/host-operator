@@ -1,7 +1,11 @@
 package notification
 
 import (
+	"net/http"
+	"net/url"
 	"testing"
+
+	"gopkg.in/h2non/gock.v1"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
@@ -26,24 +30,26 @@ func NewMailgunAPIBaseOption(url string) MailgunOption {
 func TestMailgunNotificationDeliveryService(t *testing.T) {
 	// given
 	mgs := mailgun.NewMockServer()
+	defer mgs.Stop()
+
 	mockServerOption := NewMailgunAPIBaseOption(mgs.URL())
 	invalidServerOption := NewMailgunAPIBaseOption("https://127.0.0.1:60000/v3")
 
 	config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345",
 		"noreply@foo.com", "", "mailgun")
-	notCtx := &UserNotificationContext{
-		UserID:      "jsmith123",
-		FirstName:   "John",
-		LastName:    "Smith",
-		UserEmail:   "jsmith@redhat.com",
-		CompanyName: "Red Hat",
+	notCtx := map[string]string{
+		"UserID":      "jsmith123",
+		"FirstName":   "John",
+		"LastName":    "Smith",
+		"UserEmail":   "jsmith@redhat.com",
+		"CompanyName": "Red Hat",
 	}
 
 	templateLoader := NewMockTemplateLoader(
 		&notificationtemplates.NotificationTemplate{
 			Subject: "foo",
-			Content: "bar",
-			Name:    "test",
+			Content: "a message sent to {{.ReplyTo}}",
+			Name:    "replyto",
 		},
 		&notificationtemplates.NotificationTemplate{
 			Subject: "Hi there, {{invalid_expression}}",
@@ -59,10 +65,12 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery service send", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(notCtx, &toolchainv1alpha1.Notification{
+		err := mgds.Send(&toolchainv1alpha1.Notification{
 			Spec: toolchainv1alpha1.NotificationSpec{
-				Subject: "test",
-				Content: "abc",
+				Recipient: "foo@bar.com",
+				Subject:   "test",
+				Content:   "abc",
+				Context:   notCtx,
 			},
 		})
 
@@ -73,10 +81,11 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery service send fails", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, invalidServerOption)
-		err := mgds.Send(notCtx, &toolchainv1alpha1.Notification{
+		err := mgds.Send(&toolchainv1alpha1.Notification{
 			Spec: toolchainv1alpha1.NotificationSpec{
 				Subject: "test",
 				Content: "abc",
+				Context: notCtx,
 			},
 		})
 
@@ -91,9 +100,10 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery service invalid template", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(notCtx, &toolchainv1alpha1.Notification{
+		err := mgds.Send(&toolchainv1alpha1.Notification{
 			Spec: toolchainv1alpha1.NotificationSpec{
 				Template: "bar",
+				Context:  notCtx,
 			},
 		})
 
@@ -105,9 +115,10 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery invalid subject template", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(notCtx, &toolchainv1alpha1.Notification{
+		err := mgds.Send(&toolchainv1alpha1.Notification{
 			Spec: toolchainv1alpha1.NotificationSpec{
 				Template: "invalid_subject",
+				Context:  notCtx,
 			},
 		})
 
@@ -119,9 +130,10 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 	t.Run("test mailgun notification delivery invalid content template", func(t *testing.T) {
 		// when
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(notCtx, &toolchainv1alpha1.Notification{
+		err := mgds.Send(&toolchainv1alpha1.Notification{
 			Spec: toolchainv1alpha1.NotificationSpec{
 				Template: "invalid_content",
+				Context:  notCtx,
 			},
 		})
 
@@ -136,15 +148,49 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 			"noreply@foo.com", "info@foo.com", "mailgun")
 
 		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
-		err := mgds.Send(notCtx, &toolchainv1alpha1.Notification{
+		err := mgds.Send(&toolchainv1alpha1.Notification{
 			Spec: toolchainv1alpha1.NotificationSpec{
-				Subject: "test",
-				Content: "abc",
+				Recipient: "foo@acme.com",
+				Subject:   "test",
+				Content:   "abc",
+				Context:   notCtx,
 			},
 		})
 
 		// then
 		require.NoError(t, err)
+	})
+
+	t.Run("test mailgun notification delivery service with template containing reply-to address", func(t *testing.T) {
+		// when
+		config := NewNotificationDeliveryServiceFactoryConfig("mg.foo.com", "abcd12345",
+			"noreply@foo.com", "info@foo.com", "mailgun")
+
+		gock.Intercept()
+		gock.New(mgs.URL()).Reply(http.StatusOK).AddHeader("Content-Type", "application/json").
+			BodyString("{\"ID\" : \"<123>\", \"Message\" : \"Queued. Thank you.\"}")
+		defer gock.Off()
+
+		var formValues url.Values
+		obs := func(request *http.Request, mock gock.Mock) {
+			err := request.ParseMultipartForm(-1)
+			require.NoError(t, err)
+			formValues = request.Form
+		}
+		gock.Observe(obs)
+
+		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
+		err := mgds.Send(&toolchainv1alpha1.Notification{
+			Spec: toolchainv1alpha1.NotificationSpec{
+				Recipient: "foo@acme.com",
+				Template:  "replyto",
+				Context:   notCtx,
+			},
+		})
+
+		// then
+		require.NoError(t, err)
+		require.Equal(t, "a message sent to info@foo.com", formValues.Get("html"))
 
 	})
 }

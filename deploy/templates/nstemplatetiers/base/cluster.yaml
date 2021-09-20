@@ -11,10 +11,10 @@ objects:
     quota:
       hard:
         limits.cpu: 20000m
-        limits.memory: 7Gi
+        limits.memory: ${MEMORY_LIMIT}
         limits.ephemeral-storage: 7Gi
         requests.cpu: 1750m
-        requests.memory: 7Gi
+        requests.memory: ${MEMORY_REQUEST}
         requests.storage: 15Gi
         requests.ephemeral-storage: 7Gi
         count/persistentvolumeclaims: "5"
@@ -156,13 +156,20 @@ objects:
   metadata:
     name: ${USERNAME}-dev
   spec:
-    timeoutSeconds: 43200 # 12 hours
+    timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
     name: ${USERNAME}-stage
   spec:
-    timeoutSeconds: 43200 # 12 hours
+    timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
 parameters:
 - name: USERNAME
   required: true
+- name: IDLER_TIMEOUT_SECONDS
+  # 12 hours
+  value: "43200"
+- name: MEMORY_LIMIT
+  value: "7Gi"
+- name: MEMORY_REQUEST
+  value: "7Gi"

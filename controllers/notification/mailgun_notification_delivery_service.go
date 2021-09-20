@@ -3,10 +3,15 @@ package notification
 import (
 	"context"
 	"fmt"
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"time"
 
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+
 	"github.com/mailgun/mailgun-go/v4"
+)
+
+const (
+	ContextReplyTo = "ReplyTo"
 )
 
 type MailgunDeliveryError struct {
@@ -64,7 +69,7 @@ func NewMailgunNotificationDeliveryService(config DeliveryServiceFactoryConfig, 
 	}
 }
 
-func (s *MailgunNotificationDeliveryService) Send(notificationCtx Context, notification *toolchainv1alpha1.Notification) error {
+func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha1.Notification) error {
 
 	var subject, body string
 
@@ -78,12 +83,21 @@ func (s *MailgunNotificationDeliveryService) Send(notificationCtx Context, notif
 			return fmt.Errorf("notification template [%s] not found", notification.Spec.Template)
 		}
 
-		subject, err = s.base.GenerateContent(notificationCtx, template.Subject)
+		// Copy the context to a local variable, we will add some more values to it here
+		context := notification.Spec.Context
+
+		if s.ReplyToEmail != "" {
+			context[ContextReplyTo] = s.ReplyToEmail
+		} else {
+			context[ContextReplyTo] = s.SenderEmail
+		}
+
+		subject, err = s.base.GenerateContent(context, template.Subject)
 		if err != nil {
 			return err
 		}
 
-		body, err = s.base.GenerateContent(notificationCtx, template.Content)
+		body, err = s.base.GenerateContent(context, template.Content)
 		if err != nil {
 			return err
 		}
@@ -98,7 +112,7 @@ func (s *MailgunNotificationDeliveryService) Send(notificationCtx Context, notif
 	}
 
 	// The message object allows you to add attachments and Bcc recipients
-	message := s.Mailgun.NewMessage(s.SenderEmail, subject, "", notificationCtx.DeliveryEmail())
+	message := s.Mailgun.NewMessage(s.SenderEmail, subject, "", notification.Spec.Recipient)
 
 	if s.ReplyToEmail != "" {
 		message.SetReplyTo(s.ReplyToEmail)

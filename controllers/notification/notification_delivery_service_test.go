@@ -115,12 +115,12 @@ func TestBaseNotificationDeliveryServiceGenerateContent(t *testing.T) {
 	// given
 	baseService := &BaseNotificationDeliveryService{}
 
-	nCtx := &UserNotificationContext{
-		UserID:      "jsmith",
-		FirstName:   "John",
-		LastName:    "Smith",
-		UserEmail:   "jsmith@redhat.com",
-		CompanyName: "Red Hat",
+	nCtx := map[string]string{
+		"UserID":      "jsmith",
+		"FirstName":   "John",
+		"LastName":    "Smith",
+		"UserEmail":   "jsmith@redhat.com",
+		"CompanyName": "Red Hat",
 	}
 
 	t.Run("test content generation with notification context for user id", func(t *testing.T) {

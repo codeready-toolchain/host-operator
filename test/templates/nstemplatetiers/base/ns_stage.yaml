@@ -1,0 +1,21 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  labels:
+    toolchain.dev.openshift.com/provider: codeready-toolchain
+  name: base-stage
+objects:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    annotations:
+      openshift.io/description: ${USERNAME}-stage
+      openshift.io/display-name: ${USERNAME}-stage
+      openshift.io/requester: ${USERNAME}
+    labels:
+      toolchain.dev.openshift.com/provider: codeready-toolchain
+      name: ${USERNAME}-stage
+    name: ${USERNAME}-stage
+parameters:
+- name: USERNAME
+  required: true

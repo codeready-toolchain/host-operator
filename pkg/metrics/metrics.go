@@ -10,35 +10,32 @@ var log = logf.Log.WithName("toolchain_metrics")
 
 // counters
 var (
-	// UserSignupUniqueTotal should be incremented only the first time a user signup is created, there should be 1 for each unique user
+	// UserSignupUniqueTotal is incremented only the first time a user signup is created, there is 1 for each unique user
 	UserSignupUniqueTotal prometheus.Counter
 
-	// UserSignupApprovedTotal should be incremented each time a user signup is approved, can be multiple times per user if they reactivate multiple times
+	// UserSignupApprovedTotal is incremented each time a user signup is approved, can be multiple times per user if they reactivate multiple times
 	UserSignupApprovedTotal prometheus.Counter
 
-	// UserSignupBannedTotal should be incremented each time a user signup is banned
+	// UserSignupBannedTotal is incremented each time a user signup is banned
 	UserSignupBannedTotal prometheus.Counter
 
-	// UserSignupDeactivatedTotal should be incremented each time a user signup is deactivated, can be multiple times per user if they reactivate multiple times
+	// UserSignupDeactivatedTotal is incremented each time a user signup is deactivated, can be multiple times per user if they reactivate multiple times
 	UserSignupDeactivatedTotal prometheus.Counter
 
-	// UserSignupAutoDeactivatedTotal should be incremented each time a user signup is automatically deactivated, can be multiple times per user if they reactivate multiple times
+	// UserSignupAutoDeactivatedTotal is incremented each time a user signup is automatically deactivated, can be multiple times per user if they reactivate multiple times
 	UserSignupAutoDeactivatedTotal prometheus.Counter
-)
 
-// gauges
-var (
-	// DEPRECATED - See MasterUserRecordGaugeVec
-	// MasterUserRecordGauge should reflect the current number of master user records in the system
-	MasterUserRecordGauge prometheus.Gauge
+	// UserSignupDeletedWithInitiatingVerificationTotal is incremented each time a user signup is deleted due to verification time trial expired, and verification was initiated
+	UserSignupDeletedWithInitiatingVerificationTotal prometheus.Counter
+
+	// UserSignupDeletedWithoutInitiatingVerificationTotal is incremented each time a user signup is deleted due to verification time trial expired, and verification was NOT initiated
+	UserSignupDeletedWithoutInitiatingVerificationTotal prometheus.Counter
 )
 
 // gauge with labels
 var (
 	// UserAccountGaugeVec reflects the current number of master user records in the system, with a label to partition per member cluster
 	UserAccountGaugeVec *prometheus.GaugeVec
-	// UsersPerActivationGaugeVec reflects the number of users labelled with on their current number of activations (DEPRECATED)
-	UsersPerActivationGaugeVec *prometheus.GaugeVec
 	// UserSignupsPerActivationAndDomainGaugeVec reflects the number of users labelled with on their current number of activations and email address domain
 	UserSignupsPerActivationAndDomainGaugeVec *prometheus.GaugeVec
 	// MasterUserRecordGaugeVec reflects the current number of MasterUserRecords, labelled with their email address domain (`internal` vs `external`)
@@ -66,12 +63,10 @@ func initMetrics() {
 	UserSignupBannedTotal = newCounter("user_signups_banned_total", "Total number of banned UserSignups")
 	UserSignupDeactivatedTotal = newCounter("user_signups_deactivated_total", "Total number of deactivated UserSignups")
 	UserSignupAutoDeactivatedTotal = newCounter("user_signups_auto_deactivated_total", "Total number of automatically deactivated UserSignups")
-	// Gauges
-	MasterUserRecordGauge = newGauge("master_user_record_current", "Current number of MasterUserRecords")
+	UserSignupDeletedWithInitiatingVerificationTotal = newCounter("user_signups_deleted_with_initiating_verification_total", "Total number of UserSignups deleted after verification time trial and with verification initiated")
+	UserSignupDeletedWithoutInitiatingVerificationTotal = newCounter("user_signups_deleted_without_initiating_verification_total", "Total number of deleted UserSignups after verification time trial but without verification initiated")
 	// Gauges with labels
 	UserAccountGaugeVec = newGaugeVec("user_accounts_current", "Current number of UserAccounts (per member cluster)", "cluster_name")
-	// DEPRECATED: use `UsersPerActivationAndDomainGaugeVec` instead
-	UsersPerActivationGaugeVec = newGaugeVec("users_per_activations", "Number of UserSignups per activations (deprecated)", []string{"activations"}...)
 	UserSignupsPerActivationAndDomainGaugeVec = newGaugeVec("users_per_activations_and_domain", "Number of UserSignups per activations and domain", []string{"activations", "domain"}...)
 	MasterUserRecordGaugeVec = newGaugeVec("master_user_records", "Number of MasterUserRecords per email address domain ('internal' vs 'external')", "domain")
 	log.Info("custom metrics initialized")

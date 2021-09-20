@@ -2,17 +2,23 @@ package notification
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"testing"
 	"time"
 
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	"github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
+	"github.com/gofrs/uuid"
 	"github.com/mailgun/mailgun-go/v4"
 	events2 "github.com/mailgun/mailgun-go/v4/events"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,7 +32,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -34,24 +39,26 @@ import (
 type MockDeliveryService struct {
 }
 
-func (s *MockDeliveryService) Send(notificationCtx Context, notification *toolchainv1alpha1.Notification) error {
+func (s *MockDeliveryService) Send(notification *toolchainv1alpha1.Notification) error {
 	return errors.New("delivery error")
 }
 
 func TestNotificationSuccess(t *testing.T) {
-	// given
-	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_NOTIFICATION_DELETION", "10s")
-	defer restore()
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().DurationBeforeNotificationDeletion("10s"))
 
+	// given
 	t.Run("will not do anything and return requeue with shorter duration that 10s", func(t *testing.T) {
 		// given
-		notification := newNotification("jane", "")
-		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
-		controller, request, cl := newController(t, notification, ds)
+		controller, cl := newController(t, ds, toolchainConfig)
+
+		notification, err := NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
+		require.NoError(t, err)
+		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
+		require.NoError(t, cl.Update(context.TODO(), notification))
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.NoError(t, err)
@@ -64,14 +71,17 @@ func TestNotificationSuccess(t *testing.T) {
 
 	t.Run("sent notification deleted when deletion timeout passed", func(t *testing.T) {
 		// given
-		notification := newNotification("jane", "")
+		ds, _ := mockDeliveryService(defaultTemplateLoader())
+		controller, cl := newController(t, ds, toolchainConfig)
+
+		notification, err := NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
+		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
-		ds, _ := mockDeliveryService(defaultTemplateLoader())
-		controller, request, cl := newController(t, notification, ds)
+		require.NoError(t, cl.Update(context.TODO(), notification))
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.NoError(t, err)
@@ -81,30 +91,33 @@ func TestNotificationSuccess(t *testing.T) {
 }
 
 func TestNotificationSentFailure(t *testing.T) {
-	restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DURATION_BEFORE_NOTIFICATION_DELETION", "10s")
-	defer restore()
+	toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().DurationBeforeNotificationDeletion("10s"))
 
 	t.Run("will return an error since it cannot delete the Notification after successfully sending", func(t *testing.T) {
 		// given
-		notification := newNotification("abc123", "")
-		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
-		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
-
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
-		controller, request, cl := newController(t, notification, ds)
-		cl.MockDelete = func(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+		controller, cl := newController(t, ds, toolchainConfig)
+		cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("error")
 		}
 
+		notification, err := NewNotificationBuilder(cl, test.HostOperatorNs).
+			WithSubjectAndContent("test", "test content").
+			Create("abc123@acme.com")
+		require.NoError(t, err)
+		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
+		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
+		require.NoError(t, cl.Update(context.TODO(), notification))
+
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.Error(t, err)
 		require.False(t, result.Requeue)
-		assert.Equal(t, err.Error(), "failed to delete notification: unable to delete Notification object 'notification-name': error")
+		assert.Equal(t, err.Error(), fmt.Sprintf("failed to delete notification: unable to delete Notification object '%s': error", notification.Name))
 		ntest.AssertThatNotification(t, notification.Name, cl).
-			HasConditions(sentCond(), deletionCond("unable to delete Notification object 'notification-name': error"))
+			HasConditions(sentCond(), deletionCond(fmt.Sprintf("unable to delete Notification object '%s': error", notification.Name)))
 	})
 }
 
@@ -121,16 +134,22 @@ func TestNotificationDelivery(t *testing.T) {
 			ObjectMeta: newObjectMeta("abc123", "foo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
 				Username:   "foo@redhat.com",
+				Userid:     "foo",
 				GivenName:  "Foo",
 				FamilyName: "Bar",
 				Company:    "Red Hat",
 			},
 		}
-		notification := newNotification("abc123", "test")
-		controller, request, client := newController(t, notification, ds, userSignup)
+		controller, client := newController(t, ds, userSignup)
+
+		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+			WithUserContext(userSignup).
+			WithSubjectAndContent("foo", "test content").
+			Create("foo@redhat.com")
+		require.NoError(t, err)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.NoError(t, err)
@@ -138,7 +157,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
@@ -161,7 +180,7 @@ func TestNotificationDelivery(t *testing.T) {
 		e := events[0]
 		require.IsType(t, &events2.Accepted{}, e)
 		accepted := e.(*events2.Accepted)
-		require.Equal(t, "Foo Bar<foo@redhat.com>", accepted.Recipient)
+		require.Equal(t, "foo@redhat.com", accepted.Recipient)
 		require.Equal(t, "redhat.com", accepted.RecipientDomain)
 		require.Equal(t, "foo", accepted.Message.Headers.Subject)
 		require.Equal(t, "noreply@foo.com", accepted.Message.Headers.From)
@@ -169,12 +188,15 @@ func TestNotificationDelivery(t *testing.T) {
 
 	t.Run("test admin notification delivery ok", func(t *testing.T) {
 		// given
-		notification := newAdminNotification("sandbox-admin@developers.redhat.com", "Alert",
-			"Something bad happened")
-		controller, request, client := newController(t, notification, ds)
+		controller, client := newController(t, ds)
+
+		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+			WithSubjectAndContent("Alert", "Something bad happened").
+			Create("sandbox-admin@developers.redhat.com")
+		require.NoError(t, err)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.NoError(t, err)
@@ -182,7 +204,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
@@ -214,8 +236,7 @@ func TestNotificationDelivery(t *testing.T) {
 	t.Run("test notification with environment e2e", func(t *testing.T) {
 
 		// given
-		restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_ENVIRONMENT", "e2e-tests")
-		defer restore()
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment(testconfig.E2E))
 		userSignup := &toolchainv1alpha1.UserSignup{
 			ObjectMeta: newObjectMeta("abc123", "jane@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
@@ -225,12 +246,15 @@ func TestNotificationDelivery(t *testing.T) {
 				Company:    "Red Hat",
 			},
 		}
-		notification := newNotification("abc123", "test")
 		// pass in nil for deliveryService since send won't be used (sending skipped)
-		controller, request, client := newController(t, notification, nil, userSignup)
+		controller, client := newController(t, nil, userSignup, toolchainConfig)
+
+		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+			Create("jane@redhat.com")
+		require.NoError(t, err)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.NoError(t, err)
@@ -238,7 +262,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
@@ -247,33 +271,6 @@ func TestNotificationDelivery(t *testing.T) {
 
 		ntest.AssertThatNotification(t, instance.Name, client).
 			HasConditions(sentCond())
-	})
-
-	t.Run("test notification delivery fails for invalid user ID", func(t *testing.T) {
-		// given
-		notification := newNotification("abc123", "test")
-		controller, request, client := newController(t, notification, ds)
-
-		// when
-		result, err := controller.Reconcile(request)
-
-		// then
-		require.Error(t, err)
-		require.False(t, result.Requeue)
-		require.Equal(t, "failed to create notification context: usersignups.toolchain.dev.openshift.com \"abc123\" not found", err.Error())
-
-		// Load the reconciled notification
-		key := types.NamespacedName{
-			Namespace: operatorNamespace,
-			Name:      notification.Name,
-		}
-		instance := &toolchainv1alpha1.Notification{}
-		err = client.Get(context.TODO(), key, instance)
-		require.NoError(t, err)
-
-		ntest.AssertThatNotification(t, instance.Name, client).
-			HasConditions(contextErrorCond("usersignups.toolchain.dev.openshift.com \"abc123\" not found"))
-
 	})
 
 	t.Run("test notification delivery fails for delivery service failure", func(t *testing.T) {
@@ -288,11 +285,14 @@ func TestNotificationDelivery(t *testing.T) {
 			},
 		}
 		mds := &MockDeliveryService{}
-		notification := newNotification("abc123", "test")
-		controller, request, client := newController(t, notification, mds, userSignup)
+		controller, client := newController(t, mds, userSignup)
+
+		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+			Create("foo@redhat.com")
+		require.NoError(t, err)
 
 		// when
-		result, err := controller.Reconcile(request)
+		result, err := reconcileNotification(controller, notification)
 
 		// then
 		require.Error(t, err)
@@ -301,7 +301,7 @@ func TestNotificationDelivery(t *testing.T) {
 
 		// Load the reconciled notification
 		key := types.NamespacedName{
-			Namespace: operatorNamespace,
+			Namespace: test.HostOperatorNs,
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
@@ -359,15 +359,6 @@ func deliveryErrorCond(msg string) toolchainv1alpha1.Condition {
 	}
 }
 
-func contextErrorCond(msg string) toolchainv1alpha1.Condition {
-	return toolchainv1alpha1.Condition{
-		Type:    toolchainv1alpha1.NotificationSent,
-		Status:  corev1.ConditionFalse,
-		Reason:  toolchainv1alpha1.NotificationContextErrorReason,
-		Message: msg,
-	}
-}
-
 func deletionCond(msg string) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:               toolchainv1alpha1.NotificationDeletionError,
@@ -378,53 +369,49 @@ func deletionCond(msg string) toolchainv1alpha1.Condition {
 	}
 }
 
-func newNotification(userID, template string) *toolchainv1alpha1.Notification {
-	notification := &toolchainv1alpha1.Notification{
-		ObjectMeta: v1.ObjectMeta{
-			Namespace: test.HostOperatorNs,
-			Name:      "notification-name",
-		},
-		Spec: toolchainv1alpha1.NotificationSpec{
-			UserID:   userID,
-			Template: template,
-		},
-	}
-	return notification
-}
+func newController(t *testing.T, deliveryService DeliveryService,
+	initObjs ...runtime.Object) (*Reconciler, *test.FakeClient) {
+	restore := test.SetEnvVarAndRestore(t, commonconfig.WatchNamespaceEnvVar, test.HostOperatorNs)
+	t.Cleanup(restore)
 
-func newAdminNotification(recipient, subject, content string) *toolchainv1alpha1.Notification {
-	return &toolchainv1alpha1.Notification{
-		ObjectMeta: v1.ObjectMeta{
-			Namespace: test.HostOperatorNs,
-			Name:      "notification-name",
-		},
-		Spec: toolchainv1alpha1.NotificationSpec{
-			Recipient: recipient,
-			Subject:   subject,
-			Content:   content,
-		},
-	}
-}
-
-func newController(t *testing.T, notification *toolchainv1alpha1.Notification, deliveryService DeliveryService,
-	initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	cl := test.NewFakeClient(t, append(initObjs, notification)...)
-	config, err := configuration.LoadConfig(cl)
-	require.NoError(t, err)
+	cl := test.NewFakeClient(t, initObjs...)
 
 	controller := &Reconciler{
 		Client:          cl,
 		Scheme:          s,
-		Config:          config,
 		deliveryService: deliveryService,
-		Log:             ctrl.Log.WithName("controllers").WithName("Notification"),
-	}
-	request := reconcile.Request{
-		NamespacedName: test.NamespacedName(test.HostOperatorNs, notification.Name),
 	}
 
-	return controller, request, cl
+	return controller, cl
+}
+
+func reconcileNotification(reconciler *Reconciler, notification *toolchainv1alpha1.Notification) (ctrl.Result, error) {
+	return reconciler.Reconcile(context.TODO(), reconcile.Request{
+		NamespacedName: test.NamespacedName(test.HostOperatorNs, notification.Name),
+	})
+}
+
+func newObjectMeta(name, email string) v1.ObjectMeta {
+	if name == "" {
+		name = uuid.Must(uuid.NewV4()).String()
+	}
+
+	md5hash := md5.New()
+	// Ignore the error, as this implementation cannot return one
+	_, _ = md5hash.Write([]byte(email))
+	emailHash := hex.EncodeToString(md5hash.Sum(nil))
+
+	return v1.ObjectMeta{
+		Name:      name,
+		Namespace: test.HostOperatorNs,
+		Annotations: map[string]string{
+			toolchainv1alpha1.UserSignupUserEmailAnnotationKey: email,
+		},
+		Labels: map[string]string{
+			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
+		},
+	}
 }

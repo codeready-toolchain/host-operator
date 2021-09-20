@@ -3,10 +3,15 @@ package usersignup
 import (
 	"testing"
 
+	"github.com/gofrs/uuid"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/host-operator/test"
+
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	uuid "github.com/satori/go.uuid"
+	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +21,7 @@ import (
 func TestUserSignupChangedPredicate(t *testing.T) {
 	// when
 	pred := &UserSignupChangedPredicate{}
-	userSignupName := uuid.NewV4().String()
+	userSignupName := uuid.Must(uuid.NewV4()).String()
 
 	userSignupOld := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -69,56 +74,30 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 		},
 	}
 
-	t.Run("test UserSignupChangedPredicate returns false when MetaOld not set", func(t *testing.T) {
-		e := event.UpdateEvent{
-			MetaOld:   nil,
-			ObjectOld: userSignupOld,
-			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
-			ObjectNew: userSignupNewNotChanged,
-		}
-		require.False(t, pred.Update(e))
-	})
 	t.Run("test UserSignupChangedPredicate returns false when ObjectOld not set", func(t *testing.T) {
 		e := event.UpdateEvent{
-			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
 			ObjectOld: nil,
-			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
 			ObjectNew: userSignupNewNotChanged,
 		}
 		require.False(t, pred.Update(e))
 	})
 	t.Run("test UserSignupChangedPredicate returns false when ObjectNew not set", func(t *testing.T) {
 		e := event.UpdateEvent{
-			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
 			ObjectOld: userSignupOld,
-			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
 			ObjectNew: nil,
-		}
-		require.False(t, pred.Update(e))
-	})
-	t.Run("test UserSignupChangedPredicate returns false when MetaNew not set", func(t *testing.T) {
-		e := event.UpdateEvent{
-			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
-			ObjectOld: userSignupOld,
-			MetaNew:   nil,
-			ObjectNew: userSignupNewNotChanged,
 		}
 		require.False(t, pred.Update(e))
 	})
 	t.Run("test UserSignupChangedPredicate returns false when generation unchanged and annoations unchanged", func(t *testing.T) {
 		e := event.UpdateEvent{
-			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
 			ObjectOld: userSignupOld,
-			MetaNew:   userSignupNewNotChanged.ObjectMeta.GetObjectMeta(),
 			ObjectNew: userSignupNewNotChanged,
 		}
 		require.False(t, pred.Update(e))
 	})
 	t.Run("test UserSignupChangedPredicate returns true when generation changed", func(t *testing.T) {
 		e := event.UpdateEvent{
-			MetaOld:   userSignupOld.ObjectMeta.GetObjectMeta(),
 			ObjectOld: userSignupOld,
-			MetaNew:   userSignupNewChanged.ObjectMeta.GetObjectMeta(),
 			ObjectNew: userSignupNewChanged,
 		}
 		require.True(t, pred.Update(e))
@@ -127,7 +106,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 
 func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 	// given
-	cl := test.NewFakeClient(t, NewToolchainConfigWithReset(t, test.AutomaticApproval().Enabled()))
+	cl := test.NewFakeClient(t, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}
@@ -137,9 +116,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 		t.Run("when all fields are set", func(t *testing.T) {
 			// given
 			updateEvent := event.UpdateEvent{
-				MetaOld:   toolchainStatus.GetObjectMeta(),
 				ObjectOld: toolchainStatus,
-				MetaNew:   toolchainStatus.GetObjectMeta(),
 				ObjectNew: toolchainStatus,
 			}
 
@@ -150,41 +127,9 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 			assert.True(t, shouldTriggerReconcile)
 		})
 
-		t.Run("when MetaOld field is missing", func(t *testing.T) {
-			// given
-			updateEvent := event.UpdateEvent{
-				ObjectOld: toolchainStatus,
-				MetaNew:   toolchainStatus.GetObjectMeta(),
-				ObjectNew: toolchainStatus,
-			}
-
-			// when
-			shouldTriggerReconcile := predicate.Update(updateEvent)
-
-			// then
-			assert.False(t, shouldTriggerReconcile)
-		})
-
 		t.Run("when ObjectOld is missing", func(t *testing.T) {
 			// given
 			updateEvent := event.UpdateEvent{
-				MetaOld:   toolchainStatus.GetObjectMeta(),
-				MetaNew:   toolchainStatus.GetObjectMeta(),
-				ObjectNew: toolchainStatus,
-			}
-
-			// when
-			shouldTriggerReconcile := predicate.Update(updateEvent)
-
-			// then
-			assert.False(t, shouldTriggerReconcile)
-		})
-
-		t.Run("when MetaNew is missing", func(t *testing.T) {
-			// given
-			updateEvent := event.UpdateEvent{
-				MetaOld:   toolchainStatus.GetObjectMeta(),
-				ObjectOld: toolchainStatus,
 				ObjectNew: toolchainStatus,
 			}
 
@@ -198,9 +143,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 		t.Run("when ObjectNew is missing", func(t *testing.T) {
 			// given
 			updateEvent := event.UpdateEvent{
-				MetaOld:   toolchainStatus.GetObjectMeta(),
 				ObjectOld: toolchainStatus,
-				MetaNew:   toolchainStatus.GetObjectMeta(),
 			}
 
 			// when
@@ -214,7 +157,6 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
 		// given
 		createEvent := event.CreateEvent{
-			Meta:   toolchainStatus.GetObjectMeta(),
 			Object: toolchainStatus,
 		}
 
@@ -228,7 +170,6 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 	t.Run("delete", func(t *testing.T) {
 		// given
 		deleteEvent := event.DeleteEvent{
-			Meta:   toolchainStatus.GetObjectMeta(),
 			Object: toolchainStatus,
 		}
 
@@ -242,7 +183,6 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 	t.Run("generic", func(t *testing.T) {
 		// given
 		genericEvent := event.GenericEvent{
-			Meta:   toolchainStatus.GetObjectMeta(),
 			Object: toolchainStatus,
 		}
 
@@ -256,7 +196,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 
 func TestAutomaticApprovalPredicateWhenApprovalIsNotEnabled(t *testing.T) {
 	// given
-	cl := test.NewFakeClient(t, NewToolchainConfigWithReset(t, test.AutomaticApproval().Disabled()))
+	cl := test.NewFakeClient(t, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(false)))
 	predicate := OnlyWhenAutomaticApprovalIsEnabled{
 		client: cl,
 	}
@@ -265,9 +205,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsNotEnabled(t *testing.T) {
 	t.Run("update", func(t *testing.T) {
 		// given
 		updateEvent := event.UpdateEvent{
-			MetaOld:   toolchainStatus.GetObjectMeta(),
 			ObjectOld: toolchainStatus,
-			MetaNew:   toolchainStatus.GetObjectMeta(),
 			ObjectNew: toolchainStatus,
 		}
 
@@ -281,7 +219,6 @@ func TestAutomaticApprovalPredicateWhenApprovalIsNotEnabled(t *testing.T) {
 	t.Run("generic", func(t *testing.T) {
 		// given
 		genericEvent := event.GenericEvent{
-			Meta:   toolchainStatus.GetObjectMeta(),
 			Object: toolchainStatus,
 		}
 

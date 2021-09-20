@@ -1,40 +1,44 @@
 package toolchainstatus
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"text/template"
 	"time"
 
+	"k8s.io/client-go/rest"
+
+	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/registrationservice"
-	crtCfg "github.com/codeready-toolchain/host-operator/pkg/configuration"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/registrationservice"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // general toolchainstatus constants
@@ -72,28 +76,32 @@ const (
 	restoredStatus toolchainStatusNotificationType = "restored"
 )
 
+const (
+	statusNotificationTemplate = `<h3>The following issues have been detected in the ToolchainStatus<h3>
+{{range $key, $value := .clusterURLs}}
+<div><span style="font-weight:bold;padding-right:10px">{{$key}}:</span>{{$value}}</div>
+{{end}}
+
+{{range .components}}
+<h4>{{.ComponentType}} {{.ComponentName}} not ready</h4>
+
+<div style="padding-left: 40px">
+<div><span style="font-weight:bold;padding-right:10px">Reason:</span>{{.Reason}}</div>
+<div><span style="font-weight:bold;padding-right:10px">Message:</span>{{.Message}}</div>
+{{range $key, $value := .Details}}
+<div><span style="font-weight:bold;padding-right:10px">{{$key}}:</span>{{$value}}</div>
+{{end}}
+</div>
+{{end}}`
+)
+
 var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r *Reconciler) error {
-	// create a new controller
-	c, err := controller.New("toolchainstatus-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
-	// watch for changes to primary resource ToolchainStatus
-	err = c.Watch(&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}}, &handler.EnqueueRequestForObject{}, predicate.GenerationChangedPredicate{})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-	return add(mgr, r)
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&toolchainv1alpha1.ToolchainStatus{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Complete(r)
 }
 
 type HTTPClient interface {
@@ -103,22 +111,29 @@ type HTTPClient interface {
 // Reconciler reconciles a ToolchainStatus object
 type Reconciler struct {
 	Client         client.Client
-	Log            logr.Logger
 	Scheme         *runtime.Scheme
 	GetMembersFunc cluster.GetMemberClustersFunc
-	Config         *crtCfg.Config
 	HTTPClientImpl HTTPClient
 }
 
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainstatuses,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainstatuses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainstatuses/finalizers,verbs=update
+
 // Reconcile reads the state of toolchain host and member cluster components and updates the ToolchainStatus resource with information useful for observation or troubleshooting
-func (r *Reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := r.Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	reqLogger := log.FromContext(ctx)
 	reqLogger.Info("Reconciling ToolchainStatus")
-	requeueTime := r.Config.GetToolchainStatusRefreshTime()
+
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+	requeueTime := config.ToolchainStatus().ToolchainStatusRefreshTime()
 
 	// fetch the ToolchainStatus
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, toolchainStatus)
+	err = r.Client.Get(context.TODO(), request.NamespacedName, toolchainStatus)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -205,7 +220,7 @@ func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *t
 					// set the failed to create notification status condition
 					return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
 						r.setStatusUnreadyNotificationCreationFailed, err,
-						"Failed to create user deactivation notification")
+						"Failed to create toolchain status unready notification")
 				}
 
 				if err := r.setStatusToolchainStatusUnreadyNotificationCreated(reqLogger, toolchainStatus); err != nil {
@@ -256,12 +271,8 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 		Revision:       version.Commit,
 		BuildTimestamp: version.BuildTime,
 	}
-	if toolchainStatus.Status.HostOperator != nil {
-		operatorStatus.MasterUserRecordCount = toolchainStatus.Status.HostOperator.MasterUserRecordCount
-	}
-
 	// look up name of the host operator deployment
-	hostOperatorDeploymentName, err := k8sutil.GetOperatorName()
+	hostOperatorName, err := commonconfig.GetOperatorName()
 	if err != nil {
 		reqLogger.Error(err, status.ErrMsgCannotGetDeployment)
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason,
@@ -270,6 +281,7 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 		toolchainStatus.Status.HostOperator = operatorStatus
 		return false
 	}
+	hostOperatorDeploymentName := fmt.Sprintf("%s-controller-manager", hostOperatorName)
 	operatorStatus.DeploymentName = hostOperatorDeploymentName
 
 	// check host operator deployment status
@@ -293,9 +305,8 @@ func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, tool
 		httpClientImpl:   r.HTTPClientImpl,
 	}
 
-	// gather the functions for handling registration service status eg. resource templates, deployment, health endpoint
+	// gather the functions for handling registration service status eg. deployment, health endpoint
 	substatusHandlers := []statusHandlerFunc{
-		s.addRegistrationServiceResourceStatus,
 		s.addRegistrationServiceDeploymentStatus,
 		s.addRegistrationServiceHealthStatus,
 	}
@@ -346,12 +357,18 @@ func (r *Reconciler) membersHandleStatus(logger logr.Logger, toolchainStatus *to
 			ResourceUsage: memberStatusObj.Status.ResourceUsage,
 			Routes:        memberStatusObj.Status.Routes,
 		}
-		if condition.IsNotTrue(memberStatusObj.Status.Conditions, toolchainv1alpha1.ConditionReady) {
+
+		readyCond, found := condition.FindConditionByType(memberStatusObj.Status.Conditions, toolchainv1alpha1.ConditionReady)
+		if !found || readyCond.Status != corev1.ConditionTrue {
 			// the memberstatus is not ready so set the component error to bubble up the error to the overall toolchain status
 			logger.Error(fmt.Errorf("member cluster %s not ready", memberCluster.Name), "the memberstatus ready condition is not true")
 			ready = false
 		}
-		r.Log.Info("adding member status", "member_name", memberCluster.Name, string(memberStatus.Conditions[0].Type), memberStatus.Conditions[0].Status)
+		if found {
+			logger.Info("adding member status", "member_name", memberCluster.Name, string(toolchainv1alpha1.ConditionReady), readyCond.Status)
+		} else {
+			logger.Info("adding member status", "member_name", memberCluster.Name, string(toolchainv1alpha1.ConditionReady), "unknown")
+		}
 		members[memberCluster.Name] = memberStatus
 	}
 
@@ -371,9 +388,15 @@ func getAPIEndpoint(clusterName string, memberClusters []*cluster.CachedToolchai
 
 func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus, status toolchainStatusNotificationType) error {
-	if !isValidEmailAddress(r.Config.GetAdminEmail()) {
+
+	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return errs.Wrapf(err, "unable to get ToolchainConfig")
+	}
+
+	if !isValidEmailAddress(config.Notifications().AdminEmail()) {
 		return errs.New(fmt.Sprintf("cannot create notification due to configuration error - admin.email [%s] is invalid or not set",
-			r.Config.GetAdminEmail()))
+			config.Notifications().AdminEmail()))
 	}
 
 	tsValue := time.Now().Format("20060102150405")
@@ -383,11 +406,12 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 	case unreadyStatus:
 		toolchainStatus = toolchainStatus.DeepCopy()
 		toolchainStatus.ManagedFields = nil // we don't need these managed fields in the notification
-		statusYaml, err := yaml.Marshal(toolchainStatus)
+
+		clusterURLs := ClusterURLs(toolchainStatus)
+		contentString, err = GenerateUnreadyNotificationContent(clusterURLs, ExtractStatusMetadata(toolchainStatus))
 		if err != nil {
 			return err
 		}
-		contentString = "<div><pre><code>" + string(statusYaml) + "</code></pre></div>" // wrap with div/pre/code tags so the formatting remains intact in the delivered mail
 		subjectString = adminUnreadyNotificationSubject
 	case restoredStatus:
 		contentString = "<div><pre>ToolchainStatus is back to ready status.</pre></div>"
@@ -396,30 +420,151 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 		return fmt.Errorf("invalid ToolchainStatusNotification status type - %s", status)
 	}
 
-	notification := &toolchainv1alpha1.Notification{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("toolchainstatus-%s-%s", string(status), tsValue),
-			Namespace: toolchainStatus.Namespace,
-		},
-		Spec: toolchainv1alpha1.NotificationSpec{
-			Recipient: r.Config.GetAdminEmail(),
-			Subject:   subjectString,
-			Content:   contentString,
-		},
-	}
+	notification, err := notify.NewNotificationBuilder(r.Client, toolchainStatus.Namespace).
+		WithName(fmt.Sprintf("toolchainstatus-%s-%s", string(status), tsValue)).
+		WithControllerReference(toolchainStatus, r.Scheme).
+		WithSubjectAndContent(subjectString, contentString).
+		Create(config.Notifications().AdminEmail())
 
-	if err := controllerutil.SetControllerReference(toolchainStatus, notification, r.Scheme); err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to set owner reference for toolchain status %s notification resource", status))
-		return err
-	}
-
-	if err := r.Client.Create(context.TODO(), notification); err != nil {
+	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to create toolchain status %s notification resource", status))
 		return err
 	}
 
-	logger.Info(fmt.Sprintf("Toolchain status %s notification resource created", status))
+	logger.Info(fmt.Sprintf("Toolchain status[%s] notification resource created", notification.Name))
 	return nil
+}
+
+func ClusterURLs(instance *toolchainv1alpha1.ToolchainStatus) map[string]string {
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		result := map[string]string{}
+
+		for _, mbr := range instance.Status.Members {
+			result["Member cluster"] = mbr.ClusterName
+		}
+
+		return result
+	}
+	return map[string]string{
+		"Cluster URL": cfg.Host,
+	}
+}
+
+type ComponentNotReadyStatus struct {
+	ComponentType string
+	ComponentName string
+	Reason        string
+	Message       string
+	Details       map[string]string
+}
+
+func GenerateUnreadyNotificationContent(clusterURLs map[string]string, statusMeta []*ComponentNotReadyStatus) (string, error) {
+	tmpl, err := template.New("status").Parse(statusNotificationTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	var output bytes.Buffer
+
+	templateContext := map[string]interface{}{
+		"clusterURLs": clusterURLs,
+		"components":  statusMeta,
+	}
+
+	err = tmpl.Execute(&output, templateContext)
+	if err != nil {
+		return "", err
+	}
+
+	return output.String(), nil
+}
+
+func ExtractStatusMetadata(instance *toolchainv1alpha1.ToolchainStatus) []*ComponentNotReadyStatus {
+	result := []*ComponentNotReadyStatus{}
+
+	cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	if found && cond.Status != corev1.ConditionTrue {
+		result = append(result, &ComponentNotReadyStatus{
+			ComponentType: "",
+			ComponentName: "ToolchainStatus",
+			Reason:        cond.Reason,
+			Message:       cond.Message,
+		})
+	}
+
+	if instance.Status.HostOperator != nil {
+		cond, found = condition.FindConditionByType(instance.Status.HostOperator.Conditions, toolchainv1alpha1.ConditionReady)
+		if found && cond.Status != corev1.ConditionTrue {
+			result = append(result, &ComponentNotReadyStatus{
+				ComponentType: "",
+				ComponentName: "Host Operator",
+				Reason:        cond.Reason,
+				Message:       cond.Message,
+			})
+		}
+	}
+
+	if instance.Status.Members != nil {
+		for _, member := range instance.Status.Members {
+			cond, found := condition.FindConditionByType(member.MemberStatus.Conditions, toolchainv1alpha1.ConditionReady)
+			if found && cond.Status != corev1.ConditionTrue {
+				result = append(result, &ComponentNotReadyStatus{
+					ComponentType: "Member",
+					ComponentName: member.ClusterName,
+					Reason:        cond.Reason,
+					Message:       cond.Message,
+				})
+			}
+
+			if member.MemberStatus.Routes != nil {
+				cond, found = condition.FindConditionByType(member.MemberStatus.Routes.Conditions, toolchainv1alpha1.ConditionReady)
+				if found && cond.Status != corev1.ConditionTrue {
+					result = append(result, &ComponentNotReadyStatus{
+						ComponentType: "Member Routes",
+						ComponentName: member.ClusterName,
+						Reason:        cond.Reason,
+						Message:       cond.Message,
+						Details: map[string]string{
+							"Che dashboard URL": member.MemberStatus.Routes.CheDashboardURL,
+							"Console URL":       member.MemberStatus.Routes.ConsoleURL,
+						},
+					})
+				}
+			}
+		}
+	}
+
+	if instance.Status.RegistrationService != nil {
+		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Deployment.Conditions, toolchainv1alpha1.ConditionReady)
+		if found && cond.Status != corev1.ConditionTrue {
+			result = append(result, &ComponentNotReadyStatus{
+				ComponentType: "Registration service",
+				ComponentName: "deployment",
+				Reason:        cond.Reason,
+				Message:       cond.Message,
+			})
+		}
+
+		cond, found = condition.FindConditionByType(instance.Status.RegistrationService.Health.Conditions, toolchainv1alpha1.ConditionReady)
+		if found && cond.Status != corev1.ConditionTrue {
+			result = append(result, &ComponentNotReadyStatus{
+				ComponentType: "Registration service",
+				ComponentName: "health",
+				Reason:        cond.Reason,
+				Message:       cond.Message,
+			})
+		}
+	}
+
+	// Safety check - confirm the status metadata has all nil details values initialized to an empty map
+	for _, meta := range result {
+		if meta.Details == nil {
+			meta.Details = map[string]string{}
+		}
+	}
+
+	return result
 }
 
 func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus, members map[string]toolchainv1alpha1.MemberStatusStatus, memberClusters []*cluster.CachedToolchainCluster) bool {
@@ -564,29 +709,6 @@ func customMemberStatus(conditions ...toolchainv1alpha1.Condition) toolchainv1al
 type regServiceSubstatusHandler struct {
 	httpClientImpl   HTTPClient
 	controllerClient client.Client
-}
-
-// addRegistrationServiceResourceStatus handles the RegistrationService.RegistrationServiceResources part of the toolchainstatus
-func (s regServiceSubstatusHandler) addRegistrationServiceResourceStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
-	// get the registrationservice resource
-	registrationServiceName := types.NamespacedName{Namespace: toolchainStatus.Namespace, Name: registrationservice.ResourceName}
-	registrationService := &toolchainv1alpha1.RegistrationService{}
-	err := s.controllerClient.Get(context.TODO(), registrationServiceName, registrationService)
-	if err != nil {
-		reqLogger.Error(err, "unable to get the registrationservice resource")
-		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusRegServiceResourceNotFoundReason, err.Error())
-		toolchainStatus.Status.RegistrationService.RegistrationServiceResources.Conditions = []toolchainv1alpha1.Condition{*errCondition}
-		return false
-	}
-
-	// use the registrationservice resource directly in the toolchainstatus
-	toolchainStatus.Status.RegistrationService.RegistrationServiceResources.Conditions = registrationService.Status.Conditions
-	if condition.IsNotTrue(registrationService.Status.Conditions, toolchainv1alpha1.ConditionReady) {
-		reqLogger.Error(fmt.Errorf("deployment is not ready"), "the registrationservice resource is not ready")
-		return false
-	}
-
-	return true
 }
 
 // addRegistrationServiceDeploymentStatus handles the RegistrationService.Deployment part of the toolchainstatus

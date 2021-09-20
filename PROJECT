@@ -1,0 +1,97 @@
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: host-operator
+repo: github.com/toolchain/host-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
+  kind: BannedUser
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
+  kind: ChangeTierRequest
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
+  kind: MasterUserRecord
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
+  kind: Notification
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
+  kind: NSTemplateTier
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
+  kind: TemplateUpdateRequest
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
+  kind: TierTemplate
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
+  kind: ToolchainCluster
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
+  kind: ToolchainConfig
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
+  kind: ToolchainStatus
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
+  kind: UserSignup
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+version: "3"

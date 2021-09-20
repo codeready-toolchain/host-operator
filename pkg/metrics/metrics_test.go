@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
-
 	"github.com/stretchr/testify/assert"
 	k8smetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
@@ -67,15 +66,11 @@ func TestResetMetrics(t *testing.T) {
 
 	// when
 	UserSignupUniqueTotal.Inc()
-	MasterUserRecordGauge.Set(22)
 	UserAccountGaugeVec.WithLabelValues("member-1").Set(20)
-	UsersPerActivationGaugeVec.WithLabelValues("1").Add(20)
 
 	Reset()
 
 	// then
 	assert.Equal(t, float64(0), promtestutil.ToFloat64(UserSignupUniqueTotal))
-	assert.Equal(t, float64(0), promtestutil.ToFloat64(MasterUserRecordGauge))
 	assert.Equal(t, float64(0), promtestutil.ToFloat64(UserAccountGaugeVec.WithLabelValues("member-1")))
-	assert.Equal(t, float64(0), promtestutil.ToFloat64(UsersPerActivationGaugeVec.WithLabelValues("1")))
 }

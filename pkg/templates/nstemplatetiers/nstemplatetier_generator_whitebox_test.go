@@ -8,13 +8,16 @@ import (
 	"testing"
 	texttemplate "text/template"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/ghodss/yaml"
+	"github.com/gofrs/uuid"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
 
 	templatev1 "github.com/openshift/api/template/v1"
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,20 +40,39 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 6)
+			require.Len(t, tmpls, 7)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "base", "baseextended", "basedeactivationdisabled", "team", "test"} {
+			for _, tier := range []string{"advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "test"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
-							assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
-							assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
+							switch tier {
+							case "base", "test":
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
+							default:
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
+							}
 						})
 					}
 					t.Run("cluster", func(t *testing.T) {
-						require.NotNil(t, tmpls[tier].rawTemplates.clusterTemplate)
-						assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.revision)
-						assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.content)
+						switch tier {
+						case "base", "test":
+							require.NotNil(t, tmpls[tier].rawTemplates.clusterTemplate)
+							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.revision)
+							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.content)
+						default:
+							assert.Nil(t, tmpls[tier].rawTemplates.clusterTemplate)
+						}
+					})
+					t.Run("based_on_tier", func(t *testing.T) {
+						switch tier {
+						case "base", "test":
+							require.Nil(t, tmpls[tier].basedOnTier)
+						default:
+							require.NotNil(t, tmpls[tier].basedOnTier)
+						}
 					})
 				})
 			}
@@ -66,22 +88,35 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			require.Len(t, tmpls, 3)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 
-			for _, tier := range []string{"advanced", "team", "nocluster"} {
+			for _, tier := range []string{"advanced", "base", "nocluster"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
-							assert.Equal(t, ExpectedRevisions[tier][kind], tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
-							assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
+							if tier != "advanced" {
+								assert.Equal(t, ExpectedRevisions[tier][kind], tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
+							} else {
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates)
+							}
 						})
 					}
 					t.Run("cluster", func(t *testing.T) {
-						if tier == "nocluster" {
+						switch tier {
+						case "nocluster", "advanced":
 							assert.Nil(t, tmpls[tier].rawTemplates.clusterTemplate)
-							return
+						default:
+							require.NotNil(t, tmpls[tier].rawTemplates.clusterTemplate)
+							assert.Equal(t, ExpectedRevisions[tier]["cluster"], tmpls[tier].rawTemplates.clusterTemplate.revision)
+							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.content)
 						}
-						require.NotNil(t, tmpls[tier].rawTemplates.clusterTemplate)
-						assert.Equal(t, ExpectedRevisions[tier]["cluster"], tmpls[tier].rawTemplates.clusterTemplate.revision)
-						assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.content)
+					})
+					t.Run("based_on_tier", func(t *testing.T) {
+						if tier != "advanced" {
+							assert.Empty(t, tmpls[tier].rawTemplates.basedOnTier)
+						} else {
+							assert.Equal(t, ExpectedRevisions[tier]["based_on_tier"], tmpls[tier].rawTemplates.basedOnTier.revision)
+							assert.NotEmpty(t, tmpls[tier].rawTemplates.basedOnTier.content)
+						}
 					})
 				})
 			}
@@ -178,6 +213,34 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			assert.Contains(t, err.Error(), "unable to load templates: unknown scope for file 'advanced/foo.yaml'")
 		})
 
+		t.Run("should fail when tier contains a mix of based_on_tier.yaml file together with a regular template file", func(t *testing.T) {
+			// given
+			s := scheme.Scheme
+			err := apis.AddToScheme(s)
+			require.NoError(t, err)
+			clt := test.NewFakeClient(t)
+
+			for _, tmplName := range []string{"cluster.yaml", "ns_dev.yaml", "ns_stage.yaml", "tier.yaml"} {
+				t.Run("for template name "+tmplName, func(t *testing.T) {
+					// given
+					testassets := assets.NewAssets(func() []string {
+						return append(testnstemplatetiers.AssetNames(), fmt.Sprintf("advanced/%s", tmplName))
+
+					}, func(path string) (bytes []byte, e error) {
+						if path == "advanced/"+tmplName {
+							return []byte(""), nil
+						}
+						return testnstemplatetiers.Asset(path)
+					})
+
+					// when
+					_, err := newTierGenerator(s, clt, test.HostOperatorNs, testassets)
+
+					// then
+					require.EqualError(t, err, "the tier advanced contains a mix of based_on_tier.yaml file together with a regular template file")
+				})
+			}
+		})
 	})
 }
 
@@ -191,15 +254,16 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 		t.Run("with prod assets", func(t *testing.T) {
 			// given
-			namespace := "host-operator-" + uuid.NewV4().String()[:7]
+			namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 			assets := assets.NewAssets(AssetNames, Asset)
 
 			expectedDeactivationTimeoutsByTier := map[string]int{
 				"base":                     30,
+				"baselarge":                30,
 				"baseextended":             180,
+				"baseextendedidling":       30,
 				"basedeactivationdisabled": 0,
 				"advanced":                 0,
-				"team":                     0,
 				"test":                     30,
 			}
 
@@ -213,14 +277,14 @@ func TestNewNSTemplateTier(t *testing.T) {
 			for _, tierData := range tc.templatesByTier {
 
 				for _, nstmplTierObj := range tierData.nstmplTierObjs {
-					tierObj := nstmplTierObj.GetRuntimeObject()
+					tierObj := nstmplTierObj.GetClientObject()
 
 					// verify tier configuration
 					nstmplTier := runtimeObjectToNSTemplateTier(t, s, tierObj)
 					require.NotNil(t, nstmplTier)
 					assert.Equal(t, namespace, nstmplTier.Namespace)
 					expectedDeactivationTimeout, ok := expectedDeactivationTimeoutsByTier[nstmplTier.Name]
-					require.True(t, ok, "encountered an unexpected tier")
+					require.True(t, ok, "encountered an unexpected tier: %s", nstmplTier.Name)
 					assert.Equal(t, expectedDeactivationTimeout, nstmplTier.Spec.DeactivationTimeoutDays)
 
 					// verify tier templates
@@ -248,18 +312,23 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 		t.Run("with test assets", func(t *testing.T) {
 			// given
-			namespace := "host-operator-" + uuid.NewV4().String()[:7]
+			namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 			tc, err := newTierGenerator(s, nil, namespace, assets)
 			require.NoError(t, err)
 			namespaceRevisions := map[string]map[string]string{
 				"advanced": {
-					"dev":   "123456b",
-					"stage": "123456c",
+					"dev":   "abcd123-123456b",
+					"stage": "abcd123-123456c",
+				},
+				"base": {
+					"dev":   "123456b-123456b",
+					"stage": "123456c-123456c",
 				},
 			}
 			clusterResourceQuotaRevisions := map[string]string{
-				"advanced": "654321a",
+				"advanced": "abcd123-654321a",
+				"base":     "654321a-654321a",
 			}
 			for tier := range namespaceRevisions {
 				t.Run(tier, func(t *testing.T) {
@@ -267,10 +336,14 @@ func TestNewNSTemplateTier(t *testing.T) {
 					objects := tc.templatesByTier[tier].nstmplTierObjs
 					require.Len(t, objects, 1, "expected only 1 NSTemplateTier toolchain object")
 					// when
-					actual := runtimeObjectToNSTemplateTier(t, s, objects[0].GetRuntimeObject())
+					actual := runtimeObjectToNSTemplateTier(t, s, objects[0].GetClientObject())
 
 					// then
-					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, namespaceRevisions[tier], clusterResourceQuotaRevisions[tier])
+					deactivationTimeout := 30
+					if tier == "advanced" {
+						deactivationTimeout = 0
+					}
+					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, deactivationTimeout, namespaceRevisions[tier], clusterResourceQuotaRevisions[tier])
 					require.NoError(t, err)
 					// here we don't compare objects because the generated NSTemplateTier
 					// has no specific values for the `TypeMeta`: the `APIVersion: toolchain.dev.openshift.com/v1alpha1`
@@ -288,7 +361,7 @@ func TestNewTierTemplate(t *testing.T) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
-	namespace := "host-operator-" + uuid.NewV4().String()[:7]
+	namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 
 	t.Run("ok", func(t *testing.T) {
 
@@ -312,14 +385,14 @@ func TestNewTierTemplate(t *testing.T) {
 							assert.Equal(t, namespace, actual.Namespace)
 							assert.True(t, resourceNameRE.MatchString(actual.Name)) // verifies that the TierTemplate name complies with the DNS-1123 spec
 							assert.NotEmpty(t, actual.Spec.Revision)
-							assert.NotEmpty(t, actual.Spec.TierName)
+							assert.Equal(t, tier, actual.Spec.TierName)
 							assert.NotEmpty(t, actual.Spec.Type)
 							assert.NotEmpty(t, actual.Spec.Template)
 							switch actual.Spec.Type {
-							case "dev", "code", "stage":
-								assertNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
+							case "dev", "stage":
+								assertNamespaceTemplate(t, decoder, actual.Spec.Template, tier, actual.Spec.Type)
 							case "clusterresources":
-								assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
+								assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, tier)
 							default:
 								t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
 							}
@@ -351,7 +424,7 @@ func TestNewTierTemplate(t *testing.T) {
 						assert.NotEmpty(t, actual.Spec.Type)
 						assert.NotEmpty(t, actual.Spec.Template)
 						switch actual.Spec.Type {
-						case "dev", "code", "stage":
+						case "dev", "stage":
 							assertTestNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
 						case "clusterresources":
 							assertTestClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
@@ -369,7 +442,7 @@ func TestNewTierTemplate(t *testing.T) {
 		t.Run("invalid template", func(t *testing.T) {
 			// given
 			fakeAssets := assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
-				if name == "metadata.yaml" {
+				if name == "metadata.yaml" || strings.HasSuffix(name, "based_on_tier.yaml") {
 					return testnstemplatetiers.Asset(name)
 				}
 				// error occurs when fetching the content of the 'advanced-code.yaml' template
@@ -380,65 +453,70 @@ func TestNewTierTemplate(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to generate 'advanced-dev-123456b' TierTemplate manifest: couldn't get version/kind; json parse error")
+			assert.Contains(t, err.Error(), "unable to generate 'advanced-dev-abcd123-123456b' TierTemplate manifest: couldn't get version/kind; json parse error")
 		})
 	})
 }
 
 func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
-	expected := templatev1.Template{}
-	content, err := Asset(fmt.Sprintf("%s/cluster.yaml", tier))
-	require.NoError(t, err)
-	_, _, err = decoder.Decode(content, nil, &expected)
-	require.NoError(t, err)
-	assert.Equal(t, expected, actual)
+	switch tier {
+	case "base", "test":
+		expected := templatev1.Template{}
+		content, err := Asset(fmt.Sprintf("%s/cluster.yaml", tier))
+		require.NoError(t, err)
+		_, _, err = decoder.Decode(content, nil, &expected)
+		require.NoError(t, err)
+		assert.Equal(t, expected, actual)
+	default:
+		// todo
+	}
+
 	switch tier {
 	case "test":
 		// skip because this tier is for testing purposes only and the template can change often
 	case "base", "baseextended", "basedeactivationdisabled":
-		assert.Len(t, actual.Objects, 13)
-		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
-		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
-		containsObj(t, actual, clusterResourceQuotaReplicasObj())
-		containsObj(t, actual, clusterResourceQuotaRoutesObj())
-		containsObj(t, actual, clusterResourceQuotaJobsObj())
-		containsObj(t, actual, clusterResourceQuotaServicesObj())
-		containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
-		containsObj(t, actual, clusterResourceQuotaSecretsObj())
-		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
-		containsObj(t, actual, clusterResourceQuotaRHOASOperatorObj())
-		containsObj(t, actual, clusterResourceQuotaSBOObj())
-		containsObj(t, actual, idlerObj("${USERNAME}-dev", "43200"))
-		containsObj(t, actual, idlerObj("${USERNAME}-stage", "43200"))
-	case "team":
-		assert.Len(t, actual.Objects, 9) // No Idlers
-		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "2000m", "15Gi", "15Gi"))
-		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
-		containsObj(t, actual, clusterResourceQuotaReplicasObj())
-		containsObj(t, actual, clusterResourceQuotaRoutesObj())
-		containsObj(t, actual, clusterResourceQuotaJobsObj())
-		containsObj(t, actual, clusterResourceQuotaServicesObj())
-		containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
-		containsObj(t, actual, clusterResourceQuotaSecretsObj())
-		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
+		assertDefaultObjects(t, actual, "43200", "7Gi")
+	case "baselarge":
+		assertDefaultObjects(t, actual, "43200", "16Gi")
+	case "baseextendedidling":
+		assertDefaultObjects(t, actual, "518400", "7Gi")
 	case "advanced":
-		assert.Len(t, actual.Objects, 9) // No Idlers
-		containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "7Gi", "15Gi"))
-		containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
-		containsObj(t, actual, clusterResourceQuotaReplicasObj())
-		containsObj(t, actual, clusterResourceQuotaRoutesObj())
-		containsObj(t, actual, clusterResourceQuotaJobsObj())
-		containsObj(t, actual, clusterResourceQuotaServicesObj())
-		containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
-		containsObj(t, actual, clusterResourceQuotaSecretsObj())
-		containsObj(t, actual, clusterResourceQuotaConfigMapObj())
+		assertDefaultObjects(t, actual, "0", "7Gi")
 	default:
 		t.Errorf("unexpected tier: '%s'", tier)
 	}
 }
 
+func assertDefaultObjects(t *testing.T, actual templatev1.Template, idlerParamValue, memoryLimit string) {
+	assert.Len(t, actual.Objects, 13)
+	containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "15Gi"))
+	containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
+	containsObj(t, actual, clusterResourceQuotaReplicasObj())
+	containsObj(t, actual, clusterResourceQuotaRoutesObj())
+	containsObj(t, actual, clusterResourceQuotaJobsObj())
+	containsObj(t, actual, clusterResourceQuotaServicesObj())
+	containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
+	containsObj(t, actual, clusterResourceQuotaSecretsObj())
+	containsObj(t, actual, clusterResourceQuotaConfigMapObj())
+	containsObj(t, actual, clusterResourceQuotaRHOASOperatorObj())
+	containsObj(t, actual, clusterResourceQuotaSBOObj())
+	containsObj(t, actual, idlerObj("${USERNAME}-dev"))
+	containsObj(t, actual, idlerObj("${USERNAME}-stage"))
+	containsParam(t, actual, "IDLER_TIMEOUT_SECONDS", idlerParamValue)
+	containsParam(t, actual, "MEMORY_LIMIT", memoryLimit)
+	containsParam(t, actual, "MEMORY_REQUEST", memoryLimit)
+}
+
 func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
-	content, err := Asset(fmt.Sprintf("%s/ns_%s.yaml", tier, kind))
+	var templatePath string
+
+	switch tier {
+	case "base", "test":
+		templatePath = fmt.Sprintf("%s/ns_%s.yaml", tier, kind)
+	default:
+		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", kind))
+	}
+	content, err := Asset(templatePath)
 	require.NoError(t, err)
 	expected := templatev1.Template{}
 	_, _, err = decoder.Decode(content, nil, &expected)
@@ -449,11 +527,11 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// Template objects count
 	switch tier {
-	case "advanced", "base", "baseextended", "basedeactivationdisabled", "team":
+	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled":
 		if kind == "dev" {
-			require.Len(t, actual.Objects, 11) // dev namespace has CRW network policy
+			require.Len(t, actual.Objects, 14) // dev namespace has CRW network policy
 		} else {
-			require.Len(t, actual.Objects, 10)
+			require.Len(t, actual.Objects, 13)
 		}
 	case "test":
 		return // Don't care what objects are defined in the test tier
@@ -472,9 +550,6 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	memoryLimit := "750Mi"
 	memoryRequest := "64Mi"
 	cpuRequest := "10m"
-	if tier == "team" {
-		memoryLimit = "1Gi"
-	}
 	containsObj(t, actual, limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest))
 
 	// NetworkPolicies
@@ -485,7 +560,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// User Namespaces Network Policies
 	switch tier {
-	case "advanced", "base", "baseextended", "basedeactivationdisabled", "team":
+	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled":
 		switch kind {
 		case "dev":
 			containsObj(t, actual, allowFromCRWPolicyObj(kind))
@@ -502,25 +577,35 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	// Role & RoleBinding with additional permissions to edit roles/rolebindings
 	containsObj(t, actual, rbacEditRoleObj(kind))
 	containsObj(t, actual, userRbacEditRoleBindingObj(kind))
+
+	// crtadmins related Role & RoleBindings
+	containsObj(t, actual, execPodsRoleObj(kind))
+	containsObj(t, actual, crtadminViewRoleBindingObj(kind))
+	containsObj(t, actual, crtadminPodsRoleBindingObj(kind))
 }
 
 func assertTestClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
-	content, err := testnstemplatetiers.Asset(fmt.Sprintf("%s/cluster.yaml", tier))
+	templatePath := fmt.Sprintf("%s/cluster.yaml", tier)
+	if tier == "advanced" {
+		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, "cluster.yaml")
+	}
+	content, err := testnstemplatetiers.Asset(templatePath)
 	require.NoError(t, err)
 	expected := templatev1.Template{}
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
-	cpuLimit := "4000m"
+	cpuLimit := "${CPU_LIMIT}"
 	memoryLimit := "7Gi"
-	if tier == "team" {
-		cpuLimit = "2000m"
-	}
 	containsObj(t, actual, testClusterResourceQuotaObj(cpuLimit, memoryLimit))
 }
 
 func assertTestNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
-	content, err := testnstemplatetiers.Asset(fmt.Sprintf("%s/ns_%s.yaml", tier, kind))
+	templatePath := fmt.Sprintf("%s/ns_%s.yaml", tier, kind)
+	if tier == "advanced" {
+		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", kind))
+	}
+	content, err := testnstemplatetiers.Asset(templatePath)
 	require.NoError(t, err)
 	expected := templatev1.Template{}
 	_, _, err = decoder.Decode(content, nil, &expected)
@@ -529,6 +614,15 @@ func assertTestNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual t
 
 	// Namespace
 	containsObj(t, actual, testNamespaceObj(kind))
+}
+
+func expectedTemplateFromBasedOnTierConfig(t *testing.T, tier, templateFileName string) string {
+	basedOnTierContent, err := Asset(fmt.Sprintf("%s/based_on_tier.yaml", tier))
+	require.NoError(t, err)
+	basedOnTier := BasedOnTier{}
+	require.NoError(t, yaml.Unmarshal(basedOnTierContent, &basedOnTier))
+	assert.Equal(t, tier, basedOnTier.To.Name)
+	return fmt.Sprintf("%s/%s", basedOnTier.From.Name, templateFileName)
 }
 
 func containsObj(t *testing.T, template templatev1.Template, obj string) {
@@ -540,12 +634,21 @@ func containsObj(t *testing.T, template templatev1.Template, obj string) {
 	assert.Fail(t, "NSTemplateTier doesn't contain the expected object", "Template: %s; \n\nExpected object: %s", template, obj)
 }
 
+func containsParam(t *testing.T, template templatev1.Template, name, value string) {
+	for _, parameter := range template.Parameters {
+		if parameter.Name == name && parameter.Value == value {
+			return
+		}
+	}
+	assert.Fail(t, "NSTemplateTier doesn't contain the expected parameter", "Parameters: %v; \n\nExpected parameter: %s with value %s", template.Parameters, name, value)
+}
+
 func limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest string) string {
 	return fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"%s","memory":"%s"},"type":"Container"}]}}`, kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest)
 }
 
-func clusterResourceQuotaComputeObj(cpuLimit, cpuRequest, memoryLimit, storageLimit string) string { // nolint: unparam
-	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-compute"},"spec":{"quota":{"hard":{"count/persistentvolumeclaims":"5","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"%[3]s","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"%[3]s","requests.storage":"%[4]s"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, memoryLimit, storageLimit)
+func clusterResourceQuotaComputeObj(cpuLimit, cpuRequest, storageLimit string) string { // nolint: unparam
+	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-compute"},"spec":{"quota":{"hard":{"count/persistentvolumeclaims":"5","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"${MEMORY_LIMIT}","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"${MEMORY_REQUEST}","requests.storage":"%[3]s"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, storageLimit)
 }
 
 func clusterResourceQuotaDeploymentsObj() string {
@@ -588,8 +691,8 @@ func clusterResourceQuotaSBOObj() string {
 	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-sbo"},"spec":{"quota":{"hard":{"count/servicebindings.binding.operators.coreos.com":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
 }
 
-func idlerObj(name, timeout string) string { //nolint:unparam
-	return fmt.Sprintf(`{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"Idler","metadata":{"name":"%s"},"spec":{"timeoutSeconds":%s}}`, name, timeout)
+func idlerObj(name string) string { //nolint:unparam
+	return fmt.Sprintf(`{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"Idler","metadata":{"name":"%s"},"spec":{"timeoutSeconds":"${{IDLER_TIMEOUT_SECONDS}}"}}`, name)
 }
 
 func testClusterResourceQuotaObj(cpuLimit, memoryLimit string) string {
@@ -617,6 +720,18 @@ func userRbacEditRoleBindingObj(kind string) string {
 
 func rbacEditRoleObj(kind string) string {
 	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"rbac-edit","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":["authorization.openshift.io","rbac.authorization.k8s.io"],"resources":["roles","rolebindings"],"verbs":["get","list","watch","create","update","patch","delete"]}]}`, kind)
+}
+
+func execPodsRoleObj(kind string) string {
+	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"exec-pods","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":[""],"resources":["pods/exec"],"verbs":["get","list","watch","create","delete","update"]}]}`, kind)
+}
+
+func crtadminViewRoleBindingObj(kind string) string {
+	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-view","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"view"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`, kind)
+}
+
+func crtadminPodsRoleBindingObj(kind string) string {
+	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-pods","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"Role","name":"exec-pods"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`, kind)
 }
 
 func allowFromOpenshiftMonitoringPolicyObj(kind string) string {
@@ -660,18 +775,18 @@ func TestNewNSTemplateTiers(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		// given
-		namespace := "host-operator-" + uuid.NewV4().String()[:7]
+		namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 		assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 		// when
 		tc, err := newTierGenerator(s, nil, namespace, assets)
 		require.NoError(t, err)
 		// then
 		require.Len(t, tc.templatesByTier, 3)
-		for _, name := range []string{"advanced", "team", "nocluster"} {
+		for _, name := range []string{"advanced", "base", "nocluster"} {
 			tierData, found := tc.templatesByTier[name]
 			tierObjs := tierData.nstmplTierObjs
 			require.Len(t, tierObjs, 1, "expected only 1 NSTemplateTier toolchain object")
-			tier := runtimeObjectToNSTemplateTier(t, s, tierObjs[0].GetRuntimeObject())
+			tier := runtimeObjectToNSTemplateTier(t, s, tierObjs[0].GetClientObject())
 
 			require.True(t, found)
 			assert.Equal(t, name, tier.ObjectMeta.Name)
@@ -691,14 +806,12 @@ func TestNewNSTemplateTiers(t *testing.T) {
 
 var ExpectedRevisions = map[string]map[string]string{
 	"advanced": {
+		"based_on_tier": "abcd123",
+	},
+	"base": {
 		"dev":     "123456b",
 		"stage":   "123456c",
 		"cluster": "654321a",
-	},
-	"team": {
-		"dev":     "123456g",
-		"stage":   "123456h",
-		"cluster": "654321c",
 	},
 	"nocluster": {
 		"dev":   "123456j",
@@ -707,66 +820,17 @@ var ExpectedRevisions = map[string]map[string]string{
 }
 
 // newNSTemplateTierFromYAML generates toolchainv1alpha1.NSTemplateTier using a golang template which is applied to the given tier.
-func newNSTemplateTierFromYAML(s *runtime.Scheme, tier, namespace string, namespaceRevisions map[string]string, clusterResourceQuotaRevision string) (toolchainv1alpha1.NSTemplateTier, string, error) {
+func newNSTemplateTierFromYAML(s *runtime.Scheme, tier, namespace string, deactivationTimeout int, namespaceRevisions map[string]string, clusterResourceQuotaRevision string) (toolchainv1alpha1.NSTemplateTier, string, error) {
 	expectedTmpl, err := texttemplate.New("template").Parse(`kind: NSTemplateTier
 apiVersion: toolchain.dev.openshift.com/v1alpha1
 metadata:
   namespace: {{ .Namespace }}
   name: {{ .Tier }}
 spec:
+  deactivationTimeoutDays: {{ .DeactivationTimeout }} 
   namespaces: 
-{{ $tier := .Tier }}{{ range $kind, $revision := .NamespaceRevisions }}  - type: {{ $kind }}
-    revision: "{{ $revision }}"
-    template:
-      apiVersion: template.openshift.io/v1
-      kind: Template
-      metadata:
-        labels:
-          toolchain.dev.openshift.com/provider: codeready-toolchain
-        name: {{ $tier }}-{{ $kind }}
-      objects:
-      - apiVersion: v1
-        kind: Namespace
-        metadata:
-          annotations:
-            openshift.io/description: ${USERNAME}-{{ $kind }}
-            openshift.io/display-name: ${USERNAME}-{{ $kind }}
-            openshift.io/requester: ${USERNAME}
-          labels:
-            toolchain.dev.openshift.com/provider: codeready-toolchain
-          name: ${USERNAME}-{{ $kind }}
-      parameters:
-      - name: USERNAME
-        required: true
-    templateRef: {{ $tier }}-{{ $kind }}-{{ $revision }}
+{{ $tier := .Tier }}{{ range $kind, $revision := .NamespaceRevisions }}    - templateRef: {{ $tier }}-{{ $kind }}-{{ $revision }}
 {{ end }}  clusterResources:
-    revision: "{{ .ClusterResourcesRevision }}"
-    template:
-      apiVersion: template.openshift.io/v1
-      kind: Template
-      metadata:
-        name: {{ .Tier }}-cluster-resources
-        labels:
-          toolchain.dev.openshift.com/provider: codeready-toolchain
-      objects:
-      - apiVersion: quota.openshift.io/v1
-        kind: ClusterResourceQuota
-        metadata:
-          name: for-${USERNAME}
-        spec:
-          quota: 
-            hard:
-              limits.cpu: 10000m
-              limits.memory: 7Gi
-              requests.storage: 15Gi
-              persistentvolumeclaims: "5"
-          selector:
-            annotations:
-              openshift.io/requester: ${USERNAME}
-            labels: null
-      parameters:
-      - name: USERNAME
-        required: true
     templateRef: {{ $tier }}-clusterresources-{{ .ClusterResourcesRevision }}`)
 	if err != nil {
 		return toolchainv1alpha1.NSTemplateTier{}, "", err
@@ -777,11 +841,13 @@ spec:
 		Namespace                string
 		NamespaceRevisions       map[string]string
 		ClusterResourcesRevision string
+		DeactivationTimeout      int
 	}{
 		Tier:                     tier,
 		Namespace:                namespace,
 		NamespaceRevisions:       namespaceRevisions,
 		ClusterResourcesRevision: clusterResourceQuotaRevision,
+		DeactivationTimeout:      deactivationTimeout,
 	})
 	if err != nil {
 		return toolchainv1alpha1.NSTemplateTier{}, "", err

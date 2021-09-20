@@ -32,7 +32,7 @@ func (p UserSignupChangedPredicate) Update(e event.UpdateEvent) bool {
 	if !checkMetaObjects(changedLog, e) {
 		return false
 	}
-	if e.MetaNew.GetGeneration() == e.MetaOld.GetGeneration() &&
+	if e.ObjectNew.GetGeneration() == e.ObjectOld.GetGeneration() &&
 		!p.AnnotationChanged(e, toolchainv1alpha1.UserSignupUserEmailAnnotationKey) &&
 		!p.LabelChanged(e, toolchainv1alpha1.UserSignupUserEmailHashLabelKey) {
 		return false
@@ -41,11 +41,11 @@ func (p UserSignupChangedPredicate) Update(e event.UpdateEvent) bool {
 }
 
 func (p UserSignupChangedPredicate) AnnotationChanged(e event.UpdateEvent, annotationName string) bool {
-	return e.MetaOld.GetAnnotations()[annotationName] != e.MetaNew.GetAnnotations()[annotationName]
+	return e.ObjectOld.GetAnnotations()[annotationName] != e.ObjectNew.GetAnnotations()[annotationName]
 }
 
 func (p UserSignupChangedPredicate) LabelChanged(e event.UpdateEvent, labelName string) bool {
-	return e.MetaOld.GetLabels()[labelName] != e.MetaNew.GetLabels()[labelName]
+	return e.ObjectOld.GetLabels()[labelName] != e.ObjectNew.GetLabels()[labelName]
 }
 
 var configLog = logf.Log.WithName("automatic_approval_predicate")
@@ -60,7 +60,7 @@ func (p OnlyWhenAutomaticApprovalIsEnabled) Update(e event.UpdateEvent) bool {
 	if !checkMetaObjects(configLog, e) {
 		return false
 	}
-	return p.checkIfAutomaticApprovalIsEnabled(e.MetaNew.GetNamespace())
+	return p.checkIfAutomaticApprovalIsEnabled(e.ObjectNew.GetNamespace())
 }
 
 // Create implements Predicate
@@ -75,15 +75,15 @@ func (OnlyWhenAutomaticApprovalIsEnabled) Delete(e event.DeleteEvent) bool {
 
 // Generic implements Predicate
 func (p OnlyWhenAutomaticApprovalIsEnabled) Generic(e event.GenericEvent) bool {
-	if e.Meta == nil {
-		predicateLog.Error(nil, "Generic event has no object metadata", "event", e)
+	if e.Object == nil {
+		predicateLog.Error(nil, "Generic event has no object", "event", e)
 		return false
 	}
-	return p.checkIfAutomaticApprovalIsEnabled(e.Meta.GetNamespace())
+	return p.checkIfAutomaticApprovalIsEnabled(e.Object.GetNamespace())
 }
 
 func (p OnlyWhenAutomaticApprovalIsEnabled) checkIfAutomaticApprovalIsEnabled(namespace string) bool {
-	config, err := toolchainconfig.GetConfig(p.client, namespace)
+	config, err := toolchainconfig.GetToolchainConfig(p.client)
 	if err != nil {
 		configLog.Error(err, "unable to get ToolchainConfig", "namespace", namespace)
 		return false
@@ -92,20 +92,12 @@ func (p OnlyWhenAutomaticApprovalIsEnabled) checkIfAutomaticApprovalIsEnabled(na
 }
 
 func checkMetaObjects(log logr.Logger, e event.UpdateEvent) bool {
-	if e.MetaOld == nil {
-		log.Error(nil, "Update event has no old metadata", "event", e)
-		return false
-	}
 	if e.ObjectOld == nil {
 		log.Error(nil, "Update event has no old runtime object to update", "event", e)
 		return false
 	}
 	if e.ObjectNew == nil {
 		log.Error(nil, "Update event has no new runtime object for update", "event", e)
-		return false
-	}
-	if e.MetaNew == nil {
-		log.Error(nil, "Update event has no new metadata", "event", e)
 		return false
 	}
 	return true

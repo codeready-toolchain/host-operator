@@ -5,14 +5,13 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/states"
-
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+	"github.com/gofrs/uuid"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
-	uuid "github.com/satori/go.uuid"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -29,14 +28,15 @@ func Approved() UserSignupModifier {
 	}
 }
 
-func ApprovedAutomatically() UserSignupModifier {
+func ApprovedAutomatically(before time.Duration) UserSignupModifier {
 	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		states.SetApproved(userSignup, true)
 		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
-				Status: v1.ConditionTrue,
-				Reason: "ApprovedAutomatically",
+				Type:               toolchainv1alpha1.UserSignupApproved,
+				Status:             v1.ConditionTrue,
+				Reason:             "ApprovedAutomatically",
+				LastTransitionTime: metav1.Time{Time: time.Now().Add(-before)},
 			})
 	}
 }
@@ -62,9 +62,19 @@ func DeactivatedWithLastTransitionTime(before time.Duration) UserSignupModifier 
 	}
 }
 
-func VerificationRequired() UserSignupModifier {
+func VerificationRequired(before time.Duration) UserSignupModifier {
 	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		states.SetVerificationRequired(userSignup, true)
+
+		verificationRequired := toolchainv1alpha1.Condition{
+			Type:               toolchainv1alpha1.UserSignupComplete,
+			Status:             v1.ConditionFalse,
+			Reason:             toolchainv1alpha1.UserSignupVerificationRequiredReason,
+			LastTransitionTime: metav1.Time{Time: time.Now().Add(-before)},
+		}
+
+		userSignup.Status.Conditions = condition.AddStatusConditions(userSignup.Status.Conditions, verificationRequired)
+
 	}
 }
 
@@ -120,11 +130,16 @@ func BeingDeleted() UserSignupModifier {
 	}
 }
 
+func WithActivations(value string) UserSignupModifier {
+	return WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, value)
+}
+
 func WithAnnotation(key, value string) UserSignupModifier {
 	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		userSignup.Annotations[key] = value
 	}
 }
+
 func WithoutAnnotation(key string) UserSignupModifier {
 	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		delete(userSignup.Annotations, key)
@@ -162,7 +177,7 @@ func NewUserSignup(modifiers ...UserSignupModifier) *toolchainv1alpha1.UserSignu
 
 func NewUserSignupObjectMeta(name, email string) metav1.ObjectMeta {
 	if name == "" {
-		name = uuid.NewV4().String()
+		name = uuid.Must(uuid.NewV4()).String()
 	}
 
 	md5hash := md5.New()
