@@ -174,12 +174,40 @@ objects:
   spec:
     ingress:
       - from:
-          - namespaceSelector:
-              matchLabels:
-                network.openshift.io/policy-group: codeready-workspaces
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: codeready-workspaces
     podSelector: {}
     policyTypes:
       - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-olm-namespaces
+    namespace: ${USERNAME}-dev
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            openshift.io/scc: anyuid
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-console-namespaces
+    namespace: ${USERNAME}-dev
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: console
+    podSelector: {}
+    policyTypes:
+    - Ingress
 parameters:
 - name: USERNAME
   required: true
