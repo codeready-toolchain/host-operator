@@ -200,12 +200,12 @@ objects:
     name: allow-from-console-namespaces
     namespace: ${USERNAME}-dev
   spec:
-    podSelector: {}
     ingress:
     - from:
       - namespaceSelector:
           matchLabels:
             network.openshift.io/policy-group: console
+    podSelector: {}
     policyTypes:
     - Ingress
 parameters:
