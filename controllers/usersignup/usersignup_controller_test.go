@@ -2396,7 +2396,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 		ObjectMeta: NewUserSignupObjectMeta("", "edward.jones@redhat.com"),
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			Userid:   "UserID089",
-			Username: "freja.johanssen@redhat.com",
+			Username: "edward.jones@redhat.com",
 			States:   []toolchainv1alpha1.UserSignupState{"deactivating"},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
@@ -2411,7 +2411,7 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 					Reason: "ApprovedAutomatically",
 				},
 			},
-			CompliantUsername: "freja-johanssen",
+			CompliantUsername: "edward-jones",
 		},
 	}
 
@@ -2453,6 +2453,67 @@ func TestUserSignupDeactivatingNotificationCreated(t *testing.T) {
 	require.Equal(t, userSignup.Spec.Userid, notifications.Items[0].Spec.Context["UserID"])
 
 	// Confirm the status is correct
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+		},
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+			Status: v1.ConditionFalse,
+			Reason: "UserIsActive",
+		},
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+			Status: v1.ConditionTrue,
+			Reason: "NotificationCRCreated",
+		},
+	)
+
+	// Now let's pretend that the notification was created but the status failed to update.  We'll do this by modifying
+	// the status back to original values
+	userSignup.Status.Conditions = []toolchainv1alpha1.Condition{
+		{
+			Type:   toolchainv1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+		},
+		{
+			Type:   toolchainv1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+	}
+
+	// Prepare the reconciliation again, but this time include the notification that was previously created
+	r, req, _ = prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, &notifications.Items[0],
+		commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+
+	// Reconcile again
+	_, err = r.Reconcile(context.TODO(), req)
+
+	// then
+	require.NoError(t, err)
+	err = r.Client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+
+	// Reload the notifications again
+	notifications = &toolchainv1alpha1.NotificationList{}
+	err = r.Client.List(context.TODO(), notifications)
+	require.NoError(t, err)
+
+	// There should still only be one notification
+	require.Len(t, notifications.Items, 1)
+
+	require.Equal(t, "userdeactivating", notifications.Items[0].Spec.Template)
+	require.Equal(t, userSignup.Spec.Userid, notifications.Items[0].Spec.Context["UserID"])
+
+	// Confirm the status is still correct
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.UserSignupComplete,
