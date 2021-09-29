@@ -1,7 +1,4 @@
-from:
-  name: base
-to:
-  name: baseextended
-  parameters:
-  - name: DEACTIVATION_TIMEOUT_DAYS
-    value: 180
+from: base
+parameters:
+- name: DEACTIVATION_TIMEOUT_DAYS
+  value: 180

@@ -112,30 +112,16 @@ func newTierGenerator(s *runtime.Scheme, client client.Client, namespace string,
 // BasedOnTier defines which tier is supposed to be reused and which parameters should be modified
 // An example:
 //
-// from:
-//   name: base
-// to:
-//   name: baseextendedidling
-//   parameters:
-//     - name: IDLER_TIMEOUT_SECONDS
-//       value: 43200
+// from: base
+// parameters:
+// - name: IDLER_TIMEOUT_SECONDS
+//   value: 43200
 //
 // Which defines that for creating baseextendedidling tier the base tier should be used and
 // the parameter IDLER_TIMEOUT_SECONDS should be set to 43200
 type BasedOnTier struct {
-	Revision string
-	From     From `json:"from"`
-	To       To   `json:"to"`
-}
-
-// From define which tier should be reused
-type From struct {
-	Name string `json:"name"`
-}
-
-// To defines the target tier and the parameters to be set
-type To struct {
-	Name       string                 `json:"name"`
+	Revision   string
+	From       string                 `json:"from"`
 	Parameters []templatev1.Parameter `json:"parameters,omitempty" protobuf:"bytes,4,rep,name=parameters"`
 }
 
@@ -212,7 +198,7 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 		case filename == "based_on_tier.yaml":
 			basedOnTier := &BasedOnTier{}
 			if err := yaml.Unmarshal(content, basedOnTier); err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "unable to unmarshal '%s'", name)
 			}
 			results[tier].rawTemplates.basedOnTier = &tmpl
 			results[tier].basedOnTier = basedOnTier
@@ -248,9 +234,9 @@ func (t *tierGenerator) initTierTemplates() error {
 		basedOnTierFileRevision := ""
 		var parameters []templatev1.Parameter
 		if tierData.basedOnTier != nil {
-			parameters = tierData.basedOnTier.To.Parameters
+			parameters = tierData.basedOnTier.Parameters
 			basedOnTierFileRevision = tierData.rawTemplates.basedOnTier.revision
-			tierData = t.templatesByTier[tierData.basedOnTier.From.Name]
+			tierData = t.templatesByTier[tierData.basedOnTier.From]
 		}
 		tierTemplates, err := t.newTierTemplates(basedOnTierFileRevision, tierData, tier, parameters)
 		if err != nil {
@@ -363,8 +349,8 @@ func (t *tierGenerator) initNSTemplateTiers() error {
 		sourceTierName := tierName
 		var parameters []templatev1.Parameter
 		if tierData.basedOnTier != nil {
-			parameters = tierData.basedOnTier.To.Parameters
-			fromData := t.templatesByTier[tierData.basedOnTier.From.Name]
+			parameters = tierData.basedOnTier.Parameters
+			fromData := t.templatesByTier[tierData.basedOnTier.From]
 			nsTemplateTier = fromData.rawTemplates.nsTemplateTier
 			sourceTierName = fromData.name
 		}

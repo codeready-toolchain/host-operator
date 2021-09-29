@@ -1,7 +1,4 @@
-from:
-  name: base
-to:
-  name: advanced
-  parameters:
-  - name: DEACTIVATION_TIMEOUT_DAYS
-    value: 0
+from: base
+parameters:
+- name: DEACTIVATION_TIMEOUT_DAYS
+  value: 0
