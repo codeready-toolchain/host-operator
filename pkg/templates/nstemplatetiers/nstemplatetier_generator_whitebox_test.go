@@ -622,8 +622,7 @@ func expectedTemplateFromBasedOnTierConfig(t *testing.T, tier, templateFileName 
 	require.NoError(t, err)
 	basedOnTier := BasedOnTier{}
 	require.NoError(t, yaml.Unmarshal(basedOnTierContent, &basedOnTier))
-	assert.Equal(t, tier, basedOnTier.To.Name)
-	return fmt.Sprintf("%s/%s", basedOnTier.From.Name, templateFileName)
+	return fmt.Sprintf("%s/%s", basedOnTier.From, templateFileName)
 }
 
 func containsObj(t *testing.T, template templatev1.Template, obj string) {
