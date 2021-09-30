@@ -89,6 +89,11 @@ spec:
               givenName:
                 description: The user's first name, obtained from the identity provider.
                 type: string
+              originalSub:
+                description: OriginalSub is an optional property temporarily introduced
+                  for the purpose of migrating the users to a new IdP provider client,
+                  and contains the user's "original-sub" claim
+                type: string
               states:
                 description: States contains a number of values that reflect the desired
                   state of the UserSignup.

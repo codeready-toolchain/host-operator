@@ -73,6 +73,11 @@ spec:
                   be able to login (but the underlying UserAccounts still exists)
                   "false" is assumed by default
                 type: boolean
+              originalSub:
+                description: OriginalSub is an optional property temporarily introduced
+                  for the purpose of migrating the users to a new IdP provider client,
+                  and contains the user's "original-sub" claim
+                type: string
               userAccounts:
                 description: The list of user accounts in the member clusters which
                   belong to this MasterUserRecord
