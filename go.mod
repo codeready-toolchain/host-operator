@@ -16,11 +16,11 @@ require (
 	github.com/redhat-cop/operator-utils v1.1.3-0.20210602122509-2eaf121122d2
 	github.com/spf13/cast v1.3.1
 	github.com/stretchr/testify v1.7.0
+	go.uber.org/zap v1.19.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/text v0.3.5 // indirect
 	gopkg.in/h2non/gock.v1 v1.0.14
 	gopkg.in/yaml.v2 v2.4.0
-	honnef.co/go/tools v0.1.3 // indirect
 	k8s.io/api v0.20.2
 	k8s.io/apiextensions-apiserver v0.20.2
 	k8s.io/apimachinery v0.20.2
