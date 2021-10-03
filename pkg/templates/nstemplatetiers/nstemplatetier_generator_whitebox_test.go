@@ -42,7 +42,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, tmpls, 7)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "test"} {
+			for _, tier := range []string{"advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "hackathon", "test"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
@@ -258,12 +258,13 @@ func TestNewNSTemplateTier(t *testing.T) {
 			assets := assets.NewAssets(AssetNames, Asset)
 
 			expectedDeactivationTimeoutsByTier := map[string]int{
+				"advanced":                 0,
 				"base":                     30,
 				"baselarge":                30,
 				"baseextended":             180,
 				"baseextendedidling":       30,
 				"basedeactivationdisabled": 0,
-				"advanced":                 0,
+				"hackathon":                50,
 				"test":                     30,
 			}
 
@@ -474,7 +475,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	switch tier {
 	case "test":
 		// skip because this tier is for testing purposes only and the template can change often
-	case "base", "baseextended", "basedeactivationdisabled":
+	case "base", "baseextended", "basedeactivationdisabled", "hackathon":
 		assertDefaultObjects(t, actual, "43200", "7Gi")
 	case "baselarge":
 		assertDefaultObjects(t, actual, "43200", "16Gi")
@@ -527,7 +528,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// Template objects count
 	switch tier {
-	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled":
+	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "hackathon":
 		if kind == "dev" {
 			require.Len(t, actual.Objects, 15) // dev namespace has CRW network policy
 		} else {
@@ -561,7 +562,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 
 	// User Namespaces Network Policies
 	switch tier {
-	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled":
+	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "hackathon":
 		switch kind {
 		case "dev":
 			containsObj(t, actual, allowFromCRWPolicyObj(kind))
