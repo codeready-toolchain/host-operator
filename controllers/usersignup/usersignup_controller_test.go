@@ -64,9 +64,22 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	member := NewMemberCluster(t, "member1", v1.ConditionTrue)
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	for testname, userSignup := range map[string]*toolchainv1alpha1.UserSignup{
-		"with valid activation annotation":   NewUserSignup(Approved(), WithTargetCluster("member1"), WithStateLabel("not-ready"), WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2")), // this is a returning user
-		"with invalid activation annotation": NewUserSignup(Approved(), WithTargetCluster("member1"), WithStateLabel("not-ready"), WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "?")), // annotation value is not an 'int'
-		"without activation annotation":      NewUserSignup(Approved(), WithTargetCluster("member1"), WithStateLabel("not-ready"), WithoutAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey)),   // no annotation on this user, so the value will not be incremented
+		"with valid activation annotation": NewUserSignup(
+			Approved(),
+			WithTargetCluster("member1"),
+			WithStateLabel("not-ready"),
+			WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"),
+			WithOriginalSub("original-sub-value:1234")), // this is a returning user
+		"with invalid activation annotation": NewUserSignup(
+			Approved(),
+			WithTargetCluster("member1"),
+			WithStateLabel("not-ready"),
+			WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "?")), // annotation value is not an 'int'
+		"without activation annotation": NewUserSignup(
+			Approved(),
+			WithTargetCluster("member1"),
+			WithStateLabel("not-ready"),
+			WithoutAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey)), // no annotation on this user, so the value will not be incremented
 	} {
 		t.Run(testname, func(t *testing.T) {
 			// given
@@ -96,6 +109,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			require.Equal(t, test.HostOperatorNs, mur.Namespace)
 			require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
 			require.Len(t, mur.Spec.UserAccounts, 1)
+			require.Equal(t, userSignup.Spec.OriginalSub, mur.Spec.OriginalSub)
 			assert.Equal(t, "base", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
 			assert.Equal(t, []toolchainv1alpha1.NSTemplateSetNamespace{
 				{
@@ -1499,8 +1513,9 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
 		"toolchain.dev.openshift.com/approved":            "true",
 	}
+	userSignup.Spec.OriginalSub = "original-sub:foo"
 
-	// Create a MUR with the same UserID
+	// Create a MUR with the same UserID but don't set the OriginalSub property
 	mur := &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
@@ -1531,29 +1546,48 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	// then
 	require.NoError(t, err)
 
-	instance := &toolchainv1alpha1.UserSignup{}
+	// The first reconciliation will result in a change in the MUR.  We will load it here and confirm that the
+	// OriginalSub property has now been set
+	murInstance := &toolchainv1alpha1.MasterUserRecord{}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: test.HostOperatorNs,
-		Name:      userSignup.Name,
-	}, instance)
+		Name:      mur.Name,
+	}, murInstance)
 	require.NoError(t, err)
-	assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	require.Equal(t, userSignup.Spec.OriginalSub, murInstance.Spec.OriginalSub)
 
-	require.Equal(t, mur.Name, instance.Status.CompliantUsername)
-	test.AssertContainsCondition(t, instance.Status.Conditions, toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.UserSignupComplete,
-		Status: v1.ConditionTrue,
-	})
-	AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-			string(metrics.External): 1,
-		}).
-		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-			"1,external": 1,
-			"1,internal": 1,
+	t.Run("reconcile a second time to update UserSignup.Status", func(t *testing.T) {
+		// Reconcile again so that the userSignup status is now updated
+		_, err = r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+
+		instance := &toolchainv1alpha1.UserSignup{}
+		err = r.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: test.HostOperatorNs,
+			Name:      userSignup.Name,
+		}, instance)
+		require.NoError(t, err)
+		assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+
+		require.Equal(t, mur.Name, instance.Status.CompliantUsername)
+		test.AssertContainsCondition(t, instance.Status.Conditions, toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
 		})
+		AssertThatCountersAndMetrics(t).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 1,
+				"1,internal": 1,
+			})
+
+	})
 }
 
 func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {

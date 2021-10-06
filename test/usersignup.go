@@ -22,6 +22,12 @@ func WithTargetCluster(targetCluster string) UserSignupModifier {
 	}
 }
 
+func WithOriginalSub(originalSub string) UserSignupModifier {
+	return func(userSignup *toolchainv1alpha1.UserSignup) {
+		userSignup.Spec.OriginalSub = originalSub
+	}
+}
+
 func Approved() UserSignupModifier {
 	return func(userSignup *toolchainv1alpha1.UserSignup) {
 		states.SetApproved(userSignup, true)

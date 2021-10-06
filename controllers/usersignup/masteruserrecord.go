@@ -9,6 +9,13 @@ import (
 
 func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTier *toolchainv1alpha1.NSTemplateTier, userSignup *toolchainv1alpha1.UserSignup) (bool, error) {
 	changed := false
+
+	// TODO remove this after all users migrated to new SSO Provider client that does not modify the original subject
+	if mur.Spec.OriginalSub != userSignup.Spec.OriginalSub {
+		mur.Spec.OriginalSub = userSignup.Spec.OriginalSub
+		changed = true
+	}
+
 	for uaIndex, userAccount := range mur.Spec.UserAccounts {
 		if userAccount.Spec.NSLimit == "" {
 			mur.Spec.UserAccounts[uaIndex].Spec.NSLimit = "default"
@@ -82,6 +89,7 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserAccounts: userAccounts,
 			UserID:       userSignup.Spec.Userid,
+			OriginalSub:  userSignup.Spec.OriginalSub,
 		},
 	}
 	return mur, nil
