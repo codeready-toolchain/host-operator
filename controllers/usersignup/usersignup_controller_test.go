@@ -1556,38 +1556,38 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, userSignup.Spec.OriginalSub, murInstance.Spec.OriginalSub)
 
-	// Then we will prepare the reconciliation request and execute it again, this time the UserSignup status should be updated
-	r, req, _ = prepareReconcile(t, userSignup.Name, ready, userSignup, murInstance,
-		commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	t.Run("reconcile a second time to update UserSignup.Status", func(t *testing.T) {
+		// Reconcile again so that the userSignup status is now updated
+		_, err = r.Reconcile(context.TODO(), req)
 
-	_, err = r.Reconcile(context.TODO(), req)
+		// then
+		require.NoError(t, err)
 
-	// then
-	require.NoError(t, err)
+		instance := &toolchainv1alpha1.UserSignup{}
+		err = r.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: test.HostOperatorNs,
+			Name:      userSignup.Name,
+		}, instance)
+		require.NoError(t, err)
+		assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	instance := &toolchainv1alpha1.UserSignup{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{
-		Namespace: test.HostOperatorNs,
-		Name:      userSignup.Name,
-	}, instance)
-	require.NoError(t, err)
-	assert.Equal(t, "approved", instance.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
-
-	require.Equal(t, mur.Name, instance.Status.CompliantUsername)
-	test.AssertContainsCondition(t, instance.Status.Conditions, toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.UserSignupComplete,
-		Status: v1.ConditionTrue,
-	})
-	AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-			string(metrics.External): 1,
-		}).
-		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-			"1,external": 1,
-			"1,internal": 1,
+		require.Equal(t, mur.Name, instance.Status.CompliantUsername)
+		test.AssertContainsCondition(t, instance.Status.Conditions, toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
 		})
+		AssertThatCountersAndMetrics(t).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 1,
+				"1,internal": 1,
+			})
+
+	})
 }
 
 func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
