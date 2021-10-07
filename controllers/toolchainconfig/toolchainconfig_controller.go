@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
 	"github.com/go-logr/logr"
 	templatev1 "github.com/openshift/api/template/v1"
 	errs "github.com/pkg/errors"
@@ -136,12 +138,16 @@ func (r *Reconciler) ensureRegistrationService(reqLogger logr.Logger, toolchainC
 	// create all objects that are within the template, and update only when the object has changed.
 	var updated []string
 	for _, toolchainObject := range toolchainObjects {
-		createdOrUpdated, err := cl.ApplyObject(toolchainObject.GetClientObject(), applycl.SetOwner(toolchainConfig))
+		createdOrUpdated, err := cl.ApplyObject(toolchainObject, applycl.SetOwner(toolchainConfig))
 		if err != nil {
 			return r.WrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to apply registration service object %s", toolchainObject.GetName())
 		}
 		if createdOrUpdated {
-			updated = append(updated, fmt.Sprintf("%s: %s", toolchainObject.GetGvk().Kind, toolchainObject.GetName()))
+			gvk, err := apiutil.GVKForObject(toolchainObject, r.Scheme)
+			if err != nil {
+				return r.WrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to determine GroupVersionKind for registration service object %s", toolchainObject.GetName())
+			}
+			updated = append(updated, fmt.Sprintf("%s: %s", gvk.Kind, toolchainObject.GetName()))
 		}
 	}
 	if len(updated) > 0 {

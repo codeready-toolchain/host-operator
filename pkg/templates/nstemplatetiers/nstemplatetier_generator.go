@@ -63,7 +63,7 @@ type tierData struct {
 	name           string
 	rawTemplates   *templates
 	tierTemplates  []*toolchainv1alpha1.TierTemplate
-	nstmplTierObjs []commonclient.ToolchainObject
+	nstmplTierObjs []client.Object
 	basedOnTier    *BasedOnTier
 }
 
@@ -373,9 +373,9 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 			return fmt.Errorf("there is an unexpected number of NSTemplateTier object to be applied for tier name '%s'; expected: 1; actual: %d", tierName, len(tierData.nstmplTierObjs))
 		}
 
-		unstructuredObj, ok := tierData.nstmplTierObjs[0].GetClientObject().(*unstructured.Unstructured)
+		unstructuredObj, ok := tierData.nstmplTierObjs[0].(*unstructured.Unstructured)
 		if !ok {
-			return fmt.Errorf("unable to cast NSTemplateTier '%s' to Unstructured object '%+v'", tierName, tierData.nstmplTierObjs[0].GetClientObject())
+			return fmt.Errorf("unable to cast NSTemplateTier '%s' to Unstructured object '%+v'", tierName, tierData.nstmplTierObjs[0])
 		}
 		tier := &toolchainv1alpha1.NSTemplateTier{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, tier); err != nil {
@@ -424,7 +424,7 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 //     - templateRef: basic-dev-4d49fe0-4d49fe0
 //     - templateRef: basic-stage-4d49fe0-4d49fe0
 // ------
-func (t *tierGenerator) newNSTemplateTier(sourceTierName, tierName string, nsTemplateTier template, tierTemplates []*toolchainv1alpha1.TierTemplate, parameters []templatev1.Parameter) ([]commonclient.ToolchainObject, error) {
+func (t *tierGenerator) newNSTemplateTier(sourceTierName, tierName string, nsTemplateTier template, tierTemplates []*toolchainv1alpha1.TierTemplate, parameters []templatev1.Parameter) ([]client.Object, error) {
 	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer()
 	if reflect.DeepEqual(nsTemplateTier, template{}) {
 		return nil, fmt.Errorf("tier %s is missing a tier.yaml file", tierName)

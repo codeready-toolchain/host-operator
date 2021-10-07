@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
 	"github.com/stretchr/testify/assert"
@@ -35,13 +37,15 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 	roleBindingFound := false
 	for _, toolchainObject := range toolchainObjects {
 		assert.Equal(t, "my-namespace", toolchainObject.GetNamespace())
-		fmt.Println(toolchainObject.GetGvk())
+		gvk, err := apiutil.GVKForObject(toolchainObject, s)
+		require.NoError(t, err)
+		fmt.Println(gvk)
 		fmt.Println(appsv1.SchemeGroupVersion.WithKind("Deployment"))
 
-		switch toolchainObject.GetGvk() {
+		switch gvk {
 		case appsv1.SchemeGroupVersion.WithKind("Deployment"):
 			deploymentFound = true
-			deployment := fmt.Sprintf("%+v", toolchainObject.GetClientObject())
+			deployment := fmt.Sprintf("%+v", toolchainObject)
 			assert.Contains(t, deployment, "replicas:10")
 			assert.Contains(t, deployment, "image:quay.io/cr-t/registration-service:123")
 
