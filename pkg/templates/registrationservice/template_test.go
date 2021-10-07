@@ -39,8 +39,6 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 		assert.Equal(t, "my-namespace", toolchainObject.GetNamespace())
 		gvk, err := apiutil.GVKForObject(toolchainObject, s)
 		require.NoError(t, err)
-		fmt.Println(gvk)
-		fmt.Println(appsv1.SchemeGroupVersion.WithKind("Deployment"))
 
 		switch gvk {
 		case appsv1.SchemeGroupVersion.WithKind("Deployment"):
