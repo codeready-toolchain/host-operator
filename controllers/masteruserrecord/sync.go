@@ -43,7 +43,7 @@ type Synchronizer struct {
 	logger            logr.Logger
 }
 
-// synchronizeSpec synhronizes the useraccount in the MasterUserRecord with the corresponding UserAccount on the member cluster.
+// synchronizeSpec synchronizes the useraccount in the MasterUserRecord with the corresponding UserAccount on the member cluster.
 func (s *Synchronizer) synchronizeSpec() error {
 
 	if !s.isSynchronized() {
@@ -54,6 +54,7 @@ func (s *Synchronizer) synchronizeSpec() error {
 		s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
 		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
+		s.memberUserAcc.Spec.OriginalSub = s.record.Spec.OriginalSub
 
 		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
 		if err != nil {

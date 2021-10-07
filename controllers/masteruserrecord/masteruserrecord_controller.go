@@ -139,6 +139,10 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 		if errors.IsNotFound(err) {
 			// does not exist - should create
 			userAccount = newUserAccount(nsdName, murAccount.Spec, mur.Spec)
+
+			// Remove this after all users have been migrated to new IdP client
+			userAccount.Spec.OriginalSub = mur.Spec.OriginalSub
+
 			if err := memberCluster.Client.Create(context.TODO(), userAccount); err != nil {
 				return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 					"failed to create UserAccount in the member cluster '%s'", murAccount.TargetCluster)

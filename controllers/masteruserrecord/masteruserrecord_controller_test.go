@@ -122,6 +122,8 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john")
+	mur.Spec.OriginalSub = "original-sub:12345"
+
 	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
 	memberClient := test.NewFakeClient(t)
 	hostClient := test.NewFakeClient(t, mur)
