@@ -260,7 +260,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 			expectedDeactivationTimeoutsByTier := map[string]int{
 				"advanced":                 0,
 				"base":                     30,
-				"baselarge":                30,
+				"baselarge":                90,
 				"baseextended":             180,
 				"baseextendedidling":       30,
 				"basedeactivationdisabled": 0,
