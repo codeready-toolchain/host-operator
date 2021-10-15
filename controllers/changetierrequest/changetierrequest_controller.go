@@ -140,12 +140,12 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 	}
 	userSignupToUpdate := &toolchainv1alpha1.UserSignup{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: userSignupName}, userSignupToUpdate); err != nil {
-		return err
+		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to get UserSignup '%s'`, userSignupName)
 	}
 	if states.Deactivating(userSignupToUpdate) {
 		states.SetDeactivating(userSignupToUpdate, false)
 		if err := r.Client.Update(context.TODO(), userSignupToUpdate); err != nil {
-			return err
+			return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to reset deactivating state for UserSignup '%s'`, userSignupName)
 		}
 	}
 
