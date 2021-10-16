@@ -3538,3 +3538,119 @@ func TestUpdateMetricsByState(t *testing.T) {
 		})
 	})
 }
+
+func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
+	t.Run("last target cluster annotation is set", func(t *testing.T) {
+		// given
+		userSignup := NewUserSignup()
+		members := NewGetMemberClusters(
+			NewMemberCluster(t, "member1", v1.ConditionTrue),
+			NewMemberCluster(t, "member2", v1.ConditionTrue))
+		r, req, _ := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, NewToolchainStatus(
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,external": 1,
+			}),
+		))
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, reconcile.Result{Requeue: false}, res)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+		require.True(t, found)
+		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		err = r.Client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
+		require.Equal(t, murs.Items[0].Spec.UserAccounts[0].TargetCluster, annotation)
+	})
+
+	t.Run("last target cluster annotation is set but cluster lacks capacity", func(t *testing.T) {
+		// given
+		userSignup := NewUserSignup()
+		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
+		members := NewGetMemberClusters(
+			NewMemberCluster(t, "member1", v1.ConditionTrue),
+			NewMemberCluster(t, "member2", v1.ConditionTrue))
+		r, req, _ := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, NewToolchainStatus(
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,external": 1,
+			}),
+		))
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, reconcile.Result{Requeue: false}, res)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+		require.True(t, found)
+		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		err = r.Client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
+		require.Equal(t, "member1", annotation)
+	})
+
+	t.Run("last target cluster annotation is set and cluster has capacity", func(t *testing.T) {
+		// given
+		userSignup := NewUserSignup()
+		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
+		members := NewGetMemberClusters(
+			NewMemberCluster(t, "member1", v1.ConditionTrue),
+			NewMemberCluster(t, "member2", v1.ConditionTrue))
+		r, req, _ := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, NewToolchainStatus(
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,external": 1,
+			}),
+		))
+
+		// set acceptable capacity for member2 cluster
+		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
+		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: toolchainconfig.ToolchainStatusName, Namespace: req.Namespace}, toolchainStatus)
+		require.NoError(t, err)
+		member2 := toolchainStatus.Status.Members[0].DeepCopy()
+		member2.ClusterName = "member2"
+		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, *member2)
+		err = r.Client.Status().Update(context.TODO(), toolchainStatus)
+		require.NoError(t, err)
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, reconcile.Result{Requeue: false}, res)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+		require.True(t, found)
+		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		err = r.Client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
+		require.Equal(t, "member2", annotation)
+	})
+}
