@@ -264,7 +264,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 				"baseextended":             180,
 				"baseextendedidling":       30,
 				"basedeactivationdisabled": 0,
-				"hackathon":                50,
+				"hackathon":                80,
 				"test":                     30,
 			}
 
