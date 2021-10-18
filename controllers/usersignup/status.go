@@ -226,13 +226,13 @@ func (u *StatusUpdater) setStatusFailedToUpdateStateLabel(userSignup *toolchainv
 		})
 }
 
-func (u *StatusUpdater) setStatusFailedToUpdateLastClusterAnnotation(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *StatusUpdater) setStatusFailedToUpdateAnnotation(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupUnableToUpdateLastClusterAnnotationReason,
+			Reason:  toolchainv1alpha1.UserSignupUnableToUpdateAnnotationReason,
 			Message: message,
 		})
 }
