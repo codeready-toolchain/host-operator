@@ -480,7 +480,7 @@ func (r *Reconciler) provisionMasterUserRecord(config toolchainconfig.ToolchainC
 	// Set the last-target-cluster annotation so that if the user signs up again later on, they can be provisioned to the same cluster
 	userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = targetCluster
 	if err := r.Client.Update(context.TODO(), userSignup); err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateLastClusterAnnotation, err,
 			"unable to update last target cluster annotation on UserSignup resource")
 	}
 
