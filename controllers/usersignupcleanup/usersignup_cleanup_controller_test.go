@@ -251,7 +251,7 @@ func TestUserCleanup(t *testing.T) {
 }
 
 func expectRequeue(t *testing.T, res reconcile.Result, margin int) {
-	// We expect the requeue duration to be approximately equal to the default retention time of 365 days. Let's
+	// We expect the requeue duration to be approximately equal to the default retention time of 730 days. Let's
 	// accept any value here between the range of 364 days and 366 days
 	durLower := time.Duration(days(730 - 1 - margin))
 	durUpper := time.Duration(days(730 + 1 - margin))
