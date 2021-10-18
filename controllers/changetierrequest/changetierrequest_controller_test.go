@@ -10,9 +10,11 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
+	. "github.com/codeready-toolchain/host-operator/test"
+
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -24,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,11 +40,12 @@ func TestChangeTierSuccess(t *testing.T) {
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 
+	userSignup := NewUserSignup()
 	t.Run("the controller should change tier in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord(t, "john")
+		mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("john", "team")
-		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
@@ -56,9 +60,9 @@ func TestChangeTierSuccess(t *testing.T) {
 
 	t.Run("the controller should change tier in all UserAccounts in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
-		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
@@ -72,9 +76,9 @@ func TestChangeTierSuccess(t *testing.T) {
 
 	t.Run("the controller should change tier only in specified UserAccount in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("another-cluster"))
-		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
@@ -89,10 +93,10 @@ func TestChangeTierSuccess(t *testing.T) {
 
 	t.Run("completed changetierrequest is requeued with the remaining deletion timeout", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord(t, "johny")
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		changeTierRequest.Status.Conditions = []toolchainv1alpha1.Condition{toBeComplete()}
-		controller, request, cl := newController(t, changeTierRequest, config, mur)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur)
 
 		// when
 		result, err := controller.Reconcile(context.TODO(), request)
@@ -109,11 +113,11 @@ func TestChangeTierSuccess(t *testing.T) {
 
 	t.Run("change request deleted when deletion timeout passed", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord(t, "johny")
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		changeTierRequest.Status.Conditions = []toolchainv1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
-		controller, request, cl := newController(t, changeTierRequest, config, mur)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur)
 
 		// when
 		result, err := controller.Reconcile(context.TODO(), request)
@@ -125,16 +129,38 @@ func TestChangeTierSuccess(t *testing.T) {
 			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
 		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
+
+	t.Run("change request will reset deactivating state of UserSignup", func(t *testing.T) {
+		// given
+		userSignupDeactivating := userSignup.DeepCopy()
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignupDeactivating.Name))
+		changeTierRequest := newChangeTierRequest("johny", "team")
+		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
+
+		states.SetDeactivating(userSignupDeactivating, true)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignupDeactivating, mur, teamTier)
+
+		// when
+		_, err := controller.Reconcile(context.TODO(), request)
+
+		// then
+		require.NoError(t, err)
+		updatedUserSignup := &toolchainv1alpha1.UserSignup{}
+		err = cl.Get(context.TODO(), types.NamespacedName{Namespace: test.HostOperatorNs, Name: userSignupDeactivating.Name}, updatedUserSignup)
+		require.NoError(t, err)
+		require.False(t, states.Deactivating(updatedUserSignup))
+	})
 }
 
 func TestChangeTierFailure(t *testing.T) {
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
+	userSignup := NewUserSignup(WithName("john"))
 
 	t.Run("the change will fail since the provided MUR doesn't exist", func(t *testing.T) {
 		// given
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		controller, request, cl := newController(t, changeTierRequest, config, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, teamTier)
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
@@ -147,9 +173,9 @@ func TestChangeTierFailure(t *testing.T) {
 
 	t.Run("the change will fail since the provided tier doesn't exist", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord(t, "johny", murtest.AdditionalAccounts("another-cluster"))
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
-		controller, request, cl := newController(t, changeTierRequest, config, mur)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur)
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
@@ -162,29 +188,28 @@ func TestChangeTierFailure(t *testing.T) {
 
 	t.Run("the change will fail since it won't be able to find the correct UserAccount in MUR", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord(t, "johny")
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("some-other-cluster"))
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
 
 		// then
-		require.Error(t, err)
+		require.EqualError(t, err, "unable to change tier in MasterUserRecord johny: the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed")
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
-		assert.Equal(t, err.Error(), "unable to change tier in MasterUserRecord johny: the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed")
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name,
 			toBeNotComplete("the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed"))
 	})
 
 	t.Run("the change will fail since the actual update operation will return an error", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord(t, "johny")
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 		cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			_, ok := obj.(*toolchainv1alpha1.MasterUserRecord)
 			if ok {
@@ -197,19 +222,18 @@ func TestChangeTierFailure(t *testing.T) {
 		_, err := controller.Reconcile(context.TODO(), request)
 
 		// then
-		require.Error(t, err)
-		assert.Equal(t, err.Error(), "unable to change tier in MasterUserRecord johny: error")
+		require.EqualError(t, err, "unable to change tier in MasterUserRecord johny: error")
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("error"))
 	})
 
 	t.Run("will return an error since it cannot delete the ChangeTierRequest after successful completion", func(t *testing.T) {
 		// given
-		mur := murtest.NewMasterUserRecord(t, "johny")
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("johny", "faildeletion")
 		changeTierRequest.Status.Conditions = []toolchainv1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
-		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 		cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 			return fmt.Errorf("error")
 		}
@@ -218,11 +242,68 @@ func TestChangeTierFailure(t *testing.T) {
 		_, err := controller.Reconcile(context.TODO(), request)
 
 		// then
-		require.Error(t, err)
-		assert.Equal(t, err.Error(), "failed to delete changeTierRequest: unable to delete ChangeTierRequest object 'request-name': error")
+		require.EqualError(t, err, "failed to delete changeTierRequest: unable to delete ChangeTierRequest object 'request-name': error")
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier)
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete(), toBeDeletionError("unable to delete ChangeTierRequest object 'request-name': error"))
+	})
+
+	t.Run("the change will fail because the MUR is missing an owner label", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john")
+		changeTierRequest := newChangeTierRequest("john", "team")
+		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
+
+		// when
+		_, err := controller.Reconcile(context.TODO(), request)
+
+		// then
+		require.EqualError(t, err, `failed to get corresponding UserSignup for MasterUserRecord with name 'john': MasterUserRecord is missing label 'toolchain.dev.openshift.com/owner'`)
+		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete(`MasterUserRecord is missing label 'toolchain.dev.openshift.com/owner'`))
+	})
+
+	t.Run("the change will fail because there is no UserSignup found with the name from the MUR owner label", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
+		changeTierRequest := newChangeTierRequest("john", "team")
+		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
+		controller, request, cl := newController(t, changeTierRequest, config, mur, teamTier)
+
+		// when
+		_, err := controller.Reconcile(context.TODO(), request)
+
+		// then
+		require.EqualError(t, err, `failed to get UserSignup 'john': usersignups.toolchain.dev.openshift.com "john" not found`)
+		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete(`usersignups.toolchain.dev.openshift.com "john" not found`))
+	})
+
+	t.Run("the change will fail because resetting the deactivating state of the UserSignup fails", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
+		changeTierRequest := newChangeTierRequest("john", "team")
+		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
+
+		userSignupDeactivating := userSignup.DeepCopy()
+		states.SetDeactivating(userSignupDeactivating, true)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignupDeactivating, mur, teamTier)
+		cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			if obj.GetObjectKind().GroupVersionKind().Kind != "MasterUserRecord" {
+				return fmt.Errorf("update UserSignup failure")
+			}
+			return nil
+		}
+
+		// when
+		_, err := controller.Reconcile(context.TODO(), request)
+
+		// then
+		require.EqualError(t, err, `failed to reset deactivating state for UserSignup 'john': update UserSignup failure`, err.Error())
+		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete(`update UserSignup failure`))
+		updatedUserSignup := &toolchainv1alpha1.UserSignup{}
+		err = cl.Get(context.TODO(), types.NamespacedName{Namespace: test.HostOperatorNs, Name: userSignupDeactivating.Name}, updatedUserSignup)
+		require.NoError(t, err)
+		require.True(t, states.Deactivating(updatedUserSignup))
 	})
 }
 
