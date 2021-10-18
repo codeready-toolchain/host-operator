@@ -100,3 +100,6 @@ If you are still confused by the e2e location, execution and branch pairing, see
 *** 3. push all changes into both forks of the repositories https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e] and https://github.com/codeready-toolchain/host-operator[host-operator]
 *** 4. create a PR for https://github.com/codeready-toolchain/host-operator[host-operator]
 *** 5. create a PR for https://github.com/codeready-toolchain/toolchain-e2e[toolchain-e2e]
+
+
+
