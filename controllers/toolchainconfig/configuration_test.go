@@ -263,7 +263,7 @@ func TestDeactivationConfig(t *testing.T) {
 
 		assert.Equal(t, 3, toolchainCfg.Deactivation().DeactivatingNotificationDays())
 		assert.Empty(t, toolchainCfg.Deactivation().DeactivationDomainsExcluded())
-		assert.Equal(t, 365, toolchainCfg.Deactivation().UserSignupDeactivatedRetentionDays())
+		assert.Equal(t, 730, toolchainCfg.Deactivation().UserSignupDeactivatedRetentionDays())
 		assert.Equal(t, 7, toolchainCfg.Deactivation().UserSignupUnverifiedRetentionDays())
 	})
 	t.Run("non-default", func(t *testing.T) {
