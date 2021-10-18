@@ -10,6 +10,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -59,8 +60,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Fetch the ChangeTierRequest instance
 	changeTierRequest := &toolchainv1alpha1.ChangeTierRequest{}
-	err = r.Client.Get(context.TODO(), request.NamespacedName, changeTierRequest)
-	if err != nil {
+	if err = r.Client.Get(context.TODO(), request.NamespacedName, changeTierRequest); err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
@@ -87,14 +87,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}, nil
 	}
 
-	err = r.changeTier(reqLogger, changeTierRequest, request.Namespace)
-	if err != nil {
+	if err = r.changeTier(reqLogger, changeTierRequest, request.Namespace); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	reqLogger.Info("Change of the tier is completed")
-	err = r.setStatusChangeComplete(changeTierRequest)
-	if err != nil {
+	if err = r.setStatusChangeComplete(changeTierRequest); err != nil {
 		reqLogger.Error(err, "unable to set change complete status to ChangeTierRequest")
 		return reconcile.Result{}, err
 	}
@@ -132,6 +130,23 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 	murName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.MurName}
 	if err := r.Client.Get(context.TODO(), murName, mur); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get MasterUserRecord with name %s", changeTierRequest.Spec.MurName)
+	}
+
+	// get the corresponding UserSignup and set the deactivating state to false to prevent the user from being deactivated prematurely
+	userSignupName, found := mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey]
+	if !found || userSignupName == "" {
+		err := fmt.Errorf(`MasterUserRecord is missing label '%s'`, toolchainv1alpha1.MasterUserRecordOwnerLabelKey)
+		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to get corresponding UserSignup for MasterUserRecord with name '%s'`, changeTierRequest.Spec.MurName)
+	}
+	userSignupToUpdate := &toolchainv1alpha1.UserSignup{}
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: userSignupName}, userSignupToUpdate); err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to get UserSignup '%s'`, userSignupName)
+	}
+	if states.Deactivating(userSignupToUpdate) {
+		states.SetDeactivating(userSignupToUpdate, false)
+		if err := r.Client.Update(context.TODO(), userSignupToUpdate); err != nil {
+			return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to reset deactivating state for UserSignup '%s'`, userSignupName)
+		}
 	}
 
 	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
