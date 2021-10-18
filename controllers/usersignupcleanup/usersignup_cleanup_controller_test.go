@@ -187,8 +187,8 @@ func TestUserCleanup(t *testing.T) {
 
 		userSignup := test2.NewUserSignup(
 			test2.CreatedBefore(threeYears),
-			test2.ApprovedAutomatically(days(396)),
-			test2.VerificationRequired(days(366)),
+			test2.ApprovedAutomatically(days(730+21)),
+			test2.VerificationRequired(days(730+1)),
 			test2.WithActivations("2"),
 		)
 
@@ -250,11 +250,11 @@ func TestUserCleanup(t *testing.T) {
 
 }
 
-func expectRequeue(t *testing.T, res reconcile.Result, minusDays int) {
-	// We expect the requeue duration to be approximately equal to the default retention time of 365 days. Let's
+func expectRequeue(t *testing.T, res reconcile.Result, margin int) {
+	// We expect the requeue duration to be approximately equal to the default retention time of 730 days. Let's
 	// accept any value here between the range of 364 days and 366 days
-	durLower := time.Duration(days(364 - minusDays))
-	durUpper := time.Duration(days(366 - minusDays))
+	durLower := time.Duration(days(730 - 1 - margin))
+	durUpper := time.Duration(days(730 + 1 - margin))
 
 	require.True(t, res.Requeue)
 	require.Greater(t, res.RequeueAfter, durLower)
