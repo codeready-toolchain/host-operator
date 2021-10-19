@@ -3611,9 +3611,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
 		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: toolchainconfig.ToolchainStatusName, Namespace: req.Namespace}, toolchainStatus)
 		require.NoError(t, err)
-		member2 := toolchainStatus.Status.Members[0].DeepCopy()
-		member2.ClusterName = "member2"
-		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, *member2)
+		WithMember("member2", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65))(toolchainStatus)
 		err = r.Client.Status().Update(context.TODO(), toolchainStatus)
 		require.NoError(t, err)
 
