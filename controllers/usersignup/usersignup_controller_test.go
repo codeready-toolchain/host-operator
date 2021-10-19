@@ -3661,4 +3661,44 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
 		require.Equal(t, "member1", murs.Items[0].Spec.UserAccounts[0].TargetCluster)
 	})
+
+	t.Run("last target cluster annotation is not set initially and setting the annotation fails", func(t *testing.T) {
+		// given
+		userSignup := NewUserSignup()
+		userSignupName := userSignup.Name
+		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+		r, req, cl := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			s, ok := obj.(*toolchainv1alpha1.UserSignup)
+			if ok && s.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] == "member1" {
+				return fmt.Errorf("error")
+			}
+			return nil
+		}
+		cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			s, ok := obj.(*toolchainv1alpha1.UserSignup)
+			if ok && s.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] == "member1" {
+				return fmt.Errorf("error")
+			}
+			return nil
+		}
+		InitializeCounters(t, NewToolchainStatus())
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.EqualError(t, err, "unable to update last target cluster annotation on UserSignup resource: error")
+		assert.Equal(t, reconcile.Result{Requeue: false}, res)
+		userSignup = &toolchainv1alpha1.UserSignup{}
+		err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupName, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		val, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+		require.Empty(t, val)
+		require.False(t, found)
+		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		err = cl.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Empty(t, murs.Items)
+	})
 }
