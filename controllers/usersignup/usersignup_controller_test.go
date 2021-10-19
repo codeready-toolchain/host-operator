@@ -3633,4 +3633,32 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
 		require.Equal(t, annotation, murs.Items[0].Spec.UserAccounts[0].TargetCluster)
 	})
+
+	t.Run("last target cluster annotation is set but cluster does not exist", func(t *testing.T) {
+		// given
+		userSignup := NewUserSignup()
+		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
+		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+		r, req, _ := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, NewToolchainStatus())
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, reconcile.Result{Requeue: false}, res)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+		require.True(t, found)
+		// the annotation should be changed from member2 to member1 since member2 does not exist
+		require.Equal(t, "member1", annotation)
+		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		err = r.Client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
+		require.Equal(t, "member1", murs.Items[0].Spec.UserAccounts[0].TargetCluster)
+	})
 }
