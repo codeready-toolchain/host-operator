@@ -3540,7 +3540,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 }
 
 func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
-	t.Run("last target cluster annotation is set", func(t *testing.T) {
+	t.Run("last target cluster annotation is not initially set but added when mur is created", func(t *testing.T) {
 		// given
 		userSignup := NewUserSignup()
 		members := NewGetMemberClusters(
