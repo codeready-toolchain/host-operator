@@ -3601,12 +3601,13 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		require.NoError(t, err)
 		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
 		require.True(t, found)
+		require.Equal(t, "member1", annotation)
 		murs := &toolchainv1alpha1.MasterUserRecordList{}
 		err = r.Client.List(context.TODO(), murs)
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 1)
 		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
-		require.Equal(t, "member1", annotation)
+		require.Equal(t, annotation, murs.Items[0].Spec.UserAccounts[0].TargetCluster)
 	})
 
 	t.Run("last target cluster annotation is set and cluster has capacity", func(t *testing.T) {
