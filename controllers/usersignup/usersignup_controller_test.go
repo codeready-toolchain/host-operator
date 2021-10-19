@@ -3571,7 +3571,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, murs.Items, 1)
 		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
-		require.Equal(t, murs.Items[0].Spec.UserAccounts[0].TargetCluster, annotation)
+		require.Equal(t, annotation, murs.Items[0].Spec.UserAccounts[0].TargetCluster)
 	})
 
 	t.Run("last target cluster annotation is set but cluster lacks capacity", func(t *testing.T) {
