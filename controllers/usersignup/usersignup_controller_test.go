@@ -3573,6 +3573,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
 		members := NewGetMemberClusters(
 			NewMemberCluster(t, "member1", v1.ConditionTrue),
+			// member2 cluster lacks capacity because the prepareReconcile only sets up the resource consumption for member1 so member2 is automatically excluded
 			NewMemberCluster(t, "member2", v1.ConditionTrue))
 		r, req, _ := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
 		InitializeCounters(t, NewToolchainStatus())
