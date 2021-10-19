@@ -3604,14 +3604,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 			NewMemberCluster(t, "member1", v1.ConditionTrue),
 			NewMemberCluster(t, "member2", v1.ConditionTrue))
 		r, req, _ := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-		InitializeCounters(t, NewToolchainStatus(
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.External): 1,
-			}),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,external": 1,
-			}),
-		))
+		InitializeCounters(t, NewToolchainStatus())
 
 		// set acceptable capacity for member2 cluster
 		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
