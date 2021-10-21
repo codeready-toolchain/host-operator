@@ -102,15 +102,26 @@ func hasMemberEnoughResources(memberStatus toolchainv1alpha1.Member, threshold i
 }
 
 func getOptimalTargetCluster(userSignup *toolchainv1alpha1.UserSignup, getMemberClusters cluster.GetMemberClustersFunc, conditions ...cluster.Condition) string {
-	// If a target cluster hasn't been selected, select one from the members
+	// If a target cluster was specified, select it without any further checks, this is needed when users can only be provisioned to a specific member cluster
 	if userSignup.Spec.TargetCluster != "" {
 		return userSignup.Spec.TargetCluster
 	}
+
 	// Automatic cluster selection based on cluster readiness
 	members := getMemberClusters(append(conditions, cluster.Ready)...)
-
-	if len(members) > 0 {
-		return members[0].Name
+	if len(members) == 0 {
+		return ""
 	}
-	return ""
+
+	// If the the UserSignup has a last target cluster annotation set it can be targeted to the same cluster, otherwise use the first one
+	// The last cluster is used for returning users to ensure they can be provisioned back to the same cluster as they were previously using so they don't need to update URLs and kube contexts
+	lastTargetCluster, isLastTargetClusterSet := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+	if isLastTargetClusterSet {
+		for _, m := range members {
+			if lastTargetCluster == m.Name {
+				return m.Name
+			}
+		}
+	}
+	return members[0].Name
 }

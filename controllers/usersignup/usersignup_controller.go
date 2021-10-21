@@ -477,6 +477,13 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 func (r *Reconciler) provisionMasterUserRecord(config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster string,
 	nstemplateTier *toolchainv1alpha1.NSTemplateTier, logger logr.Logger) error {
 
+	// Set the last-target-cluster annotation so that if the user signs up again later on, they can be provisioned to the same cluster
+	userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = targetCluster
+	if err := r.Client.Update(context.TODO(), userSignup); err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateAnnotation, err,
+			"unable to update last target cluster annotation on UserSignup resource")
+	}
+
 	// TODO Update the MasterUserRecord with NSTemplateTier values
 	// SEE https://jira.coreos.com/browse/CRT-74
 

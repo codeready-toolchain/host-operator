@@ -3538,3 +3538,167 @@ func TestUpdateMetricsByState(t *testing.T) {
 		})
 	})
 }
+
+func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
+	t.Run("last target cluster annotation is not initially set but added when mur is created", func(t *testing.T) {
+		// given
+		userSignup := NewUserSignup()
+		members := NewGetMemberClusters(
+			NewMemberCluster(t, "member1", v1.ConditionTrue),
+			NewMemberCluster(t, "member2", v1.ConditionTrue))
+		r, req, _ := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, NewToolchainStatus())
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, reconcile.Result{Requeue: false}, res)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+		require.True(t, found)
+		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		err = r.Client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
+		require.Equal(t, annotation, murs.Items[0].Spec.UserAccounts[0].TargetCluster)
+	})
+
+	t.Run("last target cluster annotation is set but cluster lacks capacity", func(t *testing.T) {
+		// given
+		userSignup := NewUserSignup()
+		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
+		members := NewGetMemberClusters(
+			NewMemberCluster(t, "member1", v1.ConditionTrue),
+			// member2 cluster lacks capacity because the prepareReconcile only sets up the resource consumption for member1 so member2 is automatically excluded
+			NewMemberCluster(t, "member2", v1.ConditionTrue))
+		r, req, _ := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, NewToolchainStatus())
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, reconcile.Result{Requeue: false}, res)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+		require.True(t, found)
+		require.Equal(t, "member1", annotation)
+		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		err = r.Client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
+		require.Equal(t, annotation, murs.Items[0].Spec.UserAccounts[0].TargetCluster)
+	})
+
+	t.Run("last target cluster annotation is set and cluster has capacity", func(t *testing.T) {
+		// given
+		userSignup := NewUserSignup()
+		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
+		members := NewGetMemberClusters(
+			NewMemberCluster(t, "member1", v1.ConditionTrue),
+			NewMemberCluster(t, "member2", v1.ConditionTrue))
+		r, req, _ := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, NewToolchainStatus())
+
+		// set acceptable capacity for member2 cluster
+		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
+		err := r.Client.Get(context.TODO(), types.NamespacedName{Name: toolchainconfig.ToolchainStatusName, Namespace: req.Namespace}, toolchainStatus)
+		require.NoError(t, err)
+		WithMember("member2", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65))(toolchainStatus)
+		err = r.Client.Status().Update(context.TODO(), toolchainStatus)
+		require.NoError(t, err)
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, reconcile.Result{Requeue: false}, res)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+		require.True(t, found)
+		require.Equal(t, "member2", annotation)
+		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		err = r.Client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
+		require.Equal(t, annotation, murs.Items[0].Spec.UserAccounts[0].TargetCluster)
+	})
+
+	t.Run("last target cluster annotation is set but cluster does not exist", func(t *testing.T) {
+		// given
+		userSignup := NewUserSignup()
+		userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = "member2"
+		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+		r, req, _ := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		InitializeCounters(t, NewToolchainStatus())
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, reconcile.Result{Requeue: false}, res)
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+		require.True(t, found)
+		// the annotation should be changed from member2 to member1 since member2 does not exist
+		require.Equal(t, "member1", annotation)
+		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		err = r.Client.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Len(t, murs.Items, 1)
+		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
+		require.Equal(t, "member1", murs.Items[0].Spec.UserAccounts[0].TargetCluster)
+	})
+
+	t.Run("last target cluster annotation is not set initially and setting the annotation fails", func(t *testing.T) {
+		// given
+		userSignup := NewUserSignup()
+		userSignupName := userSignup.Name
+		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+		r, req, cl := prepareReconcile(t, userSignup.Name, members, userSignup, baseNSTemplateTier, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+		cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			s, ok := obj.(*toolchainv1alpha1.UserSignup)
+			if ok && s.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] == "member1" {
+				return fmt.Errorf("error")
+			}
+			return nil
+		}
+		cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			s, ok := obj.(*toolchainv1alpha1.UserSignup)
+			if ok && s.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] == "member1" {
+				return fmt.Errorf("error")
+			}
+			return nil
+		}
+		InitializeCounters(t, NewToolchainStatus())
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.EqualError(t, err, "unable to update last target cluster annotation on UserSignup resource: error")
+		assert.Equal(t, reconcile.Result{Requeue: false}, res)
+		userSignup = &toolchainv1alpha1.UserSignup{}
+		err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupName, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		val, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+		require.Empty(t, val)
+		require.False(t, found)
+		murs := &toolchainv1alpha1.MasterUserRecordList{}
+		err = cl.List(context.TODO(), murs)
+		require.NoError(t, err)
+		require.Empty(t, murs.Items)
+	})
+}
