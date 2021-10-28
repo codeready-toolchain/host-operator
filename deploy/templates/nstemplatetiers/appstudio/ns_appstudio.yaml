@@ -83,7 +83,7 @@ objects:
     kind: ClusterRole
     name: edit
   subjects:
-    - apiGroup: rbac.authorization.k8s.io
+    - apiGroup: ""
       kind: ServiceAccount
       name: appstudio-${USERNAME}
 - apiVersion: v1
