@@ -18,38 +18,38 @@ objects:
       name: registration-service
       namespace: ${NAMESPACE}
     rules:
-      - apiGroups:
-          - toolchain.dev.openshift.com
-        resources:
-          - usersignups
-        verbs:
-          - create
-          - get
-          - update
-          - list
-      - apiGroups:
-          - toolchain.dev.openshift.com
-        resources:
-          - masteruserrecords
-          - toolchainconfigs
-          - toolchainstatuses
-        verbs:
-          - get
-      - apiGroups:
-          - toolchain.dev.openshift.com
-        resources:
-          - bannedusers
-        verbs:
-          - get
-          - list
-      - apiGroups:
-          - ""
-        resources:
-          - secrets
-          - configmaps
-        verbs:
-          - get
-          - list
+    - apiGroups:
+      - toolchain.dev.openshift.com
+      resources:
+      - usersignups
+      verbs:
+      - create
+      - get
+      - update
+      - list
+    - apiGroups:
+      - toolchain.dev.openshift.com
+      resources:
+      - masteruserrecords
+      - toolchainconfigs
+      - toolchainstatuses
+      verbs:
+      - get
+    - apiGroups:
+      - toolchain.dev.openshift.com
+      resources:
+      - bannedusers
+      verbs:
+      - get
+      - list
+    - apiGroups:
+      - ""
+      resources:
+      - secrets
+      - configmaps
+      verbs:
+      - get
+      - list
   - kind: RoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     metadata:
