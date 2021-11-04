@@ -86,6 +86,33 @@ objects:
     - apiGroup: ""
       kind: ServiceAccount
       name: appstudio-${USERNAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    name: toolchain-sa-read
+    namespace: ${USERNAME}
+  rules:
+    - apiGroups:
+        - ""
+      resources:
+        - "secrets"
+        - "serviceaccounts"
+      verbs:
+        - get
+        - list
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: ${USERNAME}-sa-read
+    namespace: ${USERNAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: toolchain-sa-read
+  subjects:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: Group
+      name: system:serviceaccounts:${MEMBER_OPERATOR_NAMESPACE}
 - apiVersion: v1
   kind: LimitRange
   metadata:
@@ -183,3 +210,5 @@ objects:
 parameters:
 - name: USERNAME
   required: true
+- name: MEMBER_OPERATOR_NAMESPACE
+  value: toolchain-member-operator

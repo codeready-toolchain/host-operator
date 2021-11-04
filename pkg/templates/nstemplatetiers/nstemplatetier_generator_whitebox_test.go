@@ -40,9 +40,9 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 8)
+			require.Len(t, tmpls, 9)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "hackathon", "test"} {
+			for _, tier := range []string{"advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "hackathon", "test", "appstudio"} {
 				t.Run(tier, func(t *testing.T) {
 					for _, kind := range []string{"dev", "stage"} {
 						t.Run(kind, func(t *testing.T) {
@@ -58,7 +58,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 					}
 					t.Run("cluster", func(t *testing.T) {
 						switch tier {
-						case "base", "test":
+						case "base", "test", "appstudio":
 							require.NotNil(t, tmpls[tier].rawTemplates.clusterTemplate)
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.revision)
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.content)
@@ -68,7 +68,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 					})
 					t.Run("based_on_tier", func(t *testing.T) {
 						switch tier {
-						case "base", "test":
+						case "base", "test", "appstudio":
 							require.Nil(t, tmpls[tier].basedOnTier)
 						default:
 							require.NotNil(t, tmpls[tier].basedOnTier)
@@ -266,6 +266,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 				"basedeactivationdisabled": 0,
 				"hackathon":                80,
 				"test":                     30,
+				"appstudio":                30,
 			}
 
 			// when
@@ -390,7 +391,7 @@ func TestNewTierTemplate(t *testing.T) {
 							assert.NotEmpty(t, actual.Spec.Type)
 							assert.NotEmpty(t, actual.Spec.Template)
 							switch actual.Spec.Type {
-							case "dev", "stage":
+							case "dev", "stage", "appstudio":
 								assertNamespaceTemplate(t, decoder, actual.Spec.Template, tier, actual.Spec.Type)
 							case "clusterresources":
 								assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, tier)
@@ -475,21 +476,30 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	switch tier {
 	case "test":
 		// skip because this tier is for testing purposes only and the template can change often
-	case "base", "baseextended", "basedeactivationdisabled", "hackathon":
-		assertDefaultObjects(t, actual, "43200", "7Gi")
+	case "base", "baseextended", "basedeactivationdisabled", "hackathon", "appstudio":
+		assertDefaultObjects(t, actual, "43200", "7Gi", tier)
 	case "baselarge":
-		assertDefaultObjects(t, actual, "43200", "16Gi")
+		assertDefaultObjects(t, actual, "43200", "16Gi", tier)
 	case "baseextendedidling":
-		assertDefaultObjects(t, actual, "518400", "7Gi")
+		assertDefaultObjects(t, actual, "518400", "7Gi", tier)
 	case "advanced":
-		assertDefaultObjects(t, actual, "0", "7Gi")
+		assertDefaultObjects(t, actual, "0", "7Gi", tier)
 	default:
 		t.Errorf("unexpected tier: '%s'", tier)
 	}
 }
 
-func assertDefaultObjects(t *testing.T, actual templatev1.Template, idlerParamValue, memoryLimit string) {
-	assert.Len(t, actual.Objects, 13)
+func assertDefaultObjects(t *testing.T, actual templatev1.Template, idlerParamValue, memoryLimit, tier string) {
+	switch tier {
+	case "appstudio":
+		assert.Len(t, actual.Objects, 12) // Just one idler instead of 2
+		containsObj(t, actual, idlerObj("${USERNAME}"))
+	default:
+		assert.Len(t, actual.Objects, 13)
+		containsObj(t, actual, idlerObj("${USERNAME}-dev"))
+		containsObj(t, actual, idlerObj("${USERNAME}-stage"))
+	}
+
 	containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "15Gi"))
 	containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
 	containsObj(t, actual, clusterResourceQuotaReplicasObj())
@@ -501,8 +511,6 @@ func assertDefaultObjects(t *testing.T, actual templatev1.Template, idlerParamVa
 	containsObj(t, actual, clusterResourceQuotaConfigMapObj())
 	containsObj(t, actual, clusterResourceQuotaRHOASOperatorObj())
 	containsObj(t, actual, clusterResourceQuotaSBOObj())
-	containsObj(t, actual, idlerObj("${USERNAME}-dev"))
-	containsObj(t, actual, idlerObj("${USERNAME}-stage"))
 	containsParam(t, actual, "IDLER_TIMEOUT_SECONDS", idlerParamValue)
 	containsParam(t, actual, "MEMORY_LIMIT", memoryLimit)
 	containsParam(t, actual, "MEMORY_REQUEST", memoryLimit)
@@ -512,7 +520,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	var templatePath string
 
 	switch tier {
-	case "base", "test":
+	case "base", "test", "appstudio":
 		templatePath = fmt.Sprintf("%s/ns_%s.yaml", tier, kind)
 	default:
 		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", kind))
@@ -534,6 +542,8 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 		} else {
 			require.Len(t, actual.Objects, 14)
 		}
+	case "appstudio":
+		require.Len(t, actual.Objects, 16)
 	case "test":
 		return // Don't care what objects are defined in the test tier
 	default:
@@ -543,8 +553,21 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	// Namespace
 	containsObj(t, actual, namespaceObj(kind))
 
-	// RoleBinding "user-edit"
-	containsObj(t, actual, userEditRoleBindingObj(kind))
+	// RBAC
+	switch tier {
+	case "appstudio":
+
+	default:
+		// RoleBinding "user-edit"
+		containsObj(t, actual, userEditRoleBindingObj(kind))
+		// Role & RoleBinding with additional permissions to edit roles/rolebindings
+		containsObj(t, actual, rbacEditRoleObj(kind))
+		containsObj(t, actual, userRbacEditRoleBindingObj(kind))
+	}
+	// crtadmins related Role & RoleBindings
+	containsObj(t, actual, execPodsRoleObj(kind))
+	containsObj(t, actual, crtadminViewRoleBindingObj(kind))
+	containsObj(t, actual, crtadminPodsRoleBindingObj(kind))
 
 	// LimitRange
 	cpuLimit := "1000m"
@@ -572,18 +595,11 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 		default:
 			t.Errorf("unexpected kind: '%s'", kind)
 		}
+	case "appstudio":
+		// Nothing
 	default:
 		t.Errorf("unexpected tier: '%s'", tier)
 	}
-
-	// Role & RoleBinding with additional permissions to edit roles/rolebindings
-	containsObj(t, actual, rbacEditRoleObj(kind))
-	containsObj(t, actual, userRbacEditRoleBindingObj(kind))
-
-	// crtadmins related Role & RoleBindings
-	containsObj(t, actual, execPodsRoleObj(kind))
-	containsObj(t, actual, crtadminViewRoleBindingObj(kind))
-	containsObj(t, actual, crtadminPodsRoleBindingObj(kind))
 }
 
 func assertTestClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
@@ -645,7 +661,12 @@ func containsParam(t *testing.T, template templatev1.Template, name, value strin
 }
 
 func limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest string) string {
-	return fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"%s","memory":"%s"},"type":"Container"}]}}`, kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest)
+	switch kind {
+	case "appstudio":
+		return fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"%s","memory":"%s"},"type":"Container"}]}}`, cpuLimit, memoryLimit, cpuRequest, memoryRequest)
+	default:
+		return fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"%s","memory":"%s"},"type":"Container"}]}}`, kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest)
+	}
 }
 
 func clusterResourceQuotaComputeObj(cpuLimit, cpuRequest, storageLimit string) string { // nolint: unparam
@@ -701,10 +722,14 @@ func testClusterResourceQuotaObj(cpuLimit, memoryLimit string) string {
 }
 
 func namespaceObj(kind string) string {
-	if kind == "code" {
+	switch kind {
+	case "code":
 		return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"che.eclipse.org/openshift-username":"${USERNAME}","openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"name":"${USERNAME}-%[1]s"},"name":"${USERNAME}-%[1]s"}}`, kind)
+	case "appstudio":
+		return `{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}","openshift.io/display-name":"${USERNAME}","openshift.io/requester":"${USERNAME}"},"labels":{"name":"${USERNAME}"},"name":"${USERNAME}"}}`
+	default:
+		return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"name":"${USERNAME}-%[1]s"},"name":"${USERNAME}-%[1]s"}}`, kind)
 	}
-	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"name":"${USERNAME}-%[1]s"},"name":"${USERNAME}-%[1]s"}}`, kind)
 }
 
 func testNamespaceObj(kind string) string {
@@ -724,23 +749,48 @@ func rbacEditRoleObj(kind string) string {
 }
 
 func execPodsRoleObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"exec-pods","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":[""],"resources":["pods/exec"],"verbs":["get","list","watch","create","delete","update"]}]}`, kind)
+	switch kind {
+	case "appstudio":
+		return `{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"exec-pods","namespace":"${USERNAME}"},"rules":[{"apiGroups":[""],"resources":["pods/exec"],"verbs":["get","list","watch","create","delete","update"]}]}`
+	default:
+		return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"exec-pods","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":[""],"resources":["pods/exec"],"verbs":["get","list","watch","create","delete","update"]}]}`, kind)
+	}
 }
 
 func crtadminViewRoleBindingObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-view","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"view"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`, kind)
+	switch kind {
+	case "appstudio":
+		return `{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-view","namespace":"${USERNAME}"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"view"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`
+	default:
+		return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-view","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"view"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`, kind)
+	}
 }
 
 func crtadminPodsRoleBindingObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-pods","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"Role","name":"exec-pods"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`, kind)
+	switch kind {
+	case "appstudio":
+		return `{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-pods","namespace":"${USERNAME}"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"Role","name":"exec-pods"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`
+	default:
+		return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-pods","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"Role","name":"exec-pods"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`, kind)
+	}
 }
 
 func allowFromOpenshiftMonitoringPolicyObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-monitoring","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"monitoring"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
+	switch kind {
+	case "appstudio":
+		return `{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-monitoring","namespace":"${USERNAME}"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"monitoring"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`
+	default:
+		return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-monitoring","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"monitoring"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
+	}
 }
 
 func allowFromOpenshiftIngressPolicyObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-ingress","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"ingress"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
+	switch kind {
+	case "appstudio":
+		return `{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-ingress","namespace":"${USERNAME}"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"ingress"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`
+	default:
+		return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-ingress","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"ingress"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
+	}
 }
 
 func allowFromCRWPolicyObj(kind string) string {
@@ -748,15 +798,30 @@ func allowFromCRWPolicyObj(kind string) string {
 }
 
 func allowSameNamespacePolicyObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, kind)
+	switch kind {
+	case "appstudio":
+		return `{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`
+	default:
+		return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, kind)
+	}
 }
 
 func allowFromOlmNamespacesPolicyObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-olm-namespaces","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"openshift.io/scc":"anyuid"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
+	switch kind {
+	case "appstudio":
+		return `{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-olm-namespaces","namespace":"${USERNAME}"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"openshift.io/scc":"anyuid"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`
+	default:
+		return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-olm-namespaces","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"openshift.io/scc":"anyuid"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
+	}
 }
 
 func allowFromConsoleNamespacesPolicyObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-console-namespaces","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"console"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
+	switch kind {
+	case "appstudio":
+		return `{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-console-namespaces","namespace":"${USERNAME}"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"console"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`
+	default:
+		return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-console-namespaces","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"console"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
+	}
 }
 
 func allowOtherNamespacePolicyObj(kind string, otherNamespaceKinds ...string) string {
