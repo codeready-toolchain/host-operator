@@ -296,7 +296,7 @@ func TestReconcile(t *testing.T) {
 				Exists().
 				HasConditions(
 					toolchainconfig.ToSyncFailure(),
-					toolchainconfig.ToRegServiceDeploying("updated resources: [ServiceAccount: registration-service Role: registration-service RoleBinding: registration-service Deployment: registration-service Service: registration-service Route: registration-service Service: api Route: api]")).
+					toolchainconfig.ToRegServiceDeploying("updated resources: [ServiceAccount: registration-service Role: registration-service RoleBinding: registration-service Deployment: registration-service Service: registration-service Route: registration-service]")).
 				HasSyncErrors(map[string]string{"missing-member": "specific member configuration exists but no matching toolchaincluster was found"})
 		})
 	})
