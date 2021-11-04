@@ -74,7 +74,7 @@ func allNamespaceKinds() []string {
 
 func tiers() []string {
 	tt := make([]string, 0, len(expectedTiers))
-	for tier, _ := range expectedTiers {
+	for tier := range expectedTiers {
 		tt = append(tt, tier)
 	}
 	return tt
