@@ -92,7 +92,7 @@ func TestReconcile(t *testing.T) {
 				Exists().
 				HasConditions(
 					toolchainconfig.ToSyncComplete(),
-					toolchainconfig.ToRegServiceDeploying("updated resources: [ServiceAccount: registration-service Role: registration-service RoleBinding: registration-service Deployment: registration-service Service: registration-service Route: registration-service Service: api Route: api]")).
+					toolchainconfig.ToRegServiceDeploying("updated resources: [ServiceAccount: registration-service Role: registration-service RoleBinding: registration-service Deployment: registration-service Service: registration-service Route: registration-service]")).
 				HasNoSyncErrors()
 
 			// check member1 config
