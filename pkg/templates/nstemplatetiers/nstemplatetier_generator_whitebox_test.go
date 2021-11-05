@@ -512,6 +512,7 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 		_, _, err = decoder.Decode(content, nil, &expected)
 		require.NoError(t, err)
 		assert.Equal(t, expected, actual)
+		assert.NotEmpty(t, actual.Objects)
 	}
 }
 
