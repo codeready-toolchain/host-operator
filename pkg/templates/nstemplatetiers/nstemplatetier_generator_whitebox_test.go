@@ -39,7 +39,7 @@ var expectedTiers = map[string]bool{
 	"appstudio":                false,
 }
 
-func kinds(tier string) []string {
+func types(tier string) []string {
 	switch tier {
 	case "appstudio":
 		return []string{"appstudio"}
@@ -48,24 +48,24 @@ func kinds(tier string) []string {
 	}
 }
 
-func namespaceKind(kind string) bool {
-	for _, k := range allNamespaceKinds() {
-		if kind == k {
+func namespaceType(typeName string) bool {
+	for _, t := range allNamespaceTypes() {
+		if typeName == t {
 			return true
 		}
 	}
 	return false
 }
 
-func allNamespaceKinds() []string {
+func allNamespaceTypes() []string {
 	result := make([]string, 0, 3)
-	kmap := make(map[string]string)
+	tmap := make(map[string]string)
 	for _, tier := range tiers() {
-		kk := kinds(tier)
-		for _, kind := range kk {
-			if _, ok := kmap[kind]; !ok {
-				kmap[kind] = kind
-				result = append(result, kind)
+		tt := types(tier)
+		for _, t := range tt {
+			if _, ok := tmap[t]; !ok {
+				tmap[t] = t
+				result = append(result, t)
 			}
 		}
 	}
@@ -105,14 +105,14 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 			for _, tier := range tiers() {
 				t.Run(tier, func(t *testing.T) {
-					for _, kind := range kinds(tier) {
-						t.Run(kind, func(t *testing.T) {
+					for _, typeName := range types(tier) {
+						t.Run(typeName, func(t *testing.T) {
 							if basedOnOtherTier(tier) {
-								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
-								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
 							} else {
-								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
-								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
 							}
 						})
 					}
@@ -148,11 +148,11 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 
 			for _, tier := range []string{"advanced", "base", "nocluster"} {
 				t.Run(tier, func(t *testing.T) {
-					for _, kind := range []string{"dev", "stage"} {
-						t.Run(kind, func(t *testing.T) {
+					for _, typeName := range []string{"dev", "stage"} {
+						t.Run(typeName, func(t *testing.T) {
 							if tier != "advanced" {
-								assert.Equal(t, ExpectedRevisions[tier][kind], tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
-								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
+								assert.Equal(t, ExpectedRevisions[tier][typeName], tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
 							} else {
 								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates)
 							}
@@ -435,12 +435,12 @@ func TestNewTierTemplate(t *testing.T) {
 							assert.Equal(t, tier, actual.Spec.TierName)
 							assert.NotEmpty(t, actual.Spec.Type)
 							assert.NotEmpty(t, actual.Spec.Template)
-							if namespaceKind(actual.Spec.Type) {
+							if namespaceType(actual.Spec.Type) {
 								assertNamespaceTemplate(t, decoder, actual.Spec.Template, tier, actual.Spec.Type)
 							} else if actual.Spec.Type == "clusterresources" {
 								assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, tier)
 							} else {
-								t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
+								t.Errorf("unexpected type of template: '%s'", actual.Spec.Type)
 							}
 						})
 					}
@@ -475,7 +475,7 @@ func TestNewTierTemplate(t *testing.T) {
 						case "clusterresources":
 							assertTestClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
 						default:
-							t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
+							t.Errorf("unexpected type of template: '%s'", actual.Spec.Type)
 						}
 					}
 				})
@@ -516,12 +516,12 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	}
 }
 
-func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
+func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, typeName string) {
 	var templatePath string
 	if basedOnOtherTier(tier) {
-		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", kind))
+		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", typeName))
 	} else {
-		templatePath = fmt.Sprintf("%s/ns_%s.yaml", tier, kind)
+		templatePath = fmt.Sprintf("%s/ns_%s.yaml", tier, typeName)
 	}
 	content, err := Asset(templatePath)
 	require.NoError(t, err)
@@ -545,10 +545,10 @@ func assertTestClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, a
 	assert.Equal(t, expected, actual)
 }
 
-func assertTestNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
-	templatePath := fmt.Sprintf("%s/ns_%s.yaml", tier, kind)
+func assertTestNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, typeName string) {
+	templatePath := fmt.Sprintf("%s/ns_%s.yaml", tier, typeName)
 	if tier == "advanced" {
-		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", kind))
+		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", typeName))
 	}
 	content, err := testnstemplatetiers.Asset(templatePath)
 	require.NoError(t, err)
@@ -629,7 +629,7 @@ metadata:
 spec:
   deactivationTimeoutDays: {{ .DeactivationTimeout }} 
   namespaces: 
-{{ $tier := .Tier }}{{ range $kind, $revision := .NamespaceRevisions }}    - templateRef: {{ $tier }}-{{ $kind }}-{{ $revision }}
+{{ $tier := .Tier }}{{ range $type, $revision := .NamespaceRevisions }}    - templateRef: {{ $tier }}-{{ $type }}-{{ $revision }}
 {{ end }}  clusterResources:
     templateRef: {{ $tier }}-clusterresources-{{ .ClusterResourcesRevision }}`)
 	if err != nil {
