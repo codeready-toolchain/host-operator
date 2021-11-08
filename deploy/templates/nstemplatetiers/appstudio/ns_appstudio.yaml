@@ -1,0 +1,214 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: appstudio
+objects:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    annotations:
+      openshift.io/description: ${USERNAME}
+      openshift.io/display-name: ${USERNAME}
+      openshift.io/requester: ${USERNAME}
+    labels:
+      name: ${USERNAME}
+    name: ${USERNAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: user-view
+    namespace: ${USERNAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: view
+  subjects:
+  - kind: User
+    name: ${USERNAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    name: exec-pods
+    namespace: ${USERNAME}
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - pods/exec
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - delete
+    - update
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: crtadmin-view
+    namespace: ${USERNAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: view
+  subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: crtadmin-users-view
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: crtadmin-pods
+    namespace: ${USERNAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: exec-pods
+  subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: crtadmin-users-view
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: appstudio-${USERNAME}
+    namespace: ${USERNAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: appstudio-${USERNAME}-edit
+    namespace: ${USERNAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: edit
+  subjects:
+    - apiGroup: ""
+      kind: ServiceAccount
+      name: appstudio-${USERNAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    name: toolchain-sa-read
+    namespace: ${USERNAME}
+  rules:
+    - apiGroups:
+        - ""
+      resources:
+        - "secrets"
+        - "serviceaccounts"
+      verbs:
+        - get
+        - list
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: ${USERNAME}-sa-read
+    namespace: ${USERNAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: toolchain-sa-read
+  subjects:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: Group
+      name: system:serviceaccounts:${MEMBER_OPERATOR_NAMESPACE}
+- apiVersion: v1
+  kind: LimitRange
+  metadata:
+    name: resource-limits
+    namespace: ${USERNAME}
+  spec:
+    limits:
+    - type: "Container"
+      default:
+        cpu: 1000m
+        memory: 750Mi
+      defaultRequest:
+        cpu: 10m
+        memory: 64Mi
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-same-namespace
+    namespace: ${USERNAME}
+  spec:
+    podSelector: {}
+    ingress:
+    - from:
+      - podSelector: {}
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-openshift-ingress
+    namespace: ${USERNAME}
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: ingress
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-openshift-monitoring
+    namespace: ${USERNAME}
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: monitoring
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-codeready-workspaces-operator
+    namespace: ${USERNAME}
+  spec:
+    ingress:
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: codeready-workspaces
+    podSelector: {}
+    policyTypes:
+      - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-olm-namespaces
+    namespace: ${USERNAME}
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            openshift.io/scc: anyuid
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-console-namespaces
+    namespace: ${USERNAME}
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: console
+    podSelector: {}
+    policyTypes:
+    - Ingress
+parameters:
+- name: USERNAME
+  required: true
+- name: MEMBER_OPERATOR_NAMESPACE
+  value: toolchain-member-operator
