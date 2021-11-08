@@ -27,6 +27,67 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
+var expectedTiers = map[string]bool{
+	"advanced":                 true, // tier_name: true/false (if based on the other tier)
+	"base":                     false,
+	"baselarge":                true,
+	"baseextended":             true,
+	"baseextendedidling":       true,
+	"basedeactivationdisabled": true,
+	"hackathon":                true,
+	"test":                     false,
+	"appstudio":                false,
+}
+
+func types(tier string) []string {
+	switch tier {
+	case "appstudio":
+		return []string{"appstudio"}
+	default:
+		return []string{"dev", "stage"}
+	}
+}
+
+func namespaceType(typeName string) bool {
+	for _, t := range allNamespaceTypes() {
+		if typeName == t {
+			return true
+		}
+	}
+	return false
+}
+
+func allNamespaceTypes() []string {
+	result := make([]string, 0, 3)
+	tmap := make(map[string]string)
+	for _, tier := range tiers() {
+		tt := types(tier)
+		for _, t := range tt {
+			if _, ok := tmap[t]; !ok {
+				tmap[t] = t
+				result = append(result, t)
+			}
+		}
+	}
+	return result
+}
+
+func tiers() []string {
+	tt := make([]string, 0, len(expectedTiers))
+	for tier := range expectedTiers {
+		tt = append(tt, tier)
+	}
+	return tt
+}
+
+func assertKnownTier(t *testing.T, tier string) {
+	assert.Contains(t, expectedTiers, tier, "encountered an unexpected tier: %s", tier)
+}
+
+func basedOnOtherTier(tier string) bool {
+	return expectedTiers[tier]
+}
+
 func TestLoadTemplatesByTiers(t *testing.T) {
 
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -40,38 +101,35 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 8)
+			require.Len(t, tmpls, 9)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range []string{"advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "hackathon", "test"} {
+			for _, tier := range tiers() {
 				t.Run(tier, func(t *testing.T) {
-					for _, kind := range []string{"dev", "stage"} {
-						t.Run(kind, func(t *testing.T) {
-							switch tier {
-							case "base", "test":
-								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
-								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
-							default:
-								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
-								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
+					for _, typeName := range types(tier) {
+						t.Run(typeName, func(t *testing.T) {
+							if basedOnOtherTier(tier) {
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
+							} else {
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
 							}
 						})
 					}
 					t.Run("cluster", func(t *testing.T) {
-						switch tier {
-						case "base", "test":
+						if basedOnOtherTier(tier) {
+							assert.Nil(t, tmpls[tier].rawTemplates.clusterTemplate)
+						} else {
 							require.NotNil(t, tmpls[tier].rawTemplates.clusterTemplate)
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.revision)
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.content)
-						default:
-							assert.Nil(t, tmpls[tier].rawTemplates.clusterTemplate)
 						}
 					})
 					t.Run("based_on_tier", func(t *testing.T) {
-						switch tier {
-						case "base", "test":
-							require.Nil(t, tmpls[tier].basedOnTier)
-						default:
+						if basedOnOtherTier(tier) {
 							require.NotNil(t, tmpls[tier].basedOnTier)
+						} else {
+							require.Nil(t, tmpls[tier].basedOnTier)
 						}
 					})
 				})
@@ -90,11 +148,11 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 
 			for _, tier := range []string{"advanced", "base", "nocluster"} {
 				t.Run(tier, func(t *testing.T) {
-					for _, kind := range []string{"dev", "stage"} {
-						t.Run(kind, func(t *testing.T) {
+					for _, typeName := range []string{"dev", "stage"} {
+						t.Run(typeName, func(t *testing.T) {
 							if tier != "advanced" {
-								assert.Equal(t, ExpectedRevisions[tier][kind], tmpls[tier].rawTemplates.namespaceTemplates[kind].revision)
-								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[kind].content)
+								assert.Equal(t, ExpectedRevisions[tier][typeName], tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
 							} else {
 								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates)
 							}
@@ -257,17 +315,6 @@ func TestNewNSTemplateTier(t *testing.T) {
 			namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 			assets := assets.NewAssets(AssetNames, Asset)
 
-			expectedDeactivationTimeoutsByTier := map[string]int{
-				"advanced":                 0,
-				"base":                     30,
-				"baselarge":                90,
-				"baseextended":             180,
-				"baseextendedidling":       30,
-				"basedeactivationdisabled": 0,
-				"hackathon":                80,
-				"test":                     30,
-			}
-
 			// when
 			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
 			tc, err := newTierGenerator(s, nil, namespace, assets)
@@ -284,9 +331,8 @@ func TestNewNSTemplateTier(t *testing.T) {
 					nstmplTier := runtimeObjectToNSTemplateTier(t, s, tierObj)
 					require.NotNil(t, nstmplTier)
 					assert.Equal(t, namespace, nstmplTier.Namespace)
-					expectedDeactivationTimeout, ok := expectedDeactivationTimeoutsByTier[nstmplTier.Name]
-					require.True(t, ok, "encountered an unexpected tier: %s", nstmplTier.Name)
-					assert.Equal(t, expectedDeactivationTimeout, nstmplTier.Spec.DeactivationTimeoutDays)
+
+					assertKnownTier(t, nstmplTier.Name)
 
 					// verify tier templates
 					require.Len(t, nstmplTier.Spec.Namespaces, len(tierData.tierTemplates)-1) // exclude clusterresources TierTemplate here
@@ -389,13 +435,12 @@ func TestNewTierTemplate(t *testing.T) {
 							assert.Equal(t, tier, actual.Spec.TierName)
 							assert.NotEmpty(t, actual.Spec.Type)
 							assert.NotEmpty(t, actual.Spec.Template)
-							switch actual.Spec.Type {
-							case "dev", "stage":
+							if namespaceType(actual.Spec.Type) {
 								assertNamespaceTemplate(t, decoder, actual.Spec.Template, tier, actual.Spec.Type)
-							case "clusterresources":
+							} else if actual.Spec.Type == "clusterresources" {
 								assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, tier)
-							default:
-								t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
+							} else {
+								t.Errorf("unexpected type of template: '%s'", actual.Spec.Type)
 							}
 						})
 					}
@@ -430,7 +475,7 @@ func TestNewTierTemplate(t *testing.T) {
 						case "clusterresources":
 							assertTestClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
 						default:
-							t.Errorf("unexpected kind of template: '%s'", actual.Spec.Type)
+							t.Errorf("unexpected type of template: '%s'", actual.Spec.Type)
 						}
 					}
 				})
@@ -460,62 +505,23 @@ func TestNewTierTemplate(t *testing.T) {
 }
 
 func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
-	switch tier {
-	case "base", "test":
+	if !basedOnOtherTier(tier) {
 		expected := templatev1.Template{}
 		content, err := Asset(fmt.Sprintf("%s/cluster.yaml", tier))
 		require.NoError(t, err)
 		_, _, err = decoder.Decode(content, nil, &expected)
 		require.NoError(t, err)
 		assert.Equal(t, expected, actual)
-	default:
-		// todo
-	}
-
-	switch tier {
-	case "test":
-		// skip because this tier is for testing purposes only and the template can change often
-	case "base", "baseextended", "basedeactivationdisabled", "hackathon":
-		assertDefaultObjects(t, actual, "43200", "7Gi")
-	case "baselarge":
-		assertDefaultObjects(t, actual, "43200", "16Gi")
-	case "baseextendedidling":
-		assertDefaultObjects(t, actual, "518400", "7Gi")
-	case "advanced":
-		assertDefaultObjects(t, actual, "0", "7Gi")
-	default:
-		t.Errorf("unexpected tier: '%s'", tier)
+		assert.NotEmpty(t, actual.Objects)
 	}
 }
 
-func assertDefaultObjects(t *testing.T, actual templatev1.Template, idlerParamValue, memoryLimit string) {
-	assert.Len(t, actual.Objects, 13)
-	containsObj(t, actual, clusterResourceQuotaComputeObj("20000m", "1750m", "15Gi"))
-	containsObj(t, actual, clusterResourceQuotaDeploymentsObj())
-	containsObj(t, actual, clusterResourceQuotaReplicasObj())
-	containsObj(t, actual, clusterResourceQuotaRoutesObj())
-	containsObj(t, actual, clusterResourceQuotaJobsObj())
-	containsObj(t, actual, clusterResourceQuotaServicesObj())
-	containsObj(t, actual, clusterResourceQuotaBuildConfigObj())
-	containsObj(t, actual, clusterResourceQuotaSecretsObj())
-	containsObj(t, actual, clusterResourceQuotaConfigMapObj())
-	containsObj(t, actual, clusterResourceQuotaRHOASOperatorObj())
-	containsObj(t, actual, clusterResourceQuotaSBOObj())
-	containsObj(t, actual, idlerObj("${USERNAME}-dev"))
-	containsObj(t, actual, idlerObj("${USERNAME}-stage"))
-	containsParam(t, actual, "IDLER_TIMEOUT_SECONDS", idlerParamValue)
-	containsParam(t, actual, "MEMORY_LIMIT", memoryLimit)
-	containsParam(t, actual, "MEMORY_REQUEST", memoryLimit)
-}
-
-func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
+func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, typeName string) {
 	var templatePath string
-
-	switch tier {
-	case "base", "test":
-		templatePath = fmt.Sprintf("%s/ns_%s.yaml", tier, kind)
-	default:
-		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", kind))
+	if basedOnOtherTier(tier) {
+		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", typeName))
+	} else {
+		templatePath = fmt.Sprintf("%s/ns_%s.yaml", tier, typeName)
 	}
 	content, err := Asset(templatePath)
 	require.NoError(t, err)
@@ -523,67 +529,7 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
-	// Assert expected objects in the template
-	// Each template should have one Namespace, one RoleBinding, one LimitRange and a varying number of NetworkPolicy objects depending on the namespace kind
-
-	// Template objects count
-	switch tier {
-	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "hackathon":
-		if kind == "dev" {
-			require.Len(t, actual.Objects, 15) // dev namespace has CRW network policy
-		} else {
-			require.Len(t, actual.Objects, 14)
-		}
-	case "test":
-		return // Don't care what objects are defined in the test tier
-	default:
-		require.Fail(t, fmt.Sprintf("unexpected tier: %s", tier))
-	}
-
-	// Namespace
-	containsObj(t, actual, namespaceObj(kind))
-
-	// RoleBinding "user-edit"
-	containsObj(t, actual, userEditRoleBindingObj(kind))
-
-	// LimitRange
-	cpuLimit := "1000m"
-	memoryLimit := "750Mi"
-	memoryRequest := "64Mi"
-	cpuRequest := "10m"
-	containsObj(t, actual, limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest))
-
-	// NetworkPolicies
-	containsObj(t, actual, allowSameNamespacePolicyObj(kind))
-	containsObj(t, actual, allowFromOpenshiftIngressPolicyObj(kind))
-	containsObj(t, actual, allowFromOpenshiftMonitoringPolicyObj(kind))
-	containsObj(t, actual, allowFromOlmNamespacesPolicyObj(kind))
-	containsObj(t, actual, allowFromConsoleNamespacesPolicyObj(kind))
-
-	// User Namespaces Network Policies
-	switch tier {
-	case "advanced", "base", "baselarge", "baseextended", "baseextendedidling", "basedeactivationdisabled", "hackathon":
-		switch kind {
-		case "dev":
-			containsObj(t, actual, allowFromCRWPolicyObj(kind))
-			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "stage"))
-		case "stage":
-			containsObj(t, actual, allowOtherNamespacePolicyObj(kind, "dev"))
-		default:
-			t.Errorf("unexpected kind: '%s'", kind)
-		}
-	default:
-		t.Errorf("unexpected tier: '%s'", tier)
-	}
-
-	// Role & RoleBinding with additional permissions to edit roles/rolebindings
-	containsObj(t, actual, rbacEditRoleObj(kind))
-	containsObj(t, actual, userRbacEditRoleBindingObj(kind))
-
-	// crtadmins related Role & RoleBindings
-	containsObj(t, actual, execPodsRoleObj(kind))
-	containsObj(t, actual, crtadminViewRoleBindingObj(kind))
-	containsObj(t, actual, crtadminPodsRoleBindingObj(kind))
+	assert.NotEmpty(t, actual.Objects)
 }
 
 func assertTestClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
@@ -597,15 +543,12 @@ func assertTestClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, a
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
-	cpuLimit := "${CPU_LIMIT}"
-	memoryLimit := "7Gi"
-	containsObj(t, actual, testClusterResourceQuotaObj(cpuLimit, memoryLimit))
 }
 
-func assertTestNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, kind string) {
-	templatePath := fmt.Sprintf("%s/ns_%s.yaml", tier, kind)
+func assertTestNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, typeName string) {
+	templatePath := fmt.Sprintf("%s/ns_%s.yaml", tier, typeName)
 	if tier == "advanced" {
-		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", kind))
+		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", typeName))
 	}
 	content, err := testnstemplatetiers.Asset(templatePath)
 	require.NoError(t, err)
@@ -613,9 +556,6 @@ func assertTestNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual t
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
-
-	// Namespace
-	containsObj(t, actual, testNamespaceObj(kind))
 }
 
 func expectedTemplateFromBasedOnTierConfig(t *testing.T, tier, templateFileName string) string {
@@ -624,151 +564,6 @@ func expectedTemplateFromBasedOnTierConfig(t *testing.T, tier, templateFileName 
 	basedOnTier := BasedOnTier{}
 	require.NoError(t, yaml.Unmarshal(basedOnTierContent, &basedOnTier))
 	return fmt.Sprintf("%s/%s", basedOnTier.From, templateFileName)
-}
-
-func containsObj(t *testing.T, template templatev1.Template, obj string) {
-	for _, object := range template.Objects {
-		if string(object.Raw) == obj {
-			return
-		}
-	}
-	assert.Fail(t, "NSTemplateTier doesn't contain the expected object", "Template: %s; \n\nExpected object: %s", template, obj)
-}
-
-func containsParam(t *testing.T, template templatev1.Template, name, value string) {
-	for _, parameter := range template.Parameters {
-		if parameter.Name == name && parameter.Value == value {
-			return
-		}
-	}
-	assert.Fail(t, "NSTemplateTier doesn't contain the expected parameter", "Parameters: %v; \n\nExpected parameter: %s with value %s", template.Parameters, name, value)
-}
-
-func limitRangeObj(kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest string) string {
-	return fmt.Sprintf(`{"apiVersion":"v1","kind":"LimitRange","metadata":{"name":"resource-limits","namespace":"${USERNAME}-%s"},"spec":{"limits":[{"default":{"cpu":"%s","memory":"%s"},"defaultRequest":{"cpu":"%s","memory":"%s"},"type":"Container"}]}}`, kind, cpuLimit, memoryLimit, cpuRequest, memoryRequest)
-}
-
-func clusterResourceQuotaComputeObj(cpuLimit, cpuRequest, storageLimit string) string { // nolint: unparam
-	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-compute"},"spec":{"quota":{"hard":{"count/persistentvolumeclaims":"5","limits.cpu":"%[1]s","limits.ephemeral-storage":"7Gi","limits.memory":"${MEMORY_LIMIT}","requests.cpu":"%[2]s","requests.ephemeral-storage":"7Gi","requests.memory":"${MEMORY_REQUEST}","requests.storage":"%[3]s"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, cpuRequest, storageLimit)
-}
-
-func clusterResourceQuotaDeploymentsObj() string {
-	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-deployments"},"spec":{"quota":{"hard":{"count/deploymentconfigs.apps":"30","count/deployments.apps":"30","count/pods":"50"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
-}
-
-func clusterResourceQuotaReplicasObj() string {
-	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-replicas"},"spec":{"quota":{"hard":{"count/replicasets.apps":"30","count/replicationcontrollers":"30"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
-}
-
-func clusterResourceQuotaRoutesObj() string {
-	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-routes"},"spec":{"quota":{"hard":{"count/ingresses.extensions":"10","count/routes.route.openshift.io":"10"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
-}
-
-func clusterResourceQuotaJobsObj() string {
-	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-jobs"},"spec":{"quota":{"hard":{"count/cronjobs.batch":"30","count/daemonsets.apps":"30","count/jobs.batch":"30","count/statefulsets.apps":"30"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
-}
-
-func clusterResourceQuotaServicesObj() string {
-	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-services"},"spec":{"quota":{"hard":{"count/services":"10"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
-}
-
-func clusterResourceQuotaBuildConfigObj() string {
-	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-bc"},"spec":{"quota":{"hard":{"count/buildconfigs.build.openshift.io":"30"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
-}
-
-func clusterResourceQuotaSecretsObj() string {
-	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-secrets"},"spec":{"quota":{"hard":{"count/secrets":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
-}
-
-func clusterResourceQuotaConfigMapObj() string {
-	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-cm"},"spec":{"quota":{"hard":{"count/configmaps":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
-}
-
-func clusterResourceQuotaRHOASOperatorObj() string {
-	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-rhoas"},"spec":{"quota":{"hard":{"count/cloudserviceaccountrequest.rhoas.redhat.com":"2","count/cloudservicesrequests.rhoas.redhat.com":"2","count/kafkaconnections.rhoas.redhat.com":"5"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
-}
-
-func clusterResourceQuotaSBOObj() string {
-	return `{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}-sbo"},"spec":{"quota":{"hard":{"count/servicebindings.binding.operators.coreos.com":"100"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`
-}
-
-func idlerObj(name string) string { //nolint:unparam
-	return fmt.Sprintf(`{"apiVersion":"toolchain.dev.openshift.com/v1alpha1","kind":"Idler","metadata":{"name":"%s"},"spec":{"timeoutSeconds":"${{IDLER_TIMEOUT_SECONDS}}"}}`, name)
-}
-
-func testClusterResourceQuotaObj(cpuLimit, memoryLimit string) string {
-	return fmt.Sprintf(`{"apiVersion":"quota.openshift.io/v1","kind":"ClusterResourceQuota","metadata":{"name":"for-${USERNAME}"},"spec":{"quota":{"hard":{"limits.cpu":"%[1]s","limits.memory":"%[2]s","persistentvolumeclaims":"5","requests.storage":"7Gi"}},"selector":{"annotations":{"openshift.io/requester":"${USERNAME}"},"labels":null}}}`, cpuLimit, memoryLimit)
-}
-
-func namespaceObj(kind string) string {
-	if kind == "code" {
-		return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"che.eclipse.org/openshift-username":"${USERNAME}","openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"name":"${USERNAME}-%[1]s"},"name":"${USERNAME}-%[1]s"}}`, kind)
-	}
-	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"name":"${USERNAME}-%[1]s"},"name":"${USERNAME}-%[1]s"}}`, kind)
-}
-
-func testNamespaceObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{"openshift.io/description":"${USERNAME}-%[1]s","openshift.io/display-name":"${USERNAME}-%[1]s","openshift.io/requester":"${USERNAME}"},"labels":{"name":"${USERNAME}-%[1]s","toolchain.dev.openshift.com/provider":"codeready-toolchain"},"name":"${USERNAME}-%[1]s"}}`, kind)
-}
-
-func userEditRoleBindingObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"user-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, kind)
-}
-
-func userRbacEditRoleBindingObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"user-rbac-edit","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"Role","name":"rbac-edit"},"subjects":[{"kind":"User","name":"${USERNAME}"}]}`, kind)
-}
-
-func rbacEditRoleObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"rbac-edit","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":["authorization.openshift.io","rbac.authorization.k8s.io"],"resources":["roles","rolebindings"],"verbs":["get","list","watch","create","update","patch","delete"]}]}`, kind)
-}
-
-func execPodsRoleObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"Role","metadata":{"name":"exec-pods","namespace":"${USERNAME}-%s"},"rules":[{"apiGroups":[""],"resources":["pods/exec"],"verbs":["get","list","watch","create","delete","update"]}]}`, kind)
-}
-
-func crtadminViewRoleBindingObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-view","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"view"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`, kind)
-}
-
-func crtadminPodsRoleBindingObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"name":"crtadmin-pods","namespace":"${USERNAME}-%s"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"Role","name":"exec-pods"},"subjects":[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"crtadmin-users-view"}]}`, kind)
-}
-
-func allowFromOpenshiftMonitoringPolicyObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-monitoring","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"monitoring"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
-}
-
-func allowFromOpenshiftIngressPolicyObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-openshift-ingress","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"ingress"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
-}
-
-func allowFromCRWPolicyObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-codeready-workspaces-operator","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"codeready-workspaces"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
-}
-
-func allowSameNamespacePolicyObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-same-namespace","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"podSelector":{}}]}],"podSelector":{}}}`, kind)
-}
-
-func allowFromOlmNamespacesPolicyObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-olm-namespaces","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"openshift.io/scc":"anyuid"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
-}
-
-func allowFromConsoleNamespacesPolicyObj(kind string) string {
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-console-namespaces","namespace":"${USERNAME}-%s"},"spec":{"ingress":[{"from":[{"namespaceSelector":{"matchLabels":{"network.openshift.io/policy-group":"console"}}}]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind)
-}
-
-func allowOtherNamespacePolicyObj(kind string, otherNamespaceKinds ...string) string {
-	nsSelectorTmpl := `{"namespaceSelector":{"matchLabels":{"name":"${USERNAME}-%s"}}}`
-	var selectors strings.Builder
-	for _, other := range otherNamespaceKinds {
-		if selectors.Len() > 0 {
-			selectors.WriteRune(',')
-		}
-		selectors.WriteString(fmt.Sprintf(nsSelectorTmpl, other))
-	}
-	return fmt.Sprintf(`{"apiVersion":"networking.k8s.io/v1","kind":"NetworkPolicy","metadata":{"name":"allow-from-other-user-namespaces","namespace":"${USERNAME}-%[1]s"},"spec":{"ingress":[{"from":[%[2]s]}],"podSelector":{},"policyTypes":["Ingress"]}}`, kind, selectors.String())
 }
 
 func TestNewNSTemplateTiers(t *testing.T) {
@@ -834,7 +629,7 @@ metadata:
 spec:
   deactivationTimeoutDays: {{ .DeactivationTimeout }} 
   namespaces: 
-{{ $tier := .Tier }}{{ range $kind, $revision := .NamespaceRevisions }}    - templateRef: {{ $tier }}-{{ $kind }}-{{ $revision }}
+{{ $tier := .Tier }}{{ range $type, $revision := .NamespaceRevisions }}    - templateRef: {{ $tier }}-{{ $type }}-{{ $revision }}
 {{ end }}  clusterResources:
     templateRef: {{ $tier }}-clusterresources-{{ .ClusterResourcesRevision }}`)
 	if err != nil {
