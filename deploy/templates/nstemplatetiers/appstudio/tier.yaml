@@ -1,0 +1,22 @@
+kind: Template
+apiVersion: v1
+metadata:
+  name: appstudio-tier
+objects:
+- kind: NSTemplateTier
+  apiVersion: toolchain.dev.openshift.com/v1alpha1
+  metadata:
+    name: appstudio
+    namespace: ${NAMESPACE}
+  spec:
+    clusterResources:
+      templateRef: ${CLUSTER_TEMPL_REF}
+    deactivationTimeoutDays: ${{DEACTIVATION_TIMEOUT_DAYS}}
+    namespaces:
+      - templateRef: ${APPSTUDIO_TEMPL_REF}
+parameters:
+- name: NAMESPACE
+- name: CLUSTER_TEMPL_REF
+- name: APPSTUDIO_TEMPL_REF
+- name: DEACTIVATION_TIMEOUT_DAYS
+  value: "30"
