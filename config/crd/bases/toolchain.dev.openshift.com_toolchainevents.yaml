@@ -76,6 +76,10 @@ spec:
                 description: The tier to assign to users registering for the event.  This
                   must be the valid name of an nstemplatetier resource.
                 type: string
+              verificationRequired:
+                description: If true, the user will also be required to complete standard
+                  phone verification
+                type: boolean
             required:
             - activationCode
             - endTime
@@ -89,7 +93,7 @@ spec:
                 type: integer
               conditions:
                 description: 'Conditions is an array of current ToolchainEventStatus
-                  conditions Supported condition types: Complete'
+                  conditions Supported condition types: Ready'
                 items:
                   properties:
                     lastTransitionTime:
