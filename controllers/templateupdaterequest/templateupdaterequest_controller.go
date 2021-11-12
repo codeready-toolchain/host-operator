@@ -183,11 +183,13 @@ func (r Reconciler) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1
 			}
 			mur.Spec.UserAccounts[i] = ua
 			// also, update the tier template hash label
-			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(ua.Spec.NSTemplateSet)
-			if err != nil {
-				return err
+			if ua.Spec.NSTemplateSet != nil {
+				hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
+				if err != nil {
+					return err
+				}
+				mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tur.Spec.TierName)] = hash
 			}
-			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tur.Spec.TierName)] = hash
 		}
 	}
 	logger.Info("updating the MUR")

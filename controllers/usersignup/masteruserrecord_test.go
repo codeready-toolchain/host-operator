@@ -157,7 +157,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
-			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = toolchainv1alpha1.NSTemplateSetSpec{}
+			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -207,8 +207,8 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 }
 
-func newExpectedNsTemplateSetSpec() toolchainv1alpha1.NSTemplateSetSpec {
-	return toolchainv1alpha1.NSTemplateSetSpec{
+func newExpectedNsTemplateSetSpec() *toolchainv1alpha1.NSTemplateSetSpec {
+	return &toolchainv1alpha1.NSTemplateSetSpec{
 		TierName: "advanced",
 		Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
 			{

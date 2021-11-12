@@ -186,11 +186,13 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 	}
 	// then we compute again *all* hashes, in case we removed the entry for a single target cluster, but others still "use" it.
 	for _, ua := range mur.Spec.UserAccounts {
-		hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(ua.Spec.NSTemplateSet)
-		if err != nil {
-			return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to compute hash for NSTemplateTier with name '%s'", nsTemplateTier.Name)
+		if ua.Spec.NSTemplateSet != nil {
+			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
+			if err != nil {
+				return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to compute hash for NSTemplateTier with name '%s'", nsTemplateTier.Name)
+			}
+			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(ua.Spec.NSTemplateSet.TierName)] = hash
 		}
-		mur.Labels[nstemplatetier.TemplateTierHashLabelKey(ua.Spec.NSTemplateSet.TierName)] = hash
 	}
 	if err := r.Client.Update(context.TODO(), mur); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)

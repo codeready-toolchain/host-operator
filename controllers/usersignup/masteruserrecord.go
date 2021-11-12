@@ -33,15 +33,17 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 		tierName := ua.Spec.NSTemplateSet.TierName
 		// only set the label if it is missing.
 		if _, ok := mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)]; !ok {
-			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(ua.Spec.NSTemplateSet)
-			if err != nil {
-				return false, err
+			if ua.Spec.NSTemplateSet != nil {
+				hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
+				if err != nil {
+					return false, err
+				}
+				if mur.Labels == nil {
+					mur.Labels = map[string]string{}
+				}
+				mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)] = hash
+				changed = true
 			}
-			if mur.Labels == nil {
-				mur.Labels = map[string]string{}
-			}
-			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)] = hash
-			changed = true
 		}
 	}
 	// TODO: remove as part of CRT-1074
@@ -97,7 +99,7 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 }
 
 // NewNSTemplateSetSpec initializes a NSTemplateSetSpec from the given NSTemplateTier
-func NewNSTemplateSetSpec(nstemplateTier *toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {
+func NewNSTemplateSetSpec(nstemplateTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.NSTemplateSetSpec {
 	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nstemplateTier.Spec.Namespaces))
 	for i, ns := range nstemplateTier.Spec.Namespaces {
 		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
@@ -110,7 +112,7 @@ func NewNSTemplateSetSpec(nstemplateTier *toolchainv1alpha1.NSTemplateTier) tool
 			TemplateRef: nstemplateTier.Spec.ClusterResources.TemplateRef,
 		}
 	}
-	return toolchainv1alpha1.NSTemplateSetSpec{
+	return &toolchainv1alpha1.NSTemplateSetSpec{
 		TierName:         nstemplateTier.Name,
 		Namespaces:       namespaces,
 		ClusterResources: clusterResources,
