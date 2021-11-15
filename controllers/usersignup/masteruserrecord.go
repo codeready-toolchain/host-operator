@@ -22,7 +22,7 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 			changed = true
 		}
 		nsTemplateSet := userAccount.Spec.NSTemplateSet
-		if nsTemplateSet.TierName == "" {
+		if nsTemplateSet == nil || nsTemplateSet.TierName == "" {
 			mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet = NewNSTemplateSetSpec(nstemplateTier)
 			changed = true
 		}

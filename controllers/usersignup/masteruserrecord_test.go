@@ -157,6 +157,23 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
+			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = nil // here: "missing" == nil
+
+			// when
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+
+			// then
+			require.NoError(t, err)
+			assert.True(t, changed)
+			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+		})
+
+		t.Run("when whole NSTemplateSet is empty", func(t *testing.T) {
+			// given
+			userSignup := NewUserSignup()
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			require.NoError(t, err)
 			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
 
 			// when
