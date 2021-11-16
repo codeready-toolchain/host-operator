@@ -164,8 +164,10 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+			assert.False(t, changed)
+			expectedMUR := newExpectedMur(nsTemplateTier, userSignup)
+			expectedMUR.Spec.UserAccounts[0].Spec.NSTemplateSet = nil
+			assert.Equal(t, expectedMUR, mur)
 		})
 
 		t.Run("when whole NSTemplateSet is empty", func(t *testing.T) {
