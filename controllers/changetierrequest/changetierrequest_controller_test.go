@@ -150,6 +150,29 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, states.Deactivating(updatedUserSignup))
 	})
+
+	t.Run("should not change tier when not specified in MUR's UserAccount", func(t *testing.T) {
+		// given
+		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
+		for i, ua := range mur.Spec.UserAccounts {
+			if ua.TargetCluster == test.MemberClusterName {
+				mur.Spec.UserAccounts[i].Spec.NSTemplateSet = nil // no NSTemplateSet for this UserAccount
+				break
+			}
+		}
+		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("another-cluster"))
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
+
+		// when
+		_, err := controller.Reconcile(context.TODO(), request)
+
+		// then
+		require.NoError(t, err)
+		murtest.AssertThatMasterUserRecord(t, "johny", cl).
+			UserAccountHasNoTier(test.MemberClusterName). // nothing set since there was no NStemplateSet to begin with
+			UserAccountHasTier("another-cluster", *teamTier)
+		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
+	})
 }
 
 func TestChangeTierFailure(t *testing.T) {

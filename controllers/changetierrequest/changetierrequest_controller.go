@@ -159,6 +159,10 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 	changed := false
 
 	for i, ua := range mur.Spec.UserAccounts {
+		// skip if no NSTemplateSet defined for the UserAccount
+		if ua.Spec.NSTemplateSet == nil {
+			continue
+		}
 		if changeTierRequest.Spec.TargetCluster != "" {
 			if ua.TargetCluster == changeTierRequest.Spec.TargetCluster {
 				// here we remove the template hash label since it was change for one or all target clusters
@@ -186,6 +190,10 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 	}
 	// then we compute again *all* hashes, in case we removed the entry for a single target cluster, but others still "use" it.
 	for _, ua := range mur.Spec.UserAccounts {
+		// skip if no NSTemplateSet defined for the UserAccount
+		if ua.Spec.NSTemplateSet == nil {
+			continue
+		}
 		hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
 		if err != nil {
 			return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to compute hash for NSTemplateTier with name '%s'", nsTemplateTier.Name)
