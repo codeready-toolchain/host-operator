@@ -18,38 +18,39 @@ objects:
       name: registration-service
       namespace: ${NAMESPACE}
     rules:
-    - apiGroups:
-      - toolchain.dev.openshift.com
-      resources:
-      - usersignups
-      verbs:
-      - create
-      - get
-      - update
-      - list
-    - apiGroups:
-      - toolchain.dev.openshift.com
-      resources:
-      - masteruserrecords
-      - toolchainconfigs
-      - toolchainstatuses
-      verbs:
-      - get
-    - apiGroups:
-      - toolchain.dev.openshift.com
-      resources:
-      - bannedusers
-      verbs:
-      - get
-      - list
-    - apiGroups:
-      - ""
-      resources:
-      - secrets
-      - configmaps
-      verbs:
-      - get
-      - list
+      - apiGroups:
+          - toolchain.dev.openshift.com
+        resources:
+          - usersignups
+        verbs:
+          - create
+          - get
+          - update
+          - list
+      - apiGroups:
+          - toolchain.dev.openshift.com
+        resources:
+          - masteruserrecords
+          - toolchainconfigs
+          - toolchainstatuses
+        verbs:
+          - get
+      - apiGroups:
+          - toolchain.dev.openshift.com
+        resources:
+          - bannedusers
+          - toolchainclusters
+        verbs:
+          - get
+          - list
+      - apiGroups:
+          - ""
+        resources:
+          - secrets
+          - configmaps
+        verbs:
+          - get
+          - list
   - kind: RoleBinding
     apiVersion: rbac.authorization.k8s.io/v1
     metadata:
@@ -88,6 +89,7 @@ objects:
               image: ${IMAGE}
               ports:
                 - containerPort: 8080
+                - containerPort: 8081
               command:
                 - registration-service
               imagePullPolicy: IfNotPresent
@@ -151,6 +153,43 @@ objects:
       to:
         kind: Service
         name: registration-service
+        weight: 100
+      tls:
+        termination: edge
+      wildcardPolicy: None
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      name: api
+      namespace: ${NAMESPACE}
+      labels:
+        provider: codeready-toolchain
+        run: registration-service
+    spec:
+      ports:
+        - name: "8081"
+          protocol: TCP
+          port: 80
+          targetPort: 8081
+      selector:
+        run: registration-service
+      type: ClusterIP
+      sessionAffinity: null
+  - kind: Route
+    apiVersion: v1
+    metadata:
+      labels:
+        provider: codeready-toolchain
+        run: registration-service
+      name: api
+      namespace: ${NAMESPACE}
+    spec:
+      host: ''
+      port:
+        targetPort: "8081"
+      to:
+        kind: Service
+        name: api
         weight: 100
       tls:
         termination: edge
