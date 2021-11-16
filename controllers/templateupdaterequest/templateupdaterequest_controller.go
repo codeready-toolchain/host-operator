@@ -141,55 +141,53 @@ func maxUpdateFailuresReached(tur toolchainv1alpha1.TemplateUpdateRequest, thres
 func (r Reconciler) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur *toolchainv1alpha1.MasterUserRecord) error {
 	// update MasterUserRecord accounts whose tier matches the TemplateUpdateRequest
 	for i, ua := range mur.Spec.UserAccounts {
-		if ua.Spec.NSTemplateSet != nil {
-			if ua.Spec.NSTemplateSet.TierName == tur.Spec.TierName {
-				logger.Info("updating templaterefs", "tier", tur.Spec.TierName, "target_cluster", ua.TargetCluster)
-				// reset the new templateRefs, only retain those with a custom template in use
-				namespaces := make(map[string]toolchainv1alpha1.NSTemplateSetNamespace, len(ua.Spec.NSTemplateSet.Namespaces))
-				for _, ns := range ua.Spec.NSTemplateSet.Namespaces {
-					if ns.Template != "" {
-						t := namespaceType(ns.TemplateRef)
-						logger.Info("retainining the custom namespace template", "type", t)
-						namespaces[t] = ns
-					}
-				}
-				// now, add the new templateRefs, unless there's a custom template in use
-				for _, ns := range tur.Spec.Namespaces {
+		if ua.Spec.NSTemplateSet != nil && ua.Spec.NSTemplateSet.TierName == tur.Spec.TierName {
+			logger.Info("updating templaterefs", "tier", tur.Spec.TierName, "target_cluster", ua.TargetCluster)
+			// reset the new templateRefs, only retain those with a custom template in use
+			namespaces := make(map[string]toolchainv1alpha1.NSTemplateSetNamespace, len(ua.Spec.NSTemplateSet.Namespaces))
+			for _, ns := range ua.Spec.NSTemplateSet.Namespaces {
+				if ns.Template != "" {
 					t := namespaceType(ns.TemplateRef)
-					// don't override the custom template
-					namespaces[t] = toolchainv1alpha1.NSTemplateSetNamespace{
-						TemplateRef: ns.TemplateRef,
-						Template:    namespaces[t].Template, // empty unless there was something before
-					}
+					logger.Info("retainining the custom namespace template", "type", t)
+					namespaces[t] = ns
 				}
-				// finally, set the new namespace templates in the user account
-				ua.Spec.NSTemplateSet.Namespaces = []toolchainv1alpha1.NSTemplateSetNamespace{}
-				for _, ns := range namespaces {
-					ua.Spec.NSTemplateSet.Namespaces = append(ua.Spec.NSTemplateSet.Namespaces, ns)
-				}
-				// now, let's take care about the cluster resources
-				if ua.Spec.NSTemplateSet.ClusterResources != nil && ua.Spec.NSTemplateSet.ClusterResources.Template != "" {
-					// retain the custom template even if the TemplateUpdateRequest has no clusterresources templateref
-					if tur.Spec.ClusterResources != nil {
-						ua.Spec.NSTemplateSet.ClusterResources.TemplateRef = tur.Spec.ClusterResources.TemplateRef
-					} else {
-						ua.Spec.NSTemplateSet.ClusterResources.TemplateRef = ""
-					}
-				} else if tur.Spec.ClusterResources != nil {
-					ua.Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
-						TemplateRef: tur.Spec.ClusterResources.TemplateRef,
-					}
-				} else {
-					ua.Spec.NSTemplateSet.ClusterResources = nil
-				}
-				mur.Spec.UserAccounts[i] = ua
-				// also, update the tier template hash label
-				hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
-				if err != nil {
-					return err
-				}
-				mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tur.Spec.TierName)] = hash
 			}
+			// now, add the new templateRefs, unless there's a custom template in use
+			for _, ns := range tur.Spec.Namespaces {
+				t := namespaceType(ns.TemplateRef)
+				// don't override the custom template
+				namespaces[t] = toolchainv1alpha1.NSTemplateSetNamespace{
+					TemplateRef: ns.TemplateRef,
+					Template:    namespaces[t].Template, // empty unless there was something before
+				}
+			}
+			// finally, set the new namespace templates in the user account
+			ua.Spec.NSTemplateSet.Namespaces = []toolchainv1alpha1.NSTemplateSetNamespace{}
+			for _, ns := range namespaces {
+				ua.Spec.NSTemplateSet.Namespaces = append(ua.Spec.NSTemplateSet.Namespaces, ns)
+			}
+			// now, let's take care about the cluster resources
+			if ua.Spec.NSTemplateSet.ClusterResources != nil && ua.Spec.NSTemplateSet.ClusterResources.Template != "" {
+				// retain the custom template even if the TemplateUpdateRequest has no clusterresources templateref
+				if tur.Spec.ClusterResources != nil {
+					ua.Spec.NSTemplateSet.ClusterResources.TemplateRef = tur.Spec.ClusterResources.TemplateRef
+				} else {
+					ua.Spec.NSTemplateSet.ClusterResources.TemplateRef = ""
+				}
+			} else if tur.Spec.ClusterResources != nil {
+				ua.Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
+					TemplateRef: tur.Spec.ClusterResources.TemplateRef,
+				}
+			} else {
+				ua.Spec.NSTemplateSet.ClusterResources = nil
+			}
+			mur.Spec.UserAccounts[i] = ua
+			// also, update the tier template hash label
+			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
+			if err != nil {
+				return err
+			}
+			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tur.Spec.TierName)] = hash
 		}
 	}
 	logger.Info("updating the MUR")
@@ -275,7 +273,7 @@ func (r *Reconciler) setCompleteStatusCondition(tur *toolchainv1alpha1.TemplateU
 func syncIndexes(tierName string, mur toolchainv1alpha1.MasterUserRecord) map[string]string {
 	indexes := map[string]string{}
 	for _, ua := range mur.Spec.UserAccounts {
-		if ua.Spec.NSTemplateSet.TierName == tierName {
+		if ua.Spec.NSTemplateSet != nil && ua.Spec.NSTemplateSet.TierName == tierName {
 			indexes[ua.TargetCluster] = ua.SyncIndex
 		}
 	}
