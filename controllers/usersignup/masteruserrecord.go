@@ -37,17 +37,15 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 		tierName := ua.Spec.NSTemplateSet.TierName
 		// only set the label if it is missing.
 		if _, ok := mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)]; !ok {
-			if ua.Spec.NSTemplateSet != nil {
-				hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
-				if err != nil {
-					return false, err
-				}
-				if mur.Labels == nil {
-					mur.Labels = map[string]string{}
-				}
-				mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)] = hash
-				changed = true
+			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
+			if err != nil {
+				return false, err
 			}
+			if mur.Labels == nil {
+				mur.Labels = map[string]string{}
+			}
+			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)] = hash
+			changed = true
 		}
 	}
 	// TODO: remove as part of CRT-1074
