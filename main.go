@@ -33,12 +33,12 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/rest"
 	klogv1 "k8s.io/klog"
 	klogv2 "k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	runtimecluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	//+kubebuilder:scaffold:imports
@@ -48,6 +48,8 @@ var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
+
+const memberClientTimeout = 3 * time.Second
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -145,12 +147,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	crtConfig, err := getCRTConfiguration(cfg)
+	// create client that will be used for retrieving the host operator secret & ToolchainCluster CRs
+	cl, err := client.New(cfg, client.Options{
+		Scheme: scheme,
+	})
+	if err != nil {
+		setupLog.Error(err, "unable to create a client")
+		os.Exit(1)
+	}
+
+	crtConfig, err := toolchainconfig.GetToolchainConfig(cl)
 	if err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
 	}
-
 	crtConfig.Print()
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -166,12 +176,17 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
+	_, err = addMemberClusters(mgr, cl, namespace)
+	if err != nil {
+		setupLog.Error(err, "")
+		os.Exit(1)
+	}
 
 	// Setup all Controllers
 	if err = toolchaincluster.NewReconciler(
 		mgr,
 		namespace,
-		3*time.Second,
+		memberClientTimeout,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
 		os.Exit(1)
@@ -294,18 +309,28 @@ func main() {
 	}
 }
 
-// getCRTConfiguration creates the client used for configuration and
-// returns the loaded crt configuration
-func getCRTConfiguration(config *rest.Config) (toolchainconfig.ToolchainConfig, error) {
-	// create client that will be used for retrieving the host operator secret
-	cl, err := client.New(config, client.Options{
-		Scheme: scheme,
-	})
+func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string) ([]runtimecluster.Cluster, error) {
+	memberConfigs, err := cluster.ListToolchainClusterConfigs(cl, namespace, cluster.Member, memberClientTimeout)
 	if err != nil {
-		return toolchainconfig.ToolchainConfig{}, err
+		return nil, errors.Wrapf(err, "unable to get ToolchainCluster configs for members")
 	}
+	var memberClusters []runtimecluster.Cluster
+	for _, memberConfig := range memberConfigs {
+		setupLog.Info("adding cluster for a member", "name", memberConfig.Name, "apiEndpoint", memberConfig.APIEndpoint)
 
-	return toolchainconfig.GetToolchainConfig(cl)
+		memberCluster, err := runtimecluster.New(memberConfig.Config, func(options *runtimecluster.Options) {
+			options.Scheme = scheme
+			options.Namespace = memberConfig.OperatorNamespace
+		})
+		if err != nil {
+			return nil, errors.Wrapf(err, "unable to create cluster definition for "+memberConfig.Name)
+		}
+		if err := mgr.Add(memberCluster); err != nil {
+			return nil, errors.Wrapf(err, "unable to add cluster to the manager for "+memberConfig.Name)
+		}
+		memberClusters = append(memberClusters, memberCluster)
+	}
+	return memberClusters, nil
 }
 
 // OutputCallDepth is the stack depth where we can find the origin of this call

@@ -1377,12 +1377,14 @@ func newDeploymentWithConditions(deploymentName string, deploymentConditions ...
 
 func cachedToolchainCluster(cl client.Client, name string, status corev1.ConditionStatus, lastProbeTime metav1.Time) *cluster.CachedToolchainCluster {
 	return &cluster.CachedToolchainCluster{
-		Name:              name,
-		Client:            cl,
-		Type:              cluster.Host,
-		OperatorNamespace: test.MemberOperatorNs,
-		OwnerClusterName:  test.MemberClusterName,
-		APIEndpoint:       "http://api.devcluster.openshift.com",
+		Config: &cluster.Config{
+			Name:              name,
+			Type:              cluster.Host,
+			OperatorNamespace: test.MemberOperatorNs,
+			OwnerClusterName:  test.MemberClusterName,
+			APIEndpoint:       "http://api.devcluster.openshift.com",
+		},
+		Client: cl,
 		ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
 			Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
 				Type:          toolchainv1alpha1.ToolchainClusterReady,

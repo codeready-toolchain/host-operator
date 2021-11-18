@@ -69,6 +69,8 @@ github.com/Masterminds/semver/v3 v3.1.0 h1:Y2lUDsFKVRSYGojLJ1yLxSXdMmMYTYls0rCvo
 github.com/Masterminds/semver/v3 v3.1.0/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
 github.com/Masterminds/sprig/v3 v3.1.0 h1:j7GpgZ7PdFqNsmncycTHsLmVPf5/3wJtlgW9TNDYD9Y=
 github.com/Masterminds/sprig/v3 v3.1.0/go.mod h1:ONGMf7UfYGAbMXCZmQLy8x3lCDIPrEZE/rU8pmrbihA=
+github.com/MatousJobanek/toolchain-common v0.0.0-20211119160239-6df56eb6f7e0 h1:kJUfjC6KH1mpmdiiKqOeThznz4ReRWWhzbvWOqVHCdI=
+github.com/MatousJobanek/toolchain-common v0.0.0-20211119160239-6df56eb6f7e0/go.mod h1:DJVsWbbiNJ6XB5DekM5duSoqrUXjjKG6dDArFZsGSDY=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.0.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
@@ -115,8 +117,6 @@ github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGX
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/codeready-toolchain/api v0.0.0-20211116140337-1aaf7ef57cc2 h1:MJ6aUUWVuNqku9um4NAVHReKP5y/tq1wXbgBNfphL0c=
 github.com/codeready-toolchain/api v0.0.0-20211116140337-1aaf7ef57cc2/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20211116140718-3ae87ec76ddb h1:EhSrGxwUJA3+rOl7B7tfqiJN6r3OXqLecLhZGRrTQeA=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20211116140718-3ae87ec76ddb/go.mod h1:DJVsWbbiNJ6XB5DekM5duSoqrUXjjKG6dDArFZsGSDY=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
