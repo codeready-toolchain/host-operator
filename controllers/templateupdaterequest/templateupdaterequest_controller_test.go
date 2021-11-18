@@ -236,6 +236,29 @@ func TestReconcile(t *testing.T) {
 						"cluster1": "1",
 					})
 			})
+
+			t.Run("with undefined NSTemplateSet in UserAccount", func(t *testing.T) {
+				// given
+				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
+				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
+				mur := murtest.NewMasterUserRecord(t, "user-1", murtest.Account("cluster1", *previousBasicTier, murtest.SyncIndex("1")))
+				// reset NSTemplateSet in MUR's UserAccount
+				mur.Spec.UserAccounts[0].Spec.NSTemplateSet = nil
+				initObjs := []runtime.Object{basicTier, mur, turtest.NewTemplateUpdateRequest("user-1", *basicTier)}
+				r, req, cl := prepareReconcile(t, initObjs...)
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
+				// check that the MasterUserRecord was not updated (ie, still no spec.UserAccounts[].NSTemplateSet )
+				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					UserAccountHasNoTier("cluster-1")
+				// check that TemplateUpdateRequest is in "updating" condition
+				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
+					HasConditions(templateupdaterequest.ToBeUpdating()).
+					HasNoSyncIndexes() // no sync
+			})
 		})
 
 		t.Run("when there are many target clusters to update", func(t *testing.T) {

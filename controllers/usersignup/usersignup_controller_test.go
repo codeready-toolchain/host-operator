@@ -3416,7 +3416,7 @@ func TestMigrateMur(t *testing.T) {
 	require.NoError(t, err)
 
 	// set NSLimit and NSTemplateSet to be empty
-	mur.Spec.UserAccounts[0].Spec.NSTemplateSet = toolchainv1alpha1.NSTemplateSetSpec{}
+	mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
 	mur.Spec.UserAccounts[0].Spec.NSLimit = ""
 
 	expectedMur := mur.DeepCopy()

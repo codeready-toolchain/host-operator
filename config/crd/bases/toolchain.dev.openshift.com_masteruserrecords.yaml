@@ -139,7 +139,6 @@ spec:
                           type: object
                       required:
                       - nsLimit
-                      - nsTemplateSet
                       type: object
                     syncIndex:
                       description: SyncIndex is to be updated by UserAccount Controller
