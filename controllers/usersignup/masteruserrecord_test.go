@@ -7,6 +7,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/davecgh/go-spew/spew"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -141,6 +142,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
 			mur.Spec.UserAccounts[0].Spec.NSLimit = ""
+			mur.Spec.TierName = "" // here: "missing" == empty string
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -158,6 +160,8 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
 			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = nil // here: "missing" == nil
+			mur.Spec.TierName = ""                            // here: "missing" == empty string
+			t.Log(spew.Sdump(mur))
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -166,7 +170,8 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			require.NoError(t, err)
 			assert.False(t, changed)
 			expectedMUR := newExpectedMur(nsTemplateTier, userSignup)
-			expectedMUR.Spec.UserAccounts[0].Spec.NSTemplateSet = nil
+			expectedMUR.Spec.TierName = ""                            // should not be set
+			expectedMUR.Spec.UserAccounts[0].Spec.NSTemplateSet = nil // should not be set
 			assert.Equal(t, expectedMUR, mur)
 		})
 
@@ -265,6 +270,7 @@ func newExpectedMur(tier *toolchainv1alpha1.NSTemplateTier, userSignup *toolchai
 			Banned:        false,
 			Disabled:      false,
 			Deprovisioned: false,
+			TierName:      "advanced",
 			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
 				{
 					SyncIndex:     "",

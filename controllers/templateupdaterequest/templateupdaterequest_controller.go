@@ -183,6 +183,7 @@ func (r Reconciler) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1
 			}
 			mur.Spec.UserAccounts[i] = ua
 			// also, update the tier template hash label
+			// also, update the tier template hash label
 			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
 			if err != nil {
 				return err
