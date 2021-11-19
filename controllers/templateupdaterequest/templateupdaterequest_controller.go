@@ -141,7 +141,7 @@ func maxUpdateFailuresReached(tur toolchainv1alpha1.TemplateUpdateRequest, thres
 func (r Reconciler) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1.TemplateUpdateRequest, mur *toolchainv1alpha1.MasterUserRecord) error {
 	// update MasterUserRecord accounts whose tier matches the TemplateUpdateRequest
 	for i, ua := range mur.Spec.UserAccounts {
-		if ua.Spec.NSTemplateSet.TierName == tur.Spec.TierName {
+		if ua.Spec.NSTemplateSet != nil && ua.Spec.NSTemplateSet.TierName == tur.Spec.TierName {
 			logger.Info("updating templaterefs", "tier", tur.Spec.TierName, "target_cluster", ua.TargetCluster)
 			// reset the new templateRefs, only retain those with a custom template in use
 			namespaces := make(map[string]toolchainv1alpha1.NSTemplateSetNamespace, len(ua.Spec.NSTemplateSet.Namespaces))
@@ -183,7 +183,7 @@ func (r Reconciler) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1
 			}
 			mur.Spec.UserAccounts[i] = ua
 			// also, update the tier template hash label
-			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(ua.Spec.NSTemplateSet)
+			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
 			if err != nil {
 				return err
 			}
@@ -273,7 +273,7 @@ func (r *Reconciler) setCompleteStatusCondition(tur *toolchainv1alpha1.TemplateU
 func syncIndexes(tierName string, mur toolchainv1alpha1.MasterUserRecord) map[string]string {
 	indexes := map[string]string{}
 	for _, ua := range mur.Spec.UserAccounts {
-		if ua.Spec.NSTemplateSet.TierName == tierName {
+		if ua.Spec.NSTemplateSet != nil && ua.Spec.NSTemplateSet.TierName == tierName {
 			indexes[ua.TargetCluster] = ua.SyncIndex
 		}
 	}

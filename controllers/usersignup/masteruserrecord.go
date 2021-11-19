@@ -22,7 +22,7 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 			changed = true
 		}
 		nsTemplateSet := userAccount.Spec.NSTemplateSet
-		if nsTemplateSet.TierName == "" {
+		if nsTemplateSet != nil && nsTemplateSet.TierName == "" {
 			mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet = NewNSTemplateSetSpec(nstemplateTier)
 			changed = true
 		}
@@ -30,10 +30,14 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 	// also, ensure that the MUR has a label for each tier in use
 	// this label will be needed to select master user record that need to be updated when tier templates changed.
 	for _, ua := range mur.Spec.UserAccounts {
+		// skip if no NSTemplateSet defined on the UserAccount
+		if ua.Spec.NSTemplateSet == nil {
+			continue
+		}
 		tierName := ua.Spec.NSTemplateSet.TierName
 		// only set the label if it is missing.
 		if _, ok := mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)]; !ok {
-			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(ua.Spec.NSTemplateSet)
+			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
 			if err != nil {
 				return false, err
 			}
@@ -97,7 +101,7 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 }
 
 // NewNSTemplateSetSpec initializes a NSTemplateSetSpec from the given NSTemplateTier
-func NewNSTemplateSetSpec(nstemplateTier *toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {
+func NewNSTemplateSetSpec(nstemplateTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.NSTemplateSetSpec {
 	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nstemplateTier.Spec.Namespaces))
 	for i, ns := range nstemplateTier.Spec.Namespaces {
 		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
@@ -110,7 +114,7 @@ func NewNSTemplateSetSpec(nstemplateTier *toolchainv1alpha1.NSTemplateTier) tool
 			TemplateRef: nstemplateTier.Spec.ClusterResources.TemplateRef,
 		}
 	}
-	return toolchainv1alpha1.NSTemplateSetSpec{
+	return &toolchainv1alpha1.NSTemplateSetSpec{
 		TierName:         nstemplateTier.Name,
 		Namespaces:       namespaces,
 		ClusterResources: clusterResources,
