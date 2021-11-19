@@ -48,9 +48,6 @@ spec:
               event, such as a training session or workshop. Users may register for
               the event by using the event's unique activation code
             properties:
-              activationCode:
-                description: The unique activation code for the event
-                type: string
               description:
                 description: An optional description that may be provided describing
                   the purpose of the event
@@ -81,7 +78,6 @@ spec:
                   phone verification
                 type: boolean
             required:
-            - activationCode
             - endTime
             - maxAttendees
             - startTime
