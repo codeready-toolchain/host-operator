@@ -98,7 +98,7 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 			UserAccounts: userAccounts,
 			UserID:       userSignup.Spec.Userid,
 			OriginalSub:  userSignup.Spec.OriginalSub,
-			TierName:     userAccounts[0].Spec.NSTemplateSet.TierName,
+			TierName:     nstemplateTier.Name,
 		},
 	}
 	return mur, nil
