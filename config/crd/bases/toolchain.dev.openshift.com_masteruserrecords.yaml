@@ -28,7 +28,7 @@ spec:
     - jsonPath: .spec.userAccounts[].targetCluster
       name: Cluster
       type: string
-    - jsonPath: .spec.userAccounts[].spec.nsTemplateSet.tierName
+    - jsonPath: .spec.tierName
       name: Tier
       type: string
     - jsonPath: .spec.banned

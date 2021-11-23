@@ -60,7 +60,8 @@ spec:
       kind: ToolchainConfig
       name: toolchainconfigs.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: ToolchainEvent is used to allow users to sign up to events such as workshops or training
+    - description: ToolchainEvent is used to allow users to sign up to events such
+        as workshops or training
       displayName: CodeReady Toolchain Event
       kind: ToolchainEvent
       name: toolchainevents.toolchain.dev.openshift.com
