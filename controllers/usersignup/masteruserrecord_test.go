@@ -161,7 +161,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			require.NoError(t, err)
 			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = nil // here: "missing" == nil
 			mur.Spec.TierName = ""                            // here: "missing" == empty string
-			t.Log(spew.Sdump(mur))
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
