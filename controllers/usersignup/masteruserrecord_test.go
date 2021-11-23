@@ -210,7 +210,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		// TODO: to be removed once CRT-1075 is done
 		t.Run("when email annotation is missing", func(t *testing.T) {
 			// given
-			logf.SetLogger(zap.New(zap.UseDevMode(true)))
 			userSignup := NewUserSignup() // email is `foo@redhat.com`
 			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
@@ -225,6 +224,41 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			assert.True(t, changed)
 			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
 		})
+
+		t.Run("when tierName is missing", func(t *testing.T) {
+			userSignup := NewUserSignup()
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			require.NoError(t, err)
+			mur.Spec.TierName = ""
+			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
+
+			// when
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+
+			// then
+			require.NoError(t, err)
+			assert.True(t, changed)
+			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+		})
+
+		t.Run("when tierName is different", func(t *testing.T) {
+			userSignup := NewUserSignup()
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			require.NoError(t, err)
+			mur.Spec.TierName = "somethingelse"
+			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
+
+			// when
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+
+			// then
+			require.NoError(t, err)
+			assert.True(t, changed)
+			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+		})
+
 	})
 
 }
