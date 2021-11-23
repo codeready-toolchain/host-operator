@@ -4,7 +4,6 @@ require (
 	cloud.google.com/go v0.60.0 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20211116140337-1aaf7ef57cc2
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20211116140718-3ae87ec76ddb
-	github.com/davecgh/go-spew v1.1.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.4.0

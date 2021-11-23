@@ -7,7 +7,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/davecgh/go-spew/spew"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
