@@ -69,8 +69,8 @@ github.com/Masterminds/semver/v3 v3.1.0 h1:Y2lUDsFKVRSYGojLJ1yLxSXdMmMYTYls0rCvo
 github.com/Masterminds/semver/v3 v3.1.0/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
 github.com/Masterminds/sprig/v3 v3.1.0 h1:j7GpgZ7PdFqNsmncycTHsLmVPf5/3wJtlgW9TNDYD9Y=
 github.com/Masterminds/sprig/v3 v3.1.0/go.mod h1:ONGMf7UfYGAbMXCZmQLy8x3lCDIPrEZE/rU8pmrbihA=
-github.com/MatousJobanek/toolchain-common v0.0.0-20211119160239-6df56eb6f7e0 h1:kJUfjC6KH1mpmdiiKqOeThznz4ReRWWhzbvWOqVHCdI=
-github.com/MatousJobanek/toolchain-common v0.0.0-20211119160239-6df56eb6f7e0/go.mod h1:DJVsWbbiNJ6XB5DekM5duSoqrUXjjKG6dDArFZsGSDY=
+github.com/MatousJobanek/toolchain-common v0.0.0-20211123084829-ae1da04c8b89 h1:aX/pJlAc3Sa/n2Cd5rqA+qhAxKPM+h/HfVk9x7dvo+c=
+github.com/MatousJobanek/toolchain-common v0.0.0-20211123084829-ae1da04c8b89/go.mod h1:DJVsWbbiNJ6XB5DekM5duSoqrUXjjKG6dDArFZsGSDY=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.0.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=

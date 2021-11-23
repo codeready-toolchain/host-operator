@@ -318,7 +318,7 @@ func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string) ([]
 	for _, memberConfig := range memberConfigs {
 		setupLog.Info("adding cluster for a member", "name", memberConfig.Name, "apiEndpoint", memberConfig.APIEndpoint)
 
-		memberCluster, err := runtimecluster.New(memberConfig.Config, func(options *runtimecluster.Options) {
+		memberCluster, err := runtimecluster.New(memberConfig.RestConfig, func(options *runtimecluster.Options) {
 			options.Scheme = scheme
 			options.Namespace = memberConfig.OperatorNamespace
 		})
