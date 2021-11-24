@@ -85,7 +85,7 @@ func TestIsSynchronized(t *testing.T) {
 func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1alpha1.UserAccountEmbedded, toolchainv1alpha1.UserAccount) {
 	base := toolchainv1alpha1.UserAccountSpecBase{
 		NSLimit: "limit",
-		NSTemplateSet: toolchainv1alpha1.NSTemplateSetSpec{
+		NSTemplateSet: &toolchainv1alpha1.NSTemplateSetSpec{
 			TierName: "basic",
 			ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
 				TemplateRef: "basic-clusterresources-654321a",

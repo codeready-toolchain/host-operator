@@ -1,0 +1,139 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: toolchainevents.toolchain.dev.openshift.com
+spec:
+  group: toolchain.dev.openshift.com
+  names:
+    kind: ToolchainEvent
+    listKind: ToolchainEventList
+    plural: toolchainevents
+    singular: toolchainevent
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.startTime
+      name: StartTime
+      type: string
+    - jsonPath: .spec.endTime
+      name: EndTime
+      type: string
+    - jsonPath: .spec.description
+      name: Description
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ToolchainEvent registers a toolchain event in the CodeReady Toolchain
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ToolchainEventSpec defines the parameters for a Toolchain
+              event, such as a training session or workshop. Users may register for
+              the event by using the event's unique activation code
+            properties:
+              description:
+                description: An optional description that may be provided describing
+                  the purpose of the event
+                type: string
+              endTime:
+                description: The timestamp after which users may no longer register
+                  via this event's activation code
+                format: date-time
+                type: string
+              maxAttendees:
+                description: The maximum number of attendees
+                type: integer
+              preferSameCluster:
+                description: If true, best effort is made to provision all attendees
+                  of the event on the same cluster
+                type: boolean
+              startTime:
+                description: The timestamp from which users may register via this
+                  event's activation code
+                format: date-time
+                type: string
+              tier:
+                description: The tier to assign to users registering for the event.  This
+                  must be the valid name of an nstemplatetier resource.
+                type: string
+              verificationRequired:
+                description: If true, the user will also be required to complete standard
+                  phone verification
+                type: boolean
+            required:
+            - endTime
+            - maxAttendees
+            - startTime
+            type: object
+          status:
+            description: ToolchainEventStatus defines the observed state of ToolchainEvent
+            properties:
+              activationCount:
+                type: integer
+              conditions:
+                description: 'Conditions is an array of current ToolchainEventStatus
+                  conditions Supported condition types: Ready'
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transit from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdatedTime:
+                      description: Last time the condition was updated
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        last transition.
+                      type: string
+                    reason:
+                      description: (brief) reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            required:
+            - activationCount
+            type: object
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

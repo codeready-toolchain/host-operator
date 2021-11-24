@@ -83,6 +83,14 @@ resources:
     namespaced: true
   controller: true
   group: toolchain.dev.openshift.com
+  kind: ToolchainEvent
+  path: ../github.com/codeready-toolchain/api/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  group: toolchain.dev.openshift.com
   kind: ToolchainStatus
   path: ../github.com/codeready-toolchain/api/api/v1alpha1
   version: v1alpha1

@@ -541,9 +541,12 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		userAcc := uatest.NewUserAccountFromMur(mur)
 		memberClient := test.NewFakeClient(t, userAcc)
 		memberClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-			return fmt.Errorf("unable to update user account %s", mur.Name)
+			if ua, ok := obj.(*toolchainv1alpha1.UserAccount); ok {
+				return fmt.Errorf("unable to update user account %s", ua.Name)
+			}
+			return memberClient.Client.Update(ctx, obj, opts...)
 		}
-		modifiedMur := murtest.NewMasterUserRecord(t, "john", murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
+		modifiedMur := murtest.NewMasterUserRecord(t, "john", murtest.UserID(mur.Spec.UserID), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 		murtest.ModifyUaInMur(modifiedMur, test.MemberClusterName, murtest.TierName("admin"))
 		hostClient := test.NewFakeClient(t, modifiedMur)
 
@@ -560,7 +563,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			Exists().
-			HasSpec(userAcc.Spec)
+			HasSpec(userAcc.Spec) // UserAccount should be unchanged
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToSynchronizeUserAccountSpecReason, "unable to update user account john"))
 		AssertThatCountersAndMetrics(t).

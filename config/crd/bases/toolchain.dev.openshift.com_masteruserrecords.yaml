@@ -28,7 +28,7 @@ spec:
     - jsonPath: .spec.userAccounts[].targetCluster
       name: Cluster
       type: string
-    - jsonPath: .spec.userAccounts[].spec.nsTemplateSet.tierName
+    - jsonPath: .spec.tierName
       name: Tier
       type: string
     - jsonPath: .spec.banned
@@ -77,6 +77,13 @@ spec:
                 description: OriginalSub is an optional property temporarily introduced
                   for the purpose of migrating the users to a new IdP provider client,
                   and contains the user's "original-sub" claim
+                type: string
+              tierName:
+                description: TierName is an optional property introduced to retain
+                  the name of the tier for which the Dev Sandbox user is provisioned,
+                  so we can still deal with deactivation once the NSTemplateSet field
+                  has been removed from `[]spec.UserAccounts` temporarily marked as
+                  optional until the migration took place (CRT-1321)
                 type: string
               userAccounts:
                 description: The list of user accounts in the member clusters which
@@ -139,7 +146,6 @@ spec:
                           type: object
                       required:
                       - nsLimit
-                      - nsTemplateSet
                       type: object
                     syncIndex:
                       description: SyncIndex is to be updated by UserAccount Controller

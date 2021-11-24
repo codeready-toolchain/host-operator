@@ -72,6 +72,14 @@ func (a *SingleTemplateUpdateRequestAssertion) HasSyncIndexes(indexes map[string
 	return a
 }
 
+// HasNoSyncIndexes verifies that the TemplateUpdateRequest has the no sync indexes in its status
+func (a *SingleTemplateUpdateRequestAssertion) HasNoSyncIndexes() *SingleTemplateUpdateRequestAssertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Empty(a.t, a.templateUpdateRequest.Status.SyncIndexes)
+	return a
+}
+
 // Exists verifies that the TemplateUpdateRequest exists
 func (a *SingleTemplateUpdateRequestAssertion) Exists() *SingleTemplateUpdateRequestAssertion {
 	err := a.loadResource()
