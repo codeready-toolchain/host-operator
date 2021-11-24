@@ -231,7 +231,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
 			mur.Spec.TierName = ""
-			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -248,7 +247,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
 			mur.Spec.TierName = "somethingelse"
-			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
