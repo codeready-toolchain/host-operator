@@ -48,14 +48,6 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 			changed = true
 		}
 	}
-	// TODO: remove as part of CRT-1074
-	if mur.Annotations == nil || mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey] == "" {
-		if mur.Annotations == nil {
-			mur.Annotations = map[string]string{}
-		}
-		mur.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey] = userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey]
-		changed = true
-	}
 	return changed, nil
 }
 

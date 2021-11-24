@@ -7,8 +7,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -111,25 +109,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			assert.False(t, changed)
 			assert.Equal(t, *providedMur, *mur)
 		})
-
-		// TODO: to be removed once CRT-1075 is done
-		t.Run("when email annotation is set", func(t *testing.T) {
-			// given
-			logf.SetLogger(zap.New(zap.UseDevMode(true)))
-			userSignup := NewUserSignup() // email is `foo@redhat.com`
-			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
-			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
-			require.NoError(t, err)
-			providedMur := mur.DeepCopy()
-
-			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
-
-			// then
-			require.NoError(t, err)
-			assert.False(t, changed)
-			assert.Equal(t, *providedMur, *mur)
-		})
 	})
 
 	t.Run("update needed", func(t *testing.T) {
@@ -204,24 +183,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
 		})
 
-		// TODO: to be removed once CRT-1075 is done
-		t.Run("when email annotation is missing", func(t *testing.T) {
-			// given
-			logf.SetLogger(zap.New(zap.UseDevMode(true)))
-			userSignup := NewUserSignup() // email is `foo@redhat.com`
-			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
-			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
-			require.NoError(t, err)
-			delete(mur.Annotations, toolchainv1alpha1.MasterUserRecordEmailAnnotationKey)
-
-			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
-
-			// then
-			require.NoError(t, err)
-			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
-		})
 	})
 
 }
