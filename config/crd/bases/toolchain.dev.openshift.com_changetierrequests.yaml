@@ -18,13 +18,13 @@ spec:
   versions:
   - additionalPrinterColumns:
     - jsonPath: .spec.murName
-      name: MurName
+      name: MasterUserRecord
       type: string
     - jsonPath: .spec.tierName
-      name: TierName
+      name: Tier
       type: string
     - jsonPath: .spec.targetCluster
-      name: TargetCluster
+      name: Cluster
       priority: 1
       type: string
     - jsonPath: .status.conditions[?(@.type=="Complete")].status
