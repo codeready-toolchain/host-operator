@@ -59,6 +59,7 @@ func TestReconcile(t *testing.T) {
 				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 				// check that the MasterUserRecord was updated
 				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					HasTier(*basicTier).
 					AllUserAccountsHaveTier(*basicTier)
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
@@ -86,6 +87,7 @@ func TestReconcile(t *testing.T) {
 				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 				// check that the MasterUserRecord was updated
 				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					HasTier(*basicTier).
 					AllUserAccountsHaveTier(*basicTier)
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
@@ -112,6 +114,7 @@ func TestReconcile(t *testing.T) {
 				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 				// check that the MasterUserRecord was updated
 				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					HasTier(*basicTier).
 					AllUserAccountsHaveTier(*basicTier)
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).
@@ -140,6 +143,7 @@ func TestReconcile(t *testing.T) {
 				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 				// check that the MasterUserRecord was updated
 				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					HasTier(*basicTier).
 					AllUserAccountsHaveTier(*basicTier).
 					// check that the custom template for the given cluster/namespace was not lost
 					HasCustomNamespaceTemplate("cluster1", "basic-code-123456new", "custom")
@@ -170,6 +174,7 @@ func TestReconcile(t *testing.T) {
 				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 				// check that the MasterUserRecord was updated
 				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					HasTier(*basicTier).
 					AllUserAccountsHaveTier(*basicTier).
 					// check that the custom template for the given cluster/namespace was not lost
 					HasCustomClusterResourcesTemplate("cluster1", "custom")
@@ -200,6 +205,7 @@ func TestReconcile(t *testing.T) {
 				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 				// check that the MasterUserRecord was updated
 				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					HasTier(*basicTier).
 					AllUserAccountsHaveTier(*basicTier).
 					// check that the custom template for the given cluster/namespace was not lost
 					HasCustomClusterResourcesTemplate("cluster1", "custom")
@@ -228,6 +234,7 @@ func TestReconcile(t *testing.T) {
 				require.Equal(t, reconcile.Result{}, res) // no need to requeue, the MUR is watched
 				// check that the MasterUserRecord was updated
 				murtest.AssertThatMasterUserRecord(t, "user-1", cl).
+					HasTier(*basicTier).
 					AllUserAccountsHaveTier(*basicTier)
 				// check that TemplateUpdateRequest is in "updating" condition
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).

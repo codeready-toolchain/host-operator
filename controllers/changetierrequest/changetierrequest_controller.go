@@ -168,6 +168,7 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 				// here we remove the template hash label since it was change for one or all target clusters
 				delete(mur.Labels, nstemplatetier.TemplateTierHashLabelKey(mur.Spec.UserAccounts[i].Spec.NSTemplateSet.TierName))
 				mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
+				mur.Spec.TierName = changeTierRequest.Spec.TierName
 				changed = true
 				break
 			}
@@ -176,6 +177,7 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 			// here we remove the template hash label since it was change for one or all target clusters
 			delete(mur.Labels, nstemplatetier.TemplateTierHashLabelKey(mur.Spec.UserAccounts[i].Spec.NSTemplateSet.TierName))
 			mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
+			mur.Spec.TierName = changeTierRequest.Spec.TierName
 		}
 	}
 
