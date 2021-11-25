@@ -297,6 +297,10 @@ spec:
                   tiers:
                     description: Keeps parameters concerned with tiers
                     properties:
+                      defaultSpaceTier:
+                        description: DefaultSpaceTier specifies the default tier to
+                          assign for new spaces
+                        type: string
                       defaultTier:
                         description: DefaultTier specifies the default tier to assign
                           for new users
