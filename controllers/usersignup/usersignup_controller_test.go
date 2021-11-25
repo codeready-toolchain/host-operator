@@ -3422,6 +3422,8 @@ func TestMigrateMur(t *testing.T) {
 	expectedMur := mur.DeepCopy()
 	expectedMur.Generation = 1
 	expectedMur.ResourceVersion = "1000"
+	expectedMur.Spec.TierName = "base"
+	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
 	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName = "base"
 	expectedMur.Spec.UserAccounts[0].Spec.NSLimit = "default"
 	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []toolchainv1alpha1.NSTemplateSetNamespace{
