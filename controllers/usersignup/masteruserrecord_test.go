@@ -7,8 +7,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -111,25 +109,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			assert.False(t, changed)
 			assert.Equal(t, *providedMur, *mur)
 		})
-
-		// TODO: to be removed once CRT-1075 is done
-		t.Run("when email annotation is set", func(t *testing.T) {
-			// given
-			logf.SetLogger(zap.New(zap.UseDevMode(true)))
-			userSignup := NewUserSignup() // email is `foo@redhat.com`
-			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
-			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
-			require.NoError(t, err)
-			providedMur := mur.DeepCopy()
-
-			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
-
-			// then
-			require.NoError(t, err)
-			assert.False(t, changed)
-			assert.Equal(t, *providedMur, *mur)
-		})
 	})
 
 	t.Run("update needed", func(t *testing.T) {
@@ -141,6 +120,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
 			mur.Spec.UserAccounts[0].Spec.NSLimit = ""
+			mur.Spec.TierName = "" // here: "missing" == empty string
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -158,6 +138,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
 			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = nil // here: "missing" == nil
+			mur.Spec.TierName = ""                            // here: "missing" == empty string
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -166,7 +147,8 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			require.NoError(t, err)
 			assert.False(t, changed)
 			expectedMUR := newExpectedMur(nsTemplateTier, userSignup)
-			expectedMUR.Spec.UserAccounts[0].Spec.NSTemplateSet = nil
+			expectedMUR.Spec.TierName = ""                            // should not be set
+			expectedMUR.Spec.UserAccounts[0].Spec.NSTemplateSet = nil // should not be set
 			assert.Equal(t, expectedMUR, mur)
 		})
 
@@ -204,15 +186,28 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
 		})
 
-		// TODO: to be removed once CRT-1075 is done
-		t.Run("when email annotation is missing", func(t *testing.T) {
-			// given
-			logf.SetLogger(zap.New(zap.UseDevMode(true)))
-			userSignup := NewUserSignup() // email is `foo@redhat.com`
+		t.Run("when tierName is missing", func(t *testing.T) {
+			userSignup := NewUserSignup()
 			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
-			delete(mur.Annotations, toolchainv1alpha1.MasterUserRecordEmailAnnotationKey)
+			mur.Spec.TierName = ""
+
+			// when
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+
+			// then
+			require.NoError(t, err)
+			assert.True(t, changed)
+			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+		})
+
+		t.Run("when tierName is different", func(t *testing.T) {
+			userSignup := NewUserSignup()
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			require.NoError(t, err)
+			mur.Spec.TierName = "somethingelse"
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -265,6 +260,7 @@ func newExpectedMur(tier *toolchainv1alpha1.NSTemplateTier, userSignup *toolchai
 			Banned:        false,
 			Disabled:      false,
 			Deprovisioned: false,
+			TierName:      "advanced",
 			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
 				{
 					SyncIndex:     "",
