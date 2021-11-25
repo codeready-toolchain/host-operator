@@ -1,10 +1,9 @@
 TMP_DIR?=/tmp
 IMAGE_BUILDER?=podman
 INDEX_IMAGE_NAME?=host-operator-index
-FIRST_RELEASE=false
+FIRST_RELEASE?=false
 CHANNEL=staging
 INDEX_IMAGE_TAG=latest
-ENV=dev
 NEXT_VERSION=0.0.1
 OTHER_REPO_PATH=""
 BUNDLE_TAG=""
@@ -19,7 +18,7 @@ generate-cd-release-manifests:
 ifneq (${OTHER_REPO_PATH},"")
 	$(eval OTHER_REPO_PATH_PARAM = -orp ${OTHER_REPO_PATH})
 endif
-	$(MAKE) run-cicd-script SCRIPT_PATH=scripts/cd/generate-cd-release-manifests.sh SCRIPT_PARAMS="-pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service -qn ${QUAY_NAMESPACE} -td ${TMP_DIR} -fr ${FIRST_RELEASE} -ch ${CHANNEL} -il ${IMAGE} -e ${ENV} ${OTHER_REPO_PATH_PARAM}"
+	$(MAKE) run-cicd-script SCRIPT_PATH=scripts/cd/generate-cd-release-manifests.sh SCRIPT_PARAMS="-pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service -qn ${QUAY_NAMESPACE} -td ${TMP_DIR} -fr ${FIRST_RELEASE} -ch ${CHANNEL} -il ${IMAGE} ${OTHER_REPO_PATH_PARAM}"
 
 .PHONY: push-bundle-and-index-image
 ## Pushes generated manifests as a bundle image to quay and adds is to the image index
