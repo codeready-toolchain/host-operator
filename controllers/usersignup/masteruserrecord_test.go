@@ -120,6 +120,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
 			mur.Spec.UserAccounts[0].Spec.NSLimit = ""
+			mur.Spec.TierName = "" // here: "missing" == empty string
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -137,6 +138,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			require.NoError(t, err)
 			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = nil // here: "missing" == nil
+			mur.Spec.TierName = ""                            // here: "missing" == empty string
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -145,7 +147,8 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			require.NoError(t, err)
 			assert.False(t, changed)
 			expectedMUR := newExpectedMur(nsTemplateTier, userSignup)
-			expectedMUR.Spec.UserAccounts[0].Spec.NSTemplateSet = nil
+			expectedMUR.Spec.TierName = ""                            // should not be set
+			expectedMUR.Spec.UserAccounts[0].Spec.NSTemplateSet = nil // should not be set
 			assert.Equal(t, expectedMUR, mur)
 		})
 
@@ -173,6 +176,38 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			delete(mur.Labels, "toolchain.dev.openshift.com/advanced-tier-hash") // removed for the purpose of this test
 			require.NoError(t, err)
+
+			// when
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+
+			// then
+			require.NoError(t, err)
+			assert.True(t, changed)
+			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+		})
+
+		t.Run("when tierName is missing", func(t *testing.T) {
+			userSignup := NewUserSignup()
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			require.NoError(t, err)
+			mur.Spec.TierName = ""
+
+			// when
+			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+
+			// then
+			require.NoError(t, err)
+			assert.True(t, changed)
+			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+		})
+
+		t.Run("when tierName is different", func(t *testing.T) {
+			userSignup := NewUserSignup()
+			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			mur, err := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			require.NoError(t, err)
+			mur.Spec.TierName = "somethingelse"
 
 			// when
 			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
@@ -226,6 +261,7 @@ func newExpectedMur(tier *toolchainv1alpha1.NSTemplateTier, userSignup *toolchai
 			Banned:        false,
 			Disabled:      false,
 			Deprovisioned: false,
+			TierName:      "advanced",
 			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
 				{
 					SyncIndex:     "",
