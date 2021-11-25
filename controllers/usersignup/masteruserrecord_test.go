@@ -217,7 +217,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			assert.True(t, changed)
 			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
 		})
-
 	})
 
 }

@@ -54,6 +54,12 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 		mur.Spec.TierName = mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName
 		changed = true
 	}
+	// TODO: remove this after UserAccount.NStemplateSet has been removed (CRT-1321)
+	if len(mur.Spec.UserAccounts) > 0 && mur.Spec.UserAccounts[0].Spec.NSTemplateSet != nil &&
+		mur.Spec.TierName != mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName {
+		mur.Spec.TierName = mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName
+		changed = true
+	}
 	return changed, nil
 }
 
