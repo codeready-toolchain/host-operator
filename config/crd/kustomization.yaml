@@ -7,6 +7,7 @@ resources:
 - bases/toolchain.dev.openshift.com_masteruserrecords.yaml
 - bases/toolchain.dev.openshift.com_notifications.yaml
 - bases/toolchain.dev.openshift.com_nstemplatetiers.yaml
+- bases/toolchain.dev.openshift.com_spaces.yaml
 - bases/toolchain.dev.openshift.com_templateupdaterequests.yaml
 - bases/toolchain.dev.openshift.com_tiertemplates.yaml
 - bases/toolchain.dev.openshift.com_toolchainclusters.yaml

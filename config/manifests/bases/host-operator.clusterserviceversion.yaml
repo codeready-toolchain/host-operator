@@ -37,6 +37,11 @@ spec:
       kind: NSTemplateTier
       name: nstemplatetiers.toolchain.dev.openshift.com
       version: v1alpha1
+    - description: Space defines the AppStudio Workspace on the Cluster
+      displayName: Space
+      kind: Space
+      name: spaces.toolchain.dev.openshift.com
+      version: v1alpha1
     - description: TemplateUpdateRequest is the Schema for the templateupdaterequests
         API
       displayName: Template Update Request

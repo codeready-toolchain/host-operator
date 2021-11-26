@@ -6,37 +6,33 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: changetierrequests.toolchain.dev.openshift.com
+  name: spaces.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
   names:
-    kind: ChangeTierRequest
-    listKind: ChangeTierRequestList
-    plural: changetierrequests
-    singular: changetierrequest
+    kind: Space
+    listKind: SpaceList
+    plural: spaces
+    singular: space
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.murName
-      name: MasterUserRecord
+    - jsonPath: .spec.targetCluster
+      name: Cluster
       type: string
     - jsonPath: .spec.tierName
       name: Tier
       type: string
-    - jsonPath: .spec.targetCluster
-      name: Cluster
-      priority: 1
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
       type: string
-    - jsonPath: .status.conditions[?(@.type=="Complete")].status
-      name: Complete
-      type: string
-    - jsonPath: .status.conditions[?(@.type=="Complete")].reason
+    - jsonPath: .status.conditions[?(@.type=="Ready")].reason
       name: Reason
       type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ChangeTierRequest is used as a trigger for a tier change in MasterUserRecord/UserAccount
+        description: Space is the Schema for the spaces API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -51,30 +47,25 @@ spec:
           metadata:
             type: object
           spec:
-            description: ChangeTierRequestSpec defines the desired state of ChangeTierRequest
+            description: SpaceSpec defines the desired state of Space
             properties:
-              murName:
-                description: The murName is a name of MUR/UserAccount whose tier should
-                  be changed.
-                type: string
               targetCluster:
-                description: The cluster to define UserAccount whose tier should be
-                  changed. Optional. If not set then update all the UserAccounts in
-                  the MasterUserRecord.
+                description: TargetCluster The cluster in which this Space is provisioned
+                  If not set then the target cluster will be picked automatically
                 type: string
               tierName:
-                description: The tier name the tier should be changed to.
+                description: TierName is a required property introduced to retain
+                  the name of the tier for which this Space is provisioned
                 type: string
             required:
-            - murName
             - tierName
             type: object
           status:
-            description: ChangeTierRequestStatus defines the observed state of ChangeTierRequest
+            description: SpaceStatus defines the observed state of Space
             properties:
               conditions:
-                description: 'Conditions is an array of current ChangeTierRequest
-                  conditions Supported condition types: Complete'
+                description: 'Conditions is an array of current Space conditions Supported
+                  condition types: ConditionReady'
                 items:
                   properties:
                     lastTransitionTime:
