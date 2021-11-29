@@ -13,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/controllers/templateupdaterequest"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
@@ -260,6 +261,11 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
+	}
+
+	if err = space.SetupWithManager(mgr, cluster.GetMemberClusters); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Space")
+		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
 

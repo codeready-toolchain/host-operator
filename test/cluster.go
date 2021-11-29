@@ -6,7 +6,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,16 +33,16 @@ func NewGetMemberClusters(memberClusters ...*cluster.CachedToolchainCluster) clu
 	}
 }
 
-func NewMemberCluster(t *testing.T, name string, status v1.ConditionStatus) *cluster.CachedToolchainCluster {
+func NewMemberCluster(t *testing.T, name string, status corev1.ConditionStatus) *cluster.CachedToolchainCluster {
 	return NewMemberClusterWithClient(test.NewFakeClient(t), name, status)
 }
 
-func NewMemberClusterWithClient(cl client.Client, name string, status v1.ConditionStatus) *cluster.CachedToolchainCluster {
+func NewMemberClusterWithClient(cl client.Client, name string, status corev1.ConditionStatus) *cluster.CachedToolchainCluster {
 	toolchainCluster, _ := NewGetMemberCluster(true, status)(ClusterClient(name, cl))(name)
 	return toolchainCluster
 }
 
-func NewGetMemberCluster(ok bool, status v1.ConditionStatus) GetMemberClusterFunc {
+func NewGetMemberCluster(ok bool, status corev1.ConditionStatus) GetMemberClusterFunc {
 	if !ok {
 		return func(clusters ...ClientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool) {
 			return func(name string) (*cluster.CachedToolchainCluster, bool) {

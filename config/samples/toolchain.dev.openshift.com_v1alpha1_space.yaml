@@ -1,0 +1,7 @@
+apiVersion: toolchain.dev.openshift.com/v1alpha1
+kind: Space
+metadata:
+  name: space-sample
+spec:
+  tierName: base
+  
