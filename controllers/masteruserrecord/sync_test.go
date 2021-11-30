@@ -739,12 +739,14 @@ func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostCl
 
 func newMemberCluster(cl client.Client) *cluster.CachedToolchainCluster {
 	return &cluster.CachedToolchainCluster{
-		Name:              test.MemberClusterName,
-		APIEndpoint:       fmt.Sprintf("https://api.%s:6433", test.MemberClusterName),
-		Client:            cl,
-		Type:              cluster.Member,
-		OperatorNamespace: test.HostOperatorNs,
-		OwnerClusterName:  test.HostClusterName,
+		Config: &cluster.Config{
+			Name:              test.MemberClusterName,
+			APIEndpoint:       fmt.Sprintf("https://api.%s:6433", test.MemberClusterName),
+			Type:              cluster.Member,
+			OperatorNamespace: test.HostOperatorNs,
+			OwnerClusterName:  test.HostClusterName,
+		},
+		Client: cl,
 		ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
 			Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
 				Type:   toolchainv1alpha1.ToolchainClusterReady,

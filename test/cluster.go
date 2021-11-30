@@ -62,11 +62,13 @@ func NewGetMemberCluster(ok bool, status v1.ConditionStatus) GetMemberClusterFun
 				return nil, false
 			}
 			return &cluster.CachedToolchainCluster{
-				Client:            cl,
-				Name:              name,
-				Type:              cluster.Member,
-				OperatorNamespace: test.MemberOperatorNs,
-				OwnerClusterName:  test.HostClusterName,
+				Config: &cluster.Config{
+					Name:              name,
+					Type:              cluster.Member,
+					OperatorNamespace: test.MemberOperatorNs,
+					OwnerClusterName:  test.HostClusterName,
+				},
+				Client: cl,
 				ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
 					Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
 						Type:   toolchainv1alpha1.ToolchainClusterReady,
