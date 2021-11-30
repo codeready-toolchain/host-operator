@@ -129,7 +129,7 @@ func TestReconciler(t *testing.T) {
 
 		t.Run("failure", func(t *testing.T) {
 
-			t.Run("missing target member cluster", func(t *testing.T) {
+			t.Run("unspecified target member cluster", func(t *testing.T) {
 				// given
 				space := spacetest.NewSpace("oddity", basicTier.Name)
 				hostClient := test.NewFakeClient(t, space)
@@ -138,7 +138,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				_, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
+				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: space.Namespace,
 						Name:      space.Name,
@@ -146,7 +146,14 @@ func TestReconciler(t *testing.T) {
 				})
 
 				// then
-				assert.EqualError(t, err, "missing target member cluster for Space 'oddity'")
+				require.NoError(t, err)
+				assert.False(t, res.Requeue)
+				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).HasConditions(toolchainv1alpha1.Condition{
+					Type:    toolchainv1alpha1.ConditionReady,
+					Status:  corev1.ConditionFalse,
+					Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
+					Message: "unspecified target member cluster",
+				})
 			})
 
 			t.Run("unknown target member cluster", func(t *testing.T) {
@@ -158,7 +165,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				_, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
+				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: space.Namespace,
 						Name:      space.Name,
@@ -166,70 +173,45 @@ func TestReconciler(t *testing.T) {
 				})
 
 				// then
-				assert.EqualError(t, err, "unknown target member cluster 'unknown'")
+				require.NoError(t, err)
+				assert.False(t, res.Requeue)
+				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).HasConditions(toolchainv1alpha1.Condition{
+					Type:    toolchainv1alpha1.ConditionReady,
+					Status:  corev1.ConditionFalse,
+					Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
+					Message: "unknown target member cluster 'unknown'",
+				})
 			})
 		})
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		// given
-		space := spacetest.NewSpace("oddity", basicTier.Name,
-			spacetest.WithTargetCluster("member-1"),
-			spacetest.WithFinalizer(),
-			spacetest.WithDeletionTimestamp())
-		hostClient := test.NewFakeClient(t, space, basicTier)
-		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
-		member1Client := test.NewFakeClient(t, nstmplSet)
-		member1Client.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
-			t.Logf("deleting resource of type '%T'", obj)
-			if nstmplSet, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
-				now := metav1.NewTime(time.Now())
-				nstmplSet.DeletionTimestamp = &now
-				nstmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-					nstemplatetsettest.Terminating(),
+
+		t.Run("when space was successfully provisioned", func(t *testing.T) {
+			// given
+			space := spacetest.NewSpace("oddity", basicTier.Name,
+				spacetest.WithTargetCluster("member-1"),
+				spacetest.WithFinalizer(),
+				spacetest.WithDeletionTimestamp())
+			hostClient := test.NewFakeClient(t, space, basicTier)
+			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
+			member1Client := test.NewFakeClient(t, nstmplSet)
+			member1Client.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+				t.Logf("deleting resource of type '%T'", obj)
+				if nstmplSet, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
+					now := metav1.NewTime(time.Now())
+					nstmplSet.DeletionTimestamp = &now
+					nstmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+						nstemplatetsettest.Terminating(),
+					}
+					// instead of deleting the resource in the FakeClient,
+					// we update it with a `DeletionTimestamp`
+					return member1Client.Client.Update(ctx, obj)
 				}
-				// instead of deleting the resource in the FakeClient,
-				// we update it with a `DeletionTimestamp`
-				return member1Client.Client.Update(ctx, obj)
+				return member1Client.Client.Delete(ctx, obj, opts...)
 			}
-			return member1Client.Client.Delete(ctx, obj, opts...)
-		}
-		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
-		ctrl := newReconciler(hostClient, member1, member2)
-
-		// when
-		res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: space.Namespace,
-				Name:      space.Name,
-			},
-		})
-
-		// then
-		require.NoError(t, err)
-		assert.Equal(t, reconcile.Result{Requeue: true}, res)
-		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
-			Exists().
-			HasDeletionTimestamp().
-			HasConditions(nstemplatetsettest.Terminating()).
-			Get()
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
-			Exists().
-			HasConditions(spacetest.Terminating()).
-			HasFinalizer(toolchainv1alpha1.FinalizerName)
-
-		t.Run("requeue while NSTemplateSet is terminating", func(t *testing.T) {
-			// given another round of requeue without while NSTemplateSet is *not ready*
-			nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-				{
-					Type:   toolchainv1alpha1.ConditionReady,
-					Status: corev1.ConditionFalse,
-					Reason: toolchainv1alpha1.NSTemplateSetTerminatingReason,
-				},
-			}
-			err := member1.Client.Update(context.TODO(), nsTmplSet)
-			require.NoError(t, err)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 
 			// when
@@ -243,7 +225,6 @@ func TestReconciler(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			assert.Equal(t, reconcile.Result{Requeue: true}, res)
-			// no changes
 			nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				Exists().
 				HasDeletionTimestamp().
@@ -254,12 +235,19 @@ func TestReconciler(t *testing.T) {
 				HasConditions(spacetest.Terminating()).
 				HasFinalizer(toolchainv1alpha1.FinalizerName)
 
-			t.Run("done when NSTemplateSet is deleted", func(t *testing.T) {
-				// given another round of requeue without with NSTemplateSet now *fully deleted*
-				member1Client.MockDelete = nil
-				err := member1.Client.Delete(context.TODO(), nsTmplSet)
+			t.Run("requeue while NSTemplateSet is terminating", func(t *testing.T) {
+				// given another round of requeue without while NSTemplateSet is *not ready*
+				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+					{
+						Type:   toolchainv1alpha1.ConditionReady,
+						Status: corev1.ConditionFalse,
+						Reason: toolchainv1alpha1.NSTemplateSetTerminatingReason,
+					},
+				}
+				err := member1.Client.Update(context.TODO(), nsTmplSet)
 				require.NoError(t, err)
 				ctrl := newReconciler(hostClient, member1, member2)
+
 				// when
 				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
 					NamespacedName: types.NamespacedName{
@@ -267,13 +255,113 @@ func TestReconciler(t *testing.T) {
 						Name:      space.Name,
 					},
 				})
+
 				// then
 				require.NoError(t, err)
-				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+				assert.Equal(t, reconcile.Result{Requeue: true}, res)
+				// no changes
+				nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+					Exists().
+					HasDeletionTimestamp().
+					HasConditions(nstemplatetsettest.Terminating()).
+					Get()
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
 					HasConditions(spacetest.Terminating()).
-					HasNoFinalizers() // space resource can be deleted by the server now that the finalizer has been removed
+					HasFinalizer(toolchainv1alpha1.FinalizerName)
+
+				t.Run("done when NSTemplateSet is deleted", func(t *testing.T) {
+					// given another round of requeue without with NSTemplateSet now *fully deleted*
+					member1Client.MockDelete = nil
+					err := member1.Client.Delete(context.TODO(), nsTmplSet)
+					require.NoError(t, err)
+					ctrl := newReconciler(hostClient, member1, member2)
+					// when
+					res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Namespace: space.Namespace,
+							Name:      space.Name,
+						},
+					})
+					// then
+					require.NoError(t, err)
+					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+						Exists().
+						HasConditions(spacetest.Terminating()).
+						HasNoFinalizers() // space resource can be deleted by the server now that the finalizer has been removed
+				})
+			})
+		})
+
+		t.Run("when space was not successfully provisioned", func(t *testing.T) {
+
+			t.Run("because of missing target member cluster", func(t *testing.T) {
+				// given
+				space := spacetest.NewSpace("oddity", basicTier.Name,
+					spacetest.WithoutTargetCluster(),
+					spacetest.WithFinalizer(),
+					spacetest.WithDeletionTimestamp(),
+					spacetest.WithCondition(toolchainv1alpha1.Condition{
+						Type:    toolchainv1alpha1.ConditionReady,
+						Status:  corev1.ConditionFalse,
+						Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
+						Message: "missing target member cluster",
+					}),
+				)
+				hostClient := test.NewFakeClient(t, space, basicTier)
+				member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
+				member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+				ctrl := newReconciler(hostClient, member1, member2)
+
+				// when
+				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: space.Namespace,
+						Name:      space.Name,
+					},
+				})
+
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue neede
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+					Exists().
+					HasNoFinalizers() // will allow for deletion of the Space CR
+			})
+
+			t.Run("because of unknown target member cluster", func(t *testing.T) {
+				// given
+				space := spacetest.NewSpace("oddity", basicTier.Name,
+					spacetest.WithTargetCluster("unknown"),
+					spacetest.WithFinalizer(),
+					spacetest.WithDeletionTimestamp(),
+					spacetest.WithCondition(toolchainv1alpha1.Condition{
+						Type:    toolchainv1alpha1.ConditionReady,
+						Status:  corev1.ConditionFalse,
+						Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
+						Message: "unknown target member cluster 'unknown'",
+					}),
+				)
+				hostClient := test.NewFakeClient(t, space, basicTier)
+				member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
+				member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+				ctrl := newReconciler(hostClient, member1, member2)
+
+				// when
+				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: space.Namespace,
+						Name:      space.Name,
+					},
+				})
+
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue neede
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+					Exists().
+					HasNoFinalizers() // will allow for deletion of the Space CR
 			})
 		})
 	})

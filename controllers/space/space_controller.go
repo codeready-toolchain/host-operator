@@ -107,11 +107,11 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, space *toolchainv1alpha1.S
 // returns `true` after creating the NSTemplateSet and until it is `ready`
 func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
 	if space.Spec.TargetCluster == "" {
-		return false, fmt.Errorf("missing target member cluster for Space '%s'", space.Name)
+		return false, r.setStatusProvisioningFailed(space, "unspecified target member cluster")
 	}
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
-		return false, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster)
+		return false, r.setStatusProvisioningFailed(space, fmt.Sprintf("unknown target member cluster '%s'", space.Spec.TargetCluster))
 	}
 	name := space.Name // NSTemplateSet will have the same name as the Space
 	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster, "name", name)
@@ -137,7 +137,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			logger.Info("NSTemplateSet created on target member cluster")
 			return true, nil
 		}
-		return false, r.wrapErrorWithStatusUpdate(logger, space, r.setStatusNSTemplateSetCreationFailed, err, "failed to get NSTemplateSet '%s'", name)
+		return false, r.setStatusNSTemplateSetCreationFailed(space, fmt.Sprintf("failed to get NSTemplateSet '%s'", name))
 	}
 	logger.Info("NSTemplateSet already exists")
 
@@ -192,7 +192,8 @@ func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv
 func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
 	logger.Info("terminating Space")
 	if deleted, err := r.deleteNSTemplateSet(logger, space); err != nil {
-		return false, r.wrapErrorWithStatusUpdate(logger, space, r.setStatusTerminatingFailed, err, "failed to delete the NSTemplateSet")
+		logger.Error(err, "failed to delete the NSTemplateSet")
+		return false, r.setStatusTerminatingFailed(space, "failed to delete the NSTemplateSet")
 	} else if deleted {
 		if err := r.setStatusTerminating(space); err != nil {
 			logger.Error(err, "error updating status")
@@ -203,7 +204,8 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 	// Remove finalizer from Space
 	util.RemoveFinalizer(space, toolchainv1alpha1.FinalizerName)
 	if err := r.Client.Update(context.TODO(), space); err != nil {
-		return false, r.wrapErrorWithStatusUpdate(logger, space, r.setStatusTerminatingFailed, err, "failed to remove finalizer")
+		logger.Error(err, "failed to remove finalizer")
+		return false, r.setStatusTerminatingFailed(space, "failed to remove finalizer")
 	}
 	logger.Info("removed finalizer")
 	// no need to update the status of the Space once the finalizer has been removed, since
@@ -220,12 +222,12 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
 	if space.Spec.TargetCluster == "" {
 		logger.Info("cannot deleted NSTemplateSet: no target cluster specified")
-		return false, nil // abort deletion
+		return false, nil // skip NSTemplateSet deletion
 	}
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
 		logger.WithValues("target_cluster", space.Spec.TargetCluster).Info("Cannot deleted NSTemplateSet: unknown target member cluster")
-		return false, fmt.Errorf("unable to get the client for member cluster '%s'", space.Spec.TargetCluster)
+		return false, nil // skip NSTemplateSet deletion
 	}
 	// Get the NSTemplateSet associated with the Space
 	nstmplSet := &toolchainv1alpha1.NSTemplateSet{}
@@ -264,6 +266,17 @@ func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionFalse,
 			Reason: toolchainv1alpha1.SpaceProvisioningReason,
+		})
+}
+
+func (r *Reconciler) setStatusProvisioningFailed(space *toolchainv1alpha1.Space, msg string) error {
+	return r.updateStatusConditions(
+		space,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.ConditionReady,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
+			Message: msg,
 		})
 }
 

@@ -11,6 +11,12 @@ import (
 
 type Option func(space *toolchainv1alpha1.Space)
 
+func WithoutTargetCluster() Option {
+	return func(space *toolchainv1alpha1.Space) {
+		space.Spec.TargetCluster = ""
+	}
+}
+
 func WithTargetCluster(name string) Option {
 	return func(space *toolchainv1alpha1.Space) {
 		space.Spec.TargetCluster = name
@@ -27,6 +33,12 @@ func WithDeletionTimestamp() Option {
 	return func(space *toolchainv1alpha1.Space) {
 		now := metav1.NewTime(time.Now())
 		space.DeletionTimestamp = &now
+	}
+}
+
+func WithCondition(c toolchainv1alpha1.Condition) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		space.Status.Conditions = append(space.Status.Conditions, c)
 	}
 }
 
