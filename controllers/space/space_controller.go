@@ -333,17 +333,6 @@ func (r *Reconciler) setStatusFromNSTemplateSet(space *toolchainv1alpha1.Space, 
 		})
 }
 
-// wrapErrorWithStatusUpdate wraps the error and update the space status. If the update failed then logs the error.
-func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, space *toolchainv1alpha1.Space, statusUpdater func(space *toolchainv1alpha1.Space, message string) error, err error, format string, args ...interface{}) error {
-	if err == nil {
-		return nil
-	}
-	if err := statusUpdater(space, err.Error()); err != nil {
-		logger.Error(err, "status update failed")
-	}
-	return errs.Wrapf(err, format, args...)
-}
-
 // updateStatusConditions updates space status conditions with the new conditions
 func (r *Reconciler) updateStatusConditions(space *toolchainv1alpha1.Space, conditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
