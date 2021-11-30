@@ -9,11 +9,12 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	. "github.com/codeready-toolchain/host-operator/test"
 	nstemplatetsettest "github.com/codeready-toolchain/host-operator/test/nstemplateset" // TODO: use github.com/codeready-toolchain/toolchain-common/test/nstemplateset instead
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/assert"
@@ -45,7 +46,7 @@ func TestReconciler(t *testing.T) {
 			hostClient := test.NewFakeClient(t, space, basicTier)
 			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
-			ctrl := newReconciler(hostClient, member1, member2)
+			ctrl := newReconciler(t, hostClient, member1, member2)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -77,7 +78,7 @@ func TestReconciler(t *testing.T) {
 				}
 				err := member1.Client.Update(context.TODO(), nsTmplSet)
 				require.NoError(t, err)
-				ctrl := newReconciler(hostClient, member1, member2)
+				ctrl := newReconciler(t, hostClient, member1, member2)
 
 				// when
 				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -105,7 +106,7 @@ func TestReconciler(t *testing.T) {
 					}
 					err := member1.Client.Update(context.TODO(), nsTmplSet)
 					require.NoError(t, err)
-					ctrl := newReconciler(hostClient, member1, member2)
+					ctrl := newReconciler(t, hostClient, member1, member2)
 
 					// when
 					res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -134,7 +135,7 @@ func TestReconciler(t *testing.T) {
 				hostClient := test.NewFakeClient(t, space)
 				member1 := NewMemberCluster(t, "member1", corev1.ConditionTrue)
 				member2 := NewMemberCluster(t, "member2", corev1.ConditionTrue)
-				ctrl := newReconciler(hostClient, member1, member2)
+				ctrl := newReconciler(t, hostClient, member1, member2)
 
 				// when
 				_, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -154,7 +155,7 @@ func TestReconciler(t *testing.T) {
 				hostClient := test.NewFakeClient(t, space)
 				member1 := NewMemberCluster(t, "member1", corev1.ConditionTrue)
 				member2 := NewMemberCluster(t, "member2", corev1.ConditionTrue)
-				ctrl := newReconciler(hostClient, member1, member2)
+				ctrl := newReconciler(t, hostClient, member1, member2)
 
 				// when
 				_, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -195,7 +196,7 @@ func TestReconciler(t *testing.T) {
 		}
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
-		ctrl := newReconciler(hostClient, member1, member2)
+		ctrl := newReconciler(t, hostClient, member1, member2)
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -229,7 +230,7 @@ func TestReconciler(t *testing.T) {
 			}
 			err := member1.Client.Update(context.TODO(), nsTmplSet)
 			require.NoError(t, err)
-			ctrl := newReconciler(hostClient, member1, member2)
+			ctrl := newReconciler(t, hostClient, member1, member2)
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -258,7 +259,7 @@ func TestReconciler(t *testing.T) {
 				member1Client.MockDelete = nil
 				err := member1.Client.Delete(context.TODO(), nsTmplSet)
 				require.NoError(t, err)
-				ctrl := newReconciler(hostClient, member1, member2)
+				ctrl := newReconciler(t, hostClient, member1, member2)
 				// when
 				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
 					NamespacedName: types.NamespacedName{
@@ -278,10 +279,17 @@ func TestReconciler(t *testing.T) {
 	})
 }
 
-func newReconciler(hostCl client.Client, memberClusters ...*cluster.CachedToolchainCluster) *space.Reconciler {
+func newReconciler(t *testing.T, hostCl client.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *space.Reconciler {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
+	clusters := map[string]cluster.Cluster{}
+	for _, c := range memberClusters {
+		clusters[c.Name] = cluster.Cluster{
+			OperatorNamespace: c.OperatorNamespace,
+			Client:            c.Client,
+		}
+	}
 	return &space.Reconciler{
 		Client:         hostCl,
-		MemberClusters: NewGetMemberClusters(memberClusters...),
+		MemberClusters: clusters,
 	}
 }

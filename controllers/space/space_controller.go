@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -18,7 +18,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	runtimecluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -29,30 +28,26 @@ import (
 // Reconciler reconciles a Space object
 type Reconciler struct {
 	Client         client.Client
-	MemberClusters cluster.GetMemberClustersFunc
+	MemberClusters map[string]cluster.Cluster
 }
 
 // SetupWithManager sets up the controller reconciler with the Manager and the given member clusters.
 // Watches the Space resources in the current (host) cluster as its primary resources.
 // Watches NSTemplateSets on the member clusters as its secondary resources.
-func SetupWithManager(mgr ctrl.Manager, getMemberClusters cluster.GetMemberClustersFunc) error {
+func SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluster) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		// watch Spaces in the host cluster
 		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	// watch NSTemplateSets in all the member clusters
-	for _, memberCluster := range getMemberClusters() {
-		cl, err := runtimecluster.New(memberCluster.Config.RestConfig)
-		if err != nil {
-			return err
-		}
-		builder = builder.Watches(source.NewKindWithCache(&toolchainv1alpha1.NSTemplateSet{}, cl.GetCache()),
+	for _, memberCluster := range memberClusters {
+		builder = builder.Watches(source.NewKindWithCache(&toolchainv1alpha1.NSTemplateSet{}, memberCluster.Cache),
 			&handler.EnqueueRequestForObject{},
 		)
 	}
 
 	return builder.Complete(&Reconciler{
 		Client:         mgr.GetClient(),
-		MemberClusters: getMemberClusters,
+		MemberClusters: memberClusters,
 	})
 }
 
@@ -114,7 +109,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	if space.Spec.TargetCluster == "" {
 		return false, fmt.Errorf("missing target member cluster for Space '%s'", space.Name)
 	}
-	memberCluster, found := r.getMemberCluster(space.Spec.TargetCluster)
+	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
 		return false, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster)
 	}
@@ -123,7 +118,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	// create if not found
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
 	if err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
-		Namespace: memberCluster.Config.OperatorNamespace,
+		Namespace: memberCluster.OperatorNamespace,
 		Name:      space.Name,
 	}, nsTmplSet); err != nil {
 		if errors.IsNotFound(err) {
@@ -131,7 +126,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			if err := r.setStatusProvisioning(space); err != nil {
 				return false, err
 			}
-			if nsTmplSet, err = r.newNSTemplateSet(memberCluster.Config.OperatorNamespace, space); err != nil {
+			if nsTmplSet, err = r.newNSTemplateSet(memberCluster.OperatorNamespace, space); err != nil {
 				return false, err
 			}
 
@@ -157,15 +152,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return true, nil
 	}
 	return false, r.setStatusReady(space)
-}
-
-func (r *Reconciler) getMemberCluster(name string) (*cluster.CachedToolchainCluster, bool) {
-	for _, c := range r.MemberClusters() {
-		if c.Name == name {
-			return c, true
-		}
-	}
-	return nil, false
 }
 
 func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv1alpha1.Space) (*toolchainv1alpha1.NSTemplateSet, error) {
@@ -236,7 +222,7 @@ func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		logger.Info("cannot deleted NSTemplateSet: no target cluster specified")
 		return false, nil // abort deletion
 	}
-	memberCluster, found := r.getMemberCluster(space.Spec.TargetCluster)
+	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
 		logger.WithValues("target_cluster", space.Spec.TargetCluster).Info("Cannot deleted NSTemplateSet: unknown target member cluster")
 		return false, fmt.Errorf("unable to get the client for member cluster '%s'", space.Spec.TargetCluster)
