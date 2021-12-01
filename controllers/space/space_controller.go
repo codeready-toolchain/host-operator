@@ -322,17 +322,6 @@ func (r *Reconciler) setStatusNSTemplateSetCreationFailed(space *toolchainv1alph
 		})
 }
 
-func (r *Reconciler) setStatusFromNSTemplateSet(space *toolchainv1alpha1.Space, reason, message string) error {
-	return r.updateStatus(
-		space,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.ConditionReady,
-			Status:  corev1.ConditionFalse,
-			Reason:  reason,
-			Message: message,
-		})
-}
-
 // updateStatus updates space status conditions with the new conditions
 func (r *Reconciler) updateStatus(space *toolchainv1alpha1.Space, conditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
