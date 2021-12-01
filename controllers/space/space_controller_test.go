@@ -11,11 +11,11 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	. "github.com/codeready-toolchain/host-operator/test"
-	nstemplatetsettest "github.com/codeready-toolchain/host-operator/test/nstemplateset" // TODO: use github.com/codeready-toolchain/toolchain-common/test/nstemplateset instead
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	nstemplatetsettest "github.com/codeready-toolchain/toolchain-common/pkg/test/nstemplateset"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
