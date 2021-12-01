@@ -28,13 +28,14 @@ import (
 // Reconciler reconciles a Space object
 type Reconciler struct {
 	Client         client.Client
+	Namespace      string
 	MemberClusters map[string]cluster.Cluster
 }
 
 // SetupWithManager sets up the controller reconciler with the Manager and the given member clusters.
 // Watches the Space resources in the current (host) cluster as its primary resources.
 // Watches NSTemplateSets on the member clusters as its secondary resources.
-func SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluster) error {
+func SetupWithManager(mgr ctrl.Manager, namespace string, memberClusters map[string]cluster.Cluster) error {
 	b := ctrl.NewControllerManagedBy(mgr).
 		// watch Spaces in the host cluster
 		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
@@ -47,6 +48,7 @@ func SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluste
 
 	return b.Complete(&Reconciler{
 		Client:         mgr.GetClient(),
+		Namespace:      namespace,
 		MemberClusters: memberClusters,
 	})
 }
@@ -57,14 +59,18 @@ func SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluste
 
 // Reconcile ensures that there is an NSTemplateSet resource defined in the target member cluster
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx, "namespace", r.Namespace)
 	logger.Info("reconciling Space")
 
 	// Fetch the Space
 	space := &toolchainv1alpha1.Space{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, space)
+	err := r.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: r.Namespace,
+		Name:      request.Name,
+	}, space)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			logger.Info("Space not found")
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -79,8 +85,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, err
 		}
 	} else {
-		requeue, err := r.ensureSpaceDeletion(logger, space)
-		return reconcile.Result{Requeue: requeue}, err
+		return reconcile.Result{}, r.ensureSpaceDeletion(logger, space)
 	}
 	// ensure that there's a NSTemplateSet on the Target Cluster
 	// will trigger a requeue until the NSTemplateSet exists and is ready,
@@ -135,7 +140,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 				return false, r.setStatusNSTemplateSetCreationFailed(space, err.Error())
 			}
 			logger.Info("NSTemplateSet created on target member cluster")
-			return true, nil
+			return false, nil
 		}
 		return false, r.setStatusNSTemplateSetCreationFailed(space, fmt.Sprintf("failed to get NSTemplateSet '%s'", name))
 	}
@@ -144,7 +149,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	readyCond, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	if !found || readyCond.Status != corev1.ConditionTrue {
 		logger.Info("NSTemplateSet is not ready", "ready-condition", readyCond)
-		return true, nil
+		return true, nil // here we need to explicitly requeue since the controller doesn't watch the NSTemplateSetStatus
 	}
 	return false, r.setStatusReady(space)
 }
@@ -184,28 +189,28 @@ func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv
 	return nsTmplSet, nil
 }
 
-func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
+func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1alpha1.Space) error {
 	logger.Info("terminating Space")
 	if deleted, err := r.deleteNSTemplateSet(logger, space); err != nil {
 		logger.Error(err, "failed to delete the NSTemplateSet")
-		return false, r.setStatusTerminatingFailed(space, "failed to delete the NSTemplateSet")
+		return r.setStatusTerminatingFailed(space, "failed to delete the NSTemplateSet")
 	} else if deleted {
 		if err := r.setStatusTerminating(space); err != nil {
 			logger.Error(err, "error updating status")
-			return false, err
+			return err
 		}
-		return true, nil // requeue until NSTemplateSet is fully deleted
+		return nil
 	}
 	// Remove finalizer from Space
 	util.RemoveFinalizer(space, toolchainv1alpha1.FinalizerName)
 	if err := r.Client.Update(context.TODO(), space); err != nil {
 		logger.Error(err, "failed to remove finalizer")
-		return false, r.setStatusTerminatingFailed(space, "failed to remove finalizer")
+		return r.setStatusTerminatingFailed(space, "failed to remove finalizer")
 	}
 	logger.Info("removed finalizer")
 	// no need to update the status of the Space once the finalizer has been removed, since
 	// the resource will be deleted
-	return false, nil // no need to requeue
+	return nil
 }
 
 // deleteNSTemplateSet triggers the deletion of the NSTemplateSet on the target member cluster.

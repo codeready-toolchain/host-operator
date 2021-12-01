@@ -264,7 +264,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
 	}
 
-	if err = space.SetupWithManager(mgr, memberClusters); err != nil {
+	if err = space.SetupWithManager(mgr, namespace, memberClusters); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Space")
 		os.Exit(1)
 	}

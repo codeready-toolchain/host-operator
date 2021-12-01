@@ -58,7 +58,7 @@ func TestReconciler(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.Equal(t, reconcile.Result{Requeue: true}, res)
+			assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to requeue when creating the NSTemplateSet
 			nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				Exists().
 				Get()
@@ -233,7 +233,7 @@ func TestReconciler(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				assert.Equal(t, reconcile.Result{Requeue: true}, res)
+				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
 				nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 					Exists().
 					HasDeletionTimestamp().
@@ -268,7 +268,7 @@ func TestReconciler(t *testing.T) {
 
 					// then
 					require.NoError(t, err)
-					assert.Equal(t, reconcile.Result{Requeue: true}, res)
+					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
 					// no changes
 					nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 						Exists().
@@ -394,6 +394,7 @@ func newReconciler(hostCl client.Client, memberClusters ...*commoncluster.Cached
 	}
 	return &space.Reconciler{
 		Client:         hostCl,
+		Namespace:      test.HostOperatorNs,
 		MemberClusters: clusters,
 	}
 }
