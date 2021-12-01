@@ -217,7 +217,7 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 // Returns `true/nil` if the NSTemplateSet was deleted during this call, or if it is already being deleted
 // (ie, the deletion was triggered during a previous call/reconcile loop, and it's not fully done yet)
 // Returns `false/nil` if the NSTemplateSet was already deleted (ie, resource doesn't exist anymore),
-//   or if there is no target cluster specified in the given space, of if the target cluster is unknown.
+//   or if there is no target cluster specified in the given space, or if the target cluster is unknown.
 // Returns `false/error` if an error occurred
 func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
 	if space.Spec.TargetCluster == "" {
