@@ -226,7 +226,7 @@ func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
-		logger.WithValues("target_cluster", space.Spec.TargetCluster).Info("Cannot deleted NSTemplateSet: unknown target member cluster")
+		logger.WithValues("target_cluster", space.Spec.TargetCluster).Info("Cannot delete NSTemplateSet: unknown target member cluster")
 		return false, nil // skip NSTemplateSet deletion
 	}
 	// Get the NSTemplateSet associated with the Space
