@@ -100,10 +100,10 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               targetCluster:
-                description: TargetCluster The cluster in which this Space is actually
+                description: TargetCluster The cluster in which this Space is currently
                   provisioned Can be empty if provisioning did not start or failed
                   To be used to de-provision the NSTemplateSet if the Spec.TargetCluster
-                  changes
+                  is either changed or removed
                 type: string
             type: object
         type: object
