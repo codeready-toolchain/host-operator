@@ -187,10 +187,10 @@ func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv
 
 func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1alpha1.Space) error {
 	logger.Info("terminating Space")
-	if deleted, err := r.deleteNSTemplateSet(logger, space); err != nil {
+	if isBeingDeleted, err := r.deleteNSTemplateSet(logger, space); err != nil {
 		logger.Error(err, "failed to delete the NSTemplateSet")
 		return r.setStatusTerminatingFailed(space, "failed to delete the NSTemplateSet")
-	} else if deleted {
+	} else if isBeingDeleted {
 		if err := r.setStatusTerminating(space); err != nil {
 			logger.Error(err, "error updating status")
 			return err
@@ -210,9 +210,9 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 }
 
 // deleteNSTemplateSet triggers the deletion of the NSTemplateSet on the target member cluster.
-// Returns `true/nil` if the NSTemplateSet was deleted during this call, or if it is already being deleted
-// (ie, the deletion was triggered during a previous call/reconcile loop, and it's not fully done yet)
-// Returns `false/nil` if the NSTemplateSet was already deleted (ie, resource doesn't exist anymore),
+// Returns `true/nil` if the NSTemplateSet is being deleted (whether deletion was triggered during this call,
+// or if it was triggered earlier and is still in progress)
+// Returns `false/nil` if the NSTemplateSet doesn't exist anymore,
 //   or if there is no target cluster specified in the given space, or if the target cluster is unknown.
 // Returns `false/error` if an error occurred
 func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
