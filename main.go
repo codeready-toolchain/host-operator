@@ -266,7 +266,6 @@ func main() {
 
 	if err = space.SetupWithManager(mgr, namespace, memberClusters); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Space")
-		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
 
