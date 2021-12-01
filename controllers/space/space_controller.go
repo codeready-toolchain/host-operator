@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
@@ -164,6 +165,7 @@ func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv
 		return nil, err
 	}
 	// create the NSTemplateSet from the NSTemplateTier
+
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: memberOperatorNS,
@@ -172,13 +174,7 @@ func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv
 				toolchainv1alpha1.FinalizerName,
 			},
 		},
-		Spec: toolchainv1alpha1.NSTemplateSetSpec{
-			TierName: space.Spec.TierName,
-			ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
-				TemplateRef: tmplTier.Spec.ClusterResources.TemplateRef,
-			},
-			Namespaces: make([]toolchainv1alpha1.NSTemplateSetNamespace, len(tmplTier.Spec.Namespaces)),
-		},
+		Spec: *usersignup.NewNSTemplateSetSpec(tmplTier),
 	}
 	for i, tmpl := range tmplTier.Spec.Namespaces {
 		nsTmplSet.Spec.Namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
