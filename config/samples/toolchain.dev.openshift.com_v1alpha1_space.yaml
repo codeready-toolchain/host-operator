@@ -4,4 +4,5 @@ metadata:
   name: space-sample
 spec:
   tierName: base
+  targetCluster: member-1 # optional 
   
