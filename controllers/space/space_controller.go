@@ -35,17 +35,17 @@ type Reconciler struct {
 // Watches the Space resources in the current (host) cluster as its primary resources.
 // Watches NSTemplateSets on the member clusters as its secondary resources.
 func SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluster) error {
-	builder := ctrl.NewControllerManagedBy(mgr).
+	b := ctrl.NewControllerManagedBy(mgr).
 		// watch Spaces in the host cluster
 		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	// watch NSTemplateSets in all the member clusters
 	for _, memberCluster := range memberClusters {
-		builder = builder.Watches(source.NewKindWithCache(&toolchainv1alpha1.NSTemplateSet{}, memberCluster.Cache),
+		b = b.Watches(source.NewKindWithCache(&toolchainv1alpha1.NSTemplateSet{}, memberCluster.Cache),
 			&handler.EnqueueRequestForObject{},
 		)
 	}
 
-	return builder.Complete(&Reconciler{
+	return b.Complete(&Reconciler{
 		Client:         mgr.GetClient(),
 		MemberClusters: memberClusters,
 	})
