@@ -142,13 +142,8 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	logger.Info("NSTemplateSet already exists")
 
 	readyCond, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
-	// if UserAccount ready condition is already set to false, then don't update if no message is provided
-	// also, don't update when NSTemplateSet ready condition is in an invalid state
-	if !found || readyCond.Status == corev1.ConditionUnknown || readyCond.Status == corev1.ConditionFalse {
+	if !found || readyCond.Status != corev1.ConditionTrue {
 		logger.Info("NSTemplateSet is not ready", "ready-condition", readyCond)
-		if err := r.setStatusFromNSTemplateSet(space, readyCond.Reason, readyCond.Message); err != nil {
-			return false, err
-		}
 		return true, nil
 	}
 	return false, r.setStatusReady(space)
@@ -260,7 +255,7 @@ func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1a
 }
 
 func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error {
-	return r.updateStatusConditions(
+	return r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
@@ -270,7 +265,7 @@ func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error
 }
 
 func (r *Reconciler) setStatusProvisioningFailed(space *toolchainv1alpha1.Space, msg string) error {
-	return r.updateStatusConditions(
+	return r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
@@ -281,7 +276,7 @@ func (r *Reconciler) setStatusProvisioningFailed(space *toolchainv1alpha1.Space,
 }
 
 func (r *Reconciler) setStatusReady(space *toolchainv1alpha1.Space) error {
-	return r.updateStatusConditions(
+	return r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
@@ -291,7 +286,7 @@ func (r *Reconciler) setStatusReady(space *toolchainv1alpha1.Space) error {
 }
 
 func (r *Reconciler) setStatusTerminating(space *toolchainv1alpha1.Space) error {
-	return r.updateStatusConditions(
+	return r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
@@ -301,7 +296,7 @@ func (r *Reconciler) setStatusTerminating(space *toolchainv1alpha1.Space) error 
 }
 
 func (r *Reconciler) setStatusTerminatingFailed(space *toolchainv1alpha1.Space, msg string) error {
-	return r.updateStatusConditions(
+	return r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
@@ -312,7 +307,7 @@ func (r *Reconciler) setStatusTerminatingFailed(space *toolchainv1alpha1.Space, 
 }
 
 func (r *Reconciler) setStatusNSTemplateSetCreationFailed(space *toolchainv1alpha1.Space, message string) error {
-	return r.updateStatusConditions(
+	return r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
@@ -323,7 +318,7 @@ func (r *Reconciler) setStatusNSTemplateSetCreationFailed(space *toolchainv1alph
 }
 
 func (r *Reconciler) setStatusFromNSTemplateSet(space *toolchainv1alpha1.Space, reason, message string) error {
-	return r.updateStatusConditions(
+	return r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
@@ -333,9 +328,10 @@ func (r *Reconciler) setStatusFromNSTemplateSet(space *toolchainv1alpha1.Space, 
 		})
 }
 
-// updateStatusConditions updates space status conditions with the new conditions
-func (r *Reconciler) updateStatusConditions(space *toolchainv1alpha1.Space, conditions ...toolchainv1alpha1.Condition) error {
+// updateStatus updates space status conditions with the new conditions
+func (r *Reconciler) updateStatus(space *toolchainv1alpha1.Space, conditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
+	space.Status.TargetCluster = space.Spec.TargetCluster
 	space.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(space.Status.Conditions, conditions...)
 	if !updated {
 		// Nothing changed

@@ -56,6 +56,20 @@ func (a *Assertion) HasNoFinalizers() *Assertion {
 	return a
 }
 
+func (a *Assertion) HasNoStatusTargetCluster() *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Empty(a.t, a.space.Status.TargetCluster)
+	return a
+}
+
+func (a *Assertion) HasStatusTargetCluster(targetCluster string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, targetCluster, a.space.Status.TargetCluster)
+	return a
+}
+
 func (a *Assertion) HasConditions(expected ...toolchainv1alpha1.Condition) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)

@@ -64,6 +64,7 @@ func TestReconciler(t *testing.T) {
 				Get()
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 				Exists().
+				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.Provisioning()).
 				HasFinalizer(toolchainv1alpha1.FinalizerName)
 
@@ -93,6 +94,7 @@ func TestReconciler(t *testing.T) {
 				assert.Equal(t, reconcile.Result{Requeue: true}, res)
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
+					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.Provisioning()).
 					HasFinalizer(toolchainv1alpha1.FinalizerName)
 
@@ -121,6 +123,7 @@ func TestReconciler(t *testing.T) {
 					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
 					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 						Exists().
+						HasStatusTargetCluster("member-1").
 						HasConditions(spacetest.Ready()).
 						HasFinalizer(toolchainv1alpha1.FinalizerName)
 				})
@@ -148,12 +151,14 @@ func TestReconciler(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				assert.False(t, res.Requeue)
-				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).HasConditions(toolchainv1alpha1.Condition{
-					Type:    toolchainv1alpha1.ConditionReady,
-					Status:  corev1.ConditionFalse,
-					Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
-					Message: "unspecified target member cluster",
-				})
+				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
+					HasNoStatusTargetCluster().
+					HasConditions(toolchainv1alpha1.Condition{
+						Type:    toolchainv1alpha1.ConditionReady,
+						Status:  corev1.ConditionFalse,
+						Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
+						Message: "unspecified target member cluster",
+					})
 			})
 
 			t.Run("unknown target member cluster", func(t *testing.T) {
@@ -175,12 +180,14 @@ func TestReconciler(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				assert.False(t, res.Requeue)
-				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).HasConditions(toolchainv1alpha1.Condition{
-					Type:    toolchainv1alpha1.ConditionReady,
-					Status:  corev1.ConditionFalse,
-					Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
-					Message: "unknown target member cluster 'unknown'",
-				})
+				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
+					HasStatusTargetCluster("unknown").
+					HasConditions(toolchainv1alpha1.Condition{
+						Type:    toolchainv1alpha1.ConditionReady,
+						Status:  corev1.ConditionFalse,
+						Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
+						Message: "unknown target member cluster 'unknown'",
+					})
 			})
 		})
 	})
@@ -232,6 +239,7 @@ func TestReconciler(t *testing.T) {
 				Get()
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 				Exists().
+				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.Terminating()).
 				HasFinalizer(toolchainv1alpha1.FinalizerName)
 
@@ -267,6 +275,7 @@ func TestReconciler(t *testing.T) {
 					Get()
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
+					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.Terminating()).
 					HasFinalizer(toolchainv1alpha1.FinalizerName)
 
@@ -288,6 +297,7 @@ func TestReconciler(t *testing.T) {
 					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
 					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 						Exists().
+						HasStatusTargetCluster("member-1").
 						HasConditions(spacetest.Terminating()).
 						HasNoFinalizers() // space resource can be deleted by the server now that the finalizer has been removed
 				})
@@ -327,6 +337,7 @@ func TestReconciler(t *testing.T) {
 				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue neede
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
+					HasNoStatusTargetCluster().
 					HasNoFinalizers() // will allow for deletion of the Space CR
 			})
 
@@ -361,6 +372,7 @@ func TestReconciler(t *testing.T) {
 				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue neede
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
+					HasNoStatusTargetCluster().
 					HasNoFinalizers() // will allow for deletion of the Space CR
 			})
 		})
