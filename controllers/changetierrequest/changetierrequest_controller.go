@@ -178,11 +178,12 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 			mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
 		}
 	}
-
 	if !changed {
 		err := fmt.Errorf("the MasterUserRecord '%s' doesn't contain UserAccount with cluster '%s' whose tier should be changed", changeTierRequest.Spec.MurName, changeTierRequest.Spec.TargetCluster)
 		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
 	}
+
+	mur.Spec.TierName = changeTierRequest.Spec.TierName
 
 	// also update some of the labels on the MUR, those related to the new Tier in use.
 	if mur.Labels == nil {
