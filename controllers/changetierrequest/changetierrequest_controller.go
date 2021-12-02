@@ -178,7 +178,10 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 			mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
 		}
 	}
-	mur.Spec.TierName = changeTierRequest.Spec.TierName
+	if mur.Spec.TierName != changeTierRequest.Spec.TierName {
+		mur.Spec.TierName = changeTierRequest.Spec.TierName
+		changed = true
+	}
 
 	if !changed {
 		err := fmt.Errorf("the MasterUserRecord '%s' doesn't contain UserAccount with cluster '%s' whose tier should be changed", changeTierRequest.Spec.MurName, changeTierRequest.Spec.TargetCluster)
