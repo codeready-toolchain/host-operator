@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	routev1 "github.com/openshift/api/route/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -35,6 +36,7 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 	saFound := false
 	roleFound := false
 	roleBindingFound := false
+	apiRouteFound := false
 	for _, toolchainObject := range toolchainObjects {
 		assert.Equal(t, "my-namespace", toolchainObject.GetNamespace())
 		gvk, err := apiutil.GVKForObject(toolchainObject, s)
@@ -53,13 +55,17 @@ func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 			roleFound = true
 		case rbacv1.SchemeGroupVersion.WithKind("RoleBinding"):
 			roleBindingFound = true
-
+		case routev1.GroupVersion.WithKind("Route"):
+			if toolchainObject.GetName() == ProxyRouteName {
+				apiRouteFound = true
+			}
 		}
 	}
 	assert.True(t, deploymentFound, "a Deployment wasn't found")
 	assert.True(t, saFound, "a ServiceAccount wasn't found")
 	assert.True(t, roleFound, "a Role wasn't found")
 	assert.True(t, roleBindingFound, "a RoleBinding wasn't found")
+	assert.True(t, apiRouteFound, "a proxy route with the name 'api' wasn't found")
 }
 
 func getVars(namespace, image, replicas string) map[string]string {
