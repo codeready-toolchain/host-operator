@@ -77,6 +77,13 @@ func (a *Assertion) HasConditions(expected ...toolchainv1alpha1.Condition) *Asse
 	return a
 }
 
+func (a *Assertion) HasNoConditions() *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Empty(a.t, a.space.Status.Conditions)
+	return a
+}
+
 func Provisioning() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
@@ -98,5 +105,14 @@ func Terminating() toolchainv1alpha1.Condition {
 		Type:   toolchainv1alpha1.ConditionReady,
 		Status: corev1.ConditionFalse,
 		Reason: toolchainv1alpha1.SpaceTerminatingReason,
+	}
+}
+
+func TerminatingFailed(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.SpaceTerminatingFailedReason,
+		Message: msg,
 	}
 }
