@@ -57,8 +57,10 @@ jobs:
     - name: Lint
       uses: golangci/golangci-lint-action@v2
       with:
-        version: v1.39
-        skip-go-installation: true
-        args: -E gofmt,golint,megacheck,misspell
+        version: v1.42.1
+        skip-go-installation: true # we already installed Go with `actions/setup-go@v2` above
+        skip-pkg-cache: true
+        skip-build-cache: true
+        args: --config=./.golangci.yml --verbose
 
 
