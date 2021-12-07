@@ -165,7 +165,6 @@ func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv
 		return nil, err
 	}
 	// create the NSTemplateSet from the NSTemplateTier
-
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: memberOperatorNS,
@@ -176,12 +175,6 @@ func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv
 		},
 		Spec: *usersignup.NewNSTemplateSetSpec(tmplTier),
 	}
-	for i, tmpl := range tmplTier.Spec.Namespaces {
-		nsTmplSet.Spec.Namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace{
-			TemplateRef: tmpl.TemplateRef,
-		}
-	}
-
 	return nsTmplSet, nil
 }
 
