@@ -268,7 +268,7 @@ func main() {
 		Client:         mgr.GetClient(),
 		Namespace:      namespace,
 		MemberClusters: memberClusters,
-	}).SetupWithManager(mgr, namespace, memberClusters); err != nil {
+	}).SetupWithManager(mgr, memberClusters); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Space")
 	}
 	//+kubebuilder:scaffold:builder
