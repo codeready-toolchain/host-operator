@@ -59,7 +59,7 @@ func TestReconciler(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to requeue when creating the NSTemplateSet
+			assert.False(t, res.Requeue)
 			nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				Exists().
 				Get()
@@ -92,7 +92,7 @@ func TestReconciler(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				assert.Equal(t, reconcile.Result{Requeue: true}, res)
+				assert.False(t, res.Requeue)
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
@@ -232,7 +232,7 @@ func TestReconciler(t *testing.T) {
 					HasConditions(toolchainv1alpha1.Condition{
 						Type:    toolchainv1alpha1.ConditionReady,
 						Status:  corev1.ConditionFalse,
-						Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
+						Reason:  toolchainv1alpha1.SpaceProvisioningPendingReason,
 						Message: "unspecified target member cluster",
 					})
 			})

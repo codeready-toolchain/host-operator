@@ -91,8 +91,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// ensure that there's a NSTemplateSet on the Target Cluster
 	// will trigger a requeue until the NSTemplateSet exists and is ready,
 	// so the Space can be in `ready` status as well
-	requeue, err := r.ensureNSTemplateSet(logger, space)
-	return ctrl.Result{Requeue: requeue}, err
+
+	return ctrl.Result{}, r.ensureNSTemplateSet(logger, space)
 }
 
 // setFinalizers sets the finalizers for Space
@@ -110,14 +110,13 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, space *toolchainv1alpha1.S
 
 // ensureNSTemplateSet creates the NSTemplateSet on the target member cluster if it does not exist,
 // and updates the space's status accordingly.
-// returns `true` after creating the NSTemplateSet and until it is `ready`
-func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
+func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) error {
 	if space.Spec.TargetCluster == "" {
-		return false, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unspecified target member cluster"))
+		return r.setStatusProvisioningPending(logger, space, fmt.Errorf("unspecified target member cluster"))
 	}
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
-		return false, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
+		return r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
 	}
 	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster)
 	// create if not found
@@ -129,29 +128,29 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		if errors.IsNotFound(err) {
 			logger.Info("creating NSTemplateSet on target member cluster")
 			if err := r.setStatusProvisioning(space); err != nil {
-				return false, err
+				return err
 			}
 			if nsTmplSet, err = r.newNSTemplateSet(memberCluster.OperatorNamespace, space); err != nil {
-				return false, r.setStatusProvisioningFailed(logger, space, err)
+				return r.setStatusProvisioningFailed(logger, space, err)
 			}
 
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
-				return false, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
+				return r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 			}
 			logger.Info("NSTemplateSet created on target member cluster")
-			return false, nil
+			return nil
 		}
-		return false, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
+		return r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 	}
 	logger.Info("NSTemplateSet already exists")
 
 	readyCond, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	if !found || readyCond.Status != corev1.ConditionTrue {
 		logger.Info("NSTemplateSet is not ready", "ready-condition", readyCond)
-		return true, nil // here we need to explicitly requeue since the controller doesn't watch the NSTemplateSetStatus
+		return nil // here we need to explicitly requeue since the controller doesn't watch the NSTemplateSetStatus
 	}
-	return false, r.setStatusReady(space)
+	return r.setStatusReady(space)
 }
 
 func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv1alpha1.Space) (*toolchainv1alpha1.NSTemplateSet, error) {
@@ -256,6 +255,21 @@ func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error
 			Status: corev1.ConditionFalse,
 			Reason: toolchainv1alpha1.SpaceProvisioningReason,
 		})
+}
+
+func (r *Reconciler) setStatusProvisioningPending(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
+	if err := r.updateStatus(
+		space,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.ConditionReady,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.SpaceProvisioningPendingReason,
+			Message: cause.Error(),
+		}); err != nil {
+		logger.Error(cause, "unable to provision Space")
+		return err
+	}
+	return cause
 }
 
 func (r *Reconciler) setStatusProvisioningFailed(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
