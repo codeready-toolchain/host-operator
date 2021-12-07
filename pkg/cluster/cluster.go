@@ -6,6 +6,7 @@ import (
 )
 
 type Cluster struct {
-	runtimecluster.Cluster
 	OperatorNamespace string
+	Client            client.Client
+	Cache             cache.Cache
 }
