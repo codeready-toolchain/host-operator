@@ -60,7 +60,7 @@ spec:
                 required:
                 - templateRef
                 type: object
-              currentHash:
+              currentTierHash:
                 description: Holds the value from “toolchain.dev.openshift.com/<tiername>-tier-hash”
                   label of the associated Space CR at the time when TemplateUpdateRequest
                   CR is created
