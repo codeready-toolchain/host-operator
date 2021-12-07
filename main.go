@@ -245,6 +245,7 @@ func main() {
 		Scheme:         mgr.GetScheme(),
 		HTTPClientImpl: &http.Client{},
 		GetMembersFunc: commoncluster.GetMemberClusters,
+		Namespace:      namespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainStatus")
 	}
