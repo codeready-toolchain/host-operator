@@ -168,9 +168,6 @@ func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: memberOperatorNS,
 			Name:      space.Name,
-			Finalizers: []string{
-				toolchainv1alpha1.FinalizerName,
-			},
 		},
 		Spec: *usersignup.NewNSTemplateSetSpec(tmplTier),
 	}
