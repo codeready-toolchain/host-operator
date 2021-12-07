@@ -11,7 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	routev1 "github.com/openshift/api/route/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
@@ -70,7 +73,7 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := scheme.Scheme
-	err := toolchainv1alpha1.AddToScheme(s)
+	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	fakeClient := test.NewFakeClient(t, initObjs...)
 	require.NoError(t, err)
@@ -79,6 +82,7 @@ func prepareReconcile(t *testing.T, requestName string, httpTestClient *fakeHTTP
 		Client:         fakeClient,
 		HTTPClientImpl: httpTestClient,
 		Scheme:         s,
+		Namespace:      test.HostOperatorNs,
 		GetMembersFunc: func(conditions ...cluster.Condition) []*cluster.CachedToolchainCluster {
 			clusters := make([]*cluster.CachedToolchainCluster, len(memberClusters))
 			for i, clusterName := range memberClusters {
@@ -164,7 +168,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
 		memberStatus := newMemberStatus(ready())
 		toolchainStatus := NewToolchainStatus()
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 		// when
 		res, err := reconciler.Reconcile(context.TODO(), req)
@@ -176,7 +181,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-			HasRegistrationServiceStatus(registrationServiceReady())
+			HasRegistrationServiceStatus(registrationServiceReady()).
+			HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 	})
 
 	t.Run("HostOperator tests", func(t *testing.T) {
@@ -187,7 +193,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("Host operator deployment not found - deployment env var not set", func(t *testing.T) {
 			// given
 			resetFunc := test.UnsetEnvVarAndRestore(t, commonconfig.OperatorNameEnvVar)
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, registrationServiceDeployment, memberStatus, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				registrationServiceDeployment, memberStatus, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -200,12 +207,14 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady("", "DeploymentNotFound", "unable to get the deployment: OPERATOR_NAME must be set")).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("Host operator deployment not found", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, registrationServiceDeployment, memberStatus, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				registrationServiceDeployment, memberStatus, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -217,13 +226,15 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorDeploymentName, "DeploymentNotFound", "unable to get the deployment: deployments.apps \"host-operator-controller-manager\" not found")).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("Host operator deployment not ready", func(t *testing.T) {
 			// given
 			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -235,13 +246,15 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorDeploymentName, "DeploymentNotReady", "deployment has unready status conditions: Available")).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("Host operator deployment not progressing", func(t *testing.T) {
 			// given
 			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentNotProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -253,7 +266,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(hostOperatorTag))).
 				HasHostOperatorStatus(hostOperatorStatusNotReady(defaultHostOperatorDeploymentName, "DeploymentNotReady", "deployment has unready status conditions: Progressing")).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 	})
 
@@ -264,7 +278,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration service deployment not found", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -276,13 +291,15 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable()).
 				HasRegistrationServiceStatus(registrationServiceDeploymentNotReady("DeploymentNotFound", "unable to get the deployment: deployments.apps \"registration-service\" not found"))
 		})
 
 		t.Run("Registration service deployment not ready", func(t *testing.T) {
 			// given
 			registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -294,13 +311,15 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable()).
 				HasRegistrationServiceStatus(registrationServiceDeploymentNotReady("DeploymentNotReady", "deployment has unready status conditions: Available"))
 		})
 
 		t.Run("Registration service deployment not progressing", func(t *testing.T) {
 			// given
 			registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentNotProgressingCondition())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -312,6 +331,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable()).
 				HasRegistrationServiceStatus(registrationServiceDeploymentNotReady("DeploymentNotReady", "deployment has unready status conditions: Progressing"))
 		})
 	})
@@ -324,7 +344,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 
 		t.Run("Registration health endpoint - http client error", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, httpClientError(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, httpClientError(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -336,12 +357,14 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceHealthNotReady("http client error"))
+				HasRegistrationServiceStatus(registrationServiceHealthNotReady("http client error")).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("Registration health endpoint - bad status code", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBadCode(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBadCode(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -353,12 +376,14 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceHealthNotReady("bad response from http://registration-service/api/v1/health : statusCode=500"))
+				HasRegistrationServiceStatus(registrationServiceHealthNotReady("bad response from http://registration-service/api/v1/health : statusCode=500")).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("Registration health endpoint - invalid JSON", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseInvalid(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseInvalid(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -370,12 +395,14 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceHealthNotReady("invalid character '}' after object key"))
+				HasRegistrationServiceStatus(registrationServiceHealthNotReady("invalid character '}' after object key")).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("Registration health endpoint - not alive", func(t *testing.T) {
 			// given
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBodyNotAlive(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseBodyNotAlive(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -387,7 +414,57 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(registrationServiceTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceHealthNotReady("the registration service health endpoint is reporting an unhealthy status"))
+				HasRegistrationServiceStatus(registrationServiceHealthNotReady("the registration service health endpoint is reporting an unhealthy status")).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
+		})
+	})
+
+	t.Run("Proxy status tests", func(t *testing.T) {
+		// given
+		hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		registrationServiceDeployment := newDeploymentWithConditions(registrationservice.ResourceName, status.DeploymentAvailableCondition(), status.DeploymentProgressingCondition())
+		memberStatus := newMemberStatus(ready())
+		toolchainStatus := NewToolchainStatus()
+
+		t.Run("proxy route not found", func(t *testing.T) {
+			// given
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, registrationServiceDeployment, memberStatus, toolchainStatus)
+
+			// when
+			res, err := reconciler.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, requeueResult, res)
+			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+				HasConditions(componentsNotReady(string(hostRoutesTag))).
+				HasHostOperatorStatus(hostOperatorStatusReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("", proxyRouteUnavailable("routes.route.openshift.io \"api\" not found"))
+		})
+
+		t.Run("proxy without tls and with path", func(t *testing.T) {
+			// given
+			route := proxyRoute()
+			route.Spec.TLS = nil
+			route.Spec.Path = "/api"
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, route)
+
+			// when
+			res, err := reconciler.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, requeueResult, res)
+			AssertThatToolchainStatus(t, req.Namespace, requestName, fakeClient).
+				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
+				HasHostOperatorStatus(hostOperatorStatusReady()).
+				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("http://api-toolchain-host-operator.host-cluster/api", hostRoutesAvailable())
 		})
 	})
 
@@ -398,7 +475,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 		t.Run("MemberStatus not found", func(t *testing.T) {
 			// given
 			emptyToolchainStatus := NewToolchainStatus()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{}, hostOperatorDeployment, registrationServiceDeployment, emptyToolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{},
+				hostOperatorDeployment, registrationServiceDeployment, emptyToolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -410,7 +488,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).Exists().
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus().
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("ToolchainCluster CR of member-1 and member-2 clusters were removed", func(t *testing.T) {
@@ -426,7 +505,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				WithMember("member-1", WithUserAccountCount(10)),
 				WithMember("member-2", WithUserAccountCount(10)),
 			)
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 			InitializeCounters(t, toolchainStatus)
 
 			// when
@@ -442,7 +522,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", userAccountCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
 					memberCluster("member-2", userAccountCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("ToolchainCluster CR of member-1 cluster was removed", func(t *testing.T) {
@@ -461,7 +542,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 			InitializeCounters(t, toolchainStatus)
 
 			// when
@@ -477,7 +559,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", userAccountCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
 					memberCluster("member-2", userAccountCount(10), ready()),
 				).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("ToolchainCluster CR of member-2 cluster was removed", func(t *testing.T) {
@@ -495,7 +578,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				memberCluster("member-1", ready(), userAccountCount(10)),
 				memberCluster("member-2", ready(), userAccountCount(10)),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 			InitializeCounters(t, toolchainStatus)
 
 			// when
@@ -511,7 +595,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", userAccountCount(10), ready()),
 					memberCluster("member-2", userAccountCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("MemberStatus saying that there was no member cluster present should be removed", func(t *testing.T) {
@@ -521,7 +606,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 				memberCluster("member-1", userAccountCount(0), notReady("NoMemberClustersFound", "no member clusters found")),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 			InitializeCounters(t, toolchainStatus)
 
 			// when
@@ -534,13 +620,15 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("MemberStatus not found", func(t *testing.T) {
 			// given
 			emptyToolchainStatus := NewToolchainStatus()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, registrationServiceDeployment, emptyToolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, registrationServiceDeployment, emptyToolchainStatus, proxyRoute())
 			InitializeCounters(t, emptyToolchainStatus)
 
 			// when
@@ -556,14 +644,16 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", noResourceUsage(), userAccountCount(0), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
 					memberCluster("member-2", noResourceUsage(), userAccountCount(0), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("MemberStatus not ready", func(t *testing.T) {
 			// given
 			emptyToolchainStatus := NewToolchainStatus()
 			memberStatus := newMemberStatus(notReady(toolchainv1alpha1.ToolchainStatusComponentsNotReadyReason, "components not ready: [memberOperator]"))
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, emptyToolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, emptyToolchainStatus, proxyRoute())
 			InitializeCounters(t, emptyToolchainStatus)
 
 			// when
@@ -579,14 +669,16 @@ func TestToolchainStatusConditions(t *testing.T) {
 					memberCluster("member-1", notReady("ComponentsNotReady", "components not ready: [memberOperator]")),
 					memberCluster("member-2", notReady("ComponentsNotReady", "components not ready: [memberOperator]")),
 				).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("synchronization with the counter fails", func(t *testing.T) {
 			// given
 			emptyToolchainStatus := NewToolchainStatus()
 			memberStatus := newMemberStatus(ready())
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, emptyToolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, emptyToolchainStatus, proxyRoute())
 			fakeClient.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 				return fmt.Errorf("some error")
 			}
@@ -601,7 +693,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(counterTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("MemberStatus not ready is changed to ready", func(t *testing.T) {
@@ -612,7 +705,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				memberCluster("member-1", notReady("ComponentsNotReady", "some cool error")),
 				memberCluster("member-2", ready()),
 			}
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 			InitializeCounters(t, toolchainStatus)
 
 			// when
@@ -625,14 +719,16 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("MemberStatus with no condition", func(t *testing.T) {
 			// given
 			memberStatus := newMemberStatus()
 			toolchainStatus := NewToolchainStatus()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 			InitializeCounters(t, toolchainStatus)
 
 			// when
@@ -645,7 +741,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(memberCluster("member-1"), memberCluster("member-2")).
-				HasRegistrationServiceStatus(registrationServiceReady())
+				HasRegistrationServiceStatus(registrationServiceReady()).
+				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 		})
 
 		t.Run("All components ready but one member is missing", func(t *testing.T) {
@@ -661,7 +758,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 					// member-1 and member-2 will be added since there are MemberStatus resources for each one of them
 					memberCluster("member-3", ready(), userAccountCount(10)), // will move to `NotReady` since there is no CachedToolchainCluster for this member
 				}
-				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 				InitializeCounters(t, toolchainStatus)
 
 				// when
@@ -678,7 +776,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 						memberCluster("member-2", ready()),
 						memberCluster("member-3", noResourceUsage(), userAccountCount(0), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-3` that was previously registered in the host")),
 					).
-					HasRegistrationServiceStatus(registrationServiceReady())
+					HasRegistrationServiceStatus(registrationServiceReady()).
+					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 			})
 
 			t.Run("with zero user accounts", func(t *testing.T) {
@@ -686,7 +785,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 					memberCluster("removed-cluster", ready()), // will move to `NotReady` since there is no MemberStatus for this cluster
 				}
-				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 				InitializeCounters(t, toolchainStatus)
 
 				// when
@@ -699,7 +799,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 					HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 					HasHostOperatorStatus(hostOperatorStatusReady()).
 					HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-					HasRegistrationServiceStatus(registrationServiceReady())
+					HasRegistrationServiceStatus(registrationServiceReady()).
+					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 			})
 		})
 	})
@@ -723,8 +824,8 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		defer counter.Reset()
 
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-			[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-			toolchainStatus)
+			[]string{"member-1", "member-2"},
+			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 		// when
 		_, err := reconciler.Reconcile(context.TODO(), req)
@@ -748,7 +849,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		reconciler, req, fakeClient := prepareReconcileWithStatusConditions(t, requestName,
 			[]string{"member-1", "member-2"},
 			conditions,
-			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 		// when no ready condition changed
 		_, err := reconciler.Reconcile(context.TODO(), req)
@@ -774,7 +875,7 @@ func TestToolchainStatusReadyConditionTimestamps(t *testing.T) {
 		reconciler, req, fakeClient := prepareReconcileWithStatusConditions(t, requestName,
 			[]string{"member-1", "member-2"},
 			conditions,
-			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 		// when the ready condition becomes not-ready
 		_, err := reconciler.Reconcile(context.TODO(), req)
@@ -810,9 +911,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Notifications().AdminEmail("admin@dev.sandbox.com"))
 
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-			[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-			toolchainStatus, toolchainConfig)
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
 		// when
 		res, err := reconciler.Reconcile(context.TODO(), req)
@@ -825,7 +925,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMemberClusterStatus(memberCluster("member-1", ready()), memberCluster("member-2", ready())).
-			HasRegistrationServiceStatus(registrationServiceReady())
+			HasRegistrationServiceStatus(registrationServiceReady()).
+			HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
 
 		// Confirm there is no notification
 		assertToolchainStatusNotificationNotCreated(t, fakeClient, unreadyStatusNotification)
@@ -836,9 +937,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 			hostOperatorDeployment := newDeploymentWithConditions(defaultHostOperatorDeploymentName,
 				status.DeploymentNotAvailableCondition(), status.DeploymentProgressingCondition())
 
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-				[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-				toolchainStatus, toolchainConfig)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -867,9 +967,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 					overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
-					reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-						[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-						toolchainStatus, invalidConfig)
+					reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+						hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, invalidConfig, proxyRoute())
 
 					// when
 					res, err := reconciler.Reconcile(context.TODO(), req)
@@ -902,9 +1001,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 				overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
-				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-					[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-					toolchainStatus, toolchainConfig)
+				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
 				// when
 				res, err := reconciler.Reconcile(context.TODO(), req)
@@ -930,9 +1028,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 					require.NoError(t, fakeClient.Get(context.Background(), test.NamespacedName(test.HostOperatorNs,
 						toolchainStatus.Name), toolchainStatus))
 
-					reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-						[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-						toolchainStatus)
+					reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+						hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 					// when
 					res, err := reconciler.Reconcile(context.TODO(), req)
@@ -962,9 +1059,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 							toolchainStatus.Name), toolchainStatus))
 
 						// Reconcile in order to update the ready status to false
-						reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(),
-							[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-							toolchainStatus, toolchainConfig)
+						reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+							hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
 						// when
 						_, err := reconciler.Reconcile(context.TODO(), req)
@@ -982,9 +1078,8 @@ func TestToolchainStatusNotifications(t *testing.T) {
 						overrideLastTransitionTime(t, toolchainStatus, metav1.Time{Time: time.Now().Add(-time.Duration(24) * time.Hour)})
 
 						// Reconcile once more
-						reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(),
-							[]string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment,
-							toolchainStatus, toolchainConfig)
+						reconciler, req, fakeClient = prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+							hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, toolchainConfig, proxyRoute())
 
 						// when
 						res, err = reconciler.Reconcile(context.TODO(), req)
@@ -1060,7 +1155,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		// given
 		defer counter.Reset()
 		toolchainStatus := NewToolchainStatus()
-		initObjects := append([]runtime.Object{}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+		initObjects := append([]runtime.Object{}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 		initObjects = append(initObjects, CreateMultipleUserSignups("cookie-", 8)...)
 		initObjects = append(initObjects, CreateMultipleMurs(t, "cookie-", 8, "member-1")...)
 		initObjects = append(initObjects, CreateMultipleUserSignups("pasta-", 2)...)
@@ -1098,7 +1193,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			counter.IncrementMasterUserRecordCount(logger, metrics.External)
 			counter.IncrementUserAccountCount(logger, "member-1")
 			toolchainStatus := NewToolchainStatus()
-			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 			// when
 			res, err := reconciler.Reconcile(context.TODO(), req)
@@ -1134,7 +1230,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				string(metrics.External): 8,
 			}),
 		)
-		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus)
+		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
+			hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 
 		// when
 		counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
@@ -1391,6 +1488,24 @@ func cachedToolchainCluster(cl client.Client, name string, status corev1.Conditi
 				Status:        status,
 				LastProbeTime: lastProbeTime,
 			}},
+		},
+	}
+}
+
+func proxyRoute() *routev1.Route {
+	return &routev1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "api",
+			Namespace: test.HostOperatorNs,
+		},
+		Spec: routev1.RouteSpec{
+			Host: fmt.Sprintf("api-%s.%s", test.HostOperatorNs, test.HostClusterName),
+			Port: &routev1.RoutePort{
+				TargetPort: intstr.FromInt(8081),
+			},
+			TLS: &routev1.TLSConfig{
+				Termination: routev1.TLSTerminationEdge,
+			},
 		},
 	}
 }
@@ -1678,4 +1793,12 @@ func registrationServiceStatus(deploy regTestDeployStatus, health toolchainv1alp
 			Conditions: []toolchainv1alpha1.Condition{health},
 		},
 	}
+}
+
+func proxyRouteUnavailable(msg string) toolchainv1alpha1.Condition {
+	return *status.NewComponentErrorCondition("ProxyRouteUnavailable", msg)
+}
+
+func hostRoutesAvailable() toolchainv1alpha1.Condition {
+	return *status.NewComponentReadyCondition("HostRoutesAvailable")
 }

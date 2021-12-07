@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"regexp"
 	"text/template"
 	"time"
 
+	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/client-go/rest"
 
 	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
@@ -58,6 +60,7 @@ type statusComponentTag string
 
 const (
 	registrationServiceTag statusComponentTag = "registrationService"
+	hostRoutesTag          statusComponentTag = "hostRoutes"
 	hostOperatorTag        statusComponentTag = "hostOperator"
 	memberConnectionsTag   statusComponentTag = "members"
 	counterTag             statusComponentTag = "MasterUserRecord and UserAccount counter"
@@ -114,6 +117,7 @@ type Reconciler struct {
 	Scheme         *runtime.Scheme
 	GetMembersFunc cluster.GetMemberClustersFunc
 	HTTPClientImpl HTTPClient
+	Namespace      string
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainstatuses,verbs=get;list;watch;create;update;patch;delete
@@ -168,6 +172,7 @@ func (r *Reconciler) aggregateAndUpdateStatus(reqLogger logr.Logger, toolchainSt
 	// collect status handlers that will contribute status of various toolchain components
 	hostOperatorStatusHandlerFunc := statusHandler{name: hostOperatorTag, handleStatus: r.hostOperatorHandleStatus}
 	registrationServiceStatusHandlerFunc := statusHandler{name: registrationServiceTag, handleStatus: r.registrationServiceHandleStatus}
+	proxyURLHandlerFunc := statusHandler{name: hostRoutesTag, handleStatus: r.hostRoutesHandleStatus}
 	memberStatusHandlerFunc := statusHandler{name: memberConnectionsTag, handleStatus: r.membersHandleStatus}
 	// should be executed as the last one
 	counterHandlerFunc := statusHandler{name: counterTag, handleStatus: r.synchronizeWithCounter}
@@ -176,6 +181,7 @@ func (r *Reconciler) aggregateAndUpdateStatus(reqLogger logr.Logger, toolchainSt
 		hostOperatorStatusHandlerFunc,
 		memberStatusHandlerFunc,
 		registrationServiceStatusHandlerFunc,
+		proxyURLHandlerFunc,
 		counterHandlerFunc,
 	}
 
@@ -321,6 +327,43 @@ func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, tool
 	}
 
 	return ready
+}
+
+// hostRoutesHandleStatus retrieves the public routes which should be exposed to the users. Such as Proxy URL.
+// Returns false if any route is not available.
+func (r *Reconciler) hostRoutesHandleStatus(reqLogger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
+	proxyURL, err := r.proxyURL()
+	if err != nil {
+		reqLogger.Error(err, "Proxy route was not found")
+		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusProxyRouteUnavailableReason, err.Error())
+		toolchainStatus.Status.HostRoutes.Conditions = []toolchainv1alpha1.Condition{*errCondition}
+		return false
+	}
+	toolchainStatus.Status.HostRoutes.ProxyURL = proxyURL
+
+	readyCondition := status.NewComponentReadyCondition(toolchainv1alpha1.ToolchainStatusHostRoutesAvailableReason)
+	toolchainStatus.Status.HostRoutes.Conditions = []toolchainv1alpha1.Condition{*readyCondition}
+
+	return true
+}
+
+func (r *Reconciler) proxyURL() (string, error) {
+	route := &routev1.Route{}
+	namespacedName := types.NamespacedName{Namespace: r.Namespace, Name: registrationservice.ProxyRouteName}
+	if err := r.Client.Get(context.TODO(), namespacedName, route); err != nil {
+		return "", err
+	}
+
+	scheme := "https"
+	if route.Spec.TLS == nil || *route.Spec.TLS == (routev1.TLSConfig{}) {
+		scheme = "http"
+	}
+	routeURL := &url.URL{
+		Scheme: scheme,
+		Host:   route.Spec.Host,
+		Path:   route.Spec.Path,
+	}
+	return routeURL.String(), nil
 }
 
 // memberHandleStatus retrieves the status of member clusters and adds them to ToolchainStatus. It returns an error
