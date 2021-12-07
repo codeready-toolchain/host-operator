@@ -264,8 +264,11 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
 	}
-
-	if err = space.SetupWithManager(mgr, namespace, memberClusters); err != nil {
+	if err = (&space.Reconciler{
+		Client:         mgr.GetClient(),
+		Namespace:      namespace,
+		MemberClusters: memberClusters,
+	}).SetupWithManager(mgr, namespace, memberClusters); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Space")
 	}
 	//+kubebuilder:scaffold:builder

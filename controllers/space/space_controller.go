@@ -36,7 +36,7 @@ type Reconciler struct {
 // SetupWithManager sets up the controller reconciler with the Manager and the given member clusters.
 // Watches the Space resources in the current (host) cluster as its primary resources.
 // Watches NSTemplateSets on the member clusters as its secondary resources.
-func SetupWithManager(mgr ctrl.Manager, namespace string, memberClusters map[string]cluster.Cluster) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, namespace string, memberClusters map[string]cluster.Cluster) error {
 	b := ctrl.NewControllerManagedBy(mgr).
 		// watch Spaces in the host cluster
 		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
@@ -47,11 +47,7 @@ func SetupWithManager(mgr ctrl.Manager, namespace string, memberClusters map[str
 		)
 	}
 
-	return b.Complete(&Reconciler{
-		Client:         mgr.GetClient(),
-		Namespace:      namespace,
-		MemberClusters: memberClusters,
-	})
+	return b.Complete(r)
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spaces,verbs=get;list;watch;create;update;patch;delete
