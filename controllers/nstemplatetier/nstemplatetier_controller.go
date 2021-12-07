@@ -51,6 +51,7 @@ type Reconciler struct {
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spaces,verbs=get;list
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/finalizers,verbs=update
 
@@ -149,7 +150,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 		// and for which there is no TemplateUpdateRequest yet
 
 		// fetch by subsets of "MaxPoolSize + 1" size until a candidate is found
-		matchingLabels, err := outdatedSelector(tier)
+		matchingLabels, err := outdatedTierSelector(tier)
 		if err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
@@ -164,7 +165,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchingLabels)
 
 		spaces := toolchainv1alpha1.SpaceList{}
-		if err = r.Client.List(context.Background(), &murs,
+		if err = r.Client.List(context.Background(), &spaces,
 			client.InNamespace(tier.Namespace),
 			client.Limit(config.Tiers().TemplateUpdateRequestMaxPoolSize()+1),
 			matchingLabels,
@@ -223,7 +224,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 				logger.Info("Space already has an associated TemplateUpdateRequest", "name", space.Name)
 				continue
 			} else if !errors.IsNotFound(err) {
-				return false, errs.Wrapf(err, "unable to get TemplateUpdateRequest for MasterUserRecord '%s'", space.Name)
+				return false, errs.Wrapf(err, "unable to get TemplateUpdateRequest for Space '%s'", space.Name)
 			}
 			logger.Info("creating a TemplateUpdateRequest to update the Space", "name", space.Name, "tier", tier.Name)
 			hashLabel := TemplateTierHashLabelKey(tier.Name)
