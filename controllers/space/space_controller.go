@@ -120,7 +120,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return false, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
 	}
 	name := space.Name // NSTemplateSet will have the same name as the Space
-	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster, "name", name)
+	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster)
 	// create if not found
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
 	if err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
