@@ -209,13 +209,17 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 //   or if there is no target cluster specified in the given space, or if the target cluster is unknown.
 // Returns `false/error` if an error occurred
 func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
-	if space.Spec.TargetCluster == "" {
+	targetCluster := space.Spec.TargetCluster
+	if targetCluster == "" {
+		targetCluster = space.Status.TargetCluster
+	}
+	if targetCluster == "" {
 		logger.Info("cannot delete NSTemplateSet: no target cluster specified")
 		return false, nil // skip NSTemplateSet deletion
 	}
-	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
+	memberCluster, found := r.MemberClusters[targetCluster]
 	if !found {
-		logger.WithValues("target_cluster", space.Spec.TargetCluster).Info("Cannot delete NSTemplateSet: unknown target member cluster")
+		logger.WithValues("target_cluster", targetCluster).Info("Cannot delete NSTemplateSet: unknown target member cluster")
 		return false, nil // skip NSTemplateSet deletion
 	}
 	// Get the NSTemplateSet associated with the Space
