@@ -92,7 +92,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		logger.Error(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed")
 		return reconcile.Result{}, errs.Wrap(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed")
 	} else if done {
-		logger.Info("All MasterUserRecords are up to date. Setting the completion timestamp")
+		logger.Info("All MasterUserRecords and Spaces are up to date. Setting the completion timestamp")
 		if err := r.markUpdateRecordAsCompleted(tier); err != nil {
 			logger.Error(err, "unable to mark latest status.update as complete")
 			return reconcile.Result{}, errs.Wrap(err, "unable to mark latest status.update as complete")
@@ -237,7 +237,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 					},
 				},
 				Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
-					CurrentHash: space.Labels[hashLabel],
+					CurrentTierHash: space.Labels[hashLabel],
 				},
 			}
 			if err = controllerutil.SetControllerReference(tier, tur, r.Scheme); err != nil {

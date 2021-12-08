@@ -129,6 +129,30 @@ func (a *SingleTemplateUpdateRequestAssertion) HasOwnerReference() *SingleTempla
 	return a
 }
 
+// HasMasterUserRecordFieldsSetForTier verifies that the TemplateUpdateRequest has the expected fields when created for a MasterUserRecord
+func (a *SingleTemplateUpdateRequestAssertion) HasMasterUserRecordFieldsSetForTier(tier *toolchainv1alpha1.NSTemplateTier) *SingleTemplateUpdateRequestAssertion {
+	// TODO: this test should be removed once migration from MUR -> Spaces is completed.
+
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.NotEmpty(a.t, a.templateUpdateRequest.Spec.TierName)
+	assert.NotEmpty(a.t, a.templateUpdateRequest.Spec.Namespaces)
+	assert.NotEmpty(a.t, a.templateUpdateRequest.Spec.ClusterResources)
+	assert.Empty(a.t, a.templateUpdateRequest.Spec.CurrentTierHash)
+	return a
+}
+
+// HasSpaceFieldsSetForTier verifies that the TemplateUpdateRequest has the expected fields when created for a Space
+func (a *SingleTemplateUpdateRequestAssertion) HasSpaceFieldsSetForTier(tier *toolchainv1alpha1.NSTemplateTier) *SingleTemplateUpdateRequestAssertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Empty(a.t, a.templateUpdateRequest.Spec.TierName)
+	assert.Empty(a.t, a.templateUpdateRequest.Spec.Namespaces)
+	assert.Empty(a.t, a.templateUpdateRequest.Spec.ClusterResources)
+	assert.NotEmpty(a.t, a.templateUpdateRequest.Spec.CurrentTierHash)
+	return a
+}
+
 // ------------------------------------------------------------------------------------
 
 // MultipleTemplateUpdateRequestsAssertion an assertion on a set of TemplateUpdateRequests
