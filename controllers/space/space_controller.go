@@ -141,12 +141,16 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 	logger.Info("NSTemplateSet already exists")
 
-	readyCond, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
-	if !found || readyCond.Status != corev1.ConditionTrue {
-		logger.Info("NSTemplateSet is not ready", "ready-condition", readyCond)
-		return nil // here we need to explicitly requeue since the controller doesn't watch the NSTemplateSetStatus
+	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	// if Space's `ready` condition is already set to `false`, then don't update if no message is provided by the NSTemplateSet (so we don't override the current message if there's any)
+	// also, don't update when NSTemplateSet ready condition is in an invalid state
+	if (condition.IsFalse(space.Status.Conditions, toolchainv1alpha1.ConditionReady) && nsTmplSetReady.Status == corev1.ConditionFalse && nsTmplSetReady.Message == "") ||
+		!found || nsTmplSetReady.Status == corev1.ConditionUnknown {
+		logger.Info("Either Space's ready condition is already set to false and no message was provided by NSTemplateSet, or NSTemplateSet is an invalid state", "nstemplateset-ready-condition", nsTmplSetReady)
+		return nil
 	}
-	return r.setStatusReady(space)
+
+	return r.updateStatus(space, nsTmplSetReady) // replicates the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
 }
 
 func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv1alpha1.Space) (*toolchainv1alpha1.NSTemplateSet, error) {
@@ -281,16 +285,6 @@ func (r *Reconciler) setStatusProvisioningFailed(logger logr.Logger, space *tool
 		return err
 	}
 	return cause
-}
-
-func (r *Reconciler) setStatusReady(space *toolchainv1alpha1.Space) error {
-	return r.updateStatus(
-		space,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.ConditionReady,
-			Status: corev1.ConditionTrue,
-			Reason: toolchainv1alpha1.SpaceProvisionedReason,
-		})
 }
 
 func (r *Reconciler) setStatusTerminating(space *toolchainv1alpha1.Space) error {

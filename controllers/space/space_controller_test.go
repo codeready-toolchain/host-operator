@@ -105,6 +105,7 @@ func TestReconciler(t *testing.T) {
 						{
 							Type:   toolchainv1alpha1.ConditionReady,
 							Status: corev1.ConditionTrue,
+							Reason: toolchainv1alpha1.NSTemplateSetProvisionedReason,
 						},
 					}
 					err := member1.Client.Update(context.TODO(), nsTmplSet)
