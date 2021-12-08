@@ -9,6 +9,9 @@ import (
 // ResourceName is the name used for the registration service resource
 const ResourceName = "registration-service"
 
+// ProxyRouteName is the name used for the Proxy route resource
+const ProxyRouteName = "api"
+
 func GetDeploymentTemplate() (*v1.Template, error) {
 	deployment, err := Asset("registration-service.yaml")
 	if err != nil {

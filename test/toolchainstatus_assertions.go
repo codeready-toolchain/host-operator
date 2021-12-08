@@ -120,6 +120,14 @@ func (a *ToolchainStatusAssertion) HasRegistrationServiceStatus(expected toolcha
 	return a
 }
 
+func (a *ToolchainStatusAssertion) HasHostRoutesStatus(proxyURL string, expCondition toolchainv1alpha1.Condition) *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+	require.Equal(a.t, proxyURL, a.toolchainStatus.Status.HostRoutes.ProxyURL)
+	test.AssertConditionsMatch(a.t, a.toolchainStatus.Status.HostRoutes.Conditions, expCondition)
+	return a
+}
+
 func (a *ToolchainStatusAssertion) ReadyConditionLastTransitionTimeEqual(expected metav1.Time) *ToolchainStatusAssertion {
 	return a.readyConditionLastTransitionTimeEqual(expected, true)
 }
