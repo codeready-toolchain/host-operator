@@ -68,11 +68,7 @@ func TestReconciler(t *testing.T) {
 			t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
 				// given another round of requeue without while NSTemplateSet is *not ready*
 				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-					{
-						Type:   toolchainv1alpha1.ConditionReady,
-						Status: corev1.ConditionFalse,
-						Reason: toolchainv1alpha1.NSTemplateSetProvisioningReason,
-					},
+					nstemplatetsettest.Provisioning(),
 				}
 				err := member1.Client.Update(context.TODO(), nsTmplSet)
 				require.NoError(t, err)
@@ -93,11 +89,7 @@ func TestReconciler(t *testing.T) {
 				t.Run("done when NSTemplateSet is ready", func(t *testing.T) {
 					// given another round of requeue without with NSTemplateSet now *ready*
 					nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-						{
-							Type:   toolchainv1alpha1.ConditionReady,
-							Status: corev1.ConditionTrue,
-							Reason: toolchainv1alpha1.NSTemplateSetProvisionedReason,
-						},
+						nstemplatetsettest.Provisioned(),
 					}
 					err := member1.Client.Update(context.TODO(), nsTmplSet)
 					require.NoError(t, err)
@@ -381,11 +373,7 @@ func TestReconciler(t *testing.T) {
 					t.Run("requeue while NSTemplateSet is terminating", func(t *testing.T) {
 						// given another round of requeue without while NSTemplateSet is *not ready*
 						nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-							{
-								Type:   toolchainv1alpha1.ConditionReady,
-								Status: corev1.ConditionFalse,
-								Reason: toolchainv1alpha1.NSTemplateSetTerminatingReason,
-							},
+							nstemplatetsettest.Terminating(),
 						}
 						err := member1.Client.Update(context.TODO(), nsTmplSet)
 						require.NoError(t, err)
@@ -508,12 +496,7 @@ func TestReconciler(t *testing.T) {
 						spacetest.WithoutTargetCluster(),
 						spacetest.WithFinalizer(),
 						spacetest.WithDeletionTimestamp(),
-						spacetest.WithCondition(toolchainv1alpha1.Condition{
-							Type:    toolchainv1alpha1.ConditionReady,
-							Status:  corev1.ConditionFalse,
-							Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
-							Message: "missing target member cluster",
-						}),
+						spacetest.WithCondition(spacetest.ProvisioningFailed("missing target member cluster")),
 					)
 					hostClient := test.NewFakeClient(t, s, basicTier)
 					member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
@@ -538,12 +521,7 @@ func TestReconciler(t *testing.T) {
 						spacetest.WithTargetCluster("unknown"),
 						spacetest.WithFinalizer(),
 						spacetest.WithDeletionTimestamp(),
-						spacetest.WithCondition(toolchainv1alpha1.Condition{
-							Type:    toolchainv1alpha1.ConditionReady,
-							Status:  corev1.ConditionFalse,
-							Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
-							Message: "unknown target member cluster 'unknown'",
-						}),
+						spacetest.WithCondition(spacetest.ProvisioningFailed("unknown target member cluster 'unknown'")),
 					)
 					hostClient := test.NewFakeClient(t, s, basicTier)
 					member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
