@@ -520,7 +520,7 @@ func TestDeleteSpace(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue neede
+				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue needed
 				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 					Exists().
 					HasNoStatusTargetCluster().
@@ -544,12 +544,12 @@ func TestDeleteSpace(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 				// then
-				require.NoError(t, err)
-				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue neede
+				require.EqualError(t, err, "Cannot delete NSTemplateSet: unknown target member cluster: 'unknown'")
+				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue needed
 				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 					Exists().
-					HasNoStatusTargetCluster().
-					HasNoFinalizers() // will allow for deletion of the Space CR
+					HasStatusTargetCluster("unknown").
+					HasFinalizer(toolchainv1alpha1.FinalizerName) // finalizer is still there, until the error above is fixed
 			})
 		})
 
