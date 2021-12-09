@@ -84,9 +84,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	} else {
 		return reconcile.Result{}, r.ensureSpaceDeletion(logger, space)
 	}
-	// ensure that there's a NSTemplateSet on the Target Cluster
-	// will trigger a requeue until the NSTemplateSet exists and is ready,
-	// so the Space can be in `ready` status as well
 
 	return ctrl.Result{}, r.ensureNSTemplateSet(logger, space)
 }
