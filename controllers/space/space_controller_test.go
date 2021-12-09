@@ -186,7 +186,6 @@ func TestReconciler(t *testing.T) {
 				space := spacetest.NewSpace("oddity", basicTier.Name)
 				hostClient := test.NewFakeClient(t, space)
 				hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-					fmt.Printf("updating object of type %T\n", obj)
 					if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 						return fmt.Errorf("mock error!")
 					}
