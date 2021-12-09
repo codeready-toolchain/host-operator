@@ -50,12 +50,7 @@ func TestReconciler(t *testing.T) {
 			ctrl := newReconciler(hostClient, member1, member2)
 
 			// when
-			res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: space.Namespace,
-					Name:      space.Name,
-				},
-			})
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 			// then
 			require.NoError(t, err)
@@ -83,12 +78,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.NoError(t, err)
@@ -113,12 +103,7 @@ func TestReconciler(t *testing.T) {
 					ctrl := newReconciler(hostClient, member1, member2)
 
 					// when
-					res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Namespace: space.Namespace,
-							Name:      space.Name,
-						},
-					})
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 					// then
 					require.NoError(t, err)
@@ -142,12 +127,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: test.HostOperatorNs,
-						Name:      "unknown",
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(nil))
 
 				// then
 				require.NoError(t, err) // not an error, space simply doesn't exist :shrug:
@@ -169,12 +149,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: test.HostOperatorNs,
-						Name:      "unknown",
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.EqualError(t, err, "unable to get the current Space: mock error!")
@@ -196,12 +171,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.EqualError(t, err, "mock error!")
@@ -217,12 +187,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.EqualError(t, err, "unspecified target member cluster")
@@ -246,12 +211,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.EqualError(t, err, "unknown target member cluster 'unknown'")
@@ -283,12 +243,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.EqualError(t, err, "mock error!")
@@ -321,12 +276,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.EqualError(t, err, "mock error!")
@@ -359,12 +309,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.EqualError(t, err, "mock error!")
@@ -396,12 +341,7 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.EqualError(t, err, "mock error!")
@@ -446,12 +386,7 @@ func TestReconciler(t *testing.T) {
 					ctrl := newReconciler(hostClient, member1, member2)
 
 					// when
-					res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Namespace: space.Namespace,
-							Name:      space.Name,
-						},
-					})
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 					// then
 					require.NoError(t, err)
@@ -481,12 +416,7 @@ func TestReconciler(t *testing.T) {
 						ctrl := newReconciler(hostClient, member1, member2)
 
 						// when
-						res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-							NamespacedName: types.NamespacedName{
-								Namespace: space.Namespace,
-								Name:      space.Name,
-							},
-						})
+						res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 						// then
 						require.NoError(t, err)
@@ -510,22 +440,89 @@ func TestReconciler(t *testing.T) {
 							require.NoError(t, err)
 							ctrl := newReconciler(hostClient, member1, member2)
 							// when
-							res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-								NamespacedName: types.NamespacedName{
-									Namespace: space.Namespace,
-									Name:      space.Name,
-								},
-							})
+							res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 							// then
 							require.NoError(t, err)
 							assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
-							spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+							spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 								Exists().
 								HasStatusTargetCluster("member-1").
 								HasConditions(spacetest.Terminating()).
 								HasNoFinalizers() // space resource can be deleted by the server now that the finalizer has been removed
 						})
 					})
+				})
+
+				t.Run("when using status target cluster", func(t *testing.T) {
+					// given
+					space := spacetest.NewSpace("oddity", basicTier.Name,
+						spacetest.WithoutTargetCluster(),              // targetCluster is not specified in spec ...
+						spacetest.WithStatusTargetCluster("member-1"), // ... but is available in status
+						spacetest.WithFinalizer(),
+						spacetest.WithDeletionTimestamp())
+					hostClient := test.NewFakeClient(t, space, basicTier)
+					nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
+					member1Client := test.NewFakeClient(t, nstmplSet)
+					member1Client.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+						if nstmplSet, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
+							now := metav1.NewTime(time.Now())
+							nstmplSet.DeletionTimestamp = &now
+							nstmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+								nstemplatetsettest.Terminating(),
+							}
+							// instead of deleting the resource in the FakeClient,
+							// we update it with a `DeletionTimestamp`
+							return member1Client.Client.Update(ctx, obj)
+						}
+						return member1Client.Client.Delete(ctx, obj, opts...)
+					}
+					member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+					member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+					ctrl := newReconciler(hostClient, member1, member2)
+
+					// when
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
+
+					// then
+					require.NoError(t, err)
+					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
+					spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
+						Exists().
+						HasStatusTargetCluster("member-1").
+						HasConditions(spacetest.Terminating()).
+						HasFinalizer(toolchainv1alpha1.FinalizerName) // finalizer is still present while the NSTemplateSet is not fully deleted
+					nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+						Exists().
+						HasDeletionTimestamp().
+						HasConditions(nstemplatetsettest.Terminating()).
+						Get()
+					// stop the test here: it verified that the NSTemlateSet deletion was triggered (the rest is already covered above)
+				})
+
+				t.Run("no target cluster", func(t *testing.T) {
+					// given
+					space := spacetest.NewSpace("oddity", basicTier.Name,
+						spacetest.WithFinalizer(),
+						spacetest.WithDeletionTimestamp())
+					hostClient := test.NewFakeClient(t, space, basicTier)
+					ctrl := newReconciler(hostClient)
+
+					// when
+					_, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Namespace: space.Namespace,
+							Name:      space.Name,
+						},
+					})
+
+					// then
+					require.NoError(t, err)
+					spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
+						Exists().
+						HasNoStatusTargetCluster().
+						HasNoConditions(). // no need to set any `terminating` condition since the resource can be immediately deleted
+						HasNoFinalizers()  // finalizer was directly removed since there was no NSTemplateSet to delete (since no target member cluster where to look it up)
+
 				})
 			})
 
@@ -550,17 +547,12 @@ func TestReconciler(t *testing.T) {
 					ctrl := newReconciler(hostClient, member1, member2)
 
 					// when
-					res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Namespace: space.Namespace,
-							Name:      space.Name,
-						},
-					})
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 					// then
 					require.NoError(t, err)
 					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue neede
-					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+					spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 						Exists().
 						HasNoStatusTargetCluster().
 						HasNoFinalizers() // will allow for deletion of the Space CR
@@ -585,17 +577,12 @@ func TestReconciler(t *testing.T) {
 					ctrl := newReconciler(hostClient, member1, member2)
 
 					// when
-					res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Namespace: space.Namespace,
-							Name:      space.Name,
-						},
-					})
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 					// then
 					require.NoError(t, err)
 					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue neede
-					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+					spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 						Exists().
 						HasNoStatusTargetCluster().
 						HasNoFinalizers() // will allow for deletion of the Space CR
@@ -625,17 +612,12 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.EqualError(t, err, "mock error!")
 				assert.False(t, res.Requeue)
-				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.TerminatingFailed("mock error!")).
@@ -662,17 +644,12 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.EqualError(t, err, "mock error!")
 				assert.Equal(t, reconcile.Result{Requeue: false}, res)
-				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.TerminatingFailed("mock error!")).
@@ -699,17 +676,12 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.EqualError(t, err, "mock error!")
 				assert.Equal(t, reconcile.Result{Requeue: false}, res)
-				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 					Exists().
 					HasNoConditions(). // no condition set after deleting the NSTemplateSet (note: this test does not cover conditions set while provisioning the Space)
 					HasFinalizer(toolchainv1alpha1.FinalizerName)
@@ -729,17 +701,12 @@ func TestReconciler(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: space.Namespace,
-						Name:      space.Name,
-					},
-				})
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
 				require.NoError(t, err)
 				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
-				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.Terminating()).
@@ -755,17 +722,12 @@ func TestReconciler(t *testing.T) {
 					}
 					ctrl := newReconciler(hostClient, member1, member2)
 					// when
-					res, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Namespace: space.Namespace,
-							Name:      space.Name,
-						},
-					})
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 					// then
 					require.EqualError(t, err, "mock error!")
 					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
-					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+					spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 						Exists().
 						HasStatusTargetCluster("member-1").
 						HasConditions(spacetest.TerminatingFailed("mock error!"))
@@ -791,5 +753,22 @@ func newReconciler(hostCl client.Client, memberClusters ...*commoncluster.Cached
 		Client:         hostCl,
 		Namespace:      test.HostOperatorNs,
 		MemberClusters: clusters,
+	}
+}
+
+func requestFor(space *toolchainv1alpha1.Space) reconcile.Request {
+	if space != nil {
+		return reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: space.Namespace,
+				Name:      space.Name,
+			},
+		}
+	}
+	return reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: test.HostOperatorNs,
+			Name:      "unknown",
+		},
 	}
 }
