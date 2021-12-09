@@ -62,6 +62,8 @@ func TestReconciler(t *testing.T) {
 				HasFinalizer(toolchainv1alpha1.FinalizerName)
 			nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				Exists().
+				HasClusterResourcesTemplateRef("basic-clusterresources-123456new").
+				HasNamespaceTemplateRefs("basic-code-123456new", "basic-dev-123456new", "basic-stage-123456new").
 				Get()
 			t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
 				// given another round of requeue without while NSTemplateSet is *not ready*
