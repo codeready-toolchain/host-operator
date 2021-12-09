@@ -195,12 +195,7 @@ func TestReconciler(t *testing.T) {
 				assert.False(t, res.Requeue)
 				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 					HasNoStatusTargetCluster().
-					HasConditions(toolchainv1alpha1.Condition{
-						Type:    toolchainv1alpha1.ConditionReady,
-						Status:  corev1.ConditionFalse,
-						Reason:  toolchainv1alpha1.SpaceProvisioningPendingReason,
-						Message: "unspecified target member cluster",
-					})
+					HasConditions(spacetest.ProvisioningPending("unspecified target member cluster"))
 			})
 
 			t.Run("unknown target member cluster", func(t *testing.T) {
@@ -219,12 +214,7 @@ func TestReconciler(t *testing.T) {
 				assert.False(t, res.Requeue)
 				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 					HasStatusTargetCluster("unknown").
-					HasConditions(toolchainv1alpha1.Condition{
-						Type:    toolchainv1alpha1.ConditionReady,
-						Status:  corev1.ConditionFalse,
-						Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
-						Message: "unknown target member cluster 'unknown'",
-					})
+					HasConditions(spacetest.ProvisioningFailed("unknown target member cluster 'unknown'"))
 			})
 
 			t.Run("error while getting NSTemplateTier on host cluster", func(t *testing.T) {

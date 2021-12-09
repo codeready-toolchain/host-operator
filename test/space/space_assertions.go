@@ -92,6 +92,33 @@ func Provisioning() toolchainv1alpha1.Condition {
 	}
 }
 
+func ProvisioningPending(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.SpaceProvisioningPendingReason,
+		Message: msg,
+	}
+}
+
+func ProvisioningFailed(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
+		Message: msg,
+	}
+}
+
+func UnableToCreateNSTemplateSet(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.SpaceUnableToCreateNSTemplateSetReason,
+		Message: msg,
+	}
+}
+
 func Ready() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
