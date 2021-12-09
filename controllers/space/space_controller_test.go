@@ -491,7 +491,7 @@ func TestReconciler(t *testing.T) {
 
 						// then
 						require.NoError(t, err)
-						assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
+						assert.False(t, res.Requeue)
 						// no changes
 						nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 							Exists().
