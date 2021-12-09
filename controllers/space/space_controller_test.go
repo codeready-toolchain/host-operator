@@ -414,7 +414,6 @@ func TestReconciler(t *testing.T) {
 						}
 						err := member1.Client.Update(context.TODO(), nsTmplSet)
 						require.NoError(t, err)
-						ctrl := newReconciler(hostClient, member1, member2)
 
 						// when
 						res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
@@ -439,7 +438,6 @@ func TestReconciler(t *testing.T) {
 							member1Client.MockDelete = nil
 							err := member1.Client.Delete(context.TODO(), nsTmplSet)
 							require.NoError(t, err)
-							ctrl := newReconciler(hostClient, member1, member2)
 							// when
 							res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 							// then
@@ -721,7 +719,6 @@ func TestReconciler(t *testing.T) {
 						}
 						return hostClient.Client.Update(ctx, obj, opts...)
 					}
-					ctrl := newReconciler(hostClient, member1, member2)
 					// when
 					res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
