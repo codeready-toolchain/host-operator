@@ -141,7 +141,7 @@ func TestReconciler(t *testing.T) {
 				hostClient := test.NewFakeClient(t, space)
 				hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.Space); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return hostClient.Client.Get(ctx, key, obj)
 				}
@@ -153,7 +153,7 @@ func TestReconciler(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
-				require.EqualError(t, err, "unable to get the current Space: mock error!")
+				require.EqualError(t, err, "unable to get the current Space: mock error")
 				assert.False(t, res.Requeue)
 			})
 
@@ -163,7 +163,7 @@ func TestReconciler(t *testing.T) {
 				hostClient := test.NewFakeClient(t, space)
 				hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.Space); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return hostClient.Client.Update(ctx, obj, opts...)
 				}
@@ -175,7 +175,7 @@ func TestReconciler(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
-				require.EqualError(t, err, "mock error!")
+				require.EqualError(t, err, "mock error")
 				assert.False(t, res.Requeue)
 			})
 
@@ -235,7 +235,7 @@ func TestReconciler(t *testing.T) {
 				hostClient := test.NewFakeClient(t, space)
 				hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return hostClient.Client.Get(ctx, key, obj)
 				}
@@ -247,16 +247,11 @@ func TestReconciler(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
-				require.EqualError(t, err, "mock error!")
+				require.EqualError(t, err, "mock error")
 				assert.False(t, res.Requeue)
 				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 					HasStatusTargetCluster("member-1").
-					HasConditions(toolchainv1alpha1.Condition{
-						Type:    toolchainv1alpha1.ConditionReady,
-						Status:  corev1.ConditionFalse,
-						Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
-						Message: "mock error!",
-					})
+					HasConditions(spacetest.ProvisioningFailed("mock error"))
 			})
 
 			t.Run("error while getting NSTemplateSet on member cluster", func(t *testing.T) {
@@ -268,7 +263,7 @@ func TestReconciler(t *testing.T) {
 				member1Client := test.NewFakeClient(t)
 				member1Client.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return member1Client.Client.Get(ctx, key, obj)
 				}
@@ -280,16 +275,11 @@ func TestReconciler(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
-				require.EqualError(t, err, "mock error!")
+				require.EqualError(t, err, "mock error")
 				assert.False(t, res.Requeue)
 				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 					HasStatusTargetCluster("member-1").
-					HasConditions(toolchainv1alpha1.Condition{
-						Type:    toolchainv1alpha1.ConditionReady,
-						Status:  corev1.ConditionFalse,
-						Reason:  toolchainv1alpha1.SpaceUnableToCreateNSTemplateSetReason,
-						Message: "mock error!",
-					})
+					HasConditions(spacetest.UnableToCreateNSTemplateSet("mock error"))
 			})
 
 			t.Run("error while creating NSTemplateSet on member cluster", func(t *testing.T) {
@@ -301,7 +291,7 @@ func TestReconciler(t *testing.T) {
 				member1Client := test.NewFakeClient(t)
 				member1Client.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return member1Client.Client.Create(ctx, obj, opts...)
 				}
@@ -313,16 +303,11 @@ func TestReconciler(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
-				require.EqualError(t, err, "mock error!")
+				require.EqualError(t, err, "mock error")
 				assert.Equal(t, reconcile.Result{Requeue: false}, res)
 				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 					HasStatusTargetCluster("member-1").
-					HasConditions(toolchainv1alpha1.Condition{
-						Type:    toolchainv1alpha1.ConditionReady,
-						Status:  corev1.ConditionFalse,
-						Reason:  toolchainv1alpha1.SpaceUnableToCreateNSTemplateSetReason,
-						Message: "mock error!",
-					})
+					HasConditions(spacetest.UnableToCreateNSTemplateSet("mock error"))
 			})
 
 			t.Run("error while updating status after creating NSTemplateSet", func(t *testing.T) {
@@ -333,7 +318,7 @@ func TestReconciler(t *testing.T) {
 				hostClient := test.NewFakeClient(t, space, basicTier)
 				hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.Space); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return hostClient.Client.Status().Update(ctx, obj, opts...)
 				}
@@ -345,7 +330,7 @@ func TestReconciler(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
-				require.EqualError(t, err, "mock error!")
+				require.EqualError(t, err, "mock error")
 				assert.Equal(t, reconcile.Result{Requeue: false}, res)
 				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 					HasStatusTargetCluster(""). // not set
@@ -602,7 +587,7 @@ func TestReconciler(t *testing.T) {
 				member1Client := test.NewFakeClient(t)
 				member1Client.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return member1Client.Client.Get(ctx, key, obj)
 				}
@@ -614,12 +599,12 @@ func TestReconciler(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
-				require.EqualError(t, err, "mock error!")
+				require.EqualError(t, err, "mock error")
 				assert.False(t, res.Requeue)
 				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
-					HasConditions(spacetest.TerminatingFailed("mock error!")).
+					HasConditions(spacetest.TerminatingFailed("mock error")).
 					HasFinalizer(toolchainv1alpha1.FinalizerName)
 			})
 
@@ -634,7 +619,7 @@ func TestReconciler(t *testing.T) {
 				member1Client := test.NewFakeClient(t, nstmplSet)
 				member1Client.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return member1Client.Client.Delete(ctx, obj, opts...)
 				}
@@ -646,12 +631,12 @@ func TestReconciler(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
-				require.EqualError(t, err, "mock error!")
+				require.EqualError(t, err, "mock error")
 				assert.Equal(t, reconcile.Result{Requeue: false}, res)
 				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
-					HasConditions(spacetest.TerminatingFailed("mock error!")).
+					HasConditions(spacetest.TerminatingFailed("mock error")).
 					HasFinalizer(toolchainv1alpha1.FinalizerName)
 			})
 
@@ -664,7 +649,7 @@ func TestReconciler(t *testing.T) {
 				hostClient := test.NewFakeClient(t, space, basicTier)
 				hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.Space); ok {
-						return fmt.Errorf("mock error!")
+						return fmt.Errorf("mock error")
 					}
 					return hostClient.Client.Status().Update(ctx, obj, opts...)
 				}
@@ -678,7 +663,7 @@ func TestReconciler(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 				// then
-				require.EqualError(t, err, "mock error!")
+				require.EqualError(t, err, "mock error")
 				assert.Equal(t, reconcile.Result{Requeue: false}, res)
 				spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 					Exists().
@@ -715,7 +700,7 @@ func TestReconciler(t *testing.T) {
 					// given
 					hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 						if _, ok := obj.(*toolchainv1alpha1.Space); ok {
-							return fmt.Errorf("mock error!")
+							return fmt.Errorf("mock error")
 						}
 						return hostClient.Client.Update(ctx, obj, opts...)
 					}
@@ -723,12 +708,12 @@ func TestReconciler(t *testing.T) {
 					res, err := ctrl.Reconcile(context.TODO(), requestFor(space))
 
 					// then
-					require.EqualError(t, err, "mock error!")
+					require.EqualError(t, err, "mock error")
 					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
 					spacetest.AssertThatSpace(t, space.Namespace, space.Name, hostClient).
 						Exists().
 						HasStatusTargetCluster("member-1").
-						HasConditions(spacetest.TerminatingFailed("mock error!"))
+						HasConditions(spacetest.TerminatingFailed("mock error"))
 					// finalizer should be removed, but FakeClient performs a full update of the resource, so we can't verify that:
 					// see https://github.com/kubernetes-sigs/controller-runtime/blob/v0.8.3/pkg/client/fake/client.go#L522-L526
 
