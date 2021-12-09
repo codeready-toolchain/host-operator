@@ -233,7 +233,7 @@ func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 	if util.IsBeingDeleted(nstmplSet) {
 		logger.Info("the NSTemplateSet resource is already being deleted")
-		return true, nil // requeue until fully deleted
+		return true, nil
 	}
 	logger.Info("deleting the NSTemplateSet resource")
 	// Delete NSTemplateSet associated with Space
