@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	"github.com/stretchr/testify/require"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,34 +25,28 @@ func WithTargetCluster(targetCluster string) SpaceModifier {
 	}
 }
 
-func WithTierNameAndHashLabelFor(t *testing.T, tier toolchainv1alpha1.NSTemplateTier) SpaceModifier {
+func WithTierNameAndHashLabelFor(t *testing.T, tier *toolchainv1alpha1.NSTemplateTier) SpaceModifier {
 	return func(space *toolchainv1alpha1.Space) {
-		hash, err := computeTemplateRefsHash(tier) // we can assume the JSON marshalling will always work
+		hash, err := util.ComputeHashForNSTemplateTier(tier) // we can assume the JSON marshalling will always work
 		require.NoError(t, err)
 		space.Spec.TierName = tier.Name
 		space.ObjectMeta.Labels = map[string]string{
-			templateTierHashLabelKey(tier.Name): hash,
+			util.TemplateTierHashLabelKey(tier.Name): hash,
 		}
 	}
 }
 
-// func WithHashLabelForTier(tier string) SpaceModifier {
-// 	return func(space *toolchainv1alpha1.Space) {
-// 		space.Labels[key] = value
-// 	}
-// }
-
 type SpaceModifier func(*toolchainv1alpha1.Space)
 
 func NewSpace(t *testing.T, name string, modifiers ...SpaceModifier) *toolchainv1alpha1.Space {
-	hash, err := computeTemplateRefsHash(murtest.DefaultNSTemplateTier()) // we can assume the JSON marshalling will always work
+	hash, err := util.ComputeHashForNSTemplateTier(DefaultNSTemplateTier()) // we can assume the JSON marshalling will always work
 	require.NoError(t, err)
 	space := &toolchainv1alpha1.Space{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
-				templateTierHashLabelKey(DefaultNSTemplateTierName): hash,
+				util.TemplateTierHashLabelKey(DefaultNSTemplateTierName): hash,
 			},
 		},
 		Spec: toolchainv1alpha1.SpaceSpec{
@@ -99,8 +93,28 @@ func computeTemplateRefsHash(tier toolchainv1alpha1.NSTemplateTier) (string, err
 	return hash, nil
 }
 
-// TODO move to toolchain-common
-// templateTierHashLabel returns the label key to specify the version of the templates of the given tier
-func templateTierHashLabelKey(tierName string) string {
-	return toolchainv1alpha1.LabelKeyPrefix + tierName + "-tier-hash"
+// DefaultNSTemplateTier the default NSTemplateTier used to initialize the MasterUserRecord
+func DefaultNSTemplateTier() *toolchainv1alpha1.NSTemplateTier {
+	return &toolchainv1alpha1.NSTemplateTier{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: test.HostOperatorNs,
+			Name:      DefaultNSTemplateTierName,
+		},
+		Spec: toolchainv1alpha1.NSTemplateTierSpec{
+			Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
+				{
+					TemplateRef: "basic-dev-123abc",
+				},
+				{
+					TemplateRef: "basic-code-123abc",
+				},
+				{
+					TemplateRef: "basic-stage-123abc",
+				},
+			},
+			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+				TemplateRef: "basic-clusterresources-654321a",
+			},
+		},
+	}
 }

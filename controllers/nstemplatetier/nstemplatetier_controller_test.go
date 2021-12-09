@@ -129,7 +129,7 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -167,7 +167,7 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "other-%d", *basicTier, turtest.TierName("other"))...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -207,7 +207,7 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.DeletionTimestamp("user-0"))...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -228,7 +228,7 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 5, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 5, "spaceuser-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 5, "spaceuser-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 				// mark user-0 for deletion so that the next TemplateUpdateRequest can be created, all MasterUserRecords should have a TemplateUpdateRequest
 				// so the next should be for a Space
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.DeletionTimestamp("user-0"))...)
@@ -274,8 +274,8 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "new-user-%d", spacetest.WithTierNameAndHashLabelFor(t, *basicTier))...)
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "old-user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "new-user-%d", spacetest.WithTierNameAndHashLabelFor(t, basicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "old-user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -354,7 +354,7 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				otherTier := tiertest.OtherTier()
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *otherTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, otherTier))...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -409,7 +409,7 @@ func TestReconcile(t *testing.T) {
 				// given
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 20, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *basicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 20, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, basicTier))...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -464,7 +464,7 @@ func TestReconcile(t *testing.T) {
 				// given
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 20, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *basicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 20, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, basicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier)...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -520,7 +520,7 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier)...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -576,7 +576,7 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"))...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -629,7 +629,7 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -683,7 +683,7 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"), turtest.Complete("user-1"))...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
@@ -745,7 +745,7 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"), turtest.Failed("user-0"))...) // "user-0" failed twice
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -842,8 +842,8 @@ func TestReconcile(t *testing.T) {
 			previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			initObjs := []runtime.Object{basicTier}
-			initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "new-user-%d", spacetest.WithTierNameAndHashLabelFor(t, *basicTier))...)
-			initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "old-user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+			initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "new-user-%d", spacetest.WithTierNameAndHashLabelFor(t, basicTier))...)
+			initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "old-user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 
 			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 			cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
@@ -890,7 +890,7 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
@@ -938,7 +938,7 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
@@ -987,7 +987,7 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, *previousBasicTier))...)
+				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
 
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
@@ -1035,7 +1035,7 @@ func TestReconcile(t *testing.T) {
 					// given
 					basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 					initObjs := []runtime.Object{basicTier}
-					initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "new-user-%d", spacetest.WithTierNameAndHashLabelFor(t, *basicTier))...)
+					initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "new-user-%d", spacetest.WithTierNameAndHashLabelFor(t, basicTier))...)
 					r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 					cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 						if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {

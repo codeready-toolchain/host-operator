@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -105,7 +106,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // if needed and cleans-up the previous one if needed (ie, clears the `failedAccounts` array)
 // returns `true` if an entry was added, `err` if something wrong happened
 func (r *Reconciler) ensureStatusUpdateRecord(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
-	hash, err := ComputeHashForNSTemplateTier(tier)
+	hash, err := tierutil.ComputeHashForNSTemplateTier(tier)
 	if err != nil {
 		return false, errs.Wrapf(err, "unable to append an entry in the `status.updates` for NSTemplateTier '%s'", tier.Name)
 	}
@@ -227,7 +228,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 				return false, errs.Wrapf(err, "unable to get TemplateUpdateRequest for Space '%s'", space.Name)
 			}
 			logger.Info("creating a TemplateUpdateRequest to update the Space", "name", space.Name, "tier", tier.Name)
-			hashLabel := TemplateTierHashLabelKey(tier.Name)
+			hashLabel := tierutil.TemplateTierHashLabelKey(tier.Name)
 			tur := &toolchainv1alpha1.TemplateUpdateRequest{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: tier.Namespace,
