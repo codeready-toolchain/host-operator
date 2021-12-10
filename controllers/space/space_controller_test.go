@@ -339,7 +339,7 @@ func TestDeleteSpace(t *testing.T) {
 		t.Run("after space was successfully provisioned", func(t *testing.T) {
 
 			t.Run("when space is deleted", func(t *testing.T) {
-				// given
+				// given a space that is being deleted
 				s := spacetest.NewSpace("oddity", basicTier.Name,
 					spacetest.WithTargetCluster("member-1"),
 					spacetest.WithFinalizer(),
@@ -381,8 +381,8 @@ func TestDeleteSpace(t *testing.T) {
 					HasConditions(nstemplatetsettest.Terminating()).
 					Get()
 
-				t.Run("requeue while NSTemplateSet is terminating", func(t *testing.T) {
-					// given another round of requeue without while NSTemplateSet is *not ready*
+				t.Run("wait while NSTemplateSet is still terminating", func(t *testing.T) {
+					// given another reconcile loop while the NSTemplateSet is *terminating* (ie, user namespaces are being deleted)
 					nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 						nstemplatetsettest.Terminating(),
 					}
@@ -408,7 +408,7 @@ func TestDeleteSpace(t *testing.T) {
 						Get()
 
 					t.Run("done when NSTemplateSet is deleted", func(t *testing.T) {
-						// given another round of requeue without with NSTemplateSet now *fully deleted*
+						// given another reconcile loop with the NSTemplateSet now *fully deleted*
 						member1Client.MockDelete = nil
 						err := member1.Client.Delete(context.TODO(), nsTmplSet)
 						require.NoError(t, err)
