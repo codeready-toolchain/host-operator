@@ -525,6 +525,8 @@ func TestDeleteSpace(t *testing.T) {
 					Exists().
 					HasNoStatusTargetCluster().
 					HasNoFinalizers() // will allow for deletion of the Space CR
+				nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+					DoesNotExist()
 			})
 
 			t.Run("because of unknown target member cluster", func(t *testing.T) {
