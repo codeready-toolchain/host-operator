@@ -153,7 +153,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 		// and for which there is no TemplateUpdateRequest yet
 
 		// fetch by subsets of "MaxPoolSize + 1" size until a candidate is found
-		matchMurs, err := outdatedTierSelector(tier)
+		matchOutdated, err := outdatedTierSelector(tier)
 		if err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
@@ -161,38 +161,21 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 		if err = r.Client.List(context.TODO(), &murs,
 			client.InNamespace(tier.Namespace),
 			client.Limit(config.Tiers().TemplateUpdateRequestMaxPoolSize()+1),
-			matchMurs,
+			matchOutdated,
 		); err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
-		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchMurs)
+		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchOutdated)
 
-		matchSpaces, err := outdatedTierSelector(tier)
-		if err != nil {
-			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
-		}
 		spaces := toolchainv1alpha1.SpaceList{}
 		if err = r.Client.List(context.TODO(), &spaces,
 			client.InNamespace(tier.Namespace),
 			client.Limit(config.Tiers().TemplateUpdateRequestMaxPoolSize()+1),
-			matchSpaces,
+			matchOutdated,
 		); err != nil {
 			return false, errs.Wrap(err, "unable to get Spaces to update")
 		}
-		logger.Info("listed Spaces", "count", len(spaces.Items), "selector", matchSpaces)
-
-		allSpaces := toolchainv1alpha1.SpaceList{}
-		if err = r.Client.List(context.TODO(), &allSpaces,
-			client.InNamespace(tier.Namespace),
-		); err != nil {
-			return false, errs.Wrap(err, "unable to get all Spaces")
-		}
-
-		labels := map[string]string{}
-		if len(allSpaces.Items) > 0 {
-			labels = allSpaces.Items[0].Labels
-		}
-		logger.Info("all Spaces", "count", len(allSpaces.Items), "namespace", tier.Namespace, "first space labels", labels)
+		logger.Info("listed Spaces", "count", len(spaces.Items), "selector", matchOutdated)
 
 		if activeTemplateUpdateRequests == 0 && len(murs.Items) == 0 && len(spaces.Items) == 0 {
 			// we've reached the end: all MasterUserRecords and Spaces are up-to-date
