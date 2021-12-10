@@ -76,8 +76,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, errs.Wrap(err, "unable to get the current NSTemplateTier")
 	}
 
-	logger.Info("new reconcile triggered for tier", "tier generation", tier.GetGeneration(), "tier namespaces", tier.Spec.Namespaces)
-
 	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
