@@ -2,6 +2,8 @@ from: base
 parameters:
 - name: MEMORY_LIMIT
   value: "16Gi"
+- name: MEMORY_REQUEST
+  value: "16Gi"
 - name: DEACTIVATION_TIMEOUT_DAYS
   value: 0
 - name: IDLER_TIMEOUT_SECONDS
