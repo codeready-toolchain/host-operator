@@ -327,7 +327,9 @@ func (r *Reconciler) setStatusNSTemplateSetCreationFailed(logger logr.Logger, sp
 // updateStatus updates space status conditions with the new conditions
 func (r *Reconciler) updateStatus(space *toolchainv1alpha1.Space, conditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
-	space.Status.TargetCluster = space.Spec.TargetCluster
+	if space.Spec.TargetCluster != "" {
+		space.Status.TargetCluster = space.Spec.TargetCluster
+	}
 	space.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(space.Status.Conditions, conditions...)
 	if !updated {
 		// Nothing changed

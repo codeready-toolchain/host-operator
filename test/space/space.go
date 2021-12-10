@@ -23,6 +23,12 @@ func WithTargetCluster(name string) Option {
 	}
 }
 
+func WithStatusTargetCluster(name string) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		space.Status.TargetCluster = name
+	}
+}
+
 func WithFinalizer() Option {
 	return func(space *toolchainv1alpha1.Space) {
 		space.Finalizers = append(space.Finalizers, toolchainv1alpha1.FinalizerName)
