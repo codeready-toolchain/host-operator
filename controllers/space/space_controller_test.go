@@ -55,15 +55,14 @@ func TestReconciler(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			assert.False(t, res.Requeue)
-			nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
-				Exists().
-				Get()
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 				Exists().
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.Provisioning()).
 				HasFinalizer(toolchainv1alpha1.FinalizerName)
-
+			nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+				Exists().
+				Get()
 			t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
 				// given another round of requeue without while NSTemplateSet is *not ready*
 				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
@@ -391,16 +390,16 @@ func TestReconciler(t *testing.T) {
 					// then
 					require.NoError(t, err)
 					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
-					nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
-						Exists().
-						HasDeletionTimestamp().
-						HasConditions(nstemplatetsettest.Terminating()).
-						Get()
 					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 						Exists().
 						HasStatusTargetCluster("member-1").
 						HasConditions(spacetest.Terminating()).
 						HasFinalizer(toolchainv1alpha1.FinalizerName) // finalizer is still present while the NSTemplateSet is not fully deleted
+					nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+						Exists().
+						HasDeletionTimestamp().
+						HasConditions(nstemplatetsettest.Terminating()).
+						Get()
 
 					t.Run("requeue while NSTemplateSet is terminating", func(t *testing.T) {
 						// given another round of requeue without while NSTemplateSet is *not ready*
@@ -422,16 +421,16 @@ func TestReconciler(t *testing.T) {
 						require.NoError(t, err)
 						assert.False(t, res.Requeue)
 						// no changes
-						nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
-							Exists().
-							HasDeletionTimestamp().
-							HasConditions(nstemplatetsettest.Terminating()).
-							Get()
 						spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 							Exists().
 							HasStatusTargetCluster("member-1").
 							HasConditions(spacetest.Terminating()).
 							HasFinalizer(toolchainv1alpha1.FinalizerName)
+						nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+							Exists().
+							HasDeletionTimestamp().
+							HasConditions(nstemplatetsettest.Terminating()).
+							Get()
 
 						t.Run("done when NSTemplateSet is deleted", func(t *testing.T) {
 							// given another round of requeue without with NSTemplateSet now *fully deleted*
