@@ -52,7 +52,7 @@ type Reconciler struct {
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spaces,verbs=get;list
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spaces,verbs=get;list;watch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/finalizers,verbs=update
 
@@ -75,6 +75,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		logger.Error(err, "unable to get the current NSTemplateTier")
 		return reconcile.Result{}, errs.Wrap(err, "unable to get the current NSTemplateTier")
 	}
+
+	logger.Info("new reconcile triggered for tier", "tier generation", tier.GetGeneration(), "tier namespaces", tier.Spec.Namespaces)
 
 	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
@@ -151,29 +153,46 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 		// and for which there is no TemplateUpdateRequest yet
 
 		// fetch by subsets of "MaxPoolSize + 1" size until a candidate is found
-		matchingLabels, err := outdatedTierSelector(tier)
+		matchMurs, err := outdatedTierSelector(tier)
 		if err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
 		murs := toolchainv1alpha1.MasterUserRecordList{}
-		if err = r.Client.List(context.Background(), &murs,
+		if err = r.Client.List(context.TODO(), &murs,
 			client.InNamespace(tier.Namespace),
 			client.Limit(config.Tiers().TemplateUpdateRequestMaxPoolSize()+1),
-			matchingLabels,
+			matchMurs,
 		); err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
-		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchingLabels)
+		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchMurs)
 
+		matchSpaces, err := outdatedTierSelector(tier)
+		if err != nil {
+			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
+		}
 		spaces := toolchainv1alpha1.SpaceList{}
-		if err = r.Client.List(context.Background(), &spaces,
+		if err = r.Client.List(context.TODO(), &spaces,
 			client.InNamespace(tier.Namespace),
 			client.Limit(config.Tiers().TemplateUpdateRequestMaxPoolSize()+1),
-			matchingLabels,
+			matchSpaces,
 		); err != nil {
 			return false, errs.Wrap(err, "unable to get Spaces to update")
 		}
-		logger.Info("listed Spaces", "count", len(spaces.Items), "selector", matchingLabels)
+		logger.Info("listed Spaces", "count", len(spaces.Items), "selector", matchSpaces)
+
+		allSpaces := toolchainv1alpha1.SpaceList{}
+		if err = r.Client.List(context.TODO(), &allSpaces,
+			client.InNamespace(tier.Namespace),
+		); err != nil {
+			return false, errs.Wrap(err, "unable to get all Spaces")
+		}
+
+		labels := map[string]string{}
+		if len(allSpaces.Items) > 0 {
+			labels = allSpaces.Items[0].Labels
+		}
+		logger.Info("all Spaces", "count", len(allSpaces.Items), "namespace", tier.Namespace, "first space labels", labels)
 
 		if activeTemplateUpdateRequests == 0 && len(murs.Items) == 0 && len(spaces.Items) == 0 {
 			// we've reached the end: all MasterUserRecords and Spaces are up-to-date
@@ -302,7 +321,7 @@ func (r *Reconciler) activeTemplateUpdateRequests(logger logr.Logger, config too
 		}
 		count++
 	}
-	logger.Info("found active TemplateUpdateRequests for the current tier", "count", count)
+	logger.Info("number of active TemplateUpdateRequests for the current tier", "count", count)
 	return count, false, nil
 }
 
