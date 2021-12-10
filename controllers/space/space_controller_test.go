@@ -552,6 +552,8 @@ func TestDeleteSpace(t *testing.T) {
 					Exists().
 					HasStatusTargetCluster("unknown").
 					HasFinalizer(toolchainv1alpha1.FinalizerName) // finalizer is still there, until the error above is fixed
+				nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+					DoesNotExist()
 			})
 		})
 
