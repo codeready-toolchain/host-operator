@@ -142,7 +142,7 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 		return err
 	}
 	// then apply the change in MasterUserRecord
-	return r.changeTierInSpace(logger, changeTierRequest, namespace, nsTemplateTier)
+	return r.changeTierInSpace(logger, changeTierRequest, namespace)
 }
 
 func (r *Reconciler) changeTierInMasterUserRecord(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string, nsTemplateTier *toolchainv1alpha1.NSTemplateTier) error {
@@ -226,7 +226,7 @@ func (r *Reconciler) changeTierInMasterUserRecord(logger logr.Logger, changeTier
 	return nil
 }
 
-func (r *Reconciler) changeTierInSpace(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string, nsTemplateTier *toolchainv1alpha1.NSTemplateTier) error {
+func (r *Reconciler) changeTierInSpace(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) error {
 	space := &toolchainv1alpha1.Space{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: namespace,

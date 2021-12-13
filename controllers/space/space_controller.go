@@ -141,9 +141,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, s *toolchainv1alpha
 			if err := r.setStatusProvisioning(s); err != nil {
 				return false, r.setStatusProvisioningFailed(logger, s, err)
 			}
-			if tmplSet, err = r.newNSTemplateSet(memberCluster.OperatorNamespace, s.Name, tmplTier); err != nil {
-				return false, r.setStatusProvisioningFailed(logger, s, err)
-			}
+			tmplSet = r.newNSTemplateSet(memberCluster.OperatorNamespace, s.Name, tmplTier)
 
 			if err := memberCluster.Client.Create(context.TODO(), tmplSet); err != nil {
 				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
@@ -194,7 +192,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, s *toolchainv1alpha
 	return false, nil
 }
 
-func (r *Reconciler) newNSTemplateSet(namespace string, name string, tmplTier *toolchainv1alpha1.NSTemplateTier) (*toolchainv1alpha1.NSTemplateSet, error) {
+func (r *Reconciler) newNSTemplateSet(namespace string, name string, tmplTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.NSTemplateSet {
 	// create the NSTemplateSet from the NSTemplateTier
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -204,7 +202,7 @@ func (r *Reconciler) newNSTemplateSet(namespace string, name string, tmplTier *t
 	}
 	nsTmplSetSpec := usersignup.NewNSTemplateSetSpec(tmplTier)
 	nsTmplSet.Spec = *nsTmplSetSpec
-	return nsTmplSet, nil
+	return nsTmplSet
 }
 
 func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, s *toolchainv1alpha1.Space) error {
