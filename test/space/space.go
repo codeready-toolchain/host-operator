@@ -1,11 +1,7 @@
 package space
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"sort"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -66,31 +62,6 @@ func NewSpaces(t *testing.T, size int, nameFmt string, modifiers ...SpaceModifie
 		murs[i] = NewSpace(t, fmt.Sprintf(nameFmt, i), modifiers...)
 	}
 	return murs
-}
-
-type templateRefs struct {
-	Refs []string `json:"refs"`
-}
-
-// computeTemplateRefsHash computes the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
-func computeTemplateRefsHash(tier toolchainv1alpha1.NSTemplateTier) (string, error) {
-	refs := []string{}
-	for _, ns := range tier.Spec.Namespaces {
-		refs = append(refs, ns.TemplateRef)
-	}
-	if tier.Spec.ClusterResources != nil {
-		refs = append(refs, tier.Spec.ClusterResources.TemplateRef)
-	}
-	sort.Strings(refs)
-	m, err := json.Marshal(templateRefs{Refs: refs})
-	if err != nil {
-		return "", err
-	}
-	md5hash := md5.New()
-	// Ignore the error, as this implementation cannot return one
-	_, _ = md5hash.Write(m)
-	hash := hex.EncodeToString(md5hash.Sum(nil))
-	return hash, nil
 }
 
 // DefaultNSTemplateTier the default NSTemplateTier used to initialize the MasterUserRecord

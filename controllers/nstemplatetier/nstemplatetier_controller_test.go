@@ -201,7 +201,7 @@ func TestReconcile(t *testing.T) {
 				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 				// check that a single TemplateUpdateRequest was created
 				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize + 1) // one more TemplateUpdateRequest
-				turtest.AssertThatTemplateUpdateRequest(t, "user-5", cl).Exists().HasMasterUserRecordFieldsSetForTier(basicTier)
+				turtest.AssertThatTemplateUpdateRequest(t, "user-5", cl).Exists().HasMasterUserRecordFieldsSetForTier()
 			})
 			t.Run("Spaces", func(t *testing.T) {
 				// given
@@ -218,7 +218,7 @@ func TestReconcile(t *testing.T) {
 				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 				// check that a single TemplateUpdateRequest was created
 				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize + 1) // one more TemplateUpdateRequest
-				turtest.AssertThatTemplateUpdateRequest(t, "user-5", cl).Exists().HasSpaceFieldsSetForTier(basicTier)
+				turtest.AssertThatTemplateUpdateRequest(t, "user-5", cl).Exists().HasSpaceFieldsSetForTier()
 			})
 			t.Run("Both MasterUserRecords and Spaces", func(t *testing.T) {
 				// this test checks that a TemplateUpdateRequest is created for Spaces after MasterUserRecords have been processed
@@ -241,8 +241,8 @@ func TestReconcile(t *testing.T) {
 				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
 				// check that a single TemplateUpdateRequest was created
 				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize + 1) // one more TemplateUpdateRequest
-				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).Exists().HasMasterUserRecordFieldsSetForTier(basicTier)
-				turtest.AssertThatTemplateUpdateRequest(t, "spaceuser-0", cl).Exists().HasSpaceFieldsSetForTier(basicTier)
+				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).Exists().HasMasterUserRecordFieldsSetForTier()
+				turtest.AssertThatTemplateUpdateRequest(t, "spaceuser-0", cl).Exists().HasSpaceFieldsSetForTier()
 			})
 		})
 
