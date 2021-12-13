@@ -192,27 +192,11 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 				return false, errs.Wrapf(err, "unable to get TemplateUpdateRequest for MasterUserRecord '%s'", mur.Name)
 			}
 			logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", tier.Name)
-			tur := &toolchainv1alpha1.TemplateUpdateRequest{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: tier.Namespace,
-					Name:      mur.Name,
-					Labels: map[string]string{
-						toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
-					},
-				},
-				Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
-					TierName:         tier.Name,
-					Namespaces:       tier.Spec.Namespaces,
-					ClusterResources: tier.Spec.ClusterResources,
-				},
-			}
-			if err = controllerutil.SetControllerReference(tier, tur, r.Scheme); err != nil {
-				return false, err
-			}
-			// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
-			// and the creation of this TemplateUpdateRequest will trigger another reconcile loop
-			// since the controller watches TemplateUpdateRequests owned by the NSTemplateTier
-			return false, r.Client.Create(context.TODO(), tur)
+			return r.createTemplateUpdateRequest(tier, mur.Name, toolchainv1alpha1.TemplateUpdateRequestSpec{
+				TierName:         tier.Name,
+				Namespaces:       tier.Spec.Namespaces,
+				ClusterResources: tier.Spec.ClusterResources,
+			})
 		}
 
 		for _, space := range spaces.Items {
@@ -229,25 +213,9 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 			}
 			logger.Info("creating a TemplateUpdateRequest to update the Space", "name", space.Name, "tier", tier.Name)
 			hashLabel := tierutil.TemplateTierHashLabelKey(tier.Name)
-			tur := &toolchainv1alpha1.TemplateUpdateRequest{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: tier.Namespace,
-					Name:      space.Name,
-					Labels: map[string]string{
-						toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
-					},
-				},
-				Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
-					CurrentTierHash: space.Labels[hashLabel],
-				},
-			}
-			if err = controllerutil.SetControllerReference(tier, tur, r.Scheme); err != nil {
-				return false, err
-			}
-			// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
-			// and the creation of this TemplateUpdateRequest will trigger another reconcile loop
-			// since the controller watches TemplateUpdateRequests owned by the NSTemplateTier
-			return false, r.Client.Create(context.TODO(), tur)
+			return r.createTemplateUpdateRequest(tier, space.Name, toolchainv1alpha1.TemplateUpdateRequestSpec{
+				CurrentTierHash: space.Labels[hashLabel],
+			})
 		}
 	}
 	logger.Info("done for now with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", tier.Name)
@@ -345,4 +313,25 @@ func (r *Reconciler) markUpdateRecordAsCompleted(tier *toolchainv1alpha1.NSTempl
 	latest.CompletionTime = &now
 	tier.Status.Updates[len(tier.Status.Updates)-1] = latest
 	return r.Client.Status().Update(context.TODO(), tier)
+}
+
+// createTemplateUpdateRequest creates a TemplateUpdateRequest resource with the provided name and spec
+func (r *Reconciler) createTemplateUpdateRequest(tier *toolchainv1alpha1.NSTemplateTier, name string, spec toolchainv1alpha1.TemplateUpdateRequestSpec) (bool, error) {
+	tur := &toolchainv1alpha1.TemplateUpdateRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: tier.Namespace,
+			Name:      name,
+			Labels: map[string]string{
+				toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
+			},
+		},
+		Spec: spec,
+	}
+	if err := controllerutil.SetControllerReference(tier, tur, r.Scheme); err != nil {
+		return false, err
+	}
+	// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
+	// and the creation of this TemplateUpdateRequest will trigger another reconcile loop
+	// since the controller watches TemplateUpdateRequests owned by the NSTemplateTier
+	return false, r.Client.Create(context.TODO(), tur)
 }
