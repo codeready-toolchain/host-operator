@@ -103,16 +103,18 @@ func TestReconcile(t *testing.T) {
 
 		t.Run("when no TemplateUpdateRequest resource exists at all", func(t *testing.T) {
 			// in this test, there are 10 MasterUserRecords but no associated TemplateUpdateRequest
+			previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
+			spaces := spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))
+
 			t.Run("MasterUserRecords", func(t *testing.T) {
 				// TODO: this test should be removed once migration from MUR -> Spaces is completed.
 
 				// given
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d",
-					murtest.Account("cluster1", *previousBasicTier))...)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
+				initObjs := append(murtest.NewMasterUserRecords(t, 10, "user-%d",
+					murtest.Account("cluster1", *previousBasicTier)), basicTier)
+				r, req, cl := prepareReconcile(t, basicTier.Name, append(initObjs, spaces...)...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
@@ -126,10 +128,8 @@ func TestReconcile(t *testing.T) {
 			// in this test, there are 10 Spaces but no associated TemplateUpdateRequest
 			t.Run("Spaces", func(t *testing.T) {
 				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(t, 10, "user-%d", spacetest.WithTierNameAndHashLabelFor(t, previousBasicTier))...)
+				initObjs := append(spaces, basicTier)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -140,6 +140,7 @@ func TestReconcile(t *testing.T) {
 				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(1)
 				turtest.AssertThatTemplateUpdateRequest(t, "user-0", cl).Exists().HasOwnerReference()
 			})
+		})
 		})
 
 		// in this test, there are TemplateUpdateRequest resources but they are associated with the update of another NSTemplateTier
