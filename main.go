@@ -13,18 +13,20 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/controllers/templateupdaterequest"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignupcleanup"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 
 	"github.com/pkg/errors"
@@ -176,7 +178,7 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-	_, err = addMemberClusters(mgr, cl, namespace)
+	memberClusters, err := addMemberClusters(mgr, cl, namespace)
 	if err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
@@ -208,7 +210,7 @@ func main() {
 	if err := (&masteruserrecord.Reconciler{
 		Client:                mgr.GetClient(),
 		Scheme:                mgr.GetScheme(),
-		RetrieveMemberCluster: cluster.GetCachedToolchainCluster,
+		RetrieveMemberCluster: commoncluster.GetCachedToolchainCluster,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MasterUserRecord")
 		os.Exit(1)
@@ -233,7 +235,7 @@ func main() {
 	}
 	if err := (&toolchainconfig.Reconciler{
 		Client:         mgr.GetClient(),
-		GetMembersFunc: cluster.GetMemberClusters,
+		GetMembersFunc: commoncluster.GetMemberClusters,
 		Scheme:         mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainConfig")
@@ -242,7 +244,7 @@ func main() {
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
 		HTTPClientImpl: &http.Client{},
-		GetMembersFunc: cluster.GetMemberClusters,
+		GetMembersFunc: commoncluster.GetMemberClusters,
 		Namespace:      namespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainStatus")
@@ -252,7 +254,7 @@ func main() {
 			Client: mgr.GetClient(),
 		},
 		Scheme:            mgr.GetScheme(),
-		GetMemberClusters: cluster.GetMemberClusters,
+		GetMemberClusters: commoncluster.GetMemberClusters,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignup")
 	}
@@ -261,6 +263,13 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
+	}
+	if err = (&space.Reconciler{
+		Client:         mgr.GetClient(),
+		Namespace:      namespace,
+		MemberClusters: memberClusters,
+	}).SetupWithManager(mgr, memberClusters); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Space")
 	}
 	//+kubebuilder:scaffold:builder
 
@@ -310,12 +319,12 @@ func main() {
 	}
 }
 
-func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string) ([]runtimecluster.Cluster, error) {
-	memberConfigs, err := cluster.ListToolchainClusterConfigs(cl, namespace, cluster.Member, memberClientTimeout)
+func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string) (map[string]cluster.Cluster, error) {
+	memberConfigs, err := commoncluster.ListToolchainClusterConfigs(cl, namespace, commoncluster.Member, memberClientTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get ToolchainCluster configs for members")
 	}
-	var memberClusters []runtimecluster.Cluster
+	memberClusters := map[string]cluster.Cluster{}
 	for _, memberConfig := range memberConfigs {
 		setupLog.Info("adding cluster for a member", "name", memberConfig.Name, "apiEndpoint", memberConfig.APIEndpoint)
 
@@ -324,12 +333,16 @@ func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string) ([]
 			options.Namespace = memberConfig.OperatorNamespace
 		})
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to create cluster definition for "+memberConfig.Name)
+			return nil, errors.Wrapf(err, "unable to create member cluster definition for "+memberConfig.Name)
 		}
 		if err := mgr.Add(memberCluster); err != nil {
-			return nil, errors.Wrapf(err, "unable to add cluster to the manager for "+memberConfig.Name)
+			return nil, errors.Wrapf(err, "unable to add member cluster to the manager for "+memberConfig.Name)
 		}
-		memberClusters = append(memberClusters, memberCluster)
+		memberClusters[memberConfig.Name] = cluster.Cluster{
+			OperatorNamespace: memberConfig.OperatorNamespace,
+			Client:            memberCluster.GetClient(),
+			Cache:             memberCluster.GetCache(),
+		}
 	}
 	return memberClusters, nil
 }
