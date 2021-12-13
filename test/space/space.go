@@ -1,91 +1,65 @@
 package space
 
 import (
-	"fmt"
-	"testing"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/stretchr/testify/require"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
-const DefaultNSTemplateTierName = "basic"
+type Option func(space *toolchainv1alpha1.Space)
 
-func WithTargetCluster(targetCluster string) SpaceModifier {
+func WithoutTargetCluster() Option {
 	return func(space *toolchainv1alpha1.Space) {
-		space.Spec.TargetCluster = targetCluster
+		space.Spec.TargetCluster = ""
 	}
 }
 
-func WithTierNameAndHashLabelFor(t *testing.T, tier *toolchainv1alpha1.NSTemplateTier) SpaceModifier {
+func WithTargetCluster(name string) Option {
 	return func(space *toolchainv1alpha1.Space) {
-		hash, err := util.ComputeHashForNSTemplateTier(tier) // we can assume the JSON marshalling will always work
-		require.NoError(t, err)
-		space.Spec.TierName = tier.Name
-		space.ObjectMeta.Labels = map[string]string{
-			util.TemplateTierHashLabelKey(tier.Name): hash,
-		}
+		space.Spec.TargetCluster = name
 	}
 }
 
-type SpaceModifier func(*toolchainv1alpha1.Space)
+func WithStatusTargetCluster(name string) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		space.Status.TargetCluster = name
+	}
+}
 
-func NewSpace(t *testing.T, name string, modifiers ...SpaceModifier) *toolchainv1alpha1.Space {
-	hash, err := util.ComputeHashForNSTemplateTier(DefaultNSTemplateTier()) // we can assume the JSON marshalling will always work
-	require.NoError(t, err)
+func WithFinalizer() Option {
+	return func(space *toolchainv1alpha1.Space) {
+		space.Finalizers = append(space.Finalizers, toolchainv1alpha1.FinalizerName)
+	}
+}
+
+func WithDeletionTimestamp() Option {
+	return func(space *toolchainv1alpha1.Space) {
+		now := metav1.NewTime(time.Now())
+		space.DeletionTimestamp = &now
+	}
+}
+
+func WithCondition(c toolchainv1alpha1.Condition) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		space.Status.Conditions = append(space.Status.Conditions, c)
+	}
+}
+
+func NewSpace(name, tier string, options ...Option) *toolchainv1alpha1.Space {
 	space := &toolchainv1alpha1.Space{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: test.HostOperatorNs,
-			Labels: map[string]string{
-				util.TemplateTierHashLabelKey(DefaultNSTemplateTierName): hash,
-			},
 		},
 		Spec: toolchainv1alpha1.SpaceSpec{
-			TargetCluster: "member-1",
-			TierName:      "basic",
+			TierName: tier,
 		},
 	}
-	for _, modify := range modifiers {
-		modify(space)
+	for _, apply := range options {
+		apply(space)
 	}
 	return space
-}
-
-func NewSpaces(t *testing.T, size int, nameFmt string, modifiers ...SpaceModifier) []runtime.Object {
-	murs := make([]runtime.Object, size)
-	for i := 0; i < size; i++ {
-		murs[i] = NewSpace(t, fmt.Sprintf(nameFmt, i), modifiers...)
-	}
-	return murs
-}
-
-// DefaultNSTemplateTier the default NSTemplateTier used to initialize the MasterUserRecord
-func DefaultNSTemplateTier() *toolchainv1alpha1.NSTemplateTier {
-	return &toolchainv1alpha1.NSTemplateTier{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: test.HostOperatorNs,
-			Name:      DefaultNSTemplateTierName,
-		},
-		Spec: toolchainv1alpha1.NSTemplateTierSpec{
-			Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
-				{
-					TemplateRef: "basic-dev-123abc",
-				},
-				{
-					TemplateRef: "basic-code-123abc",
-				},
-				{
-					TemplateRef: "basic-stage-123abc",
-				},
-			},
-			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-				TemplateRef: "basic-clusterresources-654321a",
-			},
-		},
-	}
 }

@@ -20,7 +20,7 @@ import (
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -287,7 +287,7 @@ func (r *Reconciler) deleteUserAccount(logger logr.Logger, targetCluster, name s
 		}
 		return requeueTime, nil
 	}
-	propagationPolicy := v1.DeletePropagationForeground
+	propagationPolicy := metav1.DeletePropagationForeground
 	err = memberCluster.Client.Delete(context.TODO(), userAcc, &client.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
@@ -349,7 +349,7 @@ func updateStatusConditions(logger logr.Logger, cl client.Client, mur *toolchain
 
 func newUserAccount(nsdName types.NamespacedName, spec toolchainv1alpha1.UserAccountSpecEmbedded, murSpec toolchainv1alpha1.MasterUserRecordSpec) *toolchainv1alpha1.UserAccount {
 	return &toolchainv1alpha1.UserAccount{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      nsdName.Name,
 			Namespace: nsdName.Namespace,
 		},
