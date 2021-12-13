@@ -125,10 +125,34 @@ func (r *Reconciler) checkTransitionTimeAndDelete(logger logr.Logger, durationBe
 	return false, diff, nil
 }
 
+// changeTier changes the Tier in the MasterUserRecord and then in the Space (with the same name as the MasterUserRecord)
+// If an error occurs while updating the MasterUserRecord, then the controller will "exit" the reconcile loop, and the request
+// will be requeued.
+// If an error occurs while updating the Space, then the controller will "exit" the reconcile loop, and the request
+// will be requeued, and the MasterUserRecord that was already updated during the previous reconcile loop will remain unchanged afterwards
 func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) error {
+	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
+	tierName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.TierName}
+	if err := r.Client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get NSTemplateTier with name %s", changeTierRequest.Spec.TierName)
+	}
+
+	// apply the change in MasterUserRecord
+	if err := r.changeTierInMasterUserRecord(logger, changeTierRequest, namespace, nsTemplateTier); err != nil {
+		return err
+	}
+	// then apply the change in MasterUserRecord
+	return r.changeTierInSpace(logger, changeTierRequest, namespace, nsTemplateTier)
+}
+
+func (r *Reconciler) changeTierInMasterUserRecord(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string, nsTemplateTier *toolchainv1alpha1.NSTemplateTier) error {
 	mur := &toolchainv1alpha1.MasterUserRecord{}
 	murName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.MurName}
 	if err := r.Client.Get(context.TODO(), murName, mur); err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("No MasterUserRecord found for ChangeTierRequest")
+			return nil
+		}
 		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get MasterUserRecord with name %s", changeTierRequest.Spec.MurName)
 	}
 
@@ -147,12 +171,6 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 		if err := r.Client.Update(context.TODO(), userSignupToUpdate); err != nil {
 			return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to reset deactivating state for UserSignup '%s'`, userSignupName)
 		}
-	}
-
-	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
-	tierName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.TierName}
-	if err := r.Client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get NSTemplateTier with name %s", changeTierRequest.Spec.TierName)
 	}
 
 	newNsTemplateSet := usersignup.NewNSTemplateSetSpec(nsTemplateTier)
@@ -208,6 +226,29 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 	return nil
 }
 
+func (r *Reconciler) changeTierInSpace(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string, nsTemplateTier *toolchainv1alpha1.NSTemplateTier) error {
+	space := &toolchainv1alpha1.Space{}
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: namespace,
+		Name:      changeTierRequest.Spec.MurName,
+	}, space); err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("No Space found for ChangeTierRequest")
+			return nil
+		}
+		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get Space with name %s", changeTierRequest.Spec.MurName)
+	}
+	space.Spec.TierName = changeTierRequest.Spec.TierName
+	// remove the TemplateTierHash label on the Space resource (and let the SpaceController set it to the latest value)
+	delete(space.Labels, nstemplatetier.TemplateTierHashLabelKey(space.Spec.TierName))
+
+	if err := r.Client.Update(context.TODO(), space); err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in Space %s", changeTierRequest.Spec.MurName)
+	}
+
+	return nil
+}
+
 func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, changeRequest *toolchainv1alpha1.ChangeTierRequest, statusUpdater func(changeRequest *toolchainv1alpha1.ChangeTierRequest, message string) error, err error, format string, args ...interface{}) error {
 	if err == nil {
 		return nil
@@ -244,7 +285,7 @@ func (r *Reconciler) setStatusChangeFailed(changeRequest *toolchainv1alpha1.Chan
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ChangeTierRequestComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.ChangeTierRequestChangeFiledReason,
+			Reason:  toolchainv1alpha1.ChangeTierRequestChangeFailedReason,
 			Message: message,
 		})
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
@@ -38,7 +39,6 @@ func TestCreateSpace(t *testing.T) {
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-
 	t.Run("success", func(t *testing.T) {
 		// given
 		s := spacetest.NewSpace("oddity", basicTier.Name, spacetest.WithTargetCluster("member-1"))
@@ -236,6 +236,7 @@ func TestCreateSpace(t *testing.T) {
 			require.EqualError(t, err, "mock error")
 			assert.False(t, res.Requeue)
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				HasTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.ProvisioningFailed("mock error"))
 		})
@@ -245,7 +246,7 @@ func TestCreateSpace(t *testing.T) {
 			s := spacetest.NewSpace("oddity", basicTier.Name,
 				spacetest.WithTargetCluster("member-1"),
 				spacetest.WithFinalizer())
-			hostClient := test.NewFakeClient(t, s)
+			hostClient := test.NewFakeClient(t, s, basicTier)
 			member1Client := test.NewFakeClient(t)
 			member1Client.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
@@ -546,7 +547,7 @@ func TestDeleteSpace(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 				// then
-				require.EqualError(t, err, "Cannot delete NSTemplateSet: unknown target member cluster: 'unknown'")
+				require.EqualError(t, err, "cannot delete NSTemplateSet: unknown target member cluster: 'unknown'")
 				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue needed
 				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 					Exists().
@@ -591,6 +592,168 @@ func TestDeleteSpace(t *testing.T) {
 				HasConditions(spacetest.TerminatingFailed("mock error")).
 				HasFinalizer(toolchainv1alpha1.FinalizerName)
 		})
+	})
+}
+
+func TestUpdate(t *testing.T) {
+
+	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	s := scheme.Scheme
+	err := apis.AddToScheme(s)
+	require.NoError(t, err)
+	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
+	otherTier := tiertest.OtherTier()
+
+	t.Run("update needed", func(t *testing.T) {
+		// given that Space is promoted to `other` tier and corresponding NSTemplateSet is not up-to-date
+		s := spacetest.NewSpace("oddity", otherTier.Name,
+			// assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
+			spacetest.WithTargetCluster("member-1"),
+			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+			spacetest.WithFinalizer())
+		hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
+		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
+		member1Client := test.NewFakeClient(t, nstmplSet)
+		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		ctrl := newReconciler(hostClient, member1, member2)
+
+		// when
+		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, reconcile.Result{
+			Requeue:      true,
+			RequeueAfter: 3 * time.Second,
+		}, res) // explicitly requeue while the NSTemplate update is triggered by its controller
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+			Exists().
+			HasTier(otherTier.Name).
+			HasTargetCluster("member-1").
+			HasStatusTargetCluster("member-1").
+			HasConditions(spacetest.Provisioning()).
+			DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(otherTier.Name)) // not set yet, since NSTemplateSet must be updated first
+		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+			Exists().
+			HasTierName(otherTier.Name).
+			Get()
+
+		t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
+			// given another round of requeue without while NSTemplateSet is *not ready*
+			nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+				nstemplatetsettest.Provisioning(),
+			}
+			err := member1.Client.Update(context.TODO(), nsTmplSet)
+			require.NoError(t, err)
+			ctrl := newReconciler(hostClient, member1, member2)
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+			// then
+			require.NoError(t, err)
+			assert.False(t, res.Requeue)
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+				Exists().
+				HasTier(otherTier.Name).
+				HasTargetCluster("member-1").
+				HasStatusTargetCluster("member-1").
+				HasConditions(spacetest.Provisioning()).
+				DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(otherTier.Name))
+
+			t.Run("done when NSTemplateSet is ready", func(t *testing.T) {
+				// given another round of requeue without with NSTemplateSet now *ready*
+				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+					nstemplatetsettest.Provisioned(),
+				}
+				err := member1.Client.Update(context.TODO(), nsTmplSet)
+				require.NoError(t, err)
+				ctrl := newReconciler(hostClient, member1, member2)
+
+				// when
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+				// then
+				require.NoError(t, err)
+				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+					Exists().
+					HasStatusTargetCluster("member-1").
+					HasConditions(spacetest.Ready()).
+					HasLabel(nstemplatetier.TemplateTierHashLabelKey(otherTier.Name)).
+					HasFinalizer(toolchainv1alpha1.FinalizerName)
+			})
+		})
+	})
+
+	t.Run("update not needed", func(t *testing.T) {
+		// given that Space is promoted to `basic` tier and corresponding NSTemplateSet is already up-to-date and ready
+		s := spacetest.NewSpace("oddity", basicTier.Name,
+			// assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
+			spacetest.WithCondition(spacetest.Ready()),
+			spacetest.WithTargetCluster("member-1"),
+			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+			spacetest.WithFinalizer())
+		hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
+		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
+		member1Client := test.NewFakeClient(t, nstmplSet)
+		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		ctrl := newReconciler(hostClient, member1, member2)
+
+		// when
+		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, res.Requeue) // no need to requeue since the NSTemplate is already up-to-date
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+			Exists().
+			HasTier(basicTier.Name).
+			HasTargetCluster("member-1").
+			HasStatusTargetCluster("member-1").
+			HasConditions(spacetest.Ready()).
+			HasLabel(nstemplatetier.TemplateTierHashLabelKey(basicTier.Name)) // label is immediately set since the NSTemplateSet was already up-to-date
+	})
+
+	t.Run("failures", func(t *testing.T) {
+
+		t.Run("when updating space with new templatetierhash label", func(t *testing.T) {
+			// given that Space is promoted to `basic` tier and corresponding NSTemplateSet is already up-to-date and ready
+			s := spacetest.NewSpace("oddity", basicTier.Name,
+				// assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+				spacetest.WithFinalizer())
+			hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
+			hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
+					return fmt.Errorf("mock error")
+				}
+				return hostClient.Client.Update(ctx, obj, opts...)
+			}
+			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
+			member1Client := test.NewFakeClient(t, nstmplSet)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1, member2)
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+			// then
+			require.EqualError(t, err, "mock error")
+			assert.False(t, res.Requeue)
+			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				Exists().
+				HasStatusTargetCluster("member-1").
+				HasConditions(spacetest.ProvisioningFailed("mock error")).
+				HasFinalizer(toolchainv1alpha1.FinalizerName)
+		})
+
 	})
 }
 

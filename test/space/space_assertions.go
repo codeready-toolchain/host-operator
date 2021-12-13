@@ -56,6 +56,35 @@ func (a *Assertion) HasNoFinalizers() *Assertion {
 	return a
 }
 
+func (a *Assertion) HasTier(tierName string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, tierName, a.space.Spec.TierName)
+	return a
+}
+
+func (a *Assertion) HasLabel(key string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	require.Contains(a.t, a.space.Labels, key)
+	assert.NotEmpty(a.t, a.space.Labels[key])
+	return a
+}
+
+func (a *Assertion) DoesNotHaveLabel(key string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	require.NotContains(a.t, a.space.Labels, key)
+	return a
+}
+
+func (a *Assertion) HasTargetCluster(targetCluster string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, targetCluster, a.space.Spec.TargetCluster)
+	return a
+}
+
 func (a *Assertion) HasNoStatusTargetCluster() *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
@@ -111,6 +140,15 @@ func ProvisioningFailed(msg string) toolchainv1alpha1.Condition {
 }
 
 func UnableToCreateNSTemplateSet(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.SpaceUnableToCreateNSTemplateSetReason,
+		Message: msg,
+	}
+}
+
+func StatusUpdate(msg string) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ConditionReady,
 		Status:  corev1.ConditionFalse,
