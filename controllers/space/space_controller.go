@@ -184,12 +184,11 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, s *toolchainv1alpha
 		s.Labels = map[string]string{}
 	}
 	s.Labels[nstemplatetier.TemplateTierHashLabelKey(s.Spec.TierName)] = hash
-	// also, replicates the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
-	s.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(s.Status.Conditions, nsTmplSetReady)
 	if err := r.Client.Update(context.TODO(), s); err != nil {
 		return false, r.setStatusProvisioningFailed(logger, s, err)
 	}
-	return false, nil
+	// also, replicates the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
+	return false, r.updateStatus(s, nsTmplSetReady)
 }
 
 func (r *Reconciler) newNSTemplateSet(namespace string, name string, tmplTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.NSTemplateSet {
