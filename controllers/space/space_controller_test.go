@@ -754,6 +754,111 @@ func TestUpdate(t *testing.T) {
 				HasFinalizer(toolchainv1alpha1.FinalizerName)
 		})
 
+		t.Run("when NSTemplateSet updated failed", func(t *testing.T) {
+			// given that Space is promoted to `other` tier and corresponding NSTemplateSet is not up-to-date
+			s := spacetest.NewSpace("oddity", otherTier.Name,
+				// assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
+				spacetest.WithTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+				spacetest.WithFinalizer())
+			hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
+			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
+			member1Client := test.NewFakeClient(t, nstmplSet)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1, member2)
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, reconcile.Result{
+				Requeue:      true,
+				RequeueAfter: 3 * time.Second,
+			}, res) // explicitly requeue while the NSTemplate update is triggered by its controller
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+				Exists().
+				HasTier(otherTier.Name).
+				HasTargetCluster("member-1").
+				HasStatusTargetCluster("member-1").
+				HasConditions(spacetest.Provisioning()).
+				DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(otherTier.Name)) // not set yet, since NSTemplateSet must be updated first
+			nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+				Exists().
+				HasTierName(otherTier.Name).
+				Get()
+
+			t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
+				// given another round of requeue without while NSTemplateSet is *not ready*
+				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+					nstemplatetsettest.Provisioning(),
+				}
+				err := member1.Client.Update(context.TODO(), nsTmplSet)
+				require.NoError(t, err)
+				ctrl := newReconciler(hostClient, member1, member2)
+
+				// when
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+				// then
+				require.NoError(t, err)
+				assert.False(t, res.Requeue)
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+					Exists().
+					HasTier(otherTier.Name).
+					HasTargetCluster("member-1").
+					HasStatusTargetCluster("member-1").
+					HasConditions(spacetest.Provisioning()).
+					DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(otherTier.Name))
+
+				t.Run("failed when namespace failed to provision", func(t *testing.T) {
+					// given another round of requeue without with NSTemplateSet now *ready*
+					nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+						nstemplatetsettest.UnableToProvisionNamespace("oops, something went wrong"),
+					}
+					err := member1.Client.Update(context.TODO(), nsTmplSet)
+					require.NoError(t, err)
+					ctrl := newReconciler(hostClient, member1, member2)
+
+					// when
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+					// then
+					require.NoError(t, err)
+					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+						Exists().
+						HasStatusTargetCluster("member-1").
+						HasConditions(nstemplatetsettest.UnableToProvisionNamespace("oops, something went wrong")). // NSTemplateSet condition is copied into Space status
+						HasLabel(nstemplatetier.TemplateTierHashLabelKey(otherTier.Name)).
+						HasFinalizer(toolchainv1alpha1.FinalizerName)
+				})
+
+				t.Run("failed when clusterresources failed to provision", func(t *testing.T) {
+					// given another round of requeue without with NSTemplateSet now *ready*
+					nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+						nstemplatetsettest.UnableToProvisionClusterResources("oops, something went wrong"),
+					}
+					err := member1.Client.Update(context.TODO(), nsTmplSet)
+					require.NoError(t, err)
+					ctrl := newReconciler(hostClient, member1, member2)
+
+					// when
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+					// then
+					require.NoError(t, err)
+					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+						Exists().
+						HasStatusTargetCluster("member-1").
+						HasConditions(nstemplatetsettest.UnableToProvisionClusterResources("oops, something went wrong")). // NSTemplateSet condition is copied into Space status
+						HasLabel(nstemplatetier.TemplateTierHashLabelKey(otherTier.Name)).
+						HasFinalizer(toolchainv1alpha1.FinalizerName)
+				})
+			})
+		})
 	})
 }
 
