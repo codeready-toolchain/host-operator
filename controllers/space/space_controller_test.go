@@ -825,12 +825,12 @@ func TestUpdate(t *testing.T) {
 					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 					// then
-					require.NoError(t, err)
+					require.EqualError(t, err, "oops, something went wrong")
 					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
 					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 						Exists().
 						HasStatusTargetCluster("member-1").
-						HasConditions(nstemplatetsettest.UnableToProvisionNamespace("oops, something went wrong")). // NSTemplateSet condition is copied into Space status
+						HasConditions(spacetest.ProvisioningFailed("oops, something went wrong")). // NSTemplateSet error message is copied into Space status
 						HasLabel(nstemplatetier.TemplateTierHashLabelKey(otherTier.Name)).
 						HasFinalizer(toolchainv1alpha1.FinalizerName)
 				})
@@ -848,12 +848,12 @@ func TestUpdate(t *testing.T) {
 					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 					// then
-					require.NoError(t, err)
+					require.EqualError(t, err, "oops, something went wrong")
 					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
 					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 						Exists().
 						HasStatusTargetCluster("member-1").
-						HasConditions(nstemplatetsettest.UnableToProvisionClusterResources("oops, something went wrong")). // NSTemplateSet condition is copied into Space status
+						HasConditions(spacetest.ProvisioningFailed("oops, something went wrong")). // NSTemplateSet error message is copied into Space status
 						HasLabel(nstemplatetier.TemplateTierHashLabelKey(otherTier.Name)).
 						HasFinalizer(toolchainv1alpha1.FinalizerName)
 				})

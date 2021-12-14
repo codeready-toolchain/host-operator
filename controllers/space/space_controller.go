@@ -188,6 +188,17 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return false, r.setStatusProvisioningFailed(logger, space, err)
 	}
 	// also, replicates the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
+	switch nsTmplSetReady.Reason {
+	case toolchainv1alpha1.NSTemplateSetProvisionedReason:
+		return false, r.setStatusProvisioned(space)
+	case toolchainv1alpha1.NSTemplateSetUnableToProvisionReason, toolchainv1alpha1.NSTemplateSetUnableToProvisionClusterResourcesReason, toolchainv1alpha1.NSTemplateSetUnableToProvisionNamespaceReason:
+		return false, r.setStatusProvisioningFailed(logger, space, fmt.Errorf(nsTmplSetReady.Message))
+	case toolchainv1alpha1.NSTemplateSetUpdatingReason:
+		return false, r.setStatusProvisioning(space)
+	case toolchainv1alpha1.NSTemplateSetProvisioningReason:
+	default:
+		return false, r.setStatusProvisioning(space)
+	}
 	return false, r.updateStatus(space, nsTmplSetReady)
 }
 
@@ -275,6 +286,16 @@ func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 	logger.Info("deleted the NSTemplateSet resource")
 	return true, nil // requeue until fully deleted
+}
+
+func (r *Reconciler) setStatusProvisioned(space *toolchainv1alpha1.Space) error {
+	return r.updateStatus(
+		space,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ConditionReady,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.SpaceProvisionedReason,
+		})
 }
 
 func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error {
