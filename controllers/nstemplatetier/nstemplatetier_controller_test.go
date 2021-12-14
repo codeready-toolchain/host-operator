@@ -922,7 +922,7 @@ func TestReconcile(t *testing.T) {
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-						return fmt.Errorf("mock error") // must not be a `NotFoundError` in this test
+						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Get(ctx, key, obj)
 				}
@@ -943,7 +943,7 @@ func TestReconcile(t *testing.T) {
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-						return fmt.Errorf("mock error") // must not be a `NotFoundError` in this test
+						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Get(ctx, key, obj)
 				}
@@ -971,7 +971,7 @@ func TestReconcile(t *testing.T) {
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-						return fmt.Errorf("mock error") // must not be a `NotFoundError` in this test
+						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Delete(ctx, obj, opts...)
 				}
@@ -993,7 +993,7 @@ func TestReconcile(t *testing.T) {
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-						return fmt.Errorf("mock error") // must not be a `NotFoundError` in this test
+						return fmt.Errorf("mock error")
 					}
 					return cl.Client.Delete(ctx, obj, opts...)
 				}
