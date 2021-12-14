@@ -5,7 +5,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,10 +28,10 @@ func WithTargetCluster(name string) Option {
 
 func WithTierNameAndHashLabelFor(tier *toolchainv1alpha1.NSTemplateTier) Option {
 	return func(space *toolchainv1alpha1.Space) {
-		hash, _ := util.ComputeHashForNSTemplateTier(tier) // we can assume the JSON marshalling will always work
+		hash, _ := tierutil.ComputeHashForNSTemplateTier(tier) // we can assume the JSON marshalling will always work
 		space.Spec.TierName = tier.Name
 		space.ObjectMeta.Labels = map[string]string{
-			util.TemplateTierHashLabelKey(tier.Name): hash,
+			tierutil.TemplateTierHashLabelKey(tier.Name): hash,
 		}
 	}
 }
