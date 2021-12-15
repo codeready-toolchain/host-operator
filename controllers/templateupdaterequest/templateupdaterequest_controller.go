@@ -6,7 +6,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
@@ -183,11 +183,11 @@ func (r Reconciler) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1
 			}
 			mur.Spec.UserAccounts[i] = ua
 			// also, update the tier template hash label
-			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
+			hash, err := tierutil.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
 			if err != nil {
 				return err
 			}
-			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tur.Spec.TierName)] = hash
+			mur.Labels[tierutil.TemplateTierHashLabelKey(tur.Spec.TierName)] = hash
 		}
 	}
 	logger.Info("updating the MUR")

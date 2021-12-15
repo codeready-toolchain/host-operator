@@ -6,7 +6,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -166,7 +166,7 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 		if changeTierRequest.Spec.TargetCluster != "" {
 			if ua.TargetCluster == changeTierRequest.Spec.TargetCluster {
 				// here we remove the template hash label since it was change for one or all target clusters
-				delete(mur.Labels, nstemplatetier.TemplateTierHashLabelKey(mur.Spec.UserAccounts[i].Spec.NSTemplateSet.TierName))
+				delete(mur.Labels, tierutil.TemplateTierHashLabelKey(mur.Spec.UserAccounts[i].Spec.NSTemplateSet.TierName))
 				mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
 				changed = true
 				break
@@ -174,7 +174,7 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 		} else {
 			changed = true
 			// here we remove the template hash label since it was change for one or all target clusters
-			delete(mur.Labels, nstemplatetier.TemplateTierHashLabelKey(mur.Spec.UserAccounts[i].Spec.NSTemplateSet.TierName))
+			delete(mur.Labels, tierutil.TemplateTierHashLabelKey(mur.Spec.UserAccounts[i].Spec.NSTemplateSet.TierName))
 			mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
 		}
 	}
@@ -195,11 +195,11 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 		if ua.Spec.NSTemplateSet == nil {
 			continue
 		}
-		hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
+		hash, err := tierutil.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
 		if err != nil {
 			return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to compute hash for NSTemplateTier with name '%s'", nsTemplateTier.Name)
 		}
-		mur.Labels[nstemplatetier.TemplateTierHashLabelKey(ua.Spec.NSTemplateSet.TierName)] = hash
+		mur.Labels[tierutil.TemplateTierHashLabelKey(ua.Spec.NSTemplateSet.TierName)] = hash
 	}
 	if err := r.Client.Update(context.TODO(), mur); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -51,6 +52,7 @@ type Reconciler struct {
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spaces,verbs=get;list;watch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=nstemplatetiers/finalizers,verbs=update
 
@@ -91,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		logger.Error(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed")
 		return reconcile.Result{}, errs.Wrap(err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed")
 	} else if done {
-		logger.Info("All MasterUserRecords are up to date. Setting the completion timestamp")
+		logger.Info("All MasterUserRecords and Spaces are up to date. Setting the completion timestamp")
 		if err := r.markUpdateRecordAsCompleted(tier); err != nil {
 			logger.Error(err, "unable to mark latest status.update as complete")
 			return reconcile.Result{}, errs.Wrap(err, "unable to mark latest status.update as complete")
@@ -104,7 +106,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // if needed and cleans-up the previous one if needed (ie, clears the `failedAccounts` array)
 // returns `true` if an entry was added, `err` if something wrong happened
 func (r *Reconciler) ensureStatusUpdateRecord(logger logr.Logger, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
-	hash, err := ComputeHashForNSTemplateTier(tier)
+	hash, err := tierutil.ComputeHashForNSTemplateTier(tier)
 	if err != nil {
 		return false, errs.Wrapf(err, "unable to append an entry in the `status.updates` for NSTemplateTier '%s'", tier.Name)
 	}
@@ -132,10 +134,10 @@ func (r *Reconciler) ensureStatusUpdateRecord(logger logr.Logger, tier *toolchai
 	return true, r.Client.Status().Update(context.TODO(), tier)
 }
 
-// ensureTemplateUpdateRequest ensures that all relared MasterUserRecords are up-to-date with the NSTemplateTier that changed.
+// ensureTemplateUpdateRequest ensures that all related MasterUserRecords are up-to-date with the NSTemplateTier that changed.
 // If not, then it creates a TemplateUpdateRequest resource for the first MasterUserRecord not up-to-date with the tier, and
 // returns `false, nil` so the controller will wait for the next reconcile loop to create subsequent TemplateUpdateRequest resources,
-// until the `MaxPoolSize` threashold is reached (returns `false, nil`) or no other MasterUserRecord needs to be updated (returns `true,nil`)
+// until the `MaxPoolSize` threshold is reached (returns `false, nil`) or no other MasterUserRecord needs to be updated (returns `true,nil`)
 func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config toolchainconfig.ToolchainConfig, tier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
 	if activeTemplateUpdateRequests, deleted, err := r.activeTemplateUpdateRequests(logger, config, tier); err != nil {
 		return false, errs.Wrap(err, "unable to get active TemplateUpdateRequests")
@@ -145,25 +147,36 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 		return false, nil
 	} else if activeTemplateUpdateRequests < config.Tiers().TemplateUpdateRequestMaxPoolSize() {
 		// create a TemplateUpdateRequest if active count < MaxPoolSize,
-		// ie, find a MasterUserRecord which is not already up-to-date
+		// ie, find a MasterUserRecord or Space which is not already up-to-date
 		// and for which there is no TemplateUpdateRequest yet
 
-		// fetch by subsets of "MaxPoolSize + 1" size until a MasterUserRecord candidate is found
-		murs := toolchainv1alpha1.MasterUserRecordList{}
-		matchingLabels, err := murSelector(tier)
+		// fetch by subsets of "MaxPoolSize + 1" size until a candidate is found
+		matchOutdated, err := outdatedTierSelector(tier)
 		if err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
-		if err = r.Client.List(context.Background(), &murs,
+		murs := toolchainv1alpha1.MasterUserRecordList{}
+		if err = r.Client.List(context.TODO(), &murs,
 			client.InNamespace(tier.Namespace),
 			client.Limit(config.Tiers().TemplateUpdateRequestMaxPoolSize()+1),
-			matchingLabels,
+			matchOutdated,
 		); err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
-		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchingLabels)
-		if activeTemplateUpdateRequests == 0 && len(murs.Items) == 0 {
-			// we've reached the end: all MasterUserRecords are up-to-date
+		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchOutdated)
+
+		spaces := toolchainv1alpha1.SpaceList{}
+		if err = r.Client.List(context.TODO(), &spaces,
+			client.InNamespace(tier.Namespace),
+			client.Limit(config.Tiers().TemplateUpdateRequestMaxPoolSize()+1),
+			matchOutdated,
+		); err != nil {
+			return false, errs.Wrap(err, "unable to get Spaces to update")
+		}
+		logger.Info("listed Spaces", "count", len(spaces.Items), "selector", matchOutdated)
+
+		if activeTemplateUpdateRequests == 0 && len(murs.Items) == 0 && len(spaces.Items) == 0 {
+			// we've reached the end: all MasterUserRecords and Spaces are up-to-date
 			return true, nil
 		}
 		for _, mur := range murs.Items {
@@ -179,27 +192,30 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 				return false, errs.Wrapf(err, "unable to get TemplateUpdateRequest for MasterUserRecord '%s'", mur.Name)
 			}
 			logger.Info("creating a TemplateUpdateRequest to update the MasterUserRecord", "name", mur.Name, "tier", tier.Name)
-			tur := &toolchainv1alpha1.TemplateUpdateRequest{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: tier.Namespace,
-					Name:      mur.Name,
-					Labels: map[string]string{
-						toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
-					},
-				},
-				Spec: toolchainv1alpha1.TemplateUpdateRequestSpec{
-					TierName:         tier.Name,
-					Namespaces:       tier.Spec.Namespaces,
-					ClusterResources: tier.Spec.ClusterResources,
-				},
+			return r.createTemplateUpdateRequest(tier, mur.Name, toolchainv1alpha1.TemplateUpdateRequestSpec{
+				TierName:         tier.Name,
+				Namespaces:       tier.Spec.Namespaces,
+				ClusterResources: tier.Spec.ClusterResources,
+			})
+		}
+
+		for _, space := range spaces.Items {
+			// check if there's already a TemplateUpdateRequest for this Space
+			templateUpdateRequest := toolchainv1alpha1.TemplateUpdateRequest{}
+			if err := r.Client.Get(context.TODO(), types.NamespacedName{
+				Namespace: tier.Namespace,
+				Name:      space.Name,
+			}, &templateUpdateRequest); err == nil {
+				logger.Info("Space already has an associated TemplateUpdateRequest", "name", space.Name)
+				continue
+			} else if !errors.IsNotFound(err) {
+				return false, errs.Wrapf(err, "unable to get TemplateUpdateRequest for Space '%s'", space.Name)
 			}
-			if err = controllerutil.SetControllerReference(tier, tur, r.Scheme); err != nil {
-				return false, err
-			}
-			// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
-			// and the creation of this TemplateUpdateRequest will trigger another reconcile loop
-			// since the controller watches TemplateUpdateRequests owned by the NSTemplateTier
-			return false, r.Client.Create(context.TODO(), tur)
+			logger.Info("creating a TemplateUpdateRequest to update the Space", "name", space.Name, "tier", tier.Name)
+			hashLabel := tierutil.TemplateTierHashLabelKey(tier.Name)
+			return r.createTemplateUpdateRequest(tier, space.Name, toolchainv1alpha1.TemplateUpdateRequestSpec{
+				CurrentTierHash: space.Labels[hashLabel],
+			})
 		}
 	}
 	logger.Info("done for now with creating TemplateUpdateRequest resources after update of NSTemplateTier", "tier", tier.Name)
@@ -254,7 +270,7 @@ func (r *Reconciler) activeTemplateUpdateRequests(logger logr.Logger, config too
 		}
 		count++
 	}
-	logger.Info("found active TemplateUpdateRequests for the current tier", "count", count)
+	logger.Info("number of active TemplateUpdateRequests for the current tier", "count", count)
 	return count, false, nil
 }
 
@@ -297,4 +313,25 @@ func (r *Reconciler) markUpdateRecordAsCompleted(tier *toolchainv1alpha1.NSTempl
 	latest.CompletionTime = &now
 	tier.Status.Updates[len(tier.Status.Updates)-1] = latest
 	return r.Client.Status().Update(context.TODO(), tier)
+}
+
+// createTemplateUpdateRequest creates a TemplateUpdateRequest resource with the provided name and spec
+func (r *Reconciler) createTemplateUpdateRequest(tier *toolchainv1alpha1.NSTemplateTier, name string, spec toolchainv1alpha1.TemplateUpdateRequestSpec) (bool, error) {
+	tur := &toolchainv1alpha1.TemplateUpdateRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: tier.Namespace,
+			Name:      name,
+			Labels: map[string]string{
+				toolchainv1alpha1.NSTemplateTierNameLabelKey: tier.Name,
+			},
+		},
+		Spec: spec,
+	}
+	if err := controllerutil.SetControllerReference(tier, tur, r.Scheme); err != nil {
+		return false, err
+	}
+	// the controller creates a single TemplateUpdateRequest resource per reconcile loop,
+	// and the creation of this TemplateUpdateRequest will trigger another reconcile loop
+	// since the controller watches TemplateUpdateRequests owned by the NSTemplateTier
+	return false, r.Client.Create(context.TODO(), tur)
 }

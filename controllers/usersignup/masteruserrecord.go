@@ -2,7 +2,7 @@ package usersignup
 
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -36,15 +36,15 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 		}
 		tierName := ua.Spec.NSTemplateSet.TierName
 		// only set the label if it is missing.
-		if _, ok := mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)]; !ok {
-			hash, err := nstemplatetier.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
+		if _, ok := mur.Labels[tierutil.TemplateTierHashLabelKey(tierName)]; !ok {
+			hash, err := tierutil.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
 			if err != nil {
 				return false, err
 			}
 			if mur.Labels == nil {
 				mur.Labels = map[string]string{}
 			}
-			mur.Labels[nstemplatetier.TemplateTierHashLabelKey(tierName)] = hash
+			mur.Labels[tierutil.TemplateTierHashLabelKey(tierName)] = hash
 			changed = true
 		}
 	}
@@ -75,13 +75,13 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 			},
 		},
 	}
-	hash, err := nstemplatetier.ComputeHashForNSTemplateTier(nstemplateTier)
+	hash, err := tierutil.ComputeHashForNSTemplateTier(nstemplateTier)
 	if err != nil {
 		return nil, err
 	}
 	labels := map[string]string{
-		toolchainv1alpha1.MasterUserRecordOwnerLabelKey:              userSignup.Name,
-		nstemplatetier.TemplateTierHashLabelKey(nstemplateTier.Name): hash,
+		toolchainv1alpha1.MasterUserRecordOwnerLabelKey:        userSignup.Name,
+		tierutil.TemplateTierHashLabelKey(nstemplateTier.Name): hash,
 	}
 	annotations := map[string]string{
 		toolchainv1alpha1.MasterUserRecordEmailAnnotationKey: userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey],
