@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
@@ -242,14 +242,14 @@ func newExpectedNsTemplateSetSpec() *toolchainv1alpha1.NSTemplateSetSpec {
 }
 
 func newExpectedMur(tier *toolchainv1alpha1.NSTemplateTier, userSignup *toolchainv1alpha1.UserSignup) *toolchainv1alpha1.MasterUserRecord {
-	hash, _ := nstemplatetier.ComputeHashForNSTemplateTier(tier)
+	hash, _ := tierutil.ComputeHashForNSTemplateTier(tier)
 	return &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      "johny",
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
-				"toolchain.dev.openshift.com/owner":                userSignup.Name,
-				nstemplatetier.TemplateTierHashLabelKey(tier.Name): hash,
+				"toolchain.dev.openshift.com/owner":          userSignup.Name,
+				tierutil.TemplateTierHashLabelKey(tier.Name): hash,
 			},
 			Annotations: map[string]string{
 				"toolchain.dev.openshift.com/user-email": "foo@redhat.com",

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	. "github.com/codeready-toolchain/host-operator/test"
@@ -55,7 +55,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", cl).
 			HasTier(*teamTier).
 			AllUserAccountsHaveTier(*teamTier).
-			DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
+			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
@@ -73,7 +73,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			HasTier(*teamTier).
 			AllUserAccountsHaveTier(*teamTier).
-			DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
+			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
