@@ -396,6 +396,7 @@ func TestTiers(t *testing.T) {
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.Equal(t, "base", toolchainCfg.Tiers().DefaultTier())
+		assert.Equal(t, "base", toolchainCfg.Tiers().DefaultSpaceTier())
 		assert.Equal(t, 24*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
 		assert.Equal(t, 5, toolchainCfg.Tiers().TemplateUpdateRequestMaxPoolSize())
 	})
@@ -408,11 +409,13 @@ func TestTiers(t *testing.T) {
 	t.Run("non-default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().
 			DefaultTier("advanced").
+			DefaultSpaceTier("advanced").
 			DurationBeforeChangeTierRequestDeletion("48h").
 			TemplateUpdateRequestMaxPoolSize(40))
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.Equal(t, "advanced", toolchainCfg.Tiers().DefaultTier())
+		assert.Equal(t, "advanced", toolchainCfg.Tiers().DefaultSpaceTier())
 		assert.Equal(t, 48*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
 		assert.Equal(t, 40, toolchainCfg.Tiers().TemplateUpdateRequestMaxPoolSize())
 	})
