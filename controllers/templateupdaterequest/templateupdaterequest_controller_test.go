@@ -819,6 +819,30 @@ func TestReconcile(t *testing.T) {
 				assert.EqualError(t, err, "unable to get the Space associated with the TemplateUpdateRequest: mock error")
 				assert.Equal(t, reconcile.Result{}, res) // no need to requeue, the Space is watched
 			})
+
+			t.Run("error updating status", func(t *testing.T) {
+				// given
+				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
+				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
+				space := spacetest.NewSpace("user-1", spacetest.WithTierNameAndHashLabelFor(previousBasicTier)) // space's hash matches TUR hash
+				initObjs := []runtime.Object{basicTier, space}
+				previousHash, err := tierutil.ComputeHashForNSTemplateTier(previousBasicTier)
+				require.NoError(t, err)
+				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
+				r, req, cl := prepareReconcile(t, initObjs...)
+				cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
+						return fmt.Errorf("mock error")
+					}
+					return cl.Client.Status().Update(ctx, obj, opts...)
+				}
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.Error(t, err)
+				assert.EqualError(t, err, "unable to update the TemplateUpdateRequest status: mock error")
+				assert.Equal(t, reconcile.Result{}, res) // no need to requeue, the Space is watched
+			})
 		})
 	})
 }
