@@ -6,7 +6,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -176,14 +176,14 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return false, nil
 	}
 
-	hash, err := nstemplatetier.ComputeHashForNSTemplateTier(tmplTier)
+	hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
 	if err != nil {
 		return false, r.setStatusChangeFailed(logger, space, err)
 	}
 	if space.Labels == nil {
 		space.Labels = map[string]string{}
 	}
-	space.Labels[nstemplatetier.TemplateTierHashLabelKey(space.Spec.TierName)] = hash
+	space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] = hash
 	if err := r.Client.Update(context.TODO(), space); err != nil {
 		return false, r.setStatusProvisioningFailed(logger, space, err)
 	}

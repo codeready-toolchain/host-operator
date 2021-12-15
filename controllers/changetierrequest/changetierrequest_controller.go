@@ -240,7 +240,7 @@ func (r *Reconciler) changeTierInSpace(logger logr.Logger, changeTierRequest *to
 	}
 	space.Spec.TierName = changeTierRequest.Spec.TierName
 	// remove the TemplateTierHash label on the Space resource (and let the SpaceController set it to the latest value)
-	delete(space.Labels, nstemplatetier.TemplateTierHashLabelKey(space.Spec.TierName))
+	delete(space.Labels, tierutil.TemplateTierHashLabelKey(space.Spec.TierName))
 
 	if err := r.Client.Update(context.TODO(), space); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in Space %s", changeTierRequest.Spec.MurName)

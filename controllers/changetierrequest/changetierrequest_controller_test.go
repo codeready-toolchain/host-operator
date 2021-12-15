@@ -186,7 +186,7 @@ func TestChangeTierSuccess(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", teamTier.Name)
 			mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
-			space := spacetest.NewSpace("john", basicTier.Name, spacetest.WithTargetCluster("member-1"))
+			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
 			controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, space, basicTier, teamTier)
 
 			// when
@@ -197,18 +197,18 @@ func TestChangeTierSuccess(t *testing.T) {
 			murtest.AssertThatMasterUserRecord(t, "john", cl).
 				HasTier(*teamTier).
 				AllUserAccountsHaveTier(*teamTier).
-				DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
+				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
 				HasTier(teamTier.Name).
 				HasTargetCluster("member-1"). // unchanged
-				DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName))
+				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName))
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 		})
 
 		t.Run("when the MasterUserRecord does not exist", func(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", teamTier.Name)
-			space := spacetest.NewSpace("john", basicTier.Name, spacetest.WithTargetCluster("member-1"))
+			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
 			controller, request, cl := newController(t, changeTierRequest, config, userSignup, space, basicTier, teamTier)
 
 			// when
@@ -219,7 +219,7 @@ func TestChangeTierSuccess(t *testing.T) {
 			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
 				HasTier(teamTier.Name).
 				HasTargetCluster("member-1"). // unchanged
-				DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName))
+				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName))
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 		})
 	})
@@ -369,7 +369,7 @@ func TestChangeTierFailure(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", "team")
 			mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
-			space := spacetest.NewSpace("john", basicTier.Name, spacetest.WithTargetCluster("member-1"))
+			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
 			controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, space, teamTier)
 			cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
@@ -385,7 +385,7 @@ func TestChangeTierFailure(t *testing.T) {
 			murtest.AssertThatMasterUserRecord(t, "john", cl).
 				HasTier(*teamTier).
 				AllUserAccountsHaveTier(*teamTier).
-				DoesNotHaveLabel(nstemplatetier.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
+				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
 				HasTier(basicTier.Name) // unchanged
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("mock error!"))
@@ -394,7 +394,7 @@ func TestChangeTierFailure(t *testing.T) {
 		t.Run("when the MasterUserRecord does not exist", func(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", "team")
-			space := spacetest.NewSpace("john", basicTier.Name, spacetest.WithTargetCluster("member-1"))
+			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
 			controller, request, cl := newController(t, changeTierRequest, config, userSignup, space, teamTier)
 			cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
