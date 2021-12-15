@@ -41,7 +41,7 @@ func TestCreateSpace(t *testing.T) {
 	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 	t.Run("success", func(t *testing.T) {
 		// given
-		s := spacetest.NewSpace("oddity", basicTier.Name, spacetest.WithTargetCluster("member-1"))
+		s := spacetest.NewSpace("oddity", spacetest.WithTargetCluster("member-1"))
 		hostClient := test.NewFakeClient(t, s, basicTier)
 		member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
@@ -133,7 +133,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while getting space", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", basicTier.Name)
+			s := spacetest.NewSpace("oddity")
 			hostClient := test.NewFakeClient(t, s)
 			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
@@ -155,7 +155,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while adding finalizer", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", basicTier.Name)
+			s := spacetest.NewSpace("oddity")
 			hostClient := test.NewFakeClient(t, s)
 			hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
@@ -177,7 +177,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("unspecified target member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", basicTier.Name)
+			s := spacetest.NewSpace("oddity")
 			hostClient := test.NewFakeClient(t, s)
 			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
@@ -196,7 +196,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("unknown target member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", basicTier.Name, spacetest.WithTargetCluster("unknown"))
+			s := spacetest.NewSpace("oddity", spacetest.WithTargetCluster("unknown"))
 			hostClient := test.NewFakeClient(t, s)
 			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
@@ -215,7 +215,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while getting NSTemplateTier on host cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", basicTier.Name,
+			s := spacetest.NewSpace("oddity",
 				spacetest.WithTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s)
@@ -243,7 +243,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while getting NSTemplateSet on member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", basicTier.Name,
+			s := spacetest.NewSpace("oddity",
 				spacetest.WithTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
@@ -271,7 +271,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while creating NSTemplateSet on member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", basicTier.Name,
+			s := spacetest.NewSpace("oddity",
 				spacetest.WithTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
@@ -299,7 +299,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("error while updating status after creating NSTemplateSet", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", basicTier.Name,
+			s := spacetest.NewSpace("oddity",
 				spacetest.WithTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
@@ -341,7 +341,7 @@ func TestDeleteSpace(t *testing.T) {
 
 			t.Run("when space is deleted", func(t *testing.T) {
 				// given a space that is being deleted
-				s := spacetest.NewSpace("oddity", basicTier.Name,
+				s := spacetest.NewSpace("oddity",
 					spacetest.WithTargetCluster("member-1"),
 					spacetest.WithFinalizer(),
 					spacetest.WithDeletionTimestamp())
@@ -430,7 +430,7 @@ func TestDeleteSpace(t *testing.T) {
 
 			t.Run("when using status target cluster", func(t *testing.T) {
 				// given
-				s := spacetest.NewSpace("oddity", basicTier.Name,
+				s := spacetest.NewSpace("oddity",
 					spacetest.WithoutTargetCluster(),              // targetCluster is not specified in spec ...
 					spacetest.WithStatusTargetCluster("member-1"), // ... but is available in status
 					spacetest.WithFinalizer(),
@@ -476,7 +476,7 @@ func TestDeleteSpace(t *testing.T) {
 
 			t.Run("no target cluster", func(t *testing.T) {
 				// given
-				s := spacetest.NewSpace("oddity", basicTier.Name,
+				s := spacetest.NewSpace("oddity",
 					spacetest.WithFinalizer(),
 					spacetest.WithDeletionTimestamp())
 				hostClient := test.NewFakeClient(t, s, basicTier)
@@ -505,7 +505,7 @@ func TestDeleteSpace(t *testing.T) {
 
 			t.Run("because of missing target member cluster", func(t *testing.T) {
 				// given
-				s := spacetest.NewSpace("oddity", basicTier.Name,
+				s := spacetest.NewSpace("oddity",
 					spacetest.WithoutTargetCluster(),
 					spacetest.WithFinalizer(),
 					spacetest.WithDeletionTimestamp(),
@@ -532,7 +532,7 @@ func TestDeleteSpace(t *testing.T) {
 
 			t.Run("because of unknown target member cluster", func(t *testing.T) {
 				// given
-				s := spacetest.NewSpace("oddity", basicTier.Name,
+				s := spacetest.NewSpace("oddity",
 					spacetest.WithTargetCluster("unknown"),
 					spacetest.WithFinalizer(),
 					spacetest.WithDeletionTimestamp(),
@@ -564,7 +564,7 @@ func TestDeleteSpace(t *testing.T) {
 
 		t.Run("error while getting NSTemplateSet on member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", basicTier.Name,
+			s := spacetest.NewSpace("oddity",
 				spacetest.WithTargetCluster("member-1"),
 				spacetest.WithFinalizer(),
 				spacetest.WithDeletionTimestamp())
