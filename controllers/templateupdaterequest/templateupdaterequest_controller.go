@@ -101,6 +101,10 @@ func (r *Reconciler) handleSpaceUpdate(logger logr.Logger, request ctrl.Request,
 
 	// otherwise, we need to wait
 	logger.Info("Space still being updated...")
+	if err := r.addUpdatingStatusCondition(tur, map[string]string{}); err != nil {
+		logger.Error(err, "Unable to update the TemplateUpdateRequest status")
+		return reconcile.Result{}, errs.Wrap(err, "unable to update the TemplateUpdateRequest status")
+	}
 	// no explicit requeue: expect new reconcile loop when Space changes
 	return reconcile.Result{}, nil
 }
