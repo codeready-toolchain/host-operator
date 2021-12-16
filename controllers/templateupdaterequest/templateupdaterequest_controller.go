@@ -91,7 +91,7 @@ func (r *Reconciler) handleSpaceUpdate(logger logr.Logger, request ctrl.Request,
 		return reconcile.Result{}, errs.Wrap(err, "unable to get the Space associated with the TemplateUpdateRequest")
 	}
 
-	labelKey := TemplateTierHashLabelKey(space.Spec.TierName)
+	labelKey := tierutil.TemplateTierHashLabelKey(space.Spec.TierName)
 	// if the tier hash has changed and the Space is in ready state then the update is complete
 	if tur.Spec.CurrentTierHash != space.Labels[labelKey] && condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 		// once the Space is up-to-date, we can delete this TemplateUpdateRequest
@@ -107,11 +107,6 @@ func (r *Reconciler) handleSpaceUpdate(logger logr.Logger, request ctrl.Request,
 	}
 	// no explicit requeue: expect new reconcile loop when Space changes
 	return reconcile.Result{}, nil
-}
-
-// TODO remove
-func TemplateTierHashLabelKey(tierName string) string {
-	return toolchainv1alpha1.LabelKeyPrefix + tierName + "-tier-hash"
 }
 
 func (r *Reconciler) handleMURUpdate(logger logr.Logger, request ctrl.Request, tur *toolchainv1alpha1.TemplateUpdateRequest) (ctrl.Result, error) {
