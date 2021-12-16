@@ -178,7 +178,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 
 	hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
 	if err != nil {
-		return false, r.setStatusChangeFailed(logger, space, err)
+		return false, r.setStatusProvisioningFailed(logger, space, err)
 	}
 	if space.Labels == nil {
 		space.Labels = map[string]string{}
@@ -360,22 +360,6 @@ func (r *Reconciler) setStatusTerminatingFailed(logger logr.Logger, space *toolc
 		logger.Error(cause, "unable to terminate Space")
 		return err
 	}
-	return cause
-}
-
-func (r *Reconciler) setStatusChangeFailed(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
-	if err := r.updateStatus(
-		space,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.ConditionReady,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.SpaceStatusUpdateFailedReason,
-			Message: cause.Error(),
-		}); err != nil {
-		logger.Error(cause, "unable to compute hash for NSTemplateTier with name '%s'", space.Spec.TierName)
-		return err
-	}
-
 	return cause
 }
 
