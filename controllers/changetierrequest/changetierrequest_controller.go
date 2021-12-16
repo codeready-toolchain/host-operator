@@ -244,7 +244,7 @@ func (r *Reconciler) setStatusChangeFailed(changeRequest *toolchainv1alpha1.Chan
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ChangeTierRequestComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.ChangeTierRequestChangeFiledReason,
+			Reason:  toolchainv1alpha1.ChangeTierRequestChangeFailedReason,
 			Message: message,
 		})
 }

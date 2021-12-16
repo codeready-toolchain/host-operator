@@ -422,7 +422,7 @@ func toBeNotComplete(msg string) toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ChangeTierRequestComplete,
 		Status:  apiv1.ConditionFalse,
-		Reason:  toolchainv1alpha1.ChangeTierRequestChangeFiledReason,
+		Reason:  toolchainv1alpha1.ChangeTierRequestChangeFailedReason,
 		Message: msg,
 	}
 }
