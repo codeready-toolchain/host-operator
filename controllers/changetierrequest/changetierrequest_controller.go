@@ -241,6 +241,8 @@ func (r *Reconciler) changeTierInMasterUserRecord(logger logr.Logger, changeTier
 	return true, nil
 }
 
+// changeTierInSpace changes the tier in the Space.
+// returns `false` if there was no Space matching the `changeTierRequest.Spec.MurName`.
 func (r *Reconciler) changeTierInSpace(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) (bool, error) {
 	space := &toolchainv1alpha1.Space{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{
@@ -253,6 +255,11 @@ func (r *Reconciler) changeTierInSpace(logger logr.Logger, changeTierRequest *to
 		}
 		return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get Space with name %s", changeTierRequest.Spec.MurName)
 	}
+	// skip if space already has the expected tier
+	if space.Spec.TierName == changeTierRequest.Spec.TierName {
+		return true, nil // here we consider that the Space was processed, even though there was no update. But the ChangeTierRequest controller will not return an error.
+	}
+
 	space.Spec.TierName = changeTierRequest.Spec.TierName
 	// remove the TemplateTierHash label on the Space resource (and let the SpaceController set it to the latest value)
 	delete(space.Labels, tierutil.TemplateTierHashLabelKey(space.Spec.TierName))

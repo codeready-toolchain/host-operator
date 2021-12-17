@@ -221,6 +221,24 @@ func TestChangeTierSuccess(t *testing.T) {
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName))
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 		})
+
+		t.Run("when the Space tier already up-to-date", func(t *testing.T) {
+			// given
+			changeTierRequest := newChangeTierRequest("john", teamTier.Name)
+			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"), spacetest.WithTierNameAndHashLabelFor(teamTier))
+			controller, request, cl := newController(t, changeTierRequest, config, userSignup, space, teamTier)
+
+			// when
+			_, err := controller.Reconcile(context.TODO(), request)
+
+			// then
+			require.NoError(t, err)
+			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
+				HasTier(teamTier.Name).                                                      // unchanged
+				HasTargetCluster("member-1").                                                // unchanged
+				HasLabel(tierutil.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName)) // not removed since there was no update to perform in this case
+			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete()) // ChangeTierRequest is complete.
+		})
 	})
 }
 
