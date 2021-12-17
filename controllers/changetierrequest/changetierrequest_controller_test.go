@@ -249,6 +249,25 @@ func TestChangeTierFailure(t *testing.T) {
 	basicTier := NewNSTemplateTier("basic", "123basic", "123clusterbasic", "stage", "dev")
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 
+	t.Run("the change will fail since the corresponding MUR cannot get fetched", func(t *testing.T) {
+		// given
+		changeTierRequest := newChangeTierRequest("johny", "team")
+		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, teamTier)
+		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
+				return fmt.Errorf("mock error")
+			}
+			return cl.Client.Get(ctx, key, obj)
+		}
+		// when
+		_, err := controller.Reconcile(context.TODO(), request)
+
+		// then
+		require.EqualError(t, err, "unable to get MasterUserRecord with name johny: mock error")
+		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("mock error"))
+	})
+
 	t.Run("will fail since the provided tier doesn't exist", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
