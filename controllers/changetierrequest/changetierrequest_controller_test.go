@@ -46,7 +46,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("john", "team")
-		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, basicTier, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
