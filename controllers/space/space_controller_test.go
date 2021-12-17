@@ -633,7 +633,7 @@ func TestUpdate(t *testing.T) {
 			HasTier(otherTier.Name).
 			HasTargetCluster("member-1").
 			HasStatusTargetCluster("member-1").
-			HasConditions(spacetest.Provisioning()).
+			HasConditions(spacetest.Updating()).
 			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)) // not set yet, since NSTemplateSet must be updated first
 		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 			Exists().
@@ -659,7 +659,7 @@ func TestUpdate(t *testing.T) {
 				HasTier(otherTier.Name).
 				HasTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
-				HasConditions(spacetest.Provisioning()).
+				HasConditions(spacetest.Updating()).
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name))
 
 			t.Run("done when NSTemplateSet is ready", func(t *testing.T) {
@@ -781,7 +781,7 @@ func TestUpdate(t *testing.T) {
 				HasTier(otherTier.Name).
 				HasTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
-				HasConditions(spacetest.Provisioning()).
+				HasConditions(spacetest.Updating()).
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)) // not set yet, since NSTemplateSet must be updated first
 			nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				Exists().
@@ -807,7 +807,7 @@ func TestUpdate(t *testing.T) {
 					HasTier(otherTier.Name).
 					HasTargetCluster("member-1").
 					HasStatusTargetCluster("member-1").
-					HasConditions(spacetest.Provisioning()).
+					HasConditions(spacetest.Updating()).
 					DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name))
 
 				t.Run("failed when namespace failed to provision", func(t *testing.T) {

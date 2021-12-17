@@ -86,13 +86,30 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	} else {
 		return reconcile.Result{}, r.ensureSpaceDeletion(logger, space)
 	}
-	// ensure that there's a NSTemplateSet on the Target Cluster
-	// will trigger a requeue until the NSTemplateSet exists and is ready,
-	// so the Space can be in `ready` status as well
-	if requeue, err := r.ensureNSTemplateSet(logger, space); err != nil {
+
+	createdOrUpdated, err := r.ensureNSTemplateSet(logger, space)
+	if err != nil {
 		return ctrl.Result{}, err
-	} else if requeue {
-		return ctrl.Result{Requeue: true, RequeueAfter: 3 * time.Second}, nil
+	}
+	if createdOrUpdated {
+		// if the NSTemplateSet was created updated, we want to make sure that the NSTemplateSet Controller was kicked before
+		// reconciling the Space again. In particular, when the NSTemplateSet.Spec is updated, if the Space Controller is triggered
+		// before the NSTemplateSet Controller and the NSTemplateSet status is still `Provisioned` (but with the previous templates)
+		// then the Space Controller will immediately set the Space status to `Provisioned` whereas in fact, the template update
+		// did not even start yet!
+		// Note: there are 2 durations involved here:
+		// 1. Within 1 second after the Space status was set to `Updating`, the SpaceController considers it's too early and will requeue
+		// 2. The requeue duration is set to 3 seconds, but in practice, the SpaceController will be triggered as soon as the NSTemplateSet
+		//    status is updated by its own controller
+		logger.Info("NSTemplateSet was created or updated")
+		readyCond, ok := condition.FindConditionByType(space.Status.Conditions, toolchainv1alpha1.ConditionReady)
+		logger.Info("checking space condition", "ready", readyCond)
+		if ok && readyCond.Reason == toolchainv1alpha1.SpaceUpdatingReason && time.Since(readyCond.LastTransitionTime.Time) <= time.Second {
+			return ctrl.Result{
+				Requeue:      true,
+				RequeueAfter: 3 * time.Second,
+			}, nil
+		}
 	}
 	return ctrl.Result{}, nil
 }
@@ -112,7 +129,7 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, space *toolchainv1alpha1.S
 
 // ensureNSTemplateSet creates the NSTemplateSet on the target member cluster if it does not exist,
 // and updates the space's status accordingly.
-// returns `true` if an explicit requeue with delay is needed (to give time the the NSTemplateSetController to pick-up the changes on the updated NSTemplateSet)
+// returns `true` if the NSTemplateSet was created or updated, `false` otherwise
 func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
 	if space.Spec.TargetCluster == "" {
 		return false, r.setStatusProvisioningPending(logger, space, fmt.Errorf("unspecified target member cluster"))
@@ -148,7 +165,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 				return false, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 			}
 			logger.Info("NSTemplateSet created on target member cluster")
-			return false, nil
+			return true, r.setStatusProvisioning(space)
 		}
 		return false, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 	}
@@ -163,15 +180,19 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		}
 		// also, immediately update Space condition
 		logger.Info("NSTemplateSet updated on target member cluster")
-		return true, r.setStatusProvisioning(space) // here we need to requeue with some delay
+		return true, r.setStatusUpdating(space)
 	}
 	//
 
 	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
-	// if Space's `ready` condition is already set to `false`, then don't update if no message is provided by the NSTemplateSet (so we don't override the current message if there's any)
+	// if Space's `ready` condition is already set to `false`, then don't update if no message is provided by the NSTemplateSet
+	// (there is a message if something wrong happened, in which case we want to replicate the NSTemplateSet condition in the Space status)
 	// also, don't update when NSTemplateSet ready condition is in an invalid state
-	if (condition.IsFalse(space.Status.Conditions, toolchainv1alpha1.ConditionReady) && nsTmplSetReady.Status == corev1.ConditionFalse && nsTmplSetReady.Message == "") ||
-		!found || nsTmplSetReady.Status == corev1.ConditionUnknown {
+	if !found ||
+		nsTmplSetReady.Status == corev1.ConditionUnknown ||
+		(condition.IsFalse(space.Status.Conditions, toolchainv1alpha1.ConditionReady) &&
+			nsTmplSetReady.Status == corev1.ConditionFalse &&
+			nsTmplSetReady.Message == "") {
 		logger.Info("Either Space's ready condition is already set to false and no message was provided by NSTemplateSet, or NSTemplateSet is an invalid state", "nstemplateset-ready-condition", nsTmplSetReady)
 		return false, nil
 	}
@@ -305,6 +326,16 @@ func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionFalse,
 			Reason: toolchainv1alpha1.SpaceProvisioningReason,
+		})
+}
+
+func (r *Reconciler) setStatusUpdating(space *toolchainv1alpha1.Space) error {
+	return r.updateStatus(
+		space,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ConditionReady,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.SpaceUpdatingReason,
 		})
 }
 
