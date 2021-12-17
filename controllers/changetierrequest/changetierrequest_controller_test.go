@@ -38,7 +38,6 @@ func TestChangeTierSuccess(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
-	basicTier := NewNSTemplateTier("basic", "123basic", "123clusterbasic", "stage", "dev")
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 
 	userSignup := NewUserSignup()
@@ -64,7 +63,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
-		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, basicTier, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
@@ -82,7 +81,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("another-cluster"))
-		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, basicTier, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
@@ -100,7 +99,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		changeTierRequest.Status.Conditions = []toolchainv1alpha1.Condition{toBeComplete()}
-		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, basicTier, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 
 		// when
 		result, err := controller.Reconcile(context.TODO(), request)
@@ -122,7 +121,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		changeTierRequest := newChangeTierRequest("johny", "team")
 		changeTierRequest.Status.Conditions = []toolchainv1alpha1.Condition{toBeComplete()}
 		changeTierRequest.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
-		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, basicTier, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 
 		// when
 		result, err := controller.Reconcile(context.TODO(), request)
@@ -144,7 +143,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 
 		states.SetDeactivating(userSignupDeactivating, true)
-		controller, request, cl := newController(t, changeTierRequest, config, userSignupDeactivating, mur, basicTier, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignupDeactivating, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
@@ -167,7 +166,7 @@ func TestChangeTierSuccess(t *testing.T) {
 			}
 		}
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("another-cluster"))
-		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, basicTier, teamTier)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
@@ -187,7 +186,7 @@ func TestChangeTierSuccess(t *testing.T) {
 			changeTierRequest := newChangeTierRequest("john", teamTier.Name)
 			mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
 			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
-			controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, space, basicTier, teamTier)
+			controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, space, teamTier)
 
 			// when
 			_, err := controller.Reconcile(context.TODO(), request)
@@ -209,7 +208,7 @@ func TestChangeTierSuccess(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", teamTier.Name)
 			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
-			controller, request, cl := newController(t, changeTierRequest, config, userSignup, space, basicTier, teamTier)
+			controller, request, cl := newController(t, changeTierRequest, config, userSignup, space, teamTier)
 
 			// when
 			_, err := controller.Reconcile(context.TODO(), request)
