@@ -399,42 +399,38 @@ func TestChangeTierFailure(t *testing.T) {
 		require.True(t, states.Deactivating(updatedUserSignup))
 	})
 
-	t.Run("will fail when updating the Space", func(t *testing.T) {
+	t.Run("will fail on Space", func(t *testing.T) {
 
-		t.Run("when the MasterUserRecord exists", func(t *testing.T) {
+		t.Run("when fetching fails", func(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", "team")
-			mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
 			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
-			controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, space, teamTier)
-			cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			controller, request, cl := newController(t, changeTierRequest, config, userSignup, space, teamTier)
+			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
-					return fmt.Errorf("mock error!")
+					return fmt.Errorf("mock error")
 				}
-				return cl.Client.Update(ctx, obj, opts...)
+				return cl.Client.Get(ctx, key, obj)
 			}
 			// when
 			_, err := controller.Reconcile(context.TODO(), request)
 
 			// then
-			require.EqualError(t, err, "unable to change tier in Space john: mock error!")
-			murtest.AssertThatMasterUserRecord(t, "john", cl).
-				HasTier(*teamTier).
-				AllUserAccountsHaveTier(*teamTier).
-				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
+			require.EqualError(t, err, "unable to get Space with name john: mock error")
+			cl.MockGet = nil // need to restore the default behaviour otherwise the assertion using the same client will fail, too!
 			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
 				HasTier(basicTier.Name) // unchanged
-			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("mock error!"))
+			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("mock error"))
 		})
 
-		t.Run("when the MasterUserRecord does not exist", func(t *testing.T) {
+		t.Run("when updating fails", func(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", "team")
 			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
 			controller, request, cl := newController(t, changeTierRequest, config, userSignup, space, teamTier)
 			cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
-					return fmt.Errorf("mock error!")
+					return fmt.Errorf("mock error")
 				}
 				return cl.Client.Update(ctx, obj, opts...)
 			}
@@ -443,10 +439,10 @@ func TestChangeTierFailure(t *testing.T) {
 			_, err := controller.Reconcile(context.TODO(), request)
 
 			// then
-			require.EqualError(t, err, "unable to change tier in Space john: mock error!")
+			require.EqualError(t, err, "unable to change tier in Space john: mock error")
 			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
 				HasTier(basicTier.Name) // unchanged
-			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("mock error!"))
+			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("mock error"))
 		})
 	})
 
