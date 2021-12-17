@@ -20,15 +20,6 @@ func WithoutTargetCluster() Option {
 	}
 }
 
-func WithLabel(key, value string) Option {
-	return func(space *toolchainv1alpha1.Space) {
-		if space.Labels == nil {
-			space.Labels = map[string]string{}
-		}
-		space.Labels[key] = value
-	}
-}
-
 func WithTargetCluster(name string) Option {
 	return func(space *toolchainv1alpha1.Space) {
 		space.Spec.TargetCluster = name
