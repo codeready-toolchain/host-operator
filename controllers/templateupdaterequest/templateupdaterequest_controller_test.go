@@ -721,7 +721,13 @@ func TestReconcile(t *testing.T) {
 				// given
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				space := spacetest.NewSpace("user-1", spacetest.WithTierNameAndHashLabelFor(basicTier)) // space's hash updated to new tier
+				space := spacetest.NewSpace("user-1", spacetest.WithTierNameAndHashLabelFor(basicTier), spacetest.WithCondition(
+					toolchainv1alpha1.Condition{
+						Type:   toolchainv1alpha1.TemplateUpdateRequestComplete,
+						Status: corev1.ConditionFalse,
+						Reason: toolchainv1alpha1.TemplateUpdateRequestUpdatingReason,
+					},
+				)) // space's hash updated to new tier
 				initObjs := []runtime.Object{basicTier, space}
 				previousHash, err := tierutil.ComputeHashForNSTemplateTier(previousBasicTier)
 				require.NoError(t, err)
