@@ -558,9 +558,7 @@ func TestReconcile(t *testing.T) {
 			t.Run("tier not found", func(t *testing.T) {
 				// given
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
+				r, req, cl := prepareReconcile(t, basicTier, turtest.NewTemplateUpdateRequest("user-1", *basicTier)) // there is no associated MasterUserRecord
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
 						return errors.NewNotFound(schema.GroupResource{}, key.Name)
@@ -577,9 +575,7 @@ func TestReconcile(t *testing.T) {
 			t.Run("other error", func(t *testing.T) {
 				// given
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
+				r, req, cl := prepareReconcile(t, basicTier, turtest.NewTemplateUpdateRequest("user-1", *basicTier)) // there is no associated MasterUserRecord
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
 						return fmt.Errorf("mock error")
@@ -600,9 +596,7 @@ func TestReconcile(t *testing.T) {
 			t.Run("tier not found", func(t *testing.T) {
 				// given
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
+				r, req, cl := prepareReconcile(t, basicTier, turtest.NewTemplateUpdateRequest("user-1", *basicTier)) // there is no associated MasterUserRecord
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
 						return errors.NewNotFound(schema.GroupResource{}, key.Name)
@@ -619,9 +613,7 @@ func TestReconcile(t *testing.T) {
 			t.Run("other error", func(t *testing.T) {
 				// given
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
-				r, req, cl := prepareReconcile(t, initObjs...) // there is no associated MasterUserRecord
+				r, req, cl := prepareReconcile(t, basicTier, turtest.NewTemplateUpdateRequest("user-1", *basicTier)) // there is no associated MasterUserRecord
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
 						return fmt.Errorf("mock error")
@@ -641,11 +633,8 @@ func TestReconcile(t *testing.T) {
 			// given
 			previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-			initObjs := []runtime.Object{basicTier}
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
 			mur := murtest.NewMasterUserRecord(t, "user-1", murtest.Account("cluster1", *previousBasicTier, murtest.SyncIndex("1")))
-			initObjs = append(initObjs, mur)
-			r, req, cl := prepareReconcile(t, initObjs...)
+			r, req, cl := prepareReconcile(t, basicTier, turtest.NewTemplateUpdateRequest("user-1", *basicTier), mur)
 			cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
 					return fmt.Errorf("mock error")
@@ -664,11 +653,8 @@ func TestReconcile(t *testing.T) {
 			// given
 			previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-			initObjs := []runtime.Object{basicTier}
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier))
 			mur := murtest.NewMasterUserRecord(t, "user-1", murtest.Account("cluster1", *previousBasicTier, murtest.SyncIndex("1")))
-			initObjs = append(initObjs, mur)
-			r, req, cl := prepareReconcile(t, initObjs...)
+			r, req, cl := prepareReconcile(t, basicTier, turtest.NewTemplateUpdateRequest("user-1", *basicTier), mur)
 			cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.MasterUserRecord); ok {
 					return fmt.Errorf("mock error")
@@ -698,11 +684,9 @@ func TestReconcile(t *testing.T) {
 			previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 			space := spacetest.NewSpace("user-1", spacetest.WithTierNameAndHashLabelFor(previousBasicTier)) // space's hash matches TUR hash
-			initObjs := []runtime.Object{basicTier, space}
 			previousHash, err := tierutil.ComputeHashForNSTemplateTier(previousBasicTier)
 			require.NoError(t, err)
-			initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
-			r, req, cl := prepareReconcile(t, initObjs...)
+			r, req, cl := prepareReconcile(t, basicTier, space, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
 			// then
@@ -728,11 +712,9 @@ func TestReconcile(t *testing.T) {
 						Reason: toolchainv1alpha1.TemplateUpdateRequestUpdatingReason,
 					},
 				)) // space's hash updated to new tier
-				initObjs := []runtime.Object{basicTier, space}
 				previousHash, err := tierutil.ComputeHashForNSTemplateTier(previousBasicTier)
 				require.NoError(t, err)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
-				r, req, cl := prepareReconcile(t, initObjs...)
+				r, req, cl := prepareReconcile(t, basicTier, space, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
@@ -758,11 +740,9 @@ func TestReconcile(t *testing.T) {
 						Reason: toolchainv1alpha1.SpaceProvisionedReason,
 					}),
 				)
-				initObjs := []runtime.Object{basicTier, space}
 				previousHash, err := tierutil.ComputeHashForNSTemplateTier(previousBasicTier)
 				require.NoError(t, err)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
-				r, req, cl := prepareReconcile(t, initObjs...)
+				r, req, cl := prepareReconcile(t, basicTier, space, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
@@ -783,11 +763,9 @@ func TestReconcile(t *testing.T) {
 				// given
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
 				previousHash, err := tierutil.ComputeHashForNSTemplateTier(previousBasicTier)
 				require.NoError(t, err)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
-				r, req, cl := prepareReconcile(t, initObjs...)
+				r, req, cl := prepareReconcile(t, basicTier, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
 				// then
@@ -807,11 +785,9 @@ func TestReconcile(t *testing.T) {
 				// given
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
 				previousHash, err := tierutil.ComputeHashForNSTemplateTier(previousBasicTier)
 				require.NoError(t, err)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
-				r, req, cl := prepareReconcile(t, initObjs...)
+				r, req, cl := prepareReconcile(t, basicTier, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
 				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
 					if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 						return fmt.Errorf("mock error")
@@ -831,11 +807,9 @@ func TestReconcile(t *testing.T) {
 				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				space := spacetest.NewSpace("user-1", spacetest.WithTierNameAndHashLabelFor(previousBasicTier)) // space's hash matches TUR hash
-				initObjs := []runtime.Object{basicTier, space}
 				previousHash, err := tierutil.ComputeHashForNSTemplateTier(previousBasicTier)
 				require.NoError(t, err)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
-				r, req, cl := prepareReconcile(t, initObjs...)
+				r, req, cl := prepareReconcile(t, basicTier, space, turtest.NewTemplateUpdateRequest("user-1", *basicTier, turtest.CurrentTierHash(previousHash)))
 				cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
 						return fmt.Errorf("mock error")
