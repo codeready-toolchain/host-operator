@@ -840,7 +840,6 @@ func TestUpdate(t *testing.T) {
 					}
 					err := member1.Client.Update(context.TODO(), nsTmplSet)
 					require.NoError(t, err)
-					ctrl := newReconciler(hostClient, member1, member2)
 
 					// when
 					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
