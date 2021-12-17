@@ -141,7 +141,7 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 	if err := r.changeTierInMasterUserRecord(logger, changeTierRequest, namespace, nsTemplateTier); err != nil {
 		return err
 	}
-	// then apply the change in MasterUserRecord
+	// then apply the change in Space
 	return r.changeTierInSpace(logger, changeTierRequest, namespace)
 }
 
