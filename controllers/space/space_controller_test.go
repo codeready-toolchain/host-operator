@@ -595,7 +595,7 @@ func TestDeleteSpace(t *testing.T) {
 	})
 }
 
-func TestUpdate(t *testing.T) {
+func TestUpdateSpace(t *testing.T) {
 
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))

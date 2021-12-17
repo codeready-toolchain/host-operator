@@ -260,9 +260,10 @@ func (r *Reconciler) changeTierInSpace(logger logr.Logger, changeTierRequest *to
 		return true, nil // here we consider that the Space was processed, even though there was no update. But the ChangeTierRequest controller will not return an error.
 	}
 
-	space.Spec.TierName = changeTierRequest.Spec.TierName
 	// remove the TemplateTierHash label on the Space resource (and let the SpaceController set it to the latest value)
 	delete(space.Labels, tierutil.TemplateTierHashLabelKey(space.Spec.TierName))
+	// set the new TierName
+	space.Spec.TierName = changeTierRequest.Spec.TierName
 
 	if err := r.Client.Update(context.TODO(), space); err != nil {
 		return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in Space %s", changeTierRequest.Spec.MurName)

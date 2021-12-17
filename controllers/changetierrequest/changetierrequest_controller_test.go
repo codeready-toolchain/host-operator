@@ -38,6 +38,7 @@ func TestChangeTierSuccess(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
+	basicTier := NewNSTemplateTier("basic", "123basic", "123clusterbasic", "stage", "dev")
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 
 	userSignup := NewUserSignup()
@@ -185,7 +186,9 @@ func TestChangeTierSuccess(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", teamTier.Name)
 			mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
-			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
+			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"),
+				spacetest.WithTierNameAndHashLabelFor(basicTier))
+			basicTierName := space.Spec.TierName
 			controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, space, teamTier)
 
 			// when
@@ -199,8 +202,9 @@ func TestChangeTierSuccess(t *testing.T) {
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
 				HasTier(teamTier.Name).
-				HasTargetCluster("member-1"). // unchanged
-				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName))
+				HasTargetCluster("member-1").                                       // unchanged
+				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(basicTierName)). // label for old tier is removed
+				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(teamTier.Name))  // label for new tier is not set yet
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 		})
 
