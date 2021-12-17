@@ -231,7 +231,7 @@ func TestChangeTierFailure(t *testing.T) {
 	basicTier := NewNSTemplateTier("basic", "123basic", "123clusterbasic", "stage", "dev")
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 
-	t.Run("the change will fail since the provided tier doesn't exist", func(t *testing.T) {
+	t.Run("will fail since the provided tier doesn't exist", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
@@ -246,7 +246,7 @@ func TestChangeTierFailure(t *testing.T) {
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("nstemplatetiers.toolchain.dev.openshift.com \"team\" not found"))
 	})
 
-	t.Run("the change will fail since it won't be able to find the correct UserAccount in MUR", func(t *testing.T) {
+	t.Run("will fail since it won't be able to find the correct UserAccount in MUR", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("some-other-cluster"))
@@ -264,7 +264,7 @@ func TestChangeTierFailure(t *testing.T) {
 			toBeNotComplete("the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed"))
 	})
 
-	t.Run("the change will fail since the actual update operation will return an error", func(t *testing.T) {
+	t.Run("will fail since the actual update operation will return an error", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("johny", "team")
@@ -307,7 +307,7 @@ func TestChangeTierFailure(t *testing.T) {
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete(), toBeDeletionError("unable to delete ChangeTierRequest object 'request-name': error"))
 	})
 
-	t.Run("the change will fail because the MUR is missing an owner label", func(t *testing.T) {
+	t.Run("will fail because the MUR is missing an owner label", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "john")
 		changeTierRequest := newChangeTierRequest("john", "team")
@@ -321,7 +321,7 @@ func TestChangeTierFailure(t *testing.T) {
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete(`MasterUserRecord is missing label 'toolchain.dev.openshift.com/owner'`))
 	})
 
-	t.Run("the change will fail because there is no UserSignup found with the name from the MUR owner label", func(t *testing.T) {
+	t.Run("will fail because there is no UserSignup found with the name from the MUR owner label", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("john", "team")
@@ -335,7 +335,7 @@ func TestChangeTierFailure(t *testing.T) {
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete(`usersignups.toolchain.dev.openshift.com "john" not found`))
 	})
 
-	t.Run("the change will fail because resetting the deactivating state of the UserSignup fails", func(t *testing.T) {
+	t.Run("will fail because resetting the deactivating state of the UserSignup fails", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
 		changeTierRequest := newChangeTierRequest("john", "team")
@@ -411,6 +411,19 @@ func TestChangeTierFailure(t *testing.T) {
 				HasTier(basicTier.Name) // unchanged
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("mock error!"))
 		})
+	})
+
+	t.Run("will fail when there is no matching MasterUserRecord nor Space", func(t *testing.T) {
+		// given
+		changeTierRequest := newChangeTierRequest("john", "team")
+		controller, request, cl := newController(t, changeTierRequest, config, teamTier)
+
+		// when
+		_, err := controller.Reconcile(context.TODO(), request)
+
+		// then
+		require.EqualError(t, err, "no MasterUserRecord nor Space named 'john' matching the ChangeTierRequest")
+		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("no MasterUserRecord nor Space named 'john' matching the ChangeTierRequest"))
 	})
 }
 
