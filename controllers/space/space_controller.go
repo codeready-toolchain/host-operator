@@ -185,42 +185,33 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	//
 
 	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
-	// if Space's `ready` condition is already set to `false`, then don't update if no message is provided by the NSTemplateSet
-	// (there is a message if something wrong happened, in which case we want to replicate the NSTemplateSet condition in the Space status)
-	// also, don't update when NSTemplateSet ready condition is in an invalid state
-	if !found ||
-		nsTmplSetReady.Status == corev1.ConditionUnknown ||
-		(condition.IsFalse(space.Status.Conditions, toolchainv1alpha1.ConditionReady) &&
-			nsTmplSetReady.Status == corev1.ConditionFalse &&
-			nsTmplSetReady.Message == "") {
-		logger.Info("Either Space's ready condition is already set to false and no message was provided by NSTemplateSet, or NSTemplateSet is an invalid state", "nstemplateset-ready-condition", nsTmplSetReady)
+	// skip until there's a `Ready` condition
+	if !found {
 		return false, nil
 	}
 
-	hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
-	if err != nil {
-		return false, r.setStatusProvisioningFailed(logger, space, err)
-	}
-	if space.Labels == nil {
-		space.Labels = map[string]string{}
-	}
-	space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] = hash
-	if err := r.Client.Update(context.TODO(), space); err != nil {
-		return false, r.setStatusProvisioningFailed(logger, space, err)
-	}
-	// also, replicates the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
+	// also, replicates (translate) the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
 	switch nsTmplSetReady.Reason {
-	case toolchainv1alpha1.NSTemplateSetProvisionedReason:
-		return false, r.setStatusProvisioned(space)
-	case toolchainv1alpha1.NSTemplateSetUnableToProvisionReason, toolchainv1alpha1.NSTemplateSetUnableToProvisionClusterResourcesReason, toolchainv1alpha1.NSTemplateSetUnableToProvisionNamespaceReason:
-		return false, r.setStatusProvisioningFailed(logger, space, fmt.Errorf(nsTmplSetReady.Message))
 	case toolchainv1alpha1.NSTemplateSetUpdatingReason:
-		return false, r.setStatusProvisioning(space)
+		return false, r.setStatusUpdating(space)
 	case toolchainv1alpha1.NSTemplateSetProvisioningReason:
-	default:
 		return false, r.setStatusProvisioning(space)
+	case toolchainv1alpha1.NSTemplateSetProvisionedReason:
+		hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
+		if err != nil {
+			return false, r.setStatusProvisioningFailed(logger, space, err)
+		}
+		if space.Labels == nil {
+			space.Labels = map[string]string{}
+		}
+		space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] = hash
+		if err := r.Client.Update(context.TODO(), space); err != nil {
+			return false, r.setStatusProvisioningFailed(logger, space, err)
+		}
+		return false, r.setStatusProvisioned(space)
+	default:
+		return false, r.setStatusProvisioningFailed(logger, space, fmt.Errorf(nsTmplSetReady.Message))
 	}
-	return false, r.updateStatus(space, nsTmplSetReady)
 }
 
 func (r *Reconciler) newNSTemplateSet(namespace string, name string, tmplTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.NSTemplateSet {

@@ -643,7 +643,7 @@ func TestUpdateSpace(t *testing.T) {
 		t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
 			// given another round of requeue without while NSTemplateSet is *not ready*
 			nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-				nstemplatetsettest.Provisioning(),
+				nstemplatetsettest.Updating(),
 			}
 			err := member1.Client.Update(context.TODO(), nsTmplSet)
 			require.NoError(t, err)
@@ -791,7 +791,7 @@ func TestUpdateSpace(t *testing.T) {
 			t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
 				// given another round of requeue without while NSTemplateSet is *not ready*
 				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-					nstemplatetsettest.Provisioning(),
+					nstemplatetsettest.Updating(),
 				}
 				err := member1.Client.Update(context.TODO(), nsTmplSet)
 				require.NoError(t, err)
@@ -828,7 +828,7 @@ func TestUpdateSpace(t *testing.T) {
 						Exists().
 						HasStatusTargetCluster("member-1").
 						HasConditions(spacetest.ProvisioningFailed("oops, something went wrong")). // NSTemplateSet error message is copied into Space status
-						HasLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)).
+						DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)).
 						HasFinalizer(toolchainv1alpha1.FinalizerName)
 				})
 
@@ -850,7 +850,7 @@ func TestUpdateSpace(t *testing.T) {
 						Exists().
 						HasStatusTargetCluster("member-1").
 						HasConditions(spacetest.ProvisioningFailed("oops, something went wrong")). // NSTemplateSet error message is copied into Space status
-						HasLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)).
+						DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)).
 						HasFinalizer(toolchainv1alpha1.FinalizerName)
 				})
 			})
