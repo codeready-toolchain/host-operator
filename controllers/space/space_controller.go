@@ -132,7 +132,7 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, space *toolchainv1alpha1.S
 // returns `true` if the NSTemplateSet was created or updated, `false` otherwise
 func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
 	if space.Spec.TargetCluster == "" {
-		return false, r.setStatusProvisioningPending(logger, space, "unspecified target member cluster")
+		return false, r.setStatusProvisioningPending(space, "unspecified target member cluster")
 	}
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
@@ -329,7 +329,7 @@ func (r *Reconciler) setStatusUpdating(space *toolchainv1alpha1.Space) error {
 		})
 }
 
-func (r *Reconciler) setStatusProvisioningPending(logger logr.Logger, space *toolchainv1alpha1.Space, cause string) error {
+func (r *Reconciler) setStatusProvisioningPending(space *toolchainv1alpha1.Space, cause string) error {
 	if err := r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
