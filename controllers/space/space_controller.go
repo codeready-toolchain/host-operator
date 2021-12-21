@@ -182,7 +182,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		logger.Info("NSTemplateSet updated on target member cluster")
 		return true, r.setStatusUpdating(space)
 	}
-	//
 
 	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	// skip until there's a `Ready` condition
