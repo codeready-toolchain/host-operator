@@ -52,7 +52,7 @@ func TestCreateSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue)
+		assert.True(t, res.Requeue)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 			Exists().
 			HasStatusTargetCluster("member-1").
@@ -626,7 +626,7 @@ func TestUpdateSpace(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, reconcile.Result{
 			Requeue:      true,
-			RequeueAfter: 3 * time.Second,
+			RequeueAfter: 1 * time.Second,
 		}, res) // explicitly requeue while the NSTemplate update is triggered by its controller
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 			Exists().
@@ -662,8 +662,9 @@ func TestUpdateSpace(t *testing.T) {
 				HasConditions(spacetest.Updating()).
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name))
 
-			t.Run("done when NSTemplateSet is ready", func(t *testing.T) {
+			t.Run("not done when NSTemplateSet is ready within 1s", func(t *testing.T) {
 				// given another round of requeue without with NSTemplateSet now *ready*
+				// but LESS than 1s after the Space Ready condition was set to `Ready=false/Updating`
 				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 					nstemplatetsettest.Provisioned(),
 				}
@@ -675,13 +676,40 @@ func TestUpdateSpace(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
-				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+				assert.Equal(t, reconcile.Result{
+					Requeue:      true,
+					RequeueAfter: 1 * time.Second}, res) // requeue requested
+				s := spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
-					HasConditions(spacetest.Ready()).
-					HasLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)).
-					HasFinalizer(toolchainv1alpha1.FinalizerName)
+					HasConditions(spacetest.Updating()).
+					DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)). // not set yet
+					HasFinalizer(toolchainv1alpha1.FinalizerName).
+					Get()
+
+				t.Run("done when NSTemplateSet is ready for more than 1s", func(t *testing.T) {
+					// given another round of requeue without with NSTemplateSet now *ready*
+					// but MORE than 1s after the Space Ready condition was set to `Ready=false/Updating`
+
+					// hack: change Space's condition timestamp
+					s.Status.Conditions[0].LastTransitionTime = metav1.NewTime(s.Status.Conditions[0].LastTransitionTime.Time.Add(-1 * time.Second))
+					err := hostClient.Status().Update(context.TODO(), s)
+					require.NoError(t, err)
+
+					// when
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+					// then
+					require.NoError(t, err)
+					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+						Exists().
+						HasStatusTargetCluster("member-1").
+						HasConditions(spacetest.Ready()).
+						HasLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)).
+						HasFinalizer(toolchainv1alpha1.FinalizerName)
+
+				})
 			})
 		})
 	})
@@ -774,7 +802,7 @@ func TestUpdateSpace(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, reconcile.Result{
 				Requeue:      true,
-				RequeueAfter: 3 * time.Second,
+				RequeueAfter: 1 * time.Second,
 			}, res) // explicitly requeue while the NSTemplate update is triggered by its controller
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 				Exists().

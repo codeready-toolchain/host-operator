@@ -36,6 +36,12 @@ func AssertThatSpace(t test.T, namespace, name string, client client.Client) *As
 	}
 }
 
+func (a *Assertion) Get() *toolchainv1alpha1.Space {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	return a.space
+}
+
 func (a *Assertion) Exists() *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)

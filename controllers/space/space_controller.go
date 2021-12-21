@@ -87,30 +87,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, r.ensureSpaceDeletion(logger, space)
 	}
 
-	createdOrUpdated, err := r.ensureNSTemplateSet(logger, space)
-	if err != nil {
+	// if the NSTemplateSet was created updated, we want to make sure that the NSTemplateSet Controller was kicked before
+	// reconciling the Space again. In particular, when the NSTemplateSet.Spec is updated, if the Space Controller is triggered
+	// *before* the NSTemplateSet Controller and the NSTemplateSet's status is still `Provisioned` (as it was with the previous templates)
+	// then the Space Controller will immediately set the Space status to `Provisioned` whereas in fact, the template update
+	// did not even start yet!
+	// Note: there are 2 durations involved here:
+	// 1. Within 1 second after the Space status was set to `Updating`, the SpaceController considers it's too early and will requeue
+	// 2. The requeue duration is set to 3 seconds, but in practice, the SpaceController will be triggered as soon as the NSTemplateSet
+	//    status is updated by its own controller
+	if createdOrUpdated, err := r.ensureNSTemplateSet(logger, space); err != nil {
 		return ctrl.Result{}, err
+	} else if createdOrUpdated {
+		logger.Info("NSTemplateSet was just created or updated")
+		return ctrl.Result{
+			Requeue:      true,
+			RequeueAfter: time.Second,
+		}, nil
 	}
-	if createdOrUpdated {
-		// if the NSTemplateSet was created updated, we want to make sure that the NSTemplateSet Controller was kicked before
-		// reconciling the Space again. In particular, when the NSTemplateSet.Spec is updated, if the Space Controller is triggered
-		// *before* the NSTemplateSet Controller and the NSTemplateSet's status is still `Provisioned` (as it was with the previous templates)
-		// then the Space Controller will immediately set the Space status to `Provisioned` whereas in fact, the template update
-		// did not even start yet!
-		// Note: there are 2 durations involved here:
-		// 1. Within 1 second after the Space status was set to `Updating`, the SpaceController considers it's too early and will requeue
-		// 2. The requeue duration is set to 3 seconds, but in practice, the SpaceController will be triggered as soon as the NSTemplateSet
-		//    status is updated by its own controller
-		logger.Info("NSTemplateSet was created or updated")
-		readyCond, ok := condition.FindConditionByType(space.Status.Conditions, toolchainv1alpha1.ConditionReady)
-		logger.Info("checking space condition", "ready", readyCond)
-		if ok && readyCond.Reason == toolchainv1alpha1.SpaceUpdatingReason && time.Since(readyCond.LastTransitionTime.Time) <= time.Second {
-			return ctrl.Result{
-				Requeue:      true,
-				RequeueAfter: 3 * time.Second,
-			}, nil
-		}
-	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -129,7 +124,10 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, space *toolchainv1alpha1.S
 
 // ensureNSTemplateSet creates the NSTemplateSet on the target member cluster if it does not exist,
 // and updates the space's status accordingly.
-// returns `true` if the NSTemplateSet was created or updated, `false` otherwise
+// Returns `true` if the NSTemplateSet was *just* created or updated, ie:
+// - it has no `Ready` condition yet,
+// - the Space's `Ready=false/Updating` condition is too recent, so we're not sure that the NSTemplateSetController was triggered.
+// Returns `false` otherwise
 func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
 	if space.Spec.TargetCluster == "" {
 		return false, r.setStatusProvisioningPending(space, "unspecified target member cluster")
@@ -186,7 +184,8 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	// skip until there's a `Ready` condition
 	if !found {
-		return false, nil
+		// just created, but there is no `Ready` condition yet
+		return true, nil
 	}
 
 	// also, replicates (translate) the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
@@ -196,6 +195,12 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	case toolchainv1alpha1.NSTemplateSetProvisioningReason:
 		return false, r.setStatusProvisioning(space)
 	case toolchainv1alpha1.NSTemplateSetProvisionedReason:
+		readyCond, ok := condition.FindConditionByType(space.Status.Conditions, toolchainv1alpha1.ConditionReady)
+		logger.Info("checking Space condition", "ready", readyCond)
+		if ok && readyCond.Reason == toolchainv1alpha1.SpaceUpdatingReason && time.Since(readyCond.LastTransitionTime.Time) <= time.Second {
+			// Space status was *just* set to `Ready=false/Updating`, so we need to wait
+			return true, nil
+		}
 		hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
 		if err != nil {
 			return false, r.setStatusProvisioningFailed(logger, space, err)
