@@ -94,7 +94,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if createdOrUpdated {
 		// if the NSTemplateSet was created updated, we want to make sure that the NSTemplateSet Controller was kicked before
 		// reconciling the Space again. In particular, when the NSTemplateSet.Spec is updated, if the Space Controller is triggered
-		// before the NSTemplateSet Controller and the NSTemplateSet status is still `Provisioned` (but with the previous templates)
+		// *before* the NSTemplateSet Controller and the NSTemplateSet's status is still `Provisioned` (as it was with the previous templates)
 		// then the Space Controller will immediately set the Space status to `Provisioned` whereas in fact, the template update
 		// did not even start yet!
 		// Note: there are 2 durations involved here:
@@ -132,7 +132,7 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, space *toolchainv1alpha1.S
 // returns `true` if the NSTemplateSet was created or updated, `false` otherwise
 func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
 	if space.Spec.TargetCluster == "" {
-		return false, r.setStatusProvisioningPending(logger, space, fmt.Errorf("unspecified target member cluster"))
+		return false, r.setStatusProvisioningPending(logger, space, "unspecified target member cluster")
 	}
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
@@ -329,19 +329,19 @@ func (r *Reconciler) setStatusUpdating(space *toolchainv1alpha1.Space) error {
 		})
 }
 
-func (r *Reconciler) setStatusProvisioningPending(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
+func (r *Reconciler) setStatusProvisioningPending(logger logr.Logger, space *toolchainv1alpha1.Space, cause string) error {
 	if err := r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.SpaceProvisioningPendingReason,
-			Message: cause.Error(),
+			Message: cause, // the `cause` is just a message
 		}); err != nil {
-		logger.Error(cause, "unable to provision Space")
 		return err
 	}
-	return cause
+	// this is a valid state, so we do not return an error
+	return nil
 }
 
 func (r *Reconciler) setStatusProvisioningFailed(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {

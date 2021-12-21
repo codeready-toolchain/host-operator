@@ -112,6 +112,25 @@ func TestCreateSpace(t *testing.T) {
 					HasFinalizer(toolchainv1alpha1.FinalizerName)
 			})
 		})
+
+		t.Run("unspecified target member cluster", func(t *testing.T) {
+			// given
+			s := spacetest.NewSpace("oddity")
+			hostClient := test.NewFakeClient(t, s)
+			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1, member2)
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+			// then
+			require.NoError(t, err) // the lack of target member cluster is valid, hence no error is returned
+			assert.False(t, res.Requeue)
+			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				HasNoStatusTargetCluster().
+				HasConditions(spacetest.ProvisioningPending("unspecified target member cluster")) // the Space will remain in `ProvisioningPending` until a target member cluster is set.
+		})
 	})
 
 	t.Run("failure", func(t *testing.T) {
@@ -173,25 +192,6 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "mock error")
 			assert.False(t, res.Requeue)
-		})
-
-		t.Run("unspecified target member cluster", func(t *testing.T) {
-			// given
-			s := spacetest.NewSpace("oddity")
-			hostClient := test.NewFakeClient(t, s)
-			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
-			ctrl := newReconciler(hostClient, member1, member2)
-
-			// when
-			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
-
-			// then
-			require.EqualError(t, err, "unspecified target member cluster")
-			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
-				HasNoStatusTargetCluster().
-				HasConditions(spacetest.ProvisioningPending("unspecified target member cluster"))
 		})
 
 		t.Run("unknown target member cluster", func(t *testing.T) {
