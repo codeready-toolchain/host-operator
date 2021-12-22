@@ -36,6 +36,12 @@ func AssertThatSpace(t test.T, namespace, name string, client client.Client) *As
 	}
 }
 
+func (a *Assertion) Get() *toolchainv1alpha1.Space {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	return a.space
+}
+
 func (a *Assertion) Exists() *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
@@ -53,6 +59,35 @@ func (a *Assertion) HasNoFinalizers() *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	assert.Empty(a.t, a.space.Finalizers)
+	return a
+}
+
+func (a *Assertion) HasTier(tierName string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, tierName, a.space.Spec.TierName)
+	return a
+}
+
+func (a *Assertion) HasLabel(key string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	require.Contains(a.t, a.space.Labels, key)
+	assert.NotEmpty(a.t, a.space.Labels[key])
+	return a
+}
+
+func (a *Assertion) DoesNotHaveLabel(key string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	require.NotContains(a.t, a.space.Labels, key)
+	return a
+}
+
+func (a *Assertion) HasTargetCluster(targetCluster string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, targetCluster, a.space.Spec.TargetCluster)
 	return a
 }
 
@@ -107,6 +142,14 @@ func ProvisioningFailed(msg string) toolchainv1alpha1.Condition {
 		Status:  corev1.ConditionFalse,
 		Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
 		Message: msg,
+	}
+}
+
+func Updating() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: corev1.ConditionFalse,
+		Reason: toolchainv1alpha1.SpaceUpdatingReason,
 	}
 }
 

@@ -3,8 +3,10 @@ package space
 import (
 	"context"
 	"fmt"
+	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -85,7 +87,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, r.ensureSpaceDeletion(logger, space)
 	}
 
-	return ctrl.Result{}, r.ensureNSTemplateSet(logger, space)
+	// if the NSTemplateSet was created updated, we want to make sure that the NSTemplateSet Controller was kicked before
+	// reconciling the Space again. In particular, when the NSTemplateSet.Spec is updated, if the Space Controller is triggered
+	// *before* the NSTemplateSet Controller and the NSTemplateSet's status is still `Provisioned` (as it was with the previous templates)
+	// then the Space Controller will immediately set the Space status to `Provisioned` whereas in fact, the template update
+	// did not even start yet!
+	// Note: there are 2 durations involved here:
+	// 1. Within 1 second after the Space status was set to `Updating`, the SpaceController considers it's too early and will requeue
+	// 2. The requeue duration is set to 3 seconds, but in practice, the SpaceController will be triggered as soon as the NSTemplateSet
+	//    status is updated by its own controller
+	if createdOrUpdated, err := r.ensureNSTemplateSet(logger, space); err != nil {
+		return ctrl.Result{}, err
+	} else if createdOrUpdated {
+		logger.Info("NSTemplateSet was just created or updated")
+		return ctrl.Result{
+			Requeue:      true,
+			RequeueAfter: time.Second,
+		}, nil
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // setFinalizers sets the finalizers for Space
@@ -103,16 +124,28 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, space *toolchainv1alpha1.S
 
 // ensureNSTemplateSet creates the NSTemplateSet on the target member cluster if it does not exist,
 // and updates the space's status accordingly.
-func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) error {
+// Returns `true` if the NSTemplateSet was *just* created or updated, ie:
+// - it has no `Ready` condition yet,
+// - the Space's `Ready=false/Updating` condition is too recent, so we're not sure that the NSTemplateSetController was triggered.
+// Returns `false` otherwise
+func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
 	if space.Spec.TargetCluster == "" {
-		return r.setStatusProvisioningPending(logger, space, fmt.Errorf("unspecified target member cluster"))
+		return false, r.setStatusProvisioningPending(space, "unspecified target member cluster")
 	}
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
-		return r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
+		return false, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
 	}
 	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster)
-	// create if not found
+	// look-up the NSTemplateTier
+	tmplTier := &toolchainv1alpha1.NSTemplateTier{}
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: space.Namespace,
+		Name:      space.Spec.TierName,
+	}, tmplTier); err != nil {
+		return false, r.setStatusProvisioningFailed(logger, space, err)
+	}
+	// create if not found on the expected target cluster
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
 	if err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: memberCluster.OperatorNamespace,
@@ -121,53 +154,81 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		if errors.IsNotFound(err) {
 			logger.Info("creating NSTemplateSet on target member cluster")
 			if err := r.setStatusProvisioning(space); err != nil {
-				return err
+				return false, r.setStatusProvisioningFailed(logger, space, err)
 			}
-			if nsTmplSet, err = r.newNSTemplateSet(memberCluster.OperatorNamespace, space); err != nil {
-				return r.setStatusProvisioningFailed(logger, space, err)
-			}
+			nsTmplSet = r.newNSTemplateSet(memberCluster.OperatorNamespace, space.Name, tmplTier)
 
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
-				return r.setStatusNSTemplateSetCreationFailed(logger, space, err)
+				return false, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 			}
 			logger.Info("NSTemplateSet created on target member cluster")
-			return nil
+			return true, r.setStatusProvisioning(space)
 		}
-		return r.setStatusNSTemplateSetCreationFailed(logger, space, err)
+		return false, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 	}
 	logger.Info("NSTemplateSet already exists")
 
-	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
-	// if Space's `ready` condition is already set to `false`, then don't update if no message is provided by the NSTemplateSet (so we don't override the current message if there's any)
-	// also, don't update when NSTemplateSet ready condition is in an invalid state
-	if (condition.IsFalse(space.Status.Conditions, toolchainv1alpha1.ConditionReady) && nsTmplSetReady.Status == corev1.ConditionFalse && nsTmplSetReady.Message == "") ||
-		!found || nsTmplSetReady.Status == corev1.ConditionUnknown {
-		logger.Info("Either Space's ready condition is already set to false and no message was provided by NSTemplateSet, or NSTemplateSet is an invalid state", "nstemplateset-ready-condition", nsTmplSetReady)
-		return nil
+	// update the NSTemplateSet if needed
+	if nsTmplSet.Spec.TierName != space.Spec.TierName {
+		nsTmplSetSpec := usersignup.NewNSTemplateSetSpec(tmplTier)
+		nsTmplSet.Spec = *nsTmplSetSpec
+		if err := memberCluster.Client.Update(context.TODO(), nsTmplSet); err != nil {
+			return false, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
+		}
+		// also, immediately update Space condition
+		logger.Info("NSTemplateSet updated on target member cluster")
+		return true, r.setStatusUpdating(space)
 	}
 
-	return r.updateStatus(space, nsTmplSetReady) // replicates the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
+	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	// skip until there's a `Ready` condition
+	if !found {
+		// just created, but there is no `Ready` condition yet
+		return true, nil
+	}
+
+	// also, replicates (translate) the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
+	switch nsTmplSetReady.Reason {
+	case toolchainv1alpha1.NSTemplateSetUpdatingReason:
+		return false, r.setStatusUpdating(space)
+	case toolchainv1alpha1.NSTemplateSetProvisioningReason:
+		return false, r.setStatusProvisioning(space)
+	case toolchainv1alpha1.NSTemplateSetProvisionedReason:
+		readyCond, ok := condition.FindConditionByType(space.Status.Conditions, toolchainv1alpha1.ConditionReady)
+		logger.Info("checking Space condition", "ready", readyCond)
+		if ok && readyCond.Reason == toolchainv1alpha1.SpaceUpdatingReason && time.Since(readyCond.LastTransitionTime.Time) <= time.Second {
+			// Space status was *just* set to `Ready=false/Updating`, so we need to wait
+			return true, nil
+		}
+		hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
+		if err != nil {
+			return false, r.setStatusProvisioningFailed(logger, space, err)
+		}
+		if space.Labels == nil {
+			space.Labels = map[string]string{}
+		}
+		space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] = hash
+		if err := r.Client.Update(context.TODO(), space); err != nil {
+			return false, r.setStatusProvisioningFailed(logger, space, err)
+		}
+		return false, r.setStatusProvisioned(space)
+	default:
+		return false, r.setStatusProvisioningFailed(logger, space, fmt.Errorf(nsTmplSetReady.Message))
+	}
 }
 
-func (r *Reconciler) newNSTemplateSet(memberOperatorNS string, space *toolchainv1alpha1.Space) (*toolchainv1alpha1.NSTemplateSet, error) {
-	// look-up the NSTemplateTier
-	tmplTier := &toolchainv1alpha1.NSTemplateTier{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{
-		Namespace: space.Namespace,
-		Name:      space.Spec.TierName,
-	}, tmplTier); err != nil {
-		return nil, err
-	}
+func (r *Reconciler) newNSTemplateSet(namespace string, name string, tmplTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.NSTemplateSet {
 	// create the NSTemplateSet from the NSTemplateTier
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: memberOperatorNS,
-			Name:      space.Name,
+			Namespace: namespace,
+			Name:      name,
 		},
-		Spec: *usersignup.NewNSTemplateSetSpec(tmplTier),
 	}
-	return nsTmplSet, nil
+	nsTmplSetSpec := usersignup.NewNSTemplateSetSpec(tmplTier)
+	nsTmplSet.Spec = *nsTmplSetSpec
+	return nsTmplSet
 }
 
 func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1alpha1.Space) error {
@@ -211,7 +272,7 @@ func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 	memberCluster, found := r.MemberClusters[targetCluster]
 	if !found {
-		return false, fmt.Errorf("Cannot delete NSTemplateSet: unknown target member cluster: '%s'", targetCluster)
+		return false, fmt.Errorf("cannot delete NSTemplateSet: unknown target member cluster: '%s'", targetCluster)
 	}
 	// Get the NSTemplateSet associated with the Space
 	nstmplSet := &toolchainv1alpha1.NSTemplateSet{}
@@ -243,6 +304,16 @@ func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	return true, nil // requeue until fully deleted
 }
 
+func (r *Reconciler) setStatusProvisioned(space *toolchainv1alpha1.Space) error {
+	return r.updateStatus(
+		space,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ConditionReady,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.SpaceProvisionedReason,
+		})
+}
+
 func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error {
 	return r.updateStatus(
 		space,
@@ -253,19 +324,29 @@ func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error
 		})
 }
 
-func (r *Reconciler) setStatusProvisioningPending(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
+func (r *Reconciler) setStatusUpdating(space *toolchainv1alpha1.Space) error {
+	return r.updateStatus(
+		space,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ConditionReady,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.SpaceUpdatingReason,
+		})
+}
+
+func (r *Reconciler) setStatusProvisioningPending(space *toolchainv1alpha1.Space, cause string) error {
 	if err := r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.SpaceProvisioningPendingReason,
-			Message: cause.Error(),
+			Message: cause, // the `cause` is just a message
 		}); err != nil {
-		logger.Error(cause, "unable to provision Space")
 		return err
 	}
-	return cause
+	// this is a valid state, so we do not return an error
+	return nil
 }
 
 func (r *Reconciler) setStatusProvisioningFailed(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
