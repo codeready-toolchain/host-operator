@@ -87,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, r.ensureSpaceDeletion(logger, space)
 	}
 
-	// if the NSTemplateSet was created updated, we want to make sure that the NSTemplateSet Controller was kicked before
+	// if the NSTemplateSet was created or updated, we want to make sure that the NSTemplateSet Controller was kicked before
 	// reconciling the Space again. In particular, when the NSTemplateSet.Spec is updated, if the Space Controller is triggered
 	// *before* the NSTemplateSet Controller and the NSTemplateSet's status is still `Provisioned` (as it was with the previous templates)
 	// then the Space Controller will immediately set the Space status to `Provisioned` whereas in fact, the template update
@@ -129,6 +129,45 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, space *toolchainv1alpha1.S
 // - the Space's `Ready=false/Updating` condition is too recent, so we're not sure that the NSTemplateSetController was triggered.
 // Returns `false` otherwise
 func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
+	// deprovision from space.Status.TargetCluster if needed
+	if space.Status.TargetCluster != "" && space.Spec.TargetCluster != space.Status.TargetCluster {
+		logger.Info("retargeting space", "from_cluster", space.Status.TargetCluster, "to_cluster", space.Spec.TargetCluster)
+		// look-up and delete the NSTemplateSet on the current member cluster
+		memberCluster, found := r.MemberClusters[space.Status.TargetCluster]
+		if !found {
+			return false, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
+		}
+		nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
+		err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: memberCluster.OperatorNamespace,
+			Name:      space.Name,
+		}, nsTmplSet)
+		switch {
+		case err != nil && !errors.IsNotFound(err):
+			// something wrong happened
+			return false, r.setStatusRetargetFailed(logger, space, err)
+		case errors.IsNotFound(err):
+			logger.Info("resetting 'space.Status.TargetCluster' field")
+			// NSTemplateSet was removed: reset `space.Status.TargetCluster`
+			space.Status.TargetCluster = ""
+			if err := r.Client.Update(context.TODO(), space); err != nil {
+				return false, r.setStatusRetargetFailed(logger, space, err)
+			}
+		default:
+			// deleting the NSTemplateSet if it exists (and not already being deleted )
+			if !util.IsBeingDeleted(nsTmplSet) {
+				logger.Info("deleting NSTemplateSet", "member_cluster", space.Status.TargetCluster)
+				if err := memberCluster.Client.Delete(context.TODO(), nsTmplSet); err != nil {
+					return false, r.setStatusRetargetFailed(logger, space, err)
+				}
+				return false, r.setStatusRetargeting(space)
+			} else {
+				logger.Info("wait while NSTemplateSet is being deleted", "member_cluster", space.Status.TargetCluster)
+				return false, nil
+			}
+		}
+	}
+
 	if space.Spec.TargetCluster == "" {
 		return false, r.setStatusProvisioningPending(space, "unspecified target member cluster")
 	}
@@ -315,6 +354,9 @@ func (r *Reconciler) setStatusProvisioned(space *toolchainv1alpha1.Space) error 
 }
 
 func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error {
+	if space.Spec.TargetCluster != "" { // copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
+		space.Status.TargetCluster = space.Spec.TargetCluster
+	}
 	return r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
@@ -324,17 +366,10 @@ func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error
 		})
 }
 
-func (r *Reconciler) setStatusUpdating(space *toolchainv1alpha1.Space) error {
-	return r.updateStatus(
-		space,
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.ConditionReady,
-			Status: corev1.ConditionFalse,
-			Reason: toolchainv1alpha1.SpaceUpdatingReason,
-		})
-}
-
 func (r *Reconciler) setStatusProvisioningPending(space *toolchainv1alpha1.Space, cause string) error {
+	if space.Spec.TargetCluster != "" { // copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
+		space.Status.TargetCluster = space.Spec.TargetCluster
+	}
 	if err := r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
@@ -350,6 +385,9 @@ func (r *Reconciler) setStatusProvisioningPending(space *toolchainv1alpha1.Space
 }
 
 func (r *Reconciler) setStatusProvisioningFailed(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
+	if space.Spec.TargetCluster != "" { // copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
+		space.Status.TargetCluster = space.Spec.TargetCluster
+	}
 	if err := r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
@@ -359,6 +397,41 @@ func (r *Reconciler) setStatusProvisioningFailed(logger logr.Logger, space *tool
 			Message: cause.Error(),
 		}); err != nil {
 		logger.Error(cause, "unable to provision Space")
+		return err
+	}
+	return cause
+}
+
+func (r *Reconciler) setStatusUpdating(space *toolchainv1alpha1.Space) error {
+	return r.updateStatus(
+		space,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ConditionReady,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.SpaceUpdatingReason,
+		})
+}
+
+func (r *Reconciler) setStatusRetargeting(space *toolchainv1alpha1.Space) error {
+	return r.updateStatus(
+		space,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.ConditionReady,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.SpaceRetargetingReason,
+		})
+}
+
+func (r *Reconciler) setStatusRetargetFailed(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
+	if err := r.updateStatus(
+		space,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.ConditionReady,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.SpaceRetargetingFailedReason,
+			Message: cause.Error(),
+		}); err != nil {
+		logger.Error(cause, "unable to retarget Space")
 		return err
 	}
 	return cause
@@ -390,6 +463,9 @@ func (r *Reconciler) setStatusTerminatingFailed(logger logr.Logger, space *toolc
 }
 
 func (r *Reconciler) setStatusNSTemplateSetCreationFailed(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
+	if space.Spec.TargetCluster != "" { // copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
+		space.Status.TargetCluster = space.Spec.TargetCluster
+	}
 	if err := r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
@@ -407,9 +483,6 @@ func (r *Reconciler) setStatusNSTemplateSetCreationFailed(logger logr.Logger, sp
 // updateStatus updates space status conditions with the new conditions
 func (r *Reconciler) updateStatus(space *toolchainv1alpha1.Space, conditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
-	if space.Spec.TargetCluster != "" {
-		space.Status.TargetCluster = space.Spec.TargetCluster
-	}
 	space.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(space.Status.Conditions, conditions...)
 	if !updated {
 		// Nothing changed

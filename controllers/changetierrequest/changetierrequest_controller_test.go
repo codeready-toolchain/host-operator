@@ -186,7 +186,7 @@ func TestChangeTierSuccess(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", teamTier.Name)
 			mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
-			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"),
+			space := spacetest.NewSpace("john", spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithTierNameAndHashLabelFor(basicTier))
 			basicTierName := space.Spec.TierName
 			controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, space, teamTier)
@@ -202,7 +202,7 @@ func TestChangeTierSuccess(t *testing.T) {
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
 				HasTier(teamTier.Name).
-				HasTargetCluster("member-1").                                       // unchanged
+				HasSpecTargetCluster("member-1").                                   // unchanged
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(basicTierName)). // label for old tier is removed
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(teamTier.Name))  // label for new tier is not set yet
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
@@ -211,7 +211,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		t.Run("when the MasterUserRecord does not exist", func(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", teamTier.Name)
-			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
+			space := spacetest.NewSpace("john", spacetest.WithSpecTargetCluster("member-1"))
 			controller, request, cl := newController(t, changeTierRequest, config, userSignup, space, teamTier)
 
 			// when
@@ -221,7 +221,7 @@ func TestChangeTierSuccess(t *testing.T) {
 			require.NoError(t, err)
 			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
 				HasTier(teamTier.Name).
-				HasTargetCluster("member-1"). // unchanged
+				HasSpecTargetCluster("member-1"). // unchanged
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName))
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 		})
@@ -229,7 +229,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		t.Run("when the Space tier already up-to-date", func(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", teamTier.Name)
-			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"), spacetest.WithTierNameAndHashLabelFor(teamTier))
+			space := spacetest.NewSpace("john", spacetest.WithSpecTargetCluster("member-1"), spacetest.WithTierNameAndHashLabelFor(teamTier))
 			controller, request, cl := newController(t, changeTierRequest, config, userSignup, space, teamTier)
 
 			// when
@@ -239,7 +239,7 @@ func TestChangeTierSuccess(t *testing.T) {
 			require.NoError(t, err)
 			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
 				HasTier(teamTier.Name).                                                      // unchanged
-				HasTargetCluster("member-1").                                                // unchanged
+				HasSpecTargetCluster("member-1").                                            // unchanged
 				HasLabel(tierutil.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName)) // not removed since there was no update to perform in this case
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete()) // ChangeTierRequest is complete.
 		})
@@ -408,7 +408,7 @@ func TestChangeTierFailure(t *testing.T) {
 		t.Run("when fetching fails", func(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", "team")
-			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
+			space := spacetest.NewSpace("john", spacetest.WithSpecTargetCluster("member-1"))
 			controller, request, cl := newController(t, changeTierRequest, config, userSignup, space, teamTier)
 			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
@@ -430,7 +430,7 @@ func TestChangeTierFailure(t *testing.T) {
 		t.Run("when updating fails", func(t *testing.T) {
 			// given
 			changeTierRequest := newChangeTierRequest("john", "team")
-			space := spacetest.NewSpace("john", spacetest.WithTargetCluster("member-1"))
+			space := spacetest.NewSpace("john", spacetest.WithSpecTargetCluster("member-1"))
 			controller, request, cl := newController(t, changeTierRequest, config, userSignup, space, teamTier)
 			cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {

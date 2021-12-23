@@ -48,10 +48,10 @@ func (a *Assertion) Exists() *Assertion {
 	return a
 }
 
-func (a *Assertion) HasFinalizer(name string) *Assertion {
+func (a *Assertion) HasFinalizer() *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
-	assert.Contains(a.t, a.space.Finalizers, name)
+	assert.Contains(a.t, a.space.Finalizers, toolchainv1alpha1.FinalizerName)
 	return a
 }
 
@@ -84,7 +84,14 @@ func (a *Assertion) DoesNotHaveLabel(key string) *Assertion {
 	return a
 }
 
-func (a *Assertion) HasTargetCluster(targetCluster string) *Assertion {
+func (a *Assertion) HasNoSpecTargetCluster() *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Empty(a.t, a.space.Spec.TargetCluster)
+	return a
+}
+
+func (a *Assertion) HasSpecTargetCluster(targetCluster string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	assert.Equal(a.t, targetCluster, a.space.Spec.TargetCluster)
@@ -141,6 +148,23 @@ func ProvisioningFailed(msg string) toolchainv1alpha1.Condition {
 		Type:    toolchainv1alpha1.ConditionReady,
 		Status:  corev1.ConditionFalse,
 		Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
+		Message: msg,
+	}
+}
+
+func Retargeting() toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: corev1.ConditionFalse,
+		Reason: toolchainv1alpha1.SpaceRetargetingReason,
+	}
+}
+
+func RetargetingFailed(msg string) toolchainv1alpha1.Condition {
+	return toolchainv1alpha1.Condition{
+		Type:    toolchainv1alpha1.ConditionReady,
+		Status:  corev1.ConditionFalse,
+		Reason:  toolchainv1alpha1.SpaceRetargetingFailedReason,
 		Message: msg,
 	}
 }

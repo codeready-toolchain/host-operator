@@ -41,7 +41,7 @@ func TestCreateSpace(t *testing.T) {
 	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 	t.Run("success", func(t *testing.T) {
 		// given
-		s := spacetest.NewSpace("oddity", spacetest.WithTargetCluster("member-1"))
+		s := spacetest.NewSpace("oddity", spacetest.WithSpecTargetCluster("member-1"))
 		hostClient := test.NewFakeClient(t, s, basicTier)
 		member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
@@ -52,12 +52,12 @@ func TestCreateSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.True(t, res.Requeue)
+		assert.True(t, res.Requeue) // requeue requested explictely when NSTemplateSet is created, even though watching the resource is enough to trigger a new reconcile loop
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 			Exists().
 			HasStatusTargetCluster("member-1").
 			HasConditions(spacetest.Provisioning()).
-			HasFinalizer(toolchainv1alpha1.FinalizerName)
+			HasFinalizer()
 		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 			Exists().
 			HasClusterResourcesTemplateRef("basic-clusterresources-123456new").
@@ -83,7 +83,7 @@ func TestCreateSpace(t *testing.T) {
 				Exists().
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.Provisioning()).
-				HasFinalizer(toolchainv1alpha1.FinalizerName)
+				HasFinalizer()
 			nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				Exists().
 				HasClusterResourcesTemplateRef("basic-clusterresources-123456new").
@@ -109,7 +109,7 @@ func TestCreateSpace(t *testing.T) {
 					Exists().
 					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.Ready()).
-					HasFinalizer(toolchainv1alpha1.FinalizerName)
+					HasFinalizer()
 			})
 		})
 
@@ -196,7 +196,7 @@ func TestCreateSpace(t *testing.T) {
 
 		t.Run("unknown target member cluster", func(t *testing.T) {
 			// given
-			s := spacetest.NewSpace("oddity", spacetest.WithTargetCluster("unknown"))
+			s := spacetest.NewSpace("oddity", spacetest.WithSpecTargetCluster("unknown"))
 			hostClient := test.NewFakeClient(t, s)
 			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
@@ -216,7 +216,7 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("error while getting NSTemplateTier on host cluster", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("oddity",
-				spacetest.WithTargetCluster("member-1"),
+				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s)
 			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
@@ -236,7 +236,7 @@ func TestCreateSpace(t *testing.T) {
 			require.EqualError(t, err, "mock error")
 			assert.False(t, res.Requeue)
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
-				HasTargetCluster("member-1").
+				HasSpecTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.ProvisioningFailed("mock error"))
 		})
@@ -244,7 +244,7 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("error while getting NSTemplateSet on member cluster", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("oddity",
-				spacetest.WithTargetCluster("member-1"),
+				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
 			member1Client := test.NewFakeClient(t)
@@ -272,7 +272,7 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("error while creating NSTemplateSet on member cluster", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("oddity",
-				spacetest.WithTargetCluster("member-1"),
+				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
 			member1Client := test.NewFakeClient(t)
@@ -300,7 +300,7 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("error while updating status after creating NSTemplateSet", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("oddity",
-				spacetest.WithTargetCluster("member-1"),
+				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
 			hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
@@ -320,7 +320,7 @@ func TestCreateSpace(t *testing.T) {
 			require.EqualError(t, err, "mock error")
 			assert.Equal(t, reconcile.Result{Requeue: false}, res)
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
-				HasStatusTargetCluster(""). // not set
+				HasNoStatusTargetCluster(). // not set
 				HasNoConditions()           // not set
 		})
 	})
@@ -342,15 +342,16 @@ func TestDeleteSpace(t *testing.T) {
 			t.Run("when space is deleted", func(t *testing.T) {
 				// given a space that is being deleted
 				s := spacetest.NewSpace("oddity",
-					spacetest.WithTargetCluster("member-1"),
+					spacetest.WithDeletionTimestamp(), // deletion was requested
 					spacetest.WithFinalizer(),
-					spacetest.WithDeletionTimestamp())
+					spacetest.WithSpecTargetCluster("member-1"),
+					spacetest.WithStatusTargetCluster("member-1"))
 				hostClient := test.NewFakeClient(t, s, basicTier)
 				nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
 				member1Client := test.NewFakeClient(t, nstmplSet)
 				member1Client.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 					if nstmplSet, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
-						now := metav1.NewTime(time.Now())
+						now := metav1.Now()
 						nstmplSet.DeletionTimestamp = &now
 						nstmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 							nstemplatetsettest.Terminating(),
@@ -373,9 +374,9 @@ func TestDeleteSpace(t *testing.T) {
 				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
 				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 					Exists().
+					HasFinalizer(). // finalizer is still present while the NSTemplateSet is not fully deleted
 					HasStatusTargetCluster("member-1").
-					HasConditions(spacetest.Terminating()).
-					HasFinalizer(toolchainv1alpha1.FinalizerName) // finalizer is still present while the NSTemplateSet is not fully deleted
+					HasConditions(spacetest.Terminating())
 				nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 					Exists().
 					HasDeletionTimestamp().
@@ -399,9 +400,9 @@ func TestDeleteSpace(t *testing.T) {
 					// no changes
 					spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 						Exists().
+						HasFinalizer().
 						HasStatusTargetCluster("member-1").
-						HasConditions(spacetest.Terminating()).
-						HasFinalizer(toolchainv1alpha1.FinalizerName)
+						HasConditions(spacetest.Terminating())
 					nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 						Exists().
 						HasDeletionTimestamp().
@@ -421,9 +422,9 @@ func TestDeleteSpace(t *testing.T) {
 						// no changes
 						spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 							Exists().
+							HasNoFinalizers(). // space resource can be deleted by the server now that the finalizer has been removed
 							HasStatusTargetCluster("member-1").
-							HasConditions(spacetest.Terminating()).
-							HasNoFinalizers() // space resource can be deleted by the server now that the finalizer has been removed
+							HasConditions(spacetest.Terminating())
 					})
 				})
 			})
@@ -431,26 +432,14 @@ func TestDeleteSpace(t *testing.T) {
 			t.Run("when using status target cluster", func(t *testing.T) {
 				// given
 				s := spacetest.NewSpace("oddity",
-					spacetest.WithoutTargetCluster(),              // targetCluster is not specified in spec ...
+					spacetest.WithoutSpecTargetCluster(),          // targetCluster is not specified in spec ...
 					spacetest.WithStatusTargetCluster("member-1"), // ... but is available in status
 					spacetest.WithFinalizer(),
 					spacetest.WithDeletionTimestamp())
 				hostClient := test.NewFakeClient(t, s, basicTier)
 				nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
 				member1Client := test.NewFakeClient(t, nstmplSet)
-				member1Client.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
-					if nstmplSet, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
-						now := metav1.NewTime(time.Now())
-						nstmplSet.DeletionTimestamp = &now
-						nstmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-							nstemplatetsettest.Terminating(),
-						}
-						// instead of deleting the resource in the FakeClient,
-						// we update it with a `DeletionTimestamp`
-						return member1Client.Client.Update(ctx, obj)
-					}
-					return member1Client.Client.Delete(ctx, obj, opts...)
-				}
+				member1Client.MockDelete = mockDeleteNSTemplateSet(member1Client.Client)
 				member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 				member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
 				ctrl := newReconciler(hostClient, member1, member2)
@@ -465,7 +454,7 @@ func TestDeleteSpace(t *testing.T) {
 					Exists().
 					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.Terminating()).
-					HasFinalizer(toolchainv1alpha1.FinalizerName) // finalizer is still present while the NSTemplateSet is not fully deleted
+					HasFinalizer() // finalizer is still present while the NSTemplateSet is not fully deleted
 				nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 					Exists().
 					HasDeletionTimestamp().
@@ -506,7 +495,7 @@ func TestDeleteSpace(t *testing.T) {
 			t.Run("because of missing target member cluster", func(t *testing.T) {
 				// given
 				s := spacetest.NewSpace("oddity",
-					spacetest.WithoutTargetCluster(),
+					spacetest.WithoutSpecTargetCluster(),
 					spacetest.WithFinalizer(),
 					spacetest.WithDeletionTimestamp(),
 					spacetest.WithCondition(spacetest.ProvisioningFailed("missing target member cluster")),
@@ -533,10 +522,11 @@ func TestDeleteSpace(t *testing.T) {
 			t.Run("because of unknown target member cluster", func(t *testing.T) {
 				// given
 				s := spacetest.NewSpace("oddity",
-					spacetest.WithTargetCluster("unknown"),
+					spacetest.WithSpecTargetCluster("member-3"),
+					spacetest.WithStatusTargetCluster("member-3"), // assume that Space was provisioned on a cluster which is now missing
 					spacetest.WithFinalizer(),
 					spacetest.WithDeletionTimestamp(),
-					spacetest.WithCondition(spacetest.ProvisioningFailed("unknown target member cluster 'unknown'")),
+					spacetest.WithCondition(spacetest.ProvisioningFailed("unknown target member cluster 'member-3'")),
 				)
 				hostClient := test.NewFakeClient(t, s, basicTier)
 				member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
@@ -547,12 +537,13 @@ func TestDeleteSpace(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 				// then
-				require.EqualError(t, err, "cannot delete NSTemplateSet: unknown target member cluster: 'unknown'")
+				require.EqualError(t, err, "cannot delete NSTemplateSet: unknown target member cluster: 'member-3'")
 				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue needed
 				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 					Exists().
-					HasStatusTargetCluster("unknown").
-					HasFinalizer(toolchainv1alpha1.FinalizerName) // finalizer is still there, until the error above is fixed
+					HasFinalizer(). // finalizer is still there, until the error above is fixed
+					HasSpecTargetCluster("member-3").
+					HasStatusTargetCluster("member-3")
 				nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 					DoesNotExist()
 			})
@@ -565,9 +556,11 @@ func TestDeleteSpace(t *testing.T) {
 		t.Run("error while getting NSTemplateSet on member cluster", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("oddity",
-				spacetest.WithTargetCluster("member-1"),
+				spacetest.WithDeletionTimestamp(), // deletion was requested
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"),
 				spacetest.WithFinalizer(),
-				spacetest.WithDeletionTimestamp())
+			)
 			hostClient := test.NewFakeClient(t, s)
 			member1Client := test.NewFakeClient(t)
 			member1Client.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
@@ -588,14 +581,15 @@ func TestDeleteSpace(t *testing.T) {
 			assert.False(t, res.Requeue)
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				Exists().
+				HasFinalizer().
+				HasSpecTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
-				HasConditions(spacetest.TerminatingFailed("mock error")).
-				HasFinalizer(toolchainv1alpha1.FinalizerName)
+				HasConditions(spacetest.TerminatingFailed("mock error"))
 		})
 	})
 }
 
-func TestUpdateSpace(t *testing.T) {
+func TestPromoteSpace(t *testing.T) {
 
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -609,7 +603,7 @@ func TestUpdateSpace(t *testing.T) {
 		// given that Space is promoted to `other` tier and corresponding NSTemplateSet is not up-to-date
 		s := spacetest.NewSpace("oddity",
 			spacetest.WithTierNameFor(otherTier), // assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
-			spacetest.WithTargetCluster("member-1"),
+			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
 		hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
@@ -631,7 +625,7 @@ func TestUpdateSpace(t *testing.T) {
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 			Exists().
 			HasTier(otherTier.Name).
-			HasTargetCluster("member-1").
+			HasSpecTargetCluster("member-1").
 			HasStatusTargetCluster("member-1").
 			HasConditions(spacetest.Updating()).
 			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)) // not set yet, since NSTemplateSet must be updated first
@@ -657,7 +651,7 @@ func TestUpdateSpace(t *testing.T) {
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 				Exists().
 				HasTier(otherTier.Name).
-				HasTargetCluster("member-1").
+				HasSpecTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.Updating()).
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name))
@@ -684,7 +678,7 @@ func TestUpdateSpace(t *testing.T) {
 					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.Updating()).
 					DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)). // not set yet
-					HasFinalizer(toolchainv1alpha1.FinalizerName).
+					HasFinalizer().
 					Get()
 
 				t.Run("done when NSTemplateSet is ready for more than 1s", func(t *testing.T) {
@@ -707,7 +701,7 @@ func TestUpdateSpace(t *testing.T) {
 						HasStatusTargetCluster("member-1").
 						HasConditions(spacetest.Ready()).
 						HasLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)).
-						HasFinalizer(toolchainv1alpha1.FinalizerName)
+						HasFinalizer()
 
 				})
 			})
@@ -719,7 +713,7 @@ func TestUpdateSpace(t *testing.T) {
 		s := spacetest.NewSpace("oddity",
 			// assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
 			spacetest.WithCondition(spacetest.Ready()),
-			spacetest.WithTargetCluster("member-1"),
+			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
 		hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
@@ -738,7 +732,7 @@ func TestUpdateSpace(t *testing.T) {
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 			Exists().
 			HasTier(basicTier.Name).
-			HasTargetCluster("member-1").
+			HasSpecTargetCluster("member-1").
 			HasStatusTargetCluster("member-1").
 			HasConditions(spacetest.Ready()).
 			HasLabel(tierutil.TemplateTierHashLabelKey(basicTier.Name)) // label is immediately set since the NSTemplateSet was already up-to-date
@@ -751,7 +745,7 @@ func TestUpdateSpace(t *testing.T) {
 			s := spacetest.NewSpace("oddity",
 				// assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
 				spacetest.WithCondition(spacetest.Ready()),
-				spacetest.WithTargetCluster("member-1"),
+				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
@@ -777,7 +771,7 @@ func TestUpdateSpace(t *testing.T) {
 				Exists().
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.ProvisioningFailed("mock error")).
-				HasFinalizer(toolchainv1alpha1.FinalizerName)
+				HasFinalizer()
 		})
 
 		t.Run("when NSTemplateSet updated failed", func(t *testing.T) {
@@ -785,7 +779,7 @@ func TestUpdateSpace(t *testing.T) {
 			s := spacetest.NewSpace("oddity",
 				// assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
 				spacetest.WithTierNameFor(otherTier),
-				spacetest.WithTargetCluster("member-1"),
+				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
@@ -807,7 +801,7 @@ func TestUpdateSpace(t *testing.T) {
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 				Exists().
 				HasTier(otherTier.Name).
-				HasTargetCluster("member-1").
+				HasSpecTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.Updating()).
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)) // not set yet, since NSTemplateSet must be updated first
@@ -833,7 +827,7 @@ func TestUpdateSpace(t *testing.T) {
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
 					HasTier(otherTier.Name).
-					HasTargetCluster("member-1").
+					HasSpecTargetCluster("member-1").
 					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.Updating()).
 					DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name))
@@ -857,7 +851,7 @@ func TestUpdateSpace(t *testing.T) {
 						HasStatusTargetCluster("member-1").
 						HasConditions(spacetest.ProvisioningFailed("oops, something went wrong")). // NSTemplateSet error message is copied into Space status
 						DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)).
-						HasFinalizer(toolchainv1alpha1.FinalizerName)
+						HasFinalizer()
 				})
 
 				t.Run("failed when clusterresources failed to provision", func(t *testing.T) {
@@ -879,11 +873,169 @@ func TestUpdateSpace(t *testing.T) {
 						HasStatusTargetCluster("member-1").
 						HasConditions(spacetest.ProvisioningFailed("oops, something went wrong")). // NSTemplateSet error message is copied into Space status
 						DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)).
-						HasFinalizer(toolchainv1alpha1.FinalizerName)
+						HasFinalizer()
 				})
 			})
 		})
 	})
+}
+
+func TestRetargetSpace(t *testing.T) {
+
+	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	s := scheme.Scheme
+	err := apis.AddToScheme(s)
+	require.NoError(t, err)
+	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
+
+	t.Run("to empty target cluster", func(t *testing.T) {
+		// given
+		s := spacetest.NewSpace("oddity",
+			spacetest.WithFinalizer(),
+			spacetest.WithoutSpecTargetCluster(), // assume that field was reset by a client (admin, appstudio console, etc.)
+			spacetest.WithStatusTargetCluster("member-1"))
+		hostClient := test.NewFakeClient(t, s, basicTier)
+		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
+		member1Client := test.NewFakeClient(t, nstmplSet)
+		member1Client.MockDelete = mockDeleteNSTemplateSet(member1Client.Client)
+		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		ctrl := newReconciler(hostClient, member1, member2)
+
+		// when
+		s.Spec.TargetCluster = ""
+		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, res.Requeue)
+		spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			HasFinalizer().
+			HasNoSpecTargetCluster().
+			HasConditions(spacetest.Retargeting()).
+			HasStatusTargetCluster("member-1") // not reset yet
+
+		t.Run("status target cluster is not reset while NSTemplateSet is still being deleted on member-1", func(t *testing.T) {
+			// once NSTemplateSet resource is fully deleted, the SpaceController is triggered again
+			// and it can create the NSTemplateSet on member-2 cluster
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+			// then
+			require.NoError(t, err)
+			assert.False(t, res.Requeue)
+			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				HasFinalizer().
+				HasNoSpecTargetCluster().
+				HasConditions(spacetest.Retargeting()).
+				HasStatusTargetCluster("member-1") // not updated yet
+			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+				HasDeletionTimestamp()
+
+			t.Run("status target cluster reset when NSTemplateSet is deleted", func(t *testing.T) {
+				// once NSTemplateSet resource is fully deleted, the SpaceController is triggered again
+				err := member1Client.Client.Delete(context.TODO(), nstmplSet)
+				require.NoError(t, err)
+				// when
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+				// then
+				require.NoError(t, err)
+				assert.False(t, res.Requeue)
+				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+					HasFinalizer().
+					HasNoSpecTargetCluster().
+					HasConditions(spacetest.ProvisioningPending("unspecified target member cluster")).
+					HasNoStatusTargetCluster() // reset
+			})
+		})
+	})
+
+	t.Run("to another target cluster", func(t *testing.T) {
+		// given
+		s := spacetest.NewSpace("oddity",
+			spacetest.WithFinalizer(),
+			spacetest.WithSpecTargetCluster("member-2"), // assume that field was changed by a client (admin, appstudio console, etc.)
+			spacetest.WithStatusTargetCluster("member-1"))
+		hostClient := test.NewFakeClient(t, s, basicTier)
+		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
+		member1Client := test.NewFakeClient(t, nstmplSet)
+		member1Client.MockDelete = mockDeleteNSTemplateSet(member1Client.Client)
+		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+		member2Client := test.NewFakeClient(t)
+		member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
+		ctrl := newReconciler(hostClient, member1, member2)
+
+		// when
+		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, res.Requeue)
+		spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			HasFinalizer().
+			HasSpecTargetCluster("member-2").
+			HasConditions(spacetest.Retargeting()).
+			HasStatusTargetCluster("member-1") // not reset yet
+
+		t.Run("status target cluster is not reset while NSTemplateSet is still being deleted on member-1", func(t *testing.T) {
+			// once NSTemplateSet resource is fully deleted, the SpaceController is triggered again
+			// and it can create the NSTemplateSet on member-2 cluster
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+			// then
+			require.NoError(t, err)
+			assert.False(t, res.Requeue)
+			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				HasFinalizer().
+				HasSpecTargetCluster("member-2").
+				HasConditions(spacetest.Retargeting()).
+				HasStatusTargetCluster("member-1") // not updated yet
+			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+				HasDeletionTimestamp()
+			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member2.Client).
+				DoesNotExist()
+
+			t.Run("status target cluster is reset when NSTemplateSet is deleted on member-1", func(t *testing.T) {
+				// once NSTemplateSet resource is fully deleted, the SpaceController is triggered again
+				// and it can create the NSTemplateSet on member-2 cluster
+				err := member1Client.Client.Delete(context.TODO(), nstmplSet) // bypass the mock func
+				require.NoError(t, err)
+				// when
+				res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+				// then
+				require.NoError(t, err)
+				assert.True(t, res.Requeue) // requeue requested explictely when NSTemplateSet is created, even though watching the resource is enough to trigger a new reconcile loop
+				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+					HasFinalizer().
+					HasSpecTargetCluster("member-2").
+					HasConditions(spacetest.Provisioning()).
+					HasStatusTargetCluster("member-2") // updated
+				nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+					DoesNotExist()
+				nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member2.Client).
+					Exists().
+					HasTierName(basicTier.Name)
+			})
+		})
+	})
+}
+
+func mockDeleteNSTemplateSet(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+	return func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+		if nstmplSet, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
+			now := metav1.Now()
+			nstmplSet.DeletionTimestamp = &now
+			nstmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
+				nstemplatetsettest.Terminating(),
+			}
+			// instead of deleting the resource in the FakeClient,
+			// we update it with a `DeletionTimestamp`
+			return cl.Update(ctx, obj)
+		}
+		return cl.Delete(ctx, obj, opts...)
+	}
 }
 
 func newReconciler(hostCl client.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *space.Reconciler {
