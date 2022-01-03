@@ -904,7 +904,6 @@ func TestRetargetSpace(t *testing.T) {
 		ctrl := newReconciler(hostClient, member1, member2)
 
 		// when
-		s.Spec.TargetCluster = ""
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 		// then
