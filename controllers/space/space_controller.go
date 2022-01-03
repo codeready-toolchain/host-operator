@@ -139,11 +139,11 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			logger.Info("wait while NSTemplateSet is being deleted", "member_cluster", space.Status.TargetCluster)
 			return false, r.setStatusRetargeting(space)
 		} else {
-			logger.Info("resetting 'space.Stπatus.TargetCluster' field")
+			logger.Info("resetting 'space.Status.TargetCluster' field")
 			// NSTemplateSet was removed: reset `space.Status.TargetCluster`
 			space.Status.TargetCluster = ""
-			if err := r.Client.Update(context.TODO(), space); err != nil {
-				return false, r.setStatusRetargetFailed(logger, space, err)
+			if err := r.Client.Status().Update(context.TODO(), space); err != nil {
+				return false, err
 			}
 			// and continue with the provisioning on the new target member cluster (if specified)
 		}

@@ -1019,6 +1019,66 @@ func TestRetargetSpace(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("failures", func(t *testing.T) {
+
+		t.Run("unable to delete NSTemplateSet", func(t *testing.T) {
+			// given
+			s := spacetest.NewSpace("oddity",
+				spacetest.WithFinalizer(),
+				spacetest.WithSpecTargetCluster("member-2"), // assume that field was changed by a client (admin, appstudio console, etc.)
+				spacetest.WithStatusTargetCluster("member-1"))
+			hostClient := test.NewFakeClient(t, s, basicTier)
+			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
+			member1Client := test.NewFakeClient(t, nstmplSet)
+			member1Client.MockDelete = mockDeleteNSTemplateSetFail(member1Client.Client)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			member2Client := test.NewFakeClient(t)
+			member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1, member2)
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+			// then
+			require.EqualError(t, err, "mock error")
+			assert.False(t, res.Requeue)
+			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				HasFinalizer().
+				HasSpecTargetCluster("member-2").
+				HasConditions(spacetest.RetargetingFailed("mock error")).
+				HasStatusTargetCluster("member-1") // NOT updated
+		})
+
+		t.Run("unable to update status", func(t *testing.T) {
+			// given
+			s := spacetest.NewSpace("oddity",
+				spacetest.WithFinalizer(),
+				spacetest.WithSpecTargetCluster("member-2"), // assume that field was changed by a client (admin, appstudio console, etc.)
+				spacetest.WithStatusTargetCluster("member-1"))
+			hostClient := test.NewFakeClient(t, s, basicTier)
+			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
+			hostClient.MockStatusUpdate = mockUpdateSpaceStatusFail(hostClient.Client)
+			member1Client := test.NewFakeClient(t, nstmplSet)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			member2Client := test.NewFakeClient(t)
+			member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1, member2)
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+			// then
+			require.EqualError(t, err, "mock error")
+			assert.False(t, res.Requeue)
+			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				HasFinalizer().
+				HasSpecTargetCluster("member-2").
+				HasNoConditions().
+				HasStatusTargetCluster("member-1") // NOT updated
+		})
+
+	})
 }
 
 func mockDeleteNSTemplateSet(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
@@ -1034,6 +1094,24 @@ func mockDeleteNSTemplateSet(cl client.Client) func(ctx context.Context, obj cli
 			return cl.Update(ctx, obj)
 		}
 		return cl.Delete(ctx, obj, opts...)
+	}
+}
+
+func mockDeleteNSTemplateSetFail(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+	return func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+		if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
+			return fmt.Errorf("mock error")
+		}
+		return cl.Delete(ctx, obj, opts...)
+	}
+}
+
+func mockUpdateSpaceStatusFail(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+	return func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+		if _, ok := obj.(*toolchainv1alpha1.Space); ok {
+			return fmt.Errorf("mock error")
+		}
+		return cl.Status().Update(ctx, obj, opts...)
 	}
 }
 
