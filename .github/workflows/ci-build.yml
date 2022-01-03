@@ -74,6 +74,7 @@ jobs:
       run: |
         if [[ -n "$(grep 'replace github.com/codeready-toolchain/.*' go.mod || true)" ]]; then
           echo "forbidden replacement in go.mod"
+          exit 1
         fi
     
 
