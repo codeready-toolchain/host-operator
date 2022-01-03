@@ -152,10 +152,14 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	if space.Spec.TargetCluster == "" {
 		return false, r.setStatusProvisioningPending(space, "unspecified target member cluster")
 	}
+	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
+	space.Status.TargetCluster = space.Spec.TargetCluster
+
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
 		return false, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
 	}
+
 	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster)
 	// look-up the NSTemplateTier
 	tmplTier := &toolchainv1alpha1.NSTemplateTier{}
@@ -345,9 +349,6 @@ func (r *Reconciler) setStatusProvisioned(space *toolchainv1alpha1.Space) error 
 }
 
 func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error {
-	if space.Spec.TargetCluster != "" { // copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
-		space.Status.TargetCluster = space.Spec.TargetCluster
-	}
 	return r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
@@ -358,9 +359,6 @@ func (r *Reconciler) setStatusProvisioning(space *toolchainv1alpha1.Space) error
 }
 
 func (r *Reconciler) setStatusProvisioningPending(space *toolchainv1alpha1.Space, cause string) error {
-	if space.Spec.TargetCluster != "" { // copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
-		space.Status.TargetCluster = space.Spec.TargetCluster
-	}
 	if err := r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
@@ -376,9 +374,6 @@ func (r *Reconciler) setStatusProvisioningPending(space *toolchainv1alpha1.Space
 }
 
 func (r *Reconciler) setStatusProvisioningFailed(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
-	if space.Spec.TargetCluster != "" { // copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
-		space.Status.TargetCluster = space.Spec.TargetCluster
-	}
 	if err := r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
@@ -454,9 +449,6 @@ func (r *Reconciler) setStatusTerminatingFailed(logger logr.Logger, space *toolc
 }
 
 func (r *Reconciler) setStatusNSTemplateSetCreationFailed(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
-	if space.Spec.TargetCluster != "" { // copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
-		space.Status.TargetCluster = space.Spec.TargetCluster
-	}
 	if err := r.updateStatus(
 		space,
 		toolchainv1alpha1.Condition{
