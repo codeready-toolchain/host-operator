@@ -1005,7 +1005,7 @@ func TestRetargetSpace(t *testing.T) {
 				res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 				// then
 				require.NoError(t, err)
-				assert.True(t, res.Requeue) // requeue requested explictely when NSTemplateSet is created, even though watching the resource is enough to trigger a new reconcile loop
+				assert.True(t, res.Requeue) // requeue requested explicitly when NSTemplateSet is created, even though watching the resource is enough to trigger a new reconcile loop
 				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 					HasFinalizer().
 					HasSpecTargetCluster("member-2").
