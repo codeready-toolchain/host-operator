@@ -198,7 +198,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		nsTmplSetSpec := usersignup.NewNSTemplateSetSpec(tmplTier)
 		nsTmplSet.Spec = *nsTmplSetSpec
 		if err := memberCluster.Client.Update(context.TODO(), nsTmplSet); err != nil {
-			return false, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
+			return false, r.setStatusNSTemplateSetUpdateFailed(logger, space, err)
 		}
 		// also, immediately update Space condition
 		logger.Info("NSTemplateSet updated on target member cluster")
@@ -455,6 +455,21 @@ func (r *Reconciler) setStatusNSTemplateSetCreationFailed(logger logr.Logger, sp
 			Type:    toolchainv1alpha1.ConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.SpaceUnableToCreateNSTemplateSetReason,
+			Message: cause.Error(),
+		}); err != nil {
+		logger.Error(cause, "unable to create NSTemplateSet")
+		return err
+	}
+	return cause
+}
+
+func (r *Reconciler) setStatusNSTemplateSetUpdateFailed(logger logr.Logger, space *toolchainv1alpha1.Space, cause error) error {
+	if err := r.updateStatus(
+		space,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.ConditionReady,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.SpaceUnableToUpdateNSTemplateSetReason,
 			Message: cause.Error(),
 		}); err != nil {
 		logger.Error(cause, "unable to create NSTemplateSet")
