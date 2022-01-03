@@ -463,7 +463,7 @@ func TestDeleteSpace(t *testing.T) {
 				// stop the test here: it verified that the NSTemlateSet deletion was triggered (the rest is already covered above)
 			})
 
-			t.Run("no target cluster", func(t *testing.T) {
+			t.Run("without spec and status target cluster", func(t *testing.T) {
 				// given
 				s := spacetest.NewSpace("oddity",
 					spacetest.WithFinalizer(),

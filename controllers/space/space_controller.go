@@ -133,38 +133,19 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	if space.Status.TargetCluster != "" && space.Spec.TargetCluster != space.Status.TargetCluster {
 		logger.Info("retargeting space", "from_cluster", space.Status.TargetCluster, "to_cluster", space.Spec.TargetCluster)
 		// look-up and delete the NSTemplateSet on the current member cluster
-		memberCluster, found := r.MemberClusters[space.Status.TargetCluster]
-		if !found {
-			return false, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
-		}
-		nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
-		err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
-			Namespace: memberCluster.OperatorNamespace,
-			Name:      space.Name,
-		}, nsTmplSet)
-		switch {
-		case err != nil && !errors.IsNotFound(err):
-			// something wrong happened
+		if isBeingDeleted, err := r.deleteNSTemplateSetFromCluster(logger, space, space.Status.TargetCluster); err != nil {
 			return false, r.setStatusRetargetFailed(logger, space, err)
-		case errors.IsNotFound(err):
-			logger.Info("resetting 'space.Status.TargetCluster' field")
+		} else if isBeingDeleted {
+			logger.Info("wait while NSTemplateSet is being deleted", "member_cluster", space.Status.TargetCluster)
+			return false, r.setStatusRetargeting(space)
+		} else {
+			logger.Info("resetting 'space.Stπatus.TargetCluster' field")
 			// NSTemplateSet was removed: reset `space.Status.TargetCluster`
 			space.Status.TargetCluster = ""
 			if err := r.Client.Update(context.TODO(), space); err != nil {
 				return false, r.setStatusRetargetFailed(logger, space, err)
 			}
-		default:
-			// deleting the NSTemplateSet if it exists (and not already being deleted )
-			if !util.IsBeingDeleted(nsTmplSet) {
-				logger.Info("deleting NSTemplateSet", "member_cluster", space.Status.TargetCluster)
-				if err := memberCluster.Client.Delete(context.TODO(), nsTmplSet); err != nil {
-					return false, r.setStatusRetargetFailed(logger, space, err)
-				}
-				return false, r.setStatusRetargeting(space)
-			} else {
-				logger.Info("wait while NSTemplateSet is being deleted", "member_cluster", space.Status.TargetCluster)
-				return false, nil
-			}
+			// and continue with the provisioning on the new target member cluster (if specified)
 		}
 	}
 
@@ -309,6 +290,16 @@ func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		logger.Info("cannot delete NSTemplateSet: no target cluster specified")
 		return false, nil // skip NSTemplateSet deletion
 	}
+	return r.deleteNSTemplateSetFromCluster(logger, space, targetCluster)
+}
+
+// deleteNSTemplateSetFromCluster triggers the deletion of the NSTemplateSet on the given member cluster.
+// Returns `false/nil` if the NSTemplateSet is being deleted (whether deletion was triggered during this call,
+// or if it was triggered earlier and is still in progress)
+// Returns `true/nil` if the NSTemplateSet doesn't exist anymore,
+//   or if there is no target cluster specified in the given space, or if the target cluster is unknown.
+// Returns `false/error` if an error occurred
+func (r *Reconciler) deleteNSTemplateSetFromCluster(logger logr.Logger, space *toolchainv1alpha1.Space, targetCluster string) (bool, error) {
 	memberCluster, found := r.MemberClusters[targetCluster]
 	if !found {
 		return false, fmt.Errorf("cannot delete NSTemplateSet: unknown target member cluster: '%s'", targetCluster)
