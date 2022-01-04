@@ -129,7 +129,7 @@ func TestSynchronizeSpec(t *testing.T) {
 	userAccount := uatest.NewUserAccountFromMur(mur)
 
 	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"),
-		murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
+		murtest.UserAccountTierName("admin"), murtest.Namespace("ide", "54321"))
 
 	hostClient := test.NewFakeClient(t, mur)
 	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
@@ -445,7 +445,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		memberClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
-		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.TierName("admin"))
+		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.UserAccountTierName("admin"))
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 
 		sync := Synchronizer{

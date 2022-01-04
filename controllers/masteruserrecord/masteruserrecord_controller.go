@@ -16,7 +16,6 @@ import (
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
-	"github.com/redhat-cop/operator-utils/pkg/util"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -157,7 +156,7 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 			"failed to get userAccount '%s' from cluster '%s'", mur.Name, murAccount.TargetCluster)
 	}
 	// if the UserAccount is being deleted (by accident?), then we should wait until is has been totally deleted, and this controller will recreate it again
-	if util.IsBeingDeleted(userAccount) {
+	if coputil.IsBeingDeleted(userAccount) {
 		logger.Info("UserAccount is being deleted. Waiting until deletion is complete", "member_cluster", memberCluster.Name)
 
 		return updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "recovering deleted UserAccount"))
