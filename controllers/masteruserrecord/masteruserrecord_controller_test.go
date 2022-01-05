@@ -547,7 +547,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			return memberClient.Client.Update(ctx, obj, opts...)
 		}
 		modifiedMur := murtest.NewMasterUserRecord(t, "john", murtest.UserID(mur.Spec.UserID), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
-		murtest.ModifyUaInMur(modifiedMur, test.MemberClusterName, murtest.TierName("admin"))
+		murtest.ModifyUaInMur(modifiedMur, test.MemberClusterName, murtest.UserAccountTierName("admin"))
 		hostClient := test.NewFakeClient(t, modifiedMur)
 
 		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
@@ -735,8 +735,8 @@ func TestModifyUserAccounts(t *testing.T) {
 	userAccount2 := uatest.NewUserAccountFromMur(mur)
 	userAccount3 := uatest.NewUserAccountFromMur(mur)
 
-	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"), murtest.TierName("admin"), murtest.Namespace("ide", "54321"))
-	murtest.ModifyUaInMur(mur, test.Member2ClusterName, murtest.NsLimit("admin"), murtest.TierName("basic"))
+	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"), murtest.UserAccountTierName("admin"), murtest.Namespace("ide", "54321"))
+	murtest.ModifyUaInMur(mur, test.Member2ClusterName, murtest.NsLimit("admin"), murtest.UserAccountTierName("basic"))
 
 	toolchainStatus := NewToolchainStatus(
 		WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),

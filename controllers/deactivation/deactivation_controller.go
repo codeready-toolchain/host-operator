@@ -116,14 +116,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	// The tier is defined as part of its user account, since murs can in theory have multiple user accounts we will only consider the first one
-	account := mur.Spec.UserAccounts[0]
-
-	// Get the tier associated with the user account, we'll observe the deactivation timeout period from the tier spec
+	// Get the tier associated with the MasterUserRecord, we'll observe the deactivation timeout period from the tier spec
 	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
-	tierName := types.NamespacedName{Namespace: request.Namespace, Name: account.Spec.NSTemplateSet.TierName}
+	tierName := types.NamespacedName{Namespace: request.Namespace, Name: mur.Spec.TierName}
 	if err := r.Client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
-		logger.Error(err, "unable to get NSTemplateTier", "name", account.Spec.NSTemplateSet.TierName)
+		logger.Error(err, "unable to get NSTemplateTier", "name", mur.Spec.TierName)
 		return reconcile.Result{}, err
 	}
 
