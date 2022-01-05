@@ -87,7 +87,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("usersignup should not be deactivated - other tier (60 days)", func(t *testing.T) {
 			// given
 			murProvisionedTime := metav1.Now()
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(otherTier.Name), murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar, config)
 			// when
@@ -106,7 +106,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("usersignup should not be deactivated - no deactivation tier", func(t *testing.T) {
 			// given
 			murProvisionedTime := metav1.Now()
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(noDeactivationTier.Name), murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, noDeactivationTier, mur, userSignupFoobar, config)
 			// when
@@ -271,7 +271,7 @@ func TestReconcile(t *testing.T) {
 			states.SetDeactivating(userSignupFoobar, true)
 			// given
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutOtherTier*24) * time.Hour)}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(otherTier.Name), murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar, config)
 			// when
