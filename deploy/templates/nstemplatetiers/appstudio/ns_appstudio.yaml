@@ -12,6 +12,7 @@ objects:
       openshift.io/requester: ${USERNAME}
     labels:
       name: ${USERNAME}
+      toolchain.dev.openshift.com/workspace: ${USERNAME}
     name: ${USERNAME}
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
