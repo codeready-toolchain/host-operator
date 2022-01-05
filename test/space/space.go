@@ -14,13 +14,13 @@ import (
 
 type Option func(space *toolchainv1alpha1.Space)
 
-func WithoutTargetCluster() Option {
+func WithoutSpecTargetCluster() Option {
 	return func(space *toolchainv1alpha1.Space) {
 		space.Spec.TargetCluster = ""
 	}
 }
 
-func WithTargetCluster(name string) Option {
+func WithSpecTargetCluster(name string) Option {
 	return func(space *toolchainv1alpha1.Space) {
 		space.Spec.TargetCluster = name
 	}
