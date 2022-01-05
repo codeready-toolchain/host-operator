@@ -586,6 +586,30 @@ func TestDeleteSpace(t *testing.T) {
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.TerminatingFailed("mock error"))
 		})
+
+		t.Run("error when NSTemplateSet is stuck in deletion", func(t *testing.T) {
+			// given
+			s := spacetest.NewSpace("oddity",
+				spacetest.WithDeletionTimestamp(), // deletion was requested
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"),
+				spacetest.WithFinalizer(),
+			)
+			hostClient := test.NewFakeClient(t, s)
+			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithDeletionTimestamp(time.Now().Add(-2*time.Minute)))
+			member1Client := test.NewFakeClient(t, nstmplSet)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1, member2)
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+			// then
+			require.EqualError(t, err, "NSTemplateSet deletion has not completed in over 1 minute")
+			assert.False(t, res.Requeue)
+
+		})
 	})
 }
 
