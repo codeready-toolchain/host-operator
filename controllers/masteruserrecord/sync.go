@@ -2,9 +2,7 @@ package masteruserrecord
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
-	"net/http"
 	"reflect"
 	"time"
 
@@ -15,7 +13,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	"github.com/pkg/errors"
 	errs "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -24,14 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// consoleClient to be used to test connection to a public Web Console
-var consoleClient = &http.Client{ //nolint:deadcode,unused,varcheck
-	Timeout: time.Duration(1 * time.Second),
-	Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	},
-}
 
 type Synchronizer struct {
 	hostClient        client.Client
@@ -128,7 +117,7 @@ func (s *Synchronizer) withClusterDetails(status toolchainv1alpha1.UserAccountSt
 	if status.Cluster.Name != "" {
 		toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
 		if err := s.hostClient.Get(context.TODO(), types.NamespacedName{Namespace: s.record.Namespace, Name: toolchainconfig.ToolchainStatusName}, toolchainStatus); err != nil {
-			return status, errors.Wrapf(err, "unable to read ToolchainStatus resource")
+			return status, errs.Wrapf(err, "unable to read ToolchainStatus resource")
 		}
 
 		if status.Cluster.APIEndpoint == "" {
