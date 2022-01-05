@@ -326,7 +326,7 @@ func (r *Reconciler) deleteNSTemplateSetFromCluster(logger logr.Logger, space *t
 		logger.Info("the NSTemplateSet resource is already being deleted")
 		deletionTimestamp := nstmplSet.GetDeletionTimestamp()
 		if time.Since(deletionTimestamp.Time) > 60*time.Second {
-			return true, fmt.Errorf("NSTemplateSet deletion has not completed in over 1 minute")
+			return false, fmt.Errorf("NSTemplateSet deletion has not completed in over 1 minute")
 		}
 		return true, nil
 	}
