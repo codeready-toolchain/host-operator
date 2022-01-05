@@ -608,7 +608,12 @@ func TestDeleteSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "NSTemplateSet deletion has not completed in over 1 minute")
 			assert.False(t, res.Requeue)
-
+			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				Exists().
+				HasFinalizer().
+				HasSpecTargetCluster("member-1").
+				HasStatusTargetCluster("member-1").
+				HasConditions(spacetest.TerminatingFailed("NSTemplateSet deletion has not completed in over 1 minute"))
 		})
 	})
 }
