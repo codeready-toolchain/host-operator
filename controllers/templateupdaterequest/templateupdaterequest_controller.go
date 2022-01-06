@@ -32,6 +32,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.TemplateUpdateRequest{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&source.Kind{Type: &toolchainv1alpha1.MasterUserRecord{}}, &handler.EnqueueRequestForObject{}).
+		Watches(&source.Kind{Type: &toolchainv1alpha1.Space{}}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }
 
@@ -69,6 +70,46 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, errs.Wrap(err, "unable to get the current TemplateUpdateRequest")
 	}
 
+	if tur.Spec.CurrentTierHash != "" {
+		return r.handleSpaceUpdate(logger, request, tur)
+	} else {
+		return r.handleMURUpdate(logger, request, tur)
+	}
+}
+
+func (r *Reconciler) handleSpaceUpdate(logger logr.Logger, request ctrl.Request, tur *toolchainv1alpha1.TemplateUpdateRequest) (ctrl.Result, error) {
+	// lookup the Space with the same name as the TemplateUpdateRequest tur
+	space := &toolchainv1alpha1.Space{}
+	if err := r.Client.Get(context.TODO(), request.NamespacedName, space); err != nil {
+		if errors.IsNotFound(err) {
+			// Space object not found, could have been deleted after reconcile request.
+			// Marking this TemplateUpdateRequest as failed
+			return reconcile.Result{}, r.addFailureStatusCondition(tur, err)
+		}
+		// Error reading the object - requeue the request.
+		logger.Error(err, "Unable to get the Space associated with the TemplateUpdateRequest")
+		return reconcile.Result{}, errs.Wrap(err, "unable to get the Space associated with the TemplateUpdateRequest")
+	}
+
+	labelKey := tierutil.TemplateTierHashLabelKey(space.Spec.TierName)
+	// if the tier hash has changed and the Space is in ready state then the update is complete
+	if tur.Spec.CurrentTierHash != space.Labels[labelKey] && condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
+		// once the Space is up-to-date, we can delete this TemplateUpdateRequest
+		logger.Info("Space is up-to-date. Marking the TemplateUpdateRequest as complete")
+		return reconcile.Result{}, r.setCompleteStatusCondition(tur)
+	}
+
+	// otherwise, we need to wait
+	logger.Info("Space still being updated...")
+	if err := r.addUpdatingStatusCondition(tur, map[string]string{}); err != nil {
+		logger.Error(err, "Unable to update the TemplateUpdateRequest status")
+		return reconcile.Result{}, errs.Wrap(err, "unable to update the TemplateUpdateRequest status")
+	}
+	// no explicit requeue: expect new reconcile loop when Space changes
+	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) handleMURUpdate(logger logr.Logger, request ctrl.Request, tur *toolchainv1alpha1.TemplateUpdateRequest) (ctrl.Result, error) {
 	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
@@ -76,7 +117,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// lookup the MasterUserRecord with the same name as the TemplateUpdateRequest tur
 	mur := &toolchainv1alpha1.MasterUserRecord{}
-	if err = r.Client.Get(context.TODO(), request.NamespacedName, mur); err != nil {
+	if err := r.Client.Get(context.TODO(), request.NamespacedName, mur); err != nil {
 		if errors.IsNotFound(err) {
 			// MUR object not found, could have been deleted after reconcile request.
 			// Marking this TemplateUpdateRequest as failed
@@ -92,7 +133,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// and retain its current syncIndexex in the status
 		// NOTE: indexes need to be "captured" before updating the MURs
 		syncIndexes := syncIndexes(tur.Spec.TierName, *mur)
-		if err = r.updateTemplateRefs(logger, *tur, mur); err != nil {
+		if err := r.updateTemplateRefs(logger, *tur, mur); err != nil {
 			// we want to give ourselves a few chances before marking this MasterUserRecord update as "failed":
 			logger.Error(err, "Unable to update the MasterUserRecord associated with the TemplateUpdateRequest")
 			err = errs.Wrap(err, "unable to update the MasterUserRecord associated with the TemplateUpdateRequest")

@@ -324,8 +324,13 @@ func (r *Reconciler) deleteNSTemplateSetFromCluster(logger logr.Logger, space *t
 	}
 	if util.IsBeingDeleted(nstmplSet) {
 		logger.Info("the NSTemplateSet resource is already being deleted")
+		deletionTimestamp := nstmplSet.GetDeletionTimestamp()
+		if time.Since(deletionTimestamp.Time) > 60*time.Second {
+			return false, fmt.Errorf("NSTemplateSet deletion has not completed in over 1 minute")
+		}
 		return true, nil
 	}
+
 	logger.Info("deleting the NSTemplateSet resource")
 	// Delete NSTemplateSet associated with Space
 	if err := memberCluster.Client.Delete(context.TODO(), nstmplSet); err != nil {
