@@ -38,6 +38,19 @@ func ComputeHashForNSTemplateSetSpec(s toolchainv1alpha1.NSTemplateSetSpec) (str
 	return computeHash(refs)
 }
 
+func TierHashMatches(tmplTier *toolchainv1alpha1.NSTemplateTier, nsTmplSetSpec toolchainv1alpha1.NSTemplateSetSpec) bool {
+	tierHash, err := ComputeHashForNSTemplateTier(tmplTier)
+	if err != nil {
+		return false
+	}
+
+	nsTmplSetSpecHash, err := ComputeHashForNSTemplateSetSpec(nsTmplSetSpec)
+	if err != nil {
+		return false
+	}
+	return tierHash == nsTmplSetSpecHash
+}
+
 type templateRefs struct {
 	Refs []string `json:"refs"`
 }
