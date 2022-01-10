@@ -4,6 +4,7 @@ import (
 	"context"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/assert"
@@ -66,6 +67,17 @@ func (a *Assertion) HasTier(tierName string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	assert.Equal(a.t, tierName, a.space.Spec.TierName)
+	return a
+}
+
+func (a *Assertion) HasMatchingTierLabelForTier(tier *toolchainv1alpha1.NSTemplateTier) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	key := tierutil.TemplateTierHashLabelKey(tier.Name)
+	require.Contains(a.t, a.space.Labels, key)
+	expectedHash, err := tierutil.ComputeHashForNSTemplateTier(tier)
+	require.NoError(a.t, err)
+	assert.Equal(a.t, expectedHash, a.space.Labels[key])
 	return a
 }
 
