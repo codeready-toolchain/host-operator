@@ -787,61 +787,40 @@ func TestUpdateSpaceTier(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+			s := spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 				Exists().
 				HasTier(basicTier.Name).
 				HasSpecTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.Updating()).
-				HasLabel(tierutil.TemplateTierHashLabelKey(basicTier.Name))
+				HasLabel(tierutil.TemplateTierHashLabelKey(basicTier.Name)).
+				Get()
 
-			t.Run("not done when NSTemplateSet is ready within 1s", func(t *testing.T) {
+			t.Run("NSTemplateSet is provisioned", func(t *testing.T) {
 				// given another round of requeue with NSTemplateSet now *ready*
-				// but LESS than 1s after the Space Ready condition was set to `Ready=false/Updating`
 				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 					nstemplatetsettest.Provisioned(),
 				}
 				err := member1.Client.Update(context.TODO(), nsTmplSet)
 				require.NoError(t, err)
 
+				// hack: change Space's updating condition timestamp so that it appears the status is ready for >1 second since it's required before can go to Ready condition
+				s.Status.Conditions[0].LastTransitionTime = metav1.NewTime(s.Status.Conditions[0].LastTransitionTime.Time.Add(-1 * time.Second))
+				err = hostClient.Status().Update(context.TODO(), s)
+				require.NoError(t, err)
+
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+				res, err = ctrl.Reconcile(context.TODO(), requestFor(s))
 
 				// then
 				require.NoError(t, err)
-				assert.Equal(t, reconcile.Result{
-					Requeue:      true,
-					RequeueAfter: 1 * time.Second}, res) // requeue requested
-				s := spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
-					HasConditions(spacetest.Updating()).
+					HasConditions(spacetest.Ready()).
 					HasLabel(tierutil.TemplateTierHashLabelKey(basicTier.Name)).
-					HasFinalizer().
-					Get()
-
-				t.Run("done when NSTemplateSet is ready for more than 1s", func(t *testing.T) {
-					// given another round of requeue without with NSTemplateSet now *ready*
-					// but MORE than 1s after the Space Ready condition was set to `Ready=false/Updating`
-
-					// hack: change Space's condition timestamp
-					s.Status.Conditions[0].LastTransitionTime = metav1.NewTime(s.Status.Conditions[0].LastTransitionTime.Time.Add(-1 * time.Second))
-					err := hostClient.Status().Update(context.TODO(), s)
-					require.NoError(t, err)
-
-					// when
-					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
-
-					// then
-					require.NoError(t, err)
-					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
-					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
-						Exists().
-						HasStatusTargetCluster("member-1").
-						HasConditions(spacetest.Ready()).
-						HasLabel(tierutil.TemplateTierHashLabelKey(basicTier.Name)).
-						HasFinalizer()
-				})
+					HasFinalizer()
 			})
 		})
 	})
