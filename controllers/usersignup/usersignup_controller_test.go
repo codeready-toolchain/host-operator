@@ -101,6 +101,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			// then verify that the MUR exists and is complete
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
+			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 			murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
 				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 				HasOriginalSub(userSignup.Spec.OriginalSub).
@@ -215,6 +216,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasOriginalSub(userSignup.Spec.OriginalSub).
@@ -510,6 +512,7 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasOriginalSub(userSignup.Spec.OriginalSub).
@@ -778,6 +781,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasUserAccounts(1).
@@ -887,6 +891,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasUserAccounts(1).
@@ -997,7 +1002,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	// There should be no MasterUserRecords
-	murtest.AssertThatMasterUserRecord(t, "foo", r.Client).DoesNotExist()
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -1058,6 +1063,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasOriginalSub(userSignup.Spec.OriginalSub).
@@ -1559,7 +1565,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	require.NoError(t, err)
 
 	// We should now have 2 MURs
-	murtest.AssertThatMasterUserRecords(t, test.HostOperatorNs, r.Client).HaveCount(2)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(2)
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1646,6 +1652,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	// then
 	require.NoError(t, err)
 
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	murtest.AssertThatMasterUserRecord(t, "foo-bar", r.Client).HasNoConditions()
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -1725,6 +1732,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 			})
 
 		// The MUR should have now been deleted
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 		murtest.AssertThatMasterUserRecord(t, "john-doe", r.Client).DoesNotExist()
 		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -2238,6 +2246,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 			})
 
 		// The MUR should have not been deleted
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 		murtest.AssertThatMasterUserRecord(t, "edward-jones", r.Client).Exists()
 	})
 
@@ -2293,6 +2302,7 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 				})
 
 			// The MUR should have now been deleted
+			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 			murtest.AssertThatMasterUserRecord(t, "edward-jones", r.Client).DoesNotExist()
 
 			AssertThatCountersAndMetrics(t).
@@ -2541,6 +2551,7 @@ func TestUserSignupBanned(t *testing.T) {
 		})
 
 	// Confirm that the MUR has now been deleted
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 	murtest.AssertThatMasterUserRecord(t, "foo", r.Client).DoesNotExist()
 
 	AssertThatCountersAndMetrics(t).
@@ -2598,6 +2609,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 		})
 
 	// Confirm that no MUR is created
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 	murtest.AssertThatMasterUserRecord(t, "foo", r.Client).DoesNotExist()
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -2680,6 +2692,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 		})
 
 	// Confirm that the MUR has now been deleted
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 	murtest.AssertThatMasterUserRecord(t, mur.Name, r.Client).DoesNotExist()
 
 	AssertThatCountersAndMetrics(t).
@@ -2719,6 +2732,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 			})
 
 		// Confirm that there is still no MUR
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 		murtest.AssertThatMasterUserRecord(t, mur.Name, r.Client).DoesNotExist()
 		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -3167,6 +3181,7 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 			require.NoError(t, err)
 
 			// Lookup the MUR
+			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 			murtest.AssertThatMasterUserRecord(t, fmt.Sprintf("crt-%s%s", prefix, name), r.Client).
 				Exists().
 				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name)
@@ -3209,6 +3224,7 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 			require.NoError(t, err)
 
 			// Lookup the MUR
+			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 			murtest.AssertThatMasterUserRecord(t, fmt.Sprintf("%s%s-crt", name, suffix), r.Client).
 				Exists().
 				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name)
@@ -3259,6 +3275,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// after the 1st reconcile verify that the MUR still exists and its name still matches the initial UserSignup CompliantUsername
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	murtest.AssertThatMasterUserRecord(t, "foo-old", r.Client).
 		Exists().
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name)
@@ -3274,6 +3291,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// verify the new MUR is provisioned
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
 		Exists().
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
@@ -3336,6 +3354,7 @@ func TestMigrateMur(t *testing.T) {
 		_, err := r.Reconcile(context.TODO(), req)
 		// then verify that the MUR exists and is complete
 		require.NoError(t, err)
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 		murtest.AssertThatMasterUserRecord(t, expectedMur.Name, r.Client).Exists()
 	})
 }
@@ -3443,9 +3462,9 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.False(t, res.Requeue)
-		userSignup = AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
-			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1").
-			Get()
+		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
+			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
 			HasTargetCluster("member1")
 	})
@@ -3467,10 +3486,9 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.False(t, res.Requeue)
-		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
-			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
-		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
-			HasTargetCluster("member1")
+		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).HasTargetCluster("member1")
 	})
 
 	t.Run("last target cluster annotation is set and cluster has capacity", func(t *testing.T) {
@@ -3499,6 +3517,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		assert.False(t, res.Requeue)
 		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
 			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member2")
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
 			HasTargetCluster("member2")
 	})
@@ -3519,6 +3538,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		assert.False(t, res.Requeue)
 		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
 			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
 			HasTargetCluster("member1")
 	})
@@ -3553,6 +3573,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		assert.False(t, res.Requeue)
 		AssertThatUserSignup(t, req.Namespace, userSignupName, cl).
 			HasNoAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey)
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 		murtest.AssertThatMasterUserRecord(t, "foo", cl).DoesNotExist()
 	})
 }
