@@ -629,7 +629,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 	otherTier := tiertest.OtherTier()
 
 	t.Run("tier promotion (update needed due to different tier)", func(t *testing.T) {
-		// given that Space is promoted to `other` tier and corresponding NSTemplateSet is not up-to-date
+		// given that Space is promoted from `basic` to `other` tier and corresponding NSTemplateSet is not up-to-date
 		s := spacetest.NewSpace("oddity",
 			spacetest.WithTierNameFor(otherTier), // assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
 			spacetest.WithSpecTargetCluster("member-1"),
@@ -738,14 +738,16 @@ func TestUpdateSpaceTier(t *testing.T) {
 	})
 
 	t.Run("tier update (same tier but updated references)", func(t *testing.T) {
+		// get an older basic tier (with outdated references) that the nstemplateset can be referenced to for setup
+		olderBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 		// given that Space is set to the same tier that has been updated and the corresponding NSTemplateSet is not up-to-date
 		s := spacetest.NewSpace("oddity",
-			spacetest.WithTierNameAndHashLabelFor(basicTier), // assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
+			spacetest.WithTierNameAndHashLabelFor(basicTier),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
-		hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
-		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition()) // NSTemplateSet has references to old basic tier
+		hostClient := test.NewFakeClient(t, s, basicTier)
+		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(olderBasicTier), nstemplatetsettest.WithReadyCondition()) // NSTemplateSet has references to old basic tier
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
@@ -834,7 +836,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
-		hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
+		hostClient := test.NewFakeClient(t, s, basicTier)
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(basicTier), nstemplatetsettest.WithReadyCondition())
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
