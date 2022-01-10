@@ -149,7 +149,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, r.setStatusDeactivatingNotificationCreationFailed(logger, userSignup, err)
 		}
 
-		if err := r.setStatusDeactivatingNotificationCreated(logger, userSignup); err != nil {
+		if err := r.setStatusDeactivatingNotificationCreated(userSignup); err != nil {
 			logger.Error(err, "failed to update notification created status")
 			return reconcile.Result{}, err
 		}

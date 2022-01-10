@@ -345,7 +345,7 @@ func (u *StatusUpdater) setStatusDeactivationNotificationCreationFailed(logger l
 	return cause
 }
 
-func (u *StatusUpdater) setStatusDeactivatingNotificationCreated(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
+func (u *StatusUpdater) setStatusDeactivatingNotificationCreated(userSignup *toolchainv1alpha1.UserSignup) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
