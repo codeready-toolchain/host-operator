@@ -60,6 +60,7 @@ func TestCreateSpace(t *testing.T) {
 			HasFinalizer()
 		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 			Exists().
+			HasTierName(basicTier.Name).
 			HasClusterResourcesTemplateRef("basic-clusterresources-123456new").
 			HasNamespaceTemplateRefs("basic-code-123456new", "basic-dev-123456new", "basic-stage-123456new").
 			Get()
@@ -661,6 +662,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 			Exists().
 			HasTierName(otherTier.Name).
+			HasClusterResourcesTemplateRef("other-clusterresources-123456a").
+			HasNamespaceTemplateRefs("other-code-123456a", "other-dev-123456a", "other-stage-123456a").
 			Get()
 
 		t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
@@ -772,6 +775,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 			Exists().
 			HasTierName(basicTier.Name).
+			HasClusterResourcesTemplateRef("basic-clusterresources-123456new").
+			HasNamespaceTemplateRefs("basic-code-123456new", "basic-dev-123456new", "basic-stage-123456new").
 			Get()
 		require.False(t, tierutil.TierHashMatches(basicTier, nstmplSet.Spec))
 
@@ -925,7 +930,9 @@ func TestUpdateSpaceTier(t *testing.T) {
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)) // not set yet, since NSTemplateSet must be updated first
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				Exists().
-				HasTierName(basicTier.Name)
+				HasTierName(basicTier.Name).
+				HasClusterResourcesTemplateRef("basic-clusterresources-123456new").
+				HasNamespaceTemplateRefs("basic-code-123456new", "basic-dev-123456new", "basic-stage-123456new")
 		})
 	})
 }
