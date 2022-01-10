@@ -244,12 +244,10 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
 			TemplateRef: "base-dev-123abc1",
-			Template:    "",
 		})
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
 			TemplateRef: "base-stage-123abc2",
-			Template:    "",
 		})
 	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
 	assert.Equal(t, "base-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
@@ -553,12 +551,10 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
 			TemplateRef: "custom-dev-123abc1",
-			Template:    "",
 		})
 	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
 		toolchainv1alpha1.NSTemplateSetNamespace{
 			TemplateRef: "custom-stage-123abc2",
-			Template:    "",
 		})
 	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
 	assert.Equal(t, "custom-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)

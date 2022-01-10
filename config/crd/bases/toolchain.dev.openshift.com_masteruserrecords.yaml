@@ -103,11 +103,6 @@ spec:
                               description: the cluster resources template (for cluster-wide
                                 quotas, etc.)
                               properties:
-                                template:
-                                  description: Template contains an OpenShift Template
-                                    to be used for provisioning of cluster-scoped
-                                    resources
-                                  type: string
                                 templateRef:
                                   description: TemplateRef The name of the TierTemplate
                                     resource which exists in the host cluster and
@@ -122,10 +117,6 @@ spec:
                                 description: NSTemplateSetNamespace the namespace
                                   definition in an NSTemplateSet resource
                                 properties:
-                                  template:
-                                    description: Optional field. Used to specify a
-                                      custom template
-                                    type: string
                                   templateRef:
                                     description: TemplateRef The name of the TierTemplate
                                       resource which exists in the host cluster and
