@@ -116,6 +116,16 @@ func (t TierName) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpda
 	}
 }
 
+// CurrentTierHash sets the hash of the current tier (before update) for a Space, it is used to check whether the Space
+// is updated after a tier update occurs
+type CurrentTierHash string
+
+var _ Option = CurrentTierHash("")
+
+func (t CurrentTierHash) applyToTemplateUpdateRequest(r *toolchainv1alpha1.TemplateUpdateRequest) {
+	r.Spec.CurrentTierHash = string(t)
+}
+
 // SyncIndexes the Sync Indexes stored in the status before the MasterUserRecord update begins
 type SyncIndexes map[string]string
 
