@@ -138,7 +138,7 @@ func main() {
 
 	namespace, err := commonconfig.GetWatchNamespace()
 	if err != nil {
-		setupLog.Error(err, "Failed to get watch namespace")
+		setupLog.Error(err, "failed to get watch namespace")
 		os.Exit(1)
 	}
 

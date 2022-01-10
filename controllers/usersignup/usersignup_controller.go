@@ -143,15 +143,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated) {
 
 		if err := r.sendDeactivatingNotification(logger, config, userSignup); err != nil {
-			logger.Error(err, "Failed to create user deactivating notification")
+			logger.Error(err, "failed to create user deactivating notification")
 
 			// set the failed to create notification status condition
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-				r.setStatusDeactivatingNotificationCreationFailed, err, "Failed to create user deactivating notification")
+			return reconcile.Result{}, r.setStatusDeactivatingNotificationCreationFailed(logger, userSignup, err)
 		}
 
-		if err := r.updateStatus(logger, userSignup, r.setStatusDeactivatingNotificationCreated); err != nil {
-			logger.Error(err, "Failed to update notification created status")
+		if err := r.setStatusDeactivatingNotificationCreated(logger, userSignup); err != nil {
+			logger.Error(err, "failed to update notification created status")
 			return reconcile.Result{}, err
 		}
 	}
@@ -180,14 +179,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 		if condition.IsNotTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
 			if err := r.sendDeactivatedNotification(logger, config, userSignup); err != nil {
-				logger.Error(err, "Failed to create user deactivation notification")
+				logger.Error(err, "failed to create user deactivation notification")
 
 				// set the failed to create notification status condition
-				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusDeactivationNotificationCreationFailed, err, "Failed to create user deactivation notification")
+				return reconcile.Result{}, r.setStatusDeactivationNotificationCreationFailed(logger, userSignup, err, "failed to create user deactivation notification")
 			}
 
 			if err := r.updateStatus(logger, userSignup, r.setStatusDeactivationNotificationCreated); err != nil {
-				logger.Error(err, "Failed to update notification created status")
+				logger.Error(err, "failed to update notification created status")
 				return reconcile.Result{}, err
 			}
 		}
@@ -214,7 +213,7 @@ func (r *Reconciler) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1
 
 			// Query BannedUser for resources that match the same email hash
 			if err := r.Client.List(context.TODO(), bannedUserList, opts); err != nil {
-				return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToReadBannedUsers, err, "Failed to query BannedUsers")
+				return false, r.setStatusFailedToReadBannedUsers(reqLogger, userSignup, err, "failed to query BannedUsers")
 			}
 
 			// One last check to confirm that the e-mail addresses match also (in case of the infinitesimal chance of a hash collision)
@@ -228,18 +227,18 @@ func (r *Reconciler) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1
 			hashIsValid := validateEmailHash(emailLbl, emailHashLbl)
 			if !hashIsValid {
 				err := fmt.Errorf("hash is invalid")
-				return banned, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidEmailHash, err, "the email hash '%s' is invalid ", emailHashLbl)
+				return banned, r.setStatusInvalidEmailHash(reqLogger, userSignup, err, fmt.Sprintf("the email hash '%s' is invalid", emailHashLbl))
 			}
 		} else {
 			// If there isn't an email-hash label, then the state is invalid
-			err := fmt.Errorf("missing label at usersignup")
-			return banned, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusMissingEmailHash, err,
-				"the required label '%s' is not present", toolchainv1alpha1.UserSignupUserEmailHashLabelKey)
+			return banned, r.setStatusMissingEmailHash(reqLogger, userSignup,
+				fmt.Errorf("missing label at usersignup"),
+				fmt.Sprintf("the required label '%s' is not present", toolchainv1alpha1.UserSignupUserEmailHashLabelKey))
 		}
 	} else {
-		err := fmt.Errorf("missing annotation at usersignup")
-		return banned, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMissingUserEmailAnnotation, err,
-			"the required annotation '%s' is not present", toolchainv1alpha1.UserSignupUserEmailAnnotationKey)
+		return banned, r.setStatusInvalidMissingUserEmailAnnotation(reqLogger, userSignup,
+			fmt.Errorf("missing annotation at usersignup"),
+			fmt.Sprintf("the required annotation '%s' is not present", toolchainv1alpha1.UserSignupUserEmailAnnotationKey))
 	}
 	return banned, nil
 }
@@ -255,15 +254,14 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 	labels := map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 	opts := client.MatchingLabels(labels)
 	if err := r.Client.List(context.TODO(), murList, opts); err != nil {
-		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err,
-			"Failed to list MasterUserRecords by owner")
+		return false, r.setStatusInvalidMURState(reqLogger, userSignup, err, "failed to list MasterUserRecords by owner")
 	}
 
 	murs := murList.Items
 	// If we found more than one MasterUserRecord, then die
 	if len(murs) > 1 {
 		err := fmt.Errorf("multiple matching MasterUserRecord resources found")
-		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "Multiple MasterUserRecords found")
+		return false, r.setStatusInvalidMURState(reqLogger, userSignup, err, "multiple MasterUserRecords found")
 	} else if len(murs) == 1 {
 		mur := &murs[0]
 		// If the user has been banned, then we need to delete the MUR
@@ -273,7 +271,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 				return true, err
 			}
 			reqLogger.Info("deleting MasterUserRecord since user has been banned")
-			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusBanning, r.setStatusFailedToDeleteMUR)
+			return true, r.deleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusBanning)
 		}
 
 		// If the user has been deactivated, then we need to delete the MUR
@@ -285,7 +283,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			// We set the inProgressStatusUpdater parameter here to setStatusDeactivationInProgress, as a temporary status before
 			// the main reconcile function completes the deactivation process
 			reqLogger.Info("deleting MasterUserRecord since user has been deactivated")
-			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusDeactivationInProgress, r.setStatusFailedToDeleteMUR)
+			return true, r.deleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusDeactivationInProgress)
 		}
 
 		// if the UserSignup doesn't have the state=approved label set, then update it
@@ -296,17 +294,17 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 		// look-up the default NSTemplateTier to get the NS templates
 		nstemplateTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
 		if err != nil {
-			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
+			return true, r.setStatusNoTemplateTierAvailable(reqLogger, userSignup, err, fmt.Sprintf("NSTemplateTier '%s' not found", config.Tiers().DefaultTier()))
 		}
 
 		// check if anything in the MUR should be migrated/fixed
 		if changed, err := migrateOrFixMurIfNecessary(mur, nstemplateTier, userSignup); err != nil {
-			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
+			return true, r.setStatusInvalidMURState(reqLogger, userSignup, err, "unable to migrate or fix existing MasterUserRecord")
 
 		} else if changed {
 			reqLogger.Info("updating MasterUserRecord after it was migrated")
 			if err := r.Client.Update(context.TODO(), mur); err != nil {
-				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
+				return true, r.setStatusInvalidMURState(reqLogger, userSignup, err, "unable to migrate or fix existing MasterUserRecord")
 			}
 			return true, nil
 		}
@@ -323,7 +321,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
 	// Check if the user requires phone verification, and do not proceed further if they do
 	if states.VerificationRequired(userSignup) {
-		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
+		return r.setStatusVerificationRequired(userSignup)
 	}
 
 	approved, targetCluster, err := getClusterIfApproved(r.Client, userSignup, r.GetMemberClusters)
@@ -338,15 +336,15 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 			if err == nil {
 				err = fmt.Errorf("no suitable member cluster found - capacity was reached")
 			}
-			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusApprovedByAdmin, statusNoClustersAvailable), err, "no target clusters available")
+			return r.setStatusApprovedByAdminButNoClusterAvailable(reqLogger, userSignup, err, err.Error())
 		}
 
 		// if an error was returned, then log it, set the status and return an error
 		if err != nil {
-			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.set(statusPendingApproval, statusNoClustersAvailable), err, "getting target clusters failed")
+			return r.setStatusPendingApprovalButErrorGettingCluster(reqLogger, userSignup, err, "get target cluster failed")
 		}
 		// in case no error was returned which means that no cluster was found, then just wait for next reconcile triggered by ToolchainStatus update
-		return r.updateStatus(reqLogger, userSignup, r.set(statusPendingApproval, statusNoClustersAvailable))
+		return r.setStatusPendingApprovalButNoClusterAvailable(userSignup)
 	}
 
 	if !approved {
@@ -354,15 +352,15 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 		if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValuePending); err != nil {
 			return err
 		}
-		return r.updateStatus(reqLogger, userSignup, r.set(statusPendingApproval, statusIncompletePendingApproval))
+		return r.setStatusCompleteButPendingApproval(userSignup)
 	}
 
 	if states.Approved(userSignup) {
-		if err := r.updateStatus(reqLogger, userSignup, r.set(statusApprovedByAdmin)); err != nil {
+		if err := r.setStatusApprovedByAdmin(userSignup); err != nil {
 			return err
 		}
 	} else {
-		if err := r.updateStatus(reqLogger, userSignup, r.setStatusApprovedAutomatically); err != nil {
+		if err := r.setStatusApprovedAutomatically(userSignup); err != nil {
 			return err
 		}
 	}
@@ -374,7 +372,7 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 	// look-up the default NSTemplateTier to get the NS templates
 	nstemplateTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
+		return r.setStatusNoTemplateTierAvailable(reqLogger, userSignup, err, fmt.Sprintf("NSTemplateTier '%s' not found", config.Tiers().DefaultTier()))
 	}
 
 	// Provision the MasterUserRecord
@@ -393,8 +391,7 @@ func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1al
 		activations = r.updateActivationCounterAnnotation(logger, userSignup)
 	}
 	if err := r.Client.Update(context.TODO(), userSignup); err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
-			"unable to update state label at UserSignup resource")
+		return r.setStatusFailedToUpdateStateLabel(logger, userSignup, err, "unable to update state label at UserSignup resource")
 	}
 	updateUserSignupMetricsByState(oldState, state)
 	// increment the counter *only if the client update did not fail*
@@ -480,8 +477,7 @@ func (r *Reconciler) provisionMasterUserRecord(config toolchainconfig.ToolchainC
 	// Set the last-target-cluster annotation so that if the user signs up again later on, they can be provisioned to the same cluster
 	userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = targetCluster
 	if err := r.Client.Update(context.TODO(), userSignup); err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateAnnotation, err,
-			"unable to update last target cluster annotation on UserSignup resource")
+		return r.setStatusFailedToUpdateAnnotation(logger, userSignup, err, "unable to update last target cluster annotation on UserSignup resource")
 	}
 
 	// TODO Update the MasterUserRecord with NSTemplateTier values
@@ -489,27 +485,24 @@ func (r *Reconciler) provisionMasterUserRecord(config toolchainconfig.ToolchainC
 
 	compliantUsername, err := r.generateCompliantUsername(config, userSignup)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
-			"Error generating compliant username for %s", userSignup.Spec.Username)
+		return r.setStatusFailedToCreateMUR(logger, userSignup, err,
+			fmt.Sprintf("error generating compliant username for %s", userSignup.Spec.Username))
 	}
 
 	mur, err := newMasterUserRecord(userSignup, targetCluster, nstemplateTier, compliantUsername)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
-			"Error creating MasterUserRecord %s", mur.Name)
+		return r.setStatusFailedToCreateMUR(logger, userSignup, err, fmt.Sprintf("error creating MasterUserRecord %s", mur.Name))
 	}
 
 	err = controllerutil.SetControllerReference(userSignup, mur, r.Scheme)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
-			"Error setting controller reference for MasterUserRecord %s", mur.Name)
+		return r.setStatusFailedToCreateMUR(logger, userSignup, err, fmt.Sprintf("error setting controller reference for MasterUserRecord %s", mur.Name))
 	}
 
 	logger.Info("Creating MasterUserRecord", "Name", mur.Name)
 	err = r.Client.Create(context.TODO(), mur)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
-			"Error creating MasterUserRecord")
+		return r.setStatusFailedToCreateMUR(logger, userSignup, err, "error creating MasterUserRecord")
 	}
 	// increment the counter of MasterUserRecords
 	domain := metrics.GetEmailDomain(mur)
@@ -541,10 +534,10 @@ func (r *Reconciler) updateActivationCounterAnnotation(logger logr.Logger, userS
 	return 1
 }
 
-// DeleteMasterUserRecord deletes the specified MasterUserRecord
-func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRecord,
+// deleteMasterUserRecord deletes the specified MasterUserRecord
+func (r *Reconciler) deleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRecord,
 	userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger,
-	inProgressStatusUpdater, failedStatusUpdater StatusUpdaterFunc) error {
+	inProgressStatusUpdater StatusUpdaterFunc) error {
 
 	err := r.updateStatus(logger, userSignup, inProgressStatusUpdater)
 	if err != nil {
@@ -553,8 +546,7 @@ func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRec
 
 	err = r.Client.Delete(context.TODO(), mur)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, failedStatusUpdater, err,
-			"Error deleting MasterUserRecord")
+		return r.setStatusFailedToDeleteMUR(logger, userSignup, err, "error deleting MasterUserRecord")
 	}
 	logger.Info("Deleted MasterUserRecord", "Name", mur.Name)
 	return nil
@@ -587,7 +579,7 @@ func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, config too
 			Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 		if err != nil {
-			logger.Error(err, "Failed to create deactivating notification resource")
+			logger.Error(err, "failed to create deactivating notification resource")
 			return err
 		}
 
@@ -622,7 +614,7 @@ func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config tool
 			Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])
 
 		if err != nil {
-			logger.Error(err, "Failed to create deactivated notification resource")
+			logger.Error(err, "failed to create deactivated notification resource")
 			return err
 		}
 

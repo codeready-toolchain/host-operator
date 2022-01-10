@@ -150,7 +150,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	err = r.aggregateAndUpdateStatus(reqLogger, toolchainStatus)
 	if err != nil {
-		reqLogger.Error(err, "Failed to update status")
+		reqLogger.Error(err, "failed to update status")
 		return reconcile.Result{RequeueAfter: requeueTime}, err
 	}
 
@@ -221,16 +221,16 @@ func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *t
 		if c.LastTransitionTime.Before(&metav1.Time{Time: threshold}) {
 			if !condition.IsTrue(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated) {
 				if err := r.sendToolchainStatusNotification(reqLogger, toolchainStatus, unreadyStatus); err != nil {
-					reqLogger.Error(err, "Failed to create toolchain status unready notification")
+					reqLogger.Error(err, "failed to create toolchain status unready notification")
 
 					// set the failed to create notification status condition
 					return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
 						r.setStatusUnreadyNotificationCreationFailed, err,
-						"Failed to create toolchain status unready notification")
+						"failed to create toolchain status unready notification")
 				}
 
 				if err := r.setStatusToolchainStatusUnreadyNotificationCreated(reqLogger, toolchainStatus); err != nil {
-					reqLogger.Error(err, "Failed to update notification created status")
+					reqLogger.Error(err, "failed to update notification created status")
 					return err
 				}
 			}
@@ -249,11 +249,11 @@ func (r *Reconciler) restoredCheck(reqLogger logr.Logger, toolchainStatus *toolc
 	if condition.IsFalse(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 		if condition.IsTrue(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated) {
 			if err := r.sendToolchainStatusNotification(reqLogger, toolchainStatus, restoredStatus); err != nil {
-				reqLogger.Error(err, "Failed to create toolchain status restored notification")
+				reqLogger.Error(err, "failed to create toolchain status restored notification")
 				// set the failed to create notification status condition
 				return r.wrapErrorWithStatusUpdate(reqLogger, toolchainStatus,
 					r.setStatusReadyNotificationCreationFailed, err,
-					"Failed to create toolchain restored notification")
+					"failed to create toolchain restored notification")
 			}
 		}
 	}
@@ -470,7 +470,7 @@ func (r *Reconciler) sendToolchainStatusNotification(logger logr.Logger,
 		Create(config.Notifications().AdminEmail())
 
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to create toolchain status %s notification resource", status))
+		logger.Error(err, fmt.Sprintf("failed to create toolchain status %s notification resource", status))
 		return err
 	}
 
@@ -666,7 +666,7 @@ func (r *Reconciler) wrapErrorWithStatusUpdate(logger logr.Logger, toolchainStat
 		return nil
 	}
 	if err := statusUpdater(logger, toolchainStatus, err.Error()); err != nil {
-		logger.Error(err, "Error updating ToolchainStatus status")
+		logger.Error(err, "error updating ToolchainStatus status")
 	}
 	return errs.Wrapf(err, format, args...)
 }

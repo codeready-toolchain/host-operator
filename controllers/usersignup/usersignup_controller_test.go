@@ -352,7 +352,7 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "MissingUserEmailAnnotation",
-			Message: "missing annotation at usersignup",
+			Message: "the required annotation 'toolchain.dev.openshift.com/user-email' is not present",
 		})
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -400,7 +400,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "InvalidEmailHashLabel",
-			Message: "hash is invalid",
+			Message: "the email hash 'abcdef0123456789' is invalid",
 		})
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -443,7 +443,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "UnableToUpdateStateLabel",
-			Message: "some error",
+			Message: "unable to update state label at UserSignup resource",
 		})
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -492,7 +492,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "MissingEmailHashLabel",
-			Message: "missing label at usersignup",
+			Message: "the required label 'toolchain.dev.openshift.com/email-hash' is not present",
 		})
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -643,7 +643,7 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 					Type:    toolchainv1alpha1.UserSignupComplete,
 					Status:  v1.ConditionFalse,
 					Reason:  "NoTemplateTierAvailable",
-					Message: fmt.Sprintf("nstemplatetiers.toolchain.dev.openshift.com \"%s\" not found", v.tierName),
+					Message: fmt.Sprintf("NSTemplateTier '%s' not found", v.tierName),
 				},
 				toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
@@ -2006,7 +2006,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		require.Equal(t, "Failed to create user deactivation notification: unable to create deactivation notification", err.Error())
+		require.Equal(t, "unable to create deactivation notification", err.Error())
 
 		// Lookup the UserSignup
 		err = r.Client.Get(context.TODO(), key, userSignup)
@@ -2027,7 +2027,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 				Type:    toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
 				Status:  v1.ConditionFalse,
 				Reason:  "NotificationCRCreationFailed",
-				Message: "unable to create deactivation notification",
+				Message: "failed to create user deactivation notification",
 			})
 		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -2930,7 +2930,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 				Type:    toolchainv1alpha1.UserSignupComplete,
 				Status:  v1.ConditionFalse,
 				Reason:  "UnableToDeleteMUR",
-				Message: "unable to delete mur",
+				Message: "error deleting MasterUserRecord",
 			})
 		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -2999,7 +2999,7 @@ func TestDeathBy100Signups(t *testing.T) {
 
 	// then
 	require.Error(t, err)
-	assert.EqualError(t, err, "Error generating compliant username for foo@redhat.com: unable to transform username [foo@redhat.com] even after 100 attempts")
+	assert.EqualError(t, err, "unable to transform username [foo@redhat.com] even after 100 attempts")
 	require.Equal(t, reconcile.Result{}, res)
 
 	// Lookup the user signup again
@@ -3015,7 +3015,7 @@ func TestDeathBy100Signups(t *testing.T) {
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "UnableToCreateMUR",
-			Message: "unable to transform username [foo@redhat.com] even after 100 attempts",
+			Message: "error generating compliant username for foo@redhat.com",
 		},
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.UserSignupApproved,
@@ -3080,7 +3080,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
-	assert.EqualError(t, err, "Multiple MasterUserRecords found: multiple matching MasterUserRecord resources found")
+	assert.EqualError(t, err, "multiple matching MasterUserRecord resources found")
 
 	key := types.NamespacedName{
 		Namespace: test.HostOperatorNs,
@@ -3095,7 +3095,7 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  v1.ConditionFalse,
 			Reason:  "InvalidMURState",
-			Message: "multiple matching MasterUserRecord resources found",
+			Message: "multiple MasterUserRecords found",
 		},
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
@@ -3138,7 +3138,7 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
-	assert.EqualError(t, err, "no target clusters available: no suitable member cluster found - capacity was reached")
+	assert.EqualError(t, err, "no suitable member cluster found - capacity was reached")
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -3690,7 +3690,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		res, err := r.Reconcile(context.TODO(), req)
 
 		// then
-		require.EqualError(t, err, "unable to update last target cluster annotation on UserSignup resource: error")
+		require.EqualError(t, err, "error")
 		assert.Equal(t, reconcile.Result{Requeue: false}, res)
 		userSignup = &toolchainv1alpha1.UserSignup{}
 		err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupName, Namespace: req.Namespace}, userSignup)

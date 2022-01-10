@@ -975,7 +975,7 @@ func TestToolchainStatusNotifications(t *testing.T) {
 
 					// then
 					require.Error(t, err)
-					require.Equal(t, fmt.Sprintf("Failed to create toolchain status unready notification: cannot create notification "+
+					require.Equal(t, fmt.Sprintf("failed to create toolchain status unready notification: cannot create notification "+
 						"due to configuration error - admin.email [%s] is invalid or not set", email),
 						err.Error())
 					assert.Equal(t, requeueResult, res)

@@ -15,104 +15,154 @@ type StatusUpdater struct {
 	Client client.Client
 }
 
-func (u *StatusUpdater) setStatusApprovedAutomatically(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *StatusUpdater) setStatusApprovedAutomatically(userSignup *toolchainv1alpha1.UserSignup) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupApproved,
-			Status:  corev1.ConditionTrue,
-			Reason:  toolchainv1alpha1.UserSignupApprovedAutomaticallyReason,
-			Message: message,
+			Type:   toolchainv1alpha1.UserSignupApproved,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.UserSignupApprovedAutomaticallyReason,
 		})
 }
 
-var statusApprovedByAdmin = func(_ string) toolchainv1alpha1.Condition {
-	return toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.UserSignupApproved,
-		Status: corev1.ConditionTrue,
-		Reason: toolchainv1alpha1.UserSignupApprovedByAdminReason,
-	}
-}
-
-var statusPendingApproval = func(message string) toolchainv1alpha1.Condition {
-	return toolchainv1alpha1.Condition{
-		Type:    toolchainv1alpha1.UserSignupApproved,
-		Status:  corev1.ConditionFalse,
-		Reason:  toolchainv1alpha1.UserSignupPendingApprovalReason,
-		Message: message,
-	}
-}
-
-var statusIncompletePendingApproval = func(message string) toolchainv1alpha1.Condition {
-	return toolchainv1alpha1.Condition{
-		Type:    toolchainv1alpha1.UserSignupComplete,
-		Status:  corev1.ConditionFalse,
-		Reason:  toolchainv1alpha1.UserSignupPendingApprovalReason,
-		Message: message,
-	}
-}
-
-func (u *StatusUpdater) setStatusInvalidMURState(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *StatusUpdater) setStatusApprovedByAdmin(userSignup *toolchainv1alpha1.UserSignup) error {
 	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupApproved,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.UserSignupApprovedByAdminReason,
+		})
+}
+
+func (u *StatusUpdater) setStatusApprovedByAdminButNoClusterAvailable(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupApproved,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.UserSignupApprovedByAdminReason,
+		},
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupNoClusterAvailableReason,
+			Message: message,
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
+}
+
+func (u *StatusUpdater) setStatusPendingApprovalButErrorGettingCluster(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupApproved,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.UserSignupPendingApprovalReason,
+		},
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupNoClusterAvailableReason,
+			Message: message,
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
+}
+
+func (u *StatusUpdater) setStatusPendingApprovalButNoClusterAvailable(userSignup *toolchainv1alpha1.UserSignup) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupApproved,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.UserSignupPendingApprovalReason,
+		},
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupComplete,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.UserSignupNoClusterAvailableReason,
+		})
+}
+
+func (u *StatusUpdater) setStatusCompleteButPendingApproval(userSignup *toolchainv1alpha1.UserSignup) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupApproved,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.UserSignupPendingApprovalReason,
+		},
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupComplete,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.UserSignupPendingApprovalReason,
+		})
+}
+
+func (u *StatusUpdater) setStatusInvalidMURState(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupInvalidMURStateReason,
 			Message: message,
-		})
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
 }
 
-func (u *StatusUpdater) setStatusFailedToCreateMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
+func (u *StatusUpdater) setStatusFailedToCreateMUR(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupUnableToCreateMURReason,
 			Message: message,
-		})
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
 }
 
-func (u *StatusUpdater) setStatusFailedToDeleteMUR(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
+func (u *StatusUpdater) setStatusFailedToDeleteMUR(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupUnableToDeleteMURReason,
 			Message: message,
-		})
-}
-
-func (u *StatusUpdater) set(conditionCreators ...func(message string) toolchainv1alpha1.Condition) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-		conditions := make([]toolchainv1alpha1.Condition, len(conditionCreators))
-		for index, createCondition := range conditionCreators {
-			conditions[index] = createCondition(message)
-		}
-		return u.updateStatusConditions(userSignup, conditions...)
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
 	}
+	return cause
 }
 
-var statusNoClustersAvailable = func(message string) toolchainv1alpha1.Condition {
-	return toolchainv1alpha1.Condition{
-		Type:    toolchainv1alpha1.UserSignupComplete,
-		Status:  corev1.ConditionFalse,
-		Reason:  toolchainv1alpha1.UserSignupNoClusterAvailableReason,
-		Message: message,
-	}
-}
-
-func (u *StatusUpdater) setStatusNoTemplateTierAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
+func (u *StatusUpdater) setStatusNoTemplateTierAvailable(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupNoTemplateTierAvailableReason,
 			Message: message,
-		})
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
 }
 
 func (u *StatusUpdater) setStatusBanning(userSignup *toolchainv1alpha1.UserSignup, message string) error {
@@ -160,81 +210,104 @@ func (u *StatusUpdater) setStatusDeactivated(userSignup *toolchainv1alpha1.UserS
 		})
 }
 
-func (u *StatusUpdater) setStatusFailedToReadBannedUsers(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
+func (u *StatusUpdater) setStatusFailedToReadBannedUsers(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupFailedToReadBannedUsersReason,
 			Message: message,
-		})
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
 }
 
-func (u *StatusUpdater) setStatusInvalidMissingUserEmailAnnotation(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
+func (u *StatusUpdater) setStatusInvalidMissingUserEmailAnnotation(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupMissingUserEmailAnnotationReason,
 			Message: message,
-		})
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
 }
 
-func (u *StatusUpdater) setStatusMissingEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
+func (u *StatusUpdater) setStatusMissingEmailHash(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupMissingEmailHashLabelReason,
 			Message: message,
-		})
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
 }
 
-func (u *StatusUpdater) setStatusInvalidEmailHash(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
+func (u *StatusUpdater) setStatusInvalidEmailHash(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupInvalidEmailHashLabelReason,
 			Message: message,
-		})
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
 }
 
-func (u *StatusUpdater) setStatusVerificationRequired(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *StatusUpdater) setStatusVerificationRequired(userSignup *toolchainv1alpha1.UserSignup) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupVerificationRequiredReason,
-			Message: message,
+			Type:   toolchainv1alpha1.UserSignupComplete,
+			Status: corev1.ConditionFalse,
+			Reason: toolchainv1alpha1.UserSignupVerificationRequiredReason,
 		})
 }
 
-func (u *StatusUpdater) setStatusFailedToUpdateStateLabel(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
+func (u *StatusUpdater) setStatusFailedToUpdateStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupUnableToUpdateStateLabelReason,
 			Message: message,
-		})
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
 }
 
-func (u *StatusUpdater) setStatusFailedToUpdateAnnotation(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
+func (u *StatusUpdater) setStatusFailedToUpdateAnnotation(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupUnableToUpdateAnnotationReason,
 			Message: message,
-		})
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
 }
 
 func (u *StatusUpdater) setStatusDeactivationNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
@@ -257,18 +330,22 @@ func (u *StatusUpdater) setStatusDeactivationNotificationUserIsActive(userSignup
 		})
 }
 
-func (u *StatusUpdater) setStatusDeactivationNotificationCreationFailed(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
+func (u *StatusUpdater) setStatusDeactivationNotificationCreationFailed(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error, message string) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupDeactivatedNotificationCRCreationFailedReason,
 			Message: message,
-		})
+		}); err != nil {
+		logger.Error(cause, message)
+		return err
+	}
+	return cause
 }
 
-func (u *StatusUpdater) setStatusDeactivatingNotificationCreated(userSignup *toolchainv1alpha1.UserSignup, _ string) error {
+func (u *StatusUpdater) setStatusDeactivatingNotificationCreated(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
@@ -288,15 +365,19 @@ func (u *StatusUpdater) setStatusDeactivatingNotificationNotInPreDeactivation(us
 		})
 }
 
-func (u *StatusUpdater) setStatusDeactivatingNotificationCreationFailed(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
+func (u *StatusUpdater) setStatusDeactivatingNotificationCreationFailed(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, cause error) error {
+	if err := u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
 			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreationFailedReason,
-			Message: message,
-		})
+			Message: cause.Error(),
+		}); err != nil {
+		logger.Error(cause, "failed to create user deactivating notification")
+		return err
+	}
+	return cause
 }
 
 func (u *StatusUpdater) updateStatus(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup,
@@ -343,7 +424,7 @@ func (u *StatusUpdater) wrapErrorWithStatusUpdate(logger logr.Logger, userSignup
 		return nil
 	}
 	if err := statusUpdater(userSignup, err.Error()); err != nil {
-		logger.Error(err, "Error updating UserSignup status")
+		logger.Error(err, "error updating UserSignup status")
 	}
 	return errs.Wrapf(err, format, args...)
 }
