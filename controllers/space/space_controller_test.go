@@ -750,8 +750,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
 		hostClient := test.NewFakeClient(t, s, basicTier)
-		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(olderBasicTier), nstemplatetsettest.WithReadyCondition()) // NSTemplateSet has references to old basic tier
-		member1Client := test.NewFakeClient(t, nstmplSet)
+		nsTmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(olderBasicTier), nstemplatetsettest.WithReadyCondition()) // NSTemplateSet has references to old basic tier
+		member1Client := test.NewFakeClient(t, nsTmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
@@ -772,13 +772,13 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasStatusTargetCluster("member-1").
 			HasConditions(spacetest.Updating()).
 			HasMatchingTierLabelForTier(olderBasicTier)
-		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
+		nsTmplSet = nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 			Exists().
 			HasTierName(basicTier.Name).
 			HasClusterResourcesTemplateRef("basic-clusterresources-123456new").
 			HasNamespaceTemplateRefs("basic-code-123456new", "basic-dev-123456new", "basic-stage-123456new").
 			Get()
-		require.False(t, tierutil.TierHashMatches(basicTier, nstmplSet.Spec))
+		require.True(t, tierutil.TierHashMatches(basicTier, nsTmplSet.Spec))
 
 		t.Run("requeue while NSTemplateSet is not ready", func(t *testing.T) {
 			// given another round of requeue while NSTemplateSet is *not ready*
