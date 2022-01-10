@@ -188,7 +188,6 @@ func (r Reconciler) updateTemplateRefs(logger logr.Logger, tur toolchainv1alpha1
 			// now, add the new templateRefs, unless there's a custom template in use
 			for _, ns := range tur.Spec.Namespaces {
 				t := namespaceType(ns.TemplateRef)
-				// don't override the custom template
 				namespaces[t] = toolchainv1alpha1.NSTemplateSetNamespace(ns)
 			}
 			// finally, set the new namespace templates in the user account
