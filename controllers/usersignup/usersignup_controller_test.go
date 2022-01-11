@@ -101,27 +101,14 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			// then verify that the MUR exists and is complete
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
-			murs := &toolchainv1alpha1.MasterUserRecordList{}
-			err = r.Client.List(context.TODO(), murs)
-			require.NoError(t, err)
-			require.Len(t, murs.Items, 1)
-			mur := murs.Items[0]
-			require.Equal(t, test.HostOperatorNs, mur.Namespace)
-			require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
-			require.Len(t, mur.Spec.UserAccounts, 1)
-			require.Equal(t, userSignup.Spec.OriginalSub, mur.Spec.OriginalSub)
-			assert.Equal(t, "base", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
-			assert.Equal(t, []toolchainv1alpha1.NSTemplateSetNamespace{
-				{
-					TemplateRef: "base-dev-123abc1",
-				},
-				{
-					TemplateRef: "base-stage-123abc2",
-				},
-			}, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces)
-			require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
-			assert.Equal(t, "base-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
-
+			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+			murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
+				HasOriginalSub(userSignup.Spec.OriginalSub).
+				HasUserAccounts(1).
+				HasUserAccountTierName("base").
+				HasUserAccountNamespaceTemplateRefs("base-dev-123abc1", "base-stage-123abc2").
+				HasUserAccountClusterResourceTemplateRefs("base-clusterresources-654321b")
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal) // zero because we started with a not-ready state instead of empty as per usual
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 
@@ -229,28 +216,15 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
-
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	err = r.Client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 1)
-
-	mur := murs.Items[0]
-	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
-	require.Len(t, mur.Spec.UserAccounts, 1)
-	assert.Equal(t, "base", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
-	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 2)
-	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
-		toolchainv1alpha1.NSTemplateSetNamespace{
-			TemplateRef: "base-dev-123abc1",
-		})
-	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
-		toolchainv1alpha1.NSTemplateSetNamespace{
-			TemplateRef: "base-stage-123abc2",
-		})
-	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
-	assert.Equal(t, "base-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
+		HasOriginalSub(userSignup.Spec.OriginalSub).
+		HasUserAccounts(1).
+		HasUserAccountTierName("base").
+		HasUserAccountNamespaceTemplateRefs("base-dev-123abc1", "base-stage-123abc2").
+		HasUserAccountClusterResourceTemplateRefs("base-clusterresources-654321b").
+		Get()
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -432,6 +406,7 @@ func TestUpdateOfApprovedLabelFails(t *testing.T) {
 
 	// then
 	require.Error(t, err)
+	assert.EqualError(t, err, "unable to update state label at UserSignup resource: some error")
 
 	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -537,27 +512,14 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	err = r.Client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 1)
-
-	mur := murs.Items[0]
-	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
-	require.Len(t, mur.Spec.UserAccounts, 1)
-	assert.Equal(t, "custom", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
-	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 2)
-	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
-		toolchainv1alpha1.NSTemplateSetNamespace{
-			TemplateRef: "custom-dev-123abc1",
-		})
-	assert.Contains(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces,
-		toolchainv1alpha1.NSTemplateSetNamespace{
-			TemplateRef: "custom-stage-123abc2",
-		})
-	require.NotNil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources)
-	assert.Equal(t, "custom-clusterresources-654321b", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources.TemplateRef)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+	murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
+		HasOriginalSub(userSignup.Spec.OriginalSub).
+		HasUserAccounts(1).
+		HasUserAccountTierName("custom").
+		HasUserAccountNamespaceTemplateRefs("custom-dev-123abc1", "custom-stage-123abc2").
+		HasUserAccountClusterResourceTemplateRefs("custom-clusterresources-654321b")
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -690,7 +652,7 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	// then
 	// it should not return an error but just wait for another reconcile triggered by updated ToolchainStatus
 	require.NoError(t, err)
-	assert.Equal(t, reconcile.Result{Requeue: false}, res)
+	assert.False(t, res.Requeue)
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
@@ -752,7 +714,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	// then
 	// it should not return an error but just wait for another reconcile triggered by updated ToolchainStatus
 	require.NoError(t, err)
-	assert.Equal(t, reconcile.Result{Requeue: false}, res)
+	assert.False(t, res.Requeue)
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
 	t.Logf("usersignup status: %+v", userSignup.Status)
@@ -819,18 +781,11 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
-
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	err = r.Client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 1)
-
-	mur := murs.Items[0]
-
-	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
-	require.Len(t, mur.Spec.UserAccounts, 1)
-
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
+		HasUserAccounts(1).
+		Get()
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.UserSignupApproved,
@@ -936,16 +891,11 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	err = r.Client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 1)
-
-	mur := murs.Items[0]
-
-	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
-	require.Len(t, mur.Spec.UserAccounts, 1)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
+		HasUserAccounts(1).
+		Get()
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -1052,10 +1002,7 @@ func TestUserSignupWithManualApprovalNotApproved(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	// There should be no MasterUserRecords
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	err = r.Client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 0)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -1116,17 +1063,15 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	err = r.Client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 1)
-
-	mur := murs.Items[0]
-	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
-	require.Len(t, mur.Spec.UserAccounts, 1)
-	assert.Equal(t, "base", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
-	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 2)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
+		HasOriginalSub(userSignup.Spec.OriginalSub).
+		HasUserAccounts(1).
+		HasUserAccountTierName("base").
+		HasUserAccountNamespaceTemplateRefs("base-dev-123abc1", "base-stage-123abc2").
+		HasUserAccountClusterResourceTemplateRefs("base-clusterresources-654321b").
+		Get()
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -1620,10 +1565,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	require.NoError(t, err)
 
 	// We should now have 2 MURs
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	err = r.Client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 2)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(2)
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1710,6 +1652,7 @@ func TestUserSignupWithSpecialCharOK(t *testing.T) {
 	// then
 	require.NoError(t, err)
 
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 	murtest.AssertThatMasterUserRecord(t, "foo-bar", r.Client).HasNoConditions()
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -1788,12 +1731,8 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				Reason: "DeactivationInProgress",
 			})
 
-		murs := &toolchainv1alpha1.MasterUserRecordList{}
-
 		// The MUR should have now been deleted
-		err = r.Client.List(context.TODO(), murs)
-		require.NoError(t, err)
-		require.Len(t, murs.Items, 0)
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.External): 1, // unchanged for now (see above)
@@ -2305,12 +2244,9 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 				Reason: "UserNotInPreDeactivation",
 			})
 
-		murs := &toolchainv1alpha1.MasterUserRecordList{}
-
 		// The MUR should have not been deleted
-		err = r.Client.List(context.TODO(), murs)
-		require.NoError(t, err)
-		require.Len(t, murs.Items, 1)
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+		murtest.AssertThatMasterUserRecord(t, "edward-jones", r.Client).Exists()
 	})
 
 	t.Run("when UserSignup deactivated and MUR exists, then it should be deleted", func(t *testing.T) {
@@ -2364,12 +2300,9 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 					Reason: "UserIsActive",
 				})
 
-			murs := &toolchainv1alpha1.MasterUserRecordList{}
-
 			// The MUR should have now been deleted
-			err = r.Client.List(context.TODO(), murs)
-			require.NoError(t, err)
-			require.Len(t, murs.Items, 0)
+			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
+
 			AssertThatCountersAndMetrics(t).
 				HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 					string(metrics.External): 1,
@@ -2615,13 +2548,9 @@ func TestUserSignupBanned(t *testing.T) {
 			Reason: "Banned",
 		})
 
-	// Confirm that no MUR is created
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
-
 	// Confirm that the MUR has now been deleted
-	err = r.Client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 0)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
+
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -2677,10 +2606,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 		})
 
 	// Confirm that no MUR is created
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	err = r.Client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 0)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -2761,12 +2687,9 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 			Reason: "ApprovedAutomatically",
 		})
 
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
-
 	// Confirm that the MUR has now been deleted
-	err = r.Client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 0)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
+
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -2804,9 +2727,7 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 			})
 
 		// Confirm that there is still no MUR
-		err = r.Client.List(context.TODO(), murs)
-		require.NoError(t, err)
-		require.Len(t, murs.Items, 0)
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.External): 1,
@@ -3254,13 +3175,10 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 			require.NoError(t, err)
 
 			// Lookup the MUR
-			murs := &toolchainv1alpha1.MasterUserRecordList{}
-			err = r.Client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
-			require.NoError(t, err)
-			require.Len(t, murs.Items, 1)
-			mur := murs.Items[0]
-			require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
-			require.Equal(t, fmt.Sprintf("crt-%s%s", prefix, name), mur.Name)
+			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+			murtest.AssertThatMasterUserRecord(t, fmt.Sprintf("crt-%s%s", prefix, name), r.Client).
+				Exists().
+				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name)
 		}
 
 	}
@@ -3300,13 +3218,10 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 			require.NoError(t, err)
 
 			// Lookup the MUR
-			murs := &toolchainv1alpha1.MasterUserRecordList{}
-			err = r.Client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
-			require.NoError(t, err)
-			require.Len(t, murs.Items, 1)
-			mur := murs.Items[0]
-			require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
-			require.Equal(t, fmt.Sprintf("%s%s-crt", name, suffix), mur.Name)
+			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+			murtest.AssertThatMasterUserRecord(t, fmt.Sprintf("%s%s-crt", name, suffix), r.Client).
+				Exists().
+				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name)
 		}
 
 	}
@@ -3354,13 +3269,10 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// after the 1st reconcile verify that the MUR still exists and its name still matches the initial UserSignup CompliantUsername
-	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	err = r.Client.List(context.TODO(), murs, client.InNamespace(test.HostOperatorNs))
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 1)
-	mur := murs.Items[0]
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
-	require.Equal(t, mur.Name, "foo-old")
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+	murtest.AssertThatMasterUserRecord(t, "foo-old", r.Client).
+		Exists().
+		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name)
 	require.Equal(t, userSignup.Status.CompliantUsername, "foo-old")
 
 	// delete the old MUR to trigger creation of a new MUR using the new username
@@ -3373,24 +3285,18 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.Equal(t, reconcile.Result{}, res)
 
 	// verify the new MUR is provisioned
-	murs = &toolchainv1alpha1.MasterUserRecordList{}
-	err = r.Client.List(context.TODO(), murs)
-	require.NoError(t, err)
-	require.Len(t, murs.Items, 1)
-	mur = murs.Items[0]
-
-	// the MUR name should match the new CompliantUserName
-	assert.Equal(t, "foo", mur.Name)
-	require.Equal(t, test.HostOperatorNs, mur.Namespace)
-	require.Equal(t, userSignup.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
-	require.Len(t, mur.Spec.UserAccounts, 1)
-	assert.Equal(t, "base", mur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName)
-	require.Len(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces, 2)
+	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+		Exists().
+		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
+		HasUserAccounts(1).
+		HasUserAccountTierName("base").
+		HasUserAccountNamespaceTemplateRefs("base-dev-123abc1", "base-stage-123abc2").
+		HasUserAccountClusterResourceTemplateRefs("base-clusterresources-654321b").
+		Get()
 
 	// lookup the userSignup and check the conditions are updated but the CompliantUsername is still the old one
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-	require.NoError(t, err)
-	require.Equal(t, userSignup.Status.CompliantUsername, "foo-old")
+	AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasCompliantUsername("foo-old")
 
 	// 3rd reconcile should update the CompliantUsername on the UserSignup status
 	res, err = r.Reconcile(context.TODO(), req)
@@ -3400,9 +3306,8 @@ func TestChangedCompliantUsername(t *testing.T) {
 	// lookup the userSignup one more time and verify that the CompliantUsername was updated using the current transformUsername logic
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-
 	// the CompliantUsername and MUR name should now match
-	require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+	AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasCompliantUsername(mur.Name)
 }
 
 func TestMigrateMur(t *testing.T) {
@@ -3443,11 +3348,8 @@ func TestMigrateMur(t *testing.T) {
 		_, err := r.Reconcile(context.TODO(), req)
 		// then verify that the MUR exists and is complete
 		require.NoError(t, err)
-		murs := &toolchainv1alpha1.MasterUserRecordList{}
-		err = r.Client.List(context.TODO(), murs)
-		require.NoError(t, err)
-		require.Len(t, murs.Items, 1)
-		assert.Equal(t, *expectedMur, murs.Items[0])
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+		murtest.AssertThatMasterUserRecord(t, expectedMur.Name, r.Client).Exists()
 	})
 }
 
@@ -3538,6 +3440,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 }
 
 func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
+
 	t.Run("last target cluster annotation is not initially set but added when mur is created", func(t *testing.T) {
 		// given
 		userSignup := NewUserSignup()
@@ -3552,17 +3455,12 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, reconcile.Result{Requeue: false}, res)
-		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-		require.NoError(t, err)
-		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
-		require.True(t, found)
-		murs := &toolchainv1alpha1.MasterUserRecordList{}
-		err = r.Client.List(context.TODO(), murs)
-		require.NoError(t, err)
-		require.Len(t, murs.Items, 1)
-		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
-		require.Equal(t, annotation, murs.Items[0].Spec.UserAccounts[0].TargetCluster)
+		assert.False(t, res.Requeue)
+		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
+			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+			HasTargetCluster("member1")
 	})
 
 	t.Run("last target cluster annotation is set but cluster lacks capacity", func(t *testing.T) {
@@ -3581,18 +3479,10 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, reconcile.Result{Requeue: false}, res)
-		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-		require.NoError(t, err)
-		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
-		require.True(t, found)
-		require.Equal(t, "member1", annotation)
-		murs := &toolchainv1alpha1.MasterUserRecordList{}
-		err = r.Client.List(context.TODO(), murs)
-		require.NoError(t, err)
-		require.Len(t, murs.Items, 1)
-		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
-		require.Equal(t, annotation, murs.Items[0].Spec.UserAccounts[0].TargetCluster)
+		assert.False(t, res.Requeue)
+		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).HasTargetCluster("member1")
 	})
 
 	t.Run("last target cluster annotation is set and cluster has capacity", func(t *testing.T) {
@@ -3618,18 +3508,12 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, reconcile.Result{Requeue: false}, res)
-		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-		require.NoError(t, err)
-		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
-		require.True(t, found)
-		require.Equal(t, "member2", annotation)
-		murs := &toolchainv1alpha1.MasterUserRecordList{}
-		err = r.Client.List(context.TODO(), murs)
-		require.NoError(t, err)
-		require.Len(t, murs.Items, 1)
-		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
-		require.Equal(t, annotation, murs.Items[0].Spec.UserAccounts[0].TargetCluster)
+		assert.False(t, res.Requeue)
+		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
+			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member2")
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+			HasTargetCluster("member2")
 	})
 
 	t.Run("last target cluster annotation is set but cluster does not exist", func(t *testing.T) {
@@ -3645,19 +3529,12 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		assert.Equal(t, reconcile.Result{Requeue: false}, res)
-		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-		require.NoError(t, err)
-		annotation, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
-		require.True(t, found)
-		// the annotation should be changed from member2 to member1 since member2 does not exist
-		require.Equal(t, "member1", annotation)
-		murs := &toolchainv1alpha1.MasterUserRecordList{}
-		err = r.Client.List(context.TODO(), murs)
-		require.NoError(t, err)
-		require.Len(t, murs.Items, 1)
-		require.Len(t, murs.Items[0].Spec.UserAccounts, 1)
-		require.Equal(t, "member1", murs.Items[0].Spec.UserAccounts[0].TargetCluster)
+		assert.False(t, res.Requeue)
+		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
+			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
+		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+			HasTargetCluster("member1")
 	})
 
 	t.Run("last target cluster annotation is not set initially and setting the annotation fails", func(t *testing.T) {
@@ -3676,7 +3553,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			s, ok := obj.(*toolchainv1alpha1.UserSignup)
 			if ok && s.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] == "member1" {
-				return fmt.Errorf("error")
+				return fmt.Errorf("some error")
 			}
 			return nil
 		}
@@ -3687,16 +3564,9 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 		// then
 		require.EqualError(t, err, "unable to update last target cluster annotation on UserSignup resource: error")
-		assert.Equal(t, reconcile.Result{Requeue: false}, res)
-		userSignup = &toolchainv1alpha1.UserSignup{}
-		err = cl.Get(context.TODO(), types.NamespacedName{Name: userSignupName, Namespace: req.Namespace}, userSignup)
-		require.NoError(t, err)
-		val, found := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
-		require.Empty(t, val)
-		require.False(t, found)
-		murs := &toolchainv1alpha1.MasterUserRecordList{}
-		err = cl.List(context.TODO(), murs)
-		require.NoError(t, err)
-		require.Empty(t, murs.Items)
+		assert.False(t, res.Requeue)
+		AssertThatUserSignup(t, req.Namespace, userSignupName, cl).
+			HasNoAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey)
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 	})
 }
