@@ -115,6 +115,8 @@ github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGX
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/codeready-toolchain/api v0.0.0-20220110101730-04d30e90a574 h1:xjmJjUvjGOW42y4Wd/l6qHkoRAfNiQ5C6PbCWUlXqoo=
 github.com/codeready-toolchain/api v0.0.0-20220110101730-04d30e90a574/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220111130042-c27616410c7e h1:80uroEbKi5eEAEHyr/ABv8IgHS2j0Xn6vXOO/xYuQsY=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220111130042-c27616410c7e/go.mod h1:6fAhxW0MpXz2KgrNT+12zodepWFqNSOJcy6H2Ip4kV8=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -558,8 +560,6 @@ github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv3vaXspKw=
-github.com/xcoulon/toolchain-common v0.0.0-20220110151033-c6fb7af95fd2 h1:Eli1Z2yrOSWB1zQGPPg/5zAG3yxqjIJtRpPoVoO6UmY=
-github.com/xcoulon/toolchain-common v0.0.0-20220110151033-c6fb7af95fd2/go.mod h1:6fAhxW0MpXz2KgrNT+12zodepWFqNSOJcy6H2Ip4kV8=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

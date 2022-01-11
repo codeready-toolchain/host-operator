@@ -1733,7 +1733,6 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 		// The MUR should have now been deleted
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
-		murtest.AssertThatMasterUserRecord(t, "john-doe", r.Client).DoesNotExist()
 		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.External): 1, // unchanged for now (see above)
@@ -2303,7 +2302,6 @@ func TestUserSignupDeactivatedWhenMURExists(t *testing.T) {
 
 			// The MUR should have now been deleted
 			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
-			murtest.AssertThatMasterUserRecord(t, "edward-jones", r.Client).DoesNotExist()
 
 			AssertThatCountersAndMetrics(t).
 				HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -2552,7 +2550,6 @@ func TestUserSignupBanned(t *testing.T) {
 
 	// Confirm that the MUR has now been deleted
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
-	murtest.AssertThatMasterUserRecord(t, "foo", r.Client).DoesNotExist()
 
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -2610,7 +2607,6 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 
 	// Confirm that no MUR is created
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
-	murtest.AssertThatMasterUserRecord(t, "foo", r.Client).DoesNotExist()
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -2693,7 +2689,6 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 
 	// Confirm that the MUR has now been deleted
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
-	murtest.AssertThatMasterUserRecord(t, mur.Name, r.Client).DoesNotExist()
 
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -2733,7 +2728,6 @@ func TestUserSignupBannedMURExists(t *testing.T) {
 
 		// Confirm that there is still no MUR
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
-		murtest.AssertThatMasterUserRecord(t, mur.Name, r.Client).DoesNotExist()
 		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.External): 1,
@@ -3574,6 +3568,5 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		AssertThatUserSignup(t, req.Namespace, userSignupName, cl).
 			HasNoAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey)
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
-		murtest.AssertThatMasterUserRecord(t, "foo", cl).DoesNotExist()
 	})
 }
