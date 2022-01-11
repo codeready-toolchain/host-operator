@@ -127,6 +127,31 @@ spec:
                                 type: object
                               type: array
                               x-kubernetes-list-type: atomic
+                            spaceRoles:
+                              description: the role template and the users to whom
+                                the templates should be applied to
+                              items:
+                                description: NSTemplateSetSpaceRole the role template
+                                  and the users to whom the templates should be applied
+                                  to
+                                properties:
+                                  templateRef:
+                                    description: TemplateRef The name of the TierTemplate
+                                      resource which exists in the host cluster and
+                                      which contains the template to use
+                                    type: string
+                                  usernames:
+                                    description: Usernames the usernames to which
+                                      the template applies
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - templateRef
+                                - usernames
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
                             tierName:
                               description: The name of the tier represented by this
                                 template set
