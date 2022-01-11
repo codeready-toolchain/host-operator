@@ -148,6 +148,7 @@ spec:
                                     type: array
                                 required:
                                 - templateRef
+                                - usernames
                                 type: object
                               type: array
                               x-kubernetes-list-type: atomic
