@@ -116,8 +116,8 @@ github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:z
 github.com/codeready-toolchain/api v0.0.0-20220110101730-04d30e90a574/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
 github.com/codeready-toolchain/api v0.0.0-20220111095034-396370db892b h1:p824PXd7Mis0NiB+hx9nP6Q52aY6yLbwee++mJJza88=
 github.com/codeready-toolchain/api v0.0.0-20220111095034-396370db892b/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220110200209-2eb06c924641 h1:okZTefJkD9Gi6fTTAUZ7+YkvAJ37QH/v54c5F3apYn0=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220110200209-2eb06c924641/go.mod h1:6fAhxW0MpXz2KgrNT+12zodepWFqNSOJcy6H2Ip4kV8=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220111130042-c27616410c7e h1:80uroEbKi5eEAEHyr/ABv8IgHS2j0Xn6vXOO/xYuQsY=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220111130042-c27616410c7e/go.mod h1:6fAhxW0MpXz2KgrNT+12zodepWFqNSOJcy6H2Ip4kV8=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
