@@ -8,6 +8,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/deactivation"
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
@@ -18,7 +19,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
-
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,6 +39,7 @@ func TestChangeTierSuccess(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
 	basicTier := NewNSTemplateTier("basic", "123basic", "123clusterbasic", "stage", "dev")
+	basicTier.Spec.DeactivationTimeoutDays = 30
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 
 	userSignup := NewUserSignup()
@@ -145,6 +146,54 @@ func TestChangeTierSuccess(t *testing.T) {
 
 		states.SetDeactivating(userSignupDeactivating, true)
 		controller, request, cl := newController(t, changeTierRequest, config, userSignupDeactivating, mur, teamTier)
+
+		// when
+		_, err := controller.Reconcile(context.TODO(), request)
+
+		// then
+		require.NoError(t, err)
+		updatedUserSignup := &toolchainv1alpha1.UserSignup{}
+		err = cl.Get(context.TODO(), types.NamespacedName{Namespace: test.HostOperatorNs, Name: userSignupDeactivating.Name}, updatedUserSignup)
+		require.NoError(t, err)
+		require.False(t, states.Deactivating(updatedUserSignup))
+	})
+
+	t.Run("changetierrequest resets deactivating state of UserSignup while deactivating controller is triggered for every update", func(t *testing.T) {
+		// This test verifies that the deactivation controller doesn't set the deactivating state back after it's been removed by ChangeTierController
+
+		// given
+		userSignupDeactivating := userSignup.DeepCopy()
+
+		changeTierRequest := newChangeTierRequest("johny", "team")
+		teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
+
+		expectedDeactivationTimeoutBasicTier := 30
+		murProvisionedTime := &v1.Time{Time: time.Now().Add(-time.Duration((expectedDeactivationTimeoutBasicTier-2)*24) * time.Hour)}
+
+		mur := murtest.NewMasterUserRecord(t, "johny",
+			murtest.WithOwnerLabel(userSignupDeactivating.Name),
+			murtest.UserIDFromUserSignup(userSignupDeactivating),
+			murtest.ProvisionedMur(murProvisionedTime))
+
+		states.SetDeactivating(userSignupDeactivating, true)
+		controller, request, cl := newController(t, changeTierRequest, config, userSignupDeactivating, mur, teamTier, basicTier)
+
+		deactivatingReconciler := &deactivation.Reconciler{
+			Client: cl,
+			Scheme: scheme.Scheme,
+		}
+
+		cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			fmt.Println(mur.Labels)
+			updateErr := cl.Client.Update(ctx, obj, opts...)
+			_, err := deactivatingReconciler.Reconcile(context.TODO(), reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      mur.Name,
+					Namespace: test.HostOperatorNs,
+				}})
+			require.NoError(t, err)
+			return updateErr
+		}
 
 		// when
 		_, err := controller.Reconcile(context.TODO(), request)
