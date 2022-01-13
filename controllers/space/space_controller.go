@@ -41,7 +41,8 @@ type Reconciler struct {
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluster) error {
 	b := ctrl.NewControllerManagedBy(mgr).
 		// watch Spaces in the host cluster
-		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Watches(&source.Kind{Type: &toolchainv1alpha1.TemplateUpdateRequest{}}, &handler.EnqueueRequestForObject{})
 	// watch NSTemplateSets in all the member clusters
 	for _, memberCluster := range memberClusters {
 		b = b.Watches(source.NewKindWithCache(&toolchainv1alpha1.NSTemplateSet{}, memberCluster.Cache),
@@ -194,7 +195,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	logger.Info("NSTemplateSet already exists")
 
 	// update the NSTemplateSet if needed
-	if nsTmplSet.Spec.TierName != space.Spec.TierName {
+	if !tierutil.TierHashMatches(tmplTier, nsTmplSet.Spec) {
 		nsTmplSetSpec := usersignup.NewNSTemplateSetSpec(tmplTier)
 		nsTmplSet.Spec = *nsTmplSetSpec
 		if err := memberCluster.Client.Update(context.TODO(), nsTmplSet); err != nil {
@@ -204,6 +205,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		logger.Info("NSTemplateSet updated on target member cluster")
 		return true, r.setStatusUpdating(space)
 	}
+	logger.Info("NSTemplateSet is up-to-date")
 
 	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	// skip until there's a `Ready` condition
