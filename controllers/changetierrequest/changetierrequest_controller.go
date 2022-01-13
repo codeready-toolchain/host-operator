@@ -171,23 +171,6 @@ func (r *Reconciler) changeTierInMasterUserRecord(logger logr.Logger, changeTier
 		return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get MasterUserRecord with name %s", changeTierRequest.Spec.MurName)
 	}
 
-	// get the corresponding UserSignup and set the deactivating state to false to prevent the user from being deactivated prematurely
-	userSignupName, found := mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey]
-	if !found || userSignupName == "" {
-		err := fmt.Errorf(`MasterUserRecord is missing label '%s'`, toolchainv1alpha1.MasterUserRecordOwnerLabelKey)
-		return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to get corresponding UserSignup for MasterUserRecord with name '%s'`, changeTierRequest.Spec.MurName)
-	}
-	userSignupToUpdate := &toolchainv1alpha1.UserSignup{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: userSignupName}, userSignupToUpdate); err != nil {
-		return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to get UserSignup '%s'`, userSignupName)
-	}
-	if states.Deactivating(userSignupToUpdate) {
-		states.SetDeactivating(userSignupToUpdate, false)
-		if err := r.Client.Update(context.TODO(), userSignupToUpdate); err != nil {
-			return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to reset deactivating state for UserSignup '%s'`, userSignupName)
-		}
-	}
-
 	newNsTemplateSet := usersignup.NewNSTemplateSetSpec(nsTemplateTier)
 	changed := false
 
@@ -236,6 +219,23 @@ func (r *Reconciler) changeTierInMasterUserRecord(logger logr.Logger, changeTier
 	}
 	if err := r.Client.Update(context.TODO(), mur); err != nil {
 		return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
+	}
+
+	// get the corresponding UserSignup and set the deactivating state to false to prevent the user from being deactivated prematurely
+	userSignupName, found := mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey]
+	if !found || userSignupName == "" {
+		err := fmt.Errorf(`MasterUserRecord is missing label '%s'`, toolchainv1alpha1.MasterUserRecordOwnerLabelKey)
+		return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to get corresponding UserSignup for MasterUserRecord with name '%s'`, changeTierRequest.Spec.MurName)
+	}
+	userSignupToUpdate := &toolchainv1alpha1.UserSignup{}
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: userSignupName}, userSignupToUpdate); err != nil {
+		return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to get UserSignup '%s'`, userSignupName)
+	}
+	if states.Deactivating(userSignupToUpdate) {
+		states.SetDeactivating(userSignupToUpdate, false)
+		if err := r.Client.Update(context.TODO(), userSignupToUpdate); err != nil {
+			return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, `failed to reset deactivating state for UserSignup '%s'`, userSignupName)
+		}
 	}
 
 	return true, nil
