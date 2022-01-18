@@ -1,0 +1,81 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: spacebindings.toolchain.dev.openshift.com
+spec:
+  group: toolchain.dev.openshift.com
+  names:
+    kind: SpaceBinding
+    listKind: SpaceBindingList
+    plural: spacebindings
+    singular: spacebinding
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.masterUserRecord
+      name: MUR
+      type: string
+    - jsonPath: .spec.space
+      name: Space
+      type: string
+    - jsonPath: .spec.spaceRole
+      name: SpaceRole
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: SpaceBinding is the Schema for the spacebindings API which defines
+          relationship between Spaces and MasterUserRecords
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: SpaceBindingSpec defines the desired state of SpaceBinding
+            properties:
+              masterUserRecord:
+                description: The MasterUserRecord is a name of the MasterUserRecord
+                  this SpaceBinding belongs to.
+                type: string
+              space:
+                description: The Space is a name of the Space this SpaceBinding is
+                  bound to.
+                type: string
+              spaceRole:
+                description: 'The SpaceRole is a name of the SpaceRole that is granted
+                  to the user for the Space. For example: admin, view, ...'
+                type: string
+            required:
+            - masterUserRecord
+            - space
+            - spaceRole
+            type: object
+          status:
+            description: SpaceBindingStatus defines the observed state of SpaceBinding
+            type: object
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
