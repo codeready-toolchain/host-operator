@@ -84,7 +84,7 @@ objects:
   spec:
     quota:
       hard:
-        count/services: "10"
+        count/services: "30"
     selector:
       annotations:
         openshift.io/requester: ${USERNAME}
