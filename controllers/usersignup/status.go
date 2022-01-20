@@ -95,6 +95,16 @@ func (u *StatusUpdater) setStatusFailedToCreateSpace(userSignup *toolchainv1alph
 			Message: message,
 		})
 }
+func (u *StatusUpdater) setStatusFailedToDeleteSpace(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupUnableToDeleteSpaceReason,
+			Message: message,
+		})
+}
 
 func (u *StatusUpdater) set(conditionCreators ...func(message string) toolchainv1alpha1.Condition) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
