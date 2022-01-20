@@ -85,6 +85,17 @@ func (u *StatusUpdater) setStatusFailedToDeleteMUR(userSignup *toolchainv1alpha1
 		})
 }
 
+func (u *StatusUpdater) setStatusFailedToCreateSpace(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupUnableToCreateSpaceReason,
+			Message: message,
+		})
+}
+
 func (u *StatusUpdater) set(conditionCreators ...func(message string) toolchainv1alpha1.Condition) func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 		conditions := make([]toolchainv1alpha1.Condition, len(conditionCreators))

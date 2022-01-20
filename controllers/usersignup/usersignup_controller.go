@@ -194,7 +194,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusDeactivated)
 	}
 
-	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, config, userSignup)
+	return reconcile.Result{}, r.ensureNewMurAndSpaceIfApproved(logger, config, userSignup)
 }
 
 // Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
@@ -272,8 +272,8 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
 				return true, err
 			}
-			reqLogger.Info("deleting MasterUserRecord since user has been banned")
-			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusBanning, r.setStatusFailedToDeleteMUR)
+			reqLogger.Info("deleting MasterUserRecord and Space since user has been banned")
+			return true, r.DeleteMasterUserRecordAndSpace(mur, userSignup, reqLogger, r.setStatusBanning)
 		}
 
 		// If the user has been deactivated, then we need to delete the MUR
@@ -284,8 +284,8 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			}
 			// We set the inProgressStatusUpdater parameter here to setStatusDeactivationInProgress, as a temporary status before
 			// the main reconcile function completes the deactivation process
-			reqLogger.Info("deleting MasterUserRecord since user has been deactivated")
-			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusDeactivationInProgress, r.setStatusFailedToDeleteMUR)
+			reqLogger.Info("deleting MasterUserRecord and Space since user has been deactivated")
+			return true, r.DeleteMasterUserRecordAndSpace(mur, userSignup, reqLogger, r.setStatusDeactivationInProgress)
 		}
 
 		// if the UserSignup doesn't have the state=approved label set, then update it
@@ -320,7 +320,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 	return false, nil
 }
 
-func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
+func (r *Reconciler) ensureNewMurAndSpaceIfApproved(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
 	// Check if the user requires phone verification, and do not proceed further if they do
 	if states.VerificationRequired(userSignup) {
 		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
@@ -377,8 +377,29 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 	}
 
+	// Set the last-target-cluster annotation so that if the user signs up again later on, they can be provisioned to the same cluster
+	userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = targetCluster.getClusterName()
+	if err := r.Client.Update(context.TODO(), userSignup); err != nil {
+		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateAnnotation, err,
+			"unable to update last target cluster annotation on UserSignup resource")
+	}
+
+	compliantUsername, err := r.generateCompliantUsername(config, userSignup)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToCreateMUR, err,
+			"Error generating compliant username for %s", userSignup.Spec.Username)
+	}
+
 	// Provision the MasterUserRecord
-	return r.provisionMasterUserRecord(config, userSignup, targetCluster.getClusterName(), nstemplateTier, reqLogger)
+	if err := r.provisionMasterUserRecord(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername); err != nil {
+		return err
+	}
+
+	// Provision the Space if auto space creation is enabled
+	if autoCreateSpaceEnabled(userSignup) {
+		err = r.provisionSpace(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername)
+	}
+	return err
 }
 
 func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, state string) error {
@@ -474,26 +495,13 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
-func (r *Reconciler) provisionMasterUserRecord(config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster string,
-	nstemplateTier *toolchainv1alpha1.NSTemplateTier, logger logr.Logger) error {
-
-	// Set the last-target-cluster annotation so that if the user signs up again later on, they can be provisioned to the same cluster
-	userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = targetCluster
-	if err := r.Client.Update(context.TODO(), userSignup); err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateAnnotation, err,
-			"unable to update last target cluster annotation on UserSignup resource")
-	}
+func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
+	nstemplateTier *toolchainv1alpha1.NSTemplateTier, compliantUsername string) error {
 
 	// TODO Update the MasterUserRecord with NSTemplateTier values
 	// SEE https://jira.coreos.com/browse/CRT-74
 
-	compliantUsername, err := r.generateCompliantUsername(config, userSignup)
-	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
-			"Error generating compliant username for %s", userSignup.Spec.Username)
-	}
-
-	mur, err := newMasterUserRecord(userSignup, targetCluster, nstemplateTier, compliantUsername)
+	mur, err := newMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, compliantUsername)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error creating MasterUserRecord %s", mur.Name)
@@ -519,6 +527,29 @@ func (r *Reconciler) provisionMasterUserRecord(config toolchainconfig.ToolchainC
 	return nil
 }
 
+// provisionSpace does the work of provisioning the Space
+func (r *Reconciler) provisionSpace(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
+	nstemplateTier *toolchainv1alpha1.NSTemplateTier, compliantUsername string) error {
+
+	space := newSpace(config, userSignup, targetCluster, compliantUsername)
+
+	err := controllerutil.SetControllerReference(userSignup, space, r.Scheme)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
+			"Error setting controller reference for Space %s", space.Name)
+	}
+
+	logger.Info("Creating Space", "Name", space.Name)
+	err = r.Client.Create(context.TODO(), space)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
+			"Error creating Space")
+	}
+
+	logger.Info("Created Space", "Name", space.Name, "TargetCluster", targetCluster, "Tier", nstemplateTier.Name)
+	return nil
+}
+
 // updateActivationCounterAnnotation increments the 'toolchain.dev.openshift.com/activation-counter' annotation value on the given UserSignup
 func (r *Reconciler) updateActivationCounterAnnotation(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup) int {
 	if activations, exists := userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]; exists {
@@ -541,19 +572,36 @@ func (r *Reconciler) updateActivationCounterAnnotation(logger logr.Logger, userS
 	return 1
 }
 
-// DeleteMasterUserRecord deletes the specified MasterUserRecord
-func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRecord,
+// DeleteMasterUserRecordAndSpace deletes the specified MasterUserRecord and its associated Space (if any)
+func (r *Reconciler) DeleteMasterUserRecordAndSpace(mur *toolchainv1alpha1.MasterUserRecord,
 	userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger,
-	inProgressStatusUpdater, failedStatusUpdater StatusUpdaterFunc) error {
+	inProgressStatusUpdater StatusUpdaterFunc) error {
 
 	err := r.updateStatus(logger, userSignup, inProgressStatusUpdater)
 	if err != nil {
 		return nil
 	}
 
+	// before a MasterUserRecord is deleted, its associated space (if any) must also be deleted
+	if autoCreateSpaceEnabled(userSignup) {
+		space := &toolchainv1alpha1.Space{}
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: mur.Namespace, Name: mur.Name}, space)
+		if err != nil {
+			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteSpace, err,
+				"Error getting Space for deletion")
+		}
+
+		err = r.Client.Delete(context.TODO(), space)
+		if err != nil {
+			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteSpace, err,
+				"Error deleting Space")
+		}
+		logger.Info("Deleted Space", "Name", space.Name)
+	}
+
 	err = r.Client.Delete(context.TODO(), mur)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, failedStatusUpdater, err,
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteMUR, err,
 			"Error deleting MasterUserRecord")
 	}
 	logger.Info("Deleted MasterUserRecord", "Name", mur.Name)
@@ -638,4 +686,8 @@ func validateEmailHash(userEmail, userEmailHash string) bool {
 	// Ignore the error, as this implementation cannot return one
 	_, _ = md5hash.Write([]byte(userEmail))
 	return hex.EncodeToString(md5hash.Sum(nil)) == userEmailHash
+}
+
+func autoCreateSpaceEnabled(userSignup *toolchainv1alpha1.UserSignup) bool {
+	return userSignup.Annotations["toolchain.dev.openshift.com/auto-create-space"] == "true"
 }
