@@ -26,7 +26,7 @@ func (a *Assertion) loadResource() error {
 	return err
 }
 
-// AssertThatSpace helper func to begin with the assertions on a SpaceBinding
+// AssertThatSpaceBinding helper func to begin with the assertions on a SpaceBinding
 func AssertThatSpaceBinding(t test.T, namespace, name string, client client.Client) *Assertion {
 	return &Assertion{
 		client:         client,
