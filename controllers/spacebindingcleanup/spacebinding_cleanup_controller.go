@@ -6,6 +6,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -60,6 +61,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
+	}
+	if util.IsBeingDeleted(spaceBinding) {
+		logger.Info("the SpaceBinding is already being deleted")
+		return reconcile.Result{}, nil
 	}
 
 	spaceName := types.NamespacedName{Namespace: spaceBinding.Namespace, Name: spaceBinding.Spec.Space}
