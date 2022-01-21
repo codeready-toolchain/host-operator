@@ -45,7 +45,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbLaraIbmEdit.Name, fakeClient).Exists()
 	})
 
-	t.Run("joe-redhat SpaceBinding removed when joe MUR space is missing", func(t *testing.T) {
+	t.Run("joe-redhat SpaceBinding removed when joe MUR is missing", func(t *testing.T) {
 
 		reconciler, request, fakeClient := prepareReconciler(t, sbJoeRedhatView, sbLaraRedhatAdmin, sbLaraIbmEdit, laraMur, ibmSpace, redhatSpace)
 
