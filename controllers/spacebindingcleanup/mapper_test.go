@@ -19,9 +19,9 @@ import (
 
 func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 	// given
-	sbLaraCompAdmin := sb.NewSpaceBinding("lara-admin", "lara", "comp", "admin")
-	sbJoeCompView := sb.NewSpaceBinding("joe-view", "joe", "comp", "view")
-	sbLaraOtherEdit := sb.NewSpaceBinding("lara-edit", "lara", "other", "edit")
+	sbLaraCompAdmin := sb.NewSpaceBinding("lara", "comp", "admin")
+	sbJoeCompView := sb.NewSpaceBinding("joe", "comp", "view")
+	sbLaraOtherEdit := sb.NewSpaceBinding("lara", "other", "edit")
 
 	compSpace := space.NewSpace("comp")
 	orphanSpace := space.NewSpace("orphan")
@@ -38,8 +38,8 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 
 		// then
 		require.Len(t, requests, 2)
-		assert.Contains(t, requests, newRequest("lara-admin"))
-		assert.Contains(t, requests, newRequest("joe-view"))
+		assert.Contains(t, requests, newRequest(sbLaraCompAdmin.Name))
+		assert.Contains(t, requests, newRequest(sbJoeCompView.Name))
 	})
 
 	t.Run("should return two SpaceBindings for lara MUR, when mapping from mur", func(t *testing.T) {
@@ -48,8 +48,8 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 
 		// then
 		require.Len(t, requests, 2)
-		assert.Contains(t, requests, newRequest("lara-admin"))
-		assert.Contains(t, requests, newRequest("lara-edit"))
+		assert.Contains(t, requests, newRequest(sbLaraCompAdmin.Name))
+		assert.Contains(t, requests, newRequest(sbLaraOtherEdit.Name))
 	})
 
 	t.Run("should return one SpaceBinding request for joe MUR, when mapping from mur", func(t *testing.T) {
@@ -58,7 +58,7 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 
 		// then
 		require.Len(t, requests, 1)
-		assert.Contains(t, requests, newRequest("joe-view"))
+		assert.Contains(t, requests, newRequest(sbJoeCompView.Name))
 	})
 
 	t.Run("should not return any SpaceBinding request when there is no for the given space", func(t *testing.T) {
