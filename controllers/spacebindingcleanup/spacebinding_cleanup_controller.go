@@ -49,7 +49,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	logger := log.FromContext(ctx).WithName("cleanup")
 	logger.Info("Reconciling SpaceBinding")
 
-	// Fetch the UserSignup instance
+	// Fetch the SpaceBinding instance
 	spaceBinding := &toolchainv1alpha1.SpaceBinding{}
 	err := r.Client.Get(context.TODO(), request.NamespacedName, spaceBinding)
 	if err != nil {
