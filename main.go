@@ -14,6 +14,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
+	"github.com/codeready-toolchain/host-operator/controllers/spacebindingcleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/templateupdaterequest"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
@@ -220,18 +221,21 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr, crtConfig); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Notification")
+		os.Exit(1)
 	}
 	if err := (&nstemplatetier.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NSTemplateTier")
+		os.Exit(1)
 	}
 	if err := (&templateupdaterequest.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "TemplateUpdateRequest")
+		os.Exit(1)
 	}
 	if err := (&toolchainconfig.Reconciler{
 		Client:         mgr.GetClient(),
@@ -239,6 +243,7 @@ func main() {
 		Scheme:         mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainConfig")
+		os.Exit(1)
 	}
 	if err := (&toolchainstatus.Reconciler{
 		Client:         mgr.GetClient(),
@@ -248,6 +253,7 @@ func main() {
 		Namespace:      namespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainStatus")
+		os.Exit(1)
 	}
 	if err := (&usersignup.Reconciler{
 		StatusUpdater: &usersignup.StatusUpdater{
@@ -257,12 +263,14 @@ func main() {
 		GetMemberClusters: commoncluster.GetMemberClusters,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignup")
+		os.Exit(1)
 	}
 	if err := (&usersignupcleanup.Reconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
+		os.Exit(1)
 	}
 	if err = (&space.Reconciler{
 		Client:         mgr.GetClient(),
@@ -270,6 +278,15 @@ func main() {
 		MemberClusters: memberClusters,
 	}).SetupWithManager(mgr, memberClusters); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Space")
+		os.Exit(1)
+	}
+	if err = (&spacebindingcleanup.Reconciler{
+		Client:    mgr.GetClient(),
+		Scheme:    mgr.GetScheme(),
+		Namespace: namespace,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingCleanup")
+		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
 
