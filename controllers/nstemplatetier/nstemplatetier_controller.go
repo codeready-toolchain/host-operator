@@ -243,7 +243,8 @@ func (r *Reconciler) activeTemplateUpdateRequests(logger logr.Logger, config too
 	}
 	logger.Info("checking templateUpdateRequests", "items", items)
 	count := 0
-	for _, tur := range templateUpdateRequests.Items {
+	for i := range templateUpdateRequests.Items {
+		tur := templateUpdateRequests.Items[i] // avoids the `G601: Implicit memory aliasing in for loop. (gosec)` problem
 		logger.Info("checking templateUpdateRequest", "name", tur.Name, "deleted", util.IsBeingDeleted(&tur))
 		if util.IsBeingDeleted(&tur) {
 			// ignore when already being deleted

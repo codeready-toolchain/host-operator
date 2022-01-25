@@ -1,7 +1,7 @@
 package util
 
 import (
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"encoding/hex"
 	"encoding/json"
 	"sort"
@@ -62,7 +62,7 @@ func computeHash(refs []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	md5hash := md5.New()
+	md5hash := md5.New() //nolint:gosec
 	// Ignore the error, as this implementation cannot return one
 	_, _ = md5hash.Write(m)
 	hash := hex.EncodeToString(md5hash.Sum(nil))

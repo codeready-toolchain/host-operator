@@ -1609,7 +1609,8 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		require.Equal(t, instance.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
 
 		var cond *toolchainv1alpha1.Condition
-		for _, condition := range instance.Status.Conditions {
+		for i := range instance.Status.Conditions {
+			condition := instance.Status.Conditions[i] // avoid the `G601: Implicit memory aliasing in for loop` problem
 			if condition.Type == toolchainv1alpha1.UserSignupComplete {
 				cond = &condition
 			}

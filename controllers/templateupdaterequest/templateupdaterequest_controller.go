@@ -72,9 +72,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	if tur.Spec.CurrentTierHash != "" {
 		return r.handleSpaceUpdate(logger, request, tur)
-	} else {
-		return r.handleMURUpdate(logger, request, tur)
 	}
+	return r.handleMURUpdate(logger, request, tur)
 }
 
 func (r *Reconciler) handleSpaceUpdate(logger logr.Logger, request ctrl.Request, tur *toolchainv1alpha1.TemplateUpdateRequest) (ctrl.Result, error) {

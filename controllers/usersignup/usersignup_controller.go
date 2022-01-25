@@ -2,7 +2,7 @@ package usersignup
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -548,7 +548,7 @@ func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRec
 
 	err := r.updateStatus(logger, userSignup, inProgressStatusUpdater)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	err = r.Client.Delete(context.TODO(), mur)
@@ -634,7 +634,7 @@ func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config tool
 // validateEmailHash calculates an md5 hash value for the provided userEmail string, and compares it to the provided
 // userEmailHash.  If the values are the same the function returns true, otherwise it will return false
 func validateEmailHash(userEmail, userEmailHash string) bool {
-	md5hash := md5.New()
+	md5hash := md5.New() //nolint:gosec
 	// Ignore the error, as this implementation cannot return one
 	_, _ = md5hash.Write([]byte(userEmail))
 	return hex.EncodeToString(md5hash.Sum(nil)) == userEmailHash
