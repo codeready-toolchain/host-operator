@@ -1,15 +1,12 @@
 package usersignup
 
 import (
-	"context"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
-	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -42,86 +39,21 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 		return false, unknown, nil
 	}
 
-	status := &toolchainv1alpha1.ToolchainStatus{}
-	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
-		return false, unknown, errors.Wrapf(err, "unable to read ToolchainStatus resource")
-	}
-	counts, err := counter.GetCounts()
-	if err != nil {
-		return false, unknown, errors.Wrapf(err, "unable to get the number of provisioned users")
-	}
-
-	clusterName := getOptimalTargetCluster(userSignup, getMemberClusters, hasNotReachedMaxNumberOfUsersThreshold(config, counts), hasEnoughResources(config, status))
-	if clusterName == "" {
-		return states.Approved(userSignup), notFound, nil
-	}
-	return true, targetCluster(clusterName), nil
-}
-
-func hasNotReachedMaxNumberOfUsersThreshold(config toolchainconfig.ToolchainConfig, counts counter.Counts) cluster.Condition {
-	return func(cluster *cluster.CachedToolchainCluster) bool {
-		if config.AutomaticApproval().MaxNumberOfUsersOverall() != 0 {
-			if config.AutomaticApproval().MaxNumberOfUsersOverall() <= (counts.MasterUserRecords()) {
-				return false
-			}
-		}
-		numberOfUserAccounts := counts.UserAccountsPerClusterCounts[cluster.Name]
-		threshold := config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster()[cluster.Name]
-		return threshold == 0 || numberOfUserAccounts < threshold
-	}
-}
-
-func hasEnoughResources(config toolchainconfig.ToolchainConfig, status *toolchainv1alpha1.ToolchainStatus) cluster.Condition {
-	return func(cluster *cluster.CachedToolchainCluster) bool {
-		threshold, found := config.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster()[cluster.Name]
-		if !found {
-			threshold = config.AutomaticApproval().ResourceCapacityThresholdDefault()
-		}
-		if threshold == 0 {
-			return true
-		}
-		for _, memberStatus := range status.Status.Members {
-			if memberStatus.ClusterName == cluster.Name {
-				return hasMemberEnoughResources(memberStatus, threshold)
-			}
-		}
-		return false
-	}
-}
-
-func hasMemberEnoughResources(memberStatus toolchainv1alpha1.Member, threshold int) bool {
-	if len(memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole) > 0 {
-		for _, usagePerNode := range memberStatus.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole {
-			if usagePerNode >= threshold {
-				return false
-			}
-		}
-		return true
-	}
-	return false
-}
-
-func getOptimalTargetCluster(userSignup *toolchainv1alpha1.UserSignup, getMemberClusters cluster.GetMemberClustersFunc, conditions ...cluster.Condition) string {
 	// If a target cluster was specified, select it without any further checks, this is needed when users can only be provisioned to a specific member cluster
 	if userSignup.Spec.TargetCluster != "" {
-		return userSignup.Spec.TargetCluster
-	}
-
-	// Automatic cluster selection based on cluster readiness
-	members := getMemberClusters(append(conditions, cluster.Ready)...)
-	if len(members) == 0 {
-		return ""
+		return true, targetCluster(userSignup.Spec.TargetCluster), nil
 	}
 
 	// If the the UserSignup has a last target cluster annotation set it can be targeted to the same cluster, otherwise use the first one
 	// The last cluster is used for returning users to ensure they can be provisioned back to the same cluster as they were previously using so they don't need to update URLs and kube contexts
-	lastTargetCluster, isLastTargetClusterSet := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
-	if isLastTargetClusterSet {
-		for _, m := range members {
-			if lastTargetCluster == m.Name {
-				return m.Name
-			}
-		}
+	preferredCluster := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
+
+	clusterName, err := capacity.GetOptimalTargetCluster(preferredCluster, userSignup.Namespace, getMemberClusters, cl)
+	if err != nil {
+		return false, unknown, errors.Wrapf(err, "unable to get the optimal target cluster")
 	}
-	return members[0].Name
+	if clusterName == "" {
+		return states.Approved(userSignup), notFound, nil
+	}
+	return true, targetCluster(clusterName), nil
 }
