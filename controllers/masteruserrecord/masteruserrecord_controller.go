@@ -351,6 +351,9 @@ func newUserAccount(nsdName types.NamespacedName, spec toolchainv1alpha1.UserAcc
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nsdName.Name,
 			Namespace: nsdName.Namespace,
+			Labels: map[string]string{
+				toolchainv1alpha1.TierLabelKey: murSpec.TierName,
+			},
 		},
 		Spec: toolchainv1alpha1.UserAccountSpec{
 			UserID:   murSpec.UserID,
