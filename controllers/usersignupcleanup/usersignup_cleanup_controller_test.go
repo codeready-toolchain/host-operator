@@ -2,6 +2,7 @@ package usersignupcleanup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -17,7 +18,7 @@ import (
 	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -90,8 +91,9 @@ func TestUserCleanup(t *testing.T) {
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 		err = r.Client.Get(context.Background(), key, userSignup)
 		require.Error(t, err)
-		require.True(t, errors.IsNotFound(err))
-		statusErr := err.(*errors.StatusError)
+		require.True(t, apierrors.IsNotFound(err))
+		statusErr := &apierrors.StatusError{}
+		require.True(t, errors.As(err, &statusErr))
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 	})
 
@@ -112,9 +114,10 @@ func TestUserCleanup(t *testing.T) {
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 		err = r.Client.Get(context.Background(), key, userSignup)
 		require.Error(t, err)
-		require.True(t, errors.IsNotFound(err))
-		require.IsType(t, &errors.StatusError{}, err)
-		statusErr := err.(*errors.StatusError)
+		require.True(t, apierrors.IsNotFound(err))
+		require.IsType(t, &apierrors.StatusError{}, err)
+		statusErr := &apierrors.StatusError{}
+		require.True(t, errors.As(err, &statusErr))
 		require.Equal(t, fmt.Sprintf("usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name), statusErr.Error())
 	})
 
@@ -132,7 +135,7 @@ func TestUserCleanup(t *testing.T) {
 		// confirm the UserSignup has been deleted
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 		err = r.Client.Get(context.Background(), key, userSignup)
-		require.True(t, errors.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 		assert.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
 		// and verify the metrics
 		assert.Equal(t, float64(0), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // unchanged
@@ -154,7 +157,7 @@ func TestUserCleanup(t *testing.T) {
 		// confirm the UserSignup has been deleted
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 		err = r.Client.Get(context.Background(), key, userSignup)
-		require.True(t, errors.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 		assert.Errorf(t, err, "usersignups.toolchain.dev.openshift.com \"%s\" not found", key.Name)
 		// and verify the metrics
 		assert.Equal(t, float64(1), promtestutil.ToFloat64(metrics.UserSignupDeletedWithInitiatingVerificationTotal))    // incremented
@@ -201,7 +204,7 @@ func TestUserCleanup(t *testing.T) {
 		key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 		err = r.Client.Get(context.Background(), key, userSignup)
 		require.Error(t, err)
-		require.True(t, errors.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 	})
 
 	t.Run("test that an old, verified but unapproved UserSignup is not deleted", func(t *testing.T) {

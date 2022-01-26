@@ -14,7 +14,7 @@ import (
 
 var changedLog = logf.Log.WithName("user_signup_changed_predicate")
 
-type UserSignupChangedPredicate struct { // nolint: golint
+type UserSignupChangedPredicate struct { // nolint: revive
 	controllerPredicate.Funcs
 }
 
