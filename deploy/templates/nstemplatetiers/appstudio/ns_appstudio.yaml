@@ -35,25 +35,13 @@ objects:
     - applications
     - components
     verbs:
-    - get
-    - list
-    - watch
-    - create
-    - delete
-    - update
-    - patch
+    - "*"
   - apiGroups:
     - tekton.dev
     resources:
     - pipelineruns
     verbs:
-    - get
-    - list
-    - watch
-    - create
-    - delete
-    - update
-    - patch
+    - "*"
   - apiGroups:
     - ""
     resources:
