@@ -273,7 +273,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 				return true, err
 			}
 			reqLogger.Info("deleting MasterUserRecord since user has been banned")
-			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusBanning, r.setStatusFailedToDeleteMUR)
+			return true, r.deleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusBanning, r.setStatusFailedToDeleteMUR)
 		}
 
 		// If the user has been deactivated, then we need to delete the MUR
@@ -285,7 +285,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			// We set the inProgressStatusUpdater parameter here to setStatusDeactivationInProgress, as a temporary status before
 			// the main reconcile function completes the deactivation process
 			reqLogger.Info("deleting MasterUserRecord since user has been deactivated")
-			return true, r.DeleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusDeactivationInProgress, r.setStatusFailedToDeleteMUR)
+			return true, r.deleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusDeactivationInProgress, r.setStatusFailedToDeleteMUR)
 		}
 
 		// if the UserSignup doesn't have the state=approved label set, then update it
@@ -541,8 +541,8 @@ func (r *Reconciler) updateActivationCounterAnnotation(logger logr.Logger, userS
 	return 1
 }
 
-// DeleteMasterUserRecord deletes the specified MasterUserRecord
-func (r *Reconciler) DeleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRecord,
+// deleteMasterUserRecord deletes the specified MasterUserRecord
+func (r *Reconciler) deleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRecord,
 	userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger,
 	inProgressStatusUpdater, failedStatusUpdater StatusUpdaterFunc) error {
 
