@@ -255,7 +255,8 @@ func initializeFromResources(cl client.Client, namespace string) error {
 		return err
 	}
 	reset()
-	for _, usersignup := range usersignups.Items {
+	for i := range usersignups.Items {
+		usersignup := usersignups.Items[i] // avoid the `G601: Implicit memory aliasing in for loop` problem
 		activations, activationsExists := usersignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]
 		if activationsExists {
 			_, err := strconv.Atoi(activations) // let's make sure the value is actually an integer
@@ -267,7 +268,8 @@ func initializeFromResources(cl client.Client, namespace string) error {
 			cachedCounts.UserSignupsPerActivationAndDomainCounts[joinLabelValues(activations, string(domain))]++
 		}
 	}
-	for _, mur := range murs.Items {
+	for i := range murs.Items {
+		mur := murs.Items[i] // avoid the `G601: Implicit memory aliasing in for loop` problem
 		domain := metrics.GetEmailDomain(&mur)
 		cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]++
 		for _, ua := range mur.Spec.UserAccounts {
