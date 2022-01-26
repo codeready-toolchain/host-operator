@@ -7,11 +7,21 @@ run:
   # timeout for analysis, e.g. 30s, 5m, default is 1m
   timeout: 10m
 
-
 linters:
   enable:
-    - gofmt 
-    - unparam
+    - megacheck
+    - gocyclo
+    - gofmt
+    - revive
+    - misspell
+  presets: # groups of linters. See https://golangci-lint.run/usage/linters/
+    - bugs
+    - unused
+  disable: 
+    - golint # deprecated, use 'revive'
+    - scopelint # deprecated, use 'exportloopref'
+    - contextcheck # too many false-positives
+    - noctx # not needed
 
 # all available settings of specific linters
 linters-settings:

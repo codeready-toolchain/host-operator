@@ -64,7 +64,7 @@ const (
 	hostOperatorTag        statusComponentTag = "hostOperator"
 	memberConnectionsTag   statusComponentTag = "members"
 	counterTag             statusComponentTag = "MasterUserRecord and UserAccount counter"
-	minutesAfterUnready    time.Duration      = 10
+	durationAfterUnready   time.Duration      = 10 * time.Minute
 )
 
 const (
@@ -217,7 +217,7 @@ func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *t
 	// send a notification to the admin mailing list
 	c, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	if found && c.Status == corev1.ConditionFalse {
-		threshold := time.Now().Add(-minutesAfterUnready * time.Minute)
+		threshold := time.Now().Add(-durationAfterUnready)
 		if c.LastTransitionTime.Before(&metav1.Time{Time: threshold}) {
 			if !condition.IsTrue(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated) {
 				if err := r.sendToolchainStatusNotification(reqLogger, toolchainStatus, unreadyStatus); err != nil {
