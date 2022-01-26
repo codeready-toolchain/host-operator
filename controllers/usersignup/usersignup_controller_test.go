@@ -1609,7 +1609,8 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		require.Equal(t, instance.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
 
 		var cond *toolchainv1alpha1.Condition
-		for _, condition := range instance.Status.Conditions {
+		for i := range instance.Status.Conditions {
+			condition := instance.Status.Conditions[i] // avoid the `G601: Implicit memory aliasing in for loop` problem
 			if condition.Type == toolchainv1alpha1.UserSignupComplete {
 				cond = &condition
 			}
@@ -2867,6 +2868,91 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 		})
 	})
+}
+
+func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
+	// given
+	userSignup := &toolchainv1alpha1.UserSignup{
+		ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
+		Spec: toolchainv1alpha1.UserSignupSpec{
+			Userid:   "UserID123",
+			Username: "alice.mayweather.doe@redhat.com",
+			States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
+		},
+		Status: toolchainv1alpha1.UserSignupStatus{
+			Conditions: []toolchainv1alpha1.Condition{
+				{
+					Type:   toolchainv1alpha1.UserSignupComplete,
+					Status: v1.ConditionTrue,
+				},
+				{
+					Type:   toolchainv1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedAutomatically",
+				},
+			},
+			CompliantUsername: "alice-mayweather",
+		},
+	}
+	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
+	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+
+	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+
+	mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
+	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+
+	r, req, fakeClient := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	InitializeCounters(t, NewToolchainStatus(
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			string(metrics.External): 1,
+		}),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,external": 1,
+		}),
+	))
+
+	fakeClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+		switch obj.(type) {
+		case *toolchainv1alpha1.UserSignup:
+			return errors.New("mock error")
+		default:
+			return fakeClient.Client.Status().Update(ctx, obj)
+		}
+	}
+
+	// when
+	_, err := r.Reconcile(context.TODO(), req)
+	require.Error(t, err)
+
+	// then
+
+	// Lookup the UserSignup
+	err = r.Client.Get(context.TODO(), key, userSignup)
+	require.NoError(t, err)
+	assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
+	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+
+	// Status unchanged since it could not be updated
+	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupApproved,
+			Status: v1.ConditionTrue,
+			Reason: "ApprovedAutomatically",
+		},
+		toolchainv1alpha1.Condition{
+			Type:   toolchainv1alpha1.UserSignupComplete,
+			Status: v1.ConditionTrue,
+		})
+	AssertThatCountersAndMetrics(t).
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			string(metrics.External): 1,
+		}).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,external": 1,
+		})
 }
 
 // TestDeathBy100Signups tests the logic of generateCompliantUsername() which allows no more than 100 attempts to find a vacant name
