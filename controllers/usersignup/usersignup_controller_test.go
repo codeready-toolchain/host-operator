@@ -15,6 +15,7 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -1607,17 +1608,9 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: test.HostOperatorNs, Name: instance.Status.CompliantUsername}, mur)
 		require.NoError(t, err)
 		require.Equal(t, instance.Name, mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey])
-
-		var cond *toolchainv1alpha1.Condition
-		for i := range instance.Status.Conditions {
-			condition := instance.Status.Conditions[i] // avoid the `G601: Implicit memory aliasing in for loop` problem
-			if condition.Type == toolchainv1alpha1.UserSignupComplete {
-				cond = &condition
-			}
-		}
-
 		require.Equal(t, mur.Name, instance.Status.CompliantUsername)
-		require.NotNil(t, cond)
+		cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
+		require.True(t, found)
 		require.Equal(t, v1.ConditionTrue, cond.Status)
 		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{

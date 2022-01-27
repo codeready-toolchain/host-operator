@@ -243,10 +243,9 @@ func (r *Reconciler) activeTemplateUpdateRequests(logger logr.Logger, config too
 	}
 	logger.Info("checking templateUpdateRequests", "items", items)
 	count := 0
-	for i := range templateUpdateRequests.Items {
-		tur := templateUpdateRequests.Items[i] // avoids the `G601: Implicit memory aliasing in for loop. (gosec)` problem
-		logger.Info("checking templateUpdateRequest", "name", tur.Name, "deleted", util.IsBeingDeleted(&tur))
-		if util.IsBeingDeleted(&tur) {
+	for _, tur := range templateUpdateRequests.Items {
+		logger.Info("checking templateUpdateRequest", "name", tur.Name, "deleted", util.IsBeingDeleted(&tur)) // nolint:gosec
+		if util.IsBeingDeleted(&tur) {                                                                        // nolint:gosec
 			// ignore when already being deleted
 			logger.Info("skipping TemplateUpdateRequest as it is already being deleted", "name", tur.Name)
 			continue
@@ -259,7 +258,7 @@ func (r *Reconciler) activeTemplateUpdateRequests(logger logr.Logger, config too
 			if err := r.incrementCounters(logger, tier, tur); err != nil {
 				return -1, false, err
 			}
-			if err := r.Client.Delete(context.TODO(), &tur); err != nil {
+			if err := r.Client.Delete(context.TODO(), &tur); err != nil { // nolint:gosec
 				if errors.IsNotFound(err) {
 					logger.Info("skipping failed TemplateUpdateRequest as it was already deleted", "name", tur.Name)
 					continue

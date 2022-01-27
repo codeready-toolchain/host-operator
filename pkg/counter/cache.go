@@ -255,8 +255,7 @@ func initializeFromResources(cl client.Client, namespace string) error {
 		return err
 	}
 	reset()
-	for i := range usersignups.Items {
-		usersignup := usersignups.Items[i] // avoid the `G601: Implicit memory aliasing in for loop` problem
+	for _, usersignup := range usersignups.Items {
 		activations, activationsExists := usersignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]
 		if activationsExists {
 			_, err := strconv.Atoi(activations) // let's make sure the value is actually an integer
@@ -264,13 +263,12 @@ func initializeFromResources(cl client.Client, namespace string) error {
 				log.Error(err, "invalid number of activations", "name", usersignup.Name, "value", activations)
 				continue
 			}
-			domain := metrics.GetEmailDomain(&usersignup)
+			domain := metrics.GetEmailDomain(&usersignup) // nolint:gosec
 			cachedCounts.UserSignupsPerActivationAndDomainCounts[joinLabelValues(activations, string(domain))]++
 		}
 	}
-	for i := range murs.Items {
-		mur := murs.Items[i] // avoid the `G601: Implicit memory aliasing in for loop` problem
-		domain := metrics.GetEmailDomain(&mur)
+	for _, mur := range murs.Items {
+		domain := metrics.GetEmailDomain(&mur) // nolint:gosec
 		cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]++
 		for _, ua := range mur.Spec.UserAccounts {
 			cachedCounts.UserAccountsPerClusterCounts[ua.TargetCluster]++
