@@ -34,6 +34,7 @@ objects:
     resources:
     - applications
     - components
+    - componentdetectionquerys
     verbs:
     - "*"
   - apiGroups:
