@@ -2,6 +2,7 @@ package pending
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"sync"
 
@@ -67,7 +68,7 @@ func (c *cache) getFirstExisting(namespace string) client.Object {
 			c.objectsByCreation = c.objectsByCreation[1:]
 			return c.getFirstExisting(namespace)
 		}
-		log.Error(err, "could not get the oldest unapproved UserSignup")
+		log.Error(err, fmt.Sprintf("could not get the oldest unapproved '%T'", c.objectType))
 		return nil
 	}
 	if firstExisting.GetLabels()[toolchainv1alpha1.StateLabelKey] != toolchainv1alpha1.StateLabelValuePending {
