@@ -42,7 +42,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 		// then
-		assert.Len(t, cache.sortedObjectNames, 0)
+		assert.Empty(t, cache.sortedObjectNames)
 		assert.Nil(t, foundPending)
 	})
 
@@ -91,7 +91,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 		// then
-		assert.Len(t, cache.sortedObjectNames, 0)
+		assert.Empty(t, cache.sortedObjectNames)
 		assert.Nil(t, foundPending)
 	})
 
