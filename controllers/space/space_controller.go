@@ -151,7 +151,13 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 
 	if space.Spec.TargetCluster == "" {
+		if err := r.setStateLabel(logger, space, toolchainv1alpha1.SpaceStateLabelValuePending); err != nil {
+			return false, err
+		}
 		return false, r.setStatusProvisioningPending(space, "unspecified target member cluster")
+	}
+	if err := r.setStateLabel(logger, space, toolchainv1alpha1.SpaceStateLabelValueClusterAssigned); err != nil {
+		return false, err
 	}
 	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
 	space.Status.TargetCluster = space.Spec.TargetCluster
@@ -343,6 +349,24 @@ func (r *Reconciler) deleteNSTemplateSetFromCluster(logger logr.Logger, space *t
 	}
 	logger.Info("deleted the NSTemplateSet resource")
 	return true, nil // requeue until fully deleted
+}
+
+func (r *Reconciler) setStateLabel(logger logr.Logger, space *toolchainv1alpha1.Space, state string) error {
+	oldState := space.Labels[toolchainv1alpha1.SpaceStateLabelKey]
+	if oldState == state {
+		// skipping
+		return nil
+	}
+	if space.Labels == nil {
+		space.Labels = map[string]string{}
+	}
+	space.Labels[toolchainv1alpha1.SpaceStateLabelKey] = state
+	if err := r.Client.Update(context.TODO(), space); err != nil {
+		return r.setStatusProvisioningFailed(logger, space, errs.Wrapf(err,
+			"unable to update state label at UserSignup resource"))
+	}
+
+	return nil
 }
 
 func (r *Reconciler) setStatusProvisioned(space *toolchainv1alpha1.Space) error {
