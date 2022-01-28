@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/pkg/errors"
+	errs "github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +42,7 @@ func (c *cache) loadLatest(namespace string) { //nolint:unparam
 
 	pendingObjects, err := c.getListOfPendingObjects(c.client, opts)
 	if err != nil {
-		err = errors.Wrapf(err, "unable to list %s resources with label '%s' having value '%s'",
+		err = errs.Wrapf(err, "unable to list %s resources with label '%s' having value '%s'",
 			c.objectType.GetObjectKind().GroupVersionKind().Kind, toolchainv1alpha1.StateLabelKey, toolchainv1alpha1.StateLabelValuePending)
 		log.Error(err, "could not get the oldest pending object")
 		return
