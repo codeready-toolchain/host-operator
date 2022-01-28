@@ -56,10 +56,9 @@ spec:
                 type: string
               tierName:
                 description: TierName is a required property introduced to retain
-                  the name of the tier for which this Space is provisioned
+                  the name of the tier for which this Space is provisioned If not
+                  set then the tier name will be set automatically
                 type: string
-            required:
-            - tierName
             type: object
           status:
             description: SpaceStatus defines the observed state of Space
