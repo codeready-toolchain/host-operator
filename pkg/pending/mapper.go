@@ -14,21 +14,21 @@ type ObjectsMapper struct {
 
 // NewUserSignupMapper creates an instance of UserSignupMapper that maps any object to an oldest unapproved UserSignup
 func NewUserSignupMapper(client client.Client) ObjectsMapper {
-	return NewPendingObjectsMapper(client, &v1alpha1.UserSignup{}, getListOfPendingUserSignups)
+	return NewPendingObjectsMapper(client, &v1alpha1.UserSignup{}, listPendingUserSignups)
 }
 
 // NewSpaceMapper creates an instance of SpaceMapper that maps any object to an oldest unapproved Space
 func NewSpaceMapper(client client.Client) ObjectsMapper {
-	return NewPendingObjectsMapper(client, &v1alpha1.Space{}, getListOfPendingSpaces)
+	return NewPendingObjectsMapper(client, &v1alpha1.Space{}, listPendingSpaces)
 }
 
 // NewPendingObjectsMapper creates an instance of ObjectsMapper that maps any object to an oldest pending object
-func NewPendingObjectsMapper(client client.Client, objectType client.Object, getListOfPendingObjects GetListOfPendingObjects) ObjectsMapper {
+func NewPendingObjectsMapper(client client.Client, objectType client.Object, listPendingObjects ListPendingObjects) ObjectsMapper {
 	return ObjectsMapper{
 		unapprovedCache: &cache{
-			client:                  client,
-			objectType:              objectType,
-			getListOfPendingObjects: getListOfPendingObjects,
+			client:             client,
+			objectType:         objectType,
+			listPendingObjects: listPendingObjects,
 		},
 	}
 }

@@ -16,14 +16,14 @@ import (
 
 var log = logf.Log.WithName("pending_object_cache")
 
-type GetListOfPendingObjects func(cl client.Client, labelListOption client.ListOption) ([]client.Object, error)
+type ListPendingObjects func(cl client.Client, labelListOption client.ListOption) ([]client.Object, error)
 
 type cache struct {
 	sync.RWMutex
-	objectsByCreation       []string
-	client                  client.Client
-	objectType              client.Object
-	getListOfPendingObjects GetListOfPendingObjects
+	objectsByCreation  []string
+	client             client.Client
+	objectType         client.Object
+	listPendingObjects ListPendingObjects
 }
 
 func (c *cache) getOldestPendingObject(namespace string) client.Object {
@@ -41,7 +41,7 @@ func (c *cache) loadLatest(namespace string) { //nolint:unparam
 	labels := map[string]string{toolchainv1alpha1.StateLabelKey: toolchainv1alpha1.StateLabelValuePending}
 	opts := client.MatchingLabels(labels)
 
-	pendingObjects, err := c.getListOfPendingObjects(c.client, opts)
+	pendingObjects, err := c.listPendingObjects(c.client, opts)
 	if err != nil {
 		err = errs.Wrapf(err, "unable to list %s resources with label '%s' having value '%s'",
 			c.objectType.GetObjectKind().GroupVersionKind().Kind, toolchainv1alpha1.StateLabelKey, toolchainv1alpha1.StateLabelValuePending)
@@ -79,7 +79,7 @@ func (c *cache) getFirstExisting(namespace string) client.Object {
 	return firstExisting
 }
 
-var getListOfPendingUserSignups GetListOfPendingObjects = func(cl client.Client, labelListOption client.ListOption) ([]client.Object, error) {
+var listPendingUserSignups ListPendingObjects = func(cl client.Client, labelListOption client.ListOption) ([]client.Object, error) {
 	userSignupList := &toolchainv1alpha1.UserSignupList{}
 	if err := cl.List(context.TODO(), userSignupList, labelListOption); err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ var getListOfPendingUserSignups GetListOfPendingObjects = func(cl client.Client,
 	return objects, nil
 }
 
-var getListOfPendingSpaces GetListOfPendingObjects = func(cl client.Client, labelListOption client.ListOption) ([]client.Object, error) {
+var listPendingSpaces ListPendingObjects = func(cl client.Client, labelListOption client.ListOption) ([]client.Object, error) {
 	spaceList := &toolchainv1alpha1.SpaceList{}
 	if err := cl.List(context.TODO(), spaceList, labelListOption); err != nil {
 		return nil, err

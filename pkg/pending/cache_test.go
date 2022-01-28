@@ -27,7 +27,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 	deactivated := NewUserSignup(WithStateLabel("deactivated"))
 	banned := NewUserSignup(WithStateLabel("banned"))
 
-	cache, cl := newCache(t, &toolchainv1alpha1.UserSignup{}, getListOfPendingUserSignups, withoutStateLabel, notReady, pending, approved, deactivated, banned)
+	cache, cl := newCache(t, &toolchainv1alpha1.UserSignup{}, listPendingUserSignups, withoutStateLabel, notReady, pending, approved, deactivated, banned)
 
 	// when
 	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
@@ -76,7 +76,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 	pending := space.NewSpace("pending", space.WithStateLabel("pending"))
 	clusterAssigned := space.NewSpace("cluster-assigned", space.WithStateLabel("cluster-assigned"))
 
-	cache, cl := newCache(t, &toolchainv1alpha1.Space{}, getListOfPendingSpaces, withoutStateLabel, pending, clusterAssigned)
+	cache, cl := newCache(t, &toolchainv1alpha1.Space{}, listPendingSpaces, withoutStateLabel, pending, clusterAssigned)
 
 	// when
 	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
@@ -139,7 +139,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 	pending1 := NewUserSignup(WithStateLabel("pending"), CreatedBefore(5*time.Second), WithName("1-oldest"))
 	pending2 := NewUserSignup(WithStateLabel("pending"), CreatedBefore(3*time.Second), WithName("2-oldest"))
 	pending3 := NewUserSignup(WithStateLabel("pending"), CreatedBefore(2*time.Second), WithName("3-oldest"))
-	cache, cl := newCache(t, &toolchainv1alpha1.UserSignup{}, getListOfPendingUserSignups, withoutStateLabel, pending2, pending3, pending1)
+	cache, cl := newCache(t, &toolchainv1alpha1.UserSignup{}, listPendingUserSignups, withoutStateLabel, pending2, pending3, pending1)
 
 	// when
 	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
@@ -192,7 +192,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 	pending1 := space.NewSpace("1-oldest", space.WithStateLabel("pending"), space.CreatedBefore(5*time.Second))
 	pending2 := space.NewSpace("2-oldest", space.WithStateLabel("pending"), space.CreatedBefore(3*time.Second))
 	pending3 := space.NewSpace("3-oldest", space.WithStateLabel("pending"), space.CreatedBefore(2*time.Second))
-	cache, cl := newCache(t, &toolchainv1alpha1.Space{}, getListOfPendingSpaces, withoutStateLabel, pending2, pending3, pending1)
+	cache, cl := newCache(t, &toolchainv1alpha1.Space{}, listPendingSpaces, withoutStateLabel, pending2, pending3, pending1)
 
 	// when
 	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
@@ -239,7 +239,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 
 func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T) {
 	// given
-	cache, cl := newCache(t, &toolchainv1alpha1.UserSignup{}, getListOfPendingUserSignups)
+	cache, cl := newCache(t, &toolchainv1alpha1.UserSignup{}, listPendingUserSignups)
 
 	var latch sync.WaitGroup
 	latch.Add(1)
@@ -286,15 +286,15 @@ func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T)
 	assert.Nil(t, foundPending)
 }
 
-func newCache(t *testing.T, objectType client.Object, getListOfPendingObjects GetListOfPendingObjects, initObjects ...runtime.Object) (*cache, *test.FakeClient) {
+func newCache(t *testing.T, objectType client.Object, getListOfPendingObjects ListPendingObjects, initObjects ...runtime.Object) (*cache, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 
 	fakeClient := test.NewFakeClient(t, initObjects...)
 	return &cache{
-		client:                  fakeClient,
-		objectType:              objectType,
-		getListOfPendingObjects: getListOfPendingObjects,
+		client:             fakeClient,
+		objectType:         objectType,
+		listPendingObjects: getListOfPendingObjects,
 	}, fakeClient
 }
