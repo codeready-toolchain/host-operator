@@ -295,6 +295,6 @@ func newCache(t *testing.T, objectType client.Object, listPendingObjects ListPen
 	return &cache{
 		client:             fakeClient,
 		objectType:         objectType,
-		listPendingObjects: getListOfPendingObjects,
+		listPendingObjects: listPendingObjects,
 	}, fakeClient
 }
