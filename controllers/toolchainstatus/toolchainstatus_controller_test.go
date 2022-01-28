@@ -1698,7 +1698,7 @@ type memberClusterOption interface {
 
 func memberCluster(name string, options ...memberClusterOption) toolchainv1alpha1.Member {
 	m := toolchainv1alpha1.Member{
-		ApiEndpoint: "http://api.devcluster.openshift.com",
+		APIEndpoint: "http://api.devcluster.openshift.com",
 		ClusterName: name,
 		MemberStatus: toolchainv1alpha1.MemberStatusStatus{
 			Conditions: []toolchainv1alpha1.Condition{},
