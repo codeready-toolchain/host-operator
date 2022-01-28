@@ -616,7 +616,7 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 		newMemberStatus, ok := members[member.ClusterName]
 		apiEndpoint := getAPIEndpoint(member.ClusterName, memberClusters)
 		if apiEndpoint != "" {
-			toolchainStatus.Status.Members[index].ApiEndpoint = apiEndpoint
+			toolchainStatus.Status.Members[index].APIEndpoint = apiEndpoint
 		}
 
 		if ok {
@@ -635,7 +635,7 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 	for clusterName, memberStatus := range members {
 		apiEndpoint := getAPIEndpoint(clusterName, memberClusters)
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
-			ApiEndpoint:      apiEndpoint,
+			APIEndpoint:      apiEndpoint,
 			ClusterName:      clusterName,
 			MemberStatus:     memberStatus,
 			UserAccountCount: 0,
