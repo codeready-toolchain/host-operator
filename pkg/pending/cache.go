@@ -20,7 +20,7 @@ type ListPendingObjects func(cl client.Client, labelListOption client.ListOption
 
 type cache struct {
 	sync.RWMutex
-	objectsByCreation  []string
+	sortedObjectNames  []string
 	client             client.Client
 	objectType         client.Object
 	listPendingObjects ListPendingObjects
@@ -53,26 +53,26 @@ func (c *cache) loadLatest(namespace string) { //nolint:unparam
 		return pendingObjects[i].GetCreationTimestamp().Time.Before(pendingObjects[j].GetCreationTimestamp().Time)
 	})
 	for _, object := range pendingObjects {
-		c.objectsByCreation = append(c.objectsByCreation, object.GetName())
+		c.sortedObjectNames = append(c.sortedObjectNames, object.GetName())
 	}
 }
 
 func (c *cache) getFirstExisting(namespace string) client.Object {
-	if len(c.objectsByCreation) == 0 {
+	if len(c.sortedObjectNames) == 0 {
 		return nil
 	}
-	name := c.objectsByCreation[0]
+	name := c.sortedObjectNames[0]
 	firstExisting := c.objectType.DeepCopyObject().(client.Object)
 	if err := c.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: name}, firstExisting); err != nil {
 		if apierrors.IsNotFound(err) {
-			c.objectsByCreation = c.objectsByCreation[1:]
+			c.sortedObjectNames = c.sortedObjectNames[1:]
 			return c.getFirstExisting(namespace)
 		}
 		log.Error(err, fmt.Sprintf("could not get the oldest unapproved '%T'", c.objectType))
 		return nil
 	}
 	if firstExisting.GetLabels()[toolchainv1alpha1.StateLabelKey] != toolchainv1alpha1.StateLabelValuePending {
-		c.objectsByCreation = c.objectsByCreation[1:]
+		c.sortedObjectNames = c.sortedObjectNames[1:]
 		return c.getFirstExisting(namespace)
 	}
 

@@ -33,7 +33,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 	// then
-	assert.Len(t, cache.objectsByCreation, 1)
+	assert.Len(t, cache.sortedObjectNames, 1)
 	assert.Equal(t, pending.Name, foundPending.GetName())
 	approve(t, cl, pending)
 
@@ -42,7 +42,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 		// then
-		assert.Len(t, cache.objectsByCreation, 0)
+		assert.Len(t, cache.sortedObjectNames, 0)
 		assert.Nil(t, foundPending)
 	})
 
@@ -56,7 +56,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 		// then
-		assert.Len(t, cache.objectsByCreation, 1)
+		assert.Len(t, cache.sortedObjectNames, 1)
 		assert.Equal(t, deactivated.Name, foundPending.GetName())
 
 		t.Run("should keep unapproved resource", func(t *testing.T) {
@@ -64,7 +64,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 			foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 			// then
-			assert.Len(t, cache.objectsByCreation, 1)
+			assert.Len(t, cache.sortedObjectNames, 1)
 			assert.Equal(t, deactivated.Name, foundPending.GetName())
 		})
 	})
@@ -82,7 +82,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 	// then
-	require.Len(t, cache.objectsByCreation, 1)
+	require.Len(t, cache.sortedObjectNames, 1)
 	assert.Equal(t, pending.Name, foundPending.GetName())
 	assignCluster(t, cl, pending)
 
@@ -91,7 +91,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 		// then
-		assert.Len(t, cache.objectsByCreation, 0)
+		assert.Len(t, cache.sortedObjectNames, 0)
 		assert.Nil(t, foundPending)
 	})
 
@@ -105,7 +105,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 		// then
-		assert.Len(t, cache.objectsByCreation, 1)
+		assert.Len(t, cache.sortedObjectNames, 1)
 		assert.Equal(t, clusterAssigned.Name, foundPending.GetName())
 
 		t.Run("should keep pending resource", func(t *testing.T) {
@@ -113,7 +113,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 			foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 			// then
-			assert.Len(t, cache.objectsByCreation, 1)
+			assert.Len(t, cache.sortedObjectNames, 1)
 			assert.Equal(t, clusterAssigned.Name, foundPending.GetName())
 		})
 	})
@@ -145,7 +145,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 	// then
-	assert.Len(t, cache.objectsByCreation, 3)
+	assert.Len(t, cache.sortedObjectNames, 3)
 	assert.Equal(t, pending1.Name, foundPending.GetName())
 	approve(t, cl, pending1)
 
@@ -159,7 +159,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 		// then
-		assert.Len(t, cache.objectsByCreation, 2)
+		assert.Len(t, cache.sortedObjectNames, 2)
 		assert.Equal(t, pending2.Name, foundPending.GetName())
 		approve(t, cl, pending2)
 
@@ -168,7 +168,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 			foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 			// then
-			assert.Len(t, cache.objectsByCreation, 1)
+			assert.Len(t, cache.sortedObjectNames, 1)
 			assert.Equal(t, pending3.Name, foundPending.GetName())
 			approve(t, cl, pending3)
 
@@ -177,7 +177,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 				foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 				// then
-				assert.Len(t, cache.objectsByCreation, 1)
+				assert.Len(t, cache.sortedObjectNames, 1)
 				assert.Equal(t, pending4.Name, foundPending.GetName())
 			})
 		})
@@ -198,7 +198,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 	foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 	// then
-	assert.Len(t, cache.objectsByCreation, 3)
+	assert.Len(t, cache.sortedObjectNames, 3)
 	assert.Equal(t, pending1.Name, foundPending.GetName())
 	assignCluster(t, cl, pending1)
 
@@ -212,7 +212,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 		foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 		// then
-		assert.Len(t, cache.objectsByCreation, 2)
+		assert.Len(t, cache.sortedObjectNames, 2)
 		assert.Equal(t, pending2.Name, foundPending.GetName())
 		assignCluster(t, cl, pending2)
 
@@ -221,7 +221,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 			foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 			// then
-			assert.Len(t, cache.objectsByCreation, 1)
+			assert.Len(t, cache.sortedObjectNames, 1)
 			assert.Equal(t, pending3.Name, foundPending.GetName())
 			assignCluster(t, cl, pending3)
 
@@ -230,7 +230,7 @@ func TestGetOldestPendingApprovalWithMultipleSpaces(t *testing.T) {
 				foundPending := cache.getOldestPendingObject(test.HostOperatorNs)
 
 				// then
-				assert.Len(t, cache.objectsByCreation, 1)
+				assert.Len(t, cache.sortedObjectNames, 1)
 				assert.Equal(t, pending4.Name, foundPending.GetName())
 			})
 		})
