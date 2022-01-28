@@ -1,7 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20220111095034-396370db892b
+	github.com/codeready-toolchain/api v0.0.0-20220128071955-6baa0dfc9574
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20220111130042-c27616410c7e
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -31,6 +31,6 @@ require (
 
 replace github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20220128214923-91e9a07dbe78
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20220128214027-aa84eb621072
+replace github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20220128215238-15c4ceb5bb2b
 
 go 1.16
