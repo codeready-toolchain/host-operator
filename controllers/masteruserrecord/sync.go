@@ -44,6 +44,12 @@ func (s *Synchronizer) synchronizeSpec() error {
 		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
 		s.memberUserAcc.Spec.OriginalSub = s.record.Spec.OriginalSub
 
+		// in addition to synchronizing the spec, ensure the tier label is set
+		if s.memberUserAcc.Labels == nil {
+			s.memberUserAcc.Labels = map[string]string{}
+		}
+		s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] = s.record.Spec.TierName
+
 		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
 		if err != nil {
 			s.logger.Error(err, "synchronizing failed")
@@ -57,7 +63,8 @@ func (s *Synchronizer) synchronizeSpec() error {
 func (s *Synchronizer) isSynchronized() bool {
 	return reflect.DeepEqual(s.memberUserAcc.Spec.UserAccountSpecBase, s.recordSpecUserAcc.Spec.UserAccountSpecBase) &&
 		s.memberUserAcc.Spec.Disabled == s.record.Spec.Disabled &&
-		s.memberUserAcc.Spec.UserID == s.record.Spec.UserID
+		s.memberUserAcc.Spec.UserID == s.record.Spec.UserID &&
+		s.memberUserAcc.Labels != nil && s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] == s.record.Spec.TierName
 }
 
 func (s *Synchronizer) synchronizeStatus() error {

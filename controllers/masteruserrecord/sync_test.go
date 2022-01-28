@@ -42,6 +42,32 @@ func TestIsSynchronized(t *testing.T) {
 
 	t.Run("not synchronized", func(t *testing.T) {
 
+		t.Run("missing label", func(t *testing.T) {
+			// given
+			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			delete(memberUserAcc.Labels, toolchainv1alpha1.TierLabelKey)
+			s := Synchronizer{
+				memberUserAcc:     &memberUserAcc,
+				record:            &record,
+				recordSpecUserAcc: recordSpecUserAcc,
+			}
+			// when/then
+			assert.False(t, s.isSynchronized())
+		})
+
+		t.Run("label does not match", func(t *testing.T) {
+			// given
+			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] = "foo"
+			s := Synchronizer{
+				memberUserAcc:     &memberUserAcc,
+				record:            &record,
+				recordSpecUserAcc: recordSpecUserAcc,
+			}
+			// when/then
+			assert.False(t, s.isSynchronized())
+		})
+
 		t.Run("different user account", func(t *testing.T) {
 			// given
 			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
@@ -99,6 +125,11 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 		},
 	}
 	memberUserAcc := toolchainv1alpha1.UserAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				toolchainv1alpha1.TierLabelKey: "basic",
+			},
+		},
 		Spec: toolchainv1alpha1.UserAccountSpec{
 			UserID:              "foo",
 			Disabled:            false,
@@ -117,6 +148,7 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
 				recordSpecUserAcc,
 			},
+			TierName: "basic",
 		},
 	}
 	return record, recordSpecUserAcc, memberUserAcc

@@ -11,7 +11,7 @@ require (
 	// using latest commit from 'github.com/openshift/api@release-4.7'
 	github.com/openshift/api v0.0.0-20210428205234-a8389931bee7
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.12.0
 	github.com/redhat-cop/operator-utils v1.1.3-0.20210602122509-2eaf121122d2
 	github.com/spf13/cast v1.3.1
 	github.com/stretchr/testify v1.7.0
@@ -29,8 +29,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.8.3
 )
 
-replace github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20220120213536-df9d4075ca1b
+replace github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20220128214923-91e9a07dbe78
 
-replace github.com/codeready-toolchain/toolchain-common => /Users/rajiv/go/src/github.com/codeready-toolchain/toolchain-common
+replace github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20220128214027-aa84eb621072
 
 go 1.16

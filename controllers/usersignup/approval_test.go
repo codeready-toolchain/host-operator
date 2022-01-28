@@ -33,29 +33,12 @@ func TestGetClusterIfApproved(t *testing.T) {
 		WithMember("member1", WithUserAccountCount(700), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
 		WithMember("member2", WithUserAccountCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
 
-	t.Run("with one cluster and enough capacity", func(t *testing.T) {
+	t.Run("with two clusters available, the second one is defined as the last-used one", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().
-				Enabled(true).
-				MaxNumberOfUsers(2000, testconfig.PerMemberCluster("member1", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70)))
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
-		InitializeCounters(t, toolchainStatus)
-
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-
-		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
-
-		// then
-		require.NoError(t, err)
-		assert.True(t, approved)
-		assert.Equal(t, "member1", clusterName.getClusterName())
-	})
-
-	t.Run("with two clusters and enough capacity in both of them so it returns the first one", func(t *testing.T) {
-		// given
+		signup := NewUserSignup()
+		signup.Annotations = map[string]string{
+			toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey: "member2",
+		}
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
 				Enabled(true).
@@ -71,99 +54,17 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Equal(t, "member1", clusterName.getClusterName())
-	})
-
-	t.Run("with two clusters where the first one reaches resource threshold", func(t *testing.T) {
-		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().
-				Enabled(true).
-				MaxNumberOfUsers(2000, testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 60), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
-		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-
-		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
-
-		// then
-		require.NoError(t, err)
-		assert.True(t, approved)
 		assert.Equal(t, "member2", clusterName.getClusterName())
 	})
 
-	t.Run("with two clusters where the first one reaches max number of UserAccounts", func(t *testing.T) {
+	t.Run("with no cluster available", func(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
-				Enabled(true).
-				MaxNumberOfUsers(2000, testconfig.PerMemberCluster("member1", 700), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 90), testconfig.PerMemberCluster("member2", 95)))
+				Enabled(true))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-
-		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
-
-		// then
-		require.NoError(t, err)
-		assert.True(t, approved)
-		assert.Equal(t, "member2", clusterName.getClusterName())
-	})
-
-	t.Run("with two clusters, none of them is returned since it reaches max number of MURs", func(t *testing.T) {
-		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().
-				Enabled(true).
-				MaxNumberOfUsers(800, testconfig.PerMemberCluster("member1", 6000), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 60), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
-		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-
-		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
-
-		// then
-		require.NoError(t, err)
-		assert.False(t, approved)
-		assert.Equal(t, notFound, clusterName)
-	})
-
-	t.Run("with two clusters and enough capacity only in second one using the default values", func(t *testing.T) {
-		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().
-				Enabled(true).
-				MaxNumberOfUsers(2000).
-				ResourceCapacityThreshold(62))
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
-		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-
-		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
-
-		// then
-		require.NoError(t, err)
-		assert.True(t, approved)
-		assert.Equal(t, "member2", clusterName.getClusterName())
-	})
-
-	t.Run("with two clusters and enough capacity in none of them using the default memory values", func(t *testing.T) {
-		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().
-				Enabled(true).
-				MaxNumberOfUsers(5000).
-				ResourceCapacityThreshold(1))
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
-		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters()
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -276,26 +177,6 @@ func TestGetClusterIfApproved(t *testing.T) {
 		assert.Equal(t, "member1", clusterName.getClusterName())
 	})
 
-	t.Run("with two clusters and enough capacity in both of them but first one is not ready", func(t *testing.T) {
-		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().
-				Enabled(true).
-				MaxNumberOfUsers(2000, testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
-		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionFalse), NewMemberCluster(t, "member2", v1.ConditionTrue))
-
-		// when
-		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
-
-		// then
-		require.NoError(t, err)
-		assert.True(t, approved)
-		assert.Equal(t, "member2", clusterName.getClusterName())
-	})
-
 	t.Run("failures", func(t *testing.T) {
 		t.Run("unable to get ToolchainConfig", func(t *testing.T) {
 			// given
@@ -332,25 +213,9 @@ func TestGetClusterIfApproved(t *testing.T) {
 			approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
 
 			// then
-			require.EqualError(t, err, "unable to read ToolchainStatus resource: some error")
+			require.EqualError(t, err, "unable to get the optimal target cluster: unable to read ToolchainStatus resource: some error")
 			assert.False(t, approved)
 			assert.Equal(t, unknown, clusterName)
 		})
 	})
-}
-
-func TestGetClusterIfApprovedWhenCounterIsNotInitialized(t *testing.T) {
-	// given
-	toolchainStatus := NewToolchainStatus(
-		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
-	fakeClient := NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-	clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-
-	// when
-	approved, clusterName, err := getClusterIfApproved(fakeClient, NewUserSignup(), clusters)
-
-	// then
-	require.EqualError(t, err, "unable to get the number of provisioned users: counter is not initialized")
-	assert.False(t, approved)
-	assert.Equal(t, unknown, clusterName)
 }

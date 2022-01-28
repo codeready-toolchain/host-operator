@@ -64,7 +64,7 @@ const (
 	hostOperatorTag        statusComponentTag = "hostOperator"
 	memberConnectionsTag   statusComponentTag = "members"
 	counterTag             statusComponentTag = "MasterUserRecord and UserAccount counter"
-	minutesAfterUnready    time.Duration      = 10
+	durationAfterUnready   time.Duration      = 10 * time.Minute
 )
 
 const (
@@ -217,7 +217,7 @@ func (r *Reconciler) notificationCheck(reqLogger logr.Logger, toolchainStatus *t
 	// send a notification to the admin mailing list
 	c, found := condition.FindConditionByType(toolchainStatus.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	if found && c.Status == corev1.ConditionFalse {
-		threshold := time.Now().Add(-minutesAfterUnready * time.Minute)
+		threshold := time.Now().Add(-durationAfterUnready)
 		if c.LastTransitionTime.Before(&metav1.Time{Time: threshold}) {
 			if !condition.IsTrue(toolchainStatus.Status.Conditions, toolchainv1alpha1.ToolchainStatusUnreadyNotificationCreated) {
 				if err := r.sendToolchainStatusNotification(reqLogger, toolchainStatus, unreadyStatus); err != nil {
@@ -616,7 +616,7 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 		newMemberStatus, ok := members[member.ClusterName]
 		apiEndpoint := getAPIEndpoint(member.ClusterName, memberClusters)
 		if apiEndpoint != "" {
-			toolchainStatus.Status.Members[index].ApiEndpoint = apiEndpoint
+			toolchainStatus.Status.Members[index].APIEndpoint = apiEndpoint
 		}
 
 		if ok {
@@ -635,7 +635,7 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 	for clusterName, memberStatus := range members {
 		apiEndpoint := getAPIEndpoint(clusterName, memberClusters)
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
-			ApiEndpoint:      apiEndpoint,
+			APIEndpoint:      apiEndpoint,
 			ClusterName:      clusterName,
 			MemberStatus:     memberStatus,
 			UserAccountCount: 0,

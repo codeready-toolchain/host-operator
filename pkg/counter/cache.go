@@ -263,12 +263,12 @@ func initializeFromResources(cl client.Client, namespace string) error {
 				log.Error(err, "invalid number of activations", "name", usersignup.Name, "value", activations)
 				continue
 			}
-			domain := metrics.GetEmailDomain(&usersignup)
+			domain := metrics.GetEmailDomain(&usersignup) // nolint:gosec
 			cachedCounts.UserSignupsPerActivationAndDomainCounts[joinLabelValues(activations, string(domain))]++
 		}
 	}
 	for _, mur := range murs.Items {
-		domain := metrics.GetEmailDomain(&mur)
+		domain := metrics.GetEmailDomain(&mur) // nolint:gosec
 		cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]++
 		for _, ua := range mur.Spec.UserAccounts {
 			cachedCounts.UserAccountsPerClusterCounts[ua.TargetCluster]++

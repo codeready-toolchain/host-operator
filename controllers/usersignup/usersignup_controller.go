@@ -2,7 +2,7 @@ package usersignup
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -273,7 +273,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 				return true, err
 			}
 			reqLogger.Info("deleting MasterUserRecord and Space since user has been banned")
-			return true, r.DeleteMasterUserRecordAndSpace(mur, userSignup, reqLogger, r.setStatusBanning)
+			return true, r.deleteMasterUserRecordAndSpace(mur, userSignup, reqLogger, r.setStatusBanning)
 		}
 
 		// If the user has been deactivated, then we need to delete the MUR
@@ -285,7 +285,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			// We set the inProgressStatusUpdater parameter here to setStatusDeactivationInProgress, as a temporary status before
 			// the main reconcile function completes the deactivation process
 			reqLogger.Info("deleting MasterUserRecord and Space since user has been deactivated")
-			return true, r.DeleteMasterUserRecordAndSpace(mur, userSignup, reqLogger, r.setStatusDeactivationInProgress)
+			return true, r.deleteMasterUserRecordAndSpace(mur, userSignup, reqLogger, r.setStatusDeactivationInProgress)
 		}
 
 		// if the UserSignup doesn't have the state=approved label set, then update it
@@ -565,14 +565,14 @@ func (r *Reconciler) updateActivationCounterAnnotation(logger logr.Logger, userS
 	return 1
 }
 
-// DeleteMasterUserRecordAndSpace deletes the specified MasterUserRecord and its associated Space (if any)
-func (r *Reconciler) DeleteMasterUserRecordAndSpace(mur *toolchainv1alpha1.MasterUserRecord,
+// deleteMasterUserRecordAndSpace deletes the specified MasterUserRecord and its associated Space (if any)
+func (r *Reconciler) deleteMasterUserRecordAndSpace(mur *toolchainv1alpha1.MasterUserRecord,
 	userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger,
 	inProgressStatusUpdater StatusUpdaterFunc) error {
 
 	err := r.updateStatus(logger, userSignup, inProgressStatusUpdater)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// before a MasterUserRecord is deleted, its associated space (if any) must also be deleted
@@ -675,7 +675,7 @@ func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config tool
 // validateEmailHash calculates an md5 hash value for the provided userEmail string, and compares it to the provided
 // userEmailHash.  If the values are the same the function returns true, otherwise it will return false
 func validateEmailHash(userEmail, userEmailHash string) bool {
-	md5hash := md5.New()
+	md5hash := md5.New() //nolint:gosec
 	// Ignore the error, as this implementation cannot return one
 	_, _ = md5hash.Write([]byte(userEmail))
 	return hex.EncodeToString(md5hash.Sum(nil)) == userEmailHash
