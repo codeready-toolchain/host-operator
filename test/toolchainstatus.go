@@ -68,7 +68,7 @@ func WithHealthCondition(condition toolchainv1alpha1.Condition) RegistrationServ
 func WithMember(name string, options ...MemberToolchainStatusOption) ToolchainStatusOption {
 	return func(status *toolchainv1alpha1.ToolchainStatus) {
 		member := toolchainv1alpha1.Member{
-			ApiEndpoint: "http://api.devcluster.openshift.com",
+			APIEndpoint: "http://api.devcluster.openshift.com",
 			ClusterName: name,
 		}
 		for _, modify := range options {

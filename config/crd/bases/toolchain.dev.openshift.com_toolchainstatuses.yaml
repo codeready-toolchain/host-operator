@@ -192,7 +192,7 @@ spec:
                   description: Member contains the status of a member cluster
                   properties:
                     apiEndpoint:
-                      description: ApiEndpoint is the server API URL of the cluster
+                      description: APIEndpoint is the server API URL of the cluster
                       type: string
                     clusterName:
                       description: The cluster identifier
