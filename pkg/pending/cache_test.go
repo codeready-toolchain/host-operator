@@ -286,7 +286,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T)
 	assert.Nil(t, foundPending)
 }
 
-func newCache(t *testing.T, objectType client.Object, getListOfPendingObjects ListPendingObjects, initObjects ...runtime.Object) (*cache, *test.FakeClient) {
+func newCache(t *testing.T, objectType client.Object, listPendingObjects ListPendingObjects, initObjects ...runtime.Object) (*cache, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
