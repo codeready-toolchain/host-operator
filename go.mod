@@ -1,7 +1,6 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	cloud.google.com/go v0.60.0 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20220111095034-396370db892b
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20220111130042-c27616410c7e
 	github.com/ghodss/yaml v1.0.0
@@ -18,7 +17,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.19.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
-	golang.org/x/text v0.3.5 // indirect
 	gopkg.in/h2non/gock.v1 v1.0.14
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.20.2
@@ -32,5 +30,7 @@ require (
 )
 
 replace github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20220120213536-df9d4075ca1b
+
+replace github.com/codeready-toolchain/toolchain-common => /Users/rajiv/go/src/github.com/codeready-toolchain/toolchain-common
 
 go 1.16

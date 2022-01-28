@@ -25,3 +25,22 @@ func newSpace(config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alp
 	}
 	return space
 }
+
+// NewNSTemplateSetSpec initializes a NSTemplateSetSpec from the given NSTemplateTier
+func NewNSTemplateSetSpec(nstemplateTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.NSTemplateSetSpec {
+	namespaces := make([]toolchainv1alpha1.NSTemplateSetNamespace, len(nstemplateTier.Spec.Namespaces))
+	for i, ns := range nstemplateTier.Spec.Namespaces {
+		namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace(ns)
+	}
+	var clusterResources *toolchainv1alpha1.NSTemplateSetClusterResources
+	if nstemplateTier.Spec.ClusterResources != nil {
+		clusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
+			TemplateRef: nstemplateTier.Spec.ClusterResources.TemplateRef,
+		}
+	}
+	return &toolchainv1alpha1.NSTemplateSetSpec{
+		TierName:         nstemplateTier.Name,
+		Namespaces:       namespaces,
+		ClusterResources: clusterResources,
+	}
+}

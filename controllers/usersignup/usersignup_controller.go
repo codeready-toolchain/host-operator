@@ -498,16 +498,9 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
 	nstemplateTier *toolchainv1alpha1.NSTemplateTier, compliantUsername string) error {
 
-	// TODO Update the MasterUserRecord with NSTemplateTier values
-	// SEE https://jira.coreos.com/browse/CRT-74
+	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, compliantUsername)
 
-	mur, err := newMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, compliantUsername)
-	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
-			"Error creating MasterUserRecord %s", mur.Name)
-	}
-
-	err = controllerutil.SetControllerReference(userSignup, mur, r.Scheme)
+	err := controllerutil.SetControllerReference(userSignup, mur, r.Scheme)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error setting controller reference for MasterUserRecord %s", mur.Name)

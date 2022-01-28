@@ -106,9 +106,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 				HasOriginalSub(userSignup.Spec.OriginalSub).
 				HasUserAccounts(1).
-				HasUserAccountTierName("base").
-				HasUserAccountNamespaceTemplateRefs("base-dev-123abc1", "base-stage-123abc2").
-				HasUserAccountClusterResourceTemplateRefs("base-clusterresources-654321b")
+				HasTier(*baseNSTemplateTier)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal) // zero because we started with a not-ready state instead of empty as per usual
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 
@@ -221,9 +219,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
-		HasUserAccountTierName("base").
-		HasUserAccountNamespaceTemplateRefs("base-dev-123abc1", "base-stage-123abc2").
-		HasUserAccountClusterResourceTemplateRefs("base-clusterresources-654321b").
+		HasTier(*baseNSTemplateTier).
 		Get()
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -517,9 +513,7 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
-		HasUserAccountTierName("custom").
-		HasUserAccountNamespaceTemplateRefs("custom-dev-123abc1", "custom-stage-123abc2").
-		HasUserAccountClusterResourceTemplateRefs("custom-clusterresources-654321b")
+		HasTier(*customTier)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -1068,9 +1062,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
-		HasUserAccountTierName("base").
-		HasUserAccountNamespaceTemplateRefs("base-dev-123abc1", "base-stage-123abc2").
-		HasUserAccountClusterResourceTemplateRefs("base-clusterresources-654321b").
+		HasTier(*baseNSTemplateTier).
 		Get()
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -3290,9 +3282,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 		Exists().
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasUserAccounts(1).
-		HasUserAccountTierName("base").
-		HasUserAccountNamespaceTemplateRefs("base-dev-123abc1", "base-stage-123abc2").
-		HasUserAccountClusterResourceTemplateRefs("base-clusterresources-654321b").
+		HasTier(*baseNSTemplateTier).
 		Get()
 
 	// lookup the userSignup and check the conditions are updated but the CompliantUsername is still the old one
@@ -3313,8 +3303,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 func TestMigrateMur(t *testing.T) {
 	// given
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
-	mur, err := newMasterUserRecord(userSignup, "east", baseNSTemplateTier, "foo")
-	require.NoError(t, err)
+	mur := newMasterUserRecord(userSignup, "east", baseNSTemplateTier, "foo")
 
 	// set NSLimit and NSTemplateSet to be empty
 	mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}

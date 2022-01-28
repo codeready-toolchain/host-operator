@@ -8,7 +8,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
-	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -171,52 +170,8 @@ func (r *Reconciler) changeTierInMasterUserRecord(logger logr.Logger, changeTier
 		return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to get MasterUserRecord with name %s", changeTierRequest.Spec.MurName)
 	}
 
-	newNsTemplateSet := usersignup.NewNSTemplateSetSpec(nsTemplateTier)
-	changed := false
-
-	for i, ua := range mur.Spec.UserAccounts {
-		// skip if no NSTemplateSet defined for the UserAccount
-		if ua.Spec.NSTemplateSet == nil {
-			continue
-		}
-		if changeTierRequest.Spec.TargetCluster != "" {
-			if ua.TargetCluster == changeTierRequest.Spec.TargetCluster {
-				// here we remove the template hash label since it was change for one or all target clusters
-				delete(mur.Labels, tierutil.TemplateTierHashLabelKey(mur.Spec.UserAccounts[i].Spec.NSTemplateSet.TierName))
-				mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
-				changed = true
-				break
-			}
-		} else {
-			changed = true
-			// here we remove the template hash label since it was change for one or all target clusters
-			delete(mur.Labels, tierutil.TemplateTierHashLabelKey(mur.Spec.UserAccounts[i].Spec.NSTemplateSet.TierName))
-			mur.Spec.UserAccounts[i].Spec.NSTemplateSet = newNsTemplateSet
-		}
-	}
-	if !changed {
-		err := fmt.Errorf("the MasterUserRecord '%s' doesn't contain UserAccount with cluster '%s' whose tier should be changed", changeTierRequest.Spec.MurName, changeTierRequest.Spec.TargetCluster)
-		return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
-	}
-
 	mur.Spec.TierName = changeTierRequest.Spec.TierName
 
-	// also update some of the labels on the MUR, those related to the new Tier in use.
-	if mur.Labels == nil {
-		mur.Labels = map[string]string{}
-	}
-	// then we compute again *all* hashes, in case we removed the entry for a single target cluster, but others still "use" it.
-	for _, ua := range mur.Spec.UserAccounts {
-		// skip if no NSTemplateSet defined for the UserAccount
-		if ua.Spec.NSTemplateSet == nil {
-			continue
-		}
-		hash, err := tierutil.ComputeHashForNSTemplateSetSpec(*ua.Spec.NSTemplateSet)
-		if err != nil {
-			return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to compute hash for NSTemplateTier with name '%s'", nsTemplateTier.Name)
-		}
-		mur.Labels[tierutil.TemplateTierHashLabelKey(ua.Spec.NSTemplateSet.TierName)] = hash
-	}
 	if err := r.Client.Update(context.TODO(), mur); err != nil {
 		return false, r.wrapErrorWithStatusUpdate(logger, changeTierRequest, r.setStatusChangeFailed, err, "unable to change tier in MasterUserRecord %s", changeTierRequest.Spec.MurName)
 	}
