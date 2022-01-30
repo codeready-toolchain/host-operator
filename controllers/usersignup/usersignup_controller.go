@@ -293,14 +293,14 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			return true, err
 		}
 
-		// look-up the default NSTemplateTier to get the NS templates
-		nstemplateTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
+		// look-up the default NSTemplateTier
+		defaultTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
 		if err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 		}
 
 		// check if anything in the MUR should be migrated/fixed
-		if changed, err := migrateOrFixMurIfNecessary(mur, nstemplateTier, userSignup); err != nil {
+		if changed, err := migrateOrFixMurIfNecessary(mur, defaultTier, userSignup); err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
 
 		} else if changed {
@@ -396,9 +396,9 @@ func (r *Reconciler) ensureNewMurAndSpaceIfApproved(reqLogger logr.Logger, confi
 	}
 
 	// Provision the Space if auto space creation is enabled
-	if autoCreateSpaceEnabled(userSignup) {
-		err = r.provisionSpace(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername)
-	}
+	// if autoCreateSpaceEnabled(userSignup) {
+	err = r.provisionSpace(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername)
+	// }
 	return err
 }
 

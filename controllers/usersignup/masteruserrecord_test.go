@@ -60,21 +60,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			assert.True(t, changed)
 			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
 		})
-
-		t.Run("when tierName is different", func(t *testing.T) {
-			userSignup := NewUserSignup()
-			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
-			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
-			mur.Spec.TierName = "somethingelse"
-
-			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
-
-			// then
-			require.NoError(t, err)
-			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
-		})
 	})
 
 }

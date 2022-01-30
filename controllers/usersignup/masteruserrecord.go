@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstemplateTier *toolchainv1alpha1.NSTemplateTier, userSignup *toolchainv1alpha1.UserSignup) (bool, error) {
+func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, defaultTier *toolchainv1alpha1.NSTemplateTier, userSignup *toolchainv1alpha1.UserSignup) (bool, error) {
 	changed := false
 
 	// TODO remove this after all users migrated to new SSO Provider client that does not modify the original subject
@@ -37,8 +37,9 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, nstempl
 		}
 	}
 
-	if mur.Spec.TierName != nstemplateTier.Name {
-		mur.Spec.TierName = nstemplateTier.Name
+	// set the tier in the mur only if it was not set
+	if mur.Spec.TierName == "" {
+		mur.Spec.TierName = defaultTier.Name
 		changed = true
 	}
 	return changed, nil

@@ -70,6 +70,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
+	reqLogger = reqLogger.WithValues("murName", changeTierRequest.Spec.MurName, "tier", changeTierRequest.Spec.TierName, "targetcluster", changeTierRequest.Spec.TargetCluster)
+
 	// if is complete, then check when status was changed and delete it if the requested duration has passed
 	completeCond, found := condition.FindConditionByType(changeTierRequest.Status.Conditions, toolchainv1alpha1.ChangeTierRequestComplete)
 	if found && completeCond.Status == corev1.ConditionTrue {
