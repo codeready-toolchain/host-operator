@@ -52,7 +52,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(MapBannedUserToUserSignup(mgr.GetClient()))).
 		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
-			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.MapToOldestUnapproved),
+			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.MapToOldestPending),
 			builder.WithPredicates(&OnlyWhenAutomaticApprovalIsEnabled{
 				client: mgr.GetClient(),
 			})).

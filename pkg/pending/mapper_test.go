@@ -29,7 +29,7 @@ func TestMapperReturnsOldest(t *testing.T) {
 		mapper := NewUserSignupMapper(cl)
 
 		// when
-		requests := mapper.MapToOldestUnapproved(NewToolchainStatus())
+		requests := mapper.MapToOldestPending(NewToolchainStatus())
 
 		// then
 		require.Len(t, requests, 1)
@@ -42,7 +42,7 @@ func TestMapperReturnsOldest(t *testing.T) {
 		mapper := NewSpaceMapper(cl)
 
 		// when
-		requests := mapper.MapToOldestUnapproved(NewToolchainStatus())
+		requests := mapper.MapToOldestPending(NewToolchainStatus())
 
 		// then
 		require.Len(t, requests, 1)
@@ -60,7 +60,7 @@ func TestMapperReturnsEmptyRequestsWhenNoPendingIsFound(t *testing.T) {
 	mapper := NewUserSignupMapper(cl)
 
 	// when
-	requests := mapper.MapToOldestUnapproved(NewToolchainStatus())
+	requests := mapper.MapToOldestPending(NewToolchainStatus())
 
 	// then
 	assert.Empty(t, requests)
@@ -75,7 +75,7 @@ func TestMapperReturnsEmptyRequestsWhenClientReturnsError(t *testing.T) {
 	mapper := NewUserSignupMapper(cl)
 
 	// when
-	requests := mapper.MapToOldestUnapproved(NewToolchainStatus())
+	requests := mapper.MapToOldestPending(NewToolchainStatus())
 
 	// then
 	assert.Empty(t, requests)

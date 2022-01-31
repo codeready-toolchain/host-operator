@@ -33,7 +33,7 @@ func NewPendingObjectsMapper(client client.Client, objectType client.Object, lis
 	}
 }
 
-func (b ObjectsMapper) MapToOldestUnapproved(obj client.Object) []reconcile.Request {
+func (b ObjectsMapper) MapToOldestPending(obj client.Object) []reconcile.Request {
 	pendingObject := b.unapprovedCache.getOldestPendingObject(obj.GetNamespace())
 	if pendingObject == nil {
 		return []reconcile.Request{}
