@@ -40,7 +40,7 @@ func (s *Synchronizer) synchronizeSpec() error {
 		if err := updateStatusConditions(s.logger, s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
 			return err
 		}
-		// s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase
+		s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
 		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
 		s.memberUserAcc.Spec.OriginalSub = s.record.Spec.OriginalSub
