@@ -363,7 +363,7 @@ func (r *Reconciler) setStateLabel(logger logr.Logger, space *toolchainv1alpha1.
 	space.Labels[toolchainv1alpha1.SpaceStateLabelKey] = state
 	if err := r.Client.Update(context.TODO(), space); err != nil {
 		return r.setStatusProvisioningFailed(logger, space, errs.Wrapf(err,
-			"unable to update state label at UserSignup resource"))
+			"unable to update state label at Space resource"))
 	}
 
 	return nil
