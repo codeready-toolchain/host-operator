@@ -26,9 +26,9 @@ func WithSpecTargetCluster(name string) Option {
 	}
 }
 
-func WithTierNameFor(tier *toolchainv1alpha1.NSTemplateTier) Option {
+func WithTierName(tierName string) Option {
 	return func(space *toolchainv1alpha1.Space) {
-		space.Spec.TierName = tier.Name
+		space.Spec.TierName = tierName
 	}
 }
 

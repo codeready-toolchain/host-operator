@@ -150,6 +150,12 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		}
 	}
 
+	if space.Spec.TierName == "" {
+		if err := r.setStateLabel(logger, space, toolchainv1alpha1.SpaceStateLabelValuePending); err != nil {
+			return false, err
+		}
+		return false, r.setStatusProvisioningPending(space, "unspecified tier name")
+	}
 	if space.Spec.TargetCluster == "" {
 		if err := r.setStateLabel(logger, space, toolchainv1alpha1.SpaceStateLabelValuePending); err != nil {
 			return false, err
