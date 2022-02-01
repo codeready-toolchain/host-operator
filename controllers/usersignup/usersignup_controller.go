@@ -10,12 +10,12 @@ import (
 
 	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/host-operator/pkg/pending"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/usersignup/unapproved"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
@@ -43,7 +43,7 @@ type StatusUpdaterFunc func(userAcc *toolchainv1alpha1.UserSignup, message strin
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-	unapprovedMapper := unapproved.NewUserSignupMapper(mgr.GetClient())
+	unapprovedMapper := pending.NewUserSignupMapper(mgr.GetClient())
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.UserSignup{}, builder.WithPredicates(UserSignupChangedPredicate{})).
 		Owns(&toolchainv1alpha1.MasterUserRecord{}).
@@ -52,7 +52,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(MapBannedUserToUserSignup(mgr.GetClient()))).
 		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
-			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.MapToOldestUnapproved),
+			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.MapToOldestPending),
 			builder.WithPredicates(&OnlyWhenAutomaticApprovalIsEnabled{
 				client: mgr.GetClient(),
 			})).

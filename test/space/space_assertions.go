@@ -80,11 +80,11 @@ func (a *Assertion) HasMatchingTierLabelForTier(tier *toolchainv1alpha1.NSTempla
 	return a
 }
 
-func (a *Assertion) HasLabel(key string) *Assertion {
+func (a *Assertion) HasStateLabel(stateValue string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
-	require.Contains(a.t, a.space.Labels, key)
-	assert.NotEmpty(a.t, a.space.Labels[key])
+	require.NotNil(a.t, a.space.Labels)
+	assert.Equal(a.t, stateValue, a.space.Labels[toolchainv1alpha1.SpaceStateLabelKey])
 	return a
 }
 

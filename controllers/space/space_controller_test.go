@@ -57,6 +57,7 @@ func TestCreateSpace(t *testing.T) {
 			Exists().
 			HasStatusTargetCluster("member-1").
 			HasConditions(spacetest.Provisioning()).
+			HasStateLabel("cluster-assigned").
 			HasFinalizer()
 		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 			Exists().
@@ -84,6 +85,7 @@ func TestCreateSpace(t *testing.T) {
 				Exists().
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.Provisioning()).
+				HasStateLabel("cluster-assigned").
 				HasFinalizer()
 			nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				Exists().
@@ -110,6 +112,7 @@ func TestCreateSpace(t *testing.T) {
 					Exists().
 					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.Ready()).
+					HasStateLabel("cluster-assigned").
 					HasFinalizer()
 			})
 		})
@@ -130,6 +133,7 @@ func TestCreateSpace(t *testing.T) {
 			assert.False(t, res.Requeue)
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				HasNoStatusTargetCluster().
+				HasStateLabel("pending").
 				HasConditions(spacetest.ProvisioningPending("unspecified target member cluster")) // the Space will remain in `ProvisioningPending` until a target member cluster is set.
 		})
 	})
@@ -211,6 +215,7 @@ func TestCreateSpace(t *testing.T) {
 			assert.False(t, res.Requeue)
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				HasStatusTargetCluster("unknown").
+				HasStateLabel("cluster-assigned").
 				HasConditions(spacetest.ProvisioningFailed("unknown target member cluster 'unknown'"))
 		})
 
@@ -851,7 +856,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
 			hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
+				if _, ok := obj.(*toolchainv1alpha1.Space); ok && obj.GetLabels()[tierutil.TemplateTierHashLabelKey(basicTier.Name)] != "" {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Client.Update(ctx, obj, opts...)

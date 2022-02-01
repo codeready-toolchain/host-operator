@@ -67,6 +67,21 @@ func WithCondition(c toolchainv1alpha1.Condition) Option {
 	}
 }
 
+func WithStateLabel(stateValue string) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		if space.Labels == nil {
+			space.Labels = map[string]string{}
+		}
+		space.Labels[toolchainv1alpha1.SpaceStateLabelKey] = stateValue
+	}
+}
+
+func CreatedBefore(before time.Duration) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		space.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Now().Add(-before)}
+	}
+}
+
 func NewSpace(name string, options ...Option) *toolchainv1alpha1.Space {
 	space := &toolchainv1alpha1.Space{
 		ObjectMeta: metav1.ObjectMeta{
