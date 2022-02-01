@@ -1,7 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20220128141941-727c0ecfe260
+	github.com/codeready-toolchain/api v0.0.0-20220201152329-6374e8bd52c9
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20220128072729-4dd5728f0084
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -28,8 +28,6 @@ require (
 	k8s.io/kubectl v0.20.2
 	sigs.k8s.io/controller-runtime v0.8.3
 )
-
-replace github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20220128214923-91e9a07dbe78
 
 replace github.com/codeready-toolchain/toolchain-common => github.com/rajivnathan/toolchain-common v0.0.0-20220128215238-15c4ceb5bb2b
 
