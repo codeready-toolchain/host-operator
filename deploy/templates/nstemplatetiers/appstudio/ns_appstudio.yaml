@@ -38,6 +38,23 @@ objects:
     verbs:
     - "*"
   - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - spiaccesstokenbindings
+    verbs:
+    - create
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - spiaccesstokens
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
     - tekton.dev
     resources:
     - pipelineruns
