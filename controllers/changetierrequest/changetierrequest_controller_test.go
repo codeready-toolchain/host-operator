@@ -287,9 +287,9 @@ func TestChangeTierSuccess(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
-				HasTier(teamTier.Name).                                                      // unchanged
-				HasSpecTargetCluster("member-1").                                            // unchanged
-				HasLabel(tierutil.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName)) // not removed since there was no update to perform in this case
+				HasTier(teamTier.Name).               // unchanged
+				HasSpecTargetCluster("member-1").     // unchanged
+				HasMatchingTierLabelForTier(teamTier) // not removed since there was no update to perform in this case
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete()) // ChangeTierRequest is complete.
 		})
 	})
