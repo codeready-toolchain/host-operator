@@ -396,9 +396,9 @@ func (r *Reconciler) ensureNewMurAndSpaceIfApproved(reqLogger logr.Logger, confi
 	}
 
 	// Provision the Space if auto space creation is enabled
-	// if autoCreateSpaceEnabled(userSignup) {
-	err = r.provisionSpace(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername)
-	// }
+	if shouldManageSpace(userSignup) {
+		err = r.provisionSpace(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername)
+	}
 	return err
 }
 
@@ -576,7 +576,7 @@ func (r *Reconciler) deleteMasterUserRecordAndSpace(mur *toolchainv1alpha1.Maste
 	}
 
 	// before a MasterUserRecord is deleted, its associated space (if any) must also be deleted
-	if autoCreateSpaceEnabled(userSignup) {
+	if shouldManageSpace(userSignup) {
 		space := &toolchainv1alpha1.Space{}
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: mur.Namespace, Name: mur.Name}, space)
 		if err != nil {
@@ -681,6 +681,6 @@ func validateEmailHash(userEmail, userEmailHash string) bool {
 	return hex.EncodeToString(md5hash.Sum(nil)) == userEmailHash
 }
 
-func autoCreateSpaceEnabled(userSignup *toolchainv1alpha1.UserSignup) bool {
-	return userSignup.Annotations["toolchain.dev.openshift.com/auto-create-space"] == "true"
+func shouldManageSpace(userSignup *toolchainv1alpha1.UserSignup) bool {
+	return userSignup.Annotations[toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey] != "true"
 }
