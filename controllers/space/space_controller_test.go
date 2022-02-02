@@ -640,7 +640,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 			spacetest.WithTierNameFor(otherTier), // assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
-			spacetest.WithFinalizer())
+			spacetest.WithFinalizer(),
+			spacetest.WithCondition(spacetest.Ready()))
 		hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(basicTier), nstemplatetsettest.WithReadyCondition())
 		member1Client := test.NewFakeClient(t, nstmplSet)
@@ -753,7 +754,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 			spacetest.WithTierNameAndHashLabelFor(olderBasicTier),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
-			spacetest.WithFinalizer())
+			spacetest.WithFinalizer(),
+			spacetest.WithCondition(spacetest.Ready()))
 		hostClient := test.NewFakeClient(t, s, basicTier)
 		nsTmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(olderBasicTier), nstemplatetsettest.WithReadyCondition()) // NSTemplateSet has references to old basic tier
 		member1Client := test.NewFakeClient(t, nsTmplSet)
@@ -990,7 +992,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 				spacetest.WithTierNameFor(otherTier),
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
-				spacetest.WithFinalizer())
+				spacetest.WithFinalizer(),
+				spacetest.WithCondition(spacetest.Ready()))
 			hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
 			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(basicTier), nstemplatetsettest.WithReadyCondition())
 			member1Client := test.NewFakeClient(t, nstmplSet)

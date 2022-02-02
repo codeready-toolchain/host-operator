@@ -207,7 +207,8 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	logger.Info("NSTemplateSet already exists")
 
 	// update the NSTemplateSet if needed
-	if !tierutil.TierHashMatches(tmplTier, nsTmplSet.Spec) {
+	if !tierutil.TierHashMatches(tmplTier, nsTmplSet.Spec) &&
+		condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 		// postpone if needed, so we don't overflow the cluster with too many concurrent updates
 		if time.Since(r.lastExecutedUpdate) < time.Second {
 			if time.Now().After(r.nextScheduledUpdate) {
