@@ -35,6 +35,7 @@ type Reconciler struct {
 // Watches the Space resources and the ToolchainStatus CRD
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("spacecompletion").
 		// watch Spaces in the host cluster
 		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(
@@ -47,7 +48,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Reconcile ensures that Space has set all missing fields that are needed for proper provisoning
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx, "namespace", r.Namespace).WithName("completion")
+	logger := log.FromContext(ctx, "namespace", r.Namespace)
 	logger.Info("reconciling Space")
 
 	// Fetch the Space
