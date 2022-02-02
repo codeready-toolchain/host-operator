@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
+	errs "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -272,7 +273,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
 				return true, err
 			}
-			reqLogger.Info("deleting MasterUserRecord and Space since user has been banned")
+			reqLogger.Info("Deleting MasterUserRecord and Space since user has been banned")
 			return true, r.deleteMasterUserRecordAndSpace(mur, userSignup, reqLogger, r.setStatusBanning)
 		}
 
@@ -284,7 +285,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			}
 			// We set the inProgressStatusUpdater parameter here to setStatusDeactivationInProgress, as a temporary status before
 			// the main reconcile function completes the deactivation process
-			reqLogger.Info("deleting MasterUserRecord and Space since user has been deactivated")
+			reqLogger.Info("Deleting MasterUserRecord and Space since user has been deactivated")
 			return true, r.deleteMasterUserRecordAndSpace(mur, userSignup, reqLogger, r.setStatusDeactivationInProgress)
 		}
 
@@ -304,17 +305,30 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
 
 		} else if changed {
-			reqLogger.Info("updating MasterUserRecord after it was migrated")
+			reqLogger.Info("Updating MasterUserRecord after it was migrated")
 			if err := r.Client.Update(context.TODO(), mur); err != nil {
 				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
 			}
 			return true, nil
 		}
+		reqLogger.Info("MasterUserRecord exists")
 
-		// If we successfully found an existing MasterUserRecord then our work here is done, set the status
-		// conditions to complete and set the compliant username and return
-		reqLogger.Info("MasterUserRecord exists, setting UserSignup status to 'Complete'")
-		// Use compliantUsernameUpdater to properly handle when the master user record is created or updated
+		// if there should be a Space tied to the UserSignup then check that it exists
+		if shouldManageSpace(userSignup) {
+			space := &toolchainv1alpha1.Space{}
+			err := r.Client.Get(context.TODO(), types.NamespacedName{
+				Namespace: mur.Namespace,
+				Name:      mur.Name,
+			}, space)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					return false, nil
+				}
+				return false, errs.Wrap(err, fmt.Sprintf(`failed to get Space associated with mur "%s"`, mur.Name))
+			}
+			reqLogger.Info("Space exists")
+		}
+		reqLogger.Info("Setting UserSignup status to 'Complete'")
 		return true, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(reqLogger, mur.Name))
 	}
 	return false, nil
@@ -579,23 +593,23 @@ func (r *Reconciler) deleteMasterUserRecordAndSpace(mur *toolchainv1alpha1.Maste
 	if shouldManageSpace(userSignup) {
 		space := &toolchainv1alpha1.Space{}
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: mur.Namespace, Name: mur.Name}, space)
-		if err != nil {
+		if err == nil {
+			err = r.Client.Delete(context.TODO(), space)
+			if err != nil {
+				return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteSpace, err,
+					"error deleting Space")
+			}
+			logger.Info("Deleted Space", "Name", space.Name)
+		} else if err != nil && !errors.IsNotFound(err) {
 			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteSpace, err,
-				"Error getting Space for deletion")
+				"error getting Space for deletion")
 		}
-
-		err = r.Client.Delete(context.TODO(), space)
-		if err != nil {
-			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteSpace, err,
-				"Error deleting Space")
-		}
-		logger.Info("Deleted Space", "Name", space.Name)
 	}
 
 	err = r.Client.Delete(context.TODO(), mur)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteMUR, err,
-			"Error deleting MasterUserRecord")
+			"error deleting MasterUserRecord")
 	}
 	logger.Info("Deleted MasterUserRecord", "Name", mur.Name)
 	return nil
