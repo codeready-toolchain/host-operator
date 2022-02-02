@@ -157,7 +157,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
-	if exists, err := r.checkIfMurAlreadyExists(logger, config, userSignup, banned); exists || err != nil {
+	if exists, err := r.checkIfMurAndSpaceAlreadyExists(logger, config, userSignup, banned); exists || err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -245,11 +245,11 @@ func (r *Reconciler) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1
 	return banned, nil
 }
 
-// checkIfMurAlreadyExists checks if there is already a MUR for the given UserSignup.
+// checkIfMurAndSpaceAlreadyExists checks if there is already a MUR for the given UserSignup.
 // If there is already one then it returns 'true' as the first returned value, but before doing that it checks if the MUR should be deleted or not
 // or if the MUR requires some migration changes or additional fixes.
 // If no MUR for the given UserSignup is found, then it returns 'false' as the first returned value.
-func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup,
+func (r *Reconciler) checkIfMurAndSpaceAlreadyExists(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup,
 	banned bool) (bool, error) {
 	// List all MasterUserRecord resources that have an owner label equal to the UserSignup.Name
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
@@ -313,20 +313,11 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 		}
 		reqLogger.Info("MasterUserRecord exists")
 
-		// if there should be a Space tied to the UserSignup then check that it exists
+		// if there should be a Space tied to the UserSignup then ensure that it exists
 		if shouldManageSpace(userSignup) {
-			space := &toolchainv1alpha1.Space{}
-			err := r.Client.Get(context.TODO(), types.NamespacedName{
-				Namespace: mur.Namespace,
-				Name:      mur.Name,
-			}, space)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					return false, nil
-				}
-				return false, errs.Wrap(err, fmt.Sprintf(`failed to get Space associated with mur "%s"`, mur.Name))
+			if err = r.ensureSpace(reqLogger, config, userSignup, targetCluster(userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]), defaultTier, mur.Name); err != nil {
+				return false, err
 			}
-			reqLogger.Info("Space exists")
 		}
 		reqLogger.Info("Setting UserSignup status to 'Complete'")
 		return true, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(reqLogger, mur.Name))
@@ -411,7 +402,7 @@ func (r *Reconciler) ensureNewMurAndSpaceIfApproved(reqLogger logr.Logger, confi
 
 	// Provision the Space if auto space creation is enabled
 	if shouldManageSpace(userSignup) {
-		err = r.provisionSpace(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername)
+		err = r.ensureSpace(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername)
 	}
 	return err
 }
@@ -534,23 +525,37 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 	return nil
 }
 
-// provisionSpace does the work of provisioning the Space
-func (r *Reconciler) provisionSpace(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
-	nstemplateTier *toolchainv1alpha1.NSTemplateTier, compliantUsername string) error {
+// ensureSpace does the work of provisioning the Space
+func (r *Reconciler) ensureSpace(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
+	nstemplateTier *toolchainv1alpha1.NSTemplateTier, murName string) error {
 
-	space := newSpace(config, userSignup, targetCluster, compliantUsername)
+	space := &toolchainv1alpha1.Space{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: userSignup.Namespace,
+		Name:      murName,
+	}, space)
+	if err == nil {
+		logger.Info("Space exists")
+		return nil
+	}
 
-	err := controllerutil.SetControllerReference(userSignup, space, r.Scheme)
+	if !errors.IsNotFound(err) {
+		return errs.Wrap(err, fmt.Sprintf(`failed to get Space associated with mur "%s"`, murName))
+	}
+
+	space = newSpace(config, userSignup, targetCluster, murName)
+
+	err = controllerutil.SetControllerReference(userSignup, space, r.Scheme)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
-			"Error setting controller reference for Space %s", space.Name)
+			"error setting controller reference for Space %s", space.Name)
 	}
 
 	logger.Info("Creating Space", "Name", space.Name)
 	err = r.Client.Create(context.TODO(), space)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
-			"Error creating Space")
+			"error creating Space")
 	}
 
 	logger.Info("Created Space", "Name", space.Name, "TargetCluster", targetCluster, "Tier", nstemplateTier.Name)
