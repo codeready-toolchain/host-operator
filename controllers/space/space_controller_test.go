@@ -876,8 +876,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, res.Requeue)
-		assert.Greater(t, res.RequeueAfter, 1*time.Second) // explicitly requeued 2 seconds after `now`
-		assert.LessOrEqual(t, res.RequeueAfter, 2*time.Second)
+		assert.Greater(t, res.RequeueAfter, 0*time.Second) // explicitly requeued 1 second after `now`
+		assert.LessOrEqual(t, res.RequeueAfter, 1*time.Second)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, s2.Name, hostClient).
 			Exists().
 			HasTier(basicTier.Name).
@@ -899,8 +899,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, res.Requeue)
-		assert.Greater(t, res.RequeueAfter, 3*time.Second) // explicitly requeued 2 seconds after s2, i.e, almost 4s after `now`
-		assert.LessOrEqual(t, res.RequeueAfter, 4*time.Second)
+		assert.Greater(t, res.RequeueAfter, 1*time.Second) // explicitly requeued 1 seconds after s2, i.e, almost 2s after `now`
+		assert.LessOrEqual(t, res.RequeueAfter, 2*time.Second)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, s3.Name, hostClient).
 			Exists().
 			HasTier(basicTier.Name).

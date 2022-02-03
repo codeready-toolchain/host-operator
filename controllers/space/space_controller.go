@@ -127,6 +127,10 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, space *toolchainv1alpha1.S
 	return nil
 }
 
+const norequeue = 0 * time.Second
+const requeueDelay = 1 * time.Second
+const postponeDelay = 2 * time.Second
+
 // ensureNSTemplateSet creates the NSTemplateSet on the target member cluster if it does not exist,
 // and updates the space's status accordingly.
 // Returns `true`+duration if the NSTemplateSet was *just* created or updated, ie:
@@ -140,17 +144,17 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		logger.Info("retargeting space", "from_cluster", space.Status.TargetCluster, "to_cluster", space.Spec.TargetCluster)
 		// look-up and delete the NSTemplateSet on the current member cluster
 		if isBeingDeleted, err := r.deleteNSTemplateSetFromCluster(logger, space, space.Status.TargetCluster); err != nil {
-			return false, 0 * time.Second, r.setStatusRetargetFailed(logger, space, err)
+			return false, norequeue, r.setStatusRetargetFailed(logger, space, err)
 
 		} else if isBeingDeleted {
 			logger.Info("wait while NSTemplateSet is being deleted", "member_cluster", space.Status.TargetCluster)
-			return false, 0 * time.Second, r.setStatusRetargeting(space)
+			return false, norequeue, r.setStatusRetargeting(space)
 		} else {
 			logger.Info("resetting 'space.Status.TargetCluster' field")
 			// NSTemplateSet was removed: reset `space.Status.TargetCluster`
 			space.Status.TargetCluster = ""
 			if err := r.Client.Status().Update(context.TODO(), space); err != nil {
-				return false, 0 * time.Second, err
+				return false, norequeue, err
 			}
 			// and continue with the provisioning on the new target member cluster (if specified)
 		}
@@ -158,19 +162,19 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 
 	if space.Spec.TargetCluster == "" {
 		if err := r.setStateLabel(logger, space, toolchainv1alpha1.SpaceStateLabelValuePending); err != nil {
-			return false, 0 * time.Second, err
+			return false, norequeue, err
 		}
-		return false, 0 * time.Second, r.setStatusProvisioningPending(space, "unspecified target member cluster")
+		return false, norequeue, r.setStatusProvisioningPending(space, "unspecified target member cluster")
 	}
 	if err := r.setStateLabel(logger, space, toolchainv1alpha1.SpaceStateLabelValueClusterAssigned); err != nil {
-		return false, 0 * time.Second, err
+		return false, norequeue, err
 	}
 	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
 	space.Status.TargetCluster = space.Spec.TargetCluster
 
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
-		return false, 0 * time.Second, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
+		return false, norequeue, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
 	}
 
 	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster)
@@ -180,7 +184,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		Namespace: space.Namespace,
 		Name:      space.Spec.TierName,
 	}, tmplTier); err != nil {
-		return false, 0 * time.Second, r.setStatusProvisioningFailed(logger, space, err)
+		return false, norequeue, r.setStatusProvisioningFailed(logger, space, err)
 	}
 	// create if not found on the expected target cluster
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
@@ -191,45 +195,51 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		if errors.IsNotFound(err) {
 			logger.Info("creating NSTemplateSet on target member cluster")
 			if err := r.setStatusProvisioning(space); err != nil {
-				return false, 0 * time.Second, r.setStatusProvisioningFailed(logger, space, err)
+				return false, norequeue, r.setStatusProvisioningFailed(logger, space, err)
 			}
 			nsTmplSet = r.newNSTemplateSet(memberCluster.OperatorNamespace, space.Name, tmplTier)
 
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
-				return false, 0 * time.Second, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
+				return false, norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 			}
 			logger.Info("NSTemplateSet created on target member cluster")
-			return true, time.Second, r.setStatusProvisioning(space)
+			return true, requeueDelay, r.setStatusProvisioning(space)
 		}
-		return false, 0 * time.Second, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
+		return false, norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 	}
 	logger.Info("NSTemplateSet already exists")
 
-	// update the NSTemplateSet if needed
-	if !tierutil.TierHashMatches(tmplTier, nsTmplSet.Spec) &&
+	tiersMatch := tierutil.TierHashMatches(tmplTier, nsTmplSet.Spec)
+
+	// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)
+	if space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
+		!tiersMatch &&
 		condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 		// postpone if needed, so we don't overflow the cluster with too many concurrent updates
-		if time.Since(r.lastExecutedUpdate) < time.Second {
+		if time.Since(r.lastExecutedUpdate) < postponeDelay {
 			if time.Now().After(r.nextScheduledUpdate) {
-				r.nextScheduledUpdate = time.Now().Add(2 * time.Second)
+				r.nextScheduledUpdate = time.Now().Add(postponeDelay)
 			} else {
-				r.nextScheduledUpdate = r.nextScheduledUpdate.Add(2 * time.Second)
+				r.nextScheduledUpdate = r.nextScheduledUpdate.Add(postponeDelay)
 			}
 			// return the duration when it should be requeued
 			logger.Info("postponing NSTemplateSet update", "until", r.nextScheduledUpdate.String())
 			return true, time.Until(r.nextScheduledUpdate), nil
 		}
 		r.lastExecutedUpdate = time.Now()
+	}
 
+	// update the NSTemplateSet if needed
+	if !tiersMatch {
 		nsTmplSetSpec := usersignup.NewNSTemplateSetSpec(tmplTier)
 		nsTmplSet.Spec = *nsTmplSetSpec
 		if err := memberCluster.Client.Update(context.TODO(), nsTmplSet); err != nil {
-			return false, 0 * time.Second, r.setStatusNSTemplateSetUpdateFailed(logger, space, err)
+			return false, norequeue, r.setStatusNSTemplateSetUpdateFailed(logger, space, err)
 		}
 		// also, immediately update Space condition
 		logger.Info("NSTemplateSet updated on target member cluster")
-		return true, time.Second, r.setStatusUpdating(space)
+		return true, requeueDelay, r.setStatusUpdating(space)
 	}
 	logger.Info("NSTemplateSet is up-to-date")
 
@@ -237,36 +247,36 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	// skip until there's a `Ready` condition
 	if !found {
 		// just created, but there is no `Ready` condition yet
-		return true, time.Second, nil
+		return true, requeueDelay, nil
 	}
 
 	// also, replicates (translate) the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
 	switch nsTmplSetReady.Reason {
 	case toolchainv1alpha1.NSTemplateSetUpdatingReason:
-		return false, 0 * time.Second, r.setStatusUpdating(space)
+		return false, norequeue, r.setStatusUpdating(space)
 	case toolchainv1alpha1.NSTemplateSetProvisioningReason:
-		return false, 0 * time.Second, r.setStatusProvisioning(space)
+		return false, norequeue, r.setStatusProvisioning(space)
 	case toolchainv1alpha1.NSTemplateSetProvisionedReason:
 		readyCond, ok := condition.FindConditionByType(space.Status.Conditions, toolchainv1alpha1.ConditionReady)
 		logger.Info("checking Space condition", "ready", readyCond)
-		if ok && readyCond.Reason == toolchainv1alpha1.SpaceUpdatingReason && time.Since(readyCond.LastTransitionTime.Time) <= time.Second {
+		if ok && readyCond.Reason == toolchainv1alpha1.SpaceUpdatingReason && time.Since(readyCond.LastTransitionTime.Time) <= requeueDelay {
 			// Space status was *just* set to `Ready=false/Updating`, so we need to wait
-			return true, time.Second, nil
+			return true, requeueDelay, nil
 		}
 		hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
 		if err != nil {
-			return false, 0 * time.Second, r.setStatusProvisioningFailed(logger, space, err)
+			return false, norequeue, r.setStatusProvisioningFailed(logger, space, err)
 		}
 		if space.Labels == nil {
 			space.Labels = map[string]string{}
 		}
 		space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] = hash
 		if err := r.Client.Update(context.TODO(), space); err != nil {
-			return false, 0 * time.Second, r.setStatusProvisioningFailed(logger, space, err)
+			return false, norequeue, r.setStatusProvisioningFailed(logger, space, err)
 		}
-		return false, 0 * time.Second, r.setStatusProvisioned(space)
+		return false, norequeue, r.setStatusProvisioned(space)
 	default:
-		return false, 0 * time.Second, r.setStatusProvisioningFailed(logger, space, fmt.Errorf(nsTmplSetReady.Message))
+		return false, norequeue, r.setStatusProvisioningFailed(logger, space, fmt.Errorf(nsTmplSetReady.Message))
 	}
 }
 
