@@ -63,7 +63,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 
 // Reconcile ensures that there is an NSTemplateSet resource defined in the target member cluster
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx, "namespace", r.Namespace).WithValues("name", request.Name)
+	logger := log.FromContext(ctx, "namespace", r.Namespace)
 	logger.Info("reconciling Space")
 
 	// Fetch the Space
@@ -217,6 +217,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 				r.nextScheduledUpdate = r.nextScheduledUpdate.Add(2 * time.Second)
 			}
 			// return the duration when it should be requeued
+			logger.Info("postponing NSTemplateSet update", "until", r.nextScheduledUpdate.String())
 			return true, time.Until(r.nextScheduledUpdate), nil
 		}
 		r.lastExecutedUpdate = time.Now()
