@@ -15,6 +15,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingcleanup"
+	"github.com/codeready-toolchain/host-operator/controllers/spacecompletion"
 	"github.com/codeready-toolchain/host-operator/controllers/templateupdaterequest"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
@@ -278,6 +279,14 @@ func main() {
 		MemberClusters: memberClusters,
 	}).SetupWithManager(mgr, memberClusters); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Space")
+		os.Exit(1)
+	}
+	if err = (&spacecompletion.Reconciler{
+		Client:            mgr.GetClient(),
+		Namespace:         namespace,
+		GetMemberClusters: commoncluster.GetMemberClusters,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SpaceCompletion")
 		os.Exit(1)
 	}
 	if err = (&spacebindingcleanup.Reconciler{
