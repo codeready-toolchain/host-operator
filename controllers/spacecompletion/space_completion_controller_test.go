@@ -127,6 +127,44 @@ func TestCreateSpace(t *testing.T) {
 				HasSpecTargetCluster("")
 		})
 
+		t.Run("when the space is not there, then just skip it", func(t *testing.T) {
+			// given
+			space := spacetest.NewSpace("not-found",
+				spacetest.WithTierName("advanced"))
+			r, req, _ := prepareReconcile(t, space, NewGetMemberClusters())
+			empty := test.NewFakeClient(t)
+			empty.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+				return fmt.Errorf("shouldn't be called")
+			}
+			r.Client = empty
+
+			// when
+			_, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+		})
+
+		t.Run("when getting space fails", func(t *testing.T) {
+			// given
+			space := spacetest.NewSpace("get-fails",
+				spacetest.WithTierName("advanced"))
+			r, req, cl := prepareReconcile(t, space, NewGetMemberClusters())
+			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+				return fmt.Errorf("some error")
+			}
+
+			// when
+			_, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.Error(t, err)
+			cl.MockGet = nil
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
+				HasTier("advanced").
+				HasSpecTargetCluster("")
+		})
+
 		t.Run("when Get ToolchainConfig fails and no field is set", func(t *testing.T) {
 			// given
 			space := spacetest.NewSpace("oddity",
