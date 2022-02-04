@@ -2,12 +2,11 @@ package usersignup
 
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func newSpace(config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster, compliantUserName string) *toolchainv1alpha1.Space {
+func newSpace(userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster, compliantUserName, tier string) *toolchainv1alpha1.Space {
 	labels := map[string]string{
 		toolchainv1alpha1.SpaceCreatorLabelKey: compliantUserName,
 	}
@@ -20,7 +19,7 @@ func newSpace(config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alp
 		},
 		Spec: toolchainv1alpha1.SpaceSpec{
 			TargetCluster: targetCluster.getClusterName(),
-			TierName:      config.Tiers().DefaultSpaceTier(),
+			TierName:      tier,
 		},
 	}
 	return space

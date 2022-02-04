@@ -157,7 +157,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
-	if exists, err := r.checkIfMurAndSpaceAlreadyExists(logger, config, userSignup, banned); exists || err != nil {
+	if exists, err := r.checkIfMurAlreadyExists(logger, config, userSignup, banned); exists || err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -245,11 +245,11 @@ func (r *Reconciler) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1
 	return banned, nil
 }
 
-// checkIfMurAndSpaceAlreadyExists checks if there is already a MUR for the given UserSignup.
+// checkIfMurAlreadyExists checks if there is already a MUR for the given UserSignup.
 // If there is already one then it returns 'true' as the first returned value, but before doing that it checks if the MUR should be deleted or not
 // or if the MUR requires some migration changes or additional fixes.
 // If no MUR for the given UserSignup is found, then it returns 'false' as the first returned value.
-func (r *Reconciler) checkIfMurAndSpaceAlreadyExists(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup,
+func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup,
 	banned bool) (bool, error) {
 	// List all MasterUserRecord resources that have an owner label equal to the UserSignup.Name
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
@@ -300,10 +300,14 @@ func (r *Reconciler) checkIfMurAndSpaceAlreadyExists(reqLogger logr.Logger, conf
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 		}
 
+		// TODO this can be removed once all existing MURs have been migrated
+		if err := r.migrateFromMurToSpaceIfNecessary(reqLogger, mur, userSignup); err != nil {
+			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to complete MUR to Space migration")
+		}
+
 		// check if anything in the MUR should be migrated/fixed
 		if changed, err := migrateOrFixMurIfNecessary(mur, defaultTier, userSignup); err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
-
 		} else if changed {
 			reqLogger.Info("Updating MasterUserRecord after it was migrated")
 			if err := r.Client.Update(context.TODO(), mur); err != nil {
@@ -313,16 +317,35 @@ func (r *Reconciler) checkIfMurAndSpaceAlreadyExists(reqLogger logr.Logger, conf
 		}
 		reqLogger.Info("MasterUserRecord exists")
 
-		// if there should be a Space tied to the UserSignup then ensure that it exists
-		if shouldManageSpace(userSignup) {
-			if err = r.ensureSpace(reqLogger, config, userSignup, targetCluster(userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]), defaultTier, mur.Name); err != nil {
-				return false, err
-			}
-		}
 		reqLogger.Info("Setting UserSignup status to 'Complete'")
 		return true, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(reqLogger, mur.Name))
 	}
 	return false, nil
+}
+
+func (r *Reconciler) migrateFromMurToSpaceIfNecessary(reqLogger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, userSignup *toolchainv1alpha1.UserSignup) error {
+	shouldMigrateNSTemplateSet := false
+	cluster := ""
+	for _, userAccount := range mur.Spec.UserAccounts {
+		nsTemplateSet := userAccount.Spec.NSTemplateSet
+		// if the nsTemplateSet is still set then it's an old MasterUserRecord that should be migrated
+		if nsTemplateSet != nil {
+			shouldMigrateNSTemplateSet = true
+			cluster = userAccount.TargetCluster
+		}
+	}
+	// handle space migration if there should be a Space tied to the UserSignup
+	if shouldMigrateNSTemplateSet {
+		tier, err := getNsTemplateTier(r.Client, mur.Spec.TierName, userSignup.Namespace)
+		if err != nil {
+			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "unable to get tier from MasterUserRecord")
+		}
+
+		if err = r.ensureSpace(reqLogger, userSignup, targetCluster(cluster), tier, mur.Name); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *Reconciler) ensureNewMurAndSpaceIfApproved(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
@@ -395,16 +418,21 @@ func (r *Reconciler) ensureNewMurAndSpaceIfApproved(reqLogger logr.Logger, confi
 			"Error generating compliant username for %s", userSignup.Spec.Username)
 	}
 
-	// Provision the MasterUserRecord
-	if err := r.provisionMasterUserRecord(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername); err != nil {
-		return err
+	// if auto space creation is enabled then create the space before creating the MasterUserRecord
+	if shouldManageSpace(userSignup) {
+		reqLogger.Info("Creating Space", "Name", compliantUsername)
+		// auto space creation is enabled, ensure the Space is created
+		spaceTier, terr := getNsTemplateTier(r.Client, config.Tiers().DefaultSpaceTier(), userSignup.Namespace)
+		if terr != nil {
+			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, terr, "unable to get space tier template")
+		}
+		if err := r.ensureSpace(reqLogger, userSignup, targetCluster, spaceTier, compliantUsername); err != nil {
+			return err
+		}
 	}
 
-	// Provision the Space if auto space creation is enabled
-	if shouldManageSpace(userSignup) {
-		err = r.ensureSpace(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername)
-	}
-	return err
+	// Provision the MasterUserRecord
+	return r.provisionMasterUserRecord(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername)
 }
 
 func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, state string) error {
@@ -526,24 +554,26 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 }
 
 // ensureSpace does the work of provisioning the Space
-func (r *Reconciler) ensureSpace(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
-	nstemplateTier *toolchainv1alpha1.NSTemplateTier, murName string) error {
-
+func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
+	nstemplateTier *toolchainv1alpha1.NSTemplateTier, compliantUsername string) error {
 	space := &toolchainv1alpha1.Space{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: userSignup.Namespace,
-		Name:      murName,
+		Name:      compliantUsername,
 	}, space)
 	if err == nil {
+		if util.IsBeingDeleted(space) {
+			return fmt.Errorf("cannot create space because it is currently being deleted")
+		}
 		logger.Info("Space exists")
 		return nil
 	}
 
 	if !errors.IsNotFound(err) {
-		return errs.Wrap(err, fmt.Sprintf(`failed to get Space associated with mur "%s"`, murName))
+		return errs.Wrap(err, fmt.Sprintf(`failed to get Space associated with mur "%s"`, compliantUsername))
 	}
 
-	space = newSpace(config, userSignup, targetCluster, murName)
+	space = newSpace(userSignup, targetCluster, compliantUsername, nstemplateTier.Name)
 
 	err = controllerutil.SetControllerReference(userSignup, space, r.Scheme)
 	if err != nil {
@@ -551,7 +581,6 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, config toolchainconfig.Tool
 			"error setting controller reference for Space %s", space.Name)
 	}
 
-	logger.Info("Creating Space", "Name", space.Name)
 	err = r.Client.Create(context.TODO(), space)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
@@ -604,7 +633,7 @@ func (r *Reconciler) deleteMasterUserRecordAndSpace(mur *toolchainv1alpha1.Maste
 				return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteSpace, err,
 					"error deleting Space")
 			}
-			logger.Info("Deleted Space", "Name", space.Name)
+			logger.Info("Deleted Space", "space", space.Name)
 		} else if err != nil && !errors.IsNotFound(err) {
 			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteSpace, err,
 				"error getting Space for deletion")
@@ -616,7 +645,7 @@ func (r *Reconciler) deleteMasterUserRecordAndSpace(mur *toolchainv1alpha1.Maste
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteMUR, err,
 			"error deleting MasterUserRecord")
 	}
-	logger.Info("Deleted MasterUserRecord", "Name", mur.Name)
+	logger.Info("Deleted MasterUserRecord", "mur", mur.Name)
 	return nil
 }
 

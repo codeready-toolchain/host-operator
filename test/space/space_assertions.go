@@ -5,10 +5,14 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
+
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -40,6 +44,13 @@ func (a *Assertion) Get() *toolchainv1alpha1.Space {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	return a.space
+}
+
+func (a *Assertion) DoesNotExist() *Assertion {
+	err := a.loadResource()
+	require.Error(a.t, err)
+	assert.IsType(a.t, metav1.StatusReasonNotFound, errors.ReasonForError(err))
+	return a
 }
 
 func (a *Assertion) Exists() *Assertion {

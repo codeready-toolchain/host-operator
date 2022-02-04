@@ -14,6 +14,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	. "github.com/codeready-toolchain/host-operator/test"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
+	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
@@ -137,6 +138,61 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 						"2,internal": 1, // unchanged
 						"3,internal": 0, // unchanged
 					})
+			default:
+				assert.Fail(t, "unknown testcase")
+			}
+		})
+	}
+}
+
+func TestUserSignupCreateSpaceOk(t *testing.T) {
+	member := NewMemberCluster(t, "member1", v1.ConditionTrue)
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	for testname, userSignup := range map[string]*toolchainv1alpha1.UserSignup{
+		"without skip space creation annotation": NewUserSignup(
+			Approved(),
+			WithTargetCluster("member1"),
+			WithStateLabel("not-ready"),
+			WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey)),
+		"with skip space creation annotation set to false": NewUserSignup(
+			Approved(),
+			WithTargetCluster("member1"),
+			WithStateLabel("not-ready"),
+			WithAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey, "false")),
+		"with skip space creation annotation set to true": NewUserSignup(
+			Approved(),
+			WithTargetCluster("member1"),
+			WithStateLabel("not-ready"),
+			WithAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey, "true")),
+	} {
+		t.Run(testname, func(t *testing.T) {
+			// given
+			defer counter.Reset()
+			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+
+			// then verify that the Space exists or not depending on the skip space creation annotation
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{}, res)
+
+			actualUserSignup := &toolchainv1alpha1.UserSignup{}
+			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
+			require.NoError(t, err)
+			assert.Equal(t, "approved", actualUserSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+			switch testname {
+			case "without skip space creation annotation":
+				spacetest.AssertThatSpace(t, userSignup.Namespace, "foo", r.Client).
+					Exists().
+					HasSpecTargetCluster("member1")
+			case "with skip space creation annotation set to false":
+				spacetest.AssertThatSpace(t, userSignup.Namespace, "foo", r.Client).
+					Exists().
+					HasSpecTargetCluster("member1")
+			case "with skip space creation annotation set to true":
+				spacetest.AssertThatSpace(t, userSignup.Namespace, "foo", r.Client).
+					DoesNotExist()
 			default:
 				assert.Fail(t, "unknown testcase")
 			}
@@ -477,7 +533,7 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 
 	// given
 	customTier := newNsTemplateTier("custom", "dev", "stage")
-	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultTier("custom"))
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultTier("custom"), testconfig.Tiers().DefaultSpaceTier("custom"))
 	userSignup := NewUserSignup()
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, config, customTier) // use custom tier
@@ -1199,51 +1255,67 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 		})
 }
 
-func TestUserSignupMURCreateFails(t *testing.T) {
-	// given
-	userSignup := NewUserSignup(Approved())
+func TestUserSignupMUROrSpaceCreateFails(t *testing.T) {
 
-	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier)
-	InitializeCounters(t, NewToolchainStatus(
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.External): 1,
-		}),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,external": 1,
-		}),
-	))
+	for _, testname := range []string{
+		"mur create fail",
+		"space create fail",
+	} {
+		t.Run(testname, func(t *testing.T) {
 
-	fakeClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
-		switch obj.(type) {
-		case *toolchainv1alpha1.MasterUserRecord:
-			return errors.New("unable to create mur")
-		default:
-			return fakeClient.Create(ctx, obj)
-		}
-	}
+			// given
+			userSignup := NewUserSignup(Approved())
 
-	// when
-	res, err := r.Reconcile(context.TODO(), req)
+			ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+			r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier)
+			InitializeCounters(t, NewToolchainStatus(
+				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+					string(metrics.External): 1,
+				}),
+				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+					"1,external": 1,
+				}),
+			))
 
-	// then
-	require.Error(t, err)
-	require.Equal(t, reconcile.Result{}, res)
-	AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-			string(metrics.External): 1,
-		}).
-		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-			"1,external": 1,
-			"1,internal": 1,
+			fakeClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+				switch obj.(type) {
+				case *toolchainv1alpha1.MasterUserRecord:
+					if testname == "mur create fail" {
+						return errors.New("unable to create mur")
+					}
+					return fakeClient.Client.Create(ctx, obj)
+				case *toolchainv1alpha1.Space:
+					if testname == "space create fail" {
+						return errors.New("unable to create space")
+					}
+					return fakeClient.Client.Create(ctx, obj)
+				default:
+					return fakeClient.Client.Create(ctx, obj)
+				}
+			}
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.Error(t, err)
+			require.Equal(t, reconcile.Result{}, res)
+			AssertThatCountersAndMetrics(t).
+				HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+					string(metrics.External): 1,
+				}).
+				HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+					"1,external": 1,
+					"1,internal": 1,
+				})
+
+			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			require.NoError(t, err)
+			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 		})
-
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
-
+	}
 }
 
 func TestUserSignupMURReadFails(t *testing.T) {
@@ -1522,6 +1594,89 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 			})
 
 	})
+}
+
+func TestMigrateExistingMURToSpace(t *testing.T) {
+	member := NewMemberCluster(t, "member1", v1.ConditionTrue)
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	t.Run("MUR exists and still references NSTemplateSet", func(t *testing.T) {
+		userSignup := NewUserSignup()
+		userSignup.Annotations = map[string]string{
+			toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+		}
+		userSignup.Labels = map[string]string{
+			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			"toolchain.dev.openshift.com/approved":            "true",
+		}
+		userSignup.Spec.OriginalSub = "original-sub:foo"
+
+		mur := newMasterUserRecord(userSignup, "member1", baseNSTemplateTier, "foo")
+		templates := nstemplateSetFromTier(*baseNSTemplateTier)
+		ua := toolchainv1alpha1.UserAccountEmbedded{
+			TargetCluster: "member1",
+			SyncIndex:     "123abc", // default value
+			Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
+				UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
+					NSLimit:       baseNSTemplateTier.Name,
+					NSTemplateSet: &templates,
+				},
+			},
+		}
+		// set the user account
+		mur.Spec.UserAccounts = append(mur.Spec.UserAccounts, ua)
+
+		// given
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier, mur)
+
+		InitializeCounters(t, NewToolchainStatus(
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+			}),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,external": 1,
+			}),
+		))
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then verify that the Space was created
+		require.NoError(t, err)
+		require.Equal(t, reconcile.Result{}, res)
+
+		actualUserSignup := &toolchainv1alpha1.UserSignup{}
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
+		require.NoError(t, err)
+		assert.Equal(t, "approved", actualUserSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		spacetest.AssertThatSpace(t, userSignup.Namespace, "foo", r.Client).
+			Exists().
+			HasSpecTargetCluster("member1").
+			HasTier(baseNSTemplateTier.Name)
+
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+
+		AssertThatCountersAndMetrics(t).
+			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+				string(metrics.External): 1,
+			}).
+			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+				"1,external": 1,
+				"1,internal": 1,
+			})
+	})
+}
+
+func nstemplateSetFromTier(tier toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {
+	s := toolchainv1alpha1.NSTemplateSetSpec{}
+	s.TierName = tier.Name
+	s.Namespaces = make([]toolchainv1alpha1.NSTemplateSetNamespace, len(tier.Spec.Namespaces))
+	for i, ns := range tier.Spec.Namespaces {
+		s.Namespaces[i].TemplateRef = ns.TemplateRef
+	}
+	s.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{}
+	s.ClusterResources.TemplateRef = tier.Spec.ClusterResources.TemplateRef
+	return s
 }
 
 func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
