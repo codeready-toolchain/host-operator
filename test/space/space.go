@@ -67,6 +67,15 @@ func WithCondition(c toolchainv1alpha1.Condition) Option {
 	}
 }
 
+func WithCreatorLabel(creator string) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		if space.Labels == nil {
+			space.Labels = map[string]string{}
+		}
+		space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey] = creator
+	}
+}
+
 func WithStateLabel(stateValue string) Option {
 	return func(space *toolchainv1alpha1.Space) {
 		if space.Labels == nil {

@@ -3,9 +3,30 @@ package usersignup
 import (
 	"testing"
 
+	. "github.com/codeready-toolchain/host-operator/test"
+	spacetest "github.com/codeready-toolchain/host-operator/test/space"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNewSpace(t *testing.T) {
+	// given
+	userSignup := NewUserSignup()
+
+	nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+
+	// when
+	space := newSpace(userSignup, test.MemberClusterName, "johny", nsTemplateTier.Name)
+
+	// then
+	expectedSpace := spacetest.NewSpace("johny",
+		spacetest.WithTierNameFor(nsTemplateTier),
+		spacetest.WithSpecTargetCluster("member-cluster"),
+		spacetest.WithCreatorLabel("johny"))
+	assert.Equal(t, expectedSpace, space)
+}
 
 func TestNewNsTemplateSetSpec(t *testing.T) {
 	t.Run("when clusterResources template is specified", func(t *testing.T) {

@@ -45,7 +45,8 @@ func (s *Synchronizer) synchronizeSpec() error {
 		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
 		s.memberUserAcc.Spec.OriginalSub = s.record.Spec.OriginalSub
 
-		// in addition to synchronizing the spec, ensure the tier label is set
+		// In addition to synchronizing the spec, ensure the tier label is set.
+		// It is used for an appstudio workaround in the member operator, see https://github.com/codeready-toolchain/member-operator/pull/333
 		if s.memberUserAcc.Labels == nil {
 			s.memberUserAcc.Labels = map[string]string{}
 		}
