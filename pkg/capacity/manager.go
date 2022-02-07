@@ -2,6 +2,7 @@ package capacity
 
 import (
 	"context"
+	"sort"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
@@ -55,8 +56,8 @@ func hasMemberREnoughResources(memberStatus toolchainv1alpha1.Member, threshold 
 	return false
 }
 
-// GetOptimalTargetCluster returns the first available cluster with enough capacity where a Space could be provisioned.
-// If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned, otherwise, it returns the first available one.
+// GetOptimalTargetCluster returns the name of the cluster with the most available capacity where a Space could be provisioned.
+// If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned.
 func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberClusters cluster.GetMemberClustersFunc, cl client.Client) (string, error) {
 	config, err := toolchainconfig.GetToolchainConfig(cl)
 	if err != nil {
@@ -72,24 +73,39 @@ func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberCluste
 	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
 		return "", errors.Wrapf(err, "unable to read ToolchainStatus resource")
 	}
+	optimalTargetClusters := getOptimalTargetClusters(preferredCluster, getMemberClusters, hasNotReachedMaxNumberOfUsersThreshold(config, counts), hasEnoughResources(config, status))
 
-	return getOptimalTargetCluster(preferredCluster, getMemberClusters, hasNotReachedMaxNumberOfUsersThreshold(config, counts), hasEnoughResources(config, status)), nil
+	sort.Slice(optimalTargetClusters, func(i, j int) bool {
+		provisioned1 := counts.UserAccountsPerClusterCounts[optimalTargetClusters[i]]
+		threshold1 := config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster()[optimalTargetClusters[i]]
+
+		provisioned2 := counts.UserAccountsPerClusterCounts[optimalTargetClusters[j]]
+		threshold2 := config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster()[optimalTargetClusters[j]]
+
+		return float32(provisioned1)/float32(threshold1) < float32(provisioned2)/float32(threshold2)
+	})
+	return optimalTargetClusters[0], nil
 }
 
-func getOptimalTargetCluster(preferredCluster string, getMemberClusters cluster.GetMemberClustersFunc, conditions ...cluster.Condition) string {
+func getOptimalTargetClusters(preferredCluster string, getMemberClusters cluster.GetMemberClustersFunc, conditions ...cluster.Condition) []string {
 	// Automatic cluster selection based on cluster readiness
 	members := getMemberClusters(append(conditions, cluster.Ready)...)
 	if len(members) == 0 {
-		return ""
+		return []string{""}
 	}
 
 	// if the preferred cluster is provided and it is also one of the available clusters, then the same name is returned, otherwise, it returns the first available one
 	if preferredCluster != "" {
 		for _, m := range members {
 			if preferredCluster == m.Name {
-				return m.Name
+				return []string{m.Name}
 			}
 		}
 	}
-	return members[0].Name
+
+	memberNames := make([]string, len(members))
+	for i := range members {
+		memberNames[i] = members[i].Name
+	}
+	return memberNames
 }

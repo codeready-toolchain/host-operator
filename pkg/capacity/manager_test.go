@@ -31,7 +31,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			"1,external": 700,
 		}),
 		WithMember("member1", WithUserAccountCount(700), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
-		WithMember("member2", WithUserAccountCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
+		WithMember("member2", WithUserAccountCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)),
+		WithMember("member3", WithUserAccountCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 50)))
 
 	t.Run("with one cluster and enough capacity", func(t *testing.T) {
 		// given
@@ -52,15 +53,15 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		assert.Equal(t, "member1", clusterName)
 	})
 
-	t.Run("with two clusters and enough capacity in both of them so it returns the first one", func(t *testing.T) {
+	t.Run("with two clusters and enough capacity in both of them so it returns the with more capacity (the first one)", func(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
-				MaxNumberOfUsers(2000, testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
+				MaxNumberOfUsers(2000, testconfig.PerMemberCluster("member1", 10000), testconfig.PerMemberCluster("member2", 300), testconfig.PerMemberCluster("member3", 400)).
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
 
 		// when
 		clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
@@ -68,6 +69,24 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, "member1", clusterName)
+	})
+
+	t.Run("with two clusters and enough capacity in both of them so it returns the with more capacity (the third one)", func(t *testing.T) {
+		// given
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
+			testconfig.AutomaticApproval().
+				MaxNumberOfUsers(2000, testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000), testconfig.PerMemberCluster("member3", 2000)).
+				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
+		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		InitializeCounters(t, toolchainStatus)
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
+
+		// when
+		clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "member3", clusterName)
 	})
 
 	t.Run("with two clusters and enough capacity in both of them, but the second one is the preferred", func(t *testing.T) {
