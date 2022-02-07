@@ -71,7 +71,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		assert.Equal(t, "member1", clusterName)
 	})
 
-	t.Run("with two clusters and enough capacity in both of them so it returns the with more capacity (the third one)", func(t *testing.T) {
+	t.Run("with three clusters and enough capacity in both of them so it returns the with more capacity (the third one)", func(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
