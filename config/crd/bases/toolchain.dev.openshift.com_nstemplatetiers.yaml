@@ -73,7 +73,7 @@ spec:
                 x-kubernetes-list-type: atomic
               spaceRoles:
                 additionalProperties:
-                  description: NSTemplateTierSpaceRoles the space roles definition
+                  description: NSTemplateTierSpaceRole the space roles definition
                     in an NSTemplateTier resource
                   properties:
                     templateRef:
