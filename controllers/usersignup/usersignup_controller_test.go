@@ -183,15 +183,15 @@ func TestUserSignupCreateSpaceOk(t *testing.T) {
 			assert.Equal(t, "approved", actualUserSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 			switch testname {
 			case "without skip space creation annotation":
-				spacetest.AssertThatSpace(t, userSignup.Namespace, "foo", r.Client).
+				spacetest.AssertThatSpace(t, "foo", r.Client).
 					Exists().
 					HasSpecTargetCluster("member1")
 			case "with skip space creation annotation set to false":
-				spacetest.AssertThatSpace(t, userSignup.Namespace, "foo", r.Client).
+				spacetest.AssertThatSpace(t, "foo", r.Client).
 					Exists().
 					HasSpecTargetCluster("member1")
 			case "with skip space creation annotation set to true":
-				spacetest.AssertThatSpace(t, userSignup.Namespace, "foo", r.Client).
+				spacetest.AssertThatSpace(t, "foo", r.Client).
 					DoesNotExist()
 			default:
 				assert.Fail(t, "unknown testcase")
@@ -1648,7 +1648,7 @@ func TestMigrateExistingMURToSpace(t *testing.T) {
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
 		require.NoError(t, err)
 		assert.Equal(t, "approved", actualUserSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		spacetest.AssertThatSpace(t, userSignup.Namespace, "foo", r.Client).
+		spacetest.AssertThatSpace(t, "foo", r.Client).
 			Exists().
 			HasSpecTargetCluster("member1").
 			HasTier(baseNSTemplateTier.Name)
@@ -1831,7 +1831,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
-	t.Run("when MUR exists, then it should be deleted", func(t *testing.T) {
+	t.Run("when MUR exists, then it and its space should be deleted", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}

@@ -32,10 +32,10 @@ func (a *Assertion) loadResource() error {
 }
 
 // AssertThatSpace helper func to begin with the assertions on a Space
-func AssertThatSpace(t test.T, namespace, name string, client client.Client) *Assertion {
+func AssertThatSpace(t test.T, name string, client client.Client) *Assertion {
 	return &Assertion{
 		client:         client,
-		namespacedName: test.NamespacedName(namespace, name),
+		namespacedName: test.NamespacedName(test.HostOperatorNs, name),
 		t:              t,
 	}
 }
