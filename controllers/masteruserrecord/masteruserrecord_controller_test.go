@@ -553,7 +553,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		}
 		otherTier := tiertest.OtherTier()
 		modifiedMur := murtest.NewMasterUserRecord(t, "john",
-			murtest.UserID(mur.Spec.UserID),
 			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
 			murtest.TierName(otherTier.Name),
 			murtest.UserID("abc123")) // UserID is different and needs to be synced
