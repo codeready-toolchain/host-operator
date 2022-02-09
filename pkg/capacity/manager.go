@@ -2,6 +2,7 @@ package capacity
 
 import (
 	"context"
+	"math"
 	"sort"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -82,7 +83,7 @@ func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberCluste
 		provisioned2 := counts.UserAccountsPerClusterCounts[optimalTargetClusters[j]]
 		threshold2 := config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster()[optimalTargetClusters[j]]
 
-		return float32(provisioned1)/float32(threshold1) < float32(provisioned2)/float32(threshold2)
+		return math.Round(float64(provisioned1)/float64(threshold1)*10) < math.Round(float64(provisioned2)/float64(threshold2)*10)
 	})
 	return optimalTargetClusters[0], nil
 }

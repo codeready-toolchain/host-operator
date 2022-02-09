@@ -7,11 +7,13 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
+	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,7 +55,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		assert.Equal(t, "member1", clusterName)
 	})
 
-	t.Run("with two clusters and enough capacity in both of them so it returns the with more capacity (the first one)", func(t *testing.T) {
+	t.Run("with three clusters and enough capacity in all of them so it returns the with more capacity (the first one)", func(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
@@ -71,7 +73,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		assert.Equal(t, "member1", clusterName)
 	})
 
-	t.Run("with three clusters and enough capacity in both of them so it returns the with more capacity (the third one)", func(t *testing.T) {
+	t.Run("with three clusters and enough capacity in all of them so it returns the with more capacity (the third one)", func(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
@@ -87,6 +89,50 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, "member3", clusterName)
+	})
+
+	t.Run("verify that the users are provisioned to clusters in a batches of 50", func(t *testing.T) {
+		// given
+		// member2 and member3 have the same capacity left
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
+			testconfig.AutomaticApproval().
+				MaxNumberOfUsers(2000, testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000), testconfig.PerMemberCluster("member3", 1000)).
+				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
+		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		InitializeCounters(t, toolchainStatus)
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
+
+		// provision 50 in member2
+		for i := 0; i < 50; i++ {
+			// when
+			clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, "member2", clusterName)
+
+			counter.IncrementUserAccountCount(log.Log, "member2")
+		}
+
+		// provision 50 in member3
+		for i := 0; i < 50; i++ {
+			// when
+			clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+
+			// then
+			require.NoError(t, err)
+			assert.Equal(t, "member3", clusterName)
+
+			counter.IncrementUserAccountCount(log.Log, "member3")
+		}
+
+		// when
+		clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+
+		// then
+		require.NoError(t, err)
+		// expect that it would start provisioning in member2 again
+		assert.Equal(t, "member2", clusterName)
 	})
 
 	t.Run("with two clusters and enough capacity in both of them, but the second one is the preferred", func(t *testing.T) {
