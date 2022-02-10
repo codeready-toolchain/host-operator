@@ -15,14 +15,12 @@ func TestNewSpace(t *testing.T) {
 	// given
 	userSignup := NewUserSignup()
 
-	nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
-
 	// when
-	space := newSpace(userSignup, test.MemberClusterName, "johny", nsTemplateTier.Name)
+	space := newSpace(userSignup, test.MemberClusterName, "johny", "advanced")
 
 	// then
 	expectedSpace := spacetest.NewSpace("johny",
-		spacetest.WithTierNameFor(nsTemplateTier),
+		spacetest.WithTierName("advanced"),
 		spacetest.WithSpecTargetCluster("member-cluster"),
 		spacetest.WithCreatorLabel("johny"))
 	assert.Equal(t, expectedSpace, space)

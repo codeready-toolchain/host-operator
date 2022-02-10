@@ -151,7 +151,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.NoError(t, err) // the lack of tierName is valid, hence no error is returned
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, s.Name, hostClient).
 				HasNoStatusTargetCluster().
 				HasStateLabel("pending").
 				HasConditions(spacetest.ProvisioningPending("unspecified tier name")) // the Space will remain in `ProvisioningPending` until a tierName is set.

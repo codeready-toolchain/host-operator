@@ -38,7 +38,7 @@ func TestCreateSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
+		spacetest.AssertThatSpace(t, space.Name, cl).
 			HasTier("base").
 			HasSpecTargetCluster("")
 	})
@@ -54,7 +54,7 @@ func TestCreateSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
+		spacetest.AssertThatSpace(t, space.Name, cl).
 			HasTier("advanced").
 			HasSpecTargetCluster("member1")
 	})
@@ -71,7 +71,7 @@ func TestCreateSpace(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
+		spacetest.AssertThatSpace(t, space.Name, cl).
 			HasTier("base").
 			HasSpecTargetCluster("member2")
 	})
@@ -89,7 +89,7 @@ func TestCreateSpace(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
+			spacetest.AssertThatSpace(t, space.Name, cl).
 				HasTier("advanced").
 				HasSpecTargetCluster("member2")
 		})
@@ -106,7 +106,7 @@ func TestCreateSpace(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
+			spacetest.AssertThatSpace(t, space.Name, cl).
 				HasTier("").
 				HasSpecTargetCluster("")
 		})
@@ -122,7 +122,7 @@ func TestCreateSpace(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
+			spacetest.AssertThatSpace(t, space.Name, cl).
 				HasTier("advanced").
 				HasSpecTargetCluster("")
 		})
@@ -160,7 +160,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.Error(t, err)
 			cl.MockGet = nil
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
+			spacetest.AssertThatSpace(t, space.Name, cl).
 				HasTier("advanced").
 				HasSpecTargetCluster("")
 		})
@@ -182,7 +182,7 @@ func TestCreateSpace(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
+			spacetest.AssertThatSpace(t, space.Name, cl).
 				HasTier("").
 				HasSpecTargetCluster("")
 		})
@@ -204,7 +204,7 @@ func TestCreateSpace(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
+			spacetest.AssertThatSpace(t, space.Name, cl).
 				HasTier("advanced").
 				HasSpecTargetCluster("")
 		})
