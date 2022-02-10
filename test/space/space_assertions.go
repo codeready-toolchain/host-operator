@@ -241,3 +241,33 @@ func TerminatingFailed(msg string) toolchainv1alpha1.Condition {
 		Message: msg,
 	}
 }
+
+// Assertions on multiple Spaces at once
+type SpacesAssertion struct {
+	spaces    *toolchainv1alpha1.SpaceList
+	client    client.Client
+	namespace string
+	t         test.T
+}
+
+func AssertThatSpaces(t test.T, client client.Client) *SpacesAssertion {
+	return &SpacesAssertion{
+		client:    client,
+		namespace: test.HostOperatorNs,
+		t:         t,
+	}
+}
+
+func (a *SpacesAssertion) loadSpaces() error {
+	spaces := &toolchainv1alpha1.SpaceList{}
+	err := a.client.List(context.TODO(), spaces, client.InNamespace(a.namespace))
+	a.spaces = spaces
+	return err
+}
+
+func (a *SpacesAssertion) HaveCount(count int) *SpacesAssertion {
+	err := a.loadSpaces()
+	require.NoError(a.t, err)
+	require.Len(a.t, a.spaces.Items, count)
+	return a
+}
