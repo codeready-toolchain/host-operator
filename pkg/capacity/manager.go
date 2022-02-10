@@ -2,7 +2,6 @@ package capacity
 
 import (
 	"context"
-	"math"
 	"sort"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -58,6 +57,12 @@ func hasMemberREnoughResources(memberStatus toolchainv1alpha1.Member, threshold 
 }
 
 // GetOptimalTargetCluster returns the name of the cluster with the most available capacity where a Space could be provisioned.
+//
+// If two clusters have the same limit and they both have the same usage, then the logic distributes users in a batches of 50.
+//
+// If the two clusters don't have the same limit, then the batch is based on the scale of the limits.
+// Let's say that the limit for member1 is 1000 and for member2 is 2000, then the batch of users would be 50 for member1 and 100 for member2.
+//
 // If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned.
 func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberClusters cluster.GetMemberClustersFunc, cl client.Client) (string, error) {
 	config, err := toolchainconfig.GetToolchainConfig(cl)
@@ -83,8 +88,15 @@ func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberCluste
 		provisioned2 := counts.UserAccountsPerClusterCounts[optimalTargetClusters[j]]
 		threshold2 := config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster()[optimalTargetClusters[j]]
 
-		return math.Round(float64(provisioned1)/float64(threshold1)*10) < math.Round(float64(provisioned2)/float64(threshold2)*10)
+		// Let's round the number of provisioned users down to closest multiple of 50
+		// This is a trick we need to do before comparing the capacity, so we can distribute the users in batches by 50 (if the clusters have the same limit)
+		provisioned1 = (provisioned1 / 50) * 50
+		provisioned2 = (provisioned2 / 50) * 50
+
+		// now we can calculate what is the actual usage of the clusters (how many users are provisioned there compared to the threshold) and compare them
+		return float64(provisioned1)/float64(threshold1) < float64(provisioned2)/float64(threshold2)
 	})
+
 	return optimalTargetClusters[0], nil
 }
 
