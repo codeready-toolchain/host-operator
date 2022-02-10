@@ -139,7 +139,7 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 	}
 
 	// apply the change in MasterUserRecord
-	murUpdated, err := r.changeTierInMasterUserRecord(logger, changeTierRequest, namespace, nsTemplateTier)
+	murUpdated, err := r.changeTierInMasterUserRecord(logger, changeTierRequest, namespace)
 	if err != nil {
 		return err
 	}
@@ -161,7 +161,7 @@ func (r *Reconciler) changeTier(logger logr.Logger, changeTierRequest *toolchain
 
 // changeTierInMasterUserRecord changes the tier in the MasterUserRecord.
 // returns `false` if there was no MasterUserRecord matching the `changeTierRequest.Spec.MurName`.
-func (r *Reconciler) changeTierInMasterUserRecord(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string, nsTemplateTier *toolchainv1alpha1.NSTemplateTier) (bool, error) {
+func (r *Reconciler) changeTierInMasterUserRecord(logger logr.Logger, changeTierRequest *toolchainv1alpha1.ChangeTierRequest, namespace string) (bool, error) {
 	mur := &toolchainv1alpha1.MasterUserRecord{}
 	murName := types.NamespacedName{Namespace: namespace, Name: changeTierRequest.Spec.MurName}
 	if err := r.Client.Get(context.TODO(), murName, mur); err != nil {

@@ -294,7 +294,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			return true, err
 		}
 
-		// look-up the default NSTemplateTier
+		// look-up the default NSTemplateTier to set it on the MUR if not set
 		defaultTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
 		if err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
@@ -306,12 +306,10 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 		}
 
 		// check if anything in the MUR should be migrated/fixed
-		if changed, err := migrateOrFixMurIfNecessary(mur, defaultTier, userSignup); err != nil {
-			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
-		} else if changed {
+		if changed := migrateOrFixMurIfNecessary(mur, defaultTier, userSignup); changed {
 			reqLogger.Info("Updating MasterUserRecord after it was migrated")
 			if err := r.Client.Update(context.TODO(), mur); err != nil {
-				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to migrate or fix existing MasterUserRecord")
+				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable update MasterUserRecord to complete migration")
 			}
 			return true, nil
 		}
@@ -432,7 +430,7 @@ func (r *Reconciler) ensureNewMurAndSpaceIfApproved(reqLogger logr.Logger, confi
 	}
 
 	// Provision the MasterUserRecord
-	return r.provisionMasterUserRecord(reqLogger, config, userSignup, targetCluster, nstemplateTier, compliantUsername)
+	return r.provisionMasterUserRecord(reqLogger, userSignup, targetCluster, nstemplateTier, compliantUsername)
 }
 
 func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, state string) error {
@@ -528,7 +526,7 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
-func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
+func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
 	nstemplateTier *toolchainv1alpha1.NSTemplateTier, compliantUsername string) error {
 
 	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, compliantUsername)

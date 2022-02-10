@@ -1597,74 +1597,83 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 }
 
 func TestMigrateExistingMURToSpace(t *testing.T) {
-	member := NewMemberCluster(t, "member1", v1.ConditionTrue)
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	t.Run("MUR exists and still references NSTemplateSet", func(t *testing.T) {
-		userSignup := NewUserSignup()
-		userSignup.Annotations = map[string]string{
-			toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-		}
-		userSignup.Labels = map[string]string{
-			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
-			"toolchain.dev.openshift.com/approved":            "true",
-		}
-		userSignup.Spec.OriginalSub = "original-sub:foo"
+	customTier := newNsTemplateTier("custom", "dev", "stage")
 
-		mur := newMasterUserRecord(userSignup, "member1", baseNSTemplateTier, "foo")
-		templates := nstemplateSetFromTier(*baseNSTemplateTier)
-		ua := toolchainv1alpha1.UserAccountEmbedded{
-			TargetCluster: "member1",
-			SyncIndex:     "123abc", // default value
-			Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
-				UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
-					NSLimit:       baseNSTemplateTier.Name,
-					NSTemplateSet: &templates,
-				},
-			},
-		}
-		// set the user account
-		mur.Spec.UserAccounts = append(mur.Spec.UserAccounts, ua)
+	for testname, testTier := range map[string]*toolchainv1alpha1.NSTemplateTier{
+		"default tier":     baseNSTemplateTier,
+		"non-default tier": customTier,
+	} {
+		t.Run(testname, func(t *testing.T) {
+			member := NewMemberCluster(t, "member1", v1.ConditionTrue)
+			logf.SetLogger(zap.New(zap.UseDevMode(true)))
+			t.Run("MUR exists and still references NSTemplateSet", func(t *testing.T) {
+				userSignup := NewUserSignup()
+				userSignup.Annotations = map[string]string{
+					toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				}
+				userSignup.Labels = map[string]string{
+					toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+					"toolchain.dev.openshift.com/approved":            "true",
+				}
+				userSignup.Spec.OriginalSub = "original-sub:foo"
 
-		// given
-		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier, mur)
+				mur := newMasterUserRecord(userSignup, "member1", testTier, "foo")
+				templates := nstemplateSetFromTier(*testTier)
+				ua := toolchainv1alpha1.UserAccountEmbedded{
+					TargetCluster: "member1",
+					SyncIndex:     "123abc", // default value
+					Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
+						UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
+							NSLimit:       testTier.Name,
+							NSTemplateSet: &templates,
+						},
+					},
+				}
+				// set the user account
+				mur.Spec.UserAccounts = append(mur.Spec.UserAccounts, ua)
 
-		InitializeCounters(t, NewToolchainStatus(
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.External): 1,
-			}),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,external": 1,
-			}),
-		))
+				// given
+				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier, customTier, mur)
 
-		// when
-		res, err := r.Reconcile(context.TODO(), req)
+				InitializeCounters(t, NewToolchainStatus(
+					WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+						string(metrics.External): 1,
+					}),
+					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+						"1,external": 1,
+					}),
+				))
 
-		// then verify that the Space was created
-		require.NoError(t, err)
-		require.Equal(t, reconcile.Result{}, res)
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
 
-		actualUserSignup := &toolchainv1alpha1.UserSignup{}
-		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
-		require.NoError(t, err)
-		assert.Equal(t, "approved", actualUserSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		spacetest.AssertThatSpace(t, "foo", r.Client).
-			Exists().
-			HasSpecTargetCluster("member1").
-			HasTier(baseNSTemplateTier.Name)
+				// then verify that the Space was created
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, res)
 
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+				actualUserSignup := &toolchainv1alpha1.UserSignup{}
+				err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
+				require.NoError(t, err)
+				assert.Equal(t, "approved", actualUserSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+				spacetest.AssertThatSpace(t, "foo", r.Client).
+					Exists().
+					HasSpecTargetCluster("member1").
+					HasTier(testTier.Name)
 
-		AssertThatCountersAndMetrics(t).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-				string(metrics.External): 1,
-			}).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-				"1,external": 1,
-				"1,internal": 1,
+				AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+				AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+
+				AssertThatCountersAndMetrics(t).
+					HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+						string(metrics.External): 1,
+					}).
+					HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+						"1,external": 1,
+						"1,internal": 1,
+					})
 			})
-	})
+		})
+	}
 }
 
 func nstemplateSetFromTier(tier toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {

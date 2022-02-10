@@ -743,7 +743,8 @@ func TestModifyUserAccounts(t *testing.T) {
 	userAccount2 := uatest.NewUserAccountFromMur(mur)
 	userAccount3 := uatest.NewUserAccountFromMur(mur)
 
-	murtest.Modify(mur, murtest.UserID("abc123"))
+	err := murtest.Modify(mur, murtest.UserID("abc123"))
+	require.NoError(t, err)
 
 	toolchainStatus := NewToolchainStatus(
 		WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
@@ -768,7 +769,7 @@ func TestModifyUserAccounts(t *testing.T) {
 		ClusterClient("member3-cluster", memberClient3))
 
 	// when ensuring 1st account
-	_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+	_, err = cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 	// then
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient).

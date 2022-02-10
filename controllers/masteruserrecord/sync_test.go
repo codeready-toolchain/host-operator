@@ -162,13 +162,14 @@ func TestSynchronizeSpec(t *testing.T) {
 
 	userAccount := uatest.NewUserAccountFromMur(mur)
 
-	murtest.Modify(mur, murtest.UserID("abc123"))
+	err := murtest.Modify(mur, murtest.UserID("abc123"))
+	require.NoError(t, err)
 
 	hostClient := test.NewFakeClient(t, mur)
 	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 	// when
-	err := sync.synchronizeSpec()
+	err = sync.synchronizeSpec()
 
 	// then
 	require.NoError(t, err)
@@ -480,7 +481,8 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		memberClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
-		murtest.Modify(mur, murtest.UserID("abc123"))
+		err := murtest.Modify(mur, murtest.UserID("abc123"))
+		require.NoError(t, err)
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 
 		sync := Synchronizer{
@@ -494,7 +496,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		}
 
 		// when
-		err := sync.synchronizeSpec()
+		err = sync.synchronizeSpec()
 
 		// then
 		require.Error(t, err)

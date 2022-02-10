@@ -10,7 +10,6 @@ import (
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -23,7 +22,7 @@ func TestNewMasterUserRecord(t *testing.T) {
 	mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 
 	// then
-	assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+	assert.Equal(t, newExpectedMur(userSignup), mur)
 }
 
 func TestMigrateMurIfNecessary(t *testing.T) {
@@ -37,12 +36,11 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 
 			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
 
 			// then
-			require.NoError(t, err)
 			assert.False(t, changed)
-			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+			assert.Equal(t, newExpectedMur(userSignup), mur)
 		})
 	})
 
@@ -55,12 +53,11 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur.Spec.UserAccounts[0].Spec.NSLimit = "default" // NSLimit is set
 
 			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
 
 			// then
-			require.NoError(t, err)
 			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+			assert.Equal(t, newExpectedMur(userSignup), mur)
 		})
 
 		t.Run("when useraccount NSTemplateSet was set, it should be nil after migration", func(t *testing.T) {
@@ -71,12 +68,11 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &testNStemplateSet.Spec // NSTemplateSet is set
 
 			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
 
 			// then
-			require.NoError(t, err)
 			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+			assert.Equal(t, newExpectedMur(userSignup), mur)
 		})
 
 		t.Run("when MUR has tier hash label, it should be removed after migration", func(t *testing.T) {
@@ -90,12 +86,11 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			}
 
 			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
 
 			// then
-			require.NoError(t, err)
 			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+			assert.Equal(t, newExpectedMur(userSignup), mur)
 		})
 
 		t.Run("when tierName is missing", func(t *testing.T) {
@@ -105,18 +100,17 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 			mur.Spec.TierName = "" // tierName not set
 
 			// when
-			changed, err := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
 
 			// then
-			require.NoError(t, err)
 			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(nsTemplateTier, userSignup), mur)
+			assert.Equal(t, newExpectedMur(userSignup), mur)
 		})
 	})
 
 }
 
-func newExpectedMur(tier *toolchainv1alpha1.NSTemplateTier, userSignup *toolchainv1alpha1.UserSignup) *toolchainv1alpha1.MasterUserRecord {
+func newExpectedMur(userSignup *toolchainv1alpha1.UserSignup) *toolchainv1alpha1.MasterUserRecord {
 	return &toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      "johny",
