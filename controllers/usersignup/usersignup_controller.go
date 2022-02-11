@@ -302,7 +302,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 
 		// TODO this can be removed once all existing MURs have been migrated
 		if err := r.migrateFromMurToSpaceIfNecessary(reqLogger, mur, userSignup); err != nil {
-			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable to complete MUR to Space migration")
+			return true, err
 		}
 
 		// check if anything in the MUR should be migrated/fixed
