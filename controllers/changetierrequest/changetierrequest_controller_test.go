@@ -74,7 +74,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			HasTier(*teamTier).
-			UserAccountHasNoTier(test.MemberClusterName).
+			UserAccountHasNoTier("another-cluster").
 			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
