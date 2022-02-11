@@ -632,7 +632,7 @@ func (r *Reconciler) deleteMasterUserRecordAndSpace(mur *toolchainv1alpha1.Maste
 					"error deleting Space")
 			}
 			logger.Info("Deleted Space", "space", space.Name)
-		} else if err != nil && !errors.IsNotFound(err) {
+		} else if !errors.IsNotFound(err) {
 			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteSpace, err,
 				"error getting Space for deletion")
 		}
