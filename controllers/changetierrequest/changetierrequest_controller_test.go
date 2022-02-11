@@ -61,7 +61,7 @@ func TestChangeTierSuccess(t *testing.T) {
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
-	t.Run("UserAccounts in MUR should not have any tier", func(t *testing.T) {
+	t.Run("UserAccounts in MUR should not have any NSTemplateTier", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
