@@ -612,6 +612,13 @@ func (r *Reconciler) deleteMasterUserRecordAndSpace(mur *toolchainv1alpha1.Maste
 		return err
 	}
 
+	err = r.Client.Delete(context.TODO(), mur)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteMUR, err,
+			"error deleting MasterUserRecord")
+	}
+	logger.Info("Deleted MasterUserRecord", "mur", mur.Name)
+
 	// before a MasterUserRecord is deleted, its associated space (if any) must also be deleted
 	if shouldManageSpace(userSignup) {
 		space := &toolchainv1alpha1.Space{}
@@ -628,13 +635,6 @@ func (r *Reconciler) deleteMasterUserRecordAndSpace(mur *toolchainv1alpha1.Maste
 				"error getting Space for deletion")
 		}
 	}
-
-	err = r.Client.Delete(context.TODO(), mur)
-	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteMUR, err,
-			"error deleting MasterUserRecord")
-	}
-	logger.Info("Deleted MasterUserRecord", "mur", mur.Name)
 	return nil
 }
 
