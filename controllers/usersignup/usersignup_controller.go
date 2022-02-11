@@ -334,12 +334,7 @@ func (r *Reconciler) migrateFromMurToSpaceIfNecessary(reqLogger logr.Logger, mur
 	}
 	// handle space migration if there should be a Space tied to the UserSignup
 	if shouldMigrateNSTemplateSet {
-		tier, err := getNsTemplateTier(r.Client, mur.Spec.TierName, userSignup.Namespace)
-		if err != nil {
-			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "unable to get tier from MasterUserRecord")
-		}
-
-		if err = r.ensureSpace(reqLogger, userSignup, targetCluster(cluster), tier, mur.Name); err != nil {
+		if err := r.ensureSpace(reqLogger, userSignup, targetCluster(cluster), mur.Spec.TierName, mur.Name); err != nil {
 			return err
 		}
 	}
@@ -420,11 +415,7 @@ func (r *Reconciler) ensureNewMurAndSpaceIfApproved(reqLogger logr.Logger, confi
 	if shouldManageSpace(userSignup) {
 		reqLogger.Info("Creating Space", "Name", compliantUsername)
 		// auto space creation is enabled, ensure the Space is created
-		spaceTier, terr := getNsTemplateTier(r.Client, config.Tiers().DefaultSpaceTier(), userSignup.Namespace)
-		if terr != nil {
-			return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, terr, "unable to get space tier template")
-		}
-		if err := r.ensureSpace(reqLogger, userSignup, targetCluster, spaceTier, compliantUsername); err != nil {
+		if err := r.ensureSpace(reqLogger, userSignup, targetCluster, config.Tiers().DefaultSpaceTier(), compliantUsername); err != nil {
 			return err
 		}
 	}
@@ -553,7 +544,7 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, userSignup *t
 
 // ensureSpace does the work of provisioning the Space
 func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
-	nstemplateTier *toolchainv1alpha1.NSTemplateTier, compliantUsername string) error {
+	tierName, compliantUsername string) error {
 	space := &toolchainv1alpha1.Space{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: userSignup.Namespace,
@@ -571,7 +562,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 		return errs.Wrap(err, fmt.Sprintf(`failed to get Space associated with mur "%s"`, compliantUsername))
 	}
 
-	space = newSpace(userSignup, targetCluster, compliantUsername, nstemplateTier.Name)
+	space = newSpace(userSignup, targetCluster, compliantUsername, tierName)
 
 	err = controllerutil.SetControllerReference(userSignup, space, r.Scheme)
 	if err != nil {
@@ -585,7 +576,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 			"error creating Space")
 	}
 
-	logger.Info("Created Space", "Name", space.Name, "TargetCluster", targetCluster, "Tier", nstemplateTier.Name)
+	logger.Info("Created Space", "Name", space.Name, "TargetCluster", targetCluster, "Tier", tierName)
 	return nil
 }
 
