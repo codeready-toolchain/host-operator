@@ -177,10 +177,7 @@ func TestUserSignupCreateSpaceOk(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 
-			actualUserSignup := &toolchainv1alpha1.UserSignup{}
-			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
-			require.NoError(t, err)
-			assert.Equal(t, "approved", actualUserSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+			AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasLabel(toolchainv1alpha1.UserSignupStateLabelKey, "approved")
 			switch testname {
 			case "without skip space creation annotation":
 				spacetest.AssertThatSpace(t, "foo", r.Client).
