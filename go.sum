@@ -117,11 +117,6 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
-github.com/codeready-toolchain/api v0.0.0-20220128071955-6baa0dfc9574/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
-github.com/codeready-toolchain/api v0.0.0-20220128141941-727c0ecfe260 h1:o4s1tSe2YP9JyjBEaV41ZTM2U67agrU/utnB3NEEpF4=
-github.com/codeready-toolchain/api v0.0.0-20220128141941-727c0ecfe260/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220128072729-4dd5728f0084 h1:9V+OvCQU9h7V3W6bx0hhqO3JQL/hyENwuRPeq24XYf4=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220128072729-4dd5728f0084/go.mod h1:+wXPryRgWG13u0OQ1iv8ZxjLdEV0VwomkVceAu2bRKI=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -416,6 +411,10 @@ github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN
 github.com/mailru/easyjson v0.7.0/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7ldAVICs=
 github.com/mailru/easyjson v0.7.1 h1:mdxE1MF9o53iCb2Ghj1VfWvh7ZOwHpnVG/xwXrV90U8=
 github.com/mailru/easyjson v0.7.1/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7ldAVICs=
+github.com/matousjobanek/api v0.0.0-20220214184131-404951e4159a h1:2mDhTCNMKdOgkwSm6BfHsr6eC9O2JsGCCdoCJfWHbLg=
+github.com/matousjobanek/api v0.0.0-20220214184131-404951e4159a/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
+github.com/matousjobanek/toolchain-common v0.0.0-20220214184443-ca6f8b574953 h1:M6gDN8wOW3qW5LfKxFbYDrYK767WoXDTtkFbb8bcHb8=
+github.com/matousjobanek/toolchain-common v0.0.0-20220214184443-ca6f8b574953/go.mod h1:iKuv2cEPXMu5CNyJ87lheKELRcQjx26eYCfGkZQ4IYY=
 github.com/mattn/go-colorable v0.0.9/go.mod h1:9vuHe8Xs5qXnSaW/c/ABM9alt+Vo+STaOChaDxuIBZU=
 github.com/mattn/go-colorable v0.1.4/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
 github.com/mattn/go-colorable v0.1.8/go.mod h1:u6P/XSegPjTcexA+o6vUJrdnUu04hMope9wVRipJSqc=
