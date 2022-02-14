@@ -2,6 +2,7 @@ package capacity
 
 import (
 	"context"
+	"sort"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
@@ -55,8 +56,14 @@ func hasMemberREnoughResources(memberStatus toolchainv1alpha1.Member, threshold 
 	return false
 }
 
-// GetOptimalTargetCluster returns the first available cluster with enough capacity where a Space could be provisioned.
-// If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned, otherwise, it returns the first available one.
+// GetOptimalTargetCluster returns the name of the cluster with the most available capacity where a Space could be provisioned.
+//
+// If two clusters have the same limit and they both have the same usage, then the logic distributes users in a batches of 50.
+//
+// If the two clusters don't have the same limit, then the batch is based on the scale of the limits.
+// Let's say that the limit for member1 is 1000 and for member2 is 2000, then the batch of users would be 50 for member1 and 100 for member2.
+//
+// If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned.
 func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberClusters cluster.GetMemberClustersFunc, cl client.Client) (string, error) {
 	config, err := toolchainconfig.GetToolchainConfig(cl)
 	if err != nil {
@@ -72,24 +79,46 @@ func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberCluste
 	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
 		return "", errors.Wrapf(err, "unable to read ToolchainStatus resource")
 	}
+	optimalTargetClusters := getOptimalTargetClusters(preferredCluster, getMemberClusters, hasNotReachedMaxNumberOfUsersThreshold(config, counts), hasEnoughResources(config, status))
 
-	return getOptimalTargetCluster(preferredCluster, getMemberClusters, hasNotReachedMaxNumberOfUsersThreshold(config, counts), hasEnoughResources(config, status)), nil
+	sort.Slice(optimalTargetClusters, func(i, j int) bool {
+		provisioned1 := counts.UserAccountsPerClusterCounts[optimalTargetClusters[i]]
+		threshold1 := config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster()[optimalTargetClusters[i]]
+
+		provisioned2 := counts.UserAccountsPerClusterCounts[optimalTargetClusters[j]]
+		threshold2 := config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster()[optimalTargetClusters[j]]
+
+		// Let's round the number of provisioned users down to closest multiple of 50
+		// This is a trick we need to do before comparing the capacity, so we can distribute the users in batches by 50 (if the clusters have the same limit)
+		provisioned1 = (provisioned1 / 50) * 50
+		provisioned2 = (provisioned2 / 50) * 50
+
+		// now we can calculate what is the actual usage of the clusters (how many users are provisioned there compared to the threshold) and compare them
+		return float64(provisioned1)/float64(threshold1) < float64(provisioned2)/float64(threshold2)
+	})
+
+	return optimalTargetClusters[0], nil
 }
 
-func getOptimalTargetCluster(preferredCluster string, getMemberClusters cluster.GetMemberClustersFunc, conditions ...cluster.Condition) string {
+func getOptimalTargetClusters(preferredCluster string, getMemberClusters cluster.GetMemberClustersFunc, conditions ...cluster.Condition) []string {
 	// Automatic cluster selection based on cluster readiness
 	members := getMemberClusters(append(conditions, cluster.Ready)...)
 	if len(members) == 0 {
-		return ""
+		return []string{""}
 	}
 
 	// if the preferred cluster is provided and it is also one of the available clusters, then the same name is returned, otherwise, it returns the first available one
 	if preferredCluster != "" {
 		for _, m := range members {
 			if preferredCluster == m.Name {
-				return m.Name
+				return []string{m.Name}
 			}
 		}
 	}
-	return members[0].Name
+
+	memberNames := make([]string, len(members))
+	for i := range members {
+		memberNames[i] = members[i].Name
+	}
+	return memberNames
 }
