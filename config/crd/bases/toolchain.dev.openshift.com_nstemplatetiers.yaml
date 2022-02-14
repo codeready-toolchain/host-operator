@@ -71,6 +71,22 @@ spec:
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
+              spaceRoles:
+                additionalProperties:
+                  description: NSTemplateTierSpaceRole the space roles definition
+                    in an NSTemplateTier resource
+                  properties:
+                    templateRef:
+                      description: TemplateRef The name of the TierTemplate resource
+                        which exists in the host cluster and which contains the template
+                        to use
+                      type: string
+                  required:
+                  - templateRef
+                  type: object
+                description: the templates to set the spaces roles, indexed by role
+                type: object
+                x-kubernetes-map-type: atomic
             required:
             - namespaces
             type: object
