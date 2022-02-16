@@ -1728,7 +1728,9 @@ func TestMigrateExistingMURToSpace(t *testing.T) {
 				actualUserSignup := &toolchainv1alpha1.UserSignup{}
 				err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
 				require.NoError(t, err)
-				assert.Equal(t, "approved", actualUserSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+
+				AssertThatUserSignup(t, req.Namespace, actualUserSignup.Name, r.Client).HasLabel(toolchainv1alpha1.UserSignupStateLabelKey, "approved")
+
 				spacetest.AssertThatSpace(t, "foo", r.Client).
 					Exists().
 					HasSpecTargetCluster("member1").
