@@ -277,6 +277,9 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		HasTier(*baseNSTemplateTier).
 		Get()
 
+	// space should be created after the next reconcile
+	spacetest.AssertThatSpace(t, "foo", r.Client).DoesNotExist()
+
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.UserSignupApproved,
@@ -312,6 +315,12 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+
+		// space should now be created
+		spacetest.AssertThatSpace(t, "foo", r.Client).
+			Exists().
+			HasSpecTargetCluster("member1").
+			HasTier(baseNSTemplateTier.Name)
 
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
