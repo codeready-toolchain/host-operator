@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -168,7 +169,11 @@ func TestUserSignupCreateSpaceOk(t *testing.T) {
 		t.Run(testname, func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
+
+			mur := newMasterUserRecord(userSignup, "member1", baseNSTemplateTier, "foo")
+			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+
+			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, baseNSTemplateTier)
 
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -1252,19 +1257,37 @@ func TestUserSignupWithMissingApprovalPolicyTreatedAsManual(t *testing.T) {
 		})
 }
 
+type MurOrSpaceCreateFails struct {
+	testName      string
+	expectedError string
+}
+
 func TestUserSignupMUROrSpaceCreateFails(t *testing.T) {
 
-	for _, testname := range []string{
-		"mur create fail",
-		"space create fail",
+	for _, testcase := range []MurOrSpaceCreateFails{
+		{
+			testName:      "create mur error",
+			expectedError: "error creating MasterUserRecord: create mur error",
+		},
+		{
+			testName:      "create space error",
+			expectedError: "error creating Space: create space error",
+		},
 	} {
-		t.Run(testname, func(t *testing.T) {
+		t.Run(testcase.testName, func(t *testing.T) {
 
 			// given
 			userSignup := NewUserSignup(Approved())
 
 			ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-			r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup, baseNSTemplateTier)
+			initObjs := []runtime.Object{userSignup, baseNSTemplateTier}
+			if testcase.testName == "create space error" {
+				// mur must exist first, space is created on the reconcile after the mur is created
+				mur := newMasterUserRecord(userSignup, "member1", baseNSTemplateTier, "foo")
+				mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+				initObjs = append(initObjs, mur)
+			}
+			r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, initObjs...)
 			InitializeCounters(t, NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 					string(metrics.External): 1,
@@ -1277,13 +1300,13 @@ func TestUserSignupMUROrSpaceCreateFails(t *testing.T) {
 			fakeClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 				switch obj.(type) {
 				case *toolchainv1alpha1.MasterUserRecord:
-					if testname == "mur create fail" {
-						return errors.New("unable to create mur")
+					if testcase.testName == "create mur error" {
+						return errors.New("create mur error")
 					}
 					return fakeClient.Client.Create(ctx, obj)
 				case *toolchainv1alpha1.Space:
-					if testname == "space create fail" {
-						return errors.New("unable to create space")
+					if testcase.testName == "create space error" {
+						return errors.New("create space error")
 					}
 					return fakeClient.Client.Create(ctx, obj)
 				default:
@@ -1295,7 +1318,7 @@ func TestUserSignupMUROrSpaceCreateFails(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 
 			// then
-			require.Error(t, err)
+			require.EqualError(t, err, testcase.expectedError)
 			require.Equal(t, reconcile.Result{}, res)
 			AssertThatCountersAndMetrics(t).
 				HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -1532,8 +1555,10 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		},
 	}
 
+	space := newSpace(userSignup, "member1", mur.Name, "base")
+
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, mur, space, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
@@ -1615,6 +1640,7 @@ func TestMigrateExistingMURToSpace(t *testing.T) {
 				userSignup.Spec.OriginalSub = "original-sub:foo"
 
 				mur := newMasterUserRecord(userSignup, "member1", testTier, "foo")
+				mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 				templates := nstemplateSetFromTier(*testTier)
 				ua := toolchainv1alpha1.UserAccountEmbedded{
 					TargetCluster: "member1",
@@ -1843,6 +1869,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 		space := spacetest.NewSpace(mur.Name,
+			spacetest.WithCreatorLabel(userSignup.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
@@ -1883,11 +1910,11 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 				Reason: "DeactivationInProgress",
 			})
 
-		// The MUR should have now been deleted
-		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
-
 		// The Space should have been deleted
 		spacetest.AssertThatSpace(t, space.Name, r.Client).DoesNotExist()
+
+		// The MUR should have now been deleted
+		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 
 		AssertThatCountersAndMetrics(t).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -2517,6 +2544,9 @@ func TestUserSignupDeactivatedWhenMURAndSpaceExists(t *testing.T) {
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+
+			// The Space should still be deleted after the second reconcile
+			spacetest.AssertThatSpace(t, space.Name, r.Client).DoesNotExist()
 		})
 	})
 }
@@ -2821,6 +2851,7 @@ func TestUserSignupBannedMURAndSpaceExists(t *testing.T) {
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 	space := spacetest.NewSpace(mur.Name,
+		spacetest.WithCreatorLabel(userSignup.Name),
 		spacetest.WithSpecTargetCluster("member-1"),
 		spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 		spacetest.WithFinalizer())
@@ -2913,6 +2944,9 @@ func TestUserSignupBannedMURAndSpaceExists(t *testing.T) {
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,external": 1,
 			})
+
+		// Confirm that the Space still does not exist
+		spacetest.AssertThatSpaces(t, r.Client).HaveCount(0)
 	})
 }
 
@@ -2948,18 +2982,26 @@ func TestUserSignupListBannedUsersFails(t *testing.T) {
 		})
 }
 
+type UserSignupDeactivationFailsTestData struct {
+	name    string
+	reason  string
+	message string
+}
+
 func TestUserSignupDeactivatedButMUROrSpaceDeleteFails(t *testing.T) {
-	for testname, testValues := range map[string]map[string]string{
-		"usersignup deactivated but mur delete failed": {
-			"Reason":  "UnableToDeleteMUR",
-			"Message": "unable to delete mur",
+	for _, testValues := range []UserSignupDeactivationFailsTestData{
+		{
+			name:    "usersignup deactivated but mur delete failed",
+			reason:  "UnableToDeleteMUR",
+			message: "unable to delete mur",
 		},
-		"usersignup deactivated but space delete failed": {
-			"Reason":  "UnableToDeleteSpace",
-			"Message": "unable to delete space",
+		{
+			name:    "usersignup deactivated but space delete failed",
+			reason:  "UnableToDeleteSpace",
+			message: "unable to delete space",
 		},
 	} {
-		t.Run(testname, func(t *testing.T) {
+		t.Run(testValues.name, func(t *testing.T) {
 			// given
 			userSignup := &toolchainv1alpha1.UserSignup{
 				ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
@@ -2992,6 +3034,7 @@ func TestUserSignupDeactivatedButMUROrSpaceDeleteFails(t *testing.T) {
 			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 			space := spacetest.NewSpace(mur.Name,
+				spacetest.WithCreatorLabel(userSignup.Name),
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 				spacetest.WithFinalizer())
@@ -3009,13 +3052,13 @@ func TestUserSignupDeactivatedButMUROrSpaceDeleteFails(t *testing.T) {
 			fakeClient.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 				switch obj.(type) {
 				case *toolchainv1alpha1.MasterUserRecord:
-					if testname == "usersignup deactivated but mur delete failed" {
-						return errors.New(testValues["Message"])
+					if testValues.name == "usersignup deactivated but mur delete failed" {
+						return errors.New(testValues.message)
 					}
 					return fakeClient.Client.Delete(ctx, obj, opts...)
 				case *toolchainv1alpha1.Space:
-					if testname == "usersignup deactivated but space delete failed" {
-						return errors.New(testValues["Message"])
+					if testValues.name == "usersignup deactivated but space delete failed" {
+						return errors.New(testValues.message)
 					}
 					return fakeClient.Client.Delete(ctx, obj, opts...)
 				default:
@@ -3023,7 +3066,7 @@ func TestUserSignupDeactivatedButMUROrSpaceDeleteFails(t *testing.T) {
 				}
 			}
 
-			t.Run("first reconcile - status should show message about deletion failure", func(t *testing.T) {
+			t.Run("first reconcile", func(t *testing.T) {
 				// when
 				_, err := r.Reconcile(context.TODO(), req)
 				require.Error(t, err)
@@ -3048,8 +3091,8 @@ func TestUserSignupDeactivatedButMUROrSpaceDeleteFails(t *testing.T) {
 					toolchainv1alpha1.Condition{
 						Type:    toolchainv1alpha1.UserSignupComplete,
 						Status:  v1.ConditionFalse,
-						Reason:  testValues["Reason"],
-						Message: testValues["Message"],
+						Reason:  testValues.reason,
+						Message: testValues.message,
 					})
 				AssertThatCountersAndMetrics(t).
 					HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
@@ -3059,7 +3102,7 @@ func TestUserSignupDeactivatedButMUROrSpaceDeleteFails(t *testing.T) {
 						"1,external": 1,
 					})
 
-				t.Run("second reconcile - there should not be a notification created since the mur deletion failed even if reconciled again", func(t *testing.T) {
+				t.Run("second reconcile - there should not be a notification created since there was a deletion failure even if reconciled again", func(t *testing.T) {
 					_, err := r.Reconcile(context.TODO(), req)
 					require.Error(t, err)
 					ntest.AssertNoNotificationsExist(t, r.Client)
@@ -3386,6 +3429,7 @@ func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
 }
 
 func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMemberClustersFunc, initObjs ...runtime.Object) (*Reconciler, reconcile.Request, *test.FakeClient) {
+	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	metrics.Reset()
 
 	s := scheme.Scheme
@@ -3543,6 +3587,12 @@ func TestChangedCompliantUsername(t *testing.T) {
 			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
 		},
 	}
+	ua := toolchainv1alpha1.UserAccountEmbedded{
+		TargetCluster: "member1",
+		SyncIndex:     "123abc", // default value
+	}
+	// set the user account
+	oldMur.Spec.UserAccounts = append(oldMur.Spec.UserAccounts, ua)
 
 	// create the initial resources
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, oldMur, baseNSTemplateTier)
@@ -3601,6 +3651,7 @@ func TestMigrateMur(t *testing.T) {
 	// given
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
 	mur := newMasterUserRecord(userSignup, "east", baseNSTemplateTier, "foo")
+	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 	// set NSLimit and NSTemplateSet to be empty
 	mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}

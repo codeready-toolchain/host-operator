@@ -17,6 +17,7 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, default
 		changed = true
 	}
 
+	// TODO this can be removed once all existing MURs have been migrated
 	for uaIndex, userAccount := range mur.Spec.UserAccounts {
 		if userAccount.Spec.NSLimit != "" {
 			mur.Spec.UserAccounts[uaIndex].Spec.NSLimit = ""

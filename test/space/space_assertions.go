@@ -25,9 +25,9 @@ type Assertion struct {
 }
 
 func (a *Assertion) loadResource() error {
-	tier := &toolchainv1alpha1.Space{}
-	err := a.client.Get(context.TODO(), a.namespacedName, tier)
-	a.space = tier
+	space := &toolchainv1alpha1.Space{}
+	err := a.client.Get(context.TODO(), a.namespacedName, space)
+	a.space = space
 	return err
 }
 

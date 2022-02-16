@@ -8,7 +8,7 @@ import (
 
 func newSpace(userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster, compliantUserName, tier string) *toolchainv1alpha1.Space {
 	labels := map[string]string{
-		toolchainv1alpha1.SpaceCreatorLabelKey: compliantUserName,
+		toolchainv1alpha1.SpaceCreatorLabelKey: userSignup.Name,
 	}
 
 	space := &toolchainv1alpha1.Space{
