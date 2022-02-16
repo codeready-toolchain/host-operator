@@ -184,11 +184,7 @@ func TestUserSignupCreateSpaceOk(t *testing.T) {
 
 			AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasLabel(toolchainv1alpha1.UserSignupStateLabelKey, "approved")
 			switch testname {
-			case "without skip space creation annotation":
-				spacetest.AssertThatSpace(t, "foo", r.Client).
-					Exists().
-					HasSpecTargetCluster("member1")
-			case "with skip space creation annotation set to false":
+			case "without skip space creation annotation", "with skip space creation annotation set to false":
 				spacetest.AssertThatSpace(t, "foo", r.Client).
 					Exists().
 					HasSpecTargetCluster("member1")
