@@ -644,7 +644,7 @@ func (r *Reconciler) ensureSpaceDeleted(logger logr.Logger, userSignup *toolchai
 
 		// delete any spaces owned by the UserSignup
 		for _, space := range spaceList.Items {
-			err = r.Client.Delete(context.TODO(), &space)
+			err = r.Client.Delete(context.TODO(), &space) // nolint:gosec
 			if err != nil {
 				return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteSpace, err,
 					"error deleting Space")
