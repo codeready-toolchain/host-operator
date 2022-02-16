@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
@@ -3703,21 +3704,27 @@ func TestChangedCompliantUsername(t *testing.T) {
 func TestMigrateMur(t *testing.T) {
 	// given
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
-	mur := newMasterUserRecord(userSignup, "east", baseNSTemplateTier, "foo")
-	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+	expectedMur := newMasterUserRecord(userSignup, "east", baseNSTemplateTier, "foo")
 
-	// set NSLimit and NSTemplateSet to be empty
-	mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
-	mur.Spec.UserAccounts[0].Spec.NSLimit = ""
+	oldMur := expectedMur.DeepCopy()
 
-	expectedMur := mur.DeepCopy()
-	expectedMur.Generation = 1
-	expectedMur.ResourceVersion = "1000"
-	expectedMur.Spec.TierName = "base"
-	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
-	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName = "base"
-	expectedMur.Spec.UserAccounts[0].Spec.NSLimit = "default"
-	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []toolchainv1alpha1.NSTemplateSetNamespace{
+	oldMur.Generation = 1
+	oldMur.ResourceVersion = "1000"
+
+	// old MUR does not have TierName set
+	oldMur.Spec.TierName = ""
+
+	// old MUR has tier hash label set
+	oldMur.Labels = map[string]string{
+		toolchainv1alpha1.MasterUserRecordOwnerLabelKey:            userSignup.Name,
+		tierutil.TemplateTierHashLabelKey(baseNSTemplateTier.Name): "123abc",
+	}
+
+	// old MUR has NSLimit and NSTemplateSet set
+	oldMur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
+	oldMur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName = "base"
+	oldMur.Spec.UserAccounts[0].Spec.NSLimit = "default"
+	oldMur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []toolchainv1alpha1.NSTemplateSetNamespace{
 		{
 			TemplateRef: "base-dev-123abc1",
 		},
@@ -3725,13 +3732,13 @@ func TestMigrateMur(t *testing.T) {
 			TemplateRef: "base-stage-123abc2",
 		},
 	}
-	expectedMur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
+	oldMur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
 		TemplateRef: "base-clusterresources-654321b",
 	}
 
-	t.Run("add missing tierName and nsLimit fields", func(t *testing.T) {
+	t.Run("mur should be migrated", func(t *testing.T) {
 		// given
-		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier, mur)
+		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier, oldMur)
 		InitializeCounters(t, NewToolchainStatus())
 
 		// when
@@ -3739,7 +3746,16 @@ func TestMigrateMur(t *testing.T) {
 		// then verify that the MUR exists and is complete
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-		murtest.AssertThatMasterUserRecord(t, expectedMur.Name, r.Client).Exists()
+		actualMur := murtest.AssertThatMasterUserRecord(t, expectedMur.Name, r.Client).
+			Exists().
+			HasTier(*baseNSTemplateTier).                                                        // tier name should be set
+			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(baseNSTemplateTier.Name)).        // should not have tier hash label anymore
+			HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name). // other labels unchanged
+			Get()
+
+		// additional checks that we don't have MUR assertions for
+		require.Empty(t, actualMur.Spec.UserAccounts[0].Spec.NSLimit)     // NSLimit should be empty (deprecated)
+		require.Nil(t, actualMur.Spec.UserAccounts[0].Spec.NSTemplateSet) // NSTemplateSet should be nil (deprecated), they should be managed by Spaces now
 	})
 }
 

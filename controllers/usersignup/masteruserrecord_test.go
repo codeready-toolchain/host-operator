@@ -78,11 +78,10 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		t.Run("when MUR has tier hash label, it should be removed after migration", func(t *testing.T) {
 			userSignup := NewUserSignup()
 			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
-			testNStemplateSet := murtest.DefaultNSTemplateSet()
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			mur.Labels = map[string]string{
-				"toolchain.dev.openshift.com/owner":                       userSignup.Name,
-				tierutil.TemplateTierHashLabelKey(testNStemplateSet.Name): "abc123", // tier hash label set
+				"toolchain.dev.openshift.com/owner":                    userSignup.Name,
+				tierutil.TemplateTierHashLabelKey(nsTemplateTier.Name): "abc123", // tier hash label set
 			}
 
 			// when
