@@ -316,12 +316,6 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
 		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 
-		// space should now be created
-		spacetest.AssertThatSpace(t, "foo", r.Client).
-			Exists().
-			HasSpecTargetCluster("member1").
-			HasTier(baseNSTemplateTier.Name)
-
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupApproved,
@@ -342,6 +336,12 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 				Status: v1.ConditionFalse,
 				Reason: "UserIsActive",
 			})
+
+		// space should now be created
+		spacetest.AssertThatSpace(t, "foo", r.Client).
+			Exists().
+			HasSpecTargetCluster("member1").
+			HasTier(baseNSTemplateTier.Name)
 	})
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -573,11 +573,15 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-	murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
-		HasTier(*customTier)
+		HasTier(*customTier).
+		Get()
+
+	// space should only be created after the next reconcile
+	spacetest.AssertThatSpace(t, "foo", r.Client).DoesNotExist()
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -599,6 +603,48 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	AssertThatCountersAndMetrics(t).HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 		string(metrics.External): 1,
 		string(metrics.Internal): 1,
+	})
+
+	t.Run("second reconcile", func(t *testing.T) {
+		// when
+		res, err = r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		require.Equal(t, reconcile.Result{}, res)
+
+		// Lookup the userSignup one more and check the conditions are updated
+		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+		require.NoError(t, err)
+		require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
+		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+			},
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
+			},
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserIsActive",
+			})
+
+		// space should be created since it's the second reconcile
+		spacetest.AssertThatSpace(t, "foo", r.Client).
+			Exists().
+			HasSpecTargetCluster("member1").
+			HasTier(customTier.Name)
 	})
 }
 
