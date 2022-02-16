@@ -3,6 +3,7 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -129,6 +130,9 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 			Labels: map[string]string{
 				toolchainv1alpha1.TierLabelKey: "basic",
 			},
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserEmailAnnotationKey: "foo@bar.com",
+			},
 		},
 		Spec: toolchainv1alpha1.UserAccountSpec{
 			UserID:              "foo",
@@ -142,6 +146,11 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 		},
 	}
 	record := toolchainv1alpha1.MasterUserRecord{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserEmailAnnotationKey: "foo@bar.com",
+			},
+		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserID:   "foo",
 			Disabled: false,
@@ -179,6 +188,30 @@ func TestSynchronizeSpec(t *testing.T) {
 
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasTier(*otherTier).
+		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
+}
+
+func TestSynchronizeAnnotation(t *testing.T) {
+	// given
+	apiScheme(t)
+	mur := murtest.NewMasterUserRecord(t, "john", murtest.StatusCondition(toBeProvisioned()))
+
+	userAccount := uatest.NewUserAccountFromMur(mur)
+	userAccount.Annotations = nil
+
+	hostClient := test.NewFakeClient(t, mur)
+	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
+
+	// when
+	err := sync.synchronizeSpec()
+
+	// then
+	require.NoError(t, err)
+	uatest.AssertThatUserAccount(t, "john", memberClient).
+		Exists().
+		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
+
+	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 }
 
@@ -739,6 +772,7 @@ func TestRoutes(t *testing.T) {
 }
 
 func prepareSynchronizer(t *testing.T, userAccount *toolchainv1alpha1.UserAccount, mur *toolchainv1alpha1.MasterUserRecord, hostClient *test.FakeClient) (Synchronizer, client.Client) {
+	require.NoError(t, os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs))
 	copiedMur := mur.DeepCopy()
 	toolchainStatus := NewToolchainStatus(
 		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "http://che-toolchain-che.member-cluster/", ToBeReady())))

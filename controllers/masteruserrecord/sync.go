@@ -45,12 +45,16 @@ func (s *Synchronizer) synchronizeSpec() error {
 		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
 		s.memberUserAcc.Spec.OriginalSub = s.record.Spec.OriginalSub
 
-		// In addition to synchronizing the spec, ensure the tier label is set.
-		// It is used for an appstudio workaround in the member operator, see https://github.com/codeready-toolchain/member-operator/pull/333
+		// In addition to synchronizing the spec, ensure both the tier label and email annotation are set
+		// The tier label is used for an appstudio workaround in the member operator, see https://github.com/codeready-toolchain/member-operator/pull/333
 		if s.memberUserAcc.Labels == nil {
 			s.memberUserAcc.Labels = map[string]string{}
 		}
 		s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] = s.record.Spec.TierName
+		if s.memberUserAcc.Annotations == nil {
+			s.memberUserAcc.Annotations = map[string]string{}
+		}
+		s.memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] = s.record.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey]
 
 		err := s.memberCluster.Client.Update(context.TODO(), s.memberUserAcc)
 		if err != nil {
@@ -66,7 +70,8 @@ func (s *Synchronizer) isSynchronized() bool {
 	return reflect.DeepEqual(s.memberUserAcc.Spec.UserAccountSpecBase, s.recordSpecUserAcc.Spec.UserAccountSpecBase) &&
 		s.memberUserAcc.Spec.Disabled == s.record.Spec.Disabled &&
 		s.memberUserAcc.Spec.UserID == s.record.Spec.UserID &&
-		s.memberUserAcc.Labels != nil && s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] == s.record.Spec.TierName
+		s.memberUserAcc.Labels != nil && s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] == s.record.Spec.TierName &&
+		s.memberUserAcc.Annotations != nil && s.memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] == s.record.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey]
 }
 
 func (s *Synchronizer) synchronizeStatus() error {
