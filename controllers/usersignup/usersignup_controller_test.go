@@ -1733,9 +1733,7 @@ func TestMigrateExistingMURToSpace(t *testing.T) {
 				AssertThatUserSignup(t, req.Namespace, actualUserSignup.Name, r.Client).HasLabel(toolchainv1alpha1.UserSignupStateLabelKey, "approved")
 
 				spacetest.AssertThatSpace(t, "foo", r.Client).
-					Exists().
-					HasSpecTargetCluster("member1").
-					HasTier(testTier.Name)
+					DoesNotExist()
 
 				AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 				AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
@@ -1748,6 +1746,16 @@ func TestMigrateExistingMURToSpace(t *testing.T) {
 						"1,external": 1,
 						"1,internal": 1,
 					})
+
+				t.Run("space should be created after second reconcile", func(t *testing.T) {
+					// when
+					res, err = r.Reconcile(context.TODO(), req)
+
+					spacetest.AssertThatSpace(t, "foo", r.Client).
+						Exists().
+						HasSpecTargetCluster("member1").
+						HasTier(testTier.Name)
+				})
 			})
 		})
 	}

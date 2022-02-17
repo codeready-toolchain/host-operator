@@ -160,18 +160,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 	}
 
-	mur, err := r.checkIfMurAlreadyExists(logger, config, userSignup, banned)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// if mur exists, complete the reconcile
-	if mur != nil {
-		logger.Info("mur exists")
-		// if the usersignup is not banned or deactivated and auto space creation is enabled then ensure a space exists
-		if !banned && !states.Deactivating(userSignup) && !states.Deactivated(userSignup) && shouldManageSpace(userSignup) {
-			err = r.ensureSpace(logger, userSignup, mur)
-		}
+	if exists, err := r.checkIfMurAlreadyExists(logger, config, userSignup, banned); err != nil || exists {
 		return reconcile.Result{}, err
 	}
 
@@ -268,13 +257,13 @@ func (r *Reconciler) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1
 // or if the MUR requires some migration changes or additional fixes.
 // If no MUR for the given UserSignup is found, then it returns 'false' as the first returned value.
 func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup,
-	banned bool) (*toolchainv1alpha1.MasterUserRecord, error) {
+	banned bool) (bool, error) {
 	// List all MasterUserRecord resources that have an owner label equal to the UserSignup.Name
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
 	labels := map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 	opts := client.MatchingLabels(labels)
 	if err := r.Client.List(context.TODO(), murList, opts); err != nil {
-		return nil, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err,
+		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err,
 			"Failed to list MasterUserRecords by owner")
 	}
 
@@ -282,68 +271,74 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 	// If we found more than one MasterUserRecord, then die
 	if len(murs) > 1 {
 		err := fmt.Errorf("multiple matching MasterUserRecord resources found")
-		return nil, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "Multiple MasterUserRecords found")
+		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "Multiple MasterUserRecords found")
 	} else if len(murs) == 1 {
 		mur := &murs[0]
 		// If the user has been banned, then we need to delete the MUR
 		if banned {
 			// set the state label to banned
 			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueBanned); err != nil {
-				return mur, err
+				return true, err
 			}
 
 			// ensure space deleted
 			if err := r.ensureSpaceDeleted(reqLogger, userSignup, r.setStatusBanning); err != nil {
-				return mur, err
+				return true, err
 			}
 
 			reqLogger.Info("Deleting MasterUserRecord since user has been banned")
-			return mur, r.deleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusBanning)
+			return true, r.deleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusBanning)
 		}
 
 		// If the user has been deactivated, then we need to delete the MUR
 		if states.Deactivated(userSignup) {
 			// set the state label to deactivated
 			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
-				return mur, err
+				return true, err
 			}
 
 			// ensure space deleted
 			if err := r.ensureSpaceDeleted(reqLogger, userSignup, r.setStatusDeactivationInProgress); err != nil {
-				return mur, err
+				return true, err
 			}
 
 			// We set the inProgressStatusUpdater parameter here to setStatusDeactivationInProgress, as a temporary status before
 			// the main reconcile function completes the deactivation process
 			reqLogger.Info("Deleting MasterUserRecord since user has been deactivated")
-			return mur, r.deleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusDeactivationInProgress)
+			return true, r.deleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusDeactivationInProgress)
 		}
 
 		// if the UserSignup doesn't have the state=approved label set, then update it
 		if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueApproved); err != nil {
-			return mur, err
+			return true, err
 		}
 
 		// look-up the default NSTemplateTier to set it on the MUR if not set
 		defaultTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
 		if err != nil {
-			return mur, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
+			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 		}
 
 		// check if anything in the MUR should be migrated/fixed
 		if changed := migrateOrFixMurIfNecessary(mur, defaultTier, userSignup); changed {
 			reqLogger.Info("Updating MasterUserRecord after it was migrated")
 			if err := r.Client.Update(context.TODO(), mur); err != nil {
-				return mur, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable update MasterUserRecord to complete migration")
+				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable update MasterUserRecord to complete migration")
 			}
-			return mur, nil
+			return true, nil
 		}
 		reqLogger.Info("MasterUserRecord exists", "name", mur.Name)
 
+		if shouldManageSpace(userSignup) {
+			if err = r.ensureSpace(reqLogger, userSignup, mur); err != nil {
+				return true, err
+			}
+		}
+
 		reqLogger.Info("Setting UserSignup status to 'Complete'")
-		return mur, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(reqLogger, mur.Name))
+		return true, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(reqLogger, mur.Name))
 	}
-	return nil, nil
+	return false, nil
 }
 
 func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
