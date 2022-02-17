@@ -398,21 +398,8 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 	}
 
-	// Set the last-target-cluster annotation so that if the user signs up again later on, they can be provisioned to the same cluster
-	userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = targetCluster.getClusterName()
-	if err := r.Client.Update(context.TODO(), userSignup); err != nil {
-		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToUpdateAnnotation, err,
-			"unable to update last target cluster annotation on UserSignup resource")
-	}
-
-	compliantUsername, err := r.generateCompliantUsername(config, userSignup)
-	if err != nil {
-		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToCreateMUR, err,
-			"Error generating compliant username for %s", userSignup.Spec.Username)
-	}
-
 	// Provision the MasterUserRecord
-	return r.provisionMasterUserRecord(reqLogger, userSignup, targetCluster, nstemplateTier, compliantUsername)
+	return r.provisionMasterUserRecord(reqLogger, config, userSignup, targetCluster, nstemplateTier)
 }
 
 func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, state string) error {
@@ -508,13 +495,25 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 }
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
-func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
-	nstemplateTier *toolchainv1alpha1.NSTemplateTier, compliantUsername string) error {
+func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
+	nstemplateTier *toolchainv1alpha1.NSTemplateTier) error {
+
+	// Set the last-target-cluster annotation so that if the user signs up again later on, they can be provisioned to the same cluster
+	userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = targetCluster.getClusterName()
+	if err := r.Client.Update(context.TODO(), userSignup); err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateAnnotation, err,
+			"unable to update last target cluster annotation on UserSignup resource")
+	}
+
+	compliantUsername, err := r.generateCompliantUsername(config, userSignup)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
+			"Error generating compliant username for %s", userSignup.Spec.Username)
+	}
 
 	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, compliantUsername)
 
-	err := controllerutil.SetControllerReference(userSignup, mur, r.Scheme)
-	if err != nil {
+	if err := controllerutil.SetControllerReference(userSignup, mur, r.Scheme); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
 			"Error setting controller reference for MasterUserRecord %s", mur.Name)
 	}
