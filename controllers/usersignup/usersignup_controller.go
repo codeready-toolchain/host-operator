@@ -281,11 +281,6 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 				return true, err
 			}
 
-			// ensure space deleted
-			if err := r.ensureSpaceDeleted(reqLogger, userSignup, r.setStatusBanning); err != nil {
-				return true, err
-			}
-
 			reqLogger.Info("Deleting MasterUserRecord since user has been banned")
 			return true, r.deleteMasterUserRecord(mur, userSignup, reqLogger, r.setStatusBanning)
 		}
@@ -294,11 +289,6 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 		if states.Deactivated(userSignup) {
 			// set the state label to deactivated
 			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
-				return true, err
-			}
-
-			// ensure space deleted
-			if err := r.ensureSpaceDeleted(reqLogger, userSignup, r.setStatusDeactivationInProgress); err != nil {
 				return true, err
 			}
 
@@ -615,37 +605,6 @@ func (r *Reconciler) deleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRec
 			"error deleting MasterUserRecord")
 	}
 	logger.Info("Deleted MasterUserRecord", "mur", mur.Name)
-	return nil
-}
-
-// ensureSpaceDeleted deletes the Space tied to the given UserSignup
-func (r *Reconciler) ensureSpaceDeleted(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, inProgressStatusUpdater StatusUpdaterFunc) error {
-	logger.Info("Deleting Space")
-	err := r.updateStatus(logger, userSignup, inProgressStatusUpdater)
-	if err != nil {
-		return err
-	}
-
-	if shouldManageSpace(userSignup) {
-		// list the space by looking for the owner label that matches the UserSignup
-		spaceList := &toolchainv1alpha1.SpaceList{}
-		labels := map[string]string{toolchainv1alpha1.SpaceCreatorLabelKey: userSignup.Name}
-		opts := client.MatchingLabels(labels)
-		if err := r.Client.List(context.TODO(), spaceList, opts); err != nil {
-			return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusInvalidMURState, err,
-				"Failed to list Spaces by owner")
-		}
-
-		// delete any spaces owned by the UserSignup
-		for _, space := range spaceList.Items {
-			err = r.Client.Delete(context.TODO(), &space) // nolint:gosec
-			if err != nil {
-				return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteSpace, err,
-					"error deleting Space")
-			}
-			logger.Info("Deleted Space", "space", space.Name)
-		}
-	}
 	return nil
 }
 
