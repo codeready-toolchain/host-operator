@@ -15,6 +15,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingcleanup"
+	"github.com/codeready-toolchain/host-operator/controllers/spacecleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecompletion"
 	"github.com/codeready-toolchain/host-operator/controllers/templateupdaterequest"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
@@ -295,6 +296,13 @@ func main() {
 		Namespace: namespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SpaceBindingCleanup")
+		os.Exit(1)
+	}
+	if err = (&spacecleanup.Reconciler{
+		Client:    mgr.GetClient(),
+		Namespace: namespace,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SpaceCleanup")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
