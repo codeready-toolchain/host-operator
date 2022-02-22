@@ -216,26 +216,24 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 
 	tiersMatch := tierutil.TierHashMatches(tmplTier, nsTmplSet.Spec)
 
-	// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)
-	if space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
-		!tiersMatch &&
-		condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
-		// postpone if needed, so we don't overflow the cluster with too many concurrent updates
-		if time.Since(r.lastExecutedUpdate) < postponeDelay {
-			if time.Now().After(r.nextScheduledUpdate) {
-				r.nextScheduledUpdate = time.Now().Add(postponeDelay)
-			} else {
-				r.nextScheduledUpdate = r.nextScheduledUpdate.Add(postponeDelay)
-			}
-			// return the duration when it should be requeued
-			logger.Info("postponing NSTemplateSet update", "until", r.nextScheduledUpdate.String())
-			return true, time.Until(r.nextScheduledUpdate), nil
-		}
-		r.lastExecutedUpdate = time.Now()
-	}
-
 	// update the NSTemplateSet if needed
 	if !tiersMatch {
+		// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)
+		if space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
+			condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
+			// postpone if needed, so we don't overflow the cluster with too many concurrent updates
+			if time.Since(r.lastExecutedUpdate) < postponeDelay {
+				if time.Now().After(r.nextScheduledUpdate) {
+					r.nextScheduledUpdate = time.Now().Add(postponeDelay)
+				} else {
+					r.nextScheduledUpdate = r.nextScheduledUpdate.Add(postponeDelay)
+				}
+				// return the duration when it should be requeued
+				logger.Info("postponing NSTemplateSet update", "until", r.nextScheduledUpdate.String())
+				return true, time.Until(r.nextScheduledUpdate), nil
+			}
+			r.lastExecutedUpdate = time.Now()
+		}
 		nsTmplSetSpec := usersignup.NewNSTemplateSetSpec(tmplTier)
 		nsTmplSet.Spec = *nsTmplSetSpec
 		if err := memberCluster.Client.Update(context.TODO(), nsTmplSet); err != nil {
