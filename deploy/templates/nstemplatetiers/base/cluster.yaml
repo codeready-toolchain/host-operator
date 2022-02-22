@@ -146,7 +146,8 @@ objects:
   spec:
     quota:
       hard:
-        count/servicebindings.binding.operators.coreos.com: "100"
+        count/servicebindings.binding.operators.coreos.com: "50"
+        count/servicebindings.servicebinding.io: "50"
     selector:
       annotations:
         openshift.io/requester: ${USERNAME}
