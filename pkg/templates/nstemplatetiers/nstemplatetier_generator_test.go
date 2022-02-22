@@ -36,18 +36,44 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 
-		expectedTemplateRefs := map[string]map[string][]string{
+		expectedTemplateRefs := map[string]map[string]interface{}{
 			"advanced": {
-				"clusterresources": {"advanced-clusterresources-abcd123-654321a"},
-				"namespaces": {
+				"clusterresources": "advanced-clusterresources-abcd123-654321a",
+				"namespaces": []string{
 					"advanced-dev-abcd123-123456b",
 					"advanced-stage-abcd123-123456c",
 				},
+				"spaceRoles": map[string]string{
+					"admin": "advanced-admin-abcd123-123456d",
+				},
+			},
+			"base": {
+				"clusterresources": "base-clusterresources-654321a-654321a",
+				"namespaces": []string{
+					"base-dev-123456b-123456b",
+					"base-stage-123456c-123456c",
+				},
+				"spaceRoles": map[string]string{
+					"admin": "base-admin-123456d-123456d",
+				},
 			},
 			"nocluster": {
-				"namespaces": {
+				"namespaces": []string{
 					"nocluster-dev-123456j-123456j",
 					"nocluster-stage-1234567-1234567",
+				},
+				"spaceRoles": map[string]string{
+					"admin": "nocluster-admin-123456k-123456k",
+				},
+			},
+			"appstudio": {
+				"clusterresources": "appstudio-clusterresources-654321a-654321a",
+				"namespaces": []string{
+					"appstudio-appstudio-123456b-123456b",
+				},
+				"spaceRoles": map[string]string{
+					"admin":  "appstudio-admin-123456c-123456c",
+					"viewer": "appstudio-viewer-123456d-123456d",
 				},
 			},
 		}
@@ -75,46 +101,63 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			// then
 			require.NoError(t, err)
 
-			// verify that 18 TierTemplates were created, 14 TierTemplates and 4 templates for NSTemplateTier (see `testnstemplatetiers.AssetNames`)
+			// verify that TierTemplates were created
 			tierTmpls = toolchainv1alpha1.TierTemplateList{}
 			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, 8) // 3 items for advanced and base tiers + 2 for nocluster tier
-			names := make([]string, len(testnstemplatetiers.AssetNames())-1)
-			for i, tierTmpl := range tierTmpls.Items {
-				names[i] = tierTmpl.Name
+			require.Len(t, tierTmpls.Items, 15) // 4 items for advanced and base tiers + 3 for nocluster tier + 4 for appstudio
+			names := []string{}
+			for _, tierTmpl := range tierTmpls.Items {
+				names = append(names, tierTmpl.Name)
 			}
-			fmt.Printf("names: %v\n", names)
-			assert.ElementsMatch(t, []string{
+			require.ElementsMatch(t, []string{
 				"advanced-clusterresources-abcd123-654321a",
 				"advanced-dev-abcd123-123456b",
 				"advanced-stage-abcd123-123456c",
+				"advanced-admin-abcd123-123456d",
 				"base-clusterresources-654321a-654321a",
 				"base-dev-123456b-123456b",
 				"base-stage-123456c-123456c",
+				"base-admin-123456d-123456d",
 				"nocluster-dev-123456j-123456j",
 				"nocluster-stage-1234567-1234567",
+				"nocluster-admin-123456k-123456k",
+				"appstudio-clusterresources-654321a-654321a",
+				"appstudio-appstudio-123456b-123456b",
+				"appstudio-admin-123456c-123456c",
+				"appstudio-viewer-123456d-123456d",
 			}, names)
 
-			// verify that 3 NSTemplateTier CRs were created: "advanced", "nocluster"
-			for _, tierName := range []string{"advanced", "nocluster"} {
+			// verify that 4 NSTemplateTier CRs were created:
+			for _, tierName := range []string{"advanced", "base", "nocluster", "appstudio"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
 				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
+
+				// check the `clusterresources` templateRef
 				if tier.Name == "nocluster" {
 					assert.Nil(t, tier.Spec.ClusterResources) // "nocluster" tier should not have cluster resources set
 				} else {
 					require.NotNil(t, tier.Spec.ClusterResources)
-					assert.Equal(t, expectedTemplateRefs[tierName]["clusterresources"][0], tier.Spec.ClusterResources.TemplateRef)
+					assert.Equal(t, expectedTemplateRefs[tierName]["clusterresources"], tier.Spec.ClusterResources.TemplateRef)
 				}
-				// retain the actual TemplateRefs
-				actualTemplateRefs := make([]string, len(tier.Spec.Namespaces))
+
+				// check the `namespaces` templateRefs
+				actualNamespaceTmplRefs := make([]string, len(tier.Spec.Namespaces))
 				for i, ns := range tier.Spec.Namespaces {
-					actualTemplateRefs[i] = ns.TemplateRef
+					actualNamespaceTmplRefs[i] = ns.TemplateRef
 				}
-				// now check against the expected TemplateRefs
-				assert.ElementsMatch(t, expectedTemplateRefs[tierName]["namespaces"], actualTemplateRefs)
+				assert.ElementsMatch(t, expectedTemplateRefs[tierName]["namespaces"], actualNamespaceTmplRefs)
+
+				// check the `spaceRoles` templateRefs
+				actualSpaceRoleTmplRefs := make(map[string]string, len(tier.Spec.SpaceRoles))
+				for i, r := range tier.Spec.SpaceRoles {
+					actualSpaceRoleTmplRefs[i] = r.TemplateRef
+				}
+				for role, tmpl := range expectedTemplateRefs[tierName]["spaceRoles"].(map[string]string) {
+					assert.Equal(t, tmpl, actualSpaceRoleTmplRefs[role])
+				}
 			}
 		})
 
@@ -136,30 +179,41 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			tierTmpls := toolchainv1alpha1.TierTemplateList{}
 			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, 8) // 3 items for advanced and base tiers + 2 for nocluster tier
+			require.Len(t, tierTmpls.Items, 15) // 4 items for advanced and base tiers + 3 for nocluster tier + 4 for appstudio
 			for _, tierTmpl := range tierTmpls.Items {
 				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
 			}
 
-			// verify that 3 NSTemplateTier CRs were created: "advanced", "nocluster"
-			for _, tierName := range []string{"advanced", "nocluster"} {
+			// verify that 4 NSTemplateTier CRs were created:
+			for _, tierName := range []string{"advanced", "base", "nocluster", "appstudio"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
 				assert.Equal(t, int64(1), tier.ObjectMeta.Generation)
+
+				// check the `clusterresources` templateRef
 				if tier.Name == "nocluster" {
 					assert.Nil(t, tier.Spec.ClusterResources)
 				} else {
 					require.NotNil(t, tier.Spec.ClusterResources)
-					assert.Equal(t, expectedTemplateRefs[tierName]["clusterresources"][0], tier.Spec.ClusterResources.TemplateRef)
+					assert.Equal(t, expectedTemplateRefs[tierName]["clusterresources"], tier.Spec.ClusterResources.TemplateRef)
 				}
-				// retain the actual TemplateRefs
+
+				// check the `namespaces` templateRefs
 				actualTemplateRefs := make([]string, len(tier.Spec.Namespaces))
 				for i, ns := range tier.Spec.Namespaces {
 					actualTemplateRefs[i] = ns.TemplateRef
 				}
-				// now check against the expected TemplateRefs
 				assert.ElementsMatch(t, expectedTemplateRefs[tierName]["namespaces"], actualTemplateRefs)
+
+				// check the `spaceRoles` templateRefs
+				actualSpaceRoleTmplRefs := make(map[string]string, len(tier.Spec.SpaceRoles))
+				for i, r := range tier.Spec.SpaceRoles {
+					actualSpaceRoleTmplRefs[i] = r.TemplateRef
+				}
+				for role, tmpl := range expectedTemplateRefs[tierName]["spaceRoles"].(map[string]string) {
+					assert.Equal(t, tmpl, actualSpaceRoleTmplRefs[role])
+				}
 			}
 		})
 
@@ -176,12 +230,18 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			testassets = assets.NewAssets(testnstemplatetiers.AssetNames, func(name string) ([]byte, error) {
 				if name == "metadata.yaml" {
 					return []byte(
-						`advanced/based_on_tier: "0001111"` + "\n" +
-							`base/cluster: "111111a"` + "\n" +
-							`base/ns_dev: "222222a"` + "\n" +
-							`base/ns_stage: "222222b"` + "\n" +
-							`nocluster/ns_dev: "222222e"` + "\n" +
-							`nocluster/ns_stage: "222222f"`), nil
+						`advanced/based_on_tier: "111111a"` + "\n" +
+							`base/cluster: "222222a"` + "\n" +
+							`base/ns_dev: "222222b"` + "\n" +
+							`base/ns_stage: "222222c"` + "\n" +
+							`base/spacerole_admin: "222222d"` + "\n" +
+							`nocluster/ns_dev: "333333a"` + "\n" +
+							`nocluster/ns_stage: "333333b"` + "\n" +
+							`nocluster/spacerole_admin: "333333c"` + "\n" +
+							`appstudio/cluster: "444444a"` + "\n" +
+							`appstudio/ns_appstudio: "444444b"` + "\n" +
+							`appstudio/spacerole_admin: "444444c"` + "\n" +
+							`appstudio/spacerole_viewer: "444444d"` + "\n"), nil
 				}
 				// return default content for other assets
 				return testnstemplatetiers.Asset(name)
@@ -196,53 +256,83 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			tierTmpls := toolchainv1alpha1.TierTemplateList{}
 			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, 16) // two versions of: 3 items for advanced and base tiers + 2 for nocluster tier
+			require.Len(t, tierTmpls.Items, 30) // two versions of: 4 items for advanced and base tiers + 3 for nocluster tier + 4 for appstudio
 			for _, tierTmpl := range tierTmpls.Items {
 				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
 			}
 
-			expectedTemplateRefs := map[string]map[string][]string{
+			expectedTemplateRefs := map[string]map[string]interface{}{
 				"advanced": {
-					"clusterresources": {"advanced-clusterresources-0001111-111111a"},
-					"namespaces": {
-						"advanced-dev-0001111-222222a",
-						"advanced-stage-0001111-222222b",
+					"clusterresources": "advanced-clusterresources-111111a-222222a",
+					"namespaces": []string{
+						"advanced-dev-111111a-222222b",
+						"advanced-stage-111111a-222222c",
+					},
+					"spaceRoles": map[string]string{
+						"admin": "advanced-admin-111111a-222222d",
 					},
 				},
-
 				"base": {
-					"clusterresources": {"base-clusterresources-111111a-111111a"},
-					"namespaces": {
-						"base-dev-222222a-222222a",
-						"base-stage-222222b-222222b",
+					"clusterresources": "base-clusterresources-222222a-222222a",
+					"namespaces": []string{
+						"base-dev-222222b-222222b",
+						"base-stage-222222c-222222c",
+					},
+					"spaceRoles": map[string]string{
+						"admin": "base-admin-222222d-222222d",
 					},
 				},
 				"nocluster": {
-					"namespaces": {
-						"nocluster-dev-222222e-222222e",
-						"nocluster-stage-222222f-222222f",
+					"namespaces": []string{
+						"nocluster-dev-333333a-333333a",
+						"nocluster-stage-333333b-333333b",
+					},
+					"spaceRoles": map[string]string{
+						"admin": "nocluster-admin-333333c-333333c",
+					},
+				},
+				"appstudio": {
+					"clusterresources": "appstudio-clusterresources-444444a-444444a",
+					"namespaces": []string{
+						"appstudio-dev-444444a-444444a",
+						"appstudio-stage-444444b-444444b",
+					},
+					"spaceRoles": map[string]string{
+						"admin":  "appstudio-admin-444444c-444444c",
+						"viewer": "appstudio-viewer-444444d-444444d",
 					},
 				},
 			}
 			// verify that the 3 NStemplateTier CRs were updated
-			for _, tierName := range []string{"advanced", "nocluster"} {
+			for _, tierName := range []string{"advanced", "base", "nocluster"} {
 				tier := toolchainv1alpha1.NSTemplateTier{}
 				err = clt.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, &tier)
 				require.NoError(t, err)
 				assert.Equal(t, int64(2), tier.ObjectMeta.Generation)
+
+				// check the `clusteresources` templateRefs
 				if tier.Name == "nocluster" {
 					assert.Nil(t, tier.Spec.ClusterResources)
 				} else {
 					require.NotNil(t, tier.Spec.ClusterResources)
-					assert.Equal(t, expectedTemplateRefs[tierName]["clusterresources"][0], tier.Spec.ClusterResources.TemplateRef)
+					assert.Equal(t, expectedTemplateRefs[tierName]["clusterresources"], tier.Spec.ClusterResources.TemplateRef)
 				}
-				// retain the actual TemplateRefs
+
+				// check the `namespaces` templateRefs
 				actualTemplateRefs := make([]string, len(tier.Spec.Namespaces))
 				for i, ns := range tier.Spec.Namespaces {
 					actualTemplateRefs[i] = ns.TemplateRef
 				}
-				// now check against the expected TemplateRefs
 				assert.ElementsMatch(t, expectedTemplateRefs[tierName]["namespaces"], actualTemplateRefs)
+
+				// check the `spaceRoles` templateRefs
+				actualSpaceRoleTmplRefs := make(map[string]string, len(tier.Spec.SpaceRoles))
+				for i, r := range tier.Spec.SpaceRoles {
+					actualSpaceRoleTmplRefs[i] = r.TemplateRef
+				}
+				for role, tmpl := range expectedTemplateRefs[tierName]["spaceRoles"].(map[string]string) {
+					assert.Equal(t, tmpl, actualSpaceRoleTmplRefs[role])
+				}
 			}
 		})
 	})

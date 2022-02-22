@@ -1,0 +1,48 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: appstudio-spacerole-admin
+objects:
+
+# ServiceAccounts that represents the AppStudio user - the token of this SA is used by the proxy for forwarding the requests from UI (or any other client)
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: appstudio-${USERNAME}
+    namespace: ${USERNAME}
+
+# RoleBinding that grants limited CRUD permissions on AppStudio components CRDs & secrets to the user's SA
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: appstudio-${USERNAME}-user-actions
+    namespace: ${USERNAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: appstudio-user-actions
+  subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: appstudio-${USERNAME}
+
+# Role & RoleBinding that grants view permissions to the user's SA
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: appstudio-${USERNAME}-view
+    namespace: ${USERNAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: view
+  subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: appstudio-${USERNAME}
+
+parameters:
+- name: USERNAME
+  required: true
+- name: MEMBER_OPERATOR_NAMESPACE
+  value: toolchain-member-operator

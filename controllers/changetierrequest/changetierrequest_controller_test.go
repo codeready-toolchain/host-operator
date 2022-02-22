@@ -184,7 +184,6 @@ func TestChangeTierSuccess(t *testing.T) {
 		}
 
 		cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-			fmt.Println(mur.Labels)
 			updateErr := cl.Client.Update(ctx, obj, opts...)
 			_, err := deactivatingReconciler.Reconcile(context.TODO(), reconcile.Request{
 				NamespacedName: types.NamespacedName{

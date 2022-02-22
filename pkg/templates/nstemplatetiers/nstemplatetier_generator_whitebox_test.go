@@ -8,15 +8,14 @@ import (
 	"testing"
 	texttemplate "text/template"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/ghodss/yaml"
-	"github.com/gofrs/uuid"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
+	"github.com/ghodss/yaml"
+	"github.com/gofrs/uuid"
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-var expectedTiers = map[string]bool{
+var expectedProdTiers = map[string]bool{
 	"advanced":                 true, // tier_name: true/false (if based on the other tier)
 	"base":                     false,
 	"baselarge":                true,
@@ -39,6 +38,13 @@ var expectedTiers = map[string]bool{
 	"appstudio":                false,
 }
 
+var expectedTestTiers = map[string]bool{
+	"advanced":  true, // tier_name: true/false (if based on the other tier)
+	"base":      false,
+	"nocluster": false,
+	"appstudio": false,
+}
+
 func types(tier string) []string {
 	switch tier {
 	case "appstudio":
@@ -48,31 +54,38 @@ func types(tier string) []string {
 	}
 }
 
-func namespaceType(typeName string) bool {
-	for _, t := range allNamespaceTypes() {
-		if typeName == t {
-			return true
+func roles(tier string) []string {
+	switch tier {
+	case "appstudio":
+		return []string{"admin", "viewer"}
+	default:
+		return []string{"admin"}
+	}
+}
+
+func isNamespaceType(expectedTiers map[string]bool, typeName string) bool {
+	for _, tier := range tiers(expectedTiers) {
+		for _, t := range types(tier) {
+			if t == typeName {
+				return true
+			}
 		}
 	}
 	return false
 }
 
-func allNamespaceTypes() []string {
-	result := make([]string, 0, 3)
-	tmap := make(map[string]string)
-	for _, tier := range tiers() {
-		tt := types(tier)
-		for _, t := range tt {
-			if _, ok := tmap[t]; !ok {
-				tmap[t] = t
-				result = append(result, t)
+func isSpaceRole(expectedTiers map[string]bool, roleName string) bool {
+	for _, tier := range tiers(expectedTiers) {
+		for _, r := range roles(tier) {
+			if r == roleName {
+				return true
 			}
 		}
 	}
-	return result
+	return false
 }
 
-func tiers() []string {
+func tiers(expectedTiers map[string]bool) []string {
 	tt := make([]string, 0, len(expectedTiers))
 	for tier := range expectedTiers {
 		tt = append(tt, tier)
@@ -80,11 +93,11 @@ func tiers() []string {
 	return tt
 }
 
-func assertKnownTier(t *testing.T, tier string) {
+func assertKnownTier(t *testing.T, expectedTiers map[string]bool, tier string) {
 	assert.Contains(t, expectedTiers, tier, "encountered an unexpected tier: %s", tier)
 }
 
-func basedOnOtherTier(tier string) bool {
+func basedOnOtherTier(expectedTiers map[string]bool, tier string) bool {
 	return expectedTiers[tier]
 }
 
@@ -103,11 +116,11 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, tmpls, 9)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
-			for _, tier := range tiers() {
+			for _, tier := range tiers(expectedProdTiers) {
 				t.Run(tier, func(t *testing.T) {
 					for _, typeName := range types(tier) {
-						t.Run(typeName, func(t *testing.T) {
-							if basedOnOtherTier(tier) {
+						t.Run("ns-"+typeName, func(t *testing.T) {
+							if basedOnOtherTier(expectedProdTiers, tier) {
 								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
 								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
 							} else {
@@ -116,8 +129,19 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 							}
 						})
 					}
-					t.Run("cluster", func(t *testing.T) {
-						if basedOnOtherTier(tier) {
+					for _, role := range roles(tier) {
+						t.Run("spacerole-"+role, func(t *testing.T) {
+							if basedOnOtherTier(expectedProdTiers, tier) {
+								assert.Empty(t, tmpls[tier].rawTemplates.spaceroleTemplates[role].revision)
+								assert.Empty(t, tmpls[tier].rawTemplates.spaceroleTemplates[role].content)
+							} else {
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.spaceroleTemplates[role].revision)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.spaceroleTemplates[role].content)
+							}
+						})
+					}
+					t.Run("clusterresources", func(t *testing.T) {
+						if basedOnOtherTier(expectedProdTiers, tier) {
 							assert.Nil(t, tmpls[tier].rawTemplates.clusterTemplate)
 						} else {
 							require.NotNil(t, tmpls[tier].rawTemplates.clusterTemplate)
@@ -126,7 +150,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 						}
 					})
 					t.Run("based_on_tier", func(t *testing.T) {
-						if basedOnOtherTier(tier) {
+						if basedOnOtherTier(expectedProdTiers, tier) {
 							require.NotNil(t, tmpls[tier].basedOnTier)
 						} else {
 							require.Nil(t, tmpls[tier].basedOnTier)
@@ -143,37 +167,51 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 3)
+			require.Len(t, tmpls, 4)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 
-			for _, tier := range []string{"advanced", "base", "nocluster"} {
+			for _, tier := range tiers(expectedTestTiers) {
 				t.Run(tier, func(t *testing.T) {
-					for _, typeName := range []string{"dev", "stage"} {
-						t.Run(typeName, func(t *testing.T) {
-							if tier != "advanced" {
-								assert.Equal(t, ExpectedRevisions[tier][typeName], tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
-								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
+					for _, typeName := range types(tier) {
+						t.Run("ns-"+typeName, func(t *testing.T) {
+							require.NotNil(t, tmpls[tier])
+							if basedOnOtherTier(expectedTestTiers, tier) {
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
 							} else {
-								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
+							}
+						})
+					}
+					for _, role := range roles(tier) {
+						t.Run("spacerole-"+role, func(t *testing.T) {
+							if basedOnOtherTier(expectedProdTiers, tier) {
+								assert.Empty(t, tmpls[tier].rawTemplates.spaceroleTemplates[role].revision)
+								assert.Empty(t, tmpls[tier].rawTemplates.spaceroleTemplates[role].content)
+							} else {
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.spaceroleTemplates[role].revision)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.spaceroleTemplates[role].content)
 							}
 						})
 					}
 					t.Run("cluster", func(t *testing.T) {
-						switch tier {
-						case "nocluster", "advanced":
+						require.NotNil(t, tmpls[tier].rawTemplates)
+						if basedOnOtherTier(expectedTestTiers, tier) {
 							assert.Nil(t, tmpls[tier].rawTemplates.clusterTemplate)
-						default:
+						} else if tier != "nocluster" {
 							require.NotNil(t, tmpls[tier].rawTemplates.clusterTemplate)
-							assert.Equal(t, ExpectedRevisions[tier]["cluster"], tmpls[tier].rawTemplates.clusterTemplate.revision)
+							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.revision)
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.clusterTemplate.content)
+						} else {
+							require.Nil(t, tmpls[tier].rawTemplates.clusterTemplate)
 						}
 					})
 					t.Run("based_on_tier", func(t *testing.T) {
-						if tier != "advanced" {
-							assert.Empty(t, tmpls[tier].rawTemplates.basedOnTier)
+						if basedOnOtherTier(expectedTestTiers, tier) {
+							require.NotNil(t, tmpls[tier].basedOnTier)
 						} else {
-							assert.Equal(t, ExpectedRevisions[tier]["based_on_tier"], tmpls[tier].rawTemplates.basedOnTier.revision)
-							assert.NotEmpty(t, tmpls[tier].rawTemplates.basedOnTier.content)
+							require.Nil(t, tmpls[tier].basedOnTier)
 						}
 					})
 				})
@@ -321,38 +359,44 @@ func TestNewNSTemplateTier(t *testing.T) {
 			require.NoError(t, err)
 			// then
 			require.NotEmpty(t, tc.templatesByTier)
-			// verify that each NSTemplateTier has the Namespaces and ClusterResources `TemplateRef` set as expected
+			// verify that each NSTemplateTier has the ClusterResources, Namespaces and SpaceRoles `TemplateRef` set as expected
 			for _, tierData := range tc.templatesByTier {
 
-				for _, nstmplTierObj := range tierData.nstmplTierObjs {
-					tierObj := nstmplTierObj
-
+				for _, nstmplTierObj := range tierData.objects {
 					// verify tier configuration
-					nstmplTier := runtimeObjectToNSTemplateTier(t, s, tierObj)
+					nstmplTier := runtimeObjectToNSTemplateTier(t, s, nstmplTierObj)
 					require.NotNil(t, nstmplTier)
 					assert.Equal(t, namespace, nstmplTier.Namespace)
 
-					assertKnownTier(t, nstmplTier.Name)
+					assertKnownTier(t, expectedProdTiers, nstmplTier.Name)
 
 					// verify tier templates
-					require.Len(t, nstmplTier.Spec.Namespaces, len(tierData.tierTemplates)-1) // exclude clusterresources TierTemplate here
-					expectedTierTmplNames := make([]string, 0, len(tierData.tierTemplates)-1)
-					var clusterResourcesTemplateRef string
+					var expectedClusterResourcesTmplRef string
+					expectedNamespaceTmplRefs := []string{}
+					expectedSpaceRoleTmplRefs := []string{}
 					for _, tierTmpl := range tierData.tierTemplates {
-						if strings.Contains(tierTmpl.Name, "clusterresources") {
-							clusterResourcesTemplateRef = tierTmpl.Name
-							continue // skip
+						switch {
+						case strings.Contains(tierTmpl.Name, "clusterresources"):
+							expectedClusterResourcesTmplRef = tierTmpl.Name
+						case strings.Contains(tierTmpl.Name, "admin") || strings.Contains(tierTmpl.Name, "viewer"):
+							expectedSpaceRoleTmplRefs = append(expectedSpaceRoleTmplRefs, tierTmpl.Name)
+						default:
+							expectedNamespaceTmplRefs = append(expectedNamespaceTmplRefs, tierTmpl.Name)
 						}
-						expectedTierTmplNames = append(expectedTierTmplNames, tierTmpl.Name)
 					}
-					actualTemplateRefs := make([]string, 0, len(nstmplTier.Spec.Namespaces))
-					for _, ns := range nstmplTier.Spec.Namespaces {
-						actualTemplateRefs = append(actualTemplateRefs, ns.TemplateRef)
-					}
-					assert.ElementsMatch(t, expectedTierTmplNames, actualTemplateRefs)
-
 					require.NotNil(t, nstmplTier.Spec.ClusterResources)
-					assert.Equal(t, clusterResourcesTemplateRef, nstmplTier.Spec.ClusterResources.TemplateRef)
+					assert.Equal(t, expectedClusterResourcesTmplRef, nstmplTier.Spec.ClusterResources.TemplateRef)
+					actualNamespaceTmplRefs := []string{}
+					for _, ns := range nstmplTier.Spec.Namespaces {
+						actualNamespaceTmplRefs = append(actualNamespaceTmplRefs, ns.TemplateRef)
+					}
+					assert.ElementsMatch(t, expectedNamespaceTmplRefs, actualNamespaceTmplRefs)
+					actualSpaceRoleTmplRefs := []string{}
+					for _, role := range nstmplTier.Spec.SpaceRoles {
+						actualSpaceRoleTmplRefs = append(actualSpaceRoleTmplRefs, role.TemplateRef)
+					}
+					assert.ElementsMatch(t, expectedSpaceRoleTmplRefs, actualSpaceRoleTmplRefs)
+
 				}
 			}
 		})
@@ -363,6 +407,11 @@ func TestNewNSTemplateTier(t *testing.T) {
 			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 			tc, err := newTierGenerator(s, nil, namespace, assets)
 			require.NoError(t, err)
+			clusterResourcesRevisions := map[string]string{
+				"advanced":  "abcd123-654321a",
+				"base":      "654321a-654321a",
+				"appstudio": "654321a-654321a",
+			}
 			namespaceRevisions := map[string]map[string]string{
 				"advanced": {
 					"dev":   "abcd123-123456b",
@@ -372,15 +421,33 @@ func TestNewNSTemplateTier(t *testing.T) {
 					"dev":   "123456b-123456b",
 					"stage": "123456c-123456c",
 				},
+				"nocluster": {
+					"dev":   "123456j-123456j",
+					"stage": "1234567-1234567",
+				},
+				"appstudio": {
+					"appstudio": "123456b-123456b",
+				},
 			}
-			clusterResourceQuotaRevisions := map[string]string{
-				"advanced": "abcd123-654321a",
-				"base":     "654321a-654321a",
+			spaceRoleRevisions := map[string]map[string]string{
+				"advanced": {
+					"admin": "abcd123-123456d",
+				},
+				"base": {
+					"admin": "123456d-123456d",
+				},
+				"nocluster": {
+					"admin": "123456k-123456k",
+				},
+				"appstudio": {
+					"admin":  "123456c-123456c",
+					"viewer": "123456d-123456d",
+				},
 			}
 			for tier := range namespaceRevisions {
 				t.Run(tier, func(t *testing.T) {
 					// given
-					objects := tc.templatesByTier[tier].nstmplTierObjs
+					objects := tc.templatesByTier[tier].objects
 					require.Len(t, objects, 1, "expected only 1 NSTemplateTier toolchain object")
 					// when
 					actual := runtimeObjectToNSTemplateTier(t, s, objects[0])
@@ -390,7 +457,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 					if tier == "advanced" {
 						deactivationTimeout = 0
 					}
-					expected, _, err := newNSTemplateTierFromYAML(s, tier, namespace, deactivationTimeout, namespaceRevisions[tier], clusterResourceQuotaRevisions[tier])
+					expected, err := newNSTemplateTierFromYAML(s, tier, namespace, deactivationTimeout, clusterResourcesRevisions[tier], namespaceRevisions[tier], spaceRoleRevisions[tier])
 					require.NoError(t, err)
 					// here we don't compare objects because the generated NSTemplateTier
 					// has no specific values for the `TypeMeta`: the `APIVersion: toolchain.dev.openshift.com/v1alpha1`
@@ -414,6 +481,17 @@ func TestNewTierTemplate(t *testing.T) {
 
 		t.Run("with prod assets", func(t *testing.T) {
 			// given
+			// expectedTiers := map[string]bool{
+			// 	"advanced":                 true, // tier_name: true/false (if based on the other tier)
+			// 	"base":                     false,
+			// 	"baselarge":                true,
+			// 	"baseextended":             true,
+			// 	"baseextendedidling":       true,
+			// 	"basedeactivationdisabled": true,
+			// 	"hackathon":                true,
+			// 	"test":                     false,
+			// 	"appstudio":                false,
+			// }
 			assets := assets.NewAssets(AssetNames, Asset)
 			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
 			// when
@@ -435,10 +513,12 @@ func TestNewTierTemplate(t *testing.T) {
 							assert.Equal(t, tier, actual.Spec.TierName)
 							assert.NotEmpty(t, actual.Spec.Type)
 							assert.NotEmpty(t, actual.Spec.Template)
-							if namespaceType(actual.Spec.Type) {
-								assertNamespaceTemplate(t, decoder, actual.Spec.Template, tier, actual.Spec.Type)
-							} else if actual.Spec.Type == "clusterresources" {
-								assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, tier)
+							if actual.Spec.Type == "clusterresources" {
+								assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, assets, expectedProdTiers, tier)
+							} else if isNamespaceType(expectedProdTiers, actual.Spec.Type) {
+								assertNamespaceTemplate(t, decoder, actual.Spec.Template, assets, expectedProdTiers, tier, actual.Spec.Type)
+							} else if isSpaceRole(expectedProdTiers, actual.Spec.Type) {
+								assertSpaceRoleTemplate(t, decoder, actual.Spec.Template, assets, expectedProdTiers, tier, actual.Spec.Type)
 							} else {
 								t.Errorf("unexpected type of template: '%s'", actual.Spec.Type)
 							}
@@ -469,14 +549,25 @@ func TestNewTierTemplate(t *testing.T) {
 						assert.NotEmpty(t, actual.Spec.TierName)
 						assert.NotEmpty(t, actual.Spec.Type)
 						assert.NotEmpty(t, actual.Spec.Template)
-						switch actual.Spec.Type {
-						case "dev", "stage":
-							assertTestNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
-						case "clusterresources":
-							assertTestClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
-						default:
+
+						if actual.Spec.Type == "clusterresources" {
+							assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, assets, expectedTestTiers, tier)
+						} else if isNamespaceType(expectedTestTiers, actual.Spec.Type) {
+							assertNamespaceTemplate(t, decoder, actual.Spec.Template, assets, expectedTestTiers, tier, actual.Spec.Type)
+						} else if isSpaceRole(expectedTestTiers, actual.Spec.Type) {
+							assertSpaceRoleTemplate(t, decoder, actual.Spec.Template, assets, expectedTestTiers, tier, actual.Spec.Type)
+						} else {
 							t.Errorf("unexpected type of template: '%s'", actual.Spec.Type)
 						}
+
+						// switch actual.Spec.Type {
+						// case "dev", "stage":
+						// 	assertTestNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
+						// case "clusterresources":
+						// 	assertTestClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
+						// default:
+						// 	t.Errorf("unexpected type of template: '%s'", actual.Spec.Type)
+						// }
 					}
 				})
 			}
@@ -504,10 +595,10 @@ func TestNewTierTemplate(t *testing.T) {
 	})
 }
 
-func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
-	if !basedOnOtherTier(tier) {
+func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, assets assets.Assets, expectedTiers map[string]bool, tier string) {
+	if !basedOnOtherTier(expectedTiers, tier) {
 		expected := templatev1.Template{}
-		content, err := Asset(fmt.Sprintf("%s/cluster.yaml", tier))
+		content, err := assets.Asset(fmt.Sprintf("%s/cluster.yaml", tier))
 		require.NoError(t, err)
 		_, _, err = decoder.Decode(content, nil, &expected)
 		require.NoError(t, err)
@@ -516,14 +607,14 @@ func assertClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actua
 	}
 }
 
-func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, typeName string) {
+func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, assets assets.Assets, expectedTiers map[string]bool, tier, typeName string) {
 	var templatePath string
-	if basedOnOtherTier(tier) {
-		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", typeName))
+	if basedOnOtherTier(expectedTiers, tier) {
+		templatePath = expectedTemplateFromBasedOnTierConfig(t, assets, tier, fmt.Sprintf("ns_%s.yaml", typeName))
 	} else {
 		templatePath = fmt.Sprintf("%s/ns_%s.yaml", tier, typeName)
 	}
-	content, err := Asset(templatePath)
+	content, err := assets.Asset(templatePath)
 	require.NoError(t, err)
 	expected := templatev1.Template{}
 	_, _, err = decoder.Decode(content, nil, &expected)
@@ -532,34 +623,24 @@ func assertNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	assert.NotEmpty(t, actual.Objects)
 }
 
-func assertTestClusterResourcesTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier string) {
-	templatePath := fmt.Sprintf("%s/cluster.yaml", tier)
-	if tier == "advanced" {
-		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, "cluster.yaml")
+func assertSpaceRoleTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, assets assets.Assets, expectedTiers map[string]bool, tier, roleName string) {
+	var templatePath string
+	if basedOnOtherTier(expectedTiers, tier) {
+		templatePath = expectedTemplateFromBasedOnTierConfig(t, assets, tier, fmt.Sprintf("spacerole_%s.yaml", roleName))
+	} else {
+		templatePath = fmt.Sprintf("%s/spacerole_%s.yaml", tier, roleName)
 	}
-	content, err := testnstemplatetiers.Asset(templatePath)
+	content, err := assets.Asset(templatePath)
 	require.NoError(t, err)
 	expected := templatev1.Template{}
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
+	assert.NotEmpty(t, actual.Objects)
 }
 
-func assertTestNamespaceTemplate(t *testing.T, decoder runtime.Decoder, actual templatev1.Template, tier, typeName string) {
-	templatePath := fmt.Sprintf("%s/ns_%s.yaml", tier, typeName)
-	if tier == "advanced" {
-		templatePath = expectedTemplateFromBasedOnTierConfig(t, tier, fmt.Sprintf("ns_%s.yaml", typeName))
-	}
-	content, err := testnstemplatetiers.Asset(templatePath)
-	require.NoError(t, err)
-	expected := templatev1.Template{}
-	_, _, err = decoder.Decode(content, nil, &expected)
-	require.NoError(t, err)
-	assert.Equal(t, expected, actual)
-}
-
-func expectedTemplateFromBasedOnTierConfig(t *testing.T, tier, templateFileName string) string {
-	basedOnTierContent, err := Asset(fmt.Sprintf("%s/based_on_tier.yaml", tier))
+func expectedTemplateFromBasedOnTierConfig(t *testing.T, assets assets.Assets, tier, templateFileName string) string {
+	basedOnTierContent, err := assets.Asset(fmt.Sprintf("%s/based_on_tier.yaml", tier))
 	require.NoError(t, err)
 	basedOnTier := BasedOnTier{}
 	require.NoError(t, yaml.Unmarshal(basedOnTierContent, &basedOnTier))
@@ -581,10 +662,10 @@ func TestNewNSTemplateTiers(t *testing.T) {
 		tc, err := newTierGenerator(s, nil, namespace, assets)
 		require.NoError(t, err)
 		// then
-		require.Len(t, tc.templatesByTier, 3)
-		for _, name := range []string{"advanced", "base", "nocluster"} {
+		require.Len(t, tc.templatesByTier, 4)
+		for _, name := range []string{"advanced", "base", "nocluster", "appstudio"} {
 			tierData, found := tc.templatesByTier[name]
-			tierObjs := tierData.nstmplTierObjs
+			tierObjs := tierData.objects
 			require.Len(t, tierObjs, 1, "expected only 1 NSTemplateTier toolchain object")
 			tier := runtimeObjectToNSTemplateTier(t, s, tierObjs[0])
 
@@ -620,45 +701,58 @@ var ExpectedRevisions = map[string]map[string]string{
 }
 
 // newNSTemplateTierFromYAML generates toolchainv1alpha1.NSTemplateTier using a golang template which is applied to the given tier.
-func newNSTemplateTierFromYAML(s *runtime.Scheme, tier, namespace string, deactivationTimeout int, namespaceRevisions map[string]string, clusterResourceQuotaRevision string) (toolchainv1alpha1.NSTemplateTier, string, error) {
-	expectedTmpl, err := texttemplate.New("template").Parse(`kind: NSTemplateTier
+func newNSTemplateTierFromYAML(s *runtime.Scheme, tier, namespace string, deactivationTimeout int, clusterResourcesRevision string, namespaceRevisions map[string]string, spaceRoleRevisions map[string]string) (*toolchainv1alpha1.NSTemplateTier, error) {
+	expectedTmpl, err := texttemplate.New("template").Parse(`
+{{ $tier := .Tier}}
+kind: NSTemplateTier
 apiVersion: toolchain.dev.openshift.com/v1alpha1
 metadata:
   namespace: {{ .Namespace }}
   name: {{ .Tier }}
 spec:
   deactivationTimeoutDays: {{ .DeactivationTimeout }} 
+  {{ if .ClusterResourcesRevision }}clusterResources:
+    templateRef: {{ .Tier }}-clusterresources-{{ .ClusterResourcesRevision }}
+  {{ end }}
   namespaces: 
-{{ $tier := .Tier }}{{ range $type, $revision := .NamespaceRevisions }}    - templateRef: {{ $tier }}-{{ $type }}-{{ $revision }}
-{{ end }}  clusterResources:
-    templateRef: {{ $tier }}-clusterresources-{{ .ClusterResourcesRevision }}`)
+{{ range $type, $revision := .NamespaceRevisions }}
+    - templateRef: {{ $tier }}-{{ $type }}-{{ $revision }}
+{{ end }}
+  spaceRoles: 
+{{ range $role, $revision := .SpaceRoleRevisions }}    
+    {{ $role }}:
+      templateRef: {{ $tier }}-{{ $role }}-{{ $revision }}
+{{ end }}
+`)
 	if err != nil {
-		return toolchainv1alpha1.NSTemplateTier{}, "", err
+		return nil, err
 	}
-	expected := bytes.NewBuffer(nil)
-	err = expectedTmpl.Execute(expected, struct {
+	buf := bytes.NewBuffer(nil)
+	err = expectedTmpl.Execute(buf, struct {
 		Tier                     string
 		Namespace                string
-		NamespaceRevisions       map[string]string
 		ClusterResourcesRevision string
+		NamespaceRevisions       map[string]string
+		SpaceRoleRevisions       map[string]string
 		DeactivationTimeout      int
 	}{
 		Tier:                     tier,
 		Namespace:                namespace,
+		ClusterResourcesRevision: clusterResourcesRevision,
 		NamespaceRevisions:       namespaceRevisions,
-		ClusterResourcesRevision: clusterResourceQuotaRevision,
+		SpaceRoleRevisions:       spaceRoleRevisions,
 		DeactivationTimeout:      deactivationTimeout,
 	})
 	if err != nil {
-		return toolchainv1alpha1.NSTemplateTier{}, "", err
+		return nil, err
 	}
 	result := &toolchainv1alpha1.NSTemplateTier{}
 	codecFactory := serializer.NewCodecFactory(s)
-	_, _, err = codecFactory.UniversalDeserializer().Decode(expected.Bytes(), nil, result)
+	_, _, err = codecFactory.UniversalDeserializer().Decode(buf.Bytes(), nil, result)
 	if err != nil {
-		return toolchainv1alpha1.NSTemplateTier{}, "", err
+		return nil, err
 	}
-	return *result, expected.String(), err
+	return result, nil
 }
 
 func runtimeObjectToNSTemplateTier(t *testing.T, s *runtime.Scheme, tierObj runtime.Object) *toolchainv1alpha1.NSTemplateTier {

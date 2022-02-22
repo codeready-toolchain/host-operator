@@ -60,18 +60,19 @@ type tierGenerator struct {
 }
 
 type tierData struct {
-	name           string
-	rawTemplates   *templates
-	tierTemplates  []*toolchainv1alpha1.TierTemplate
-	nstmplTierObjs []client.Object
-	basedOnTier    *BasedOnTier
+	name          string
+	rawTemplates  *templates
+	tierTemplates []*toolchainv1alpha1.TierTemplate
+	objects       []client.Object
+	basedOnTier   *BasedOnTier
 }
 
-// templates: namespaces and other cluster-scoped resources belonging to a given tier ("advanced", "basic", "team", etc.) and the NSTemplateTier that combines them
+// templates: namespaces and other cluster-scoped resources belonging to a given tier ("advanced", "base", "team", etc.) and the NSTemplateTier that combines them
 type templates struct {
-	namespaceTemplates map[string]template // namespace templates (including roles, etc.) indexed by type ("dev", "code", "stage")
-	clusterTemplate    *template           // other cluster-scoped resources, in a single template file
 	nsTemplateTier     *template           // NSTemplateTier resource with tier-scoped configuration and references to namespace and cluster templates in its spec, in a single template file
+	clusterTemplate    *template           // other cluster-scoped resources, in a single template file
+	namespaceTemplates map[string]template // namespace templates (including roles, limits, etc.) indexed by type ("dev", "stage")
+	spaceroleTemplates map[string]template // spacerole templates (including rolebindings, etc.) indexed by role ("admin", "viewer", etc.)
 	basedOnTier        *template           // a special config defining which tier should be reused and which parameters should be overridden
 }
 
@@ -129,19 +130,15 @@ type BasedOnTier struct {
 //
 // metadata.yaml
 // advanced/
-//   cluster.yaml
-//   ns_code.yaml
-//   ns_xyz.yaml
-//   tier.yaml
+//   based_on_tier.yaml
 // basic/
 //   cluster.yaml
-//   ns_code.yaml
-//   ns_xyz.yaml
+//   ns_dev.yaml
+//   ns_stage.yaml
+//   spacerole_admin.yaml
 //   tier.yaml
 // team/
-//   cluster.yaml
-//   ns_xyz.yaml
-//   tier.yaml
+//   based_on_tier.yaml
 //
 // The output is a map of `tierData` indexed by tier.
 // Each `tierData` object contains itself a map of `template` objects indexed by the namespace type (`namespaceTemplates`);
@@ -176,6 +173,7 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 				name: tier,
 				rawTemplates: &templates{
 					namespaceTemplates: map[string]template{},
+					spaceroleTemplates: map[string]template{},
 				},
 			}
 		}
@@ -188,13 +186,16 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 			content:  content,
 		}
 		switch {
+		case filename == "tier.yaml":
+			results[tier].rawTemplates.nsTemplateTier = &tmpl
+		case filename == "cluster.yaml":
+			results[tier].rawTemplates.clusterTemplate = &tmpl
 		case strings.HasPrefix(filename, "ns_"):
 			kind := strings.TrimSuffix(strings.TrimPrefix(filename, "ns_"), ".yaml")
 			results[tier].rawTemplates.namespaceTemplates[kind] = tmpl
-		case filename == "cluster.yaml":
-			results[tier].rawTemplates.clusterTemplate = &tmpl
-		case filename == "tier.yaml":
-			results[tier].rawTemplates.nsTemplateTier = &tmpl
+		case strings.HasPrefix(filename, "spacerole_"):
+			role := strings.TrimSuffix(strings.TrimPrefix(filename, "spacerole_"), ".yaml")
+			results[tier].rawTemplates.spaceroleTemplates[role] = tmpl
 		case filename == "based_on_tier.yaml":
 			basedOnTier := &BasedOnTier{}
 			if err := yaml.Unmarshal(content, basedOnTier); err != nil {
@@ -216,7 +217,6 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 			return nil, fmt.Errorf("the tier %s contains a mix of based_on_tier.yaml file together with a regular template file", tier)
 		}
 	}
-
 	return results, nil
 }
 
@@ -256,11 +256,24 @@ func (t *tierGenerator) newTierTemplates(basedOnTierFileRevision string, tierDat
 	for kind := range tierData.rawTemplates.namespaceTemplates {
 		kinds = append(kinds, kind)
 	}
-
-	var tierTmpls []*toolchainv1alpha1.TierTemplate
+	tierTmpls := []*toolchainv1alpha1.TierTemplate{}
 	sort.Strings(kinds)
 	for _, kind := range kinds {
 		tmpl := tierData.rawTemplates.namespaceTemplates[kind]
+		tierTmpl, err := t.newTierTemplate(decoder, basedOnTierFileRevision, tier, kind, tmpl, parameters)
+		if err != nil {
+			return nil, err
+		}
+		tierTmpls = append(tierTmpls, tierTmpl)
+	}
+	// space roles templates
+	kinds = make([]string, 0, len(tierData.rawTemplates.spaceroleTemplates))
+	for kind := range tierData.rawTemplates.spaceroleTemplates {
+		kinds = append(kinds, kind)
+	}
+	sort.Strings(kinds)
+	for _, kind := range kinds {
+		tmpl := tierData.rawTemplates.spaceroleTemplates[kind]
 		tierTmpl, err := t.newTierTemplate(decoder, basedOnTierFileRevision, tier, kind, tmpl, parameters)
 		if err != nil {
 			return nil, err
@@ -354,11 +367,11 @@ func (t *tierGenerator) initNSTemplateTiers() error {
 			nsTemplateTier = fromData.rawTemplates.nsTemplateTier
 			sourceTierName = fromData.name
 		}
-		tmpl, err := t.newNSTemplateTier(sourceTierName, tierName, *nsTemplateTier, tierTemplates, parameters)
+		objs, err := t.newNSTemplateTier(sourceTierName, tierName, *nsTemplateTier, tierTemplates, parameters)
 		if err != nil {
 			return err
 		}
-		t.templatesByTier[tierName].nstmplTierObjs = tmpl
+		t.templatesByTier[tierName].objects = objs
 	}
 
 	return nil
@@ -369,13 +382,13 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 	applyCl := commonclient.NewApplyClient(t.client, t.scheme)
 
 	for tierName, tierData := range t.templatesByTier {
-		if len(tierData.nstmplTierObjs) != 1 {
-			return fmt.Errorf("there is an unexpected number of NSTemplateTier object to be applied for tier name '%s'; expected: 1; actual: %d", tierName, len(tierData.nstmplTierObjs))
+		if len(tierData.objects) != 1 {
+			return fmt.Errorf("there is an unexpected number of NSTemplateTier object to be applied for tier name '%s'; expected: 1; actual: %d", tierName, len(tierData.objects))
 		}
 
-		unstructuredObj, ok := tierData.nstmplTierObjs[0].(*unstructured.Unstructured)
+		unstructuredObj, ok := tierData.objects[0].(*unstructured.Unstructured)
 		if !ok {
-			return fmt.Errorf("unable to cast NSTemplateTier '%s' to Unstructured object '%+v'", tierName, tierData.nstmplTierObjs[0])
+			return fmt.Errorf("unable to cast NSTemplateTier '%s' to Unstructured object '%+v'", tierName, tierData.objects[0])
 		}
 		tier := &toolchainv1alpha1.NSTemplateTier{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, tier); err != nil {
@@ -402,7 +415,7 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 		if updated {
 			tierLog.Info("NSTemplateTier was either updated or created")
 		} else {
-			tierLog.Info("NSTemplateTier wasn't updated nor created - the expected spec was already there")
+			tierLog.Info("NSTemplateTier wasn't updated nor created: the spec was already set as expected")
 		}
 	}
 	return nil
@@ -415,14 +428,20 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 // ------
 // kind: NSTemplateTier
 //   metadata:
-//     name: basic
+//     name: appstudio
 //   spec:
+//     deactivationTimeoutDays: 30
 //     clusterResources:
-//       templateRef: basic-clusterresources-07cac69-07cac69
+//       templateRef: appstudio-clusterresources-07cac69-07cac69
 //     namespaces:
-//     - templateRef: basic-code-cb6fbd2-cb6fbd2
-//     - templateRef: basic-dev-4d49fe0-4d49fe0
-//     - templateRef: basic-stage-4d49fe0-4d49fe0
+//     - templateRef: appstudio-code-cb6fbd2-cb6fbd2
+//     - templateRef: appstudio-dev-4d49fe0-4d49fe0
+//     - templateRef: appstudio-stage-4d49fe0-4d49fe0
+//     spaceRoles:
+//       admin:
+//         templateRef: appstudio-admin-ab12cd34-ab12cd34
+//       viewer:
+//         templateRef: appstudio-admin-ab12cd34-ab12cd34
 // ------
 func (t *tierGenerator) newNSTemplateTier(sourceTierName, tierName string, nsTemplateTier template, tierTemplates []*toolchainv1alpha1.TierTemplate, parameters []templatev1.Parameter) ([]client.Object, error) {
 	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer()
@@ -444,7 +463,7 @@ func (t *tierGenerator) newNSTemplateTier(sourceTierName, tierName string, nsTem
 		// ClusterResources
 		case toolchainv1alpha1.ClusterResourcesTemplateType:
 			params["CLUSTER_TEMPL_REF"] = tierTmpl.Name
-		// Namespaces
+		// Namespaces and Space Roles
 		default:
 			tmplType := strings.ToUpper(tierTmpl.Spec.Type) // code, dev, stage
 			key := tmplType + "_TEMPL_REF"                  // eg. CODE_TEMPL_REF
