@@ -35,8 +35,7 @@ func TestCreateSpace(t *testing.T) {
 
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	s := scheme.Scheme
-	err := apis.AddToScheme(s)
+	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
 	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 	t.Run("success", func(t *testing.T) {

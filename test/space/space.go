@@ -26,6 +26,15 @@ func WithSpecTargetCluster(name string) Option {
 	}
 }
 
+func WithLabel(key, value string) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		if space.ObjectMeta.Labels == nil {
+			space.ObjectMeta.Labels = map[string]string{}
+		}
+		space.ObjectMeta.Labels[key] = value
+	}
+}
+
 func WithTierName(tierName string) Option {
 	return func(space *toolchainv1alpha1.Space) {
 		space.Spec.TierName = tierName
@@ -36,9 +45,10 @@ func WithTierNameAndHashLabelFor(tier *toolchainv1alpha1.NSTemplateTier) Option 
 	return func(space *toolchainv1alpha1.Space) {
 		space.Spec.TierName = tier.Name
 		hash, _ := tierutil.ComputeHashForNSTemplateTier(tier) // we can assume the JSON marshalling will always work
-		space.ObjectMeta.Labels = map[string]string{
-			tierutil.TemplateTierHashLabelKey(tier.Name): hash,
+		if space.ObjectMeta.Labels == nil {
+			space.ObjectMeta.Labels = map[string]string{}
 		}
+		space.ObjectMeta.Labels[tierutil.TemplateTierHashLabelKey(tier.Name)] = hash
 	}
 }
 
