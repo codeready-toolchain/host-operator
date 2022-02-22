@@ -33,8 +33,8 @@ type Reconciler struct {
 	Client              client.Client
 	Namespace           string
 	MemberClusters      map[string]cluster.Cluster
-	nextScheduledUpdate time.Time
-	lastExecutedUpdate  time.Time
+	NextScheduledUpdate time.Time
+	LastExecutedUpdate  time.Time
 }
 
 // SetupWithManager sets up the controller reconciler with the Manager and the given member clusters.
@@ -222,17 +222,17 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		if space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
 			condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 			// postpone if needed, so we don't overflow the cluster with too many concurrent updates
-			if time.Since(r.lastExecutedUpdate) < postponeDelay {
-				if time.Now().After(r.nextScheduledUpdate) {
-					r.nextScheduledUpdate = time.Now().Add(postponeDelay)
+			if time.Since(r.LastExecutedUpdate) < postponeDelay {
+				if time.Now().After(r.NextScheduledUpdate) {
+					r.NextScheduledUpdate = time.Now().Add(postponeDelay)
 				} else {
-					r.nextScheduledUpdate = r.nextScheduledUpdate.Add(postponeDelay)
+					r.NextScheduledUpdate = r.NextScheduledUpdate.Add(postponeDelay)
 				}
 				// return the duration when it should be requeued
-				logger.Info("postponing NSTemplateSet update", "until", r.nextScheduledUpdate.String())
-				return true, time.Until(r.nextScheduledUpdate), nil
+				logger.Info("postponing NSTemplateSet update", "until", r.NextScheduledUpdate.String())
+				return true, time.Until(r.NextScheduledUpdate), nil
 			}
-			r.lastExecutedUpdate = time.Now()
+			r.LastExecutedUpdate = time.Now()
 		}
 		nsTmplSetSpec := usersignup.NewNSTemplateSetSpec(tmplTier)
 		nsTmplSet.Spec = *nsTmplSetSpec
