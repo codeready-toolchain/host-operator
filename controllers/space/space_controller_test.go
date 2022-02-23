@@ -937,7 +937,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasMatchingTierLabelForTier(basicTier) // label is immediately set since the NSTemplateSet was already up-to-date
 	})
 
-	t.Run("update not needed when NStemplateSet not ready", func(t *testing.T) {
+	t.Run("update not needed when Space not ready", func(t *testing.T) {
 		notReadySpace := spacetest.NewSpace("oddity1",
 			spacetest.WithTierNameAndHashLabelFor(olderBasicTier),
 			spacetest.WithSpecTargetCluster("member-1"),
@@ -946,7 +946,32 @@ func TestUpdateSpaceTier(t *testing.T) {
 			spacetest.WithCondition(spacetest.Updating())) // space is not ready
 		notReadyTmplSet := nstemplatetsettest.NewNSTemplateSet(notReadySpace.Name,
 			nstemplatetsettest.WithReferencesFor(olderBasicTier), // NSTemplateSet has references to old basic tier
-			nstemplatetsettest.WithNotReadyCondition(toolchainv1alpha1.NSTemplateSetUpdatingReason, ""))
+			nstemplatetsettest.WithReadyCondition())              // NSTemplateSet is ready
+		hostClient := test.NewFakeClient(t, notReadySpace, basicTier)
+		member1Client := test.NewFakeClient(t, notReadyTmplSet)
+		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+		ctrl := newReconciler(hostClient, member1)
+		ctrl.NextScheduledUpdate = time.Now().Add(1 * time.Minute)
+		ctrl.LastExecutedUpdate = time.Now()
+
+		// when reconciling space
+		res, err := ctrl.Reconcile(context.TODO(), requestFor(notReadySpace))
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, res.Requeue) // nothing to do for now since the space was NOT ready
+	})
+
+	t.Run("update not needed when NStemplateSet not ready", func(t *testing.T) {
+		notReadySpace := spacetest.NewSpace("oddity1",
+			spacetest.WithTierNameAndHashLabelFor(olderBasicTier),
+			spacetest.WithSpecTargetCluster("member-1"),
+			spacetest.WithStatusTargetCluster("member-1"),
+			spacetest.WithFinalizer(),
+			spacetest.WithCondition(spacetest.Ready())) // space is ready
+		notReadyTmplSet := nstemplatetsettest.NewNSTemplateSet(notReadySpace.Name,
+			nstemplatetsettest.WithReferencesFor(olderBasicTier),                                        // NSTemplateSet has references to old basic tier
+			nstemplatetsettest.WithNotReadyCondition(toolchainv1alpha1.NSTemplateSetUpdatingReason, "")) // NSTemplateSet is not ready
 		hostClient := test.NewFakeClient(t, notReadySpace, basicTier)
 		member1Client := test.NewFakeClient(t, notReadyTmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
