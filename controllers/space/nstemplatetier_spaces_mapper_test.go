@@ -1,6 +1,8 @@
 package space_test
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
@@ -14,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -88,7 +91,7 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 	t.Run("no match", func(t *testing.T) {
 		// given
 		nsTmplTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-		uptodateSpace := spacetest.NewSpace("oddity3",
+		uptodateSpace := spacetest.NewSpace("oddity",
 			spacetest.WithTierNameAndHashLabelFor(nsTmplTier),
 		)
 		hostClient := test.NewFakeClient(t, nsTmplTier, uptodateSpace)
@@ -100,4 +103,34 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 		assert.Empty(t, result)
 	})
 
+	t.Run("failures", func(t *testing.T) {
+
+		t.Run("when listing NSTemplateTier", func(t *testing.T) {
+			// given
+			nsTmplTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
+			hostClient := test.NewFakeClient(t, nsTmplTier)
+			hostClient.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+				return fmt.Errorf("mock error")
+			}
+			mapFrom := space.MapNSTemplateTierToSpaces(test.HostOperatorNs, hostClient)
+
+			// when
+			result := mapFrom(nsTmplTier)
+
+			// then
+			assert.Empty(t, result)
+		})
+
+		t.Run("when processing another type of resource", func(t *testing.T) {
+			// given
+			hostClient := test.NewFakeClient(t)
+			mapFrom := space.MapNSTemplateTierToSpaces(test.HostOperatorNs, hostClient)
+
+			// when
+			result := mapFrom(spacetest.NewSpace("oddity")) // wrong type of resource as arg
+
+			// then
+			assert.Empty(t, result)
+		})
+	})
 }
