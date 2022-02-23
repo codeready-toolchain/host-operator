@@ -19,7 +19,8 @@ func MapNSTemplateTierToSpaces(namespace string, cl client.Client) func(object c
 		if tmplTier, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 			matchOutdated, err := nstemplatetier.OutdatedTierSelector(tmplTier)
 			if err != nil {
-				mapperLog.Error(err, "cannot map NSTemplateTier to Spaces")
+				mapperLog.Error(err, "cannot create outdated tier label selector", "NSTemplateTier", tmplTier)
+				return nil
 			}
 			// look-up all spaces associated with the NSTemplateTier
 			spaces := &toolchainv1alpha1.SpaceList{}
