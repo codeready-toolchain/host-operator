@@ -667,6 +667,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
+		ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
