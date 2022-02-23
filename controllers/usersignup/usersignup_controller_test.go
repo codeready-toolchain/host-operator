@@ -191,7 +191,9 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 					Exists().
 					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 					HasSpecTargetCluster("member1")
-				spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo-foo", r.Client).
+
+				sbName := verifySingleSpaceBindingAndGetName(t, r.Client)
+				spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, sbName, r.Client).
 					Exists().
 					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 					HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
@@ -356,7 +358,8 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			HasSpecTargetCluster("member1").
 			HasTier(baseNSTemplateTier.Name)
 
-		spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo-foo", r.Client).
+		sbName := verifySingleSpaceBindingAndGetName(t, r.Client)
+		spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, sbName, r.Client).
 			Exists().
 			HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 			HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
@@ -667,7 +670,8 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 			HasSpecTargetCluster("member1").
 			HasTier(customTier.Name)
 
-		spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo-foo", r.Client).
+		sbName := verifySingleSpaceBindingAndGetName(t, r.Client)
+		spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, sbName, r.Client).
 			Exists().
 			HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 			HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
@@ -1795,7 +1799,8 @@ func TestMigrateExistingMURToSpace(t *testing.T) {
 						HasSpecTargetCluster("member1").
 						HasTier(testTier.Name)
 
-					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo-foo", r.Client).
+					sbName := verifySingleSpaceBindingAndGetName(t, r.Client)
+					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, sbName, r.Client).
 						Exists().
 						HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 						HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
@@ -4030,4 +4035,10 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 			HasNoAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey)
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 	})
+}
+
+// verifySingleSpaceBindingAndGetName checks the spacebinding list has only 1 and get its name
+func verifySingleSpaceBindingAndGetName(t *testing.T, cl client.Client) string {
+	spacebindings := spacebindingtest.AssertThatSpaceBindings(t, cl).HaveCount(1).Get()
+	return spacebindings.Items[0].Name
 }

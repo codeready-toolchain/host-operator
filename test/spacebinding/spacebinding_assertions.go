@@ -94,6 +94,12 @@ func (a *SpaceBindingsAssertion) loadSpaceBindings() error {
 	return err
 }
 
+func (a *SpaceBindingsAssertion) Get() *toolchainv1alpha1.SpaceBindingList {
+	err := a.loadSpaceBindings()
+	require.NoError(a.t, err)
+	return a.spacebindings
+}
+
 func (a *SpaceBindingsAssertion) HaveCount(count int) *SpaceBindingsAssertion {
 	err := a.loadSpaceBindings()
 	require.NoError(a.t, err)

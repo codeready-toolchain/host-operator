@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	. "github.com/codeready-toolchain/host-operator/test"
-	spacebindingtest "github.com/codeready-toolchain/host-operator/test/spacebinding"
 
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewSpaceBinding(t *testing.T) {
@@ -21,6 +22,12 @@ func TestNewSpaceBinding(t *testing.T) {
 	actualSpaceBinding := newSpaceBinding(mur, space, userSignup.Name)
 
 	// then
-	expectedSpaceBinding := spacebindingtest.NewSpaceBinding("johny", "smith", "admin", userSignup.Name)
-	assert.Equal(t, expectedSpaceBinding, actualSpaceBinding)
+	assert.Equal(t, "johny", actualSpaceBinding.Spec.MasterUserRecord)
+	assert.Equal(t, "smith", actualSpaceBinding.Spec.Space)
+	assert.Equal(t, "admin", actualSpaceBinding.Spec.SpaceRole)
+
+	require.NotNil(t, actualSpaceBinding.Labels)
+	assert.Equal(t, userSignup.Name, actualSpaceBinding.Labels[toolchainv1alpha1.SpaceCreatorLabelKey])
+	assert.Equal(t, "johny", actualSpaceBinding.Labels[toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey])
+	assert.Equal(t, "smith", actualSpaceBinding.Labels[toolchainv1alpha1.SpaceBindingSpaceLabelKey])
 }

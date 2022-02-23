@@ -19,9 +19,9 @@ func newSpaceBinding(mur *toolchainv1alpha1.MasterUserRecord, space *toolchainv1
 
 	return &toolchainv1alpha1.SpaceBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: mur.Namespace,
-			Name:      spaceBindingName(mur.Name, space.Name),
-			Labels:    labels,
+			Namespace:    mur.Namespace,
+			GenerateName: spaceBindingName(mur.Name, space.Name) + "-",
+			Labels:       labels,
 		},
 		Spec: toolchainv1alpha1.SpaceBindingSpec{
 			MasterUserRecord: mur.Name,
@@ -32,5 +32,9 @@ func newSpaceBinding(mur *toolchainv1alpha1.MasterUserRecord, space *toolchainv1
 }
 
 func spaceBindingName(murName, spaceName string) string {
-	return fmt.Sprintf("%s-%s", murName, spaceName)
+	spaceBindingName := fmt.Sprintf("%s-%s", murName, spaceName)
+	if len(spaceBindingName) > 50 {
+		spaceBindingName = spaceBindingName[0:50]
+	}
+	return spaceBindingName
 }
