@@ -25,7 +25,8 @@ func MapNSTemplateTierToSpaces(namespace string, cl client.Client) func(object c
 			// look-up all spaces associated with the NSTemplateTier
 			spaces := &toolchainv1alpha1.SpaceList{}
 			if err := cl.List(context.TODO(), spaces, client.InNamespace(namespace), matchOutdated); err != nil {
-				mapperLog.Error(err, "cannot map NSTemplateTier to Spaces")
+				mapperLog.Error(err, "cannot list outdated Spaces", "tierName", tmplTier.Name)
+				return nil
 			}
 			mapperLog.Info("enqueuing reconcile requests after NSTemplateTier was updated", "name", tmplTier.Name, "request_count", len(spaces.Items))
 			requests := make([]reconcile.Request, len(spaces.Items))
