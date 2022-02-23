@@ -77,6 +77,12 @@ func WithCondition(c toolchainv1alpha1.Condition) Option {
 	}
 }
 
+func WithCreationTimestamp(t time.Time) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		space.CreationTimestamp = metav1.NewTime(t)
+	}
+}
+
 func WithStateLabel(stateValue string) Option {
 	return func(space *toolchainv1alpha1.Space) {
 		if space.Labels == nil {
