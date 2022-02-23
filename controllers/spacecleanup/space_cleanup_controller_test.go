@@ -57,7 +57,7 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("with SpaceBinding - Space shouldn't be deleted", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)))
+		space := spacetest.NewSpace("with-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)))
 		spaceBinding := spacebinding.NewSpaceBinding("johny", space.Name, "admin")
 		r, req, cl := prepareReconcile(t, space, spaceBinding)
 
