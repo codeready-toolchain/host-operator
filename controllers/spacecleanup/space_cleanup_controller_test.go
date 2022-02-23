@@ -89,7 +89,7 @@ func TestCleanupSpace(t *testing.T) {
 		// given
 		space := spacetest.NewSpace("not-found") // will be disregarded, only included for call to prepareReconcile func
 		r, req, _ := prepareReconcile(t, space)
-		empty := test.NewFakeClient(t)
+		empty := test.NewFakeClient(t) // with space disregarded
 		empty.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 			return fmt.Errorf("shouldn't be called")
 		}
