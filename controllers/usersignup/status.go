@@ -95,13 +95,14 @@ func (u *StatusUpdater) setStatusFailedToCreateSpace(userSignup *toolchainv1alph
 			Message: message,
 		})
 }
-func (u *StatusUpdater) setStatusFailedToDeleteSpace(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+
+func (u *StatusUpdater) setStatusFailedToCreateSpaceBinding(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.UserSignupComplete,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.UserSignupUnableToDeleteSpaceReason,
+			Reason:  toolchainv1alpha1.UserSignupUnableToCreateSpaceBindingReason,
 			Message: message,
 		})
 }

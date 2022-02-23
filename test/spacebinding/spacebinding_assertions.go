@@ -53,3 +53,50 @@ func (a *Assertion) DoesNotExist() *Assertion {
 	assert.True(a.t, errors.IsNotFound(err))
 	return a
 }
+
+func (a *Assertion) HasLabelWithValue(key, value string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	require.NotNil(a.t, a.spaceBinding.Labels)
+	assert.Equal(a.t, value, a.spaceBinding.Labels[key])
+	return a
+}
+
+func (a *Assertion) HasSpec(murName, spaceName, spaceRole string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, murName, a.spaceBinding.Spec.MasterUserRecord)
+	assert.Equal(a.t, spaceName, a.spaceBinding.Spec.Space)
+	assert.Equal(a.t, spaceRole, a.spaceBinding.Spec.SpaceRole)
+	return a
+}
+
+// Assertions on multiple SpaceBindings at once
+type SpaceBindingsAssertion struct {
+	spacebindings *toolchainv1alpha1.SpaceBindingList
+	client        client.Client
+	namespace     string
+	t             test.T
+}
+
+func AssertThatSpaceBindings(t test.T, client client.Client) *SpaceBindingsAssertion {
+	return &SpaceBindingsAssertion{
+		client:    client,
+		namespace: test.HostOperatorNs,
+		t:         t,
+	}
+}
+
+func (a *SpaceBindingsAssertion) loadSpaceBindings() error {
+	spacebindings := &toolchainv1alpha1.SpaceBindingList{}
+	err := a.client.List(context.TODO(), spacebindings, client.InNamespace(a.namespace))
+	a.spacebindings = spacebindings
+	return err
+}
+
+func (a *SpaceBindingsAssertion) HaveCount(count int) *SpaceBindingsAssertion {
+	err := a.loadSpaceBindings()
+	require.NoError(a.t, err)
+	require.Len(a.t, a.spacebindings.Items, count)
+	return a
+}

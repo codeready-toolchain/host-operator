@@ -19,9 +19,9 @@ import (
 
 func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 	// given
-	sbLaraCompAdmin := sb.NewSpaceBinding("lara", "comp", "admin")
-	sbJoeCompView := sb.NewSpaceBinding("joe", "comp", "view")
-	sbLaraOtherEdit := sb.NewSpaceBinding("lara", "other", "edit")
+	sbLaraCompAdmin := sb.NewSpaceBinding("lara", "comp", "admin", "signupA")
+	sbJoeCompView := sb.NewSpaceBinding("joe", "comp", "view", "signupB")
+	sbLaraOtherEdit := sb.NewSpaceBinding("lara", "other", "edit", "signupC")
 
 	compSpace := space.NewSpace("comp")
 	orphanSpace := space.NewSpace("orphan")

@@ -55,6 +55,9 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 			&source.Kind{Type: &toolchainv1alpha1.Space{}},
 			&handler.EnqueueRequestForOwner{OwnerType: &toolchainv1alpha1.UserSignup{}, IsController: true}).
 		Watches(
+			&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}},
+			&handler.EnqueueRequestForOwner{OwnerType: &toolchainv1alpha1.UserSignup{}, IsController: true}).
+		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
 			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.MapToOldestPending),
 			builder.WithPredicates(&OnlyWhenAutomaticApprovalIsEnabled{
@@ -317,10 +320,15 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			}
 			return true, nil
 		}
-		reqLogger.Info("MasterUserRecord exists", "name", mur.Name)
+		reqLogger.Info("MasterUserRecord exists", "Name", mur.Name)
 
 		if shouldManageSpace(userSignup) {
-			if err = r.ensureSpace(reqLogger, userSignup, mur); err != nil {
+			space, err := r.ensureSpace(reqLogger, userSignup, mur)
+			if err != nil {
+				return true, err
+			}
+
+			if err = r.ensureSpaceBinding(reqLogger, userSignup, mur, space); err != nil {
 				return true, err
 			}
 		}
@@ -523,8 +531,8 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 }
 
 // ensureSpace does the work of provisioning the Space
-func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord) error {
-	logger.Info("Creating Space", "Name", userSignup.Name)
+func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord) (*toolchainv1alpha1.Space, error) {
+	logger.Info("Creating Space", "UserSignup", userSignup.Name, "MUR", mur.Name)
 
 	space := &toolchainv1alpha1.Space{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{
@@ -533,36 +541,63 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 	}, space)
 	if err == nil {
 		if util.IsBeingDeleted(space) {
-			return fmt.Errorf("cannot create space because it is currently being deleted")
+			return nil, fmt.Errorf("cannot create space because it is currently being deleted")
 		}
 		logger.Info("Space exists")
-		return nil
+		return space, nil
 	}
 
 	if !errors.IsNotFound(err) {
-		return errs.Wrap(err, fmt.Sprintf(`failed to get Space associated with mur "%s"`, userSignup.Name))
+		return nil, errs.Wrap(err, fmt.Sprintf(`failed to get Space associated with mur "%s"`, mur.Name))
 	}
 
 	if len(mur.Spec.UserAccounts) == 0 || mur.Spec.UserAccounts[0].TargetCluster == "" {
-		return fmt.Errorf("unable to get target cluster from masteruserrecord for space creation")
+		return nil, fmt.Errorf("unable to get target cluster from masteruserrecord for space creation")
 	}
 	tCluster := targetCluster(mur.Spec.UserAccounts[0].TargetCluster)
 
 	space = newSpace(userSignup, tCluster, mur.Name, mur.Spec.TierName)
 
-	err = controllerutil.SetControllerReference(userSignup, space, r.Scheme) // if removing this then ensure to update the Watch for Space because it uses EnqueueRequestForOwner
-	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
-			"error setting controller reference for Space %s", space.Name)
-	}
-
 	err = r.Client.Create(context.TODO(), space)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
+		return nil, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
 			"error creating Space")
 	}
 
 	logger.Info("Created Space", "Name", space.Name, "TargetCluster", tCluster, "Tier", mur.Spec.TierName)
+	return space, nil
+}
+
+// ensureSpaceBinding creates a SpaceBinding for the provided MUR and Space if one does not exist
+func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord, space *toolchainv1alpha1.Space) error {
+	logger.Info("Creating SpaceBinding", "MUR", mur.Name, "Space", space.Name)
+
+	spaceBinding := &toolchainv1alpha1.SpaceBinding{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: mur.Namespace,
+		Name:      spaceBindingName(mur.Name, space.Name),
+	}, spaceBinding)
+	if err == nil {
+		if util.IsBeingDeleted(spaceBinding) {
+			return fmt.Errorf("cannot create spacebinding because it is currently being deleted")
+		}
+		logger.Info("SpaceBinding exists")
+		return nil
+	}
+
+	if !errors.IsNotFound(err) {
+		return errs.Wrap(err, fmt.Sprintf(`attempt to get SpaceBinding associated with mur '%s' and space '%s' failed`, mur.Name, space.Name))
+	}
+
+	spaceBinding = newSpaceBinding(mur, space, userSignup.Name)
+
+	err = r.Client.Create(context.TODO(), spaceBinding)
+	if err != nil {
+		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpaceBinding, err,
+			"error creating SpaceBinding")
+	}
+
+	logger.Info("Created SpaceBinding", "MUR", mur.Name, "Space", space.Name)
 	return nil
 }
 
@@ -593,7 +628,7 @@ func (r *Reconciler) deleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRec
 	userSignup *toolchainv1alpha1.UserSignup, logger logr.Logger,
 	inProgressStatusUpdater StatusUpdaterFunc) error {
 
-	logger.Info("Deleting MasterUserRecord", "mur", mur.Name)
+	logger.Info("Deleting MasterUserRecord", "MUR", mur.Name)
 	err := r.updateStatus(logger, userSignup, inProgressStatusUpdater)
 	if err != nil {
 		return err
@@ -604,7 +639,7 @@ func (r *Reconciler) deleteMasterUserRecord(mur *toolchainv1alpha1.MasterUserRec
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToDeleteMUR, err,
 			"error deleting MasterUserRecord")
 	}
-	logger.Info("Deleted MasterUserRecord", "mur", mur.Name)
+	logger.Info("Deleted MasterUserRecord", "MUR", mur.Name)
 	return nil
 }
 
