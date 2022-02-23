@@ -118,7 +118,7 @@ func TestCleanupSpace(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 
 			// then
-			require.Error(t, err)
+			require.EqualError(t, err, "unable to get the current Space: some error")
 			assert.False(t, res.Requeue)
 			cl.MockGet = nil
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
@@ -137,7 +137,7 @@ func TestCleanupSpace(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 
 			// then
-			require.Error(t, err)
+			require.EqualError(t, err, "unable to list SpaceBindings: some error")
 			assert.False(t, res.Requeue)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				Exists()
@@ -155,7 +155,7 @@ func TestCleanupSpace(t *testing.T) {
 			res, err := r.Reconcile(context.TODO(), req)
 
 			// then
-			require.Error(t, err)
+			require.EqualError(t, err, "unable to delete Space: some error")
 			assert.False(t, res.Requeue)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				Exists()
