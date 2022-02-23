@@ -838,25 +838,25 @@ func TestUpdateSpaceTier(t *testing.T) {
 		// get an older basic tier (with outdated references)
 		olderBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 		// given 3 spaces set to the older version of the tier
-		s1 := spacetest.NewSpace("oddity1",
+		s := spacetest.NewSpace("oddity1",
 			spacetest.WithTierNameAndHashLabelFor(olderBasicTier),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"),
 			spacetest.WithFinalizer(),
 			spacetest.WithCondition(spacetest.Ready()))
-		nsTmplSet1 := nstemplatetsettest.NewNSTemplateSet(s1.Name,
+		nsTmplSet1 := nstemplatetsettest.NewNSTemplateSet(s.Name,
 			nstemplatetsettest.WithReferencesFor(olderBasicTier), // NSTemplateSet has references to old basic tier
 			nstemplatetsettest.WithReadyCondition())
 
 		t.Run("when is postponed by two seconds", func(t *testing.T) {
-			hostClient := test.NewFakeClient(t, s1, basicTier)
+			hostClient := test.NewFakeClient(t, s, basicTier)
 			member1Client := test.NewFakeClient(t, nsTmplSet1)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1)
 			ctrl.LastExecutedUpdate = time.Now()
 
 			// when reconciling space `s1`
-			res, err := ctrl.Reconcile(context.TODO(), requestFor(s1))
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 			// then
 			require.NoError(t, err)
@@ -864,7 +864,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			assert.LessOrEqual(t, res.RequeueAfter, 2*time.Second) // wait 2s for NSTemplateSet update to begin
 			assert.LessOrEqual(t, time.Until(ctrl.NextScheduledUpdate), 2*time.Second)
 			// check that the NSTemplateSet is not being updated
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, s1.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				Exists().
 				HasTier(basicTier.Name).
 				HasConditions(spacetest.Ready()).
@@ -876,7 +876,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		})
 
 		t.Run("when is postponed by two seconds from the NextScheduledUpdate", func(t *testing.T) {
-			hostClient := test.NewFakeClient(t, s1, basicTier)
+			hostClient := test.NewFakeClient(t, s, basicTier)
 			member1Client := test.NewFakeClient(t, nsTmplSet1)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1)
@@ -884,7 +884,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			ctrl.LastExecutedUpdate = time.Now()
 
 			// when reconciling space `s1`
-			res, err := ctrl.Reconcile(context.TODO(), requestFor(s1))
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 			// then
 			require.NoError(t, err)
@@ -892,7 +892,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			assert.LessOrEqual(t, res.RequeueAfter, time.Minute+(2*time.Second)) // wait 2s for NSTemplateSet update to begin
 			assert.LessOrEqual(t, time.Until(ctrl.NextScheduledUpdate), time.Minute+(2*time.Second))
 			// check that the NSTemplateSet is not being updated
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, s1.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				Exists().
 				HasTier(basicTier.Name).
 				HasConditions(spacetest.Ready()).
