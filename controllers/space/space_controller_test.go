@@ -781,6 +781,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
+		ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -788,9 +789,9 @@ func TestUpdateSpaceTier(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, reconcile.Result{
-			Requeue:      true,
-			RequeueAfter: 1 * time.Second,
-		}, res) // explicitly requeue while the NSTemplate update is triggered by its controller
+			Requeue:      true,            // explicitly requeue while the NSTemplateSet update is triggered by its controller
+			RequeueAfter: 1 * time.Second, // requeued by 1s (since the last update happened a long time ago enough)
+		}, res)
 		s = spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 			Exists().
 			HasTier(basicTier.Name).
@@ -834,23 +835,23 @@ func TestUpdateSpaceTier(t *testing.T) {
 		})
 	})
 
-	t.Run("tier update for 3 spaces (same tier but updated references)", func(t *testing.T) {
+	t.Run("tier update for space with postpones (same tier but updated references)", func(t *testing.T) {
 		// get an older basic tier (with outdated references)
 		olderBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-		// given 3 spaces set to the older version of the tier
+		// given a space set to the older version of the tier
 		s := spacetest.NewSpace("oddity1",
 			spacetest.WithTierNameAndHashLabelFor(olderBasicTier),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"),
 			spacetest.WithFinalizer(),
 			spacetest.WithCondition(spacetest.Ready()))
-		nsTmplSet1 := nstemplatetsettest.NewNSTemplateSet(s.Name,
+		nsTmplSet := nstemplatetsettest.NewNSTemplateSet(s.Name,
 			nstemplatetsettest.WithReferencesFor(olderBasicTier), // NSTemplateSet has references to old basic tier
 			nstemplatetsettest.WithReadyCondition())
 
-		t.Run("when is postponed by two seconds", func(t *testing.T) {
+		t.Run("postponed by two seconds from now", func(t *testing.T) {
 			hostClient := test.NewFakeClient(t, s, basicTier)
-			member1Client := test.NewFakeClient(t, nsTmplSet1)
+			member1Client := test.NewFakeClient(t, nsTmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1)
 			ctrl.LastExecutedUpdate = time.Now()
@@ -869,15 +870,15 @@ func TestUpdateSpaceTier(t *testing.T) {
 				HasTier(basicTier.Name).
 				HasConditions(spacetest.Ready()).
 				HasMatchingTierLabelForTier(olderBasicTier)
-			nsTmplSet1 = nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nsTmplSet1.Name, member1.Client).
+			nsTmplSet = nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nsTmplSet.Name, member1.Client).
 				Exists().
 				Get()
-			require.True(t, tierutil.TierHashMatches(olderBasicTier, nsTmplSet1.Spec))
+			require.True(t, tierutil.TierHashMatches(olderBasicTier, nsTmplSet.Spec))
 		})
 
-		t.Run("when is postponed by two seconds from the NextScheduledUpdate", func(t *testing.T) {
+		t.Run("postponed by two seconds from the NextScheduledUpdate", func(t *testing.T) {
 			hostClient := test.NewFakeClient(t, s, basicTier)
-			member1Client := test.NewFakeClient(t, nsTmplSet1)
+			member1Client := test.NewFakeClient(t, nsTmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1)
 			ctrl.NextScheduledUpdate = time.Now().Add(1 * time.Minute)
@@ -897,10 +898,10 @@ func TestUpdateSpaceTier(t *testing.T) {
 				HasTier(basicTier.Name).
 				HasConditions(spacetest.Ready()).
 				HasMatchingTierLabelForTier(olderBasicTier)
-			nsTmplSet1 = nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nsTmplSet1.Name, member1.Client).
+			nsTmplSet = nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nsTmplSet.Name, member1.Client).
 				Exists().
 				Get()
-			require.True(t, tierutil.TierHashMatches(olderBasicTier, nsTmplSet1.Spec))
+			require.True(t, tierutil.TierHashMatches(olderBasicTier, nsTmplSet.Spec))
 		})
 
 	})

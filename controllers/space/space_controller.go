@@ -222,10 +222,12 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		if space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
 			condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
 			// postpone if needed, so we don't overflow the cluster with too many concurrent updates
-			if time.Since(r.LastExecutedUpdate) < postponeDelay {
-				if time.Now().After(r.NextScheduledUpdate) {
+
+			logger.Info("time since last tier update", "seconds", time.Since(r.LastExecutedUpdate).Seconds())
+			if time.Since(r.LastExecutedUpdate) < postponeDelay { // ie, if last update occurred less than 2s ago
+				if time.Now().After(r.NextScheduledUpdate) { // happens when there was no previous update scheduled since controller started
 					r.NextScheduledUpdate = time.Now().Add(postponeDelay)
-				} else {
+				} else { // if at least one postponed schedule occurred
 					r.NextScheduledUpdate = r.NextScheduledUpdate.Add(postponeDelay)
 				}
 				// return the duration when it should be requeued
