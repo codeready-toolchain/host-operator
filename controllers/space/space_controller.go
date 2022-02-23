@@ -214,10 +214,17 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 	logger.Info("NSTemplateSet already exists")
 
+	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	// skip until there's a `Ready` condition
+	if !found {
+		// just created, but there is no `Ready` condition yet
+		return requeueDelay, nil
+	}
+
 	tiersMatch := tierutil.TierHashMatches(tmplTier, nsTmplSet.Spec)
 
-	// update the NSTemplateSet if needed
-	if !tiersMatch {
+	// update the NSTemplateSet if needed and if it's "ready"
+	if !tiersMatch && nsTmplSetReady.Reason == toolchainv1alpha1.NSTemplateSetProvisionedReason {
 		// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)
 		if space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
 			condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
@@ -246,13 +253,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return requeueDelay, r.setStatusUpdating(space)
 	}
 	logger.Info("NSTemplateSet is up-to-date")
-
-	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
-	// skip until there's a `Ready` condition
-	if !found {
-		// just created, but there is no `Ready` condition yet
-		return requeueDelay, nil
-	}
 
 	// also, replicates (translate) the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
 	switch nsTmplSetReady.Reason {

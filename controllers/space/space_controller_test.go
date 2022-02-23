@@ -651,6 +651,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
+	// get an older basic tier (with outdated references)
+	olderBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 	otherTier := tiertest.OtherTier()
 
 	t.Run("tier promotion (update needed due to different tier)", func(t *testing.T) {
@@ -766,7 +768,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		})
 	})
 
-	t.Run("tier update for single space (same tier but updated references)", func(t *testing.T) {
+	t.Run("update without postpone", func(t *testing.T) {
 		// get an older basic tier (with outdated references) that the nstemplateset can be referenced to for setup
 		olderBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
 		// given that Space is set to the same tier that has been updated and the corresponding NSTemplateSet is not up-to-date
@@ -836,9 +838,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		})
 	})
 
-	t.Run("tier update for space with postpones (same tier but updated references)", func(t *testing.T) {
-		// get an older basic tier (with outdated references)
-		olderBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
+	t.Run("update with postpone", func(t *testing.T) {
 		// given a space set to the older version of the tier
 		s := spacetest.NewSpace("oddity1",
 			spacetest.WithTierNameAndHashLabelFor(olderBasicTier),
@@ -857,7 +857,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			ctrl := newReconciler(hostClient, member1)
 			ctrl.LastExecutedUpdate = time.Now()
 
-			// when reconciling space `s1`
+			// when reconciling space
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 			// then
@@ -885,7 +885,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			ctrl.NextScheduledUpdate = time.Now().Add(1 * time.Minute)
 			ctrl.LastExecutedUpdate = time.Now()
 
-			// when reconciling space `s1`
+			// when reconciling space
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 
 			// then
@@ -904,10 +904,9 @@ func TestUpdateSpaceTier(t *testing.T) {
 				Get()
 			require.True(t, tierutil.TierHashMatches(olderBasicTier, nsTmplSet.Spec))
 		})
-
 	})
 
-	t.Run("update not needed", func(t *testing.T) {
+	t.Run("update not needed when already up-to-date", func(t *testing.T) {
 		// given that Space is promoted to `basic` tier and corresponding NSTemplateSet is already up-to-date and ready
 		s := spacetest.NewSpace("oddity",
 			// assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
@@ -936,6 +935,31 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasStatusTargetCluster("member-1").
 			HasConditions(spacetest.Ready()).
 			HasMatchingTierLabelForTier(basicTier) // label is immediately set since the NSTemplateSet was already up-to-date
+	})
+
+	t.Run("update not needed when NStemplateSet not ready", func(t *testing.T) {
+		notReadySpace := spacetest.NewSpace("oddity1",
+			spacetest.WithTierNameAndHashLabelFor(olderBasicTier),
+			spacetest.WithSpecTargetCluster("member-1"),
+			spacetest.WithStatusTargetCluster("member-1"),
+			spacetest.WithFinalizer(),
+			spacetest.WithCondition(spacetest.Updating())) // space is not ready
+		notReadyTmplSet := nstemplatetsettest.NewNSTemplateSet(notReadySpace.Name,
+			nstemplatetsettest.WithReferencesFor(olderBasicTier), // NSTemplateSet has references to old basic tier
+			nstemplatetsettest.WithNotReadyCondition(toolchainv1alpha1.NSTemplateSetUpdatingReason, ""))
+		hostClient := test.NewFakeClient(t, notReadySpace, basicTier)
+		member1Client := test.NewFakeClient(t, notReadyTmplSet)
+		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+		ctrl := newReconciler(hostClient, member1)
+		ctrl.NextScheduledUpdate = time.Now().Add(1 * time.Minute)
+		ctrl.LastExecutedUpdate = time.Now()
+
+		// when reconciling space
+		res, err := ctrl.Reconcile(context.TODO(), requestFor(notReadySpace))
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, res.Requeue) // nothing to do for now since the space was NOT ready
 	})
 
 	t.Run("failures", func(t *testing.T) {
