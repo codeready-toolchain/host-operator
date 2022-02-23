@@ -77,10 +77,11 @@ func TestCleanupSpace(t *testing.T) {
 		r, req, cl := prepareReconcile(t, space)
 
 		// when
-		_, err := r.Reconcile(context.TODO(), req)
+		res, err := r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
+		assert.False(t, res.Requeue)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 			Exists()
 	})
