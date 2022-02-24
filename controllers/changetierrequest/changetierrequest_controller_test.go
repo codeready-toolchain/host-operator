@@ -229,7 +229,7 @@ func TestChangeTierSuccess(t *testing.T) {
 				HasTier(*teamTier).
 				UserAccountHasNoTier(test.MemberClusterName).
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
-			spacetest.AssertThatSpace(t, space.Name, cl).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier(teamTier.Name).
 				HasSpecTargetCluster("member-1").                                   // unchanged
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(basicTierName)). // label for old tier is removed
@@ -248,7 +248,7 @@ func TestChangeTierSuccess(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			spacetest.AssertThatSpace(t, space.Name, cl).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier(teamTier.Name).
 				HasSpecTargetCluster("member-1"). // unchanged
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName))
@@ -266,7 +266,7 @@ func TestChangeTierSuccess(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			spacetest.AssertThatSpace(t, space.Name, cl).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier(teamTier.Name).               // unchanged
 				HasSpecTargetCluster("member-1").     // unchanged
 				HasMatchingTierLabelForTier(teamTier) // not removed since there was no update to perform in this case
@@ -433,7 +433,7 @@ func TestChangeTierFailure(t *testing.T) {
 			// then
 			require.EqualError(t, err, "unable to get Space with name john: mock error")
 			cl.MockGet = nil // need to restore the default behaviour otherwise the assertion using the same client will fail, too!
-			spacetest.AssertThatSpace(t, space.Name, cl).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier(basicTier.Name) // unchanged
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("mock error"))
 		})
@@ -455,7 +455,7 @@ func TestChangeTierFailure(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "unable to change tier in Space john: mock error")
-			spacetest.AssertThatSpace(t, space.Name, cl).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier(basicTier.Name) // unchanged
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("mock error"))
 		})

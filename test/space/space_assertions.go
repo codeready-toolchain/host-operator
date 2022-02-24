@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -32,10 +31,10 @@ func (a *Assertion) loadResource() error {
 }
 
 // AssertThatSpace helper func to begin with the assertions on a Space
-func AssertThatSpace(t test.T, name string, client client.Client) *Assertion {
+func AssertThatSpace(t test.T, namespace, name string, client client.Client) *Assertion {
 	return &Assertion{
 		client:         client,
-		namespacedName: test.NamespacedName(test.HostOperatorNs, name),
+		namespacedName: test.NamespacedName(namespace, name),
 		t:              t,
 	}
 }
@@ -46,16 +45,16 @@ func (a *Assertion) Get() *toolchainv1alpha1.Space {
 	return a.space
 }
 
-func (a *Assertion) DoesNotExist() *Assertion {
-	err := a.loadResource()
-	require.Error(a.t, err)
-	assert.IsType(a.t, metav1.StatusReasonNotFound, errors.ReasonForError(err))
-	return a
-}
-
 func (a *Assertion) Exists() *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
+	return a
+}
+
+func (a *Assertion) DoesNotExist() *Assertion {
+	err := a.loadResource()
+	require.Error(a.t, err)
+	require.True(a.t, errors.IsNotFound(err))
 	return a
 }
 
