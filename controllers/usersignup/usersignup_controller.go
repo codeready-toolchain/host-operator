@@ -201,11 +201,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusDeactivated)
 	}
 
-	if err := r.ensureNewMurIfApproved(logger, config, userSignup); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{}, err
+	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, config, userSignup)
 }
 
 // Is the user banned? To determine this we query the BannedUser resource for any matching entries.  The query
