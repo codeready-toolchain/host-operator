@@ -117,6 +117,9 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
+github.com/codeready-toolchain/api v0.0.0-20220215110522-1a78f33ee8fc/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
+github.com/codeready-toolchain/api v0.0.0-20220224160109-6c2f447c08aa h1:t4lNOUUi/5A5GinikpcaA5DdF8avGIBE0Gq/mHVL+js=
+github.com/codeready-toolchain/api v0.0.0-20220224160109-6c2f447c08aa/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20220217010424-fd9be6c8d171 h1:sJsL6HRPL/h4fyNd/zGZK3mBrMjeHSaSeVVRLVmyj0U=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20220217010424-fd9be6c8d171/go.mod h1:BjfWQlOcdmZpbPYKk54Qj7PNEKAVbcYhaWWLPCJ8atg=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
@@ -522,8 +525,6 @@ github.com/prometheus/procfs v0.6.0/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1
 github.com/prometheus/procfs v0.7.3 h1:4jVXhlkAyzOScmCkXBTOLRLTz8EeU+eyjrwB/EPq0VU=
 github.com/prometheus/procfs v0.7.3/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
-github.com/rajivnathan/api v0.0.0-20220218005614-c8861381eff4 h1:WGjg8W5R3OFTAfX5HduTrr3ujqa/NJwpJghj95csuCs=
-github.com/rajivnathan/api v0.0.0-20220218005614-c8861381eff4/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
 github.com/redhat-cop/operator-utils v1.1.3-0.20210602122509-2eaf121122d2 h1:m0IMqkR8PcFAXITvUZGHTte/NvyF/P4Qr3bw0eIw2+c=
 github.com/redhat-cop/operator-utils v1.1.3-0.20210602122509-2eaf121122d2/go.mod h1:Hu6OKop6iQfga0Hwrqv/03CQgpkcp55qwjMh9Gi0Iyk=
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=
