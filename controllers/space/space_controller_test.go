@@ -450,7 +450,7 @@ func TestDeleteSpace(t *testing.T) {
 				HasFinalizer() // finalizer is still present while the NSTemplateSet is not fully deleted
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 				DoesNotExist()
-			// stop the test here: it verified that the NSTemlateSet deletion was triggered (the rest is already covered above)
+			// stop the test here: it verified that the NSTemplateSet deletion was triggered (the rest is already covered above)
 		})
 
 		t.Run("without spec and status target cluster", func(t *testing.T) {
