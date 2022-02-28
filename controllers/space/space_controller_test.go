@@ -392,13 +392,15 @@ func TestDeleteSpace(t *testing.T) {
 				DoesNotExist()
 		})
 
-		t.Run("when NSTemplateSet is in terminating state", func(t *testing.T) {
-			// given another reconcile loop while the NSTemplateSet is *terminating* (ie, user namespaces are being deleted)
-			nsTmplSet := nsTmplSet.DeepCopy()
-			nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-				nstemplatetsettest.Terminating(),
-			}
-			nsTmplSet.Finalizers = []string{"kubernetes"}
+		t.Run("when NSTemplateSet is being deleted and in terminating state", func(t *testing.T) {
+			// given
+			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithDeletionTimestamp(time.Now()), func(templateSet *toolchainv1alpha1.NSTemplateSet) {
+				templateSet.Status.Conditions = []toolchainv1alpha1.Condition{
+					nstemplatetsettest.Terminating(),
+				}
+				// we need to set the finalizer, otherwise, the FakeClient would delete the object immediately
+				templateSet.Finalizers = []string{"kubernetes"}
+			})
 			hostClient := test.NewFakeClient(t, s, basicTier)
 			memberClient := test.NewFakeClient(t, nsTmplSet)
 			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
