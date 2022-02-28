@@ -976,30 +976,7 @@ func TestRetargetSpace(t *testing.T) {
 			HasConditions(spacetest.Retargeting()).
 			HasStatusTargetCluster("member-1") // not reset yet
 
-		//t.Run("status target cluster is not reset while NSTemplateSet is still being deleted on member-1", func(t *testing.T) {
-		//	// once NSTemplateSet resource is fully deleted, the SpaceController is triggered again
-		//	// and it can create the NSTemplateSet on member-2 cluster
-		//
-		//	// when
-		//	res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
-		//	// then
-		//	require.NoError(t, err)
-		//	assert.False(t, res.Requeue)
-		//	spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
-		//		HasFinalizer().
-		//		HasSpecTargetCluster("member-2").
-		//		HasConditions(spacetest.Provisioning()).
-		//		HasStatusTargetCluster("member-1") // not updated yet
-		//	nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
-		//		HasDeletionTimestamp()
-		//	nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member2.Client).
-		//		DoesNotExist()
-
 		t.Run("status target cluster is reset when NSTemplateSet is deleted on member-1", func(t *testing.T) {
-			//// once NSTemplateSet resource is fully deleted, the SpaceController is triggered again
-			//// and it can create the NSTemplateSet on member-2 cluster
-			//err := member1Client.Client.Delete(context.TODO(), nstmplSet) // bypass the mock func
-			//require.NoError(t, err)
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
 			// then
@@ -1016,7 +993,6 @@ func TestRetargetSpace(t *testing.T) {
 				Exists().
 				HasTierName(basicTier.Name)
 		})
-		//})
 	})
 
 	t.Run("failures", func(t *testing.T) {
