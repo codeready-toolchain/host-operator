@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -45,6 +46,13 @@ func (a *Assertion) Get() *toolchainv1alpha1.Space {
 func (a *Assertion) Exists() *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
+	return a
+}
+
+func (a *Assertion) DoesNotExist() *Assertion {
+	err := a.loadResource()
+	require.Error(a.t, err)
+	require.True(a.t, errors.IsNotFound(err))
 	return a
 }
 
