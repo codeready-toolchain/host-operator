@@ -6,10 +6,30 @@ objects:
 
 # Rolebindings that grant permissions to the users in their own namespaces
 - apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    name: rbac-edit
+    namespace: ${NAMESPACE}
+  rules:
+    - apiGroups:
+        - authorization.openshift.io
+        - rbac.authorization.k8s.io
+      resources:
+        - roles
+        - rolebindings
+      verbs:
+        - get
+        - list
+        - watch
+        - create
+        - update
+        - patch
+        - delete
+- apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     name: user-rbac-edit
-    namespace: ${USERNAME}-dev
+    namespace: ${NAMESPACE}
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
@@ -17,12 +37,11 @@ objects:
   subjects:
     - kind: User
       name: ${USERNAME}
-
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     name: user-edit
-    namespace: ${USERNAME}-dev
+    namespace: ${NAMESPACE}
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
@@ -30,34 +49,9 @@ objects:
   subjects:
   - kind: User
     name: ${USERNAME}
-
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: user-rbac-edit
-    namespace: ${USERNAME}-stage
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: Role
-    name: rbac-edit
-  subjects:
-    - kind: User
-      name: ${USERNAME}
-
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: user-edit
-    namespace: ${USERNAME}-stage
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: edit
-  subjects:
-  - kind: User
-    name: ${USERNAME}
-
 
 parameters:
+- name: NAMESPACE
+  required: true
 - name: USERNAME
   required: true
