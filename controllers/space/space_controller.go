@@ -46,12 +46,13 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	// watch NSTemplateSets in all the member clusters
 	for _, memberCluster := range memberClusters {
 		b = b.Watches(source.NewKindWithCache(&toolchainv1alpha1.NSTemplateSet{}, memberCluster.Cache),
-			&handler.EnqueueRequestForObject{},
+			handler.EnqueueRequestsFromMapFunc(MapNSTemplateSetToSpace(r.Namespace)),
 		)
 	}
 
 	return b.Complete(r)
 }
+
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spaces,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spaces/status,verbs=get;update;patch
@@ -59,7 +60,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 
 // Reconcile ensures that there is an NSTemplateSet resource defined in the target member cluster
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx, "namespace", r.Namespace)
+	logger := log.FromContext(ctx)
 	logger.Info("reconciling Space")
 
 	// Fetch the Space
