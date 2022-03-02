@@ -481,17 +481,6 @@ func TestNewTierTemplate(t *testing.T) {
 
 		t.Run("with prod assets", func(t *testing.T) {
 			// given
-			// expectedTiers := map[string]bool{
-			// 	"advanced":                 true, // tier_name: true/false (if based on the other tier)
-			// 	"base":                     false,
-			// 	"baselarge":                true,
-			// 	"baseextended":             true,
-			// 	"baseextendedidling":       true,
-			// 	"basedeactivationdisabled": true,
-			// 	"hackathon":                true,
-			// 	"test":                     false,
-			// 	"appstudio":                false,
-			// }
 			assets := assets.NewAssets(AssetNames, Asset)
 			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
 			// when
