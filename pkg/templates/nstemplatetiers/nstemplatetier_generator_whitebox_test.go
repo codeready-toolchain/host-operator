@@ -548,15 +548,6 @@ func TestNewTierTemplate(t *testing.T) {
 						} else {
 							t.Errorf("unexpected type of template: '%s'", actual.Spec.Type)
 						}
-
-						// switch actual.Spec.Type {
-						// case "dev", "stage":
-						// 	assertTestNamespaceTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName, actual.Spec.Type)
-						// case "clusterresources":
-						// 	assertTestClusterResourcesTemplate(t, decoder, actual.Spec.Template, actual.Spec.TierName)
-						// default:
-						// 	t.Errorf("unexpected type of template: '%s'", actual.Spec.Type)
-						// }
 					}
 				})
 			}
