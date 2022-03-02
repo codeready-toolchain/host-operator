@@ -252,13 +252,13 @@ func (t *tierGenerator) newTierTemplates(basedOnTierFileRevision string, tierDat
 	decoder := serializer.NewCodecFactory(t.scheme).UniversalDeserializer()
 
 	// namespace templates
-	kinds := make([]string, 0, len(tierData.rawTemplates.namespaceTemplates))
+	roles := make([]string, 0, len(tierData.rawTemplates.namespaceTemplates))
 	for kind := range tierData.rawTemplates.namespaceTemplates {
-		kinds = append(kinds, kind)
+		roles = append(roles, kind)
 	}
 	tierTmpls := []*toolchainv1alpha1.TierTemplate{}
-	sort.Strings(kinds)
-	for _, kind := range kinds {
+	sort.Strings(roles)
+	for _, kind := range roles {
 		tmpl := tierData.rawTemplates.namespaceTemplates[kind]
 		tierTmpl, err := t.newTierTemplate(decoder, basedOnTierFileRevision, tier, kind, tmpl, parameters)
 		if err != nil {
@@ -267,14 +267,14 @@ func (t *tierGenerator) newTierTemplates(basedOnTierFileRevision string, tierDat
 		tierTmpls = append(tierTmpls, tierTmpl)
 	}
 	// space roles templates
-	kinds = make([]string, 0, len(tierData.rawTemplates.spaceroleTemplates))
-	for kind := range tierData.rawTemplates.spaceroleTemplates {
-		kinds = append(kinds, kind)
+	roles = make([]string, 0, len(tierData.rawTemplates.spaceroleTemplates))
+	for role := range tierData.rawTemplates.spaceroleTemplates {
+		roles = append(roles, role)
 	}
-	sort.Strings(kinds)
-	for _, kind := range kinds {
-		tmpl := tierData.rawTemplates.spaceroleTemplates[kind]
-		tierTmpl, err := t.newTierTemplate(decoder, basedOnTierFileRevision, tier, kind, tmpl, parameters)
+	sort.Strings(roles)
+	for _, role := range roles {
+		tmpl := tierData.rawTemplates.spaceroleTemplates[role]
+		tierTmpl, err := t.newTierTemplate(decoder, basedOnTierFileRevision, tier, role, tmpl, parameters)
 		if err != nil {
 			return nil, err
 		}
