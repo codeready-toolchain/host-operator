@@ -12,9 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var mapperLog = ctrl.Log.WithName("MapNSTemplateTierToSpaces")
-
 func MapNSTemplateTierToSpaces(namespace string, cl client.Client) func(object client.Object) []reconcile.Request {
+	mapperLog := ctrl.Log.WithName("NSTemplateTierToSpaceMapper")
 	return func(obj client.Object) []reconcile.Request {
 		if tmplTier, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 			matchOutdated, err := nstemplatetier.OutdatedTierSelector(tmplTier)
