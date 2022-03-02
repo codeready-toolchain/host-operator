@@ -31,8 +31,9 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 
 	nsTmplTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 	otherSpace1 := spacetest.NewSpace("other-space-1", spacetest.WithTierNameAndHashLabelFor(nsTmplTier))
-	otherSpace2 := spacetest.NewSpace("other-space-2", spacetest.WithTierNameAndHashLabelFor(nsTmplTier))
-	otherSpace3 := spacetest.NewSpace("other-space-3", spacetest.WithTierNameAndHashLabelFor(nsTmplTier))
+	otherSpace2 := spacetest.NewSpace("other-tier-space",
+		spacetest.WithLabel(tierutil.TemplateTierHashLabelKey("other-tier"), "123abc"))
+	otherSpace3 := spacetest.NewSpace("no-label-space")
 
 	t.Run("single match", func(t *testing.T) {
 		// given
