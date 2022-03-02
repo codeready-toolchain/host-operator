@@ -56,7 +56,7 @@ func TestMapNSTemplateTierToSpaces(t *testing.T) {
 		}, result)
 	})
 
-	t.Run("multiple matchs", func(t *testing.T) {
+	t.Run("multiple matches", func(t *testing.T) {
 		// given
 		nsTmplTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 		outdatedSpace1 := spacetest.NewSpace("oddity1",
