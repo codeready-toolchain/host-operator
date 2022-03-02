@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
 var mapperLog = ctrl.Log.WithName("NSTemplateSetToSpaceMapper")
 
 func MapNSTemplateSetToSpace(hostNamespace string) func(object client.Object) []reconcile.Request {
