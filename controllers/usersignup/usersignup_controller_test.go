@@ -3781,75 +3781,41 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 	}
 }
 
-// Test the scenario where the existing usersignup CompliantUsername becomes outdated eg. transformUsername func is changed
+// Test the scenario where the existing usersignup is reactivated and the CompliantUsername becomes outdated eg. transformUsername func is changed
 func TestChangedCompliantUsername(t *testing.T) {
-	// starting with a UserSignup that exists and was approved and has the now outdated CompliantUsername
+	// starting with a UserSignup that exists and was just approved again (reactivated) and has the now outdated CompliantUsername
 	userSignup := NewUserSignup(Approved(), WithTargetCluster("east"))
 	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
 		Conditions: []toolchainv1alpha1.Condition{
 			{
 				Type:   toolchainv1alpha1.UserSignupApproved,
 				Status: v1.ConditionTrue,
-				Reason: toolchainv1alpha1.UserSignupApprovedByAdminReason,
+				Reason: "ApprovedAutomatically",
 			},
 			{
-				Status: v1.ConditionTrue,
 				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: "Deactivated",
+			},
+			{
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionTrue,
+				Reason: "NotificationCRCreated",
 			},
 		},
-		CompliantUsername: "foo-old",
+		CompliantUsername: "foo-old", // outdated UserSignup CompliantUsername
 	}
-
-	// also starting with the old MUR whose name matches the outdated UserSignup CompliantUsername
-	oldMur := &toolchainv1alpha1.MasterUserRecord{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo-old",
-			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name},
-		},
-		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			TierName: baseNSTemplateTier.Name,
-		},
-	}
-	ua := toolchainv1alpha1.UserAccountEmbedded{
-		TargetCluster: "east",
-		SyncIndex:     "123abc", // default value
-	}
-	// set the user account
-	oldMur.Spec.UserAccounts = append(oldMur.Spec.UserAccounts, ua)
-
-	// space exists for the MUR
-	space := newSpace(userSignup, "east", "foo-old", "base")
-
-	// spacebinding exists that maps oldMur and space
-	sb := newSpaceBinding(oldMur, space, userSignup.Name)
 
 	// create the initial resources
-	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, oldMur, space, sb, baseNSTemplateTier)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.External): 1,
 		}),
 	))
 
-	// 1st reconcile should effectively be a no op because the MUR name and UserSignup CompliantUsername match and status is all good
+	// 1st reconcile should provision a new MUR
 	res, err := r.Reconcile(context.TODO(), req)
-	require.NoError(t, err)
-	require.Equal(t, reconcile.Result{}, res)
-
-	// after the 1st reconcile verify that the MUR still exists and its name still matches the initial UserSignup CompliantUsername
-	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-	murtest.AssertThatMasterUserRecord(t, "foo-old", r.Client).
-		Exists().
-		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name)
-	require.Equal(t, userSignup.Status.CompliantUsername, "foo-old")
-
-	// delete the old MUR to trigger creation of a new MUR using the new username
-	err = r.Client.Delete(context.TODO(), oldMur)
-	require.NoError(t, err)
-
-	// 2nd reconcile should handle the deleted MUR and provision a new one
-	res, err = r.Reconcile(context.TODO(), req)
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
@@ -3865,7 +3831,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	// lookup the userSignup and check the conditions are updated but the CompliantUsername is still the old one
 	AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasCompliantUsername("foo-old")
 
-	// 3rd reconcile should create a new Space for the new MUR
+	// 2nd reconcile should create a new Space for the new MUR
 	res, err = r.Reconcile(context.TODO(), req)
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
@@ -3876,7 +3842,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 		HasSpecTargetCluster("east").
 		HasTier(baseNSTemplateTier.Name)
 
-	// 4th reconcile should create a new SpaceBinding for the new MUR
+	// 3rd reconcile should create a new SpaceBinding for the new MUR
 	res, err = r.Reconcile(context.TODO(), req)
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
@@ -3888,7 +3854,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 		HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
 		HasSpec("foo", "foo", "admin")
 
-	// 5th reconcile should update the CompliantUsername on the UserSignup status
+	// 4th reconcile should update the CompliantUsername on the UserSignup status
 	res, err = r.Reconcile(context.TODO(), req)
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
