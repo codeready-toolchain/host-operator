@@ -45,7 +45,7 @@ var expectedTestTiers = map[string]bool{
 	"appstudio": false,
 }
 
-func types(tier string) []string {
+func nsTypes(tier string) []string {
 	switch tier {
 	case "appstudio":
 		return []string{"appstudio"}
@@ -65,7 +65,7 @@ func roles(tier string) []string {
 
 func isNamespaceType(expectedTiers map[string]bool, typeName string) bool {
 	for _, tier := range tiers(expectedTiers) {
-		for _, t := range types(tier) {
+		for _, t := range nsTypes(tier) {
 			if t == typeName {
 				return true
 			}
@@ -118,14 +118,14 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 			for _, tier := range tiers(expectedProdTiers) {
 				t.Run(tier, func(t *testing.T) {
-					for _, typeName := range types(tier) {
-						t.Run("ns-"+typeName, func(t *testing.T) {
+					for _, nsTypeName := range nsTypes(tier) {
+						t.Run("ns-"+nsTypeName, func(t *testing.T) {
 							if basedOnOtherTier(expectedProdTiers, tier) {
-								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
-								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[nsTypeName].revision)
+								assert.Empty(t, tmpls[tier].rawTemplates.namespaceTemplates[nsTypeName].content)
 							} else {
-								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].revision)
-								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[typeName].content)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[nsTypeName].revision)
+								assert.NotEmpty(t, tmpls[tier].rawTemplates.namespaceTemplates[nsTypeName].content)
 							}
 						})
 					}
@@ -172,7 +172,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 
 			for _, tier := range tiers(expectedTestTiers) {
 				t.Run(tier, func(t *testing.T) {
-					for _, typeName := range types(tier) {
+					for _, typeName := range nsTypes(tier) {
 						t.Run("ns-"+typeName, func(t *testing.T) {
 							require.NotNil(t, tmpls[tier])
 							if basedOnOtherTier(expectedTestTiers, tier) {
