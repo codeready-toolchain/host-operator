@@ -91,5 +91,3 @@ parameters:
   required: true
 - name: USERNAME
   required: true
-- name: MEMBER_OPERATOR_NAMESPACE
-  value: toolchain-member-operator
