@@ -26,7 +26,7 @@ func MapToSpaceBindingByBoundObjectName(cl client.Client, label string) func(obj
 			return []reconcile.Request{}
 		}
 		if len(spaceBindings.Items) == 0 {
-			logger.Error(err, "no SpaceBinding found for an object")
+			logger.Info("no SpaceBinding found for an object")
 			return []reconcile.Request{}
 		}
 
