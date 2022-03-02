@@ -2,36 +2,49 @@ package spacebinding
 
 import (
 	"context"
+	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Assertion struct {
-	spaceBinding   *toolchainv1alpha1.SpaceBinding
-	client         client.Client
-	namespacedName types.NamespacedName
-	t              test.T
+	spaceBinding *toolchainv1alpha1.SpaceBinding
+	client       client.Client
+	namespace    string
+	murName      string
+	spaceName    string
+	t            test.T
 }
 
 func (a *Assertion) loadResource() error {
-	tier := &toolchainv1alpha1.SpaceBinding{}
-	err := a.client.Get(context.TODO(), a.namespacedName, tier)
-	a.spaceBinding = tier
+	spacebindings := &toolchainv1alpha1.SpaceBindingList{}
+	labels := map[string]string{
+		toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: a.murName,
+		toolchainv1alpha1.SpaceBindingSpaceLabelKey:            a.spaceName,
+	}
+	opts := client.MatchingLabels(labels)
+	err := a.client.List(context.TODO(), spacebindings, client.InNamespace(a.namespace), opts)
+
+	if err == nil && len(spacebindings.Items) == 0 {
+		return fmt.Errorf("no spacebinding found")
+	}
+
+	a.spaceBinding = &spacebindings.Items[0]
 	return err
 }
 
 // AssertThatSpaceBinding helper func to begin with the assertions on a SpaceBinding
-func AssertThatSpaceBinding(t test.T, namespace, name string, client client.Client) *Assertion {
+func AssertThatSpaceBinding(t test.T, namespace, murName, spaceName string, client client.Client) *Assertion {
 	return &Assertion{
-		client:         client,
-		namespacedName: test.NamespacedName(namespace, name),
-		t:              t,
+		client:    client,
+		namespace: namespace,
+		murName:   murName,
+		spaceName: spaceName,
+		t:         t,
 	}
 }
 
@@ -50,7 +63,7 @@ func (a *Assertion) Exists() *Assertion {
 func (a *Assertion) DoesNotExist() *Assertion {
 	err := a.loadResource()
 	require.Error(a.t, err)
-	assert.True(a.t, errors.IsNotFound(err))
+	assert.EqualError(a.t, err, "no spacebinding found")
 	return a
 }
 

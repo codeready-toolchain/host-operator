@@ -319,8 +319,9 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 		reqLogger.Info("MasterUserRecord exists", "Name", mur.Name)
 
 		if shouldManageSpace(userSignup) {
-			space, err := r.ensureSpace(reqLogger, userSignup, mur)
-			if err != nil {
+			space, created, err := r.ensureSpace(reqLogger, userSignup, mur)
+			// if there was an error or the space was created then return to complete the reconcile, another reconcile will occur when space is created since this controller watches spaces
+			if err != nil || created {
 				return true, err
 			}
 
@@ -527,8 +528,8 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 }
 
 // ensureSpace does the work of provisioning the Space
-func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord) (*toolchainv1alpha1.Space, error) {
-	logger.Info("Creating Space", "UserSignup", userSignup.Name, "MUR", mur.Name)
+func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord) (*toolchainv1alpha1.Space, bool, error) {
+	logger.Info("Ensuring Space", "UserSignup", userSignup.Name, "MUR", mur.Name)
 
 	space := &toolchainv1alpha1.Space{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{
@@ -537,18 +538,18 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 	}, space)
 	if err == nil {
 		if util.IsBeingDeleted(space) {
-			return nil, fmt.Errorf("cannot create space because it is currently being deleted")
+			return nil, false, fmt.Errorf("cannot create space because it is currently being deleted")
 		}
 		logger.Info("Space exists")
-		return space, nil
+		return space, false, nil
 	}
 
 	if !errors.IsNotFound(err) {
-		return nil, errs.Wrap(err, fmt.Sprintf(`failed to get Space associated with mur "%s"`, mur.Name))
+		return nil, false, errs.Wrap(err, fmt.Sprintf(`failed to get Space associated with mur "%s"`, mur.Name))
 	}
 
 	if len(mur.Spec.UserAccounts) == 0 || mur.Spec.UserAccounts[0].TargetCluster == "" {
-		return nil, fmt.Errorf("unable to get target cluster from masteruserrecord for space creation")
+		return nil, false, fmt.Errorf("unable to get target cluster from masteruserrecord for space creation")
 	}
 	tCluster := targetCluster(mur.Spec.UserAccounts[0].TargetCluster)
 
@@ -556,38 +557,42 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 
 	err = r.Client.Create(context.TODO(), space)
 	if err != nil {
-		return nil, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
+		return nil, false, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
 			"error creating Space")
 	}
 
 	logger.Info("Created Space", "Name", space.Name, "TargetCluster", tCluster, "Tier", mur.Spec.TierName)
-	return space, nil
+	return space, true, nil
 }
 
 // ensureSpaceBinding creates a SpaceBinding for the provided MUR and Space if one does not exist
 func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord, space *toolchainv1alpha1.Space) error {
-	logger.Info("Creating SpaceBinding", "MUR", mur.Name, "Space", space.Name)
+	logger.Info("Ensuring SpaceBinding", "MUR", mur.Name, "Space", space.Name)
 
-	spaceBinding := &toolchainv1alpha1.SpaceBinding{}
-	err := r.Client.Get(context.TODO(), types.NamespacedName{
-		Namespace: mur.Namespace,
-		Name:      spaceBindingName(mur.Name, space.Name),
-	}, spaceBinding)
-	if err == nil {
-		if util.IsBeingDeleted(spaceBinding) {
+	spaceBindings := &toolchainv1alpha1.SpaceBindingList{}
+	labels := map[string]string{
+		toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: mur.Name,
+		toolchainv1alpha1.SpaceBindingSpaceLabelKey:            space.Name,
+	}
+	opts := client.MatchingLabels(labels)
+	if err := r.Client.List(context.TODO(), spaceBindings, opts); err != nil {
+		return errs.Wrap(err, fmt.Sprintf(`attempt to list SpaceBinding associated with mur '%s' and space '%s' failed`, mur.Name, space.Name))
+	}
+
+	if len(spaceBindings.Items) == 1 {
+		spaceBinding := spaceBindings.Items[0]
+		if util.IsBeingDeleted(&spaceBinding) {
 			return fmt.Errorf("cannot create spacebinding because it is currently being deleted")
 		}
 		logger.Info("SpaceBinding exists")
 		return nil
+	} else if len(spaceBindings.Items) > 1 {
+		return fmt.Errorf(`unable to proceed because there are multiple SpaceBindings associated with mur '%s' and space '%s'`, mur.Name, space.Name)
 	}
 
-	if !errors.IsNotFound(err) {
-		return errs.Wrap(err, fmt.Sprintf(`attempt to get SpaceBinding associated with mur '%s' and space '%s' failed`, mur.Name, space.Name))
-	}
+	spaceBinding := newSpaceBinding(mur, space, userSignup.Name)
 
-	spaceBinding = newSpaceBinding(mur, space, userSignup.Name)
-
-	err = r.Client.Create(context.TODO(), spaceBinding)
+	err := r.Client.Create(context.TODO(), spaceBinding)
 	if err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpaceBinding, err,
 			"error creating SpaceBinding")
