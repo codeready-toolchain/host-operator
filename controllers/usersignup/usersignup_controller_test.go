@@ -1836,7 +1836,7 @@ func TestMigrateExistingMURToSpace(t *testing.T) {
 					},
 				}
 				// set the user account
-				mur.Spec.UserAccounts = append(mur.Spec.UserAccounts, ua)
+				mur.Spec.UserAccounts = []toolchainv1alpha1.UserAccountEmbedded{ua}
 
 				// given
 				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier, customTier, mur)
