@@ -1877,6 +1877,8 @@ func TestMigrateExistingMURToSpace(t *testing.T) {
 				require.NoError(t, err)
 
 				AssertThatUserSignup(t, req.Namespace, actualUserSignup.Name, r.Client).HasLabel(toolchainv1alpha1.UserSignupStateLabelKey, "approved")
+				mur = murtest.AssertThatMasterUserRecord(t, mur.Name, r.Client).Exists().Get()
+				assert.Nil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet)
 
 				// space should be created after second reconcile
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).DoesNotExist()
