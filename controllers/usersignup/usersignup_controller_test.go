@@ -344,7 +344,8 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			Exists().
 			HasSpecTargetCluster("member1").
 			HasTier(baseNSTemplateTier.Name)
-
+		spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
+			DoesNotExist()
 		t.Run("third reconcile", func(t *testing.T) {
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
