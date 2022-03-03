@@ -667,49 +667,6 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 			HasSpecTargetCluster("member1").
 			HasTier(customTier.Name)
 
-		t.Run("third reconcile", func(t *testing.T) {
-			// when
-			res, err = r.Reconcile(context.TODO(), req)
-
-			// then
-			require.NoError(t, err)
-			require.Equal(t, reconcile.Result{}, res)
-
-			// spacebinding should be created on the second reconcile
-			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
-				Exists().
-				HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
-				HasSpec("foo", "foo", "admin")
-
-			// Lookup the userSignup one more and check the conditions are updated
-			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-			require.NoError(t, err)
-			require.Equal(t, userSignup.Status.CompliantUsername, mur.Name)
-			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-
-			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-				toolchainv1alpha1.Condition{
-					Type:   toolchainv1alpha1.UserSignupApproved,
-					Status: v1.ConditionTrue,
-					Reason: "ApprovedAutomatically",
-				},
-				toolchainv1alpha1.Condition{
-					Type:   toolchainv1alpha1.UserSignupComplete,
-					Status: v1.ConditionTrue,
-				},
-				toolchainv1alpha1.Condition{
-					Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-					Status: v1.ConditionFalse,
-					Reason: "UserNotInPreDeactivation",
-				},
-				toolchainv1alpha1.Condition{
-					Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-					Status: v1.ConditionFalse,
-					Reason: "UserIsActive",
-				})
-		})
 	})
 }
 
