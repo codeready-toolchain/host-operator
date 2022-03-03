@@ -1007,7 +1007,8 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 				HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
 				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
-				HasSpec("foo", "foo", "admin"
+				HasSpec("foo", "foo", "admin")
+
 			// Lookup the userSignup one more time and check the conditions are updated
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 			require.NoError(t, err)
@@ -1133,6 +1134,13 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
+
+			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
+				Exists().
+				HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
+				HasSpec("foo", "foo", "admin")
 
 			// Lookup the userSignup one more and check the conditions are updated
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -1322,6 +1330,13 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
+
+			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
+				Exists().
+				HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
+				HasSpec("foo", "foo", "admin")
 
 			// Lookup the userSignup one more and check the conditions are updated
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
