@@ -53,10 +53,10 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(MapBannedUserToUserSignup(mgr.GetClient()))).
 		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.Space{}},
-			&handler.EnqueueRequestForOwner{OwnerType: &toolchainv1alpha1.UserSignup{}, IsController: true}).
+			handler.EnqueueRequestsFromMapFunc(MapObjectWithCreatorLabelToUserSignup(mgr.GetClient()))).
 		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}},
-			&handler.EnqueueRequestForOwner{OwnerType: &toolchainv1alpha1.UserSignup{}, IsController: true}).
+			handler.EnqueueRequestsFromMapFunc(MapObjectWithCreatorLabelToUserSignup(mgr.GetClient()))).
 		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
 			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.MapToOldestPending),

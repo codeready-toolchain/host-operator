@@ -86,3 +86,111 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 		require.Nil(t, req)
 	})
 }
+
+func TestMapObjectWithCreatorLabelToUserSignup(t *testing.T) {
+	// when
+
+	userSignup := &toolchainv1alpha1.UserSignup{
+		ObjectMeta: NewUserSignupObjectMeta("", "foo@redhat.com"),
+		Spec: toolchainv1alpha1.UserSignupSpec{
+			Username: "foo@redhat.com",
+		},
+	}
+
+	userSignup2 := &toolchainv1alpha1.UserSignup{
+		ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
+		Spec: toolchainv1alpha1.UserSignupSpec{
+			Username: "alice.mayweather.doe@redhat.com",
+		},
+	}
+
+	t.Run("space with creator label maps correctly", func(t *testing.T) {
+
+		space := newSpace(userSignup, targetCluster("member-1"), "foo", "base")
+
+		c := test.NewFakeClient(t, userSignup, userSignup2)
+
+		// This is required for the mapper to function
+		restore := test.SetEnvVarAndRestore(t, configuration.WatchNamespaceEnvVar, test.HostOperatorNs)
+		defer restore()
+
+		// when
+		req := MapObjectWithCreatorLabelToUserSignup(c)(space)
+
+		// then
+		require.Len(t, req, 1)
+		require.Equal(t, types.NamespacedName{
+			Namespace: userSignup.Namespace,
+			Name:      userSignup.Name,
+		}, req[0].NamespacedName)
+	})
+
+	t.Run("spacebinding with creator label maps correctly", func(t *testing.T) {
+
+		baseNSTemplateTier := newNsTemplateTier("base", "dev", "stage")
+		space := newSpace(userSignup2, targetCluster("member-1"), "foo", "base")
+		mur := newMasterUserRecord(userSignup2, "member-1", baseNSTemplateTier, "foo")
+		sb := newSpaceBinding(mur, space, userSignup2.Name)
+
+		c := test.NewFakeClient(t, userSignup, userSignup2)
+
+		// This is required for the mapper to function
+		restore := test.SetEnvVarAndRestore(t, configuration.WatchNamespaceEnvVar, test.HostOperatorNs)
+		defer restore()
+
+		// when
+		req := MapObjectWithCreatorLabelToUserSignup(c)(sb)
+
+		// then
+		require.Len(t, req, 1)
+		require.Equal(t, types.NamespacedName{
+			Namespace: userSignup2.Namespace,
+			Name:      userSignup2.Name,
+		}, req[0].NamespacedName)
+	})
+
+	t.Run("space without creator label is not mapped", func(t *testing.T) {
+
+		space := newSpace(userSignup, targetCluster("member-1"), "foo", "base")
+		space.Labels = map[string]string{}
+
+		c := test.NewFakeClient(t, userSignup, userSignup2)
+
+		// This is required for the mapper to function
+		restore := test.SetEnvVarAndRestore(t, configuration.WatchNamespaceEnvVar, test.HostOperatorNs)
+		defer restore()
+
+		// when
+		req := MapObjectWithCreatorLabelToUserSignup(c)(space)
+
+		// then
+		require.Nil(t, req)
+	})
+
+	t.Run("returns nil when client get fails", func(t *testing.T) {
+		space := newSpace(userSignup, targetCluster("member-1"), "foo", "base")
+		c := test.NewFakeClient(t)
+		c.MockGet = func(ctx context.Context, nsName types.NamespacedName, obj client.Object) error {
+			return errors.New("err happened")
+		}
+
+		// when
+		req := MapObjectWithCreatorLabelToUserSignup(c)(space)
+
+		// then
+		require.Nil(t, req)
+	})
+
+	t.Run("returns nil when watch namespace not set", func(t *testing.T) {
+		space := newSpace(userSignup, targetCluster("member-1"), "foo", "base")
+		c := test.NewFakeClient(t)
+		restore := test.UnsetEnvVarAndRestore(t, "WATCH_NAMESPACE")
+		t.Cleanup(restore)
+
+		// when
+		req := MapObjectWithCreatorLabelToUserSignup(c)(space)
+
+		// then
+		require.Nil(t, req)
+	})
+}
