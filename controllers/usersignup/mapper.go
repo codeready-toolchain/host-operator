@@ -2,7 +2,6 @@ package usersignup
 
 import (
 	"context"
-	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
@@ -46,34 +45,5 @@ func MapBannedUserToUserSignup(cl client.Client) func(object client.Object) []re
 		}
 		// the obj was not a BannedUser or it did not have the required label.
 		return []reconcile.Request{}
-	}
-}
-
-func MapObjectWithCreatorLabelToUserSignup(cl client.Client) func(object client.Object) []reconcile.Request {
-	var logger = ctrl.Log.WithName("CreatorToUserSignupMapper")
-	return func(obj client.Object) []reconcile.Request {
-		if obj.GetLabels() != nil {
-			// look-up the associated UserSignup using the object's "toolchain.dev.openshift.com/creator" label
-			if userSignupName, exists := obj.GetLabels()[toolchainv1alpha1.SpaceCreatorLabelKey]; exists {
-				ns, err := configuration.GetWatchNamespace()
-				if err != nil {
-					logger.Error(err, "Could not determine watched namespace")
-					return nil
-				}
-
-				userSignup := &toolchainv1alpha1.UserSignup{}
-				if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: ns, Name: userSignupName}, userSignup); err != nil {
-					logger.Error(err, "Could not list UserSignup resources with label value", toolchainv1alpha1.SpaceCreatorLabelKey, userSignupName)
-					return nil
-				}
-
-				return []reconcile.Request{
-					{NamespacedName: types.NamespacedName{Namespace: ns, Name: userSignup.Name}},
-				}
-			}
-		}
-		// the obj has no creator label so it cannot be mapped
-		logger.Error(fmt.Errorf("object is missing creator label"), "object cannot be mapped")
-		return nil
 	}
 }

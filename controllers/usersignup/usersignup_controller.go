@@ -19,6 +19,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
+	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
@@ -53,10 +54,10 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(MapBannedUserToUserSignup(mgr.GetClient()))).
 		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.Space{}},
-			handler.EnqueueRequestsFromMapFunc(MapObjectWithCreatorLabelToUserSignup(mgr.GetClient()))).
+			handler.EnqueueRequestsFromMapFunc(commoncontrollers.MapToOwnerByLabel(r.Namespace, toolchainv1alpha1.SpaceCreatorLabelKey))).
 		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}},
-			handler.EnqueueRequestsFromMapFunc(MapObjectWithCreatorLabelToUserSignup(mgr.GetClient()))).
+			handler.EnqueueRequestsFromMapFunc(commoncontrollers.MapToOwnerByLabel(r.Namespace, toolchainv1alpha1.SpaceCreatorLabelKey))).
 		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
 			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.MapToOldestPending),
@@ -69,6 +70,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 // Reconciler reconciles a UserSignup object
 type Reconciler struct {
 	*StatusUpdater
+	Namespace         string
 	Scheme            *runtime.Scheme
 	GetMemberClusters cluster.GetMemberClustersFunc
 }
