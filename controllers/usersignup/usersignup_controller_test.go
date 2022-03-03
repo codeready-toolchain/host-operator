@@ -1868,7 +1868,7 @@ func TestMigrateExistingMURToSpace(t *testing.T) {
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
 
-				// then verify that the Space was created
+				// then
 				require.NoError(t, err)
 				require.Equal(t, reconcile.Result{}, res)
 
