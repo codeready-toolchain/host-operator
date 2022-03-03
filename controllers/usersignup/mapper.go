@@ -67,7 +67,9 @@ func MapObjectWithCreatorLabelToUserSignup(cl client.Client) func(object client.
 					return nil
 				}
 
-				return []reconcile.Request{{types.NamespacedName{Namespace: ns, Name: userSignup.Name}}}
+				return []reconcile.Request{
+					{NamespacedName: types.NamespacedName{Namespace: ns, Name: userSignup.Name}},
+				}
 			}
 		}
 		// the obj has no creator label so it cannot be mapped
