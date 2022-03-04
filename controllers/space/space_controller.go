@@ -3,6 +3,8 @@ package space
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sort"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -202,7 +204,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 				return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 			}
 			nsTmplSet = r.newNSTemplateSet(memberCluster.OperatorNamespace, space.Name, tmplTier)
-
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
 				return norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
@@ -214,12 +215,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 	logger.Info("NSTemplateSet already exists")
 
-	spaceReady, found := condition.FindConditionByType(space.Status.Conditions, toolchainv1alpha1.ConditionReady)
-	// skip until there's a `Ready` condition
-	if !found {
-		// just created, but there is no `Ready` condition yet
-		return requeueDelay, nil
-	}
 	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	// skip until there's a `Ready` condition
 	if !found {
@@ -227,12 +222,10 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return requeueDelay, nil
 	}
 
-	tiersMatch := tierutil.TierHashMatches(tmplTier, nsTmplSet.Spec)
+	// tiersMatch := tierutil.TierHashMatches(tmplTier, nsTmplSet.Spec)
 
-	// update the NSTemplateSet if needed and if it's "ready"
-	if !tiersMatch &&
-		spaceReady.Reason == toolchainv1alpha1.SpaceProvisionedReason &&
-		nsTmplSetReady.Reason == toolchainv1alpha1.NSTemplateSetProvisionedReason {
+	// update the NSTemplateSet if needed (ie, spec changed) and if it's "ready"
+	if !reflect.DeepEqual(nsTmplSet.Spec, r.newNSTemplateSetSpec(space, tmplTier)) {
 		// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)
 		if space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
 			condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
@@ -303,6 +296,41 @@ func (r *Reconciler) newNSTemplateSet(namespace string, name string, tmplTier *t
 	nsTmplSetSpec := usersignup.NewNSTemplateSetSpec(tmplTier)
 	nsTmplSet.Spec = *nsTmplSetSpec
 	return nsTmplSet
+}
+
+func (r *Reconciler) newNSTemplateSetSpec(space *toolchainv1alpha1.Space, tmplTier *toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {
+	s := toolchainv1alpha1.NSTemplateSetSpec{
+		TierName: space.Spec.TierName,
+	}
+	if tmplTier.Spec.ClusterResources != nil {
+		s.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
+			TemplateRef: tmplTier.Spec.ClusterResources.TemplateRef,
+		}
+	}
+	if len(tmplTier.Spec.Namespaces) > 0 {
+		s.Namespaces = make([]toolchainv1alpha1.NSTemplateSetNamespace, len(tmplTier.Spec.Namespaces))
+		for i, ns := range tmplTier.Spec.Namespaces {
+			s.Namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace(ns)
+		}
+	}
+	// space roles
+	if len(tmplTier.Spec.SpaceRoles) > 0 {
+		s.SpaceRoles = make([]toolchainv1alpha1.NSTemplateSetSpaceRole, len(tmplTier.Spec.SpaceRoles))
+		// append by alphabetical order of role names
+		roles := make([]string, 0, len(tmplTier.Spec.SpaceRoles))
+		for r := range tmplTier.Spec.SpaceRoles {
+			roles = append(roles, r)
+		}
+		sort.Strings(roles)
+		for i, r := range roles {
+			sr := tmplTier.Spec.SpaceRoles[r]
+			s.SpaceRoles[i] = toolchainv1alpha1.NSTemplateSetSpaceRole{
+				TemplateRef: sr.TemplateRef,
+				// TODO: include usernames from SpaceBindings
+			}
+		}
+	}
+	return s
 }
 
 func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1alpha1.Space) error {
