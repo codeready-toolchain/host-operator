@@ -222,8 +222,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return requeueDelay, nil
 	}
 
-	// tiersMatch := tierutil.TierHashMatches(tmplTier, nsTmplSet.Spec)
-
 	// update the NSTemplateSet if needed (ie, spec changed) and if it's "ready"
 	if !reflect.DeepEqual(nsTmplSet.Spec, r.newNSTemplateSetSpec(space, tmplTier)) {
 		// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)

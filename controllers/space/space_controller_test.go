@@ -937,9 +937,9 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasMatchingTierLabelForTier(basicTier) // label is immediately set since the NSTemplateSet was already up-to-date
 	})
 
-	t.Run("update not needed when Space not ready", func(t *testing.T) {
+	t.Run("update needed even when Space not ready", func(t *testing.T) {
 		notReadySpace := spacetest.NewSpace("oddity1",
-			spacetest.WithTierNameAndHashLabelFor(olderBasicTier),
+			spacetest.WithTierNameAndHashLabelFor(basicTier),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"),
 			spacetest.WithFinalizer(),
@@ -951,20 +951,24 @@ func TestUpdateSpaceTier(t *testing.T) {
 		member1Client := test.NewFakeClient(t, notReadyTmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1)
-		ctrl.NextScheduledUpdate = time.Now().Add(1 * time.Minute)
-		ctrl.LastExecutedUpdate = time.Now()
 
 		// when reconciling space
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(notReadySpace))
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue) // nothing to do for now since the space was NOT ready
+		assert.True(t, res.Requeue)
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, notReadySpace.Name, hostClient).
+			HasConditions(spacetest.Updating())
+		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, notReadyTmplSet.Name, member1Client).
+			HasClusterResourcesTemplateRef("basic-clusterresources-123456new").
+			HasNamespaceTemplateRefs("basic-code-123456new", "basic-dev-123456new", "basic-stage-123456new").
+			HasConditions(nstemplatetsettest.Provisioned()) // status will be set to `Updating` by NSTemplateSet controller
 	})
 
-	t.Run("update not needed when NStemplateSet not ready", func(t *testing.T) {
+	t.Run("update needed even when NStemplateSet not ready", func(t *testing.T) {
 		notReadySpace := spacetest.NewSpace("oddity1",
-			spacetest.WithTierNameAndHashLabelFor(olderBasicTier),
+			spacetest.WithTierNameAndHashLabelFor(basicTier),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"),
 			spacetest.WithFinalizer(),
@@ -976,15 +980,19 @@ func TestUpdateSpaceTier(t *testing.T) {
 		member1Client := test.NewFakeClient(t, notReadyTmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1)
-		ctrl.NextScheduledUpdate = time.Now().Add(1 * time.Minute)
-		ctrl.LastExecutedUpdate = time.Now()
 
 		// when reconciling space
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(notReadySpace))
 
 		// then
 		require.NoError(t, err)
-		assert.False(t, res.Requeue) // nothing to do for now since the space was NOT ready
+		assert.True(t, res.Requeue)
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, notReadySpace.Name, hostClient).
+			HasConditions(spacetest.Updating()) // changed by controller
+		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, notReadyTmplSet.Name, member1Client).
+			HasClusterResourcesTemplateRef("basic-clusterresources-123456new").
+			HasNamespaceTemplateRefs("basic-code-123456new", "basic-dev-123456new", "basic-stage-123456new").
+			HasConditions(nstemplatetsettest.Updating()) // was already `Updating`
 	})
 
 	t.Run("failures", func(t *testing.T) {
