@@ -4,22 +4,22 @@ import (
 	"fmt"
 	"testing"
 
-	routev1 "github.com/openshift/api/route/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/template"
+	routev1 "github.com/openshift/api/route/v1"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 func TestDeploymentAssetContainsAllNecessaryInformation(t *testing.T) {
 	// given
-	s := scheme.Scheme
+	s := runtime.NewScheme()
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	deploymentTemplate, err := GetDeploymentTemplate()
