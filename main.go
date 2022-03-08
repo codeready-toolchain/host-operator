@@ -261,6 +261,7 @@ func main() {
 		StatusUpdater: &usersignup.StatusUpdater{
 			Client: mgr.GetClient(),
 		},
+		Namespace:         namespace,
 		Scheme:            mgr.GetScheme(),
 		GetMemberClusters: commoncluster.GetMemberClusters,
 	}).SetupWithManager(mgr); err != nil {

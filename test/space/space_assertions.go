@@ -5,7 +5,9 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
+
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -22,9 +24,9 @@ type Assertion struct {
 }
 
 func (a *Assertion) loadResource() error {
-	tier := &toolchainv1alpha1.Space{}
-	err := a.client.Get(context.TODO(), a.namespacedName, tier)
-	a.space = tier
+	space := &toolchainv1alpha1.Space{}
+	err := a.client.Get(context.TODO(), a.namespacedName, space)
+	a.space = space
 	return err
 }
 
@@ -74,6 +76,14 @@ func (a *Assertion) HasTier(tierName string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	assert.Equal(a.t, tierName, a.space.Spec.TierName)
+	return a
+}
+
+func (a *Assertion) HasLabelWithValue(key, value string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	require.NotNil(a.t, a.space.Labels)
+	assert.Equal(a.t, value, a.space.Labels[key])
 	return a
 }
 
@@ -237,4 +247,34 @@ func TerminatingFailed(msg string) toolchainv1alpha1.Condition {
 		Reason:  toolchainv1alpha1.SpaceTerminatingFailedReason,
 		Message: msg,
 	}
+}
+
+// Assertions on multiple Spaces at once
+type SpacesAssertion struct {
+	spaces    *toolchainv1alpha1.SpaceList
+	client    client.Client
+	namespace string
+	t         test.T
+}
+
+func AssertThatSpaces(t test.T, client client.Client) *SpacesAssertion {
+	return &SpacesAssertion{
+		client:    client,
+		namespace: test.HostOperatorNs,
+		t:         t,
+	}
+}
+
+func (a *SpacesAssertion) loadSpaces() error {
+	spaces := &toolchainv1alpha1.SpaceList{}
+	err := a.client.List(context.TODO(), spaces, client.InNamespace(a.namespace))
+	a.spaces = spaces
+	return err
+}
+
+func (a *SpacesAssertion) HaveCount(count int) *SpacesAssertion {
+	err := a.loadSpaces()
+	require.NoError(a.t, err)
+	require.Len(a.t, a.spaces.Items, count)
+	return a
 }

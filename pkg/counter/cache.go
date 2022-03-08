@@ -238,7 +238,7 @@ func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainSt
 		!masterUserRecordsPerDomainMetricExists {
 		return initializeFromResources(cl, toolchainStatus.Namespace)
 	}
-	// otherwise, initialize the cached counters from the ToolchainStatud resource.
+	// otherwise, initialize the cached counters from the ToolchainStatus resource.
 	return initializeFromToolchainStatus(toolchainStatus)
 }
 

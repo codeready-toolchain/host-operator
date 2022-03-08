@@ -12,7 +12,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/kubectl/pkg/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,9 +21,9 @@ import (
 
 func TestDeleteSpaceBinding(t *testing.T) {
 	// given
-	sbLaraRedhatAdmin := sb.NewSpaceBinding("lara", "redhat", "admin")
-	sbJoeRedhatView := sb.NewSpaceBinding("joe", "redhat", "view")
-	sbLaraIbmEdit := sb.NewSpaceBinding("lara", "ibm", "edit")
+	sbLaraRedhatAdmin := sb.NewSpaceBinding("lara", "redhat", "admin", "signupA")
+	sbJoeRedhatView := sb.NewSpaceBinding("joe", "redhat", "view", "signupB")
+	sbLaraIbmEdit := sb.NewSpaceBinding("lara", "ibm", "edit", "signupC")
 
 	redhatSpace := space.NewSpace("redhat")
 	ibmSpace := space.NewSpace("ibm")
@@ -40,9 +40,9 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbLaraRedhatAdmin.Name, fakeClient).DoesNotExist()
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbJoeRedhatView.Name, fakeClient).Exists()
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbLaraIbmEdit.Name, fakeClient).Exists()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).DoesNotExist()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
 	})
 
 	t.Run("joe-redhat SpaceBinding removed when joe MUR is missing", func(t *testing.T) {
@@ -54,9 +54,9 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbLaraRedhatAdmin.Name, fakeClient).Exists()
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbJoeRedhatView.Name, fakeClient).DoesNotExist()
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbLaraIbmEdit.Name, fakeClient).Exists()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).DoesNotExist()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
 	})
 
 	t.Run("lara-redhat SpaceBinding is being deleted, so no action needed", func(t *testing.T) {
@@ -70,9 +70,9 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbLaraRedhatAdmin.Name, fakeClient).Exists()
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbJoeRedhatView.Name, fakeClient).Exists()
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbLaraIbmEdit.Name, fakeClient).Exists()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
 	})
 
 	t.Run("no SpaceBinding removed when MUR and Space are present", func(t *testing.T) {
@@ -84,9 +84,9 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbLaraRedhatAdmin.Name, fakeClient).Exists()
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbJoeRedhatView.Name, fakeClient).Exists()
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbLaraIbmEdit.Name, fakeClient).Exists()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "joe", "redhat", fakeClient).Exists()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "ibm", fakeClient).Exists()
 	})
 
 	t.Run("fails while getting the bound resource", func(t *testing.T) {
@@ -105,7 +105,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbLaraRedhatAdmin.Name, fakeClient).Exists()
+			sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
 		}
 	})
 
@@ -121,7 +121,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, sbLaraRedhatAdmin.Name, fakeClient).Exists()
+		sb.AssertThatSpaceBinding(t, test.HostOperatorNs, "lara", "redhat", fakeClient).Exists()
 	})
 }
 
