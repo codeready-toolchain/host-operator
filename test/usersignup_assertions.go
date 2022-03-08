@@ -50,6 +50,15 @@ func (a *UserSignupAssertion) HasCompliantUsername(name string) *UserSignupAsser
 	return a
 }
 
+func (a *UserSignupAssertion) HasLabel(key, value string) *UserSignupAssertion {
+	err := a.loadUserSignup()
+	require.NoError(a.t, err)
+	v, found := a.usersignup.Labels[key]
+	require.True(a.t, found)
+	assert.Equal(a.t, value, v)
+	return a
+}
+
 func (a *UserSignupAssertion) HasAnnotation(key, value string) *UserSignupAssertion {
 	err := a.loadUserSignup()
 	require.NoError(a.t, err)
