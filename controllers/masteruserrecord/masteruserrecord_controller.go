@@ -137,7 +137,7 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 	if err := memberCluster.Client.Get(context.TODO(), nsdName, userAccount); err != nil {
 		if errors.IsNotFound(err) {
 			// does not exist - should create
-			userAccount = newUserAccount(nsdName, murAccount.Spec, mur)
+			userAccount = newUserAccount(nsdName, mur)
 
 			// Remove this after all users have been migrated to new IdP client
 			userAccount.Spec.OriginalSub = mur.Spec.OriginalSub
@@ -346,7 +346,7 @@ func updateStatusConditions(logger logr.Logger, cl client.Client, mur *toolchain
 	return err
 }
 
-func newUserAccount(nsdName types.NamespacedName, spec toolchainv1alpha1.UserAccountSpecEmbedded, mur *toolchainv1alpha1.MasterUserRecord) *toolchainv1alpha1.UserAccount {
+func newUserAccount(nsdName types.NamespacedName, mur *toolchainv1alpha1.MasterUserRecord) *toolchainv1alpha1.UserAccount {
 	return &toolchainv1alpha1.UserAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nsdName.Name,
@@ -361,10 +361,6 @@ func newUserAccount(nsdName types.NamespacedName, spec toolchainv1alpha1.UserAcc
 		Spec: toolchainv1alpha1.UserAccountSpec{
 			UserID:   mur.Spec.UserID,
 			Disabled: mur.Spec.Disabled,
-			UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
-				NSLimit:       spec.UserAccountSpecBase.NSLimit,
-				NSTemplateSet: spec.UserAccountSpecBase.NSTemplateSet,
-			},
 		},
 	}
 }
