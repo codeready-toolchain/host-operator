@@ -26,7 +26,7 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("without any SpaceBinding and created more than 30 seconds ago", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-31*time.Second)))
+		space := spacetest.NewSpace("without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-(2*time.Hour + 1*time.Second))))
 		r, req, cl := prepareReconcile(t, space)
 
 		// when
@@ -41,7 +41,7 @@ func TestCleanupSpace(t *testing.T) {
 
 	t.Run("without any SpaceBinding and created less than 30 seconds ago- Space shouldn't be deleted, just requeued", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-29*time.Second)))
+		space := spacetest.NewSpace("without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-(2*time.Hour - time.Second))))
 		r, req, cl := prepareReconcile(t, space)
 
 		// when
@@ -145,7 +145,7 @@ func TestCleanupSpace(t *testing.T) {
 
 		t.Run("when delete Space fails", func(t *testing.T) {
 			// given
-			space := spacetest.NewSpace("delete-fails", spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)))
+			space := spacetest.NewSpace("delete-fails", spacetest.WithCreationTimestamp(time.Now().Add(-3*time.Hour)))
 			r, req, cl := prepareReconcile(t, space)
 			cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 				return fmt.Errorf("some error")
