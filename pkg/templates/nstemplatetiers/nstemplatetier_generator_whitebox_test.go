@@ -30,6 +30,7 @@ import (
 var expectedTiers = map[string]bool{
 	"advanced":                 true, // tier_name: true/false (if based on the other tier)
 	"base":                     false,
+	"base-single-ns":           false,
 	"baselarge":                true,
 	"baseextended":             true,
 	"baseextendedidling":       true,
@@ -43,6 +44,8 @@ func types(tier string) []string {
 	switch tier {
 	case "appstudio":
 		return []string{"appstudio"}
+	case "base-single-ns":
+		return []string{"dev"}
 	default:
 		return []string{"dev", "stage"}
 	}
@@ -101,7 +104,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 9)
+			require.Len(t, tmpls, 10)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 			for _, tier := range tiers() {
 				t.Run(tier, func(t *testing.T) {
