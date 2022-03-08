@@ -117,10 +117,11 @@ github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMn
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
-github.com/codeready-toolchain/api v0.0.0-20220215110522-1a78f33ee8fc h1:3724QOImc5jkpfc7UUXJ6G+BpaZQGG7Tjta0tYbaXvw=
 github.com/codeready-toolchain/api v0.0.0-20220215110522-1a78f33ee8fc/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220215110812-832c0dc0d182 h1:ig8b5SVzdc0UCYtDa+/ETwaUyYIdWt9ksFsDyG6Y3y0=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220215110812-832c0dc0d182/go.mod h1:BjfWQlOcdmZpbPYKk54Qj7PNEKAVbcYhaWWLPCJ8atg=
+github.com/codeready-toolchain/api v0.0.0-20220224160109-6c2f447c08aa h1:t4lNOUUi/5A5GinikpcaA5DdF8avGIBE0Gq/mHVL+js=
+github.com/codeready-toolchain/api v0.0.0-20220224160109-6c2f447c08aa/go.mod h1:+QWudsY8VJYCWui6oamNNJ0eo1kmqi3UsA9lY687O8c=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220217010424-fd9be6c8d171 h1:sJsL6HRPL/h4fyNd/zGZK3mBrMjeHSaSeVVRLVmyj0U=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220217010424-fd9be6c8d171/go.mod h1:BjfWQlOcdmZpbPYKk54Qj7PNEKAVbcYhaWWLPCJ8atg=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=

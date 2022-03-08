@@ -131,7 +131,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.NoError(t, err) // the lack of target member cluster is valid, hence no error is returned
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasNoStatusTargetCluster().
 				HasStateLabel("pending").
 				HasConditions(spacetest.ProvisioningPending("unspecified target member cluster")) // the Space will remain in `ProvisioningPending` until a target member cluster is set.
@@ -151,7 +151,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.NoError(t, err) // the lack of tierName is valid, hence no error is returned
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasNoStatusTargetCluster().
 				HasStateLabel("pending").
 				HasConditions(spacetest.ProvisioningPending("unspecified tier name")) // the Space will remain in `ProvisioningPending` until a tierName is set.
@@ -233,7 +233,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "unknown target member cluster 'unknown'")
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasStatusTargetCluster("unknown").
 				HasStateLabel("cluster-assigned").
 				HasConditions(spacetest.ProvisioningFailed("unknown target member cluster 'unknown'"))
@@ -261,7 +261,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "mock error")
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasSpecTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.ProvisioningFailed("mock error"))
@@ -290,7 +290,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "mock error")
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.UnableToCreateNSTemplateSet("mock error"))
 		})
@@ -318,7 +318,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "mock error")
 			assert.Equal(t, reconcile.Result{Requeue: false}, res)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.UnableToCreateNSTemplateSet("mock error"))
 		})
@@ -345,7 +345,7 @@ func TestCreateSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "mock error")
 			assert.Equal(t, reconcile.Result{Requeue: false}, res)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasNoStatusTargetCluster(). // not set
 				HasNoConditions()           // not set
 		})
@@ -398,7 +398,7 @@ func TestDeleteSpace(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
-				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 					Exists().
 					HasFinalizer(). // finalizer is still present while the NSTemplateSet is not fully deleted
 					HasStatusTargetCluster("member-1").
@@ -424,7 +424,7 @@ func TestDeleteSpace(t *testing.T) {
 					require.NoError(t, err)
 					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
 					// no changes
-					spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 						Exists().
 						HasFinalizer().
 						HasStatusTargetCluster("member-1").
@@ -446,7 +446,7 @@ func TestDeleteSpace(t *testing.T) {
 						require.NoError(t, err)
 						assert.False(t, res.Requeue)
 						// no changes
-						spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+						spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 							Exists().
 							HasNoFinalizers(). // space resource can be deleted by the server now that the finalizer has been removed
 							HasStatusTargetCluster("member-1").
@@ -476,7 +476,7 @@ func TestDeleteSpace(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no need to explicitly requeue while the NSTemplate is terminating
-				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.Terminating()).
@@ -507,7 +507,7 @@ func TestDeleteSpace(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 					Exists().
 					HasNoStatusTargetCluster().
 					HasNoConditions(). // no need to set any `terminating` condition since the resource can be immediately deleted
@@ -537,7 +537,7 @@ func TestDeleteSpace(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue needed
-				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 					Exists().
 					HasNoStatusTargetCluster().
 					HasNoFinalizers() // will allow for deletion of the Space CR
@@ -565,7 +565,7 @@ func TestDeleteSpace(t *testing.T) {
 				// then
 				require.EqualError(t, err, "cannot delete NSTemplateSet: unknown target member cluster: 'member-3'")
 				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue needed
-				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 					Exists().
 					HasFinalizer(). // finalizer is still there, until the error above is fixed
 					HasSpecTargetCluster("member-3").
@@ -605,7 +605,7 @@ func TestDeleteSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "mock error")
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				Exists().
 				HasFinalizer().
 				HasSpecTargetCluster("member-1").
@@ -634,7 +634,7 @@ func TestDeleteSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "NSTemplateSet deletion has not completed in over 1 minute")
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				Exists().
 				HasFinalizer().
 				HasSpecTargetCluster("member-1").
@@ -893,7 +893,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			// then
 			require.EqualError(t, err, "mock error")
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				Exists().
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.ProvisioningFailed("mock error")).
@@ -967,7 +967,7 @@ func TestRetargetSpace(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.False(t, res.Requeue)
-		spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 			HasFinalizer().
 			HasNoSpecTargetCluster().
 			HasConditions(spacetest.Retargeting()).
@@ -982,7 +982,7 @@ func TestRetargetSpace(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasFinalizer().
 				HasNoSpecTargetCluster().
 				HasConditions(spacetest.Retargeting()).
@@ -999,7 +999,7 @@ func TestRetargetSpace(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				assert.False(t, res.Requeue)
-				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 					HasFinalizer().
 					HasNoSpecTargetCluster().
 					HasConditions(spacetest.ProvisioningPending("unspecified target member cluster")).
@@ -1029,7 +1029,7 @@ func TestRetargetSpace(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.False(t, res.Requeue)
-		spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 			HasFinalizer().
 			HasSpecTargetCluster("member-2").
 			HasConditions(spacetest.Retargeting()).
@@ -1044,7 +1044,7 @@ func TestRetargetSpace(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasFinalizer().
 				HasSpecTargetCluster("member-2").
 				HasConditions(spacetest.Retargeting()).
@@ -1064,7 +1064,7 @@ func TestRetargetSpace(t *testing.T) {
 				// then
 				require.NoError(t, err)
 				assert.True(t, res.Requeue) // requeue requested explicitly when NSTemplateSet is created, even though watching the resource is enough to trigger a new reconcile loop
-				spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+				spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 					HasFinalizer().
 					HasSpecTargetCluster("member-2").
 					HasConditions(spacetest.Provisioning()).
@@ -1101,7 +1101,7 @@ func TestRetargetSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "mock error")
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasFinalizer().
 				HasSpecTargetCluster("member-2").
 				HasConditions(spacetest.RetargetingFailed("mock error")).
@@ -1129,7 +1129,7 @@ func TestRetargetSpace(t *testing.T) {
 			// then
 			require.EqualError(t, err, "mock error")
 			assert.False(t, res.Requeue)
-			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasFinalizer().
 				HasSpecTargetCluster("member-2").
 				HasNoConditions().

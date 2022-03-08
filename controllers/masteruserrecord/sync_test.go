@@ -10,6 +10,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	. "github.com/codeready-toolchain/host-operator/test"
 	. "github.com/codeready-toolchain/host-operator/test/notification"
+	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -165,18 +166,19 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 func TestSynchronizeSpec(t *testing.T) {
 	// given
 	apiScheme(t)
-	mur := murtest.NewMasterUserRecord(t, "john", murtest.StatusCondition(toBeProvisioned()))
+	otherTier := tiertest.OtherTier()
+	mur := murtest.NewMasterUserRecord(t, "john", murtest.StatusCondition(toBeProvisioned()), murtest.TierName(otherTier.Name))
 
 	userAccount := uatest.NewUserAccountFromMur(mur)
 
-	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"),
-		murtest.UserAccountTierName("admin"), murtest.Namespace("ide", "54321"))
+	err := murtest.Modify(mur, murtest.UserID("abc123"))
+	require.NoError(t, err)
 
 	hostClient := test.NewFakeClient(t, mur)
 	sync, memberClient := prepareSynchronizer(t, userAccount, mur, hostClient)
 
 	// when
-	err := sync.synchronizeSpec()
+	err = sync.synchronizeSpec()
 
 	// then
 	require.NoError(t, err)
@@ -185,6 +187,7 @@ func TestSynchronizeSpec(t *testing.T) {
 		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
 
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+		HasTier(*otherTier).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 }
 
@@ -506,11 +509,13 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "john")
 		userAcc := uatest.NewUserAccountFromMur(mur)
+
 		memberClient := test.NewFakeClient(t, userAcc)
 		memberClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 			return fmt.Errorf("unable to update user account %s", mur.Name)
 		}
-		murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.UserAccountTierName("admin"))
+		err := murtest.Modify(mur, murtest.UserID("abc123"))
+		require.NoError(t, err)
 		hostClient := test.NewFakeClient(t, mur, readyToolchainStatus)
 
 		sync := Synchronizer{
@@ -524,7 +529,7 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 		}
 
 		// when
-		err := sync.synchronizeSpec()
+		err = sync.synchronizeSpec()
 
 		// then
 		require.Error(t, err)
