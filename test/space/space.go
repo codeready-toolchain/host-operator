@@ -77,6 +77,15 @@ func WithCondition(c toolchainv1alpha1.Condition) Option {
 	}
 }
 
+func WithCreatorLabel(creator string) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		if space.Labels == nil {
+			space.Labels = map[string]string{}
+		}
+		space.Labels[toolchainv1alpha1.SpaceCreatorLabelKey] = creator
+	}
+}
+
 func WithCreationTimestamp(t time.Time) Option {
 	return func(space *toolchainv1alpha1.Space) {
 		space.CreationTimestamp = metav1.NewTime(t)

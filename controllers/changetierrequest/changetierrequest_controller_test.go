@@ -56,12 +56,12 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "john", cl).
 			HasTier(*teamTier).
-			AllUserAccountsHaveTier(*teamTier).
+			UserAccountHasNoTier(test.MemberClusterName).
 			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
-	t.Run("should update tier in all UserAccounts in MUR", func(t *testing.T) {
+	t.Run("UserAccounts in MUR should not have any NSTemplateTier", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team")
@@ -74,12 +74,13 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			HasTier(*teamTier).
-			AllUserAccountsHaveTier(*teamTier).
+			UserAccountHasNoTier(test.MemberClusterName).
+			UserAccountHasNoTier("another-cluster").
 			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
-	t.Run("should update tier only in specified UserAccount in MUR", func(t *testing.T) {
+	t.Run("specified UserAccount in MUR should not have any tier", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
 		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("another-cluster"))
@@ -91,8 +92,8 @@ func TestChangeTierSuccess(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			UserAccountHasTier("another-cluster", *teamTier).
-			UserAccountHasTier(test.MemberClusterName, murtest.DefaultNSTemplateTier())
+			UserAccountHasNoTier("another-cluster").
+			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
@@ -113,7 +114,8 @@ func TestChangeTierSuccess(t *testing.T) {
 		assert.True(t, result.RequeueAfter > cast.ToDuration("1s"))
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			HasTier(murtest.DefaultNSTemplateTier()).
-			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier())
+			UserAccountHasNoTier(test.MemberClusterName).
+			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
 
@@ -133,7 +135,8 @@ func TestChangeTierSuccess(t *testing.T) {
 		assert.False(t, result.Requeue)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			HasTier(murtest.DefaultNSTemplateTier()).
-			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier())
+			UserAccountHasNoTier(test.MemberClusterName).
+			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
 
@@ -206,29 +209,6 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.False(t, states.Deactivating(updatedUserSignup))
 	})
 
-	t.Run("should not update tier when not specified in MUR's UserAccount", func(t *testing.T) {
-		// given
-		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name), murtest.AdditionalAccounts("another-cluster"))
-		for i, ua := range mur.Spec.UserAccounts {
-			if ua.TargetCluster == test.MemberClusterName {
-				mur.Spec.UserAccounts[i].Spec.NSTemplateSet = nil // no NSTemplateSet for this UserAccount
-				break
-			}
-		}
-		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("another-cluster"))
-		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
-
-		// when
-		_, err := controller.Reconcile(context.TODO(), request)
-
-		// then
-		require.NoError(t, err)
-		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			UserAccountHasNoTier(test.MemberClusterName). // nothing set since there was no NStemplateSet to begin with
-			UserAccountHasTier("another-cluster", *teamTier)
-		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
-	})
-
 	t.Run("should also update the Space with the same name", func(t *testing.T) {
 
 		t.Run("when the MasterUserRecord exists", func(t *testing.T) {
@@ -247,9 +227,9 @@ func TestChangeTierSuccess(t *testing.T) {
 			require.NoError(t, err)
 			murtest.AssertThatMasterUserRecord(t, "john", cl).
 				HasTier(*teamTier).
-				AllUserAccountsHaveTier(*teamTier).
+				UserAccountHasNoTier(test.MemberClusterName).
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
-			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier(teamTier.Name).
 				HasSpecTargetCluster("member-1").                                   // unchanged
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(basicTierName)). // label for old tier is removed
@@ -268,7 +248,7 @@ func TestChangeTierSuccess(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier(teamTier.Name).
 				HasSpecTargetCluster("member-1"). // unchanged
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(changeTierRequest.Spec.TierName))
@@ -286,7 +266,7 @@ func TestChangeTierSuccess(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier(teamTier.Name).               // unchanged
 				HasSpecTargetCluster("member-1").     // unchanged
 				HasMatchingTierLabelForTier(teamTier) // not removed since there was no update to perform in this case
@@ -336,24 +316,6 @@ func TestChangeTierFailure(t *testing.T) {
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("nstemplatetiers.toolchain.dev.openshift.com \"team\" not found"))
 	})
 
-	t.Run("will fail since it won't be able to find the correct UserAccount in MUR", func(t *testing.T) {
-		// given
-		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name))
-		changeTierRequest := newChangeTierRequest("johny", "team", targetCluster("some-other-cluster"))
-		controller, request, cl := newController(t, changeTierRequest, config, userSignup, mur, teamTier)
-
-		// when
-		_, err := controller.Reconcile(context.TODO(), request)
-
-		// then
-		require.EqualError(t, err, "unable to change tier in MasterUserRecord johny: the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed")
-		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			HasTier(murtest.DefaultNSTemplateTier()).
-			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier())
-		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name,
-			toBeNotComplete("the MasterUserRecord 'johny' doesn't contain UserAccount with cluster 'some-other-cluster' whose tier should be changed"))
-	})
-
 	t.Run("will fail since the actual update operation will return an error", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "johny", murtest.WithOwnerLabel(userSignup.Name))
@@ -392,8 +354,8 @@ func TestChangeTierFailure(t *testing.T) {
 		// then
 		require.EqualError(t, err, "failed to delete changeTierRequest: unable to delete ChangeTierRequest object 'request-name': error")
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			HasTier(murtest.DefaultNSTemplateTier()).
-			AllUserAccountsHaveTier(murtest.DefaultNSTemplateTier())
+			UserAccountHasNoTier(test.MemberClusterName).
+			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete(), toBeDeletionError("unable to delete ChangeTierRequest object 'request-name': error"))
 	})
 
@@ -471,7 +433,7 @@ func TestChangeTierFailure(t *testing.T) {
 			// then
 			require.EqualError(t, err, "unable to get Space with name john: mock error")
 			cl.MockGet = nil // need to restore the default behaviour otherwise the assertion using the same client will fail, too!
-			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier(basicTier.Name) // unchanged
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("mock error"))
 		})
@@ -493,7 +455,7 @@ func TestChangeTierFailure(t *testing.T) {
 
 			// then
 			require.EqualError(t, err, "unable to change tier in Space john: mock error")
-			spacetest.AssertThatSpace(t, space.Namespace, space.Name, cl).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier(basicTier.Name) // unchanged
 			AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeNotComplete("mock error"))
 		})
