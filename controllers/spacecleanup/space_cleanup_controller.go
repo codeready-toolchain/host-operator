@@ -38,7 +38,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-const deletionTimeThreshold = 30 * time.Second
+const deletionTimeThreshold = 2 * time.Hour
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spaces,verbs=get;list;watch;delete
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spacebindings,verbs=get;list;watch
