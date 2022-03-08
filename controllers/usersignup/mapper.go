@@ -11,9 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var mapperLog = ctrl.Log.WithName("BannedUserToUserSignupMapper")
-
 func MapBannedUserToUserSignup(cl client.Client) func(object client.Object) []reconcile.Request {
+	var logger = ctrl.Log.WithName("BannedUserToUserSignupMapper")
 	return func(obj client.Object) []reconcile.Request {
 		if bu, ok := obj.(*toolchainv1alpha1.BannedUser); ok {
 			// look-up any associated UserSignup using the BannedUser's "toolchain.dev.openshift.com/email-hash" label
@@ -23,7 +22,7 @@ func MapBannedUserToUserSignup(cl client.Client) func(object client.Object) []re
 				opts := client.MatchingLabels(labels)
 				userSignupList := &toolchainv1alpha1.UserSignupList{}
 				if err := cl.List(context.TODO(), userSignupList, opts); err != nil {
-					mapperLog.Error(err, "Could not list UserSignup resources with label value", toolchainv1alpha1.UserSignupUserEmailHashLabelKey, emailHashLbl)
+					logger.Error(err, "Could not list UserSignup resources with label value", toolchainv1alpha1.UserSignupUserEmailHashLabelKey, emailHashLbl)
 					return nil
 				}
 
@@ -31,7 +30,7 @@ func MapBannedUserToUserSignup(cl client.Client) func(object client.Object) []re
 
 				ns, err := configuration.GetWatchNamespace()
 				if err != nil {
-					mapperLog.Error(err, "Could not determine watched namespace")
+					logger.Error(err, "Could not determine watched namespace")
 					return nil
 				}
 

@@ -8,12 +8,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func NewSpaceBinding(mur, space, spaceRole string) *v1alpha1.SpaceBinding {
+func NewSpaceBinding(mur, space, spaceRole, creator string) *v1alpha1.SpaceBinding {
 	return &v1alpha1.SpaceBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s", mur, space),
 			Namespace: test.HostOperatorNs,
 			Labels: map[string]string{
+				v1alpha1.SpaceCreatorLabelKey:                 creator,
 				v1alpha1.SpaceBindingMasterUserRecordLabelKey: mur,
 				v1alpha1.SpaceBindingSpaceLabelKey:            space,
 			},

@@ -11,6 +11,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
+	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
@@ -550,8 +551,11 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			}
 			return memberClient.Client.Update(ctx, obj, opts...)
 		}
-		modifiedMur := murtest.NewMasterUserRecord(t, "john", murtest.UserID(mur.Spec.UserID), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
-		murtest.ModifyUaInMur(modifiedMur, test.MemberClusterName, murtest.UserAccountTierName("admin"))
+		otherTier := tiertest.OtherTier()
+		modifiedMur := murtest.NewMasterUserRecord(t, "john",
+			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
+			murtest.TierName(otherTier.Name),
+			murtest.UserID("abc123")) // UserID is different and needs to be synced
 		hostClient := test.NewFakeClient(t, modifiedMur)
 
 		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
@@ -689,8 +693,8 @@ func TestModifyUserAccounts(t *testing.T) {
 	userAccount2 := uatest.NewUserAccountFromMur(mur)
 	userAccount3 := uatest.NewUserAccountFromMur(mur)
 
-	murtest.ModifyUaInMur(mur, test.MemberClusterName, murtest.NsLimit("advanced"), murtest.UserAccountTierName("admin"), murtest.Namespace("ide", "54321"))
-	murtest.ModifyUaInMur(mur, test.Member2ClusterName, murtest.NsLimit("admin"), murtest.UserAccountTierName("basic"))
+	err := murtest.Modify(mur, murtest.UserID("abc123"))
+	require.NoError(t, err)
 
 	toolchainStatus := NewToolchainStatus(
 		WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
@@ -715,7 +719,7 @@ func TestModifyUserAccounts(t *testing.T) {
 		ClusterClient("member3-cluster", memberClient3))
 
 	// when ensuring 1st account
-	_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+	_, err = cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 	// then
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
