@@ -1265,3 +1265,50 @@ func requestFor(s *toolchainv1alpha1.Space) reconcile.Request {
 		},
 	}
 }
+
+func TestNewNsTemplateSetSpec(t *testing.T) {
+	t.Run("when clusterResources template is specified", func(t *testing.T) {
+		// given
+		nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
+
+		// when
+		setSpec := space.NewNSTemplateSetSpec(nsTemplateTier)
+
+		// then
+		assert.Equal(t, newExpectedNsTemplateSetSpec(), setSpec)
+	})
+
+	t.Run("when clusterResources template is NOT specified", func(t *testing.T) {
+		// given
+		nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
+		nsTemplateTier.Spec.ClusterResources = nil
+
+		// when
+		setSpec := space.NewNSTemplateSetSpec(nsTemplateTier)
+
+		// then
+		withoutClusterRes := newExpectedNsTemplateSetSpec()
+		withoutClusterRes.ClusterResources = nil
+		assert.Equal(t, withoutClusterRes, setSpec)
+	})
+}
+
+func newExpectedNsTemplateSetSpec() toolchainv1alpha1.NSTemplateSetSpec {
+	return toolchainv1alpha1.NSTemplateSetSpec{
+		TierName: "advanced",
+		Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
+			{
+				TemplateRef: "advanced-dev-123abc1",
+			},
+			{
+				TemplateRef: "advanced-stage-123abc2",
+			},
+			{
+				TemplateRef: "advanced-extra-123abc3",
+			},
+		},
+		ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
+			TemplateRef: "advanced-clusterresources-654321b",
+		},
+	}
+}
