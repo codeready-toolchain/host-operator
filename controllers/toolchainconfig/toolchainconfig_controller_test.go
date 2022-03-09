@@ -11,7 +11,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/registrationservice"
 	. "github.com/codeready-toolchain/host-operator/test"
-
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -21,7 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -364,10 +362,8 @@ func matchesDefaultConfig(t *testing.T, actual toolchainconfig.ToolchainConfig) 
 
 func newController(t *testing.T, hostCl client.Client, members cluster.GetMemberClustersFunc) toolchainconfig.Reconciler {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
-	s := runtime.NewScheme()
+	s := clientgoscheme.Scheme
 	err := apis.AddToScheme(s)
-	require.NoError(t, err)
-	err = clientgoscheme.AddToScheme(s)
 	require.NoError(t, err)
 
 	regServiceTemplate, err := registrationservice.GetDeploymentTemplate()
