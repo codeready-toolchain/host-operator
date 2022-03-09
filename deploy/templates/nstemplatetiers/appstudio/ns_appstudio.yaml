@@ -13,9 +13,10 @@ objects:
     labels:
       name: ${USERNAME}
       toolchain.dev.openshift.com/workspace: ${USERNAME}
+      argocd.argoproj.io/managed-by: gitops-service-argocd
     name: ${USERNAME}
 
-# ServiceAccounts that represents the AppStudio user - the token of this SA is used by the proxy for forwarding the requests from UI (or any other client)
+# ServiceAccounts that represents the AppStudio user - the token of this SA is used by the proxy for forwarding the requests from UI (or any other client) 
 - apiVersion: v1
   kind: ServiceAccount
   metadata:
@@ -29,6 +30,12 @@ objects:
     name: appstudio-user-actions
     namespace: ${USERNAME}
   rules:
+  - apiGroups:
+    - managed-gitops.redhat.com
+    resources:
+    - gitopsdeployments
+    verbs:
+    - "*"
   - apiGroups:
     - appstudio.redhat.com
     resources:
