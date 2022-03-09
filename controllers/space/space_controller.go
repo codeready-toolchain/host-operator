@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"sort"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -203,7 +202,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			if err := r.setStatusProvisioning(space); err != nil {
 				return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 			}
-			nsTmplSet = r.newNSTemplateSet(memberCluster.OperatorNamespace, space.Name, tmplTier)
+			nsTmplSet = r.newNSTemplateSet(memberCluster.OperatorNamespace, space, tmplTier)
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
 				return norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
@@ -283,16 +282,15 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 }
 
-func (r *Reconciler) newNSTemplateSet(namespace string, name string, tmplTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.NSTemplateSet {
+func (r *Reconciler) newNSTemplateSet(namespace string, space *toolchainv1alpha1.Space, tmplTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.NSTemplateSet {
 	// create the NSTemplateSet from the NSTemplateTier
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      name,
+			Name:      space.Name,
 		},
 	}
-	nsTmplSetSpec := usersignup.NewNSTemplateSetSpec(tmplTier)
-	nsTmplSet.Spec = *nsTmplSetSpec
+	nsTmplSet.Spec = r.newNSTemplateSetSpec(space, tmplTier)
 	return nsTmplSet
 }
 
@@ -309,23 +307,6 @@ func (r *Reconciler) newNSTemplateSetSpec(space *toolchainv1alpha1.Space, tmplTi
 		s.Namespaces = make([]toolchainv1alpha1.NSTemplateSetNamespace, len(tmplTier.Spec.Namespaces))
 		for i, ns := range tmplTier.Spec.Namespaces {
 			s.Namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace(ns)
-		}
-	}
-	// space roles
-	if len(tmplTier.Spec.SpaceRoles) > 0 {
-		s.SpaceRoles = make([]toolchainv1alpha1.NSTemplateSetSpaceRole, len(tmplTier.Spec.SpaceRoles))
-		// append by alphabetical order of role names
-		roles := make([]string, 0, len(tmplTier.Spec.SpaceRoles))
-		for r := range tmplTier.Spec.SpaceRoles {
-			roles = append(roles, r)
-		}
-		sort.Strings(roles)
-		for i, r := range roles {
-			sr := tmplTier.Spec.SpaceRoles[r]
-			s.SpaceRoles[i] = toolchainv1alpha1.NSTemplateSetSpaceRole{
-				TemplateRef: sr.TemplateRef,
-				// TODO: include usernames from SpaceBindings
-			}
 		}
 	}
 	return s
