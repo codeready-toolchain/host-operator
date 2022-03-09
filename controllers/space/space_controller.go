@@ -8,7 +8,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
-	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
@@ -221,8 +220,9 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return requeueDelay, nil
 	}
 
+	nsTmplSetSpec := NewNSTemplateSetSpec(tmplTier)
 	// update the NSTemplateSet if needed (ie, spec changed) and if it's "ready"
-	if !reflect.DeepEqual(nsTmplSet.Spec, r.newNSTemplateSetSpec(space, tmplTier)) {
+	if !reflect.DeepEqual(nsTmplSet.Spec, nsTmplSetSpec) {
 		// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)
 		if space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
 			condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
@@ -241,8 +241,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			}
 			r.LastExecutedUpdate = time.Now()
 		}
-		nsTmplSetSpec := usersignup.NewNSTemplateSetSpec(tmplTier)
-		nsTmplSet.Spec = *nsTmplSetSpec
+		nsTmplSet.Spec = nsTmplSetSpec
 		if err := memberCluster.Client.Update(context.TODO(), nsTmplSet); err != nil {
 			return norequeue, r.setStatusNSTemplateSetUpdateFailed(logger, space, err)
 		}
@@ -290,13 +289,13 @@ func (r *Reconciler) newNSTemplateSet(namespace string, space *toolchainv1alpha1
 			Name:      space.Name,
 		},
 	}
-	nsTmplSet.Spec = r.newNSTemplateSetSpec(space, tmplTier)
+	nsTmplSet.Spec = NewNSTemplateSetSpec(tmplTier)
 	return nsTmplSet
 }
 
-func (r *Reconciler) newNSTemplateSetSpec(space *toolchainv1alpha1.Space, tmplTier *toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {
+func NewNSTemplateSetSpec(tmplTier *toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {
 	s := toolchainv1alpha1.NSTemplateSetSpec{
-		TierName: space.Spec.TierName,
+		TierName: tmplTier.Name,
 	}
 	if tmplTier.Spec.ClusterResources != nil {
 		s.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{

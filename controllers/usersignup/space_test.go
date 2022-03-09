@@ -3,6 +3,7 @@ package usersignup
 import (
 	"testing"
 
+	"github.com/codeready-toolchain/host-operator/controllers/space"
 	. "github.com/codeready-toolchain/host-operator/test"
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 
@@ -32,7 +33,7 @@ func TestNewNsTemplateSetSpec(t *testing.T) {
 		nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
 
 		// when
-		setSpec := NewNSTemplateSetSpec(nsTemplateTier)
+		setSpec := space.NewNSTemplateSetSpec(nsTemplateTier)
 
 		// then
 		assert.Equal(t, newExpectedNsTemplateSetSpec(), setSpec)
@@ -44,7 +45,7 @@ func TestNewNsTemplateSetSpec(t *testing.T) {
 		nsTemplateTier.Spec.ClusterResources = nil
 
 		// when
-		setSpec := NewNSTemplateSetSpec(nsTemplateTier)
+		setSpec := space.NewNSTemplateSetSpec(nsTemplateTier)
 
 		// then
 		withoutClusterRes := newExpectedNsTemplateSetSpec()
@@ -53,8 +54,8 @@ func TestNewNsTemplateSetSpec(t *testing.T) {
 	})
 }
 
-func newExpectedNsTemplateSetSpec() *toolchainv1alpha1.NSTemplateSetSpec {
-	return &toolchainv1alpha1.NSTemplateSetSpec{
+func newExpectedNsTemplateSetSpec() toolchainv1alpha1.NSTemplateSetSpec {
+	return toolchainv1alpha1.NSTemplateSetSpec{
 		TierName: "advanced",
 		Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
 			{
