@@ -634,56 +634,6 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			HaveUserAccountsForCluster(test.MemberClusterName, 1)
 	})
 
-	t.Run("deletion of MasterUserRecord fails because it cannot remove finalizer", func(t *testing.T) {
-		// given
-		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(2)),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			})))
-		mur := murtest.NewMasterUserRecord(t, "john",
-			murtest.Finalizer("finalizer.toolchain.dev.openshift.com"),
-			murtest.ToBeDeleted())
-
-		hostClient := test.NewFakeClient(t, mur)
-		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
-		hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-			return fmt.Errorf("unable to remove finalizer from MUR %s", mur.Name)
-		}
-
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
-
-		// when
-		result1, err1 := cntrl.Reconcile(context.TODO(), newMurRequest(mur)) // first reconcile will be requeued to wait for UserAccount deletion
-		require.NoError(t, err1)
-		assert.True(t, result1.Requeue)
-		assert.Equal(t, int64(result1.RequeueAfter), int64(10*time.Second))
-
-		result2, err2 := cntrl.Reconcile(context.TODO(), newMurRequest(mur)) // second reconcile
-
-		// then
-		require.Empty(t, result2)
-		require.Error(t, err2)
-		msg := "failed to update MasterUserRecord while deleting finalizer"
-		assert.Contains(t, err2.Error(), msg)
-
-		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
-		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUnableToRemoveFinalizerReason, "unable to remove finalizer from MUR john"))
-		AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-				"1,internal": 1, // unchanged
-			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
-	})
-
 	t.Run("deletion of the UserAccount failed", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
@@ -1034,7 +984,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			DoesNotHaveFinalizer()
+			DoesNotExist()
 		AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
@@ -1089,7 +1039,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		uatest.AssertThatUserAccount(t, "john-wait-for-ua", memberClient).
 			DoesNotExist()
 		murtest.AssertThatMasterUserRecord(t, "john-wait-for-ua", hostClient).
-			DoesNotHaveFinalizer()
+			DoesNotExist()
 		AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 1, // unchanged
@@ -1233,7 +1183,7 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		DoesNotExist()
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-		DoesNotHaveFinalizer()
+		DoesNotExist()
 	AssertThatCountersAndMetrics(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 0, // decremented
