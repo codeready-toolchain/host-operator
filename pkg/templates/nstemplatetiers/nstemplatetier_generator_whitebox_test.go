@@ -30,7 +30,7 @@ import (
 var expectedTiers = map[string]bool{
 	"advanced":                 true, // tier_name: true/false (if based on the other tier)
 	"base":                     false,
-	"base-single-ns":           false,
+	"baseonens":                false,
 	"baselarge":                true,
 	"baseextended":             true,
 	"baseextendedidling":       true,
@@ -44,7 +44,7 @@ func types(tier string) []string {
 	switch tier {
 	case "appstudio":
 		return []string{"appstudio"}
-	case "base-single-ns":
+	case "baseonens":
 		return []string{"dev"}
 	default:
 		return []string{"dev", "stage"}
