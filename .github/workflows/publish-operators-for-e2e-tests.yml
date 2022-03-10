@@ -77,6 +77,7 @@ jobs:
         sha: ${{ github.event.pull_request.head.sha }}
         pr-number: ${{ github.event.pull_request.number }}
         author: ${{ github.event.pull_request.head.user.login }}
+        gh-head-ref: ${{ github.event.pull_request.head.ref }}
 
     # Execute composite action using values from PR event
     # Is executed only for comment events - in that case the pull_request field is empty
@@ -89,3 +90,4 @@ jobs:
         sha: ${{ fromJson(steps.request.outputs.data).head.sha }}
         pr-number: ${{ fromJson(steps.request.outputs.data).number }}
         author: ${{ fromJson(steps.request.outputs.data).head.user.login }}
+        gh-head-ref: ${{ fromJson(steps.request.outputs.data).head.ref }}
