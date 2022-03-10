@@ -6,6 +6,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	. "github.com/codeready-toolchain/host-operator/test"
+	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
@@ -16,7 +17,7 @@ import (
 func TestNewMasterUserRecord(t *testing.T) {
 	// given
 	userSignup := NewUserSignup()
-	nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 
 	// when
 	mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
@@ -32,7 +33,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		t.Run("when mur is the same", func(t *testing.T) {
 			// given
 			userSignup := NewUserSignup()
-			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 
 			// when
@@ -48,7 +49,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		t.Run("when useraccount NSLimit was set, it should be empty after migration", func(t *testing.T) {
 			userSignup := NewUserSignup()
-			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			mur.Spec.UserAccounts[0].Spec.NSLimit = "default" // NSLimit is set
 
@@ -62,7 +63,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		t.Run("when useraccount NSTemplateSet was set, it should be nil after migration", func(t *testing.T) {
 			userSignup := NewUserSignup()
-			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 			testNStemplateSet := murtest.DefaultNSTemplateSet()
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &testNStemplateSet.Spec // NSTemplateSet is set
@@ -77,7 +78,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		t.Run("when MUR has tier hash label, it should be removed after migration", func(t *testing.T) {
 			userSignup := NewUserSignup()
-			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			mur.Labels = map[string]string{
 				"toolchain.dev.openshift.com/owner":                    userSignup.Name,
@@ -94,7 +95,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		t.Run("when tierName is missing", func(t *testing.T) {
 			userSignup := NewUserSignup()
-			nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			mur.Spec.TierName = "" // tierName not set
 

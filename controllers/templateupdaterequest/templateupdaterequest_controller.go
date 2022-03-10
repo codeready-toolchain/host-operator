@@ -29,7 +29,6 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.TemplateUpdateRequest{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&source.Kind{Type: &toolchainv1alpha1.MasterUserRecord{}}, &handler.EnqueueRequestForObject{}).
-		Watches(&source.Kind{Type: &toolchainv1alpha1.Space{}}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }
 

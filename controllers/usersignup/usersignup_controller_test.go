@@ -13,9 +13,9 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	. "github.com/codeready-toolchain/host-operator/test"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
+	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	spacebindingtest "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -40,30 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func newNsTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NSTemplateTier {
-	namespaces := make([]toolchainv1alpha1.NSTemplateTierNamespace, len(nsTypes))
-	for i, nsType := range nsTypes {
-		revision := fmt.Sprintf("123abc%d", i+1)
-		namespaces[i] = toolchainv1alpha1.NSTemplateTierNamespace{
-			TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, nsType, revision),
-		}
-	}
-
-	return &toolchainv1alpha1.NSTemplateTier{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: test.HostOperatorNs,
-			Name:      tierName,
-		},
-		Spec: toolchainv1alpha1.NSTemplateTierSpec{
-			Namespaces: namespaces,
-			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
-				TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, "clusterresources", "654321b"),
-			},
-		},
-	}
-}
-
-var baseNSTemplateTier = newNsTemplateTier("base", "dev", "stage")
+var baseNSTemplateTier = tiertest.NewNSTemplateTier("base", "dev", "stage")
 
 func TestUserSignupCreateMUROk(t *testing.T) {
 	member := NewMemberCluster(t, "member1", v1.ConditionTrue)
@@ -586,7 +563,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 func TestNonDefaultNSTemplateTier(t *testing.T) {
 
 	// given
-	customTier := newNsTemplateTier("custom", "dev", "stage")
+	customTier := tiertest.NewNSTemplateTier("custom", "dev", "stage")
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultTier("custom"), testconfig.Tiers().DefaultSpaceTier("custom"))
 	userSignup := NewUserSignup()
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
@@ -1774,7 +1751,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 }
 
 func TestMigrateExistingMURToSpace(t *testing.T) {
-	customTier := newNsTemplateTier("custom", "dev", "stage")
+	customTier := tiertest.NewNSTemplateTier("custom", "dev", "stage")
 
 	for testname, testTier := range map[string]*toolchainv1alpha1.NSTemplateTier{
 		"default tier":     baseNSTemplateTier,
