@@ -6,7 +6,9 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,7 +16,7 @@ import (
 func TestNewSpaceBinding(t *testing.T) {
 	// given
 	userSignup := NewUserSignup()
-	nsTemplateTier := newNsTemplateTier("advanced", "dev", "stage", "extra")
+	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 	space := newSpace(userSignup, test.MemberClusterName, "smith", nsTemplateTier.Name)
 	mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 

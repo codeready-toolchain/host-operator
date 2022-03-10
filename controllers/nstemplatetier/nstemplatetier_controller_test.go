@@ -124,26 +124,11 @@ func TestReconcile(t *testing.T) {
 				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(1)
 				turtest.AssertThatTemplateUpdateRequest(t, "user-0", cl).Exists().HasOwnerReference()
 			})
-
-			// in this test, there are 10 Spaces but no associated TemplateUpdateRequest
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := append(spaces, basicTier)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
-				// check that a single TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(1)
-				turtest.AssertThatTemplateUpdateRequest(t, "user-0", cl).Exists().HasOwnerReference()
-			})
 		})
 
 		// in this test, there are TemplateUpdateRequest resources but they are associated with the update of another NSTemplateTier
 		t.Run("when no TemplateUpdateRequest resource exists for the given NSTemplateTier", func(t *testing.T) {
+
 			t.Run("MasterUserRecords", func(t *testing.T) {
 				// TODO: this test should be removed once migration from MUR -> Spaces is completed.
 
@@ -162,27 +147,13 @@ func TestReconcile(t *testing.T) {
 				// check that a single TemplateUpdateRequest was created
 				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize + 1) // 1 resource was created, `MaxPoolSize` already existed
 			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "other-%d", *basicTier, turtest.TierName("other"))...)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
-				// check that a single TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize + 1) // 1 resource was created, `MaxPoolSize` already existed
-			})
+
 		})
 
 		// in this test, the controller can create an extra TemplateUpdateRequest resource
 		// because one is being deleted
 		t.Run("when maximum number of TemplateUpdateRequest is reached but one is being deleted", func(t *testing.T) {
+
 			t.Run("MasterUserRecords", func(t *testing.T) {
 				// TODO: this test should be removed once migration from MUR -> Spaces is completed.
 
@@ -202,47 +173,6 @@ func TestReconcile(t *testing.T) {
 				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize + 1) // one more TemplateUpdateRequest
 				turtest.AssertThatTemplateUpdateRequest(t, "user-5", cl).Exists().HasMasterUserRecordFieldsSetForTier()
 			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.DeletionTimestamp("user-0"))...)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
-				// check that a single TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize + 1) // one more TemplateUpdateRequest
-				turtest.AssertThatTemplateUpdateRequest(t, "user-5", cl).Exists().HasSpaceFieldsSetForTier()
-			})
-			t.Run("Both MasterUserRecords and Spaces", func(t *testing.T) {
-				// this test checks that a TemplateUpdateRequest is created for Spaces after MasterUserRecords have been processed
-				// TODO: this test should be removed once migration from MUR -> Spaces is completed.
-
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 5, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-				initObjs = append(initObjs, spacetest.NewSpaces(5, "spaceuser-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
-				// mark user-0 for deletion so that the next TemplateUpdateRequest can be created, all MasterUserRecords should have a TemplateUpdateRequest
-				// so the next should be for a Space
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.DeletionTimestamp("user-0"))...)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
-				// check that a single TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize + 1) // one more TemplateUpdateRequest
-				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).Exists().HasMasterUserRecordFieldsSetForTier()
-				turtest.AssertThatTemplateUpdateRequest(t, "spaceuser-0", cl).Exists().HasSpaceFieldsSetForTier()
-			})
 		})
 
 		// in this test, there are 20 MasterUserRecords on the same tier.
@@ -259,23 +189,6 @@ func TestReconcile(t *testing.T) {
 					murtest.Account("cluster1", *basicTier))...)
 				initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "old-user-%d",
 					murtest.Account("cluster1", *previousBasicTier))...)
-
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
-				// check that a single TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(1) // one TemplateUpdateRequest created
-			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "new-user-%d", spacetest.WithTierNameAndHashLabelFor(basicTier))...)
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "old-user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
 
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -349,32 +262,6 @@ func TestReconcile(t *testing.T) {
 						CompletionTime: &now, // expect a completion time since there was no MasterUserRecord to update
 					})
 			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				otherTier := tiertest.OtherTier()
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "user-%d", spacetest.WithTierNameAndHashLabelFor(otherTier))...)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res)
-				// check that no TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(0)
-				// also check that the tier `status.updates` was updated with a new entry
-				now := metav1.Now()
-				tiertest.AssertThatNSTemplateTier(t, basicTier.Name, cl).
-					HasStatusUpdatesItems(1).
-					// at this point, all the counters are '0'
-					HasLatestUpdate(toolchainv1alpha1.NSTemplateTierHistory{
-						Hash:           basicTier.Labels["toolchain.dev.openshift.com/basic-tier-hash"],
-						Failures:       2, // default
-						FailedAccounts: []string{"failed1", "failed2"},
-						CompletionTime: &now, // expect a completion time since there was no MasterUserRecord to update
-					})
-			})
 		})
 
 		// in this test, all existing MasterUserRecords or Spaces are already up-to-date
@@ -386,30 +273,6 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 20, "user-%d", murtest.Account("cluster1", *basicTier))...)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res)
-				// check that no TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(0)
-				now := metav1.Now()
-				tiertest.AssertThatNSTemplateTier(t, basicTier.Name, cl).
-					HasStatusUpdatesItems(1).
-					// at this point, all the counters are '0'
-					HasLatestUpdate(toolchainv1alpha1.NSTemplateTierHistory{
-						Hash:           basicTier.Labels["toolchain.dev.openshift.com/basic-tier-hash"],
-						Failures:       2, // default
-						FailedAccounts: []string{"failed1", "failed2"},
-						CompletionTime: &now, // completion time should be set
-					})
-			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(20, "user-%d", spacetest.WithTierNameAndHashLabelFor(basicTier))...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -460,30 +323,6 @@ func TestReconcile(t *testing.T) {
 						CompletionTime: nil, // completion time should NOT be set
 					})
 			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(20, "user-%d", spacetest.WithTierNameAndHashLabelFor(basicTier))...)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier)...)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res)
-				// check that no TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize) // size unchanged
-				tiertest.AssertThatNSTemplateTier(t, basicTier.Name, cl).
-					HasStatusUpdatesItems(1).
-					// at this point, all the counters are '0'
-					HasLatestUpdate(toolchainv1alpha1.NSTemplateTierHistory{
-						Hash:           basicTier.Labels["toolchain.dev.openshift.com/basic-tier-hash"],
-						Failures:       2, // default
-						FailedAccounts: []string{"failed1", "failed2"},
-						CompletionTime: nil, // completion time should NOT be set
-					})
-			})
 		})
 
 		// in this test, there are a more MasterUserRecords/Spaces to update than `MaxPoolSize` allows, but
@@ -497,30 +336,6 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier)...)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res)
-				// check that a single TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize) // no increase
-				tiertest.AssertThatNSTemplateTier(t, basicTier.Name, cl).
-					HasStatusUpdatesItems(1).
-					// at this point, all the counters are '0'
-					HasLatestUpdate(toolchainv1alpha1.NSTemplateTierHistory{
-						Hash:           basicTier.Labels["toolchain.dev.openshift.com/basic-tier-hash"],
-						Failures:       2, // default
-						FailedAccounts: []string{"failed1", "failed2"},
-					})
-			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier)...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -571,31 +386,6 @@ func TestReconcile(t *testing.T) {
 						FailedAccounts: []string{"failed1", "failed2"}, // unchanged
 					})
 			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"))...)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
-				// check that no TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize) // none created and one marked for deletion
-				turtest.AssertThatTemplateUpdateRequest(t, "user-0", cl).Exists()
-				tiertest.AssertThatNSTemplateTier(t, basicTier.Name, cl).
-					HasStatusUpdatesItems(1).
-					// at this point, all the counters are '0'
-					HasLatestUpdate(toolchainv1alpha1.NSTemplateTierHistory{
-						Hash:           basicTier.Labels["toolchain.dev.openshift.com/basic-tier-hash"],
-						Failures:       2,                              // not incremented (yet)
-						FailedAccounts: []string{"failed1", "failed2"}, // unchanged
-					})
-			})
 		})
 	})
 
@@ -613,23 +403,6 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
-				// check that no TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize) // none created and one marked for deletion
-				turtest.AssertThatTemplateUpdateRequest(t, "user-0", cl).HasDeletionTimestamp()
-			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -678,36 +451,6 @@ func TestReconcile(t *testing.T) {
 				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize)         // none created and one marked for deletion
 				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).HasDeletionTimestamp() // "user-1" is the one marked for deletion
 			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"), turtest.Complete("user-1"))...)
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
-					if tur, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-						if tur.Name == "user-0" {
-							return errors.NewNotFound(schema.GroupResource{}, "user-0")
-						}
-						t.Logf("setting deletion timestamp on TemplateUpdateRequest '%s'", tur.Name)
-						now := metav1.Now()
-						tur.SetDeletionTimestamp(&now)
-						return cl.Client.Update(ctx, tur)
-					}
-					return fmt.Errorf("unexpected type of resource to delete: '%T'", obj)
-				}
-
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
-				// check that no TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize)         // none created and one marked for deletion
-				turtest.AssertThatTemplateUpdateRequest(t, "user-1", cl).HasDeletionTimestamp() // "user-1" is the one marked for deletion
-			})
 		})
 
 		// in this test, the controller can't create an extra TemplateUpdateRequest resource yet
@@ -721,31 +464,6 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d", murtest.Account("cluster1", *previousBasicTier))...)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"), turtest.Failed("user-0"))...) // "user-0" failed twice
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res) // no need to explicit requeue after the creation
-				// check that no TemplateUpdateRequest was created
-				turtest.AssertThatTemplateUpdateRequests(t, cl).TotalCount(maxPoolSize) // none created and one marked for deletion
-				turtest.AssertThatTemplateUpdateRequest(t, "user-0", cl).HasDeletionTimestamp()
-				tiertest.AssertThatNSTemplateTier(t, basicTier.Name, cl).
-					HasStatusUpdatesItems(1).
-					// at this point, all the counters are '0'
-					HasLatestUpdate(toolchainv1alpha1.NSTemplateTierHistory{
-						Hash:           basicTier.Labels["toolchain.dev.openshift.com/basic-tier-hash"],
-						Failures:       3, // incremented
-						FailedAccounts: []string{"failed1", "failed2", "user-0"},
-					})
-			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Failed("user-0"), turtest.Failed("user-0"))...) // "user-0" failed twice
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				// when
@@ -837,29 +555,6 @@ func TestReconcile(t *testing.T) {
 			assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 		})
 
-		t.Run("unable to list Spaces", func(t *testing.T) {
-			// given
-			previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-			basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-			initObjs := []runtime.Object{basicTier}
-			initObjs = append(initObjs, spacetest.NewSpaces(10, "new-user-%d", spacetest.WithTierNameAndHashLabelFor(basicTier))...)
-			initObjs = append(initObjs, spacetest.NewSpaces(10, "old-user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
-
-			r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-			cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-				if _, ok := list.(*toolchainv1alpha1.SpaceList); ok {
-					return fmt.Errorf("mock error")
-				}
-				return cl.Client.List(ctx, list, opts...)
-			}
-			// when
-			res, err := r.Reconcile(context.TODO(), req)
-			// then
-			require.Error(t, err)
-			assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get Spaces to update: mock error")
-			assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
-		})
-
 		t.Run("unable to list TemplateUpdateRequests", func(t *testing.T) {
 			t.Run("MasterUserRecords", func(t *testing.T) {
 				// TODO: this test should be removed once migration from MUR -> Spaces is completed.
@@ -870,27 +565,6 @@ func TestReconcile(t *testing.T) {
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d",
 					murtest.Account("cluster1", *previousBasicTier))...)
-
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-					if _, ok := list.(*toolchainv1alpha1.TemplateUpdateRequestList); ok {
-						return fmt.Errorf("mock error")
-					}
-					return cl.Client.List(ctx, list, opts...)
-				}
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.Error(t, err)
-				assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get active TemplateUpdateRequests: mock error")
-				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
-			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
 
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 				cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
@@ -933,27 +607,6 @@ func TestReconcile(t *testing.T) {
 				assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get TemplateUpdateRequest for MasterUserRecord 'user-0': mock error")
 				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
 			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
-
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
-					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-						return fmt.Errorf("mock error")
-					}
-					return cl.Client.Get(ctx, key, obj)
-				}
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.Error(t, err)
-				assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get TemplateUpdateRequest for Space 'user-0': mock error")
-				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
-			})
 		})
 
 		t.Run("unable to delete TemplateUpdateRequest associated with MasterUserRecord/Space", func(t *testing.T) {
@@ -966,28 +619,6 @@ func TestReconcile(t *testing.T) {
 				initObjs := []runtime.Object{basicTier}
 				initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "user-%d",
 					murtest.Account("cluster1", *previousBasicTier))...)
-				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
-
-				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
-					if _, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-						return fmt.Errorf("mock error")
-					}
-					return cl.Client.Delete(ctx, obj, opts...)
-				}
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-				// then
-				require.Error(t, err)
-				assert.EqualError(t, err, "unable to ensure TemplateRequestUpdate resource after NSTemplateTier changed: unable to get active TemplateUpdateRequests: unable to delete the TemplateUpdateRequest resource 'user-0': mock error")
-				assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
-			})
-			t.Run("Spaces", func(t *testing.T) {
-				// given
-				previousBasicTier := tiertest.BasicTier(t, tiertest.PreviousBasicTemplates)
-				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates, tiertest.WithCurrentUpdateInProgress())
-				initObjs := []runtime.Object{basicTier}
-				initObjs = append(initObjs, spacetest.NewSpaces(10, "user-%d", spacetest.WithTierNameAndHashLabelFor(previousBasicTier))...)
 				initObjs = append(initObjs, turtest.NewTemplateUpdateRequests(maxPoolSize, "user-%d", *basicTier, turtest.Complete("user-0"))...)
 
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
@@ -1017,25 +648,6 @@ func TestReconcile(t *testing.T) {
 					initObjs := []runtime.Object{basicTier}
 					initObjs = append(initObjs, murtest.NewMasterUserRecords(t, 10, "new-user-%d",
 						murtest.Account("cluster1", *basicTier))...)
-					r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-					cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-						if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
-							return fmt.Errorf("mock error")
-						}
-						return cl.Client.Status().Update(ctx, obj, opts...)
-					}
-					// when
-					res, err := r.Reconcile(context.TODO(), req)
-					// then
-					require.Error(t, err)
-					assert.EqualError(t, err, "unable to insert a new entry in status.updates after NSTemplateTier changed: mock error")
-					assert.Equal(t, reconcile.Result{}, res) // no explicit requeue
-				})
-				t.Run("Spaces", func(t *testing.T) {
-					// given
-					basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
-					initObjs := []runtime.Object{basicTier}
-					initObjs = append(initObjs, spacetest.NewSpaces(10, "new-user-%d", spacetest.WithTierNameAndHashLabelFor(basicTier))...)
 					r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
 					cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 						if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
