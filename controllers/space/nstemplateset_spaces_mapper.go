@@ -2,6 +2,7 @@ package space
 
 import (
 	"errors"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -9,9 +10,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var mapperLog = ctrl.Log.WithName("NSTemplateSetToSpaceMapper")
-
 func MapNSTemplateSetToSpace(hostNamespace string) func(object client.Object) []reconcile.Request {
+	mapperLog := ctrl.Log.WithName("NSTemplateSetToSpaceMapper")
 	return func(obj client.Object) []reconcile.Request {
 		if nsTemplateSet, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 			return []reconcile.Request{{
