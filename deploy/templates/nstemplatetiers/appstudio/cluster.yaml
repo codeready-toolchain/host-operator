@@ -125,33 +125,6 @@ objects:
       annotations:
         openshift.io/requester: ${USERNAME}
       labels: null
-- apiVersion: quota.openshift.io/v1
-  kind: ClusterResourceQuota
-  metadata:
-    name: for-${USERNAME}-rhoas
-  spec:
-    quota:
-      hard:
-        count/cloudservicesrequests.rhoas.redhat.com: "2"
-        count/kafkaconnections.rhoas.redhat.com: "5"
-        count/cloudserviceaccountrequest.rhoas.redhat.com: "2"
-    selector:
-      annotations:
-        openshift.io/requester: ${USERNAME}
-      labels: null
-- apiVersion: quota.openshift.io/v1
-  kind: ClusterResourceQuota
-  metadata:
-    name: for-${USERNAME}-sbo
-  spec:
-    quota:
-      hard:
-        count/servicebindings.binding.operators.coreos.com: "50"
-        count/servicebindings.servicebinding.io: "50"
-    selector:
-      annotations:
-        openshift.io/requester: ${USERNAME}
-      labels: null
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
