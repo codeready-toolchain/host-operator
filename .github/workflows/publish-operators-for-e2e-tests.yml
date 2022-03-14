@@ -13,7 +13,7 @@ jobs:
   binary:
     name: Build & push operator bundles for e2e tests
 
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     if: ${{ github.event.comment == '' || github.event.comment.body == '/retest' || github.event.comment.body == '/test all' || github.event.comment.body == '/test e2e' }}
     steps:
     # Checkout from PR event - in that case the comment field is empty
