@@ -29,5 +29,5 @@ objects:
 parameters:
 - name: USERNAME
   required: true
-- name: MEMBER_OPERATOR_NAMESPACE
-  value: toolchain-member-operator
+- name: NAMESPACE
+  required: true
