@@ -158,6 +158,14 @@ objects:
     name: ${USERNAME}-dev
   spec:
     timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
+- apiVersion: dbaas.redhat.com/v1alpha1
+  kind: DBaaSTenant
+  metadata:
+    annotations:
+      toolchain.dev.openshift.com/optional-resource: "yes"
+    name: "tenant-${USERNAME}-dev"
+  spec:
+    inventoryNamespace: ${USERNAME}-dev
 parameters:
 - name: USERNAME
   required: true
