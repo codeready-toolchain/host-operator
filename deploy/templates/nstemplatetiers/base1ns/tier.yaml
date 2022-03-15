@@ -1,12 +1,12 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: baseonens-tier
+  name: base1ns-tier
 objects:
 - kind: NSTemplateTier
   apiVersion: toolchain.dev.openshift.com/v1alpha1
   metadata:
-    name: baseonens
+    name: base1ns
     namespace: ${NAMESPACE}
   spec:
     clusterResources:

@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: baseonens-dev
+  name: base1ns-dev
 objects:
 - apiVersion: v1
   kind: Namespace
