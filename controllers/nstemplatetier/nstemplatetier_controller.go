@@ -151,7 +151,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 		// and for which there is no TemplateUpdateRequest yet
 
 		// fetch by subsets of "MaxPoolSize + 1" size until a candidate is found
-		matchOutdated, err := outdatedTierSelector(tier)
+		matchOutdated, err := OutdatedTierSelector(tier)
 		if err != nil {
 			return false, errs.Wrap(err, "unable to get MasterUserRecords to update")
 		}
@@ -165,17 +165,7 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 		}
 		logger.Info("listed MasterUserRecords", "count", len(murs.Items), "selector", matchOutdated)
 
-		spaces := toolchainv1alpha1.SpaceList{}
-		if err = r.Client.List(context.TODO(), &spaces,
-			client.InNamespace(tier.Namespace),
-			client.Limit(config.Tiers().TemplateUpdateRequestMaxPoolSize()+1),
-			matchOutdated,
-		); err != nil {
-			return false, errs.Wrap(err, "unable to get Spaces to update")
-		}
-		logger.Info("listed Spaces", "count", len(spaces.Items), "selector", matchOutdated)
-
-		if activeTemplateUpdateRequests == 0 && len(murs.Items) == 0 && len(spaces.Items) == 0 {
+		if activeTemplateUpdateRequests == 0 && len(murs.Items) == 0 { // && len(spaces.Items) == 0 {
 			// we've reached the end: all MasterUserRecords and Spaces are up-to-date
 			return true, nil
 		}
@@ -196,25 +186,6 @@ func (r *Reconciler) ensureTemplateUpdateRequest(logger logr.Logger, config tool
 				TierName:         tier.Name,
 				Namespaces:       tier.Spec.Namespaces,
 				ClusterResources: tier.Spec.ClusterResources,
-			})
-		}
-
-		for _, space := range spaces.Items {
-			// check if there's already a TemplateUpdateRequest for this Space
-			templateUpdateRequest := toolchainv1alpha1.TemplateUpdateRequest{}
-			if err := r.Client.Get(context.TODO(), types.NamespacedName{
-				Namespace: tier.Namespace,
-				Name:      space.Name,
-			}, &templateUpdateRequest); err == nil {
-				logger.Info("Space already has an associated TemplateUpdateRequest", "name", space.Name)
-				continue
-			} else if !errors.IsNotFound(err) {
-				return false, errs.Wrapf(err, "unable to get TemplateUpdateRequest for Space '%s'", space.Name)
-			}
-			logger.Info("creating a TemplateUpdateRequest to update the Space", "name", space.Name, "tier", tier.Name)
-			hashLabel := tierutil.TemplateTierHashLabelKey(tier.Name)
-			return r.createTemplateUpdateRequest(tier, space.Name, toolchainv1alpha1.TemplateUpdateRequestSpec{
-				CurrentTierHash: space.Labels[hashLabel],
 			})
 		}
 	}

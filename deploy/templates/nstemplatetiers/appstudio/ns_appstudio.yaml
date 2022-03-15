@@ -75,6 +75,14 @@ objects:
     verbs:
     - create
     - delete
+  - apiGroups:
+    - results.tekton.dev
+    resources:
+    - results
+    - records
+    verbs:
+    - get
+    - list
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:

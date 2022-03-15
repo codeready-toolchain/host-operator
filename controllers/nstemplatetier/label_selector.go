@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// outdatedSelector creates a label selector to find MasterUserRecords or Spaces which are not up-to-date with
+// OutdatedTierSelector creates a label selector to find MasterUserRecords or Spaces which are not up-to-date with
 // the templateRefs of the given NSTemplateTier.
 //
 // (longer explanation)
@@ -20,7 +20,7 @@ import (
 // but with a template version (defined by `<hash>`) which is NOT to the expected value (the one provided by `instance`).
 //
 // Note: The `hash` value is computed from the TemplateRefs. See `computeTemplateRefsHash()`
-func outdatedTierSelector(tier *toolchainv1alpha1.NSTemplateTier) (client.MatchingLabelsSelector, error) {
+func OutdatedTierSelector(tier *toolchainv1alpha1.NSTemplateTier) (client.MatchingLabelsSelector, error) {
 	// compute the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
 	hash, err := tierutil.ComputeHashForNSTemplateTier(tier)
 	if err != nil {
