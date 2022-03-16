@@ -1,0 +1,22 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: appstudio-ns
+objects:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    annotations:
+      openshift.io/description: ${USERNAME}
+      openshift.io/display-name: ${USERNAME}
+      openshift.io/requester: ${USERNAME}
+    labels:
+      name: ${USERNAME}
+      toolchain.dev.openshift.com/workspace: ${USERNAME}
+    name: ${USERNAME}
+
+parameters:
+- name: USERNAME
+  required: true
+- name: MEMBER_OPERATOR_NAMESPACE
+  value: toolchain-member-operator
