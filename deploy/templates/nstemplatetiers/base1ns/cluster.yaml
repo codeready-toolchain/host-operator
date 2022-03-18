@@ -1,0 +1,151 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: base1ns-cluster-resources
+objects:
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-compute
+  spec:
+    quota:
+      hard:
+        limits.cpu: 20000m
+        limits.memory: ${MEMORY_LIMIT}
+        limits.ephemeral-storage: 7Gi
+        requests.cpu: 1750m
+        requests.memory: ${MEMORY_REQUEST}
+        requests.storage: 15Gi
+        requests.ephemeral-storage: 7Gi
+        count/persistentvolumeclaims: "5"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-deployments
+  spec:
+    quota:
+      hard:
+        count/deployments.apps: "30"
+        count/deploymentconfigs.apps: "30"
+        count/pods: "50"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-replicas
+  spec:
+    quota:
+      hard:
+        count/replicasets.apps: "30"
+        count/replicationcontrollers: "30"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-routes
+  spec:
+    quota:
+      hard:
+        count/ingresses.extensions: "10"
+        count/routes.route.openshift.io: "10"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-jobs
+  spec:
+    quota:
+      hard:
+        count/jobs.batch: "30"
+        count/daemonsets.apps: "30"
+        count/cronjobs.batch: "30"
+        count/statefulsets.apps: "30"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-services
+  spec:
+    quota:
+      hard:
+        count/services: "30"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-bc
+  spec:
+    quota:
+      hard:
+        count/buildconfigs.build.openshift.io: "30"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-secrets
+  spec:
+    quota:
+      hard:
+        count/secrets: "100"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
+- apiVersion: quota.openshift.io/v1
+  kind: ClusterResourceQuota
+  metadata:
+    name: for-${USERNAME}-cm
+  spec:
+    quota:
+      hard:
+        count/configmaps: "100"
+    selector:
+      annotations:
+        openshift.io/requester: ${USERNAME}
+      labels: null
+- apiVersion: toolchain.dev.openshift.com/v1alpha1
+  kind: Idler
+  metadata:
+    name: ${USERNAME}-dev
+  spec:
+    timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
+- apiVersion: dbaas.redhat.com/v1alpha1
+  kind: DBaaSTenant
+  metadata:
+    annotations:
+      toolchain.dev.openshift.com/optional-resource: "yes"
+    name: "tenant-${USERNAME}-dev"
+  spec:
+    inventoryNamespace: ${USERNAME}-dev
+parameters:
+- name: USERNAME
+  required: true
+- name: IDLER_TIMEOUT_SECONDS
+  # 12 hours
+  value: "43200"
+- name: MEMORY_LIMIT
+  value: "7Gi"
+- name: MEMORY_REQUEST
+  value: "7Gi"

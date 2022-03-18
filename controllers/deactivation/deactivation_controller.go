@@ -34,6 +34,7 @@ import (
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("deactivation").
 		For(&toolchainv1alpha1.MasterUserRecord{}, builder.WithPredicates(CreateAndUpdateOnlyPredicate{})).
 		Watches(&source.Kind{Type: &toolchainv1alpha1.UserSignup{}},
 			handler.EnqueueRequestsFromMapFunc(MapUserSignupToMasterUserRecord())).
