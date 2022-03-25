@@ -16,103 +16,7 @@ objects:
       argocd.argoproj.io/managed-by: gitops-service-argocd
     name: ${USERNAME}
 
-# ServiceAccounts that represents the AppStudio user - the token of this SA is used by the proxy for forwarding the requests from UI (or any other client) 
-- apiVersion: v1
-  kind: ServiceAccount
-  metadata:
-    name: appstudio-${USERNAME}
-    namespace: ${USERNAME}
-
-# Role & RoleBinding that grants limited CRUD permissions on AppStudio components CRDs & secrets to the user's SA
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: Role
-  metadata:
-    name: appstudio-user-actions
-    namespace: ${USERNAME}
-  rules:
-  - apiGroups:
-    - managed-gitops.redhat.com
-    resources:
-    - gitopsdeployments
-    verbs:
-    - "*"
-  - apiGroups:
-    - appstudio.redhat.com
-    resources:
-    - applications
-    - components
-    - componentdetectionqueries
-    verbs:
-    - "*"
-  - apiGroups:
-    - appstudio.redhat.com
-    resources:
-    - spiaccesstokenbindings
-    verbs:
-    - create
-    - get
-    - list
-    - watch
-    - delete
-  - apiGroups:
-    - appstudio.redhat.com
-    resources:
-    - spiaccesstokens
-    verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - tekton.dev
-    resources:
-    - pipelineruns
-    verbs:
-    - "*"
-  - apiGroups:
-    - ""
-    resources:
-    - secrets
-    verbs:
-    - create
-    - delete
-  - apiGroups:
-    - results.tekton.dev
-    resources:
-    - results
-    - records
-    verbs:
-    - get
-    - list
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: appstudio-${USERNAME}-user-actions
-    namespace: ${USERNAME}
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: Role
-    name: appstudio-user-actions
-  subjects:
-  - apiGroup: ""
-    kind: ServiceAccount
-    name: appstudio-${USERNAME}
-
-# Role & RoleBinding that grants view permissions to the user's SA
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: appstudio-${USERNAME}-view
-    namespace: ${USERNAME}
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: view
-  subjects:
-  - apiGroup: ""
-    kind: ServiceAccount
-    name: appstudio-${USERNAME}
-
-# Role & RoleBinding that grants limited read permissions to all SAs in member-operator namespace.
+# Role & RoleBinding that grant limited read permissions to all SAs in member-operator namespace.
 # This is needed to let Proxy read the ServiceAccounts and Secrets in this namespace.
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
@@ -142,7 +46,6 @@ objects:
     kind: Group
     name: system:serviceaccounts:${MEMBER_OPERATOR_NAMESPACE}
 
-# Other template objects
 - apiVersion: v1
   kind: LimitRange
   metadata:

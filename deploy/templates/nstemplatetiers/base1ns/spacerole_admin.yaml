@@ -29,7 +29,7 @@ objects:
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: user-rbac-edit
+    name: ${USERNAME}-rbac-edit
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
@@ -41,7 +41,7 @@ objects:
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: user-edit
+    name: ${USERNAME}-edit
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole

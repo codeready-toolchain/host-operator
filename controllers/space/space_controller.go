@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -47,7 +48,9 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 		For(&toolchainv1alpha1.Space{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&source.Kind{Type: &toolchainv1alpha1.NSTemplateTier{}},
 			handler.EnqueueRequestsFromMapFunc(MapNSTemplateTierToSpaces(r.Namespace, r.Client)),
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Watches(&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}},
+			handler.EnqueueRequestsFromMapFunc(MapSpaceBindingToSpace()))
 	// watch NSTemplateSets in all the member clusters
 	for _, memberCluster := range memberClusters {
 		b = b.Watches(source.NewKindWithCache(&toolchainv1alpha1.NSTemplateSet{}, memberCluster.Cache),
@@ -191,6 +194,16 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}, tmplTier); err != nil {
 		return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 	}
+	spacebindings := toolchainv1alpha1.SpaceBindingList{}
+	if err := r.Client.List(context.TODO(),
+		&spacebindings,
+		client.InNamespace(space.Namespace),
+		client.MatchingLabels{
+			toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Name,
+		},
+	); err != nil {
+		logger.Error(err, "failed to list spacebindings")
+	}
 	// create if not found on the expected target cluster
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
 	if err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
@@ -202,7 +215,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			if err := r.setStatusProvisioning(space); err != nil {
 				return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 			}
-			nsTmplSet = r.newNSTemplateSet(memberCluster.OperatorNamespace, space, tmplTier)
+			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spacebindings.Items, tmplTier)
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
 				return norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
@@ -221,9 +234,10 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return requeueDelay, nil
 	}
 
-	nsTmplSetSpec := NewNSTemplateSetSpec(tmplTier)
-	// update the NSTemplateSet if needed (ie, spec changed) and if it's "ready"
+	// update the NSTemplateSet if needed (including in case of missing space roles)
+	nsTmplSetSpec := NewNSTemplateSetSpec(space, spacebindings.Items, tmplTier)
 	if !reflect.DeepEqual(nsTmplSet.Spec, nsTmplSetSpec) {
+		logger.Info("NSTemplateSet is not up-to-date")
 		// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)
 		if space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] != "" &&
 			condition.IsTrue(space.Status.Conditions, toolchainv1alpha1.ConditionReady) {
@@ -282,7 +296,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 }
 
-func (r *Reconciler) newNSTemplateSet(namespace string, space *toolchainv1alpha1.Space, tmplTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.NSTemplateSet {
+func NewNSTemplateSet(namespace string, space *toolchainv1alpha1.Space, bindings []toolchainv1alpha1.SpaceBinding, tmplTier *toolchainv1alpha1.NSTemplateTier) *toolchainv1alpha1.NSTemplateSet {
 	// create the NSTemplateSet from the NSTemplateTier
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -290,13 +304,13 @@ func (r *Reconciler) newNSTemplateSet(namespace string, space *toolchainv1alpha1
 			Name:      space.Name,
 		},
 	}
-	nsTmplSet.Spec = NewNSTemplateSetSpec(tmplTier)
+	nsTmplSet.Spec = NewNSTemplateSetSpec(space, bindings, tmplTier)
 	return nsTmplSet
 }
 
-func NewNSTemplateSetSpec(tmplTier *toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {
+func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1alpha1.SpaceBinding, tmplTier *toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {
 	s := toolchainv1alpha1.NSTemplateSetSpec{
-		TierName: tmplTier.Name,
+		TierName: space.Spec.TierName,
 	}
 	if tmplTier.Spec.ClusterResources != nil {
 		s.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
@@ -307,6 +321,33 @@ func NewNSTemplateSetSpec(tmplTier *toolchainv1alpha1.NSTemplateTier) toolchainv
 		s.Namespaces = make([]toolchainv1alpha1.NSTemplateSetNamespace, len(tmplTier.Spec.Namespaces))
 		for i, ns := range tmplTier.Spec.Namespaces {
 			s.Namespaces[i] = toolchainv1alpha1.NSTemplateSetNamespace(ns)
+		}
+	}
+	// space roles
+	if len(bindings) > 0 {
+		s.SpaceRoles = make([]toolchainv1alpha1.NSTemplateSetSpaceRole, 0, len(tmplTier.Spec.SpaceRoles))
+		// append by alphabetical order of role names
+		roles := make([]string, 0, len(tmplTier.Spec.SpaceRoles))
+		for r := range tmplTier.Spec.SpaceRoles {
+			roles = append(roles, r)
+		}
+		sort.Strings(roles)
+		for _, r := range roles {
+			sr := tmplTier.Spec.SpaceRoles[r]
+			usernames := []string{}
+			for _, b := range bindings {
+				if b.Spec.SpaceRole == r {
+					usernames = append(usernames, b.Spec.MasterUserRecord)
+				}
+			}
+			// no need to add an entry in space roles if there is no associated user
+			if len(usernames) > 0 {
+				s.SpaceRoles = append(s.SpaceRoles, toolchainv1alpha1.NSTemplateSetSpaceRole{
+					TemplateRef: sr.TemplateRef,
+					Usernames:   usernames,
+				})
+			}
+
 		}
 	}
 	return s
