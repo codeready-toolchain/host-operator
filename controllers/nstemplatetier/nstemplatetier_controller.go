@@ -83,21 +83,21 @@ func (r *Reconciler) ensureStatusUpdateRecord(logger logr.Logger, tier *toolchai
 	}
 	// if there was no previous status:
 	if len(tier.Status.Updates) == 0 {
-		tier.Status.Updates = append(tier.Status.Updates, toolchainv1alpha1.NSTemplateTierHistory{
-			UpdateTime: metav1.Now(),
-			Hash:       hash,
-		})
-		return true, r.Client.Status().Update(context.TODO(), tier)
+		return true, r.addNewTierUpdate(tier, hash)
 	}
 	// check whether the entry was already added
 	if tier.Status.Updates[len(tier.Status.Updates)-1].Hash == hash {
-		logger.Info("current tier template already exists in Updates")
+		logger.Info("current tier template already exists in tier.status.updates")
 		return false, nil
 	}
 	logger.Info("Adding a new entry in tier.status.updates")
+	return true, r.addNewTierUpdate(tier, hash)
+}
+
+func (r *Reconciler) addNewTierUpdate(tier *toolchainv1alpha1.NSTemplateTier, hash string) error {
 	tier.Status.Updates = append(tier.Status.Updates, toolchainv1alpha1.NSTemplateTierHistory{
 		StartTime: metav1.Now(),
 		Hash:      hash,
 	})
-	return true, r.Client.Status().Update(context.TODO(), tier)
+	return r.Client.Status().Update(context.TODO(), tier)
 }
