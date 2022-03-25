@@ -63,6 +63,12 @@ objects:
     - list
     - watch
   - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - spiaccesstokendataupdates
+    verbs:
+    - create
+  - apiGroups:
     - tekton.dev
     resources:
     - pipelineruns
@@ -70,11 +76,6 @@ objects:
     - "*"
   - apiGroups:
     - ""
-    resources:
-    - secrets
-    verbs:
-    - create
-    - delete
   - apiGroups:
     - results.tekton.dev
     resources:
