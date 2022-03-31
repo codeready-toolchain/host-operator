@@ -29,7 +29,6 @@ import (
 
 const (
 	operatorNamespace = "toolchain-host-operator"
-	maxPoolSize       = 5 // same as default in config
 )
 
 func TestReconcile(t *testing.T) {
