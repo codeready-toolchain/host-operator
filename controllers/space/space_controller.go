@@ -9,6 +9,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
+	"github.com/codeready-toolchain/host-operator/pkg/mapper"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -50,7 +51,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	// watch NSTemplateSets in all the member clusters
 	for _, memberCluster := range memberClusters {
 		b = b.Watches(source.NewKindWithCache(&toolchainv1alpha1.NSTemplateSet{}, memberCluster.Cache),
-			handler.EnqueueRequestsFromMapFunc(MapNSTemplateSetToSpace(r.Namespace)),
+			handler.EnqueueRequestsFromMapFunc(mapper.MapByResourceName(r.Namespace)),
 		)
 	}
 	return b.Complete(r)

@@ -6,13 +6,16 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
+	"github.com/codeready-toolchain/host-operator/pkg/mapper"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
@@ -34,17 +37,24 @@ const (
 )
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&toolchainv1alpha1.MasterUserRecord{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Complete(r)
+func (r *Reconciler) SetupWithManager(mgr manager.Manager, memberClusters map[string]cluster.Cluster) error {
+	b := ctrl.NewControllerManagedBy(mgr).
+		For(&toolchainv1alpha1.MasterUserRecord{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	// watch UserAccounts in all the member clusters
+	for _, memberCluster := range memberClusters {
+		b = b.Watches(source.NewKindWithCache(&toolchainv1alpha1.UserAccount{}, memberCluster.Cache),
+			handler.EnqueueRequestsFromMapFunc(mapper.MapByResourceName(r.Namespace)),
+		)
+	}
+	return b.Complete(r)
 }
 
 // Reconciler reconciles a MasterUserRecord object
 type Reconciler struct {
-	Client                client.Client
-	Scheme                *runtime.Scheme
-	RetrieveMemberCluster func(name string) (*cluster.CachedToolchainCluster, bool)
+	Client         client.Client
+	Scheme         *runtime.Scheme
+	Namespace      string
+	MemberClusters map[string]cluster.Cluster
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=masteruserrecords,verbs=get;list;watch;create;update;patch;delete
@@ -125,9 +135,10 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, mur *toolchainv1alpha1.Mas
 // Returns non-zero duration as the first argument if there is a need for requeing (eg, if the remote UserAccount is being deleted and the controller should wait until the deletion is complete)
 func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv1alpha1.UserAccountEmbedded, mur *toolchainv1alpha1.MasterUserRecord) error {
 	// get & check member cluster
-	memberCluster, err := r.getMemberCluster(murAccount.TargetCluster)
-	if err != nil {
-		return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason), err,
+	memberCluster, found := r.MemberClusters[murAccount.TargetCluster]
+	if !found {
+		return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason),
+			fmt.Errorf("unknown target member cluster '%s'", murAccount.TargetCluster),
 			"failed to get the member cluster '%s'", murAccount.TargetCluster)
 	}
 
@@ -146,7 +157,14 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 				return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 					"failed to create UserAccount in the member cluster '%s'", murAccount.TargetCluster)
 			}
-			if murAccount.SyncIndex != "0" && murAccount.SyncIndex != "deleted" {
+			isStatusPresent := false
+			for _, uaStatus := range mur.Status.UserAccounts {
+				if uaStatus.Cluster.Name == murAccount.TargetCluster {
+					isStatusPresent = true
+					break
+				}
+			}
+			if !isStatusPresent {
 				counter.IncrementUserAccountCount(logger, murAccount.TargetCluster)
 			}
 			return updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
@@ -184,18 +202,6 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 	// nothing done and no error occurred
 	logger.Info("user account on member cluster was already in sync", "target_cluster", murAccount.TargetCluster)
 	return nil
-}
-
-func (r *Reconciler) getMemberCluster(targetCluster string) (*cluster.CachedToolchainCluster, error) {
-	// get & check toolchain cluster
-	toolchainCluster, ok := r.RetrieveMemberCluster(targetCluster)
-	if !ok {
-		return nil, fmt.Errorf("the member cluster %s not found in the registry", targetCluster)
-	}
-	if !cluster.IsReady(toolchainCluster.ClusterStatus) {
-		return nil, fmt.Errorf("the member cluster %s is not ready", targetCluster)
-	}
-	return toolchainCluster, nil
 }
 
 type statusUpdater func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error
@@ -263,14 +269,14 @@ func (r *Reconciler) manageCleanUp(logger logr.Logger, mur *toolchainv1alpha1.Ma
 func (r *Reconciler) deleteUserAccount(logger logr.Logger, targetCluster, name string) (time.Duration, error) {
 	requeueTime := 10 * time.Second
 	// get & check member cluster
-	memberCluster, err := r.getMemberCluster(targetCluster)
-	if err != nil {
-		return 0, err
+	memberCluster, found := r.MemberClusters[targetCluster]
+	if !found {
+		return 0, fmt.Errorf("unknown target member cluster '%s'", targetCluster)
 	}
 	// Get the User associated with the UserAccount
 	userAcc := &toolchainv1alpha1.UserAccount{}
 	namespacedName := types.NamespacedName{Namespace: memberCluster.OperatorNamespace, Name: name}
-	if err = memberCluster.Client.Get(context.TODO(), namespacedName, userAcc); err != nil {
+	if err := memberCluster.Client.Get(context.TODO(), namespacedName, userAcc); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("UserAccount deleted")
 			return 0, nil
@@ -287,7 +293,7 @@ func (r *Reconciler) deleteUserAccount(logger logr.Logger, targetCluster, name s
 		return requeueTime, nil
 	}
 	propagationPolicy := metav1.DeletePropagationForeground
-	err = memberCluster.Client.Delete(context.TODO(), userAcc, &client.DeleteOptions{
+	err := memberCluster.Client.Delete(context.TODO(), userAcc, &client.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
 	if err != nil {
