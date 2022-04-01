@@ -8,10 +8,10 @@ import (
 
 	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	errs "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,7 +24,7 @@ import (
 
 type Synchronizer struct {
 	hostClient        client.Client
-	memberCluster     *cluster.CachedToolchainCluster
+	memberCluster     cluster.Cluster
 	memberUserAcc     *toolchainv1alpha1.UserAccount
 	recordSpecUserAcc toolchainv1alpha1.UserAccountEmbedded
 	record            *toolchainv1alpha1.MasterUserRecord
@@ -76,14 +76,16 @@ func (s *Synchronizer) isSynchronized() bool {
 
 func (s *Synchronizer) synchronizeStatus() error {
 	recordStatusUserAcc, index := getUserAccountStatus(s.recordSpecUserAcc.TargetCluster, s.record)
-	if index < 0 || s.recordSpecUserAcc.SyncIndex != recordStatusUserAcc.SyncIndex {
+
+	expectedRecordStatus := *(&recordStatusUserAcc).DeepCopy()
+	expectedRecordStatus.UserAccountStatus = s.memberUserAcc.Status
+	expectedRecordStatus, err := s.withClusterDetails(expectedRecordStatus)
+	if err != nil {
+		return err
+	}
+	if index < 0 || !reflect.DeepEqual(recordStatusUserAcc, expectedRecordStatus) {
 		// when record should update status
-		recordStatusUserAcc.SyncIndex = s.recordSpecUserAcc.SyncIndex
-		recordStatusUserAcc.UserAccountStatus = s.memberUserAcc.Status
-		recordStatusUserAcc, err := s.withClusterDetails(recordStatusUserAcc)
-		if err != nil {
-			return err
-		}
+		recordStatusUserAcc = expectedRecordStatus
 		var originalStatusUserAcc toolchainv1alpha1.UserAccountStatusEmbedded
 		if index < 0 {
 			s.record.Status.UserAccounts = append(s.record.Status.UserAccounts, recordStatusUserAcc)
@@ -116,7 +118,7 @@ func (s *Synchronizer) synchronizeStatus() error {
 
 	// Align readiness even if the user account statuses were not changed.
 	// We need to do it to cleanup outdated errors (for example if the target cluster was unavailable) if any
-	_, err := s.alignReadiness()
+	_, err = s.alignReadiness()
 	if err != nil {
 		return err
 	}

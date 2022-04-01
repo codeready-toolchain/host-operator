@@ -211,10 +211,11 @@ func main() {
 		os.Exit(1)
 	}
 	if err := (&masteruserrecord.Reconciler{
-		Client:                mgr.GetClient(),
-		Scheme:                mgr.GetScheme(),
-		RetrieveMemberCluster: commoncluster.GetCachedToolchainCluster,
-	}).SetupWithManager(mgr); err != nil {
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		Namespace:      namespace,
+		MemberClusters: memberClusters,
+	}).SetupWithManager(mgr, memberClusters); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MasterUserRecord")
 		os.Exit(1)
 	}
@@ -374,9 +375,9 @@ func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string) (ma
 			return nil, errors.Wrapf(err, "unable to add member cluster to the manager for "+memberConfig.Name)
 		}
 		memberClusters[memberConfig.Name] = cluster.Cluster{
-			OperatorNamespace: memberConfig.OperatorNamespace,
-			Client:            memberCluster.GetClient(),
-			Cache:             memberCluster.GetCache(),
+			Config: memberConfig,
+			Client: memberCluster.GetClient(),
+			Cache:  memberCluster.GetCache(),
 		}
 	}
 	return memberClusters, nil

@@ -9,9 +9,11 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
@@ -54,8 +56,7 @@ func TestAddFinalizer(t *testing.T) {
 			}),
 		))
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
 		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -93,8 +94,7 @@ func TestAddFinalizer(t *testing.T) {
 				string(metrics.Internal): 1,
 			})))
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
 		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -137,8 +137,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 			string(metrics.Internal): 1,
 		})))
 
-	cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-		ClusterClient(test.MemberClusterName, memberClient))
+	cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 	// when
 	_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -166,45 +165,49 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	s := apiScheme(t)
-	for _, syncIndex := range []string{"0", "deleted"} {
-		mur := murtest.NewMasterUserRecord(t, "john")
-		mur.Spec.UserAccounts[0].SyncIndex = syncIndex
-		require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
-		memberClient := test.NewFakeClient(t)
-		hostClient := test.NewFakeClient(t, mur)
-		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			})))
-
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
-
-		// when
-		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
-
-		// then
-		require.NoError(t, err)
-		uatest.AssertThatUserAccount(t, "john", memberClient).
-			Exists().
-			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
-			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
-		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
-			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-				"1,internal": 1, // unchanged
-			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1) // unchanged
+	mur := murtest.NewMasterUserRecord(t, "john")
+	mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
+		{
+			Cluster: toolchainv1alpha1.Cluster{
+				Name: test.MemberClusterName,
+			},
+		},
 	}
+	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
+	memberClient := test.NewFakeClient(t)
+	hostClient := test.NewFakeClient(t, mur)
+	InitializeCounters(t, NewToolchainStatus(
+		WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,internal": 1,
+		}),
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			string(metrics.Internal): 1,
+		})))
+
+	cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
+
+	// when
+	_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
+
+	// then
+	require.NoError(t, err)
+	uatest.AssertThatUserAccount(t, "john", memberClient).
+		Exists().
+		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
+	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
+		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
+		HasFinalizer()
+	AssertThatCountersAndMetrics(t).
+		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+			"1,internal": 1, // unchanged
+		}).
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			string(metrics.Internal): 1, // unchanged
+		}).
+		HaveUserAccountsForCluster(test.MemberClusterName, 1) // unchanged
+
 }
 
 func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
@@ -227,8 +230,7 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 	InitializeCounters(t, toolchainStatus)
 
-	cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-		ClusterClient(test.MemberClusterName, memberClient), ClusterClient(test.Member2ClusterName, memberClient2))
+	cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient), ClusterClient(test.Member2ClusterName, memberClient2))
 
 	// when reconciling
 	result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -283,8 +285,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 		userAccount2 := uatest.NewUserAccountFromMur(mur, uatest.DeletedUa())
 		memberClient2 := test.NewFakeClient(t, userAccount2)
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient1),
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient1),
 			ClusterClient(test.Member2ClusterName, memberClient2),
 			ClusterClient("member3-cluster", memberClient3))
 
@@ -326,15 +327,14 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 		))
 		memberClient := test.NewFakeClient(t)
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(false, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient("other", memberClient))
 
 		// when
 		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Error(t, err)
-		msg := "the member cluster member-cluster not found in the registry"
+		msg := "unknown target member cluster 'member-cluster'"
 		assert.Contains(t, err.Error(), msg)
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
@@ -363,89 +363,15 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			})))
 		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(false, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient("other", memberClient))
 
 		// when
 		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
 
 		// then
 		require.Error(t, err)
-		msg := "the member cluster member-cluster not found in the registry"
+		msg := "unknown target member cluster 'member-cluster'"
 		assert.Contains(t, err.Error(), msg)
-		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
-			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-				"1,internal": 1, // unchanged
-			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
-	})
-
-	t.Run("when member cluster is not ready and UA hasn't been created yet", func(t *testing.T) {
-		// given
-		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			})))
-		memberClient := test.NewFakeClient(t)
-
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionFalse),
-			ClusterClient(test.MemberClusterName, memberClient))
-
-		// when
-		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
-
-		// then
-		require.Error(t, err)
-		msg := "the member cluster member-cluster is not ready"
-		assert.Contains(t, err.Error(), msg)
-
-		uatest.AssertThatUserAccount(t, "john", memberClient).DoesNotExist()
-		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
-			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
-			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
-			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-				"1,internal": 1, // unchanged
-			}).
-			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
-	})
-
-	t.Run("when member cluster is not ready and UA was already created", func(t *testing.T) {
-		// given
-		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"1,internal": 1,
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 1,
-			})))
-		memberClient := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
-
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionFalse),
-			ClusterClient(test.MemberClusterName, memberClient))
-
-		// when
-		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
-
-		// then
-		require.Error(t, err)
-		msg := "the member cluster member-cluster is not ready"
-		assert.Contains(t, err.Error(), msg)
-
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordTargetClusterNotReadyReason, msg)).
 			HasFinalizer()
@@ -471,8 +397,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			})))
 		memberClient := test.NewFakeClient(t)
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 		statusUpdater := func(logger logr.Logger, mur *toolchainv1alpha1.MasterUserRecord, message string) error {
 			return fmt.Errorf("unable to update status")
 		}
@@ -509,8 +434,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			return fmt.Errorf("unable to create user account %s", mur.Name)
 		}
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
 		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -558,8 +482,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			murtest.UserID("abc123")) // UserID is different and needs to be synced
 		hostClient := test.NewFakeClient(t, modifiedMur)
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
 		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(modifiedMur))
@@ -608,8 +531,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			return fmt.Errorf("unable to update MUR %s", provisionedMur.Name)
 		}
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
 		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(provisionedMur))
@@ -654,8 +576,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			return fmt.Errorf("unable to delete user account %s", mur.Name)
 		}
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
 		_, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -714,8 +635,7 @@ func TestModifyUserAccounts(t *testing.T) {
 
 	InitializeCounters(t, toolchainStatus)
 
-	cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-		ClusterClient(test.MemberClusterName, memberClient), ClusterClient(test.Member2ClusterName, memberClient2),
+	cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient), ClusterClient(test.Member2ClusterName, memberClient2),
 		ClusterClient("member3-cluster", memberClient3))
 
 	// when ensuring 1st account
@@ -780,14 +700,12 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 
 		mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
 			{
-				SyncIndex: "111aaa",
 				Cluster: toolchainv1alpha1.Cluster{
 					Name: test.Member2ClusterName,
 				},
 				UserAccountStatus: userAccount2.Status,
 			},
 			{
-				SyncIndex: "123abc",
 				Cluster: toolchainv1alpha1.Cluster{
 					Name: "member3-cluster",
 				},
@@ -812,8 +730,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient), ClusterClient(test.Member2ClusterName, memberClient2),
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient), ClusterClient(test.Member2ClusterName, memberClient2),
 			ClusterClient("member3-cluster", memberClient3))
 
 		// when
@@ -841,7 +758,6 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 			HasStatusUserAccounts(test.MemberClusterName, test.Member2ClusterName, "member3-cluster").
-			AllUserAccountsHaveStatusSyncIndex("123abc").
 			AllUserAccountsHaveCondition(userAccount.Status.Conditions[0])
 		AssertThatCountersAndMetrics(t).
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
@@ -875,12 +791,10 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{
 			{
 				Cluster:           toolchainv1alpha1.Cluster{Name: test.MemberClusterName},
-				SyncIndex:         userAccount.ResourceVersion,
 				UserAccountStatus: userAccount.Status,
 			},
 			{
 				Cluster:           toolchainv1alpha1.Cluster{Name: test.Member2ClusterName},
-				SyncIndex:         userAccount2.ResourceVersion,
 				UserAccountStatus: userAccount2.Status,
 			},
 		}
@@ -901,8 +815,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		memberClient := test.NewFakeClient(t, userAccount)
 		memberClient2 := test.NewFakeClient(t, uatest.NewUserAccountFromMur(mur))
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient),
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient),
 			ClusterClient(test.Member2ClusterName, memberClient2))
 
 		// when
@@ -966,8 +879,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 				string(metrics.External): 1,
 			})))
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
 		result1, err1 := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -1020,8 +932,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 				string(metrics.External): 1,
 			})))
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
 		result1, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -1082,8 +993,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 				string(metrics.External): 1,
 			})))
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 		// when
 		result, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -1111,8 +1021,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		hostClient := test.NewFakeClient(t, mur)
 		memberClient := test.NewFakeClient(t, userAcc)
 
-		cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-			ClusterClient(test.MemberClusterName, memberClient))
+		cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 		deleted := false
 		memberClient.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
@@ -1158,8 +1067,7 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 			string(metrics.External): 1,
 		})))
 
-	cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-		ClusterClient(test.MemberClusterName, memberClient), ClusterClient(test.Member2ClusterName, memberClient2))
+	cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient), ClusterClient(test.Member2ClusterName, memberClient2))
 
 	// when
 	result1, err1 := cntrl.Reconcile(context.TODO(), newMurRequest(mur)) // first reconcile will wait for first useraccount to be deleted
@@ -1214,8 +1122,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	hostClient := test.NewFakeClient(t, mur, toolchainStatus)
 	InitializeCounters(t, toolchainStatus)
 
-	cntrl := newController(hostClient, s, NewGetMemberCluster(true, v1.ConditionTrue),
-		ClusterClient(test.MemberClusterName, memberClient))
+	cntrl := newController(hostClient, s, ClusterClient(test.MemberClusterName, memberClient))
 
 	// when
 	res, err := cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -1243,11 +1150,24 @@ func apiScheme(t *testing.T) *runtime.Scheme {
 	return s
 }
 
-func newController(hostCl client.Client, s *runtime.Scheme, getMemberCluster GetMemberClusterFunc, memberCl ...ClientForCluster) Reconciler {
+func newController(hostCl client.Client, s *runtime.Scheme, memberCl ...ClientForCluster) Reconciler {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
-	return Reconciler{
-		Client:                hostCl,
-		Scheme:                s,
-		RetrieveMemberCluster: getMemberCluster(memberCl...),
+	r := Reconciler{
+		Client:         hostCl,
+		Scheme:         s,
+		MemberClusters: map[string]cluster.Cluster{},
 	}
+	for _, c := range memberCl {
+		name, cl := c()
+		NewMemberClusterWithClient(cl, name, v1.ConditionTrue)
+		r.MemberClusters[name] = cluster.Cluster{
+			Config: &commoncluster.Config{
+				Type:              commoncluster.Member,
+				OperatorNamespace: test.MemberOperatorNs,
+				OwnerClusterName:  test.MemberClusterName,
+			},
+			Client: cl,
+		}
+	}
+	return r
 }
