@@ -1238,8 +1238,12 @@ func newReconciler(hostCl client.Client, memberClusters ...*commoncluster.Cached
 	clusters := map[string]cluster.Cluster{}
 	for _, c := range memberClusters {
 		clusters[c.Name] = cluster.Cluster{
-			OperatorNamespace: c.OperatorNamespace,
-			Client:            c.Client,
+			Config: &commoncluster.Config{
+				Type:              commoncluster.Member,
+				OperatorNamespace: c.OperatorNamespace,
+				OwnerClusterName:  test.MemberClusterName,
+			},
+			Client: c.Client,
 		}
 	}
 	return &space.Reconciler{
