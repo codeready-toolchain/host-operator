@@ -130,7 +130,6 @@ func newExpectedMur(userSignup *toolchainv1alpha1.UserSignup) *toolchainv1alpha1
 			TierName:      "advanced",
 			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
 				{
-					SyncIndex:     "",
 					TargetCluster: test.MemberClusterName,
 				},
 			},
