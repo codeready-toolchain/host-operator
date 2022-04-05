@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -181,62 +180,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	cl := test.NewFakeClient(t, initObjs...)
-	// (partial) support the `limit` and `continue` when listing MasterUserRecords
-	// Here, the result's `continue` is the initial `continue` + `limit`
-	cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-		if murs, ok := list.(*toolchainv1alpha1.MasterUserRecordList); ok {
-			c := 0
-			if murs.Continue != "" {
-				c, err = strconv.Atoi(murs.Continue)
-				if err != nil {
-					return err
-				}
-			}
-			if err := cl.Client.List(ctx, list, opts...); err != nil {
-				return err
-			}
-			listOpts := client.ListOptions{}
-			for _, opt := range opts {
-				opt.ApplyToList(&listOpts)
-			}
-			if c > 0 {
-				murs.Items = murs.Items[c:]
-			}
-			if int(listOpts.Limit) < len(murs.Items) {
-				// keep the first items and remove the following ones to fit into the limit
-				murs.Items = murs.Items[:listOpts.Limit]
-			}
-			murs.Continue = strconv.Itoa(c + int(listOpts.Limit))
-			return nil
-		}
-		if spaces, ok := list.(*toolchainv1alpha1.SpaceList); ok {
-			c := 0
-			if spaces.Continue != "" {
-				c, err = strconv.Atoi(spaces.Continue)
-				if err != nil {
-					return err
-				}
-			}
-			if err := cl.Client.List(ctx, list, opts...); err != nil {
-				return err
-			}
-			listOpts := client.ListOptions{}
-			for _, opt := range opts {
-				opt.ApplyToList(&listOpts)
-			}
-			if c > 0 {
-				spaces.Items = spaces.Items[c:]
-			}
-			if int(listOpts.Limit) < len(spaces.Items) {
-				// keep the first items and remove the following ones to fit into the limit
-				spaces.Items = spaces.Items[:listOpts.Limit]
-			}
-			spaces.Continue = strconv.Itoa(c + int(listOpts.Limit))
-			return nil
-		}
-		// default behaviour
-		return cl.Client.List(ctx, list, opts...)
-	}
 	r := &nstemplatetier.Reconciler{
 		Client: cl,
 		Scheme: s,
