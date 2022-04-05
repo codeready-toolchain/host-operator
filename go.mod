@@ -27,4 +27,6 @@ require (
 	sigs.k8s.io/controller-runtime v0.10.3
 )
 
+replace github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20220405155257-58bc47bae462
+
 go 1.16
