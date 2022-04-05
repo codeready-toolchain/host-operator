@@ -200,6 +200,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				return reconcile.Result{}, err
 			}
 		}
+
+		// Migrate the UserSignup if necessary
+		// TODO remove this once all basic tier users have been migrated
+
 		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusDeactivated)
 	}
 
