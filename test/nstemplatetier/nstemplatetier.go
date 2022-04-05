@@ -97,13 +97,6 @@ func BasicTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options 
 // TierOption an option to configure the NStemplateTier
 type TierOption func(*toolchainv1alpha1.NSTemplateTier)
 
-// WithPreviousUpdates adds the given entries in the `status.updates`
-func WithPreviousUpdates(entries ...toolchainv1alpha1.NSTemplateTierHistory) TierOption {
-	return func(tier *toolchainv1alpha1.NSTemplateTier) {
-		tier.Status.Updates = entries
-	}
-}
-
 // WithoutCodeNamespace removes the `code` templates from the tier's specs.
 func WithoutCodeNamespace() TierOption {
 	return func(tier *toolchainv1alpha1.NSTemplateTier) {
@@ -125,18 +118,26 @@ func WithoutClusterResources() TierOption {
 	}
 }
 
-// WithCurrentUpdateInProgress appends an "in-progress" entry in the `status.updates`
-func WithCurrentUpdateInProgress() TierOption {
+// WithPreviousUpdates adds the given entries in the `status.updates`
+func WithPreviousUpdates(entries ...toolchainv1alpha1.NSTemplateTierHistory) TierOption {
+	return func(tier *toolchainv1alpha1.NSTemplateTier) {
+		tier.Status.Updates = entries
+	}
+}
+
+// WithCurrentUpdate appends an entry in the `status.updates` for the current tier
+func WithCurrentUpdate() TierOption {
 	return func(tier *toolchainv1alpha1.NSTemplateTier) {
 		hash, _ := tierutil.ComputeHashForNSTemplateTier(tier)
-		tier.Status.Updates = []toolchainv1alpha1.NSTemplateTierHistory{
-			{
-				StartTime:      metav1.Now(),
-				Hash:           hash,
-				Failures:       2,
-				FailedAccounts: []string{"failed1", "failed2"},
-			},
+		if tier.Status.Updates == nil {
+			tier.Status.Updates = []toolchainv1alpha1.NSTemplateTierHistory{}
 		}
+		tier.Status.Updates = append(tier.Status.Updates,
+			toolchainv1alpha1.NSTemplateTierHistory{
+				StartTime: metav1.Now(),
+				Hash:      hash,
+			},
+		)
 	}
 }
 

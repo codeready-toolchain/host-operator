@@ -46,15 +46,15 @@ func (a *Assertion) HasStatusUpdatesItems(expected int) *Assertion {
 
 // HasValidPreviousUpdates verifies the previous `status.updates`
 // in particular, it checks that:
-// - `CompletionTime` is not nil
-// - `FailedAccounts` is empty
+// - `StartTime` is not nil
+// - `Hash` is not nil
 func (a *Assertion) HasValidPreviousUpdates() *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	require.NotEmpty(a.t, a.tier.Status.Updates)
 	for _, h := range a.tier.Status.Updates[:len(a.tier.Status.Updates)-1] {
-		assert.NotNil(a.t, h.CompletionTime)
-		assert.Empty(a.t, h.FailedAccounts)
+		assert.NotNil(a.t, h.StartTime)
+		assert.NotNil(a.t, h.Hash)
 	}
 	return a
 }
@@ -66,14 +66,7 @@ func (a *Assertion) HasLatestUpdate(expected toolchainv1alpha1.NSTemplateTierHis
 	require.NotEmpty(a.t, a.tier.Status.Updates)
 	latest := a.tier.Status.Updates[len(a.tier.Status.Updates)-1]
 	assert.False(a.t, latest.StartTime.IsZero())
-	assert.Equal(a.t, expected.Failures, latest.Failures)
 	assert.Equal(a.t, expected.Hash, latest.Hash)
-	assert.ElementsMatch(a.t, expected.FailedAccounts, latest.FailedAccounts)
-	if expected.CompletionTime == nil {
-		assert.Nil(a.t, latest.CompletionTime)
-	} else {
-		assert.NotNil(a.t, latest.CompletionTime)
-	}
 
 	return a
 }
