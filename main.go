@@ -13,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/nstemplatetier"
+	"github.com/codeready-toolchain/host-operator/controllers/socialevent"
 	"github.com/codeready-toolchain/host-operator/controllers/space"
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingcleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecleanup"
@@ -305,6 +306,12 @@ func main() {
 		Namespace: namespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SpaceCleanup")
+		os.Exit(1)
+	}
+	if err = (&socialevent.Reconciler{
+		Client: mgr.GetClient(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SocialEvent")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

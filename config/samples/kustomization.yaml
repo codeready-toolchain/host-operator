@@ -3,4 +3,5 @@ resources:
 - toolchain.dev.openshift.com_v1alpha1_usersignup.yaml
 - toolchain.dev.openshift.com_v1alpha1_space.yaml
 # TODO
+- toolchain.dev.openshift.com_v1alpha1_socialevent.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

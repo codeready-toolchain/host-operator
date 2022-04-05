@@ -16,6 +16,7 @@ resources:
 - bases/toolchain.dev.openshift.com_toolchainstatuses.yaml
 - bases/toolchain.dev.openshift.com_usersignups.yaml
 - bases/toolchain.dev.openshift.com_spacebindings.yaml
+- bases/toolchain.dev.openshift.com_socialevents.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 # the following config is for teaching kustomize how to do kustomization for CRDs.
