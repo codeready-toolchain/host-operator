@@ -86,7 +86,7 @@ func printVersion() {
 //+kubebuilder:rbac:groups=apps,resources=deployments;deployments/finalizers;replicasets,verbs=get;list;watch;update;patch;create;delete
 //+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;update;patch;create;delete
 
-func main() {
+func main() { // nolint:gocyclo
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
