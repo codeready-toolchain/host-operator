@@ -5,6 +5,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -30,7 +31,6 @@ import (
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.NSTemplateTier{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Owns(&toolchainv1alpha1.TemplateUpdateRequest{}).
 		Complete(r)
 }
 
@@ -60,6 +60,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// Error reading the object - requeue the request.
 		logger.Error(err, "unable to get the current NSTemplateTier")
 		return reconcile.Result{}, errs.Wrap(err, "unable to get the current NSTemplateTier")
+	}
+
+	_, err := toolchainconfig.GetToolchainConfig(r.Client)
+	if err != nil {
+		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}
 
 	// create a new entry in the `status.history` if needed

@@ -237,15 +237,6 @@ func prepareReconcile(t *testing.T, name string, initObjs ...runtime.Object) (re
 		// default behaviour
 		return cl.Client.List(ctx, list, opts...)
 	}
-	cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
-		if tur, ok := obj.(*toolchainv1alpha1.TemplateUpdateRequest); ok {
-			t.Logf("setting deletion timestamp on TemplateUpdateRequest '%s'", tur.Name)
-			now := metav1.Now()
-			tur.SetDeletionTimestamp(&now)
-			return cl.Client.Update(ctx, tur)
-		}
-		return fmt.Errorf("unexpected type of resource to delete: '%T'", obj)
-	}
 	r := &nstemplatetier.Reconciler{
 		Client: cl,
 		Scheme: s,

@@ -398,7 +398,6 @@ func TestTiers(t *testing.T) {
 		assert.Equal(t, "base", toolchainCfg.Tiers().DefaultTier())
 		assert.Equal(t, "base", toolchainCfg.Tiers().DefaultSpaceTier())
 		assert.Equal(t, 24*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
-		assert.Equal(t, 5, toolchainCfg.Tiers().TemplateUpdateRequestMaxPoolSize())
 	})
 	t.Run("invalid", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("rapid"))
@@ -410,14 +409,12 @@ func TestTiers(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().
 			DefaultTier("advanced").
 			DefaultSpaceTier("advanced").
-			DurationBeforeChangeTierRequestDeletion("48h").
-			TemplateUpdateRequestMaxPoolSize(40))
+			DurationBeforeChangeTierRequestDeletion("48h"))
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
 		assert.Equal(t, "advanced", toolchainCfg.Tiers().DefaultTier())
 		assert.Equal(t, "advanced", toolchainCfg.Tiers().DefaultSpaceTier())
 		assert.Equal(t, 48*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
-		assert.Equal(t, 40, toolchainCfg.Tiers().TemplateUpdateRequestMaxPoolSize())
 	})
 }
 
