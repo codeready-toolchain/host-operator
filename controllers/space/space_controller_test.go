@@ -1490,7 +1490,7 @@ func TestNewNSTemplateSetSpec(t *testing.T) {
 				{
 					TemplateRef: "advanced-viewer-123abc2",
 					Usernames: []string{
-						"joe", "jack",
+						"jack", "joe", // sorted
 					},
 				},
 			},
