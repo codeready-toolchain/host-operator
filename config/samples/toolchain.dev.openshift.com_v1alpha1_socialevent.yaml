@@ -1,0 +1,7 @@
+apiVersion: toolchain.dev.openshift.com/v1alpha1
+kind: SocialEvent
+metadata:
+  name: socialevent-sample
+spec:
+  # Add fields here
+  foo: bar
