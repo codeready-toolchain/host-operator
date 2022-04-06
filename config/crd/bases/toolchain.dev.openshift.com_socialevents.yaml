@@ -29,7 +29,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: SocialEvent registers a toolchain event in the CodeReady Toolchain
+        description: SocialEvent registers a social event in Dev Sandbox
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -44,7 +44,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: SocialEventSpec defines the parameters for a Toolchain event,
+            description: SocialEventSpec defines the parameters for a Social event,
               such as a training session or workshop. Users may register for the event
               by using the event's unique activation code
             properties:
