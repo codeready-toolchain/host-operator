@@ -29,29 +29,3 @@ func MapNSTemplateSetToSpace(hostNamespace string) func(object client.Object) []
 	}
 
 }
-
-func MapSpaceBindingToSpace() func(object client.Object) []reconcile.Request {
-	mapperLog := ctrl.Log.WithName("SpaceBindingToSpaceMapper")
-	return func(obj client.Object) []reconcile.Request {
-		if sb, ok := obj.(*toolchainv1alpha1.SpaceBinding); ok {
-			if spaceName, found := sb.Labels[toolchainv1alpha1.SpaceBindingSpaceLabelKey]; found {
-				return []reconcile.Request{{
-					NamespacedName: types.NamespacedName{
-						Namespace: sb.Namespace,
-						Name:      spaceName,
-					},
-				}}
-			}
-			// the obj was not a SpaceBinding
-			mapperLog.Error(errors.New("not a SpaceBinding"),
-				"MapSpaceBindingToSpace attempted to map a SpaceBinding without any '"+toolchainv1alpha1.SpaceBindingSpaceLabelKey+"' label",
-				"obj", obj)
-		}
-		// the obj was not a SpaceBinding
-		mapperLog.Error(errors.New("not a SpaceBinding"),
-			"MapSpaceBindingToSpace attempted to map an object that was not a SpaceBinding",
-			"obj", obj)
-		return []reconcile.Request{}
-	}
-
-}
