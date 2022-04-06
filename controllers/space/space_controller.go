@@ -195,15 +195,15 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}, tmplTier); err != nil {
 		return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 	}
-	spacebindings := toolchainv1alpha1.SpaceBindingList{}
+	spaceBindings := toolchainv1alpha1.SpaceBindingList{}
 	if err := r.Client.List(context.TODO(),
-		&spacebindings,
+		&spaceBindings,
 		client.InNamespace(space.Namespace),
 		client.MatchingLabels{
 			toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Name,
 		},
 	); err != nil {
-		logger.Error(err, "failed to list spacebindings")
+		logger.Error(err, "failed to list space bindings")
 	}
 	// create if not found on the expected target cluster
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
@@ -216,7 +216,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			if err := r.setStatusProvisioning(space); err != nil {
 				return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 			}
-			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spacebindings.Items, tmplTier)
+			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spaceBindings.Items, tmplTier)
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
 				return norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
@@ -236,7 +236,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	}
 
 	// update the NSTemplateSet if needed (including in case of missing space roles)
-	nsTmplSetSpec := NewNSTemplateSetSpec(space, spacebindings.Items, tmplTier)
+	nsTmplSetSpec := NewNSTemplateSetSpec(space, spaceBindings.Items, tmplTier)
 	if !reflect.DeepEqual(nsTmplSet.Spec, nsTmplSetSpec) {
 		logger.Info("NSTemplateSet is not up-to-date")
 		// postpone NSTemplateSet updates if needed (but only for NSTemplateTier updates, not tier promotions or changes in spacebindings)
