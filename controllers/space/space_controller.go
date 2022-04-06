@@ -343,6 +343,7 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 			}
 			// no need to add an entry in space roles if there is no associated user
 			if len(usernames) > 0 {
+				sort.Strings(usernames)
 				s.SpaceRoles = append(s.SpaceRoles, toolchainv1alpha1.NSTemplateSetSpaceRole{
 					TemplateRef: sr.TemplateRef,
 					Usernames:   usernames,
