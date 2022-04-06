@@ -72,7 +72,7 @@ func TestIsSynchronized(t *testing.T) {
 		t.Run("different user account", func(t *testing.T) {
 			// given
 			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
-			recordSpecUserAcc.Spec.NSLimit = "bar"
+			recordSpecUserAcc.TargetCluster = "another-cluster"
 			s := Synchronizer{
 				memberUserAcc:     &memberUserAcc,
 				record:            &record,
@@ -111,20 +111,6 @@ func TestIsSynchronized(t *testing.T) {
 }
 
 func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1alpha1.UserAccountEmbedded, toolchainv1alpha1.UserAccount) {
-	base := toolchainv1alpha1.UserAccountSpecBase{
-		NSLimit: "limit",
-		NSTemplateSet: &toolchainv1alpha1.NSTemplateSetSpec{
-			TierName: "basic",
-			ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
-				TemplateRef: "basic-clusterresources-654321a",
-			},
-			Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
-				{
-					TemplateRef: "basic-code-123456a",
-				},
-			},
-		},
-	}
 	memberUserAcc := toolchainv1alpha1.UserAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
@@ -135,15 +121,12 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 			},
 		},
 		Spec: toolchainv1alpha1.UserAccountSpec{
-			UserID:              "foo",
-			Disabled:            false,
-			UserAccountSpecBase: base,
+			UserID:   "foo",
+			Disabled: false,
 		},
 	}
 	recordSpecUserAcc := toolchainv1alpha1.UserAccountEmbedded{
-		Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
-			UserAccountSpecBase: base,
-		},
+		TargetCluster: "member-1",
 	}
 	record := toolchainv1alpha1.MasterUserRecord{
 		ObjectMeta: metav1.ObjectMeta{
@@ -184,7 +167,7 @@ func TestSynchronizeSpec(t *testing.T) {
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
+		MatchMasterUserRecord(mur)
 
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasTier(*otherTier).
@@ -209,7 +192,7 @@ func TestSynchronizeAnnotation(t *testing.T) {
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec)
+		MatchMasterUserRecord(mur)
 
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
@@ -683,7 +666,7 @@ func TestRoutes(t *testing.T) {
 		require.NoError(t, err)
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			Exists().
-			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+			MatchMasterUserRecord(mur).
 			HasConditions(condition)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
@@ -718,7 +701,7 @@ func TestRoutes(t *testing.T) {
 		require.NoError(t, err)
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			Exists().
-			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+			MatchMasterUserRecord(mur).
 			HasConditions(condition)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
@@ -753,7 +736,7 @@ func TestRoutes(t *testing.T) {
 		require.Error(t, err)
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			Exists().
-			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+			MatchMasterUserRecord(mur).
 			HasConditions(condition)
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 			AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
@@ -788,7 +771,7 @@ func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostCl
 	userAccountCondition := userAccount.Status.Conditions[0]
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+		MatchMasterUserRecord(mur).
 		HasConditions(userAccountCondition)
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(expMurCon...).

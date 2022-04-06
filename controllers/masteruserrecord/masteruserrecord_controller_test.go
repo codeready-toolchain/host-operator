@@ -146,7 +146,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+		MatchMasterUserRecord(mur).
 		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
@@ -194,7 +194,7 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+		MatchMasterUserRecord(mur).
 		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
@@ -239,11 +239,11 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	assert.False(t, result.Requeue)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+		MatchMasterUserRecord(mur).
 		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
-		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec).
+		MatchMasterUserRecord(mur).
 		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
@@ -644,7 +644,7 @@ func TestModifyUserAccounts(t *testing.T) {
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
-		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+		MatchMasterUserRecord(mur).
 		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
 
 	// when ensuring 2nd account
@@ -653,7 +653,7 @@ func TestModifyUserAccounts(t *testing.T) {
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
-		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec).
+		MatchMasterUserRecord(mur).
 		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
 
 	// when ensuring 3rd account
@@ -662,7 +662,7 @@ func TestModifyUserAccounts(t *testing.T) {
 	require.NoError(t, err)
 	uatest.AssertThatUserAccount(t, "john", memberClient3).
 		Exists().
-		MatchMasterUserRecord(mur, mur.Spec.UserAccounts[2].Spec).
+		MatchMasterUserRecord(mur).
 		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
@@ -741,17 +741,17 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			Exists().
-			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[0].Spec).
+			MatchMasterUserRecord(mur).
 			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic").
 			HasConditions(userAccount.Status.Conditions...)
 		uatest.AssertThatUserAccount(t, "john", memberClient2).
 			Exists().
-			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[1].Spec).
+			MatchMasterUserRecord(mur).
 			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic").
 			HasConditions(userAccount2.Status.Conditions...)
 		uatest.AssertThatUserAccount(t, "john", memberClient3).
 			Exists().
-			MatchMasterUserRecord(mur, mur.Spec.UserAccounts[2].Spec).
+			MatchMasterUserRecord(mur).
 			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic").
 			HasConditions(userAccount3.Status.Conditions...)
 
