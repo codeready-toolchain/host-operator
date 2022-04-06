@@ -349,8 +349,8 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 					Usernames:   usernames,
 				})
 			}
-
 		}
+		fmt.Printf("Space roles: %+v\n", s.SpaceRoles)
 	}
 	return s
 }

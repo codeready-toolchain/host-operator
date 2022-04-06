@@ -1044,18 +1044,28 @@ func TestUpdateSpaceRoles(t *testing.T) {
 
 	t.Run("add user with admin role", func(t *testing.T) {
 		// given a MUR, a Space and its NSTemplateSet resource...
-		mur := murtest.NewMasterUserRecord(t, "john")
+		johnMUR := murtest.NewMasterUserRecord(t, "john")
+		adminMUR := murtest.NewMasterUserRecord(t, "jack")
+		viewerMUR := murtest.NewMasterUserRecord(t, "jeff")
 		s := spacetest.NewSpace("oddity",
 			spacetest.WithTierName(basicTier.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity",
-			nstemplatetsettest.WithReferencesFor(basicTier),
-			nstemplatetsettest.WithReadyCondition())
-		// ...and a SpaceBinding for John as an Admin on the Space
-		sb := spacebindingtest.NewSpaceBinding(mur.Name, s.Name, "admin", "signupJohn")
-		hostClient := test.NewFakeClient(t, s, mur, sb, basicTier)
+			nstemplatetsettest.WithReferencesFor(basicTier,
+				// include pre-existing users with role
+				nstemplatetsettest.WithSpaceRole("admin", adminMUR.Name),
+				nstemplatetsettest.WithSpaceRole("viewer", viewerMUR.Name),
+			),
+			nstemplatetsettest.WithReadyCondition(),
+		)
+		// (and their corresponding space bindings)
+		sb1 := spacebindingtest.NewSpaceBinding(adminMUR.Name, s.Name, "admin", "signupAdmin")
+		sb2 := spacebindingtest.NewSpaceBinding(viewerMUR.Name, s.Name, "viewer", "signupViewer")
+		// and a SpaceBinding for John as an Admin on the Space
+		sb3 := spacebindingtest.NewSpaceBinding(johnMUR.Name, s.Name, "admin", "signupJohn")
+		hostClient := test.NewFakeClient(t, s, johnMUR, sb1, sb2, sb3, basicTier)
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
@@ -1073,8 +1083,11 @@ func TestUpdateSpaceRoles(t *testing.T) {
 			HasConditions(spacetest.Updating())
 		// NSTemplateSet should have an spaceRoles entry for the `mur`
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
-			HasSpaceRoleForUser("basic-admin-123456new", mur.Name). // entry added for user
-			HasConditions(nstemplatetsettest.Provisioned())         // not changed by the SpaceController, but will be by the NSTemplateSetController
+			HasSpaceRoleForUser("basic-admin-123456new", johnMUR.Name).    // entry added for user as admin
+			HasNoSpaceRoleForUser("basic-viewer-123456new", johnMUR.Name). // but not added as viewer
+			HasSpaceRoleForUser("basic-admin-123456new", adminMUR.Name).   // unchanged
+			HasSpaceRoleForUser("basic-viewer-123456new", viewerMUR.Name). // unchanged
+			HasConditions(nstemplatetsettest.Provisioned())                // not changed by the SpaceController, but will be by the NSTemplateSetController
 	})
 
 	t.Run("remove user with admin role", func(t *testing.T) {
