@@ -69,10 +69,23 @@ func TestIsSynchronized(t *testing.T) {
 			assert.False(t, s.isSynchronized())
 		})
 
-		t.Run("different user account", func(t *testing.T) {
+		t.Run("missing email annotation", func(t *testing.T) {
 			// given
 			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
-			recordSpecUserAcc.TargetCluster = "another-cluster"
+			delete(memberUserAcc.Annotations, toolchainv1alpha1.UserEmailAnnotationKey)
+			s := Synchronizer{
+				memberUserAcc:     &memberUserAcc,
+				record:            &record,
+				recordSpecUserAcc: recordSpecUserAcc,
+			}
+			// when/then
+			assert.False(t, s.isSynchronized())
+		})
+
+		t.Run("email annotation does not match", func(t *testing.T) {
+			// given
+			record, recordSpecUserAcc, memberUserAcc := setupSynchronizerItems()
+			memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] = "foo"
 			s := Synchronizer{
 				memberUserAcc:     &memberUserAcc,
 				record:            &record,
