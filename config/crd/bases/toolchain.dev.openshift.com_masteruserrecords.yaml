@@ -90,79 +90,6 @@ spec:
                   belong to this MasterUserRecord
                 items:
                   properties:
-                    spec:
-                      description: The spec of the corresponding UserAccount
-                      properties:
-                        nsLimit:
-                          description: The namespace limit name
-                          type: string
-                        nsTemplateSet:
-                          description: Namespace template set
-                          properties:
-                            clusterResources:
-                              description: the cluster resources template (for cluster-wide
-                                quotas, etc.)
-                              properties:
-                                templateRef:
-                                  description: TemplateRef The name of the TierTemplate
-                                    resource which exists in the host cluster and
-                                    which contains the template to use
-                                  type: string
-                              required:
-                              - templateRef
-                              type: object
-                            namespaces:
-                              description: The namespace templates
-                              items:
-                                description: NSTemplateSetNamespace the namespace
-                                  definition in an NSTemplateSet resource
-                                properties:
-                                  templateRef:
-                                    description: TemplateRef The name of the TierTemplate
-                                      resource which exists in the host cluster and
-                                      which contains the template to use
-                                    type: string
-                                required:
-                                - templateRef
-                                type: object
-                              type: array
-                              x-kubernetes-list-type: atomic
-                            spaceRoles:
-                              description: the role template and the users to whom
-                                the templates should be applied to
-                              items:
-                                description: NSTemplateSetSpaceRole the role template
-                                  and the users to whom the templates should be applied
-                                  to
-                                properties:
-                                  templateRef:
-                                    description: TemplateRef The name of the TierTemplate
-                                      resource which exists in the host cluster and
-                                      which contains the template to use
-                                    type: string
-                                  usernames:
-                                    description: Usernames the usernames to which
-                                      the template applies
-                                    items:
-                                      type: string
-                                    type: array
-                                required:
-                                - templateRef
-                                - usernames
-                                type: object
-                              type: array
-                              x-kubernetes-list-type: atomic
-                            tierName:
-                              description: The name of the tier represented by this
-                                template set
-                              type: string
-                          required:
-                          - namespaces
-                          - tierName
-                          type: object
-                      required:
-                      - nsLimit
-                      type: object
                     syncIndex:
                       description: SyncIndex is to be updated by UserAccount Controller
                         when the member needs to trigger MasterUserRecord <-> UserAccount
@@ -172,7 +99,6 @@ spec:
                       description: The cluster in which the user exists
                       type: string
                   required:
-                  - spec
                   - syncIndex
                   - targetCluster
                   type: object
