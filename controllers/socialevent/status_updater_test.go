@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -19,15 +18,7 @@ func TestUpdateStatusCondition(t *testing.T) {
 
 	t.Run("status condition created", func(t *testing.T) {
 		// given
-		e := &toolchainv1alpha1.SocialEvent{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: test.HostOperatorNs,
-				Name:      "lab",
-			},
-			Status: toolchainv1alpha1.SocialEventStatus{
-				// with no pre-existing status condition
-			},
-		}
+		e := socialeventtest.NewSocialEvent("lab", "base") // with no pre-existing status condition
 		c1 := toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionTrue,
@@ -52,17 +43,9 @@ func TestUpdateStatusCondition(t *testing.T) {
 			Reason:  toolchainv1alpha1.SocialEventInvalidTierReason,
 			Message: "NSTemplateTier 'foo' not found",
 		}
-		e := &toolchainv1alpha1.SocialEvent{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: test.HostOperatorNs,
-				Name:      "lab",
-			},
-			Status: toolchainv1alpha1.SocialEventStatus{
-				Conditions: []toolchainv1alpha1.Condition{
-					c1, // with pre-existing status condition
-				},
-			},
-		}
+		e := socialeventtest.NewSocialEvent("lab", "base",
+			socialeventtest.WithConditions(c1), // with pre-existing status condition
+		)
 		c2 := toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionTrue,
@@ -87,17 +70,9 @@ func TestUpdateStatusCondition(t *testing.T) {
 			Reason:  toolchainv1alpha1.SocialEventInvalidTierReason,
 			Message: "NSTemplateTier 'foo' not found",
 		}
-		e := &toolchainv1alpha1.SocialEvent{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: test.HostOperatorNs,
-				Name:      "lab",
-			},
-			Status: toolchainv1alpha1.SocialEventStatus{
-				Conditions: []toolchainv1alpha1.Condition{
-					c1, // with pre-existing status condition
-				},
-			},
-		}
+		e := socialeventtest.NewSocialEvent("lab", "base",
+			socialeventtest.WithConditions(c1), // with pre-existing status condition
+		)
 		hostClient := test.NewFakeClient(t, e)
 		hostClient.MockStatusUpdate = func(_ context.Context, _ client.Object, _ ...client.UpdateOption) error {
 			return fmt.Errorf("mock error")

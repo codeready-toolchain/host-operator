@@ -13,8 +13,8 @@ import (
 // starting: now
 // ending: 1hr later
 // max attendees: 10
-func NewSocialEvent(name, tierName string) *toolchainv1alpha1.SocialEvent {
-	return &toolchainv1alpha1.SocialEvent{
+func NewSocialEvent(name, tierName string, options ...Option) *toolchainv1alpha1.SocialEvent {
+	se := &toolchainv1alpha1.SocialEvent{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: test.HostOperatorNs,
 			Name:      name,
@@ -25,5 +25,17 @@ func NewSocialEvent(name, tierName string) *toolchainv1alpha1.SocialEvent {
 			EndTime:      metav1.NewTime(time.Now().Add(1 * time.Hour)),
 			MaxAttendees: 10,
 		},
+	}
+	for _, apply := range options {
+		apply(se)
+	}
+	return se
+}
+
+type Option func(*toolchainv1alpha1.SocialEvent)
+
+func WithConditions(c ...toolchainv1alpha1.Condition) Option {
+	return func(se *toolchainv1alpha1.SocialEvent) {
+		se.Status.Conditions = c
 	}
 }
