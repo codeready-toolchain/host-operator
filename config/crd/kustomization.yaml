@@ -12,7 +12,7 @@ resources:
 - bases/toolchain.dev.openshift.com_tiertemplates.yaml
 - bases/toolchain.dev.openshift.com_toolchainclusters.yaml
 - bases/toolchain.dev.openshift.com_toolchainconfigs.yaml
-- bases/toolchain.dev.openshift.com_toolchainevents.yaml
+- bases/toolchain.dev.openshift.com_socialevents.yaml
 - bases/toolchain.dev.openshift.com_toolchainstatuses.yaml
 - bases/toolchain.dev.openshift.com_usersignups.yaml
 - bases/toolchain.dev.openshift.com_spacebindings.yaml

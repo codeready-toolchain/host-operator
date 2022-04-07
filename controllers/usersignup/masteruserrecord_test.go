@@ -123,11 +123,9 @@ func newExpectedMur(userSignup *toolchainv1alpha1.UserSignup) *toolchainv1alpha1
 			},
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserID:        userSignup.Spec.Userid,
-			Banned:        false,
-			Disabled:      false,
-			Deprovisioned: false,
-			TierName:      "advanced",
+			UserID:   userSignup.Spec.Userid,
+			Disabled: false,
+			TierName: "advanced",
 			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
 				{
 					TargetCluster: test.MemberClusterName,

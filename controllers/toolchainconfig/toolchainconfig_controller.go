@@ -49,6 +49,8 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	}
 	r.RegServiceTemplate = regServiceTemplate
 
+	log.Log.Info("Setup ToolchainConfig")
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&toolchainv1alpha1.ToolchainConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&source.Kind{Type: &corev1.Secret{}},

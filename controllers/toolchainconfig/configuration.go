@@ -256,10 +256,6 @@ func (d TiersConfig) DurationBeforeChangeTierRequestDeletion() time.Duration {
 	return duration
 }
 
-func (d TiersConfig) TemplateUpdateRequestMaxPoolSize() int {
-	return commonconfig.GetInt(d.tiers.TemplateUpdateRequestMaxPoolSize, 5)
-}
-
 type ToolchainStatusConfig struct {
 	t toolchainv1alpha1.ToolchainStatusConfig
 }

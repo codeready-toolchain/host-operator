@@ -60,14 +60,6 @@ spec:
           spec:
             description: MasterUserRecordSpec defines the desired state of MasterUserRecord
             properties:
-              banned:
-                description: If set to true then the corresponding user has been banned
-                  from logging in and accessing their resources
-                type: boolean
-              deprovisioned:
-                description: If set to true then the corresponding UserAccount should
-                  be deleted "false" is assumed by default
-                type: boolean
               disabled:
                 description: If set to true then the corresponding user should not
                   be able to login (but the underlying UserAccounts still exists)
