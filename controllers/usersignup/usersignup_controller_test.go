@@ -1776,7 +1776,6 @@ func TestMigrateExistingMURToSpace(t *testing.T) {
 				templates := nstemplateSetFromTier(*testTier)
 				ua := toolchainv1alpha1.UserAccountEmbedded{
 					TargetCluster: "member1",
-					SyncIndex:     "123abc", // default value
 					Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
 						UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
 							NSLimit:       testTier.Name,
