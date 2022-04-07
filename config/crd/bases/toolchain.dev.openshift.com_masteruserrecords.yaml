@@ -82,16 +82,10 @@ spec:
                   belong to this MasterUserRecord
                 items:
                   properties:
-                    syncIndex:
-                      description: SyncIndex is to be updated by UserAccount Controller
-                        when the member needs to trigger MasterUserRecord <-> UserAccount
-                        synchronization
-                      type: string
                     targetCluster:
                       description: The cluster in which the user exists
                       type: string
                   required:
-                  - syncIndex
                   - targetCluster
                   type: object
                 type: array
