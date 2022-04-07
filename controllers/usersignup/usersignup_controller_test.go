@@ -1750,131 +1750,6 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	})
 }
 
-func TestMigrateExistingMURToSpace(t *testing.T) {
-	customTier := tiertest.NewNSTemplateTier("custom", "dev", "stage")
-
-	for testname, testTier := range map[string]*toolchainv1alpha1.NSTemplateTier{
-		"default tier":     baseNSTemplateTier,
-		"non-default tier": customTier,
-	} {
-		t.Run(testname, func(t *testing.T) {
-			member := NewMemberCluster(t, "member1", v1.ConditionTrue)
-			logf.SetLogger(zap.New(zap.UseDevMode(true)))
-			t.Run("MUR exists and still references NSTemplateSet", func(t *testing.T) {
-				userSignup := NewUserSignup()
-				userSignup.Annotations = map[string]string{
-					toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
-				}
-				userSignup.Labels = map[string]string{
-					toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
-					"toolchain.dev.openshift.com/approved":            "true",
-				}
-				userSignup.Spec.OriginalSub = "original-sub:foo"
-
-				mur := newMasterUserRecord(userSignup, "member1", testTier, "foo")
-				mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
-				templates := nstemplateSetFromTier(*testTier)
-				ua := toolchainv1alpha1.UserAccountEmbedded{
-					TargetCluster: "member1",
-					Spec: toolchainv1alpha1.UserAccountSpecEmbedded{
-						UserAccountSpecBase: toolchainv1alpha1.UserAccountSpecBase{
-							NSLimit:       testTier.Name,
-							NSTemplateSet: &templates,
-						},
-					},
-				}
-				// set the user account
-				mur.Spec.UserAccounts = []toolchainv1alpha1.UserAccountEmbedded{ua}
-
-				// given
-				r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier, customTier, mur)
-
-				InitializeCounters(t, NewToolchainStatus(
-					WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-						string(metrics.External): 1,
-					}),
-					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-						"1,external": 1,
-					}),
-				))
-
-				// when
-				res, err := r.Reconcile(context.TODO(), req)
-
-				// then
-				require.NoError(t, err)
-				require.Equal(t, reconcile.Result{}, res)
-
-				actualUserSignup := &toolchainv1alpha1.UserSignup{}
-				err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, actualUserSignup)
-				require.NoError(t, err)
-
-				AssertThatUserSignup(t, req.Namespace, actualUserSignup.Name, r.Client).HasLabel(toolchainv1alpha1.UserSignupStateLabelKey, "approved")
-				mur = murtest.AssertThatMasterUserRecord(t, mur.Name, r.Client).Exists().Get()
-				assert.Nil(t, mur.Spec.UserAccounts[0].Spec.NSTemplateSet)
-
-				// space should be created after second reconcile
-				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).DoesNotExist()
-				spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).DoesNotExist()
-
-				AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-				AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
-
-				AssertThatCountersAndMetrics(t).
-					HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-						string(metrics.External): 1,
-					}).
-					HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-						"1,external": 1,
-						"1,internal": 1,
-					})
-
-				t.Run("space should be created after second reconcile", func(t *testing.T) {
-					// when
-					res, err = r.Reconcile(context.TODO(), req)
-
-					// then
-					require.NoError(t, err)
-					require.Equal(t, reconcile.Result{}, res)
-
-					spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
-						Exists().
-						HasSpecTargetCluster("member1").
-						HasTier(testTier.Name)
-
-					t.Run("spacebinding should be created after third reconcile", func(t *testing.T) {
-						// when
-						res, err = r.Reconcile(context.TODO(), req)
-
-						// then
-						require.NoError(t, err)
-						require.Equal(t, reconcile.Result{}, res)
-
-						spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
-							Exists().
-							HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
-							HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
-							HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
-							HasSpec("foo", "foo", "admin")
-					})
-				})
-			})
-		})
-	}
-}
-
-func nstemplateSetFromTier(tier toolchainv1alpha1.NSTemplateTier) toolchainv1alpha1.NSTemplateSetSpec {
-	s := toolchainv1alpha1.NSTemplateSetSpec{}
-	s.TierName = tier.Name
-	s.Namespaces = make([]toolchainv1alpha1.NSTemplateSetNamespace, len(tier.Spec.Namespaces))
-	for i, ns := range tier.Spec.Namespaces {
-		s.Namespaces[i].TemplateRef = ns.TemplateRef
-	}
-	s.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{}
-	s.ClusterResources.TemplateRef = tier.Spec.ClusterResources.TemplateRef
-	return s
-}
-
 func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	// given
 	userSignup := NewUserSignup(Approved())
@@ -3841,22 +3716,6 @@ func TestMigrateMur(t *testing.T) {
 		tierutil.TemplateTierHashLabelKey(baseNSTemplateTier.Name): "123abc",
 	}
 
-	// old MUR has NSLimit and NSTemplateSet set
-	oldMur.Spec.UserAccounts[0].Spec.NSTemplateSet = &toolchainv1alpha1.NSTemplateSetSpec{}
-	oldMur.Spec.UserAccounts[0].Spec.NSTemplateSet.TierName = "base"
-	oldMur.Spec.UserAccounts[0].Spec.NSLimit = "default"
-	oldMur.Spec.UserAccounts[0].Spec.NSTemplateSet.Namespaces = []toolchainv1alpha1.NSTemplateSetNamespace{
-		{
-			TemplateRef: "base-dev-123abc1",
-		},
-		{
-			TemplateRef: "base-stage-123abc2",
-		},
-	}
-	oldMur.Spec.UserAccounts[0].Spec.NSTemplateSet.ClusterResources = &toolchainv1alpha1.NSTemplateSetClusterResources{
-		TemplateRef: "base-clusterresources-654321b",
-	}
-
 	t.Run("mur should be migrated", func(t *testing.T) {
 		// given
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, baseNSTemplateTier, oldMur)
@@ -3867,16 +3726,12 @@ func TestMigrateMur(t *testing.T) {
 		// then verify that the MUR exists and is complete
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-		actualMur := murtest.AssertThatMasterUserRecord(t, expectedMur.Name, r.Client).
+		murtest.AssertThatMasterUserRecord(t, expectedMur.Name, r.Client).
 			Exists().
-			HasTier(*baseNSTemplateTier).                                                        // tier name should be set
-			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(baseNSTemplateTier.Name)).        // should not have tier hash label anymore
-			HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name). // other labels unchanged
-			Get()
+			HasTier(*baseNSTemplateTier).                                                       // tier name should be set
+			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(baseNSTemplateTier.Name)).       // should not have tier hash label anymore
+			HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name) // other labels unchanged
 
-		// additional checks that we don't have MUR assertions for
-		require.Empty(t, actualMur.Spec.UserAccounts[0].Spec.NSLimit)     // NSLimit should be empty (deprecated)
-		require.Nil(t, actualMur.Spec.UserAccounts[0].Spec.NSTemplateSet) // NSTemplateSet should be nil (deprecated), they should be managed by Spaces now
 	})
 }
 
