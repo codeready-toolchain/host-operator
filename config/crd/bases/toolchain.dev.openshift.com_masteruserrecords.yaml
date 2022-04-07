@@ -155,17 +155,11 @@ spec:
                       required:
                       - nsLimit
                       type: object
-                    syncIndex:
-                      description: SyncIndex is to be updated by UserAccount Controller
-                        when the member needs to trigger MasterUserRecord <-> UserAccount
-                        synchronization
-                      type: string
                     targetCluster:
                       description: The cluster in which the user exists
                       type: string
                   required:
                   - spec
-                  - syncIndex
                   - targetCluster
                   type: object
                 type: array
@@ -285,14 +279,8 @@ spec:
                       x-kubernetes-list-map-keys:
                       - type
                       x-kubernetes-list-type: map
-                    syncIndex:
-                      description: SyncIndex is used for checking if there is needed
-                        some MasterUserRecord <-> UserAccount synchronization for
-                        this specific UserAccount in the specific member cluster
-                      type: string
                   required:
                   - cluster
-                  - syncIndex
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic
