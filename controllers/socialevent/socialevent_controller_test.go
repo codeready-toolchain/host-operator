@@ -101,9 +101,12 @@ func TestReconcileSocialEvent(t *testing.T) {
 	})
 }
 
-func newReconciler(hostCl client.Client) *socialevent.Reconciler {
+func newReconciler(hostClient client.Client) *socialevent.Reconciler {
 	return &socialevent.Reconciler{
-		Client: hostCl,
+		Client: hostClient,
+		StatusUpdater: &socialevent.StatusUpdater{
+			Client: hostClient,
+		},
 	}
 }
 

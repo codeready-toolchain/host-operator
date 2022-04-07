@@ -302,6 +302,9 @@ func main() { // nolint:gocyclo
 	}
 	if err = (&socialevent.Reconciler{
 		Client: mgr.GetClient(),
+		StatusUpdater: &socialevent.StatusUpdater{
+			Client: mgr.GetClient(),
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SocialEvent")
 		os.Exit(1)

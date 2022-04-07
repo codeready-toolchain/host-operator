@@ -22,6 +22,7 @@ import (
 // Reconciler reconciles a SocialEvent object
 type Reconciler struct {
 	client.Client
+	StatusUpdater *StatusUpdater
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -68,25 +69,19 @@ func (r *Reconciler) checkTier(logger logr.Logger, event *toolchainv1alpha1.Soci
 	}, tier); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("NSTemplateTier not found", "nstemplatetier_name", event.Spec.Tier)
-			event.Status.Conditions = []toolchainv1alpha1.Condition{
-				{
-					Type:    toolchainv1alpha1.ConditionReady,
-					Status:  corev1.ConditionFalse,
-					Reason:  toolchainv1alpha1.SocialEventInvalidTierReason,
-					Message: fmt.Sprintf("NSTemplateTier '%s' not found", event.Spec.Tier),
-				},
-			}
-			return r.Client.Status().Update(context.TODO(), event)
+			return r.StatusUpdater.updateStatusConditions(event, toolchainv1alpha1.Condition{
+				Type:    toolchainv1alpha1.ConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  toolchainv1alpha1.SocialEventInvalidTierReason,
+				Message: fmt.Sprintf("NSTemplateTier '%s' not found", event.Spec.Tier),
+			})
 		}
 		// Error reading the object - requeue the request.
 		logger.Error(err, "unable to get the NSTemplateTier", "nstemplatetier_name", event.Spec.Tier)
 		return errs.Wrapf(err, "unable to get the '%s' NSTemplateTier", event.Spec.Tier)
 	}
-	event.Status.Conditions = []toolchainv1alpha1.Condition{
-		{
-			Type:   toolchainv1alpha1.ConditionReady,
-			Status: corev1.ConditionTrue,
-		},
-	}
-	return r.Client.Status().Update(context.TODO(), event)
+	return r.StatusUpdater.updateStatusConditions(event, toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: corev1.ConditionTrue,
+	})
 }
