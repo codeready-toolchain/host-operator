@@ -56,7 +56,6 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "john", cl).
 			HasTier(*teamTier).
-			UserAccountHasNoTier(test.MemberClusterName).
 			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
@@ -74,8 +73,6 @@ func TestChangeTierSuccess(t *testing.T) {
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			HasTier(*teamTier).
-			UserAccountHasNoTier(test.MemberClusterName).
-			UserAccountHasNoTier("another-cluster").
 			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
@@ -92,7 +89,6 @@ func TestChangeTierSuccess(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			UserAccountHasNoTier("another-cluster").
 			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
@@ -114,7 +110,6 @@ func TestChangeTierSuccess(t *testing.T) {
 		assert.True(t, result.RequeueAfter > cast.ToDuration("1s"))
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			HasTier(murtest.DefaultNSTemplateTier()).
-			UserAccountHasNoTier(test.MemberClusterName).
 			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete())
 	})
@@ -135,7 +130,6 @@ func TestChangeTierSuccess(t *testing.T) {
 		assert.False(t, result.Requeue)
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
 			HasTier(murtest.DefaultNSTemplateTier()).
-			UserAccountHasNoTier(test.MemberClusterName).
 			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestIsDeleted(t, cl, changeTierRequest.Name)
 	})
@@ -226,7 +220,6 @@ func TestChangeTierSuccess(t *testing.T) {
 			require.NoError(t, err)
 			murtest.AssertThatMasterUserRecord(t, "john", cl).
 				HasTier(*teamTier).
-				UserAccountHasNoTier(test.MemberClusterName).
 				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier(teamTier.Name).
@@ -353,7 +346,6 @@ func TestChangeTierFailure(t *testing.T) {
 		// then
 		require.EqualError(t, err, "failed to delete changeTierRequest: unable to delete ChangeTierRequest object 'request-name': error")
 		murtest.AssertThatMasterUserRecord(t, "johny", cl).
-			UserAccountHasNoTier(test.MemberClusterName).
 			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(murtest.DefaultNSTemplateTierName))
 		AssertThatChangeTierRequestHasCondition(t, cl, changeTierRequest.Name, toBeComplete(), toBeDeletionError("unable to delete ChangeTierRequest object 'request-name': error"))
 	})

@@ -8,7 +8,6 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,35 +45,6 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 	})
 
 	t.Run("update needed", func(t *testing.T) {
-
-		t.Run("when useraccount NSLimit was set, it should be empty after migration", func(t *testing.T) {
-			userSignup := NewUserSignup()
-			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
-			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
-			mur.Spec.UserAccounts[0].Spec.NSLimit = "default" // NSLimit is set
-
-			// when
-			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
-
-			// then
-			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(userSignup), mur)
-		})
-
-		t.Run("when useraccount NSTemplateSet was set, it should be nil after migration", func(t *testing.T) {
-			userSignup := NewUserSignup()
-			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
-			testNStemplateSet := murtest.DefaultNSTemplateSet()
-			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
-			mur.Spec.UserAccounts[0].Spec.NSTemplateSet = &testNStemplateSet.Spec // NSTemplateSet is set
-
-			// when
-			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
-
-			// then
-			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(userSignup), mur)
-		})
 
 		t.Run("when MUR has tier hash label, it should be removed after migration", func(t *testing.T) {
 			userSignup := NewUserSignup()
@@ -123,14 +93,11 @@ func newExpectedMur(userSignup *toolchainv1alpha1.UserSignup) *toolchainv1alpha1
 			},
 		},
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserID:        userSignup.Spec.Userid,
-			Banned:        false,
-			Disabled:      false,
-			Deprovisioned: false,
-			TierName:      "advanced",
+			UserID:   userSignup.Spec.Userid,
+			Disabled: false,
+			TierName: "advanced",
 			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
 				{
-					SyncIndex:     "",
 					TargetCluster: test.MemberClusterName,
 				},
 			},

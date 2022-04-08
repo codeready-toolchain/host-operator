@@ -36,11 +36,10 @@ type Synchronizer struct {
 func (s *Synchronizer) synchronizeSpec() error {
 
 	if !s.isSynchronized() {
-		s.logger.Info("synchronizing specs", "UserAccountSpecBase", s.recordSpecUserAcc.Spec.UserAccountSpecBase)
+		s.logger.Info("synchronizing specs")
 		if err := updateStatusConditions(s.logger, s.hostClient, s.record, toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, "")); err != nil {
 			return err
 		}
-		s.memberUserAcc.Spec.UserAccountSpecBase = s.recordSpecUserAcc.Spec.UserAccountSpecBase
 		s.memberUserAcc.Spec.Disabled = s.record.Spec.Disabled
 		s.memberUserAcc.Spec.UserID = s.record.Spec.UserID
 		s.memberUserAcc.Spec.OriginalSub = s.record.Spec.OriginalSub
@@ -67,8 +66,7 @@ func (s *Synchronizer) synchronizeSpec() error {
 }
 
 func (s *Synchronizer) isSynchronized() bool {
-	return reflect.DeepEqual(s.memberUserAcc.Spec.UserAccountSpecBase, s.recordSpecUserAcc.Spec.UserAccountSpecBase) &&
-		s.memberUserAcc.Spec.Disabled == s.record.Spec.Disabled &&
+	return s.memberUserAcc.Spec.Disabled == s.record.Spec.Disabled &&
 		s.memberUserAcc.Spec.UserID == s.record.Spec.UserID &&
 		s.memberUserAcc.Labels != nil && s.memberUserAcc.Labels[toolchainv1alpha1.TierLabelKey] == s.record.Spec.TierName &&
 		s.memberUserAcc.Annotations != nil && s.memberUserAcc.Annotations[toolchainv1alpha1.UserEmailAnnotationKey] == s.record.Annotations[toolchainv1alpha1.MasterUserRecordEmailAnnotationKey]
