@@ -76,6 +76,11 @@ objects:
     - "*"
   - apiGroups:
     - ""
+    resources:
+    - secrets
+    verbs:
+    - create
+    - delete
   - apiGroups:
     - results.tekton.dev
     resources:
