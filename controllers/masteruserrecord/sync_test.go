@@ -8,16 +8,16 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	. "github.com/codeready-toolchain/host-operator/test"
 	. "github.com/codeready-toolchain/host-operator/test/notification"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	uatest "github.com/codeready-toolchain/toolchain-common/pkg/test/useraccount"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -265,7 +265,6 @@ func TestSyncMurStatusWithUserAccountStatusWhenUpdated(t *testing.T) {
 		uatest.StatusCondition(toBeProvisioned()), uatest.ResourceVersion("123abc"))
 
 	mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{{
-		SyncIndex: "111aaa",
 		Cluster: toolchainv1alpha1.Cluster{
 			Name: test.MemberClusterName,
 		},
@@ -314,7 +313,6 @@ func TestSyncMurStatusWithUserAccountStatusWhenDisabled(t *testing.T) {
 		uatest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")), uatest.ResourceVersion("123abc"))
 
 	mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{{
-		SyncIndex: "111aaa",
 		Cluster: toolchainv1alpha1.Cluster{
 			Name: test.MemberClusterName,
 		},
@@ -371,7 +369,6 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 		uatest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")), uatest.ResourceVersion("123abc"))
 
 	mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{{
-		SyncIndex: "111aaa",
 		Cluster: toolchainv1alpha1.Cluster{
 			Name: test.MemberClusterName,
 		},
@@ -592,7 +589,6 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 				Cluster: toolchainv1alpha1.Cluster{
 					Name: test.MemberClusterName,
 				},
-				SyncIndex: "somethingCrazy",
 			}
 			provisionedMur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{toBeModified}
 
@@ -614,7 +610,6 @@ func TestSynchronizeUserAccountFailed(t *testing.T) {
 				uatest.StatusCondition(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")), uatest.ResourceVersion("123abc"))
 
 			mur.Status.UserAccounts = []toolchainv1alpha1.UserAccountStatusEmbedded{{
-				SyncIndex: "111aaa",
 				Cluster: toolchainv1alpha1.Cluster{
 					Name: test.MemberClusterName,
 				},
@@ -798,7 +793,6 @@ func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostCl
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(expMurCon...).
 		HasStatusUserAccounts(test.MemberClusterName).
-		AllUserAccountsHaveStatusSyncIndex("123abc").
 		AllUserAccountsHaveCluster(toolchainv1alpha1.Cluster{
 			Name:            test.MemberClusterName,
 			APIEndpoint:     "https://api.member-cluster:6433",
@@ -808,21 +802,15 @@ func verifySyncMurStatusWithUserAccountStatus(t *testing.T, memberClient, hostCl
 		AllUserAccountsHaveCondition(userAccountCondition)
 }
 
-func newMemberCluster(cl client.Client) *cluster.CachedToolchainCluster {
-	return &cluster.CachedToolchainCluster{
-		Config: &cluster.Config{
+func newMemberCluster(cl client.Client) cluster.Cluster {
+	return cluster.Cluster{
+		Config: &commoncluster.Config{
 			Name:              test.MemberClusterName,
 			APIEndpoint:       fmt.Sprintf("https://api.%s:6433", test.MemberClusterName),
-			Type:              cluster.Member,
+			Type:              commoncluster.Member,
 			OperatorNamespace: test.HostOperatorNs,
 			OwnerClusterName:  test.HostClusterName,
 		},
 		Client: cl,
-		ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
-			Conditions: []toolchainv1alpha1.ToolchainClusterCondition{{
-				Type:   toolchainv1alpha1.ToolchainClusterReady,
-				Status: v1.ConditionTrue,
-			}},
-		},
 	}
 }

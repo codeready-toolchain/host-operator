@@ -1,0 +1,57 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: base1ns-spacerole-admin
+objects:
+
+# Rolebindings that grant permissions to the users in their own namespaces
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    namespace: ${NAMESPACE}
+    name: rbac-edit
+  rules:
+    - apiGroups:
+        - authorization.openshift.io
+        - rbac.authorization.k8s.io
+      resources:
+        - roles
+        - rolebindings
+      verbs:
+        - get
+        - list
+        - watch
+        - create
+        - update
+        - patch
+        - delete
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    namespace: ${NAMESPACE}
+    name: user-rbac-edit
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: rbac-edit
+  subjects:
+    - kind: User
+      name: ${USERNAME}
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    namespace: ${NAMESPACE}
+    name: user-edit
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: edit
+  subjects:
+  - kind: User
+    name: ${USERNAME}
+
+parameters:
+- name: USERNAME
+  required: true
+- name: NAMESPACE
+  required: true

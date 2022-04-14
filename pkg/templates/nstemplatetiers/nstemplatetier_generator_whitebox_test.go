@@ -29,6 +29,7 @@ import (
 var expectedProdTiers = map[string]bool{
 	"advanced":                 true, // tier_name: true/false (if based on the other tier)
 	"base":                     false,
+	"base1ns":                  false,
 	"baselarge":                true,
 	"baseextended":             true,
 	"baseextendedidling":       true,
@@ -49,6 +50,8 @@ func nsTypes(tier string) []string {
 	switch tier {
 	case "appstudio":
 		return []string{"appstudio"}
+	case "base1ns":
+		return []string{"dev"}
 	default:
 		return []string{"dev", "stage"}
 	}
@@ -114,7 +117,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 9)
+			require.Len(t, tmpls, 10)
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 			for _, tier := range tiers(expectedProdTiers) {
 				t.Run(tier, func(t *testing.T) {

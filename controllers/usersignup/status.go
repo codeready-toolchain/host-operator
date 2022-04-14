@@ -182,6 +182,43 @@ func (u *StatusUpdater) setStatusDeactivated(userSignup *toolchainv1alpha1.UserS
 		})
 }
 
+const (
+	UserMigrationFailed toolchainv1alpha1.ConditionType = "UserMigrationFailed"
+)
+
+func (u *StatusUpdater) setStatusMigrationFailedLookup(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    UserMigrationFailed,
+			Status:  corev1.ConditionTrue,
+			Reason:  "UserSignupLookupFailed",
+			Message: message,
+		})
+}
+
+func (u *StatusUpdater) setStatusMigrationFailedCreate(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    UserMigrationFailed,
+			Status:  corev1.ConditionTrue,
+			Reason:  "UserSignupCreateFailed",
+			Message: message,
+		})
+}
+
+func (u *StatusUpdater) setStatusMigrationFailedCleanup(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    UserMigrationFailed,
+			Status:  corev1.ConditionTrue,
+			Reason:  "UserSignupCleanupFailed",
+			Message: message,
+		})
+}
+
 func (u *StatusUpdater) setStatusFailedToReadBannedUsers(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,

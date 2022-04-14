@@ -17,7 +17,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingcleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecompletion"
-	"github.com/codeready-toolchain/host-operator/controllers/templateupdaterequest"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
@@ -211,10 +210,11 @@ func main() {
 		os.Exit(1)
 	}
 	if err := (&masteruserrecord.Reconciler{
-		Client:                mgr.GetClient(),
-		Scheme:                mgr.GetScheme(),
-		RetrieveMemberCluster: commoncluster.GetCachedToolchainCluster,
-	}).SetupWithManager(mgr); err != nil {
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		Namespace:      namespace,
+		MemberClusters: memberClusters,
+	}).SetupWithManager(mgr, memberClusters); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MasterUserRecord")
 		os.Exit(1)
 	}
@@ -230,13 +230,6 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NSTemplateTier")
-		os.Exit(1)
-	}
-	if err := (&templateupdaterequest.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "TemplateUpdateRequest")
 		os.Exit(1)
 	}
 	if err := (&toolchainconfig.Reconciler{
@@ -374,9 +367,9 @@ func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string) (ma
 			return nil, errors.Wrapf(err, "unable to add member cluster to the manager for "+memberConfig.Name)
 		}
 		memberClusters[memberConfig.Name] = cluster.Cluster{
-			OperatorNamespace: memberConfig.OperatorNamespace,
-			Client:            memberCluster.GetClient(),
-			Cache:             memberCluster.GetCache(),
+			Config: memberConfig,
+			Client: memberCluster.GetClient(),
+			Cache:  memberCluster.GetCache(),
 		}
 	}
 	return memberClusters, nil
