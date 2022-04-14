@@ -255,68 +255,77 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 		}
 
-		// Migrate the UserSignup if necessary - REMOVE THIS BLOCK AFTER MIGRATION COMPLETE
-		// TODO remove this once all basic tier users have been migrated
-		// The migration process is as follows:
-		//
-		// 1) Check if the UserSignup has been migrated.  This is done by checking if a UserSignup with a name equal
-		//    to the encoded username exists (while also checking that the currently reconciling UserSignup isn't actually it)
-		//
-		// 2) If the UserSignup hasn't been migrated, then migrate it by creating a new UserSignup with the name set to
-		//    the encoded username, and the "migration-replaces" annotation set to the name of this (the old) UserSignup
-		//
-		// 3)
-		//
-		// Other things to remove after migration is completed:
-		//
-		// 1) The setStatusMigrationFailedLookup function in status.go
-		// 2) The setStatusMigrationFailedCreate function in status.go
-		// 3) The setStatusMigrationFailedCleanup function in status.go
-		// 4) The UserSignupUserMigrationFailed constant in status.go
-		// 5) The EncodeUserIdentifier function from this file
-		// 6) The above block of code in this function that deletes the original UserSignup if the "migration-replaces" annotation is set
-		encodedUsername := EncodeUserIdentifier(userSignup.Spec.Username)
-		if userSignup.Name != encodedUsername {
-			migratedUserSignup := &toolchainv1alpha1.UserSignup{}
-			err := r.Client.Get(context.TODO(), types.NamespacedName{
-				Namespace: request.Namespace,
-				Name:      encodedUsername,
-			}, migratedUserSignup)
-			if err != nil {
-				if !errors.IsNotFound(err) {
-					// Error reading the object - requeue the request.
-					return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-						r.setStatusMigrationFailedLookup, err, "Failed to lookup migrated UserSignup")
-				}
-
-				// Create the migrated UserSignup here.
-				//
-				// We need to:
-				//
-				// 1) Copy the existing UserSignup
-				// 2) Override the new UserSignup resource name with the encoded username
-				// 3) Set the starting status to Deactivated (technically we could let the reconciler function do this
-				//    when it reconciles the migrated UserSignup, but it shouldn't hurt to set this status up front)
-				migratedUserSignup = userSignup.DeepCopy()
-				migratedUserSignup.Name = encodedUsername
-				err = r.setStatusDeactivated(migratedUserSignup, "")
-				if err != nil {
-					return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-						r.setStatusMigrationFailedCreate, err, "Failed to set deactivated status of migrated UserSignup")
-				}
-				err = r.Client.Create(ctx, migratedUserSignup)
-				if err != nil {
-					// If there was an error creating the migrated UserSignup, then set the status and requeue
-					return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-						r.setStatusMigrationFailedCreate, err, "Failed to migrate UserSignup")
-				}
-			}
+		// Migrate the user if necessary
+		err = r.migrateUserIfNecessary(userSignup, request, logger)
+		if err != nil {
+			return reconcile.Result{}, err
 		}
 
 		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusDeactivated)
 	}
 
 	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, config, userSignup)
+}
+
+// migrateUserIfNecessary migrates the UserSignup if necessary - REMOVE THIS FUNCTION AFTER MIGRATION COMPLETE
+// TODO remove this function once all basic tier users have been migrated
+// The migration process is as follows:
+//
+// 1) Check if the UserSignup has been migrated.  This is done by checking if a UserSignup with a name equal
+//    to the encoded username exists (while also checking that the currently reconciling UserSignup isn't actually it)
+//
+// 2) If the UserSignup hasn't been migrated, then migrate it by creating a new UserSignup with the name set to
+//    the encoded username, and the "migration-replaces" annotation set to the name of this (the old) UserSignup
+//
+// 3)
+//
+// Other things to remove after migration is completed:
+//
+// 1) The setStatusMigrationFailedLookup function in status.go
+// 2) The setStatusMigrationFailedCreate function in status.go
+// 3) The setStatusMigrationFailedCleanup function in status.go
+// 4) The UserSignupUserMigrationFailed constant in status.go
+// 5) The EncodeUserIdentifier function from this file
+// 6) The above block of code in this function that deletes the original UserSignup if the "migration-replaces" annotation is set
+func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSignup, request ctrl.Request, logger logr.Logger) error {
+	encodedUsername := EncodeUserIdentifier(userSignup.Spec.Username)
+	if userSignup.Name != encodedUsername {
+		migratedUserSignup := &toolchainv1alpha1.UserSignup{}
+		err := r.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: request.Namespace,
+			Name:      encodedUsername,
+		}, migratedUserSignup)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				// Error reading the object - requeue the request.
+				return r.wrapErrorWithStatusUpdate(logger, userSignup,
+					r.setStatusMigrationFailedLookup, err, "Failed to lookup migrated UserSignup")
+			}
+
+			// Create the migrated UserSignup here.
+			//
+			// We need to:
+			//
+			// 1) Copy the existing UserSignup
+			// 2) Override the new UserSignup resource name with the encoded username
+			// 3) Set the starting status to Deactivated (technically we could let the reconciler function do this
+			//    when it reconciles the migrated UserSignup, but it shouldn't hurt to set this status up front)
+			migratedUserSignup = userSignup.DeepCopy()
+			migratedUserSignup.Name = encodedUsername
+			err = r.setStatusDeactivated(migratedUserSignup, "")
+			if err != nil {
+				return r.wrapErrorWithStatusUpdate(logger, userSignup,
+					r.setStatusMigrationFailedCreate, err, "Failed to set deactivated status of migrated UserSignup")
+			}
+			err = r.Client.Create(context.TODO(), migratedUserSignup)
+			if err != nil {
+				// If there was an error creating the migrated UserSignup, then set the status and requeue
+				return r.wrapErrorWithStatusUpdate(logger, userSignup,
+					r.setStatusMigrationFailedCreate, err, "Failed to migrate UserSignup")
+			}
+		}
+	}
+	return nil
 }
 
 // EncodeUserIdentifier is a temporary function used by the migration procedure
