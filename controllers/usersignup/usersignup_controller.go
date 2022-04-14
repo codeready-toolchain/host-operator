@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
@@ -134,6 +135,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			Namespace: request.Namespace,
 			Name:      originalUserSignupName,
 		}, userSignupToDelete)
+		if err == nil {
+			// Delete the original UserSignup
+			err = r.Client.Delete(context.TODO(), userSignupToDelete)
+			if err != nil {
+				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
+					err, fmt.Sprintf("Failed to remove original UserSignup [%s]",
+						userSignup.Annotations[migrationAnnotationName]))
+			}
+			// Requeue so that the annotation will now be removed also
+			return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, nil
+		}
+
 		if err != nil {
 			// If the annotation exists however the original UserSignup isn't found, then remove the annotation
 			if errors.IsNotFound(err) {
@@ -143,7 +156,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				err = r.Client.Update(ctx, userSignup)
 				if err != nil {
 					return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-						r.setStatusMigrationFailedCleanup, err, fmt.Sprintf("Failed to remove migration annotation"))
+						r.setStatusMigrationFailedCleanup, err, "Failed to remove migration annotation")
 				}
 			} else {
 				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
@@ -151,16 +164,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 						userSignup.Annotations[migrationAnnotationName]))
 			}
 		}
-
-		// Delete the original UserSignup
-		err = r.Client.Delete(context.TODO(), userSignupToDelete)
-		if err != nil {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
-				err, fmt.Sprintf("Failed to remove original UserSignup [%s]",
-					userSignup.Annotations[migrationAnnotationName]))
-		}
-		// Requeue so that the annotation will now be removed also
-		return reconcile.Result{Requeue: true}, nil
 	}
 
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
@@ -291,7 +294,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 					//    when it reconciles the migrated UserSignup, but it shouldn't hurt to set this status up front)
 					migratedUserSignup = userSignup.DeepCopy()
 					migratedUserSignup.Name = encodedUsername
-					r.setStatusDeactivated(migratedUserSignup, "")
+					err = r.setStatusDeactivated(migratedUserSignup, "")
+					if err != nil {
+						return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
+							r.setStatusMigrationFailedCreate, err, "Failed to set deactivated status of migrated UserSignup")
+					}
 					err = r.Client.Create(ctx, migratedUserSignup)
 					if err != nil {
 						// If there was an error creating the migrated UserSignup, then set the status and requeue
