@@ -283,32 +283,33 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				Name:      encodedUsername,
 			}, migratedUserSignup)
 			if err != nil {
-				if errors.IsNotFound(err) {
-					// Create the migrated UserSignup here.
-					//
-					// We need to:
-					//
-					// 1) Copy the existing UserSignup
-					// 2) Override the new UserSignup resource name with the encoded username
-					// 3) Set the starting status to Deactivated (technically we could let the reconciler function do this
-					//    when it reconciles the migrated UserSignup, but it shouldn't hurt to set this status up front)
-					migratedUserSignup = userSignup.DeepCopy()
-					migratedUserSignup.Name = encodedUsername
-					err = r.setStatusDeactivated(migratedUserSignup, "")
-					if err != nil {
-						return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-							r.setStatusMigrationFailedCreate, err, "Failed to set deactivated status of migrated UserSignup")
-					}
-					err = r.Client.Create(ctx, migratedUserSignup)
-					if err != nil {
-						// If there was an error creating the migrated UserSignup, then set the status and requeue
-						return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-							r.setStatusMigrationFailedCreate, err, "Failed to migrate UserSignup")
-					}
+				if !errors.IsNotFound(err) {
+					// Error reading the object - requeue the request.
+					return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
+						r.setStatusMigrationFailedLookup, err, "Failed to lookup migrated UserSignup")
 				}
-				// Error reading the object - requeue the request.
-				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-					r.setStatusMigrationFailedLookup, err, "Failed to lookup migrated UserSignup")
+
+				// Create the migrated UserSignup here.
+				//
+				// We need to:
+				//
+				// 1) Copy the existing UserSignup
+				// 2) Override the new UserSignup resource name with the encoded username
+				// 3) Set the starting status to Deactivated (technically we could let the reconciler function do this
+				//    when it reconciles the migrated UserSignup, but it shouldn't hurt to set this status up front)
+				migratedUserSignup = userSignup.DeepCopy()
+				migratedUserSignup.Name = encodedUsername
+				err = r.setStatusDeactivated(migratedUserSignup, "")
+				if err != nil {
+					return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
+						r.setStatusMigrationFailedCreate, err, "Failed to set deactivated status of migrated UserSignup")
+				}
+				err = r.Client.Create(ctx, migratedUserSignup)
+				if err != nil {
+					// If there was an error creating the migrated UserSignup, then set the status and requeue
+					return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
+						r.setStatusMigrationFailedCreate, err, "Failed to migrate UserSignup")
+				}
 			}
 		}
 
