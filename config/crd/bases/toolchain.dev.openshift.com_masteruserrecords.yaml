@@ -60,14 +60,6 @@ spec:
           spec:
             description: MasterUserRecordSpec defines the desired state of MasterUserRecord
             properties:
-              banned:
-                description: If set to true then the corresponding user has been banned
-                  from logging in and accessing their resources
-                type: boolean
-              deprovisioned:
-                description: If set to true then the corresponding UserAccount should
-                  be deleted "false" is assumed by default
-                type: boolean
               disabled:
                 description: If set to true then the corresponding user should not
                   be able to login (but the underlying UserAccounts still exists)
@@ -90,90 +82,10 @@ spec:
                   belong to this MasterUserRecord
                 items:
                   properties:
-                    spec:
-                      description: The spec of the corresponding UserAccount
-                      properties:
-                        nsLimit:
-                          description: The namespace limit name
-                          type: string
-                        nsTemplateSet:
-                          description: Namespace template set
-                          properties:
-                            clusterResources:
-                              description: the cluster resources template (for cluster-wide
-                                quotas, etc.)
-                              properties:
-                                templateRef:
-                                  description: TemplateRef The name of the TierTemplate
-                                    resource which exists in the host cluster and
-                                    which contains the template to use
-                                  type: string
-                              required:
-                              - templateRef
-                              type: object
-                            namespaces:
-                              description: The namespace templates
-                              items:
-                                description: NSTemplateSetNamespace the namespace
-                                  definition in an NSTemplateSet resource
-                                properties:
-                                  templateRef:
-                                    description: TemplateRef The name of the TierTemplate
-                                      resource which exists in the host cluster and
-                                      which contains the template to use
-                                    type: string
-                                required:
-                                - templateRef
-                                type: object
-                              type: array
-                              x-kubernetes-list-type: atomic
-                            spaceRoles:
-                              description: the role template and the users to whom
-                                the templates should be applied to
-                              items:
-                                description: NSTemplateSetSpaceRole the role template
-                                  and the users to whom the templates should be applied
-                                  to
-                                properties:
-                                  templateRef:
-                                    description: TemplateRef The name of the TierTemplate
-                                      resource which exists in the host cluster and
-                                      which contains the template to use
-                                    type: string
-                                  usernames:
-                                    description: Usernames the usernames to which
-                                      the template applies
-                                    items:
-                                      type: string
-                                    type: array
-                                required:
-                                - templateRef
-                                - usernames
-                                type: object
-                              type: array
-                              x-kubernetes-list-type: atomic
-                            tierName:
-                              description: The name of the tier represented by this
-                                template set
-                              type: string
-                          required:
-                          - namespaces
-                          - tierName
-                          type: object
-                      required:
-                      - nsLimit
-                      type: object
-                    syncIndex:
-                      description: SyncIndex is to be updated by UserAccount Controller
-                        when the member needs to trigger MasterUserRecord <-> UserAccount
-                        synchronization
-                      type: string
                     targetCluster:
                       description: The cluster in which the user exists
                       type: string
                   required:
-                  - spec
-                  - syncIndex
                   - targetCluster
                   type: object
                 type: array
@@ -293,14 +205,8 @@ spec:
                       x-kubernetes-list-map-keys:
                       - type
                       x-kubernetes-list-type: map
-                    syncIndex:
-                      description: SyncIndex is used for checking if there is needed
-                        some MasterUserRecord <-> UserAccount synchronization for
-                        this specific UserAccount in the specific member cluster
-                      type: string
                   required:
                   - cluster
-                  - syncIndex
                   type: object
                 type: array
                 x-kubernetes-list-type: atomic

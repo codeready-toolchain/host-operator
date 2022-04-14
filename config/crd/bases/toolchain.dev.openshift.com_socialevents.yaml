@@ -6,14 +6,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
-  name: toolchainevents.toolchain.dev.openshift.com
+  name: socialevents.toolchain.dev.openshift.com
 spec:
   group: toolchain.dev.openshift.com
   names:
-    kind: ToolchainEvent
-    listKind: ToolchainEventList
-    plural: toolchainevents
-    singular: toolchainevent
+    kind: SocialEvent
+    listKind: SocialEventList
+    plural: socialevents
+    singular: socialevent
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -29,7 +29,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ToolchainEvent registers a toolchain event in the CodeReady Toolchain
+        description: SocialEvent registers a social event in Dev Sandbox
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -44,9 +44,9 @@ spec:
           metadata:
             type: object
           spec:
-            description: ToolchainEventSpec defines the parameters for a Toolchain
-              event, such as a training session or workshop. Users may register for
-              the event by using the event's unique activation code
+            description: SocialEventSpec defines the parameters for a Social event,
+              such as a training session or workshop. Users may register for the event
+              by using the event's unique activation code
             properties:
               description:
                 description: An optional description that may be provided describing
@@ -83,12 +83,12 @@ spec:
             - startTime
             type: object
           status:
-            description: ToolchainEventStatus defines the observed state of ToolchainEvent
+            description: SocialEventStatus defines the observed state of SocialEvent
             properties:
               activationCount:
                 type: integer
               conditions:
-                description: 'Conditions is an array of current ToolchainEventStatus
+                description: 'Conditions is an array of current SocialEventStatus
                   conditions Supported condition types: Ready'
                 items:
                   properties:

@@ -17,19 +17,6 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, default
 		changed = true
 	}
 
-	// TODO this can be removed once all existing MURs have been migrated
-	for uaIndex, userAccount := range mur.Spec.UserAccounts {
-		if userAccount.Spec.NSLimit != "" {
-			mur.Spec.UserAccounts[uaIndex].Spec.NSLimit = ""
-			changed = true
-		}
-		nsTemplateSet := userAccount.Spec.NSTemplateSet
-		if nsTemplateSet != nil {
-			mur.Spec.UserAccounts[uaIndex].Spec.NSTemplateSet = nil
-			changed = true
-		}
-	}
-
 	// ensure that the MUR does not have any tier hash labels since NSTemplateSet will be handled by Spaces
 	for key := range mur.Labels {
 		if strings.HasSuffix(key, "-tier-hash") {
