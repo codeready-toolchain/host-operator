@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/pending"
@@ -273,11 +275,13 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 			//    when it reconciles the migrated UserSignup, but it shouldn't hurt to set this status up front)
 			migratedUserSignup = userSignup.DeepCopy()
 			migratedUserSignup.Name = encodedUsername
-			err = r.setStatusDeactivated(migratedUserSignup, "")
-			if err != nil {
-				return r.wrapErrorWithStatusUpdate(logger, userSignup,
-					r.setStatusMigrationFailedCreate, err, "Failed to set deactivated status of migrated UserSignup")
-			}
+			migratedUserSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(migratedUserSignup.Status.Conditions,
+				toolchainv1alpha1.Condition{
+					Type:    toolchainv1alpha1.UserSignupComplete,
+					Status:  corev1.ConditionTrue,
+					Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
+					Message: "",
+				})
 			err = r.Client.Create(context.TODO(), migratedUserSignup)
 			if err != nil {
 				// If there was an error creating the migrated UserSignup, then set the status and requeue
