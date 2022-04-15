@@ -6,11 +6,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"hash/crc32"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -287,6 +288,7 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 					Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
 					Message: "",
 				})
+			migratedUserSignup.Annotations[migrationAnnotationName] = userSignup.Name
 			err = r.Client.Create(context.TODO(), migratedUserSignup)
 			if err != nil {
 				// If there was an error creating the migrated UserSignup, then set the status and requeue

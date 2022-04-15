@@ -3970,7 +3970,8 @@ func TestUserSignupMigration(t *testing.T) {
 	require.False(t, res.Requeue)
 
 	userSignups := &toolchainv1alpha1.UserSignupList{}
-	cl.List(context.TODO(), userSignups)
+	err = cl.List(context.TODO(), userSignups)
+	require.NoError(t, err)
 
 	// We should now have 2 UserSignups, the original and the migrated
 	require.Len(t, userSignups.Items, 2)
@@ -3979,7 +3980,8 @@ func TestUserSignupMigration(t *testing.T) {
 
 	for _, us := range userSignups.Items {
 		if us.Name == "1cf93821-fooredhatcom" {
-			migrated = &us
+			value := us
+			migrated = &value
 			break
 		}
 	}
@@ -3992,4 +3994,35 @@ func TestUserSignupMigration(t *testing.T) {
 	require.Equal(t, userSignup.Spec.FamilyName, migrated.Spec.FamilyName)
 	require.Equal(t, userSignup.Spec.GivenName, migrated.Spec.GivenName)
 	require.Equal(t, userSignup.Labels, migrated.Labels)
+
+	t.Run("Reconcile migrated UserSignup cleanup fails as original not yet deactivated", func(t *testing.T) {
+		r, req, cl = prepareReconcile(t, migrated.Name, members, migrated, userSignup)
+		_, err := r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, fmt.Sprintf("Original UserSignup [%s] not yet deactivated: Original UserSignup not deactivated",
+			userSignup.Name), err.Error())
+
+		// Refresh the updated migrated UserSignup
+		err = cl.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: migrated.Namespace,
+			Name:      migrated.Name}, migrated)
+		require.NoError(t, err)
+		test.AssertConditionsMatch(t, migrated.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionTrue,
+				Reason: "NotificationCRCreated",
+			},
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: "Deactivated",
+			},
+			toolchainv1alpha1.Condition{
+				Type:    UserMigrationFailed,
+				Status:  v1.ConditionTrue,
+				Reason:  "UserSignupCleanupFailed",
+				Message: "Original UserSignup not deactivated",
+			})
+	})
 }
