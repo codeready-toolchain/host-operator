@@ -356,7 +356,8 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 		}
 	}
 
-	return reconcile.Result{}, nil
+	// If everything was cleaned up successfully, requeue one more time to invoke the standard reconciliation workflow
+	return reconcile.Result{Requeue: true}, nil
 }
 
 // EncodeUserIdentifier is a temporary function used by the migration procedure
