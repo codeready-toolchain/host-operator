@@ -250,6 +250,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // 5) The EncodeUserIdentifier function from this file
 // 6) The above block of code in this function that deletes the original UserSignup if the "migration-replaces" annotation is set
 // 7) The cleanupMigration function from this file
+// 8) The TestUserSignupMigration() test in usersignup_controller_test.go
 //
 func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSignup, request ctrl.Request, logger logr.Logger) error {
 	encodedUsername := EncodeUserIdentifier(userSignup.Spec.Username)

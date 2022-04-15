@@ -3952,3 +3952,44 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 	})
 }
+
+func TestUserSignupMigration(t *testing.T) {
+	// Given
+	userSignup := NewUserSignup()
+	userSignup.Spec.Company = "Acme"
+	userSignup.Spec.GivenName = "Wile E"
+	userSignup.Spec.FamilyName = "Coyote"
+	userSignup.Spec.OriginalSub = "j3siujx:1235334234"
+	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+	states.SetDeactivated(userSignup, true)
+	members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+
+	r, req, cl := prepareReconcile(t, userSignup.Name, members, userSignup)
+	res, err := r.Reconcile(context.TODO(), req)
+	require.NoError(t, err)
+	require.False(t, res.Requeue)
+
+	userSignups := &toolchainv1alpha1.UserSignupList{}
+	cl.List(context.TODO(), userSignups)
+
+	// We should now have 2 UserSignups, the original and the migrated
+	require.Len(t, userSignups.Items, 2)
+
+	var migrated *toolchainv1alpha1.UserSignup
+
+	for _, us := range userSignups.Items {
+		if us.Name == "1cf93821-fooredhatcom" {
+			migrated = &us
+			break
+		}
+	}
+
+	require.NotNil(t, migrated)
+	require.Equal(t, userSignup.Spec.Username, migrated.Spec.Username)
+	require.Equal(t, userSignup.Spec.Userid, migrated.Spec.Userid)
+	require.Equal(t, userSignup.Spec.OriginalSub, migrated.Spec.OriginalSub)
+	require.Equal(t, userSignup.Spec.Company, migrated.Spec.Company)
+	require.Equal(t, userSignup.Spec.FamilyName, migrated.Spec.FamilyName)
+	require.Equal(t, userSignup.Spec.GivenName, migrated.Spec.GivenName)
+	require.Equal(t, userSignup.Labels, migrated.Labels)
+}
