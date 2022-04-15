@@ -119,59 +119,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	// REMOVE THIS BLOCK AFTER MIGRATION - See additional comments further below in this function
+	// REMOVE THIS BLOCK AFTER MIGRATION - See additional comments further below in the migrateUserIfNecessary function
 	originalUserSignupName, ok := userSignup.Annotations[migrationAnnotationName]
 	if ok {
-		// If the annotation has been set, then it indicates that this UserSignup has been migrated, and that the
-		// *original* UserSignup should be deleted.  The value of the annotation is the name of the original UserSignup
-		// resource that should now be deleted.
-		//
-		// This block of migration code should:
-		//
-		// 1) Delete the original UserSignup, then
-		// 2) Remove the migration-replaces annotation
-		userSignupToDelete := &toolchainv1alpha1.UserSignup{}
-		err = r.Client.Get(context.TODO(), types.NamespacedName{
-			Namespace: request.Namespace,
-			Name:      originalUserSignupName,
-		}, userSignupToDelete)
-		if err == nil {
-			// Delete the original UserSignup, if it has finished deactivating
-			cond, found := condition.FindConditionByType(userSignupToDelete.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
-			if !found || cond.Reason != toolchainv1alpha1.UserSignupUserDeactivatedReason {
-				// The UserSignup to delete isn't finished deactivating yet, return an error
-				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
-					errs.New("Original UserSignup not deactivated"),
-					fmt.Sprintf("Original UserSignup [%s] not yet deactivated", userSignupToDelete.Name))
-			}
-
-			err = r.Client.Delete(context.TODO(), userSignupToDelete)
-			if err != nil {
-				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
-					err, fmt.Sprintf("Failed to remove original UserSignup [%s]",
-						userSignup.Annotations[migrationAnnotationName]))
-			}
-			// Requeue so that the annotation will now be removed also
-			return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, nil
-		}
-
-		if err != nil {
-			// If the annotation exists however the original UserSignup isn't found, then remove the annotation
-			if errors.IsNotFound(err) {
-				// Remove the annotation
-				delete(userSignup.Annotations, migrationAnnotationName)
-				// Update the UserSignup
-				err = r.Client.Update(ctx, userSignup)
-				if err != nil {
-					return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-						r.setStatusMigrationFailedCleanup, err, "Failed to remove migration annotation")
-				}
-			} else {
-				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-					r.setStatusMigrationFailedLookup, err, fmt.Sprintf("Failed to lookup original UserSignup [%s]",
-						userSignup.Annotations[migrationAnnotationName]))
-			}
-		}
+		return r.cleanupMigration(userSignup, originalUserSignupName, request, logger)
 	}
 
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
@@ -295,6 +246,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // 4) The UserSignupUserMigrationFailed constant in status.go
 // 5) The EncodeUserIdentifier function from this file
 // 6) The above block of code in this function that deletes the original UserSignup if the "migration-replaces" annotation is set
+// 7) The cleanupMigration function from this file
+//
 func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSignup, request ctrl.Request, logger logr.Logger) error {
 	encodedUsername := EncodeUserIdentifier(userSignup.Spec.Username)
 	if userSignup.Name != encodedUsername {
@@ -334,6 +287,76 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 		}
 	}
 	return nil
+}
+
+// cleanupMigration performs migration cleanup if the "migration-replaces" annotation has been set on the UserSignup
+//
+// If the annotation has been set, then it indicates that this UserSignup has been migrated, and that the
+// *original* UserSignup should be deleted.  The value of the annotation is the name of the original UserSignup
+// resource that should now be deleted.
+//
+// This function should:
+//
+// 1) Delete the original UserSignup, then
+// 2) Remove the migration-replaces annotation
+func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, originalUserSignupName string,
+	request ctrl.Request, logger logr.Logger) (ctrl.Result, error) {
+
+	userSignupToDelete := &toolchainv1alpha1.UserSignup{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: request.Namespace,
+		Name:      originalUserSignupName,
+	}, userSignupToDelete)
+	if err == nil {
+		// Delete the original UserSignup, if it has finished deactivating
+		cond, found := condition.FindConditionByType(userSignupToDelete.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
+		if !found || cond.Reason != toolchainv1alpha1.UserSignupUserDeactivatedReason {
+			// The UserSignup to delete isn't finished deactivating yet, return an error
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
+				errs.New("Original UserSignup not deactivated"),
+				fmt.Sprintf("Original UserSignup [%s] not yet deactivated", userSignupToDelete.Name))
+		}
+
+		err = r.Client.Delete(context.TODO(), userSignupToDelete)
+		if err != nil {
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
+				err, fmt.Sprintf("Failed to remove original UserSignup [%s]",
+					userSignup.Annotations[migrationAnnotationName]))
+		}
+		// Requeue so that the annotation will now be removed also
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, nil
+	}
+
+	if err != nil {
+		// If the annotation exists however the original UserSignup isn't found, then remove the annotation and the
+		// migration condition from the status
+		if errors.IsNotFound(err) {
+			// Remove the annotation
+			delete(userSignup.Annotations, migrationAnnotationName)
+
+			// Remove the migration condition from the status
+			conditions := []toolchainv1alpha1.Condition{}
+			for _, cond := range userSignup.Status.Conditions {
+				if cond.Type != UserMigrationFailed {
+					conditions = append(conditions, cond)
+				}
+			}
+			userSignup.Status.Conditions = conditions
+
+			// Update the UserSignup
+			err = r.Client.Update(context.TODO(), userSignup)
+			if err != nil {
+				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
+					r.setStatusMigrationFailedCleanup, err, "Failed to remove migration annotation")
+			}
+		} else {
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
+				r.setStatusMigrationFailedLookup, err, fmt.Sprintf("Failed to lookup original UserSignup [%s]",
+					userSignup.Annotations[migrationAnnotationName]))
+		}
+	}
+
+	return reconcile.Result{}, nil
 }
 
 // EncodeUserIdentifier is a temporary function used by the migration procedure
