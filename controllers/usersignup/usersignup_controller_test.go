@@ -3995,34 +3995,49 @@ func TestUserSignupMigration(t *testing.T) {
 	require.Equal(t, userSignup.Spec.GivenName, migrated.Spec.GivenName)
 	require.Equal(t, userSignup.Labels, migrated.Labels)
 
-	t.Run("Reconcile migrated UserSignup cleanup fails as original not yet deactivated", func(t *testing.T) {
+	// Reload the original
+	err = cl.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: userSignup.Namespace,
+		Name:      userSignup.Name}, userSignup)
+	require.NoError(t, err)
+
+	// Confirm that the original has had its Deactivated condition set
+	require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete,
+		toolchainv1alpha1.UserSignupUserDeactivatedReason))
+
+	// Confirm that the original still has its migration annotation
+	require.Contains(t, migrated.Annotations, "toolchain.dev.openshift.com/migration-replaces")
+
+	t.Run("Reconcile migrated UserSignup cleanup deletes original UserSignup", func(t *testing.T) {
 		r, req, cl = prepareReconcile(t, migrated.Name, members, migrated, userSignup)
 		_, err := r.Reconcile(context.TODO(), req)
-		require.Error(t, err)
-		require.Equal(t, fmt.Sprintf("Original UserSignup [%s] not yet deactivated: Original UserSignup not deactivated",
-			userSignup.Name), err.Error())
+		require.NoError(t, err)
+
+		// Confirm there is now only 1 UserSignup and it is the migrated one
+		err = cl.Client.List(context.TODO(), userSignups)
+		require.NoError(t, err)
+		require.Len(t, userSignups.Items, 1)
+		require.Equal(t, migrated.Name, userSignups.Items[0].Name)
 
 		// Refresh the updated migrated UserSignup
 		err = cl.Client.Get(context.TODO(), types.NamespacedName{
 			Namespace: migrated.Namespace,
 			Name:      migrated.Name}, migrated)
 		require.NoError(t, err)
-		test.AssertConditionsMatch(t, migrated.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-				Status: v1.ConditionTrue,
-				Reason: "NotificationCRCreated",
-			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
-				Status: v1.ConditionTrue,
-				Reason: "Deactivated",
-			},
-			toolchainv1alpha1.Condition{
-				Type:    UserMigrationFailed,
-				Status:  v1.ConditionTrue,
-				Reason:  "UserSignupCleanupFailed",
-				Message: "Original UserSignup not deactivated",
-			})
+
+		t.Run("Reconcile migrated UserSignup cleanup removes annotation", func(t *testing.T) {
+			r, req, cl = prepareReconcile(t, migrated.Name, members, migrated)
+			res, err := r.Reconcile(context.TODO(), req)
+			require.NoError(t, err)
+
+			// Refresh the updated migrated UserSignup
+			err = cl.Client.Get(context.TODO(), types.NamespacedName{
+				Namespace: migrated.Namespace,
+				Name:      migrated.Name}, migrated)
+			require.NoError(t, err)
+
+			require.NotContains(t, migrated.Annotations, "toolchain.dev.openshift.com/migration-replaces")
+			require.True(t, res.Requeue)
+		})
 	})
 }
