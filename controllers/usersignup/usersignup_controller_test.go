@@ -4040,4 +4040,64 @@ func TestUserSignupMigration(t *testing.T) {
 			require.True(t, res.Requeue)
 		})
 	})
+
+	t.Run("Migration fails to lookup migrated UserSignup", func(t *testing.T) {
+		// Given
+		userSignup := NewUserSignup()
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+		states.SetDeactivated(userSignup, true)
+		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+
+		r, req, cl := prepareReconcile(t, userSignup.Name, members, userSignup)
+		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			if key.Name == userSignup.Name || key.Name == "config" {
+				return cl.Client.Get(ctx, key, obj)
+			}
+			return errors.New("failed")
+		}
+
+		_, err := r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, "Failed to lookup migrated UserSignup: failed", err.Error())
+
+		// Refresh the updated migrated UserSignup
+		err = cl.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: userSignup.Namespace,
+			Name:      userSignup.Name}, userSignup)
+		require.NoError(t, err)
+
+		require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, UserMigrationFailed,
+			"UserSignupLookupFailed"))
+	})
+
+	t.Run("Migration fails to create migrated UserSignup", func(t *testing.T) {
+		// Given
+		userSignup := NewUserSignup()
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+		states.SetDeactivated(userSignup, true)
+		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+
+		r, req, cl := prepareReconcile(t, userSignup.Name, members, userSignup)
+		cl.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+			switch obj.(type) {
+			case *toolchainv1alpha1.Notification:
+				return cl.Client.Create(ctx, obj, opts...)
+			default:
+				return errors.New("failed to create")
+			}
+		}
+
+		_, err := r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, "Failed to migrate UserSignup: failed to create", err.Error())
+
+		// Refresh the updated migrated UserSignup
+		err = cl.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: userSignup.Namespace,
+			Name:      userSignup.Name}, userSignup)
+		require.NoError(t, err)
+
+		require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, UserMigrationFailed,
+			"UserSignupCreateFailed"))
+	})
 }
