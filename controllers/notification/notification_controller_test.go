@@ -10,7 +10,7 @@ import (
 	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-
+	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
@@ -52,7 +52,7 @@ func TestNotificationSuccess(t *testing.T) {
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, cl := newController(t, ds, toolchainConfig)
 
-		notification, err := NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		require.NoError(t, cl.Update(context.TODO(), notification))
@@ -74,7 +74,7 @@ func TestNotificationSuccess(t *testing.T) {
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, cl := newController(t, ds, toolchainConfig)
 
-		notification, err := NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
@@ -101,7 +101,7 @@ func TestNotificationSentFailure(t *testing.T) {
 			return fmt.Errorf("error")
 		}
 
-		notification, err := NewNotificationBuilder(cl, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithSubjectAndContent("test", "test content").
 			Create("abc123@acme.com")
 		require.NoError(t, err)
@@ -142,7 +142,7 @@ func TestNotificationDelivery(t *testing.T) {
 		}
 		controller, client := newController(t, ds, userSignup)
 
-		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
 			WithUserContext(userSignup).
 			WithSubjectAndContent("foo", "test content").
 			Create("foo@redhat.com")
@@ -190,7 +190,7 @@ func TestNotificationDelivery(t *testing.T) {
 		// given
 		controller, client := newController(t, ds)
 
-		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
 			WithSubjectAndContent("Alert", "Something bad happened").
 			Create("sandbox-admin@developers.redhat.com")
 		require.NoError(t, err)
@@ -249,7 +249,7 @@ func TestNotificationDelivery(t *testing.T) {
 		// pass in nil for deliveryService since send won't be used (sending skipped)
 		controller, client := newController(t, nil, userSignup, toolchainConfig)
 
-		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
 			Create("jane@redhat.com")
 		require.NoError(t, err)
 
@@ -287,7 +287,7 @@ func TestNotificationDelivery(t *testing.T) {
 		mds := &MockDeliveryService{}
 		controller, client := newController(t, mds, userSignup)
 
-		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
 			Create("foo@redhat.com")
 		require.NoError(t, err)
 
