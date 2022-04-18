@@ -4005,10 +4005,35 @@ func TestUserSignupMigration(t *testing.T) {
 	require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete,
 		toolchainv1alpha1.UserSignupUserDeactivatedReason))
 
-	// Confirm that the original still has its migration annotation
+	// Confirm that the migrated still has its migration annotation
 	require.Contains(t, migrated.Annotations, "toolchain.dev.openshift.com/migration-replaces")
 
+	t.Run("Reconcile migrated UserSignup fails if original UserSignup not deactivated", func(t *testing.T) {
+		// Remove the deactivated status from the original UserSignup
+		userSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: "",
+			})
+
+		r, req, cl = prepareReconcile(t, migrated.Name, members, migrated, userSignup)
+		_, err := r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, fmt.Sprintf("Original UserSignup [%s] not yet deactivated: Original UserSignup not deactivated",
+			userSignup.Name), err.Error())
+
+	})
+
 	t.Run("Reconcile migrated UserSignup cleanup deletes original UserSignup", func(t *testing.T) {
+		// Re-set the deactivated status from the original UserSignup
+		userSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: toolchainv1alpha1.UserSignupUserDeactivatedReason,
+			})
+
 		r, req, cl = prepareReconcile(t, migrated.Name, members, migrated, userSignup)
 		_, err := r.Reconcile(context.TODO(), req)
 		require.NoError(t, err)
@@ -4099,5 +4124,32 @@ func TestUserSignupMigration(t *testing.T) {
 
 		require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, UserMigrationFailed,
 			"UserSignupCreateFailed"))
+	})
+
+	t.Run("Migration fails cleanup due to client errors", func(t *testing.T) {
+		// Given
+		userSignup := NewUserSignup()
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+		userSignup.Annotations["toolchain.dev.openshift.com/migration-replaces"] = "foo"
+		states.SetDeactivated(userSignup, true)
+		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+
+		userSignupToDelete := NewUserSignup()
+		userSignupToDelete.Name = "foo"
+		userSignupToDelete.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: toolchainv1alpha1.UserSignupUserDeactivatedReason,
+			})
+
+		r, req, cl := prepareReconcile(t, userSignup.Name, members, userSignup, userSignupToDelete)
+		cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+			return errors.New("delete failed")
+		}
+
+		_, err := r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, "Failed to remove original UserSignup [foo]: delete failed", err.Error())
 	})
 }
