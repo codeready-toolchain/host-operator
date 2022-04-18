@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"time"
 
-	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
+	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
