@@ -4151,5 +4151,14 @@ func TestUserSignupMigration(t *testing.T) {
 		_, err := r.Reconcile(context.TODO(), req)
 		require.Error(t, err)
 		require.Equal(t, "Failed to remove original UserSignup [foo]: delete failed", err.Error())
+
+		r, req, cl = prepareReconcile(t, userSignup.Name, members, userSignup)
+		// Now override the update
+		cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			return errors.New("update failed")
+		}
+		_, err = r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, "Failed to remove migration annotation: update failed", err.Error())
 	})
 }
