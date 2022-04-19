@@ -4,7 +4,7 @@ metadata:
   name: appstudio-spacerole-admin
 objects:
 
-# ServiceAccounts that represents the AppStudio user - the token of this SA is used by the proxy for forwarding the requests from UI (or any other client)
+# ServiceAccounts that represents the AppStudio user - the token of this SA is used by the proxy for forwarding the requests from UI (or any other client) 
 - apiVersion: v1
   kind: ServiceAccount
   metadata:
@@ -15,8 +15,8 @@ objects:
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
   metadata:
-    name: appstudio-user-actions
     namespace: ${NAMESPACE}
+    name: appstudio-user-actions
   rules:
   - apiGroups:
     - managed-gitops.redhat.com
@@ -50,6 +50,12 @@ objects:
     - get
     - list
     - watch
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - spiaccesstokendataupdates
+    verbs:
+    - create
   - apiGroups:
     - tekton.dev
     resources:
