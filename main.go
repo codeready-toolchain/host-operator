@@ -26,6 +26,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -323,12 +324,21 @@ func main() {
 
 		// create or update all NSTemplateTiers on the cluster at startup
 		setupLog.Info("Creating/updating the NSTemplateTier resources")
-		tierAssets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
-		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, tierAssets); err != nil {
+		nstemplatetierAssets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
+		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetierAssets); err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}
 		setupLog.Info("Created/updated the NSTemplateTier resources")
+
+		// create or update all UserTiers on the cluster at startup
+		setupLog.Info("Creating/updating the UserTier resources")
+		usertierAssets := assets.NewAssets(usertiers.AssetNames, usertiers.Asset)
+		if err := usertiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, usertierAssets); err != nil {
+			setupLog.Error(err, "")
+			os.Exit(1)
+		}
+		setupLog.Info("Created/updated the UserTier resources")
 	}()
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

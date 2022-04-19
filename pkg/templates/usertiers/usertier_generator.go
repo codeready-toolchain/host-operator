@@ -1,4 +1,4 @@
-package nstemplatetiers
+package usertiers
 
 import (
 	"fmt"
@@ -50,17 +50,14 @@ type tierGenerator struct {
 }
 
 type tierData struct {
-	name    string
-	objects []client.Object
+	name         string
+	rawTemplates *templates
+	objects      []client.Object
 }
 
-// templates: namespaces and other cluster-scoped resources belonging to a given tier ("advanced", "base", "team", etc.) and the NSTemplateTier that combines them
+// templates: any resources belonging to a given user tier ("advanced", "base", "team", etc.), currently only a single template
 type templates struct {
-	nsTemplateTier     *template           // NSTemplateTier resource with tier-scoped configuration and references to namespace and cluster templates in its spec, in a single template file
-	clusterTemplate    *template           // other cluster-scoped resources, in a single template file
-	namespaceTemplates map[string]template // namespace templates (including roles, limits, etc.) indexed by type ("dev", "stage")
-	spaceroleTemplates map[string]template // spacerole templates (including rolebindings, etc.) indexed by role ("admin", "viewer", etc.)
-	basedOnTier        *template           // a special config defining which tier should be reused and which parameters should be overridden
+	userTier *template // UserTier resource with tier-scoped configuration
 }
 
 // template: a template's content and its latest git revision
@@ -96,19 +93,14 @@ func newUserTierGenerator(s *runtime.Scheme, client client.Client, namespace str
 //
 // metadata.yaml
 // advanced/
-//   based_on_tier.yaml
+//   tier.yaml
 // basic/
-//   cluster.yaml
-//   ns_dev.yaml
-//   ns_stage.yaml
-//   spacerole_admin.yaml
 //   tier.yaml
 // team/
-//   based_on_tier.yaml
+//   tier.yaml
 //
 // The output is a map of `tierData` indexed by tier.
-// Each `tierData` object contains itself a map of `template` objects indexed by the namespace type (`namespaceTemplates`);
-// an optional `template` for the cluster resources (`clusterTemplate`) and the NSTemplateTier resource object.
+// Each `tierData` object contains template objects for the tier.
 // Each `template` object contains a `revision` (`string`) and the `content` of the template to apply (`[]byte`)
 func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 	metadataContent, err := assets.Asset("metadata.yaml")
@@ -136,11 +128,8 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 		filename := parts[1]
 		if _, exists := results[tier]; !exists {
 			results[tier] = &tierData{
-				name: tier,
-				rawTemplates: &templates{
-					namespaceTemplates: map[string]template{},
-					spaceroleTemplates: map[string]template{},
-				},
+				name:         tier,
+				rawTemplates: &templates{},
 			}
 		}
 		content, err := assets.Asset(name)
@@ -153,36 +142,12 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 		}
 		switch {
 		case filename == "tier.yaml":
-			results[tier].rawTemplates.nsTemplateTier = &tmpl
-		case filename == "cluster.yaml":
-			results[tier].rawTemplates.clusterTemplate = &tmpl
-		case strings.HasPrefix(filename, "ns_"):
-			kind := strings.TrimSuffix(strings.TrimPrefix(filename, "ns_"), ".yaml")
-			results[tier].rawTemplates.namespaceTemplates[kind] = tmpl
-		case strings.HasPrefix(filename, "spacerole_"):
-			role := strings.TrimSuffix(strings.TrimPrefix(filename, "spacerole_"), ".yaml")
-			results[tier].rawTemplates.spaceroleTemplates[role] = tmpl
-		case filename == "based_on_tier.yaml":
-			basedOnTier := &BasedOnTier{}
-			if err := yaml.Unmarshal(content, basedOnTier); err != nil {
-				return nil, errors.Wrapf(err, "unable to unmarshal '%s'", name)
-			}
-			results[tier].rawTemplates.basedOnTier = &tmpl
-			results[tier].basedOnTier = basedOnTier
+			results[tier].rawTemplates.userTier = &tmpl
 		default:
 			return nil, errors.Errorf("unable to load templates: unknown scope for file '%s'", name)
 		}
 	}
 
-	// check that none of the tiers uses combination of based_on_tier.yaml file together with any template file
-	for tier, tierData := range results {
-		if tierData.rawTemplates.basedOnTier != nil &&
-			(tierData.rawTemplates.clusterTemplate != nil ||
-				len(tierData.rawTemplates.namespaceTemplates) > 0 ||
-				tierData.rawTemplates.nsTemplateTier != nil) {
-			return nil, fmt.Errorf("the tier %s contains a mix of based_on_tier.yaml file together with a regular template file", tier)
-		}
-	}
 	return results, nil
 }
 
@@ -198,27 +163,14 @@ func setParams(parametersToSet []templatev1.Parameter, tmpl *templatev1.Template
 	}
 }
 
-// NewTierTemplateName a utility func to generate a TierTemplate name, based on the given tier, kind and revision.
-// note: the resource name must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character
-func NewTierTemplateName(tier, kind, revision string) string {
-	return strings.ToLower(fmt.Sprintf("%s-%s-%s", tier, kind, revision))
-}
-
-// newNSTemplateTiers generates all NSTemplateTier resources and adds them to the tier map
-func (t *tierGenerator) initNSTemplateTiers() error {
+// initUserTiers generates all UserTier resources and adds them to the tier map
+func (t *tierGenerator) initUserTiers() error {
 
 	for tierName, tierData := range t.templatesByTier {
-		nsTemplateTier := tierData.rawTemplates.nsTemplateTier
-		tierTemplates := tierData.tierTemplates
+		userTier := tierData.rawTemplates.userTier
 		sourceTierName := tierName
 		var parameters []templatev1.Parameter
-		if tierData.basedOnTier != nil {
-			parameters = tierData.basedOnTier.Parameters
-			fromData := t.templatesByTier[tierData.basedOnTier.From]
-			nsTemplateTier = fromData.rawTemplates.nsTemplateTier
-			sourceTierName = fromData.name
-		}
-		objs, err := t.newNSTemplateTier(sourceTierName, tierName, *nsTemplateTier, tierTemplates, parameters)
+		objs, err := t.newUserTier(sourceTierName, tierName, *userTier, parameters)
 		if err != nil {
 			return err
 		}
@@ -257,12 +209,7 @@ func (t *tierGenerator) createUserTiers() error {
 			return errors.Wrapf(err, "unable to create or update the '%s' UserTier", tierName)
 		}
 		tierLog := log.WithValues("name", tierName)
-		for i, nsTemplate := range tier.Spec.Namespaces {
-			tierLog = tierLog.WithValues(fmt.Sprintf("namespaceTemplate-%d", i), nsTemplate.TemplateRef)
-		}
-		if tier.Spec.ClusterResources != nil {
-			tierLog = tierLog.WithValues("clusterResourcesTemplate", tier.Spec.ClusterResources.TemplateRef)
-		}
+		tierLog = tierLog.WithValues("DeactivationTimeoutDays", tier.Spec.DeactivationTimeoutDays)
 		if updated {
 			tierLog.Info("UserTier was either updated or created")
 		} else {
