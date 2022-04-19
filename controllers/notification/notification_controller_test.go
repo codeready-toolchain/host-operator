@@ -15,7 +15,7 @@ import (
 	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
-	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"github.com/mailgun/mailgun-go/v4"
 	events2 "github.com/mailgun/mailgun-go/v4/events"
 	"k8s.io/apimachinery/pkg/types"
