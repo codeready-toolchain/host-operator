@@ -79,26 +79,6 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              updates:
-                description: Updates is an array of all UserTier updates
-                items:
-                  description: UserTierHistory a track record of an update
-                  properties:
-                    hash:
-                      description: Hash the hash matching of the UserTier spec
-                      type: string
-                    startTime:
-                      description: StartTime is the time when the UserTier was updated
-                      format: date-time
-                      type: string
-                  required:
-                  - hash
-                  - startTime
-                  type: object
-                type: array
-                x-kubernetes-list-map-keys:
-                - startTime
-                x-kubernetes-list-type: map
             type: object
         type: object
         x-kubernetes-preserve-unknown-fields: true
