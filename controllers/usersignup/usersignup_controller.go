@@ -293,6 +293,12 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 					Status:  corev1.ConditionTrue,
 					Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
 					Message: "",
+				},
+				toolchainv1alpha1.Condition{
+					Type:    toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+					Status:  corev1.ConditionTrue,
+					Reason:  "UserSignupMigrated",
+					Message: "",
 				})
 			if migratedUserSignup.Annotations == nil {
 				migratedUserSignup.Annotations = map[string]string{}
