@@ -1,16 +1,16 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: base-usertier
+  name: nodeactivation-usertier
 objects:
 - kind: UserTier
   apiVersion: toolchain.dev.openshift.com/v1alpha1
   metadata:
-    name: base
+    name: nodeactivation
     namespace: ${NAMESPACE}
   spec:
     deactivationTimeoutDays: ${{DEACTIVATION_TIMEOUT_DAYS}}
 parameters:
 - name: NAMESPACE
 - name: DEACTIVATION_TIMEOUT_DAYS
-  value: "30"
+  value: "0"

@@ -77,6 +77,10 @@ func printVersion() {
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates/finalizers,verbs=update
 
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usertiers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usertiers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usertiers/finalizers,verbs=update
+
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainclusters/finalizers,verbs=update
