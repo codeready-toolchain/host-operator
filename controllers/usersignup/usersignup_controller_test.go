@@ -4114,7 +4114,7 @@ func TestUserSignupMigration(t *testing.T) {
 
 		_, err := r.Reconcile(context.TODO(), req)
 		require.Error(t, err)
-		require.Equal(t, "Failed to migrate UserSignup: failed to create", err.Error())
+		require.Equal(t, "Failed to create UserSignup: failed to create", err.Error())
 
 		// Refresh the updated migrated UserSignup
 		err = cl.Client.Get(context.TODO(), types.NamespacedName{

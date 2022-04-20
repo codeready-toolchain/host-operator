@@ -218,13 +218,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 		}
 
-		// Migrate the user if necessary
-		err = r.migrateUserIfNecessary(userSignup, request, logger)
+		err = r.updateStatus(logger, userSignup, r.setStatusDeactivated)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
-		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusDeactivated)
+		// Migrate the user if necessary
+		return reconcile.Result{}, r.migrateUserIfNecessary(userSignup, request, logger)
 	}
 
 	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, config, userSignup)
@@ -308,7 +308,7 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 			if err != nil {
 				// If there was an error creating the migrated UserSignup, then set the status and requeue
 				return r.wrapErrorWithStatusUpdate(logger, userSignup,
-					r.setStatusMigrationFailedCreate, err, "Failed to migrate UserSignup")
+					r.setStatusMigrationFailedCreate, err, "Failed to create UserSignup")
 			}
 		}
 	}
