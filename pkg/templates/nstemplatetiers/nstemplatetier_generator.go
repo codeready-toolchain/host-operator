@@ -301,7 +301,7 @@ func (t *tierGenerator) createTierTemplates() error {
 			if err := t.client.Create(context.TODO(), tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
 				return errors.Wrapf(err, "unable to create the '%s' TierTemplate in namespace '%s'", tierTmpl.Name, tierTmpl.Namespace)
 			}
-			log.Info("TierTemplate resource created", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
+			log.Info("TierTemplate resource created", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name, "tier_name", tierTmpl.Spec.TierName, "revision", tierTmpl.Spec.Revision, "template_name", tierTmpl.Spec.Template.GetName())
 		}
 	}
 	return nil
@@ -400,17 +400,19 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 			labels = make(map[string]string)
 		}
 		labels[toolchainv1alpha1.ProviderLabelKey] = toolchainv1alpha1.ProviderLabelValue
-
 		updated, err := applyCl.ApplyObject(tier, commonclient.ForceUpdate(true))
 		if err != nil {
 			return errors.Wrapf(err, "unable to create or update the '%s' NSTemplateTier", tierName)
 		}
 		tierLog := log.WithValues("name", tierName)
+		if tier.Spec.ClusterResources != nil {
+			tierLog = tierLog.WithValues("clusterResourcesTemplate", tier.Spec.ClusterResources.TemplateRef)
+		}
 		for i, nsTemplate := range tier.Spec.Namespaces {
 			tierLog = tierLog.WithValues(fmt.Sprintf("namespaceTemplate-%d", i), nsTemplate.TemplateRef)
 		}
-		if tier.Spec.ClusterResources != nil {
-			tierLog = tierLog.WithValues("clusterResourcesTemplate", tier.Spec.ClusterResources.TemplateRef)
+		for role, nsTemplate := range tier.Spec.SpaceRoles {
+			tierLog = tierLog.WithValues(fmt.Sprintf("spaceRoleTemplate-%s", role), nsTemplate.TemplateRef)
 		}
 		if updated {
 			tierLog.Info("NSTemplateTier was either updated or created")

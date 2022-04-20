@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: base-spacerole-admin
+  name: base-spacerole-admin # name is used in e2e tests
 objects:
 
 # Rolebindings that grant permissions to the users in their own namespaces

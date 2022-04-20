@@ -505,6 +505,7 @@ func TestNewTierTemplate(t *testing.T) {
 							assert.Equal(t, tier, actual.Spec.TierName)
 							assert.NotEmpty(t, actual.Spec.Type)
 							assert.NotEmpty(t, actual.Spec.Template)
+							assert.NotEmpty(t, actual.Spec.Template.Name)
 							if actual.Spec.Type == "clusterresources" {
 								assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, assets, expectedProdTiers, tier)
 							} else if isNamespaceType(expectedProdTiers, actual.Spec.Type) {
@@ -541,6 +542,7 @@ func TestNewTierTemplate(t *testing.T) {
 						assert.NotEmpty(t, actual.Spec.TierName)
 						assert.NotEmpty(t, actual.Spec.Type)
 						assert.NotEmpty(t, actual.Spec.Template)
+						assert.NotEmpty(t, actual.Spec.Template.Name)
 
 						if actual.Spec.Type == "clusterresources" {
 							assertClusterResourcesTemplate(t, decoder, actual.Spec.Template, assets, expectedTestTiers, tier)

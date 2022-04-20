@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: appstudio-spacerole-viewer
+  name: appstudio-spacerole-viewer # name is used in e2e tests
 objects:
 
 # ServiceAccounts that represents the AppStudio user - the token of this SA is used by the proxy for forwarding the requests from UI (or any other client)
