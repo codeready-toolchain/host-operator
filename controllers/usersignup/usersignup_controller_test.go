@@ -3976,15 +3976,7 @@ func TestUserSignupMigration(t *testing.T) {
 	// We should now have 2 UserSignups, the original and the migrated
 	require.Len(t, userSignups.Items, 2)
 
-	var migrated *toolchainv1alpha1.UserSignup
-
-	for _, us := range userSignups.Items {
-		if us.Name == "1cf93821-fooredhatcom" {
-			value := us
-			migrated = &value
-			break
-		}
-	}
+	migrated := AssertThatUserSignup(t, test.HostOperatorNs, "1cf93821-fooredhatcom", cl).Get()
 
 	require.NotNil(t, migrated)
 	require.Equal(t, userSignup.Spec.Username, migrated.Spec.Username)

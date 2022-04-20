@@ -333,25 +333,6 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 		Namespace: request.Namespace,
 		Name:      originalUserSignupName,
 	}, userSignupToDelete)
-	if err == nil {
-		// Delete the original UserSignup, if it has finished deactivating
-		cond, found := condition.FindConditionByType(userSignupToDelete.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
-		if !found || cond.Reason != toolchainv1alpha1.UserSignupUserDeactivatedReason {
-			// The UserSignup to delete isn't finished deactivating yet, return an error
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
-				errs.New("Original UserSignup not deactivated"),
-				fmt.Sprintf("Original UserSignup [%s] not yet deactivated", userSignupToDelete.Name))
-		}
-
-		err = r.Client.Delete(context.TODO(), userSignupToDelete)
-		if err != nil {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
-				err, fmt.Sprintf("Failed to remove original UserSignup [%s]",
-					userSignup.Annotations[migrationAnnotationName]))
-		}
-		// Requeue so that the annotation will now be removed also
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, nil
-	}
 
 	if err != nil {
 		// If the annotation exists however the original UserSignup isn't found, then remove the annotation and the
@@ -370,7 +351,7 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 			userSignup.Status.Conditions = conditions
 
 			// Update the UserSignup
-			err = r.Client.Update(context.TODO(), userSignup)
+			err := r.Client.Update(context.TODO(), userSignup)
 			if err != nil {
 				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
 					r.setStatusMigrationFailedCleanup, err, "Failed to remove migration annotation")
@@ -380,6 +361,26 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 				r.setStatusMigrationFailedLookup, err, fmt.Sprintf("Failed to lookup original UserSignup [%s]",
 					userSignup.Annotations[migrationAnnotationName]))
 		}
+	}
+
+	if err == nil {
+		// Delete the original UserSignup, if it has finished deactivating
+		cond, found := condition.FindConditionByType(userSignupToDelete.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
+		if !found || cond.Reason != toolchainv1alpha1.UserSignupUserDeactivatedReason {
+			// The UserSignup to delete isn't finished deactivating yet, return an error
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
+				errs.New("Original UserSignup not deactivated"),
+				fmt.Sprintf("Original UserSignup [%s] not yet deactivated", userSignupToDelete.Name))
+		}
+
+		err := r.Client.Delete(context.TODO(), userSignupToDelete)
+		if err != nil {
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
+				err, fmt.Sprintf("Failed to remove original UserSignup [%s]",
+					userSignup.Annotations[migrationAnnotationName]))
+		}
+		// Requeue so that the annotation will now be removed also
+		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, nil
 	}
 
 	// If everything was cleaned up successfully, requeue one more time to invoke the standard reconciliation workflow
