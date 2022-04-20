@@ -276,11 +276,17 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 			// 2) Override the new UserSignup resource name with the encoded username
 			// 3) Set the starting status to Deactivated (technically we could let the reconciler function do this
 			//    when it reconciles the migrated UserSignup, but it shouldn't hurt to set this status up front)
-			migratedUserSignup = userSignup.DeepCopy()
-			migratedUserSignup.ObjectMeta.ResourceVersion = ""
-			migratedUserSignup.ObjectMeta.Generation = 0
-			migratedUserSignup.ObjectMeta.CreationTimestamp = v1.Time{}
-			migratedUserSignup.Name = encodedUsername
+			migratedUserSignup = &toolchainv1alpha1.UserSignup{
+				ObjectMeta: v1.ObjectMeta{
+					Name:        encodedUsername,
+					Namespace:   userSignup.Namespace,
+					Labels:      userSignup.Labels,
+					Annotations: userSignup.Annotations,
+				},
+				Spec:   userSignup.Spec,
+				Status: userSignup.Status,
+			}
+
 			migratedUserSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(migratedUserSignup.Status.Conditions,
 				toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.UserSignupComplete,
