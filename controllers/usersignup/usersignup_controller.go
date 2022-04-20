@@ -294,6 +294,9 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 					Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
 					Message: "",
 				})
+			if migratedUserSignup.Annotations == nil {
+				migratedUserSignup.Annotations = map[string]string{}
+			}
 			migratedUserSignup.Annotations[migrationAnnotationName] = userSignup.Name
 			err = r.Client.Create(context.TODO(), migratedUserSignup)
 			if err != nil {
