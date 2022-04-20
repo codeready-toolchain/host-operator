@@ -3961,6 +3961,7 @@ func TestUserSignupMigration(t *testing.T) {
 	userSignup.Spec.FamilyName = "Coyote"
 	userSignup.Spec.OriginalSub = "j3siujx:1235334234"
 	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+	userSignup.Annotations["foo"] = "bar"
 	states.SetDeactivated(userSignup, true)
 	members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
@@ -3979,12 +3980,7 @@ func TestUserSignupMigration(t *testing.T) {
 	migrated := AssertThatUserSignup(t, test.HostOperatorNs, "1cf93821-fooredhatcom", cl).Get()
 
 	require.NotNil(t, migrated)
-	require.Equal(t, userSignup.Spec.Username, migrated.Spec.Username)
-	require.Equal(t, userSignup.Spec.Userid, migrated.Spec.Userid)
-	require.Equal(t, userSignup.Spec.OriginalSub, migrated.Spec.OriginalSub)
-	require.Equal(t, userSignup.Spec.Company, migrated.Spec.Company)
-	require.Equal(t, userSignup.Spec.FamilyName, migrated.Spec.FamilyName)
-	require.Equal(t, userSignup.Spec.GivenName, migrated.Spec.GivenName)
+	require.Equal(t, userSignup.Spec, migrated.Spec)
 	require.Equal(t, userSignup.Labels, migrated.Labels)
 
 	// Reload the original
@@ -3999,6 +3995,11 @@ func TestUserSignupMigration(t *testing.T) {
 
 	// Confirm that the migrated still has its migration annotation
 	require.Contains(t, migrated.Annotations, "toolchain.dev.openshift.com/migration-replaces")
+	require.Equal(t, userSignup.Name, migrated.Annotations["toolchain.dev.openshift.com/migration-replaces"])
+
+	// Confirm that the migrated also has the original annotations
+	require.Contains(t, migrated.Annotations, "foo")
+	require.Equal(t, "bar", migrated.Annotations["foo"])
 
 	t.Run("Reconcile migrated UserSignup fails if original UserSignup not deactivated", func(t *testing.T) {
 		// Remove the deactivated status from the original UserSignup
