@@ -133,6 +133,8 @@ github.com/codeready-toolchain/api v0.0.0-20220407172226-5247322e920d h1:rcg3Gy1
 github.com/codeready-toolchain/api v0.0.0-20220407172226-5247322e920d/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20220407213103-baabc6382432 h1:MLyjJZuUVYdR0kQGvrKpMp4pcow4GdhTXe8zvJHp3Yg=
 github.com/codeready-toolchain/toolchain-common v0.0.0-20220407213103-baabc6382432/go.mod h1:cUo/39yF9vBIUlgnVdSFe6l9QTigPnXDvbToKgWRxAc=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220420225956-8a83aef9cc41 h1:z50GLmNaR2OYo+nzT9R6aiaGed/ZDlg2qy6uJ7RP8k0=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220420225956-8a83aef9cc41/go.mod h1:cUo/39yF9vBIUlgnVdSFe6l9QTigPnXDvbToKgWRxAc=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
