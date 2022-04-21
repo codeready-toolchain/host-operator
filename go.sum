@@ -687,8 +687,8 @@ github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGr
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv3vaXspKw=
-github.com/xcoulon/api v0.0.0-20220421074947-861e82306b6f h1:qr1nQ32RAT6oDln1nJ6dsqOnWcNAql2y7QzvjN0FfyA=
-github.com/xcoulon/api v0.0.0-20220421074947-861e82306b6f/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
+github.com/xcoulon/api v0.0.0-20220421084828-36ccb86c1a2e h1:5bXK5rRgAVDVTw55DXK0gQI5V/Tn7wjN6BuP4K3rw6s=
+github.com/xcoulon/api v0.0.0-20220421084828-36ccb86c1a2e/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
 github.com/xcoulon/toolchain-common v0.0.0-20220421071121-7ae1509576ce h1:4I7AevkBrMtagKytjEg3QVbFVmWVFdqf/qvNzfyzf9M=
 github.com/xcoulon/toolchain-common v0.0.0-20220421071121-7ae1509576ce/go.mod h1:MRW2K1Es7tjgbqLt024he5iaDcpnMx03Xf2TaFG67ww=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
