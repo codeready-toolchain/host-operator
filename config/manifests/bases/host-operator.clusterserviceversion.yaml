@@ -80,6 +80,11 @@ spec:
       kind: UserSignup
       name: usersignups.toolchain.dev.openshift.com
       version: v1alpha1
+    - description: UserTier provides user-level configuration
+      displayName: User Tier
+      kind: UserTier
+      name: usersignups.toolchain.dev.openshift.com
+      version: v1alpha1
   description: Toolchain Host Operator
   displayName: Toolchain Host Operator
   icon:
