@@ -15,9 +15,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/pending"
+	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/redhat-cop/operator-utils/pkg/util"

@@ -1,12 +1,12 @@
 package deactivation
 
 import (
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/require"
 
@@ -17,7 +17,7 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 	t.Run("test UserSignupToMasterUserRecordMapper maps correctly", func(t *testing.T) {
 		// given
 		userSignup := &toolchainv1alpha1.UserSignup{
-			ObjectMeta: NewUserSignupObjectMeta("", "foo@redhat.com"),
+			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "foo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
 				Username: "foo@redhat.com",
 			},
@@ -40,7 +40,7 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 	t.Run("test UserSignup doesn't have compliant username", func(t *testing.T) {
 		// given
 		userSignup := &toolchainv1alpha1.UserSignup{
-			ObjectMeta: NewUserSignupObjectMeta("", "bravo@redhat.com"),
+			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "bravo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
 				Username: "bravo@redhat.com",
 			},

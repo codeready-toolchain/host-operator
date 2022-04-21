@@ -8,6 +8,7 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,9 +16,9 @@ import (
 
 func TestMapperReturnsOldest(t *testing.T) {
 	// given
-	pendingSignup := NewUserSignup(WithStateLabel("pending"))
-	approvedSignup := NewUserSignup(WithStateLabel("approved"))
-	deactivatedSignup := NewUserSignup(WithStateLabel("deactivated"))
+	pendingSignup := commonsignup.NewUserSignup(commonsignup.WithStateLabel("pending"))
+	approvedSignup := commonsignup.NewUserSignup(commonsignup.WithStateLabel("approved"))
+	deactivatedSignup := commonsignup.NewUserSignup(commonsignup.WithStateLabel("deactivated"))
 
 	pendingSpace := space.NewSpace("pending", space.WithStateLabel("pending"))
 	clusterAssignedSpace := space.NewSpace("cluster-assigned", space.WithStateLabel("cluster-assigned"))
@@ -53,9 +54,9 @@ func TestMapperReturnsOldest(t *testing.T) {
 
 func TestMapperReturnsEmptyRequestsWhenNoPendingIsFound(t *testing.T) {
 	// given
-	banned := NewUserSignup(WithStateLabel("banned"))
-	approved := NewUserSignup(WithStateLabel("approved"))
-	deactivated := NewUserSignup(WithStateLabel("deactivated"))
+	banned := commonsignup.NewUserSignup(commonsignup.WithStateLabel("banned"))
+	approved := commonsignup.NewUserSignup(commonsignup.WithStateLabel("approved"))
+	deactivated := commonsignup.NewUserSignup(commonsignup.WithStateLabel("deactivated"))
 	cl := test.NewFakeClient(t, banned, approved, deactivated)
 	mapper := NewUserSignupMapper(cl)
 

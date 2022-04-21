@@ -1,11 +1,11 @@
 package usersignup
 
 import (
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
-	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
@@ -15,7 +15,7 @@ import (
 
 func TestNewMasterUserRecord(t *testing.T) {
 	// given
-	userSignup := NewUserSignup()
+	userSignup := commonsignup.NewUserSignup()
 	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 
 	// when
@@ -31,7 +31,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 		t.Run("when mur is the same", func(t *testing.T) {
 			// given
-			userSignup := NewUserSignup()
+			userSignup := commonsignup.NewUserSignup()
 			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 
@@ -47,7 +47,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 	t.Run("update needed", func(t *testing.T) {
 
 		t.Run("when MUR has tier hash label, it should be removed after migration", func(t *testing.T) {
-			userSignup := NewUserSignup()
+			userSignup := commonsignup.NewUserSignup()
 			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			mur.Labels = map[string]string{
@@ -64,7 +64,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		})
 
 		t.Run("when tierName is missing", func(t *testing.T) {
-			userSignup := NewUserSignup()
+			userSignup := commonsignup.NewUserSignup()
 			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
 			mur.Spec.TierName = "" // tierName not set

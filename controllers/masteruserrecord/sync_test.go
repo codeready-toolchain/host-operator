@@ -3,6 +3,7 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"os"
 	"testing"
 	"time"
@@ -352,7 +353,7 @@ func TestSyncMurStatusWithUserAccountStatusWhenCompleted(t *testing.T) {
 	apiScheme(t)
 
 	// A basic userSignup to set as the mur owner
-	userSignup := NewUserSignup()
+	userSignup := commonsignup.NewUserSignup()
 	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
 		CompliantUsername: "john",
 	}
