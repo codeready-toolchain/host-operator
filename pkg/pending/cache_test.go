@@ -8,9 +8,9 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
-	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,12 +20,12 @@ import (
 
 func TestGetOldestSignupPendingApproval(t *testing.T) {
 	// given
-	withoutStateLabel := NewUserSignup()
-	notReady := NewUserSignup(WithStateLabel("not-ready"))
-	pending := NewUserSignup(WithStateLabel("pending"))
-	approved := NewUserSignup(WithStateLabel("approved"))
-	deactivated := NewUserSignup(WithStateLabel("deactivated"))
-	banned := NewUserSignup(WithStateLabel("banned"))
+	withoutStateLabel := commonsignup.NewUserSignup()
+	notReady := commonsignup.NewUserSignup(commonsignup.WithStateLabel("not-ready"))
+	pending := commonsignup.NewUserSignup(commonsignup.WithStateLabel("pending"))
+	approved := commonsignup.NewUserSignup(commonsignup.WithStateLabel("approved"))
+	deactivated := commonsignup.NewUserSignup(commonsignup.WithStateLabel("deactivated"))
+	banned := commonsignup.NewUserSignup(commonsignup.WithStateLabel("banned"))
 
 	cache, cl := newCache(t, &toolchainv1alpha1.UserSignup{}, listPendingUserSignups, withoutStateLabel, notReady, pending, approved, deactivated, banned)
 
@@ -48,7 +48,7 @@ func TestGetOldestSignupPendingApproval(t *testing.T) {
 
 	t.Run("will pick the newly added (reactivated) pending UserSignup", func(t *testing.T) {
 		// given
-		WithStateLabel("pending")(deactivated)
+		commonsignup.WithStateLabel("pending")(deactivated)
 		err := cl.Update(context.TODO(), deactivated)
 		require.NoError(t, err)
 
@@ -120,7 +120,7 @@ func TestGetOldestSpacePendingTargetCluster(t *testing.T) {
 }
 
 func approve(t *testing.T, cl *test.FakeClient, signup *toolchainv1alpha1.UserSignup) {
-	WithStateLabel("approved")(signup)
+	commonsignup.WithStateLabel("approved")(signup)
 	err := cl.Update(context.TODO(), signup)
 	require.NoError(t, err)
 }
@@ -133,12 +133,12 @@ func assignCluster(t *testing.T, cl *test.FakeClient, sp *toolchainv1alpha1.Spac
 
 func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 	// given
-	withoutStateLabel := NewUserSignup()
+	withoutStateLabel := commonsignup.NewUserSignup()
 	// we need to create the UserSignups with different timestamp in the range of seconds because
 	// the k8s resource keeps the time in RFC3339 format where the smallest unit are seconds.
-	pending1 := NewUserSignup(WithStateLabel("pending"), CreatedBefore(5*time.Second), WithName("1-oldest"))
-	pending2 := NewUserSignup(WithStateLabel("pending"), CreatedBefore(3*time.Second), WithName("2-oldest"))
-	pending3 := NewUserSignup(WithStateLabel("pending"), CreatedBefore(2*time.Second), WithName("3-oldest"))
+	pending1 := commonsignup.NewUserSignup(commonsignup.WithStateLabel("pending"), commonsignup.CreatedBefore(5*time.Second), commonsignup.WithName("1-oldest"))
+	pending2 := commonsignup.NewUserSignup(commonsignup.WithStateLabel("pending"), commonsignup.CreatedBefore(3*time.Second), commonsignup.WithName("2-oldest"))
+	pending3 := commonsignup.NewUserSignup(commonsignup.WithStateLabel("pending"), commonsignup.CreatedBefore(2*time.Second), commonsignup.WithName("3-oldest"))
 	cache, cl := newCache(t, &toolchainv1alpha1.UserSignup{}, listPendingUserSignups, withoutStateLabel, pending2, pending3, pending1)
 
 	// when
@@ -151,7 +151,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignups(t *testing.T) {
 
 	t.Run("should keep two UserSignup since the pending4 hasn't been loaded yet", func(t *testing.T) {
 		// given
-		pending4 := NewUserSignup(WithStateLabel("pending"))
+		pending4 := commonsignup.NewUserSignup(commonsignup.WithStateLabel("pending"))
 		err := cl.Create(context.TODO(), pending4)
 		require.NoError(t, err)
 
@@ -250,12 +250,12 @@ func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T)
 		go func() {
 			defer waitForFinished.Done()
 			latch.Wait()
-			pending1 := NewUserSignup(WithStateLabel("pending"))
-			pending2 := NewUserSignup(WithStateLabel("pending"))
+			pending1 := commonsignup.NewUserSignup(commonsignup.WithStateLabel("pending"))
+			pending2 := commonsignup.NewUserSignup(commonsignup.WithStateLabel("pending"))
 			allSingups := []*toolchainv1alpha1.UserSignup{
-				NewUserSignup(WithStateLabel("not-ready")),
-				NewUserSignup(WithStateLabel("deactivated")),
-				NewUserSignup(WithStateLabel("approved")),
+				commonsignup.NewUserSignup(commonsignup.WithStateLabel("not-ready")),
+				commonsignup.NewUserSignup(commonsignup.WithStateLabel("deactivated")),
+				commonsignup.NewUserSignup(commonsignup.WithStateLabel("approved")),
 				pending1,
 				pending2,
 			}

@@ -2,26 +2,24 @@ package notification
 
 import (
 	"context"
-	"crypto/md5" // nolint:gosec
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"testing"
 	"time"
-
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	ntest "github.com/codeready-toolchain/host-operator/test/notification"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
-	"github.com/gofrs/uuid"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"github.com/mailgun/mailgun-go/v4"
 	events2 "github.com/mailgun/mailgun-go/v4/events"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +50,7 @@ func TestNotificationSuccess(t *testing.T) {
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, cl := newController(t, ds, toolchainConfig)
 
-		notification, err := NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		require.NoError(t, cl.Update(context.TODO(), notification))
@@ -74,7 +72,7 @@ func TestNotificationSuccess(t *testing.T) {
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, cl := newController(t, ds, toolchainConfig)
 
-		notification, err := NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
 		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
@@ -101,7 +99,7 @@ func TestNotificationSentFailure(t *testing.T) {
 			return fmt.Errorf("error")
 		}
 
-		notification, err := NewNotificationBuilder(cl, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithSubjectAndContent("test", "test content").
 			Create("abc123@acme.com")
 		require.NoError(t, err)
@@ -131,7 +129,7 @@ func TestNotificationDelivery(t *testing.T) {
 	t.Run("test notification delivery ok", func(t *testing.T) {
 		// given
 		userSignup := &toolchainv1alpha1.UserSignup{
-			ObjectMeta: newObjectMeta("abc123", "foo@redhat.com"),
+			ObjectMeta: usersignup.NewUserSignupObjectMeta("abc123", "foo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
 				Username:   "foo@redhat.com",
 				Userid:     "foo",
@@ -142,7 +140,7 @@ func TestNotificationDelivery(t *testing.T) {
 		}
 		controller, client := newController(t, ds, userSignup)
 
-		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
 			WithUserContext(userSignup).
 			WithSubjectAndContent("foo", "test content").
 			Create("foo@redhat.com")
@@ -190,7 +188,7 @@ func TestNotificationDelivery(t *testing.T) {
 		// given
 		controller, client := newController(t, ds)
 
-		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
 			WithSubjectAndContent("Alert", "Something bad happened").
 			Create("sandbox-admin@developers.redhat.com")
 		require.NoError(t, err)
@@ -238,7 +236,7 @@ func TestNotificationDelivery(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Environment(testconfig.E2E))
 		userSignup := &toolchainv1alpha1.UserSignup{
-			ObjectMeta: newObjectMeta("abc123", "jane@redhat.com"),
+			ObjectMeta: usersignup.NewUserSignupObjectMeta("abc123", "jane@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
 				Username:   "jane@redhat.com",
 				GivenName:  "jane",
@@ -249,7 +247,7 @@ func TestNotificationDelivery(t *testing.T) {
 		// pass in nil for deliveryService since send won't be used (sending skipped)
 		controller, client := newController(t, nil, userSignup, toolchainConfig)
 
-		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
 			Create("jane@redhat.com")
 		require.NoError(t, err)
 
@@ -276,7 +274,7 @@ func TestNotificationDelivery(t *testing.T) {
 	t.Run("test notification delivery fails for delivery service failure", func(t *testing.T) {
 		// given
 		userSignup := &toolchainv1alpha1.UserSignup{
-			ObjectMeta: newObjectMeta("abc123", "foo@redhat.com"),
+			ObjectMeta: usersignup.NewUserSignupObjectMeta("abc123", "foo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
 				Username:   "foo@redhat.com",
 				GivenName:  "Foo",
@@ -287,7 +285,7 @@ func TestNotificationDelivery(t *testing.T) {
 		mds := &MockDeliveryService{}
 		controller, client := newController(t, mds, userSignup)
 
-		notification, err := NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
 			Create("foo@redhat.com")
 		require.NoError(t, err)
 
@@ -392,26 +390,4 @@ func reconcileNotification(reconciler *Reconciler, notification *toolchainv1alph
 	return reconciler.Reconcile(context.TODO(), reconcile.Request{
 		NamespacedName: test.NamespacedName(test.HostOperatorNs, notification.Name),
 	})
-}
-
-func newObjectMeta(name, email string) v1.ObjectMeta {
-	if name == "" {
-		name = uuid.Must(uuid.NewV4()).String()
-	}
-
-	md5hash := md5.New() // nolint:gosec
-	// Ignore the error, as this implementation cannot return one
-	_, _ = md5hash.Write([]byte(email))
-	emailHash := hex.EncodeToString(md5hash.Sum(nil))
-
-	return v1.ObjectMeta{
-		Name:      name,
-		Namespace: test.HostOperatorNs,
-		Annotations: map[string]string{
-			toolchainv1alpha1.UserSignupUserEmailAnnotationKey: email,
-		},
-		Labels: map[string]string{
-			toolchainv1alpha1.UserSignupUserEmailHashLabelKey: emailHash,
-		},
-	}
 }

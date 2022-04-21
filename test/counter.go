@@ -12,6 +12,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,9 +77,9 @@ func CreateMultipleMurs(t *testing.T, prefix string, number int, targetCluster s
 func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
 	usersignups := make([]runtime.Object, number)
 	for index := range usersignups {
-		usersignups[index] = NewUserSignup(
-			WithName(fmt.Sprintf("%s%d", prefix, index)),
-			WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1)),
+		usersignups[index] = commonsignup.NewUserSignup(
+			commonsignup.WithName(fmt.Sprintf("%s%d", prefix, index)),
+			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, strconv.Itoa(index+1)),
 		)
 	}
 	return usersignups

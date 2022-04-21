@@ -77,6 +77,16 @@ objects:
     verbs:
     - get
     - list
+  - apiGroups:
+    - singapore.open-cluster-management.io
+    resources:
+    - registeredclusters
+    verbs:
+    - create
+    - get
+    - list
+    - watch
+    - delete
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
