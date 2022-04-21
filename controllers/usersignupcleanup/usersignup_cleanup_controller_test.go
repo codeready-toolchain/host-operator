@@ -11,9 +11,9 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
-	test2 "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
@@ -33,11 +33,11 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that user cleanup doesn't delete an active UserSignup", func(t *testing.T) {
 
-		userSignup := test2.NewUserSignup(
-			test2.CreatedBefore(threeYears),
-			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
-			test2.SignupComplete(""),
-			test2.ApprovedAutomatically(threeYears),
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.CreatedBefore(threeYears),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
+			commonsignup.SignupComplete(""),
+			commonsignup.ApprovedAutomatically(threeYears),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -53,11 +53,11 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that user cleanup doesn't delete a recently deactivated UserSignup", func(t *testing.T) {
 
-		userSignup := test2.NewUserSignup(
-			test2.ApprovedAutomatically(threeYears),
-			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
-			test2.DeactivatedWithLastTransitionTime(time.Duration(5*time.Minute)),
-			test2.CreatedBefore(threeYears),
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.ApprovedAutomatically(threeYears),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
+			commonsignup.DeactivatedWithLastTransitionTime(time.Duration(5*time.Minute)),
+			commonsignup.CreatedBefore(threeYears),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -75,11 +75,11 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that an old, deactivated UserSignup is deleted", func(t *testing.T) {
 
-		userSignup := test2.NewUserSignup(
-			test2.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
-			test2.ApprovedAutomatically(threeYears),
-			test2.DeactivatedWithLastTransitionTime(threeYears),
-			test2.CreatedBefore(threeYears),
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
+			commonsignup.ApprovedAutomatically(threeYears),
+			commonsignup.DeactivatedWithLastTransitionTime(threeYears),
+			commonsignup.CreatedBefore(threeYears),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -99,10 +99,10 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that an old, unverified UserSignup is deleted", func(t *testing.T) {
 
-		userSignup := test2.NewUserSignup(
-			test2.CreatedBefore(days(8)),
-			test2.VerificationRequired(days(8)),
-			test2.WithActivations("0"),
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.CreatedBefore(days(8)),
+			commonsignup.VerificationRequired(days(8)),
+			commonsignup.WithActivations("0"),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -123,9 +123,9 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("without phone verification initiated", func(t *testing.T) {
 		// given
-		userSignup := test2.NewUserSignup(
-			test2.CreatedBefore(days(8)),
-			test2.VerificationRequired(days(8)),
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.CreatedBefore(days(8)),
+			commonsignup.VerificationRequired(days(8)),
 		)
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 		// when
@@ -144,10 +144,10 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("with phone verification initiated", func(t *testing.T) {
 		// given
-		userSignup := test2.NewUserSignup(
-			test2.CreatedBefore(days(8)),
-			test2.VerificationRequired(days(8)),
-			test2.WithAnnotation(toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey, "12345"),
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.CreatedBefore(days(8)),
+			commonsignup.VerificationRequired(days(8)),
+			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey, "12345"),
 		)
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 		// when
@@ -166,11 +166,11 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that recently reactivated, unverified UserSignup is NOT deleted", func(t *testing.T) {
 
-		userSignup := test2.NewUserSignup(
-			test2.CreatedBefore(threeYears),
-			test2.ApprovedAutomatically(days(40)),
-			test2.VerificationRequired(days(10)),
-			test2.WithActivations("1"),
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.CreatedBefore(threeYears),
+			commonsignup.ApprovedAutomatically(days(40)),
+			commonsignup.VerificationRequired(days(10)),
+			commonsignup.WithActivations("1"),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -188,11 +188,11 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that reactivated, unverified UserSignup long time ago is deleted", func(t *testing.T) {
 
-		userSignup := test2.NewUserSignup(
-			test2.CreatedBefore(threeYears),
-			test2.ApprovedAutomatically(days(730+21)),
-			test2.VerificationRequired(days(730+1)),
-			test2.WithActivations("2"),
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.CreatedBefore(threeYears),
+			commonsignup.ApprovedAutomatically(days(730+21)),
+			commonsignup.VerificationRequired(days(730+1)),
+			commonsignup.WithActivations("2"),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -209,8 +209,8 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test that an old, verified but unapproved UserSignup is not deleted", func(t *testing.T) {
 
-		userSignup := test2.NewUserSignup(
-			test2.CreatedBefore(threeYears),
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.CreatedBefore(threeYears),
 		)
 		states.SetVerificationRequired(userSignup, false)
 		states.SetApproved(userSignup, false)
@@ -229,9 +229,9 @@ func TestUserCleanup(t *testing.T) {
 	})
 
 	t.Run("test propagation policy", func(t *testing.T) {
-		userSignup := test2.NewUserSignup(
-			test2.CreatedBefore(threeYears),
-			test2.VerificationRequired(days(8)),
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.CreatedBefore(threeYears),
+			commonsignup.VerificationRequired(days(8)),
 		)
 
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)

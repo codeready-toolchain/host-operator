@@ -12,13 +12,13 @@ import (
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
-	. "github.com/codeready-toolchain/host-operator/test"
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,7 +42,7 @@ func TestChangeTierSuccess(t *testing.T) {
 	basicTier.Spec.DeactivationTimeoutDays = 30
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")
 
-	userSignup := NewUserSignup()
+	userSignup := commontest.NewUserSignup()
 	t.Run("should update tier in MUR", func(t *testing.T) {
 		// given
 		mur := murtest.NewMasterUserRecord(t, "john", murtest.WithOwnerLabel(userSignup.Name))
@@ -269,7 +269,7 @@ func TestChangeTierSuccess(t *testing.T) {
 
 func TestChangeTierFailure(t *testing.T) {
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().DurationBeforeChangeTierRequestDeletion("10s"))
-	userSignup := NewUserSignup(WithName("john"))
+	userSignup := commontest.NewUserSignup(commontest.WithName("john"))
 
 	basicTier := NewNSTemplateTier("basic", "123basic", "123clusterbasic", "stage", "dev")
 	teamTier := NewNSTemplateTier("team", "123team", "123clusterteam", "stage", "dev")

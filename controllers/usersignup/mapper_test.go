@@ -3,10 +3,10 @@ package usersignup
 import (
 	"context"
 	"errors"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	. "github.com/codeready-toolchain/host-operator/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
@@ -31,14 +31,14 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 
 	t.Run("test BannedUserToUserSignupMapper maps correctly", func(t *testing.T) {
 		userSignup := &toolchainv1alpha1.UserSignup{
-			ObjectMeta: NewUserSignupObjectMeta("", "foo@redhat.com"),
+			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "foo@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
 				Username: "foo@redhat.com",
 			},
 		}
 
 		userSignup2 := &toolchainv1alpha1.UserSignup{
-			ObjectMeta: NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
+			ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "alice.mayweather.doe@redhat.com"),
 			Spec: toolchainv1alpha1.UserSignupSpec{
 				Username: "alice.mayweather.doe@redhat.com",
 			},
