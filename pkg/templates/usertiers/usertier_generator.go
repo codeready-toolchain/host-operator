@@ -91,12 +91,15 @@ func newUserTierGenerator(s *runtime.Scheme, client client.Client, namespace str
 
 // loadTemplatesByTiers loads the assets and dispatches them by tiers, assuming the given `assets` has the following structure:
 //
-// metadata.yaml
-// advanced/
+// nodeactivation/
 //   tier.yaml
-// basic/
+// deactivate30/
 //   tier.yaml
-// team/
+// deactivate80/
+//   tier.yaml
+// deactivate90/
+//   tier.yaml
+// deactivate180/
 //   tier.yaml
 //
 // The output is a map of `tierData` indexed by tier.
