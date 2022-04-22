@@ -55,7 +55,6 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 						_, found := tmpls[tier]
 						require.Truef(t, found, "did not find expected tier '%s'", tier)
 						require.NotNil(t, tmpls[tier].rawTemplates.userTier)
-						assert.NotEmpty(t, tmpls[tier].rawTemplates.userTier.revision)
 						assert.NotEmpty(t, tmpls[tier].rawTemplates.userTier.content)
 					})
 				})
@@ -78,10 +77,8 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 						require.NotNil(t, tmpls[tier].rawTemplates.userTier)
 						switch tier {
 						case "advanced":
-							assert.Equal(t, "abc123", tmpls[tier].rawTemplates.userTier.revision)
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.userTier.content)
 						case "base":
-							assert.Equal(t, "abcdef", tmpls[tier].rawTemplates.userTier.revision)
 							assert.NotEmpty(t, tmpls[tier].rawTemplates.userTier.content)
 						default:
 							require.Fail(t, "found unexpected tier", "tier '%s' found but not handled", tier)
@@ -95,38 +92,9 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 
 	t.Run("failures", func(t *testing.T) {
 
-		t.Run("unparseable content", func(t *testing.T) {
-			// given
-			fakeAssets := func(name string) ([]byte, error) {
-				return []byte("foo::bar"), nil
-			}
-			assets := assets.NewAssets(testusertiers.AssetNames, fakeAssets)
-			// when
-			_, err := loadTemplatesByTiers(assets)
-			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to load templates: yaml: unmarshal errors:")
-		})
-
-		t.Run("missing metadata", func(t *testing.T) {
-			// given
-			fakeAssets := func(name string) ([]byte, error) {
-				return nil, fmt.Errorf("an error occurred")
-			}
-			assets := assets.NewAssets(testusertiers.AssetNames, fakeAssets)
-			// when
-			_, err := loadTemplatesByTiers(assets)
-			// then
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "unable to load templates: an error occurred")
-		})
-
 		t.Run("missing asset", func(t *testing.T) {
 			// given
 			fakeAssets := func(name string) ([]byte, error) {
-				if name == "metadata.yaml" {
-					return testusertiers.Asset(name)
-				}
 				return nil, fmt.Errorf("an error occurred")
 			}
 			assets := assets.NewAssets(testusertiers.AssetNames, fakeAssets)
@@ -140,12 +108,10 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 		t.Run("invalid name format", func(t *testing.T) {
 			// given
 			fakeAssetNames := func() []string {
-				return []string{`.DS_Store`, `metadata.yaml`} // '/advanced/foo.yaml' is not a valid filename
+				return []string{`.DS_Store`} // '/advanced/foo.yaml' is not a valid filename
 			}
 			fakeAssets := func(name string) ([]byte, error) {
 				switch name {
-				case "metadata.yaml":
-					return []byte(`advanced/foo.yaml: "123456a"`), nil // just make sure the asset exists
 				case ".DS_Store":
 					return []byte(`foo:bar`), nil // just make sure the asset exists
 				default:
@@ -163,12 +129,10 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 		t.Run("invalid filename scope", func(t *testing.T) {
 			// given
 			fakeAssetNames := func() []string {
-				return []string{`metadata.yaml`, `advanced/foo.yaml`} // '/advanced/foo.yaml' is not a valid filename
+				return []string{`advanced/foo.yaml`} // '/advanced/foo.yaml' is not a valid filename
 			}
 			fakeAssets := func(name string) ([]byte, error) {
 				switch name {
-				case "metadata.yaml":
-					return []byte(`advanced/foo.yaml: "123456a"`), nil // just make sure the asset exists
 				case "advanced/foo.yaml":
 					return []byte(`foo:bar`), nil // just make sure the asset exists
 				default:

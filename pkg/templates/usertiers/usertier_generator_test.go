@@ -112,9 +112,6 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		t.Run("failed to read assets", func(t *testing.T) {
 			// given
 			fakeAssets := assets.NewAssets(testusertiers.AssetNames, func(name string) ([]byte, error) {
-				if name == "metadata.yaml" {
-					return []byte("base/tier: abcdef"), nil
-				}
 				// error occurs when fetching the content of the 'tier.yaml' template
 				return nil, errors.Errorf("an error")
 			})

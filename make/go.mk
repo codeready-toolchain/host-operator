@@ -28,7 +28,6 @@ NSTEMPLATES_FILES = $(wildcard $(NSTEMPLATES_BASEDIR)/**/*.yaml)
 NSTEMPLATES_TEST_BASEDIR = test/templates/nstemplatetiers
 
 USERTEMPLATES_BASEDIR = deploy/templates/usertiers
-USERTEMPLATES_FILES = $(wildcard $(USERTEMPLATES_BASEDIR)/**/*.yaml)
 USERTEMPLATES_TEST_BASEDIR = test/templates/usertiers
 
 NOTIFICATION_BASEDIR = deploy/templates/notificationtemplates
@@ -47,9 +46,6 @@ clean-metadata:
 generate-metadata: clean-metadata
 	@echo "generating templates metadata for manifests in $(NSTEMPLATES_BASEDIR)" 
 	@$(foreach tmpl,$(wildcard $(NSTEMPLATES_FILES)),$(call git_commit,$(tmpl),$(NSTEMPLATES_BASEDIR),metadata.yaml))
-	@echo "generating templates metadata for manifests in $(USERTEMPLATES_BASEDIR)" 
-	@rm ./$(USERTEMPLATES_BASEDIR)/metadata.yaml 2>/dev/null || true
-	@$(foreach tmpl,$(wildcard $(USERTEMPLATES_FILES)),$(call git_commit,$(tmpl),$(USERTEMPLATES_BASEDIR),metadata.yaml))
 	
 define git_commit
 	echo "processing YAML files in $(2)"

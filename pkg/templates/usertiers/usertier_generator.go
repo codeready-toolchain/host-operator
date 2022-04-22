@@ -14,7 +14,6 @@ import (
 
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,8 +61,7 @@ type templates struct {
 
 // template: a template's content and its latest git revision
 type template struct {
-	revision string
-	content  []byte
+	content []byte
 }
 
 // newUserTierGenerator loads templates from the provided assets and processes the UserTiers
@@ -106,21 +104,8 @@ func newUserTierGenerator(s *runtime.Scheme, client client.Client, namespace str
 // Each `tierData` object contains template objects for the tier.
 // Each `template` object contains a `revision` (`string`) and the `content` of the template to apply (`[]byte`)
 func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
-	metadataContent, err := assets.Asset("metadata.yaml")
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to load templates")
-	}
-	metadata := make(map[string]string)
-	err = yaml.Unmarshal([]byte(metadataContent), &metadata)
-	if err != nil {
-		return nil, errors.Wrapf(err, "unable to load templates")
-	}
-
 	results := make(map[string]*tierData)
 	for _, name := range assets.Names() {
-		if name == "metadata.yaml" {
-			continue
-		}
 		// split the name using the `/` separator
 		parts := strings.Split(name, "/")
 		// skip any name that does not have 2 parts
@@ -140,8 +125,7 @@ func loadTemplatesByTiers(assets assets.Assets) (map[string]*tierData, error) {
 			return nil, errors.Wrapf(err, "unable to load templates")
 		}
 		tmpl := template{
-			revision: metadata[strings.TrimSuffix(name, ".yaml")],
-			content:  content,
+			content: content,
 		}
 		switch {
 		case filename == "tier.yaml":
