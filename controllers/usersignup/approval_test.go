@@ -3,6 +3,7 @@ package usersignup
 import (
 	"context"
 	"fmt"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -20,7 +21,7 @@ import (
 
 func TestGetClusterIfApproved(t *testing.T) {
 	// given
-	signup := NewUserSignup()
+	signup := commonsignup.NewUserSignup()
 	toolchainStatus := NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 100,
@@ -35,7 +36,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("with two clusters available, the second one is defined as the last-used one", func(t *testing.T) {
 		// given
-		signup := NewUserSignup()
+		signup := commonsignup.NewUserSignup()
 		signup.Annotations = map[string]string{
 			toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey: "member2",
 		}
@@ -110,7 +111,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-		signup := NewUserSignup(Approved())
+		signup := commonsignup.NewUserSignup(commonsignup.Approved())
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -128,7 +129,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-		signup := NewUserSignup(Approved())
+		signup := commonsignup.NewUserSignup(commonsignup.Approved())
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -148,7 +149,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-		signup := NewUserSignup(Approved())
+		signup := commonsignup.NewUserSignup(commonsignup.Approved())
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -166,7 +167,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-		signup := NewUserSignup(Approved(), WithTargetCluster("member1"))
+		signup := commonsignup.NewUserSignup(commonsignup.Approved(), commonsignup.WithTargetCluster("member1"))
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)

@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	notify "github.com/codeready-toolchain/host-operator/controllers/notification"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/pending"
+	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/redhat-cop/operator-utils/pkg/util"

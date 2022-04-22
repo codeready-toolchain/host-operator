@@ -3,6 +3,7 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"os"
 	"testing"
 	"time"
@@ -774,7 +775,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 	t.Run("outdated mur status error cleaned", func(t *testing.T) {
 		// given
 		// A basic userSignup to set as the mur owner
-		userSignup := NewUserSignup()
+		userSignup := commonsignup.NewUserSignup()
 		userSignup.Status = toolchainv1alpha1.UserSignupStatus{
 			CompliantUsername: "john",
 		}
@@ -969,7 +970,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		s := apiScheme(t)
 
 		// A basic userSignup to set as the mur owner
-		userSignup := NewUserSignup()
+		userSignup := commonsignup.NewUserSignup()
 		userSignup.Status = toolchainv1alpha1.UserSignupStatus{
 			CompliantUsername: "john-wait-for-ua",
 		}
