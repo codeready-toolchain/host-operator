@@ -42,6 +42,12 @@ spec:
       kind: Space
       name: spaces.toolchain.dev.openshift.com
       version: v1alpha1
+    - description: SpaceBinding defines the connection between an AppStudio Workspace
+        and a user
+      displayName: SpaceBinding
+      kind: SpaceBinding
+      name: spacebindings.toolchain.dev.openshift.com
+      version: v1alpha1
     - description: TemplateUpdateRequest is the Schema for the templateupdaterequests
         API
       displayName: Template Update Request
