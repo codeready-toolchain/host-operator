@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"os"
 	"testing"
+
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
@@ -3956,7 +3957,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 func TestUserSignupMigration(t *testing.T) {
 	// Given
-	userSignup := NewUserSignup()
+	userSignup := commonsignup.NewUserSignup()
 	userSignup.Spec.Company = "Acme"
 	userSignup.Spec.GivenName = "Wile E"
 	userSignup.Spec.FamilyName = "Coyote"
@@ -4062,7 +4063,7 @@ func TestUserSignupMigration(t *testing.T) {
 
 	t.Run("Migration fails to lookup migrated UserSignup", func(t *testing.T) {
 		// Given
-		userSignup := NewUserSignup()
+		userSignup := commonsignup.NewUserSignup()
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
 		states.SetDeactivated(userSignup, true)
 		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
@@ -4091,7 +4092,7 @@ func TestUserSignupMigration(t *testing.T) {
 
 	t.Run("Migration fails to create migrated UserSignup", func(t *testing.T) {
 		// Given
-		userSignup := NewUserSignup()
+		userSignup := commonsignup.NewUserSignup()
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
 		states.SetDeactivated(userSignup, true)
 		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
@@ -4122,13 +4123,13 @@ func TestUserSignupMigration(t *testing.T) {
 
 	t.Run("Migration fails cleanup due to client errors", func(t *testing.T) {
 		// Given
-		userSignup := NewUserSignup()
+		userSignup := commonsignup.NewUserSignup()
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
 		userSignup.Annotations["toolchain.dev.openshift.com/migration-replaces"] = "foo"
 		states.SetDeactivated(userSignup, true)
 		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
-		userSignupToDelete := NewUserSignup()
+		userSignupToDelete := commonsignup.NewUserSignup()
 		userSignupToDelete.Name = "foo"
 		userSignupToDelete.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
