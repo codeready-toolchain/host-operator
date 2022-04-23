@@ -60,7 +60,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NotNil(t, template)
 			assert.True(t, found)
 			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account will be deactivated soon", template.Subject)
-			assert.Contains(t, template.Content, "Your sandbox will expire in 3 days.  We recommend you save your work as all data in your sandbox will be deleted upon expiry.")
+			assert.Contains(t, template.Content, "Your sandbox will expire in 3 days.  We recommend you save your work as all data in your sandbox will be\n        deleted upon expiry.")
 
 		})
 
