@@ -12,6 +12,7 @@ var notificationTemplates map[string]NotificationTemplate
 var UserProvisioned, _, _ = GetNotificationTemplate("userprovisioned")
 var UserDeactivated, _, _ = GetNotificationTemplate("userdeactivated")
 var UserDeactivating, _, _ = GetNotificationTemplate("userdeactivating")
+var IdlerActivated, _, _ = GetNotificationTemplate("idleractivated")
 
 // NotificationTemplate contains the template subject and content
 type NotificationTemplate struct {

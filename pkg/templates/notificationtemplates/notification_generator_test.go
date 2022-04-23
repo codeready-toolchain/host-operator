@@ -51,6 +51,31 @@ func TestGetNotificationTemplate(t *testing.T) {
 			assert.Contains(t, template["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
 			assert.Equal(t, template["userprovisioned"], *UserProvisioned)
 		})
+		t.Run("get userdeactivating notification template", func(t *testing.T) {
+			// when
+			defer resetNotificationTemplateCache()
+			template, found, err := GetNotificationTemplate("userdeactivating")
+			// then
+			require.NoError(t, err)
+			require.NotNil(t, template)
+			assert.True(t, found)
+			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account will be deactivated soon", template.Subject)
+			assert.Contains(t, template.Content, "Your sandbox will expire in 3 days.  We recommend you save your work as all data in your sandbox will be deleted upon expiry.")
+
+		})
+
+		t.Run("get idleractivated notification template", func(t *testing.T) {
+			// when
+			defer resetNotificationTemplateCache()
+			template, found, err := GetNotificationTemplate("idleractivated")
+			// then
+			require.NoError(t, err)
+			require.NotNil(t, template)
+			assert.True(t, found)
+			assert.Equal(t, "Notice: Your long running pods have been deleted", template.Subject)
+			assert.Contains(t, template.Content, "This is to notify you that pods running consecutively for over 12 hours are deleted automatically")
+
+		})
 	})
 	t.Run("failures", func(t *testing.T) {
 		t.Run("failed to get notification templates", func(t *testing.T) {
