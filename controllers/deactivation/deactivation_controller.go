@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -118,15 +119,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// Get the tier associated with the MasterUserRecord, we'll observe the deactivation timeout period from the tier spec
-	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
-	tierName := types.NamespacedName{Namespace: request.Namespace, Name: mur.Spec.TierName}
-	if err := r.Client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
-		logger.Error(err, "unable to get NSTemplateTier", "name", mur.Spec.TierName)
+	deactivationTimeoutDays, err := r.getDeactivationTimeoutDays(logger, request.Namespace, mur.Spec.TierName)
+	if err != nil {
+		logger.Error(err, "unable to get the deactivationTimeoutDays from either UserTier or NSTemplateTier", "name", mur.Spec.TierName)
 		return reconcile.Result{}, err
 	}
 
 	// If the deactivation timeout is 0 then users that belong to this tier should not be automatically deactivated
-	deactivationTimeoutDays := nsTemplateTier.Spec.DeactivationTimeoutDays
 	if deactivationTimeoutDays == 0 {
 		logger.Info("User belongs to a tier that does not have a deactivation timeout. The user will not be automatically deactivated")
 		// Users belonging to this tier will not be auto deactivated, no need to requeue.
@@ -209,4 +208,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	metrics.UserSignupAutoDeactivatedTotal.Inc()
 
 	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) getDeactivationTimeoutDays(logger logr.Logger, namespace, name string) (int, error) {
+	userTier := &toolchainv1alpha1.UserTier{}
+	tierName := types.NamespacedName{Namespace: namespace, Name: name}
+
+	err := r.Client.Get(context.TODO(), tierName, userTier)
+	if err == nil {
+		return userTier.Spec.DeactivationTimeoutDays, nil
+	}
+	logger.Error(err, "unable to get UserTier", "name", name)
+
+	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
+	if err := r.Client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
+		logger.Error(err, "unable to get NSTemplateTier", "name", name)
+		return 0, err
+	}
+
+	// If the deactivation timeout is 0 then users that belong to this tier should not be automatically deactivated
+	return nsTemplateTier.Spec.DeactivationTimeoutDays, nil
 }

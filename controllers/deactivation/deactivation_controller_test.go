@@ -16,6 +16,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -37,6 +38,11 @@ import (
 const (
 	operatorNamespace = "toolchain-host-operator"
 
+	// UserTiers
+	expectedDeactivationTimeoutDeactivate30Tier = 30
+	expectedDeactivationTimeoutDeactivate90Tier = 90
+
+	// NSTemplateTiers
 	expectedDeactivationTimeoutBasicTier = 30
 	expectedDeactivationTimeoutOtherTier = 60
 
@@ -52,6 +58,11 @@ func TestReconcile(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	username := "test-user"
 
+	// UserTiers
+	userTier30 := testusertier.NewUserTier("deactivate30", 30)
+	userTier90 := testusertier.NewUserTier("deactivate90", 90)
+
+	// NSTemplateTiers
 	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 	otherTier := tiertest.OtherTier()
 	noDeactivationTier := tiertest.TierWithoutDeactivationTimeout()
@@ -64,94 +75,190 @@ func TestReconcile(t *testing.T) {
 
 	t.Run("controller should not deactivate user", func(t *testing.T) {
 
-		// the time since the mur was provisioned is within the deactivation timeout period for the 'basic' tier
-		t.Run("usersignup should not be deactivated - basic tier (30 days)", func(t *testing.T) {
-			// given
-			murProvisionedTime := metav1.Now()
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
-			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
-			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
-			// when
-			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
-			res, err := r.Reconcile(context.TODO(), req)
-			// then
-			require.NoError(t, err)
-			expectedTime := (time.Duration((expectedDeactivationTimeoutBasicTier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
-			actualTime := res.RequeueAfter
-			diff := expectedTime - actualTime
-			require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
-			assertThatUserSignupDeactivated(t, cl, username, false)
+		t.Run("usertier", func(t *testing.T) {
+
+			// the time since the mur was provisioned is within the deactivation timeout period for the 'deactivate30' tier
+			t.Run("usersignup should not be deactivated - deactivate30 (30 days)", func(t *testing.T) {
+				// given
+				murProvisionedTime := metav1.Now()
+				mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+				r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
+				// when
+				timeSinceProvisioned := time.Since(murProvisionedTime.Time)
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				expectedTime := (time.Duration((expectedDeactivationTimeoutBasicTier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
+				actualTime := res.RequeueAfter
+				diff := expectedTime - actualTime
+				require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
+				assertThatUserSignupDeactivated(t, cl, username, false)
+			})
+
+			// the time since the mur was provisioned is within the deactivation timeout period for the 'other' tier
+			t.Run("usersignup should not be deactivated - other tier (60 days)", func(t *testing.T) {
+				// given
+				murProvisionedTime := metav1.Now()
+				mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(otherTier.Name), murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+				r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar, config)
+				// when
+				timeSinceProvisioned := time.Since(murProvisionedTime.Time)
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				expectedTime := (time.Duration((expectedDeactivationTimeoutOtherTier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
+				actualTime := res.RequeueAfter
+				diff := expectedTime - actualTime
+				require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
+				assertThatUserSignupDeactivated(t, cl, username, false)
+			})
+
+			// the tier does not have a deactivationTimeoutDays set so the time since the mur was provisioned is irrelevant, the user should not be deactivated
+			t.Run("usersignup should not be deactivated - no deactivation tier", func(t *testing.T) {
+				// given
+				murProvisionedTime := metav1.Now()
+				mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(noDeactivationTier.Name), murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+				r, req, cl := prepareReconcile(t, mur.Name, noDeactivationTier, mur, userSignupFoobar, config)
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				require.False(t, res.Requeue, "requeue should not be set")
+				require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
+				assertThatUserSignupDeactivated(t, cl, username, false)
+			})
+
+			// a mur that has not been provisioned yet
+			t.Run("mur without provisioned time", func(t *testing.T) {
+				// given
+				mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.UserIDFromUserSignup(userSignupFoobar))
+				r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				require.False(t, res.Requeue, "requeue should not be set")
+				require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
+				assertThatUserSignupDeactivated(t, cl, username, false)
+			})
+
+			// a user that belongs to the deactivation domain excluded list
+			t.Run("user deactivation excluded", func(t *testing.T) {
+				// given
+				config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
+					testconfig.PerMemberCluster("member1", 321)),
+					testconfig.Deactivation().DeactivatingNotificationDays(3),
+				)
+				restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DEACTIVATION_DOMAINS_EXCLUDED", "@redhat.com")
+				defer restore()
+				murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
+				mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupRedhat))
+				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupRedhat.Name
+				r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupRedhat, config)
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				require.False(t, res.Requeue, "requeue should not be set")
+				require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
+				assertThatUserSignupDeactivated(t, cl, username, false)
+			})
 		})
 
-		// the time since the mur was provisioned is within the deactivation timeout period for the 'other' tier
-		t.Run("usersignup should not be deactivated - other tier (60 days)", func(t *testing.T) {
-			// given
-			murProvisionedTime := metav1.Now()
-			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(otherTier.Name), murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
-			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
-			r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar, config)
-			// when
-			timeSinceProvisioned := time.Since(murProvisionedTime.Time)
-			res, err := r.Reconcile(context.TODO(), req)
-			// then
-			require.NoError(t, err)
-			expectedTime := (time.Duration((expectedDeactivationTimeoutOtherTier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
-			actualTime := res.RequeueAfter
-			diff := expectedTime - actualTime
-			require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
-			assertThatUserSignupDeactivated(t, cl, username, false)
-		})
+		t.Run("nstemplatetier", func(t *testing.T) {
 
-		// the tier does not have a deactivationTimeoutDays set so the time since the mur was provisioned is irrelevant, the user should not be deactivated
-		t.Run("usersignup should not be deactivated - no deactivation tier", func(t *testing.T) {
-			// given
-			murProvisionedTime := metav1.Now()
-			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(noDeactivationTier.Name), murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
-			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
-			r, req, cl := prepareReconcile(t, mur.Name, noDeactivationTier, mur, userSignupFoobar, config)
-			// when
-			res, err := r.Reconcile(context.TODO(), req)
-			// then
-			require.NoError(t, err)
-			require.False(t, res.Requeue, "requeue should not be set")
-			require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
-			assertThatUserSignupDeactivated(t, cl, username, false)
-		})
+			// the time since the mur was provisioned is within the deactivation timeout period for the 'basic' tier
+			t.Run("usersignup should not be deactivated - basic tier (30 days)", func(t *testing.T) {
+				// given
+				murProvisionedTime := metav1.Now()
+				mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+				r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
+				// when
+				timeSinceProvisioned := time.Since(murProvisionedTime.Time)
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				expectedTime := (time.Duration((expectedDeactivationTimeoutBasicTier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
+				actualTime := res.RequeueAfter
+				diff := expectedTime - actualTime
+				require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
+				assertThatUserSignupDeactivated(t, cl, username, false)
+			})
 
-		// a mur that has not been provisioned yet
-		t.Run("mur without provisioned time", func(t *testing.T) {
-			// given
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.UserIDFromUserSignup(userSignupFoobar))
-			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
-			// when
-			res, err := r.Reconcile(context.TODO(), req)
-			// then
-			require.NoError(t, err)
-			require.False(t, res.Requeue, "requeue should not be set")
-			require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
-			assertThatUserSignupDeactivated(t, cl, username, false)
-		})
+			// the time since the mur was provisioned is within the deactivation timeout period for the 'other' tier
+			t.Run("usersignup should not be deactivated - other tier (60 days)", func(t *testing.T) {
+				// given
+				murProvisionedTime := metav1.Now()
+				mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(otherTier.Name), murtest.Account("cluster1", *otherTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+				r, req, cl := prepareReconcile(t, mur.Name, otherTier, mur, userSignupFoobar, config)
+				// when
+				timeSinceProvisioned := time.Since(murProvisionedTime.Time)
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				expectedTime := (time.Duration((expectedDeactivationTimeoutOtherTier-preDeactivationNotificationDays)*24) * time.Hour) - timeSinceProvisioned
+				actualTime := res.RequeueAfter
+				diff := expectedTime - actualTime
+				require.Truef(t, diff > 0 && diff < 2*time.Second, "expectedTime: '%v' is not within 2 seconds of actualTime: '%v' diff: '%v'", expectedTime, actualTime, diff)
+				assertThatUserSignupDeactivated(t, cl, username, false)
+			})
 
-		// a user that belongs to the deactivation domain excluded list
-		t.Run("user deactivation excluded", func(t *testing.T) {
-			// given
-			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
-				testconfig.PerMemberCluster("member1", 321)),
-				testconfig.Deactivation().DeactivatingNotificationDays(3),
-			)
-			restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DEACTIVATION_DOMAINS_EXCLUDED", "@redhat.com")
-			defer restore()
-			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupRedhat))
-			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupRedhat.Name
-			r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupRedhat, config)
-			// when
-			res, err := r.Reconcile(context.TODO(), req)
-			// then
-			require.NoError(t, err)
-			require.False(t, res.Requeue, "requeue should not be set")
-			require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
-			assertThatUserSignupDeactivated(t, cl, username, false)
+			// the tier does not have a deactivationTimeoutDays set so the time since the mur was provisioned is irrelevant, the user should not be deactivated
+			t.Run("usersignup should not be deactivated - no deactivation tier", func(t *testing.T) {
+				// given
+				murProvisionedTime := metav1.Now()
+				mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(noDeactivationTier.Name), murtest.Account("cluster1", *noDeactivationTier), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+				r, req, cl := prepareReconcile(t, mur.Name, noDeactivationTier, mur, userSignupFoobar, config)
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				require.False(t, res.Requeue, "requeue should not be set")
+				require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
+				assertThatUserSignupDeactivated(t, cl, username, false)
+			})
+
+			// a mur that has not been provisioned yet
+			t.Run("mur without provisioned time", func(t *testing.T) {
+				// given
+				mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.UserIDFromUserSignup(userSignupFoobar))
+				r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				require.False(t, res.Requeue, "requeue should not be set")
+				require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
+				assertThatUserSignupDeactivated(t, cl, username, false)
+			})
+
+			// a user that belongs to the deactivation domain excluded list
+			t.Run("user deactivation excluded", func(t *testing.T) {
+				// given
+				config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
+					testconfig.PerMemberCluster("member1", 321)),
+					testconfig.Deactivation().DeactivatingNotificationDays(3),
+				)
+				restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DEACTIVATION_DOMAINS_EXCLUDED", "@redhat.com")
+				defer restore()
+				murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
+				mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1", *basicTier), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupRedhat))
+				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupRedhat.Name
+				r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupRedhat, config)
+				// when
+				res, err := r.Reconcile(context.TODO(), req)
+				// then
+				require.NoError(t, err)
+				require.False(t, res.Requeue, "requeue should not be set")
+				require.True(t, res.RequeueAfter == 0, "requeueAfter should not be set")
+				assertThatUserSignupDeactivated(t, cl, username, false)
+			})
 		})
 	})
 	// in these tests, the controller should (eventually) deactivate the user
