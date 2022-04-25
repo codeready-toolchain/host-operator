@@ -32,9 +32,9 @@ var log = logf.Log.WithName("templates")
 func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) error {
 
 	// initialize tier generator, loads templates from assets
-	generator, err := newTierGenerator(s, client, namespace, assets)
+	generator, err := newNSTemplateTierGenerator(s, client, namespace, assets)
 	if err != nil {
-		return errors.Wrap(err, "unable to create TierTemplates")
+		return errors.Wrap(err, "unable to create NSTemplateTier generator")
 	}
 
 	// create the TierTemplate resources
@@ -82,8 +82,8 @@ type template struct {
 	content  []byte
 }
 
-// newTierGenerator loads templates from the provided assets and processes the tierTemplates and NSTemplateTiers
-func newTierGenerator(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) (*tierGenerator, error) {
+// newNSTemplateTierGenerator loads templates from the provided assets and processes the tierTemplates and NSTemplateTiers
+func newNSTemplateTierGenerator(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) (*tierGenerator, error) {
 	// load templates from assets
 	templatesByTier, err := loadTemplatesByTiers(assets)
 	if err != nil {
