@@ -333,7 +333,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 					})
 
 					// when
-					_, err := newTierGenerator(s, clt, test.HostOperatorNs, testassets)
+					_, err := newNSTemplateTierGenerator(s, clt, test.HostOperatorNs, testassets)
 
 					// then
 					require.EqualError(t, err, "the tier advanced contains a mix of based_on_tier.yaml file together with a regular template file")
@@ -358,7 +358,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 			// when
 			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
-			tc, err := newTierGenerator(s, nil, namespace, assets)
+			tc, err := newNSTemplateTierGenerator(s, nil, namespace, assets)
 			require.NoError(t, err)
 			// then
 			require.NotEmpty(t, tc.templatesByTier)
@@ -408,7 +408,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 			// given
 			namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
-			tc, err := newTierGenerator(s, nil, namespace, assets)
+			tc, err := newNSTemplateTierGenerator(s, nil, namespace, assets)
 			require.NoError(t, err)
 			clusterResourcesRevisions := map[string]string{
 				"advanced":  "abcd123-654321a",
@@ -487,7 +487,7 @@ func TestNewTierTemplate(t *testing.T) {
 			assets := assets.NewAssets(AssetNames, Asset)
 			// uses the `Asset` funcs generated in the `pkg/templates/nstemplatetiers/` subpackages
 			// when
-			tc, err := newTierGenerator(s, nil, namespace, assets)
+			tc, err := newNSTemplateTierGenerator(s, nil, namespace, assets)
 
 			// then
 			require.NoError(t, err)
@@ -524,7 +524,7 @@ func TestNewTierTemplate(t *testing.T) {
 			// given
 			assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 			// when
-			tc, err := newTierGenerator(s, nil, namespace, assets)
+			tc, err := newNSTemplateTierGenerator(s, nil, namespace, assets)
 
 			// then
 			require.NoError(t, err)
@@ -569,7 +569,7 @@ func TestNewTierTemplate(t *testing.T) {
 				return []byte("invalid"), nil // return an invalid YAML representation of a Template
 			})
 			// when
-			_, err := newTierGenerator(s, nil, namespace, fakeAssets)
+			_, err := newNSTemplateTierGenerator(s, nil, namespace, fakeAssets)
 
 			// then
 			require.Error(t, err)
@@ -642,7 +642,7 @@ func TestNewNSTemplateTiers(t *testing.T) {
 		namespace := "host-operator-" + uuid.Must(uuid.NewV4()).String()[:7]
 		assets := assets.NewAssets(testnstemplatetiers.AssetNames, testnstemplatetiers.Asset)
 		// when
-		tc, err := newTierGenerator(s, nil, namespace, assets)
+		tc, err := newNSTemplateTierGenerator(s, nil, namespace, assets)
 		require.NoError(t, err)
 		// then
 		require.Len(t, tc.templatesByTier, 4)

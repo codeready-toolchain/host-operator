@@ -129,12 +129,11 @@ github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:z
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
-github.com/codeready-toolchain/api v0.0.0-20220407172226-5247322e920d h1:rcg3Gy1IYqbgkSiZOqEijPbi35Tz7DgUM8w44iOZV4Q=
 github.com/codeready-toolchain/api v0.0.0-20220407172226-5247322e920d/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220407213103-baabc6382432 h1:MLyjJZuUVYdR0kQGvrKpMp4pcow4GdhTXe8zvJHp3Yg=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220407213103-baabc6382432/go.mod h1:cUo/39yF9vBIUlgnVdSFe6l9QTigPnXDvbToKgWRxAc=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220420225956-8a83aef9cc41 h1:z50GLmNaR2OYo+nzT9R6aiaGed/ZDlg2qy6uJ7RP8k0=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220420225956-8a83aef9cc41/go.mod h1:cUo/39yF9vBIUlgnVdSFe6l9QTigPnXDvbToKgWRxAc=
+github.com/codeready-toolchain/api v0.0.0-20220420163009-01d30d6cedd9 h1:mtXJZW+ykGQ4oT7U5Ww9IViPESWv0JHR6DAbEkFhA5U=
+github.com/codeready-toolchain/api v0.0.0-20220420163009-01d30d6cedd9/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220425164055-e6d4ee1b5fdc h1:+ji/T41nzf5dH1uNGeBabKMrVgHK0oAJThuQfG6rRro=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220425164055-e6d4ee1b5fdc/go.mod h1:cUo/39yF9vBIUlgnVdSFe6l9QTigPnXDvbToKgWRxAc=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -623,8 +622,6 @@ github.com/prometheus/procfs v0.6.0/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1
 github.com/prometheus/procfs v0.7.3 h1:4jVXhlkAyzOScmCkXBTOLRLTz8EeU+eyjrwB/EPq0VU=
 github.com/prometheus/procfs v0.7.3/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
-github.com/ranakan19/toolchain-common v0.0.0-20220419151532-0cc8fdef5730 h1:jVKwXyDqf4sPRjZzs+FBZVh3wqMPF7cCrUPNYLXITUU=
-github.com/ranakan19/toolchain-common v0.0.0-20220419151532-0cc8fdef5730/go.mod h1:cUo/39yF9vBIUlgnVdSFe6l9QTigPnXDvbToKgWRxAc=
 github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf h1:fsZiv9XuFo8G7IyzFWjG02vqzJG7kSqFvD1Wiq3V/o8=
 github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf/go.mod h1:FfTyeSCu+e2VLgeMh/1RFG8TSkVjKRPEyR6EmDt0RIw=
 github.com/remyoudompheng/bigfft v0.0.0-20170806203942-52369c62f446/go.mod h1:uYEyJGbgTkfkS4+E/PavXkNJcbFIpEtjt2B0KDQ5+9M=
