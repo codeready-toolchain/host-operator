@@ -1,1 +1,1 @@
-Notice: Your long running pods have been deleted
+Notice: Your running application has been idled
