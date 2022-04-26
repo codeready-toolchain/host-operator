@@ -26,6 +26,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
+	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	"github.com/codeready-toolchain/host-operator/version"
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -75,6 +76,10 @@ func printVersion() {
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=tiertemplates/finalizers,verbs=update
+
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usertiers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usertiers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usertiers/finalizers,verbs=update
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainclusters/status,verbs=get;update;patch
@@ -323,12 +328,21 @@ func main() {
 
 		// create or update all NSTemplateTiers on the cluster at startup
 		setupLog.Info("Creating/updating the NSTemplateTier resources")
-		tierAssets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
-		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, tierAssets); err != nil {
+		nstemplatetierAssets := assets.NewAssets(nstemplatetiers.AssetNames, nstemplatetiers.Asset)
+		if err := nstemplatetiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, nstemplatetierAssets); err != nil {
 			setupLog.Error(err, "")
 			os.Exit(1)
 		}
 		setupLog.Info("Created/updated the NSTemplateTier resources")
+
+		// create or update all UserTiers on the cluster at startup
+		setupLog.Info("Creating/updating the UserTier resources")
+		usertierAssets := assets.NewAssets(usertiers.AssetNames, usertiers.Asset)
+		if err := usertiers.CreateOrUpdateResources(mgr.GetScheme(), mgr.GetClient(), namespace, usertierAssets); err != nil {
+			setupLog.Error(err, "")
+			os.Exit(1)
+		}
+		setupLog.Info("Created/updated the UserTier resources")
 	}()
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
