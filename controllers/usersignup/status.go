@@ -183,15 +183,15 @@ func (u *StatusUpdater) setStatusDeactivated(userSignup *toolchainv1alpha1.UserS
 }
 
 const (
-	UserMigrationFailed toolchainv1alpha1.ConditionType = "UserMigrationFailed"
+	UserMigrated toolchainv1alpha1.ConditionType = "UserMigrated"
 )
 
 func (u *StatusUpdater) setStatusMigrationFailedLookup(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type:    UserMigrationFailed,
-			Status:  corev1.ConditionTrue,
+			Type:    UserMigrated,
+			Status:  corev1.ConditionFalse,
 			Reason:  "UserSignupLookupFailed",
 			Message: message,
 		})
@@ -201,8 +201,8 @@ func (u *StatusUpdater) setStatusMigrationFailedCreate(userSignup *toolchainv1al
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type:    UserMigrationFailed,
-			Status:  corev1.ConditionTrue,
+			Type:    UserMigrated,
+			Status:  corev1.ConditionFalse,
 			Reason:  "UserSignupCreateFailed",
 			Message: message,
 		})
@@ -212,9 +212,20 @@ func (u *StatusUpdater) setStatusMigrationFailedCleanup(userSignup *toolchainv1a
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type:    UserMigrationFailed,
-			Status:  corev1.ConditionTrue,
+			Type:    UserMigrated,
+			Status:  corev1.ConditionFalse,
 			Reason:  "UserSignupCleanupFailed",
+			Message: message,
+		})
+}
+
+func (u *StatusUpdater) setStatusMigrationSuccessful(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    UserMigrated,
+			Status:  corev1.ConditionTrue,
+			Reason:  "MigratedOK",
 			Message: message,
 		})
 }

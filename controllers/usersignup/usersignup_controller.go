@@ -247,11 +247,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // 1) The setStatusMigrationFailedLookup function in status.go
 // 2) The setStatusMigrationFailedCreate function in status.go
 // 3) The setStatusMigrationFailedCleanup function in status.go
-// 4) The UserSignupUserMigrationFailed constant in status.go
-// 5) The EncodeUserIdentifier function from this file
-// 6) The above block of code in this function that deletes the original UserSignup if the "migration-replaces" annotation is set
-// 7) The cleanupMigration function from this file
-// 8) The TestUserSignupMigration() test in usersignup_controller_test.go
+// 4) The setStatusMigrationSuccessful function in status.go
+// 5) The UserSignupUserMigrationFailed constant in status.go
+// 6) The EncodeUserIdentifier function from this file
+// 7) The above block of code in this function that deletes the original UserSignup if the "migration-replaces" annotation is set
+// 8) The cleanupMigration function from this file
+// 9) The TestUserSignupMigration() test in usersignup_controller_test.go
 //
 func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSignup, request ctrl.Request, logger logr.Logger) error {
 	encodedUsername := EncodeUserIdentifier(userSignup.Spec.Username)
@@ -311,6 +312,7 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 					r.setStatusMigrationFailedCreate, err, "Failed to create UserSignup")
 			}
 		}
+		return r.setStatusMigrationSuccessful(userSignup, "Created new UserSignup")
 	}
 	return nil
 }
@@ -338,23 +340,24 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 		// If the annotation exists however the original UserSignup isn't found, then remove the annotation and the
 		// migration condition from the status
 		if errors.IsNotFound(err) {
+
+			// Update the migration status
+			userSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
+				toolchainv1alpha1.Condition{
+					Type:    UserMigrated,
+					Status:  corev1.ConditionTrue,
+					Reason:  "UserMigrated",
+					Message: fmt.Sprintf("Successfully migrated from UserSignup [%s]", userSignup.Annotations[migrationAnnotationName]),
+				})
+
 			// Remove the annotation
 			delete(userSignup.Annotations, migrationAnnotationName)
-
-			// Remove the migration condition from the status
-			conditions := []toolchainv1alpha1.Condition{}
-			for _, cond := range userSignup.Status.Conditions {
-				if cond.Type != UserMigrationFailed {
-					conditions = append(conditions, cond)
-				}
-			}
-			userSignup.Status.Conditions = conditions
 
 			// Update the UserSignup
 			err := r.Client.Update(context.TODO(), userSignup)
 			if err != nil {
 				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-					r.setStatusMigrationFailedCleanup, err, "Failed to remove migration annotation")
+					r.setStatusMigrationFailedCleanup, err, "Failed to update migrated UserSignup")
 			}
 		} else {
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
@@ -364,10 +367,10 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 	}
 
 	if err == nil {
-		// Delete the original UserSignup, if it has finished deactivating
-		cond, found := condition.FindConditionByType(userSignupToDelete.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
-		if !found || cond.Reason != toolchainv1alpha1.UserSignupUserDeactivatedReason {
-			// The UserSignup to delete isn't finished deactivating yet, return an error
+		// Delete the original UserSignup if it has finished migration
+		cond, found := condition.FindConditionByType(userSignupToDelete.Status.Conditions, UserMigrated)
+		if !found || cond.Status != corev1.ConditionTrue {
+			// The UserSignup to delete isn't finished migrating yet, return an error
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
 				errs.New("Original UserSignup not deactivated"),
 				fmt.Sprintf("Original UserSignup [%s] not yet deactivated", userSignupToDelete.Name))
