@@ -312,7 +312,7 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 					r.setStatusMigrationFailedCreate, err, "Failed to create UserSignup")
 			}
 		}
-		return r.setStatusMigrationSuccessful(userSignup, "Created new UserSignup")
+		return r.setStatusMigrationSuccessful(userSignup)
 	}
 	return nil
 }
@@ -368,12 +368,11 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 
 	if err == nil {
 		// Delete the original UserSignup if it has finished migration
-		cond, found := condition.FindConditionByType(userSignupToDelete.Status.Conditions, UserMigrated)
-		if !found || cond.Status != corev1.ConditionTrue {
+		if userSignupToDelete.Annotations["migrated"] != "true" {
 			// The UserSignup to delete isn't finished migrating yet, return an error
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
-				errs.New("Original UserSignup not deactivated"),
-				fmt.Sprintf("Original UserSignup [%s] not yet deactivated", userSignupToDelete.Name))
+				errs.New("Original UserSignup not finished migration"),
+				fmt.Sprintf("Original UserSignup [%s] not yet finished migration", userSignupToDelete.Name))
 		}
 
 		err := r.Client.Delete(context.TODO(), userSignupToDelete)

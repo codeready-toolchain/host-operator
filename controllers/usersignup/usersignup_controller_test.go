@@ -4086,7 +4086,7 @@ func TestUserSignupMigration(t *testing.T) {
 			Name:      userSignup.Name}, userSignup)
 		require.NoError(t, err)
 
-		require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, UserMigrationFailed,
+		require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, UserMigrated,
 			"UserSignupLookupFailed"))
 	})
 
@@ -4117,7 +4117,7 @@ func TestUserSignupMigration(t *testing.T) {
 			Name:      userSignup.Name}, userSignup)
 		require.NoError(t, err)
 
-		require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, UserMigrationFailed,
+		require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, UserMigrated,
 			"UserSignupCreateFailed"))
 	})
 

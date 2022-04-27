@@ -219,15 +219,20 @@ func (u *StatusUpdater) setStatusMigrationFailedCleanup(userSignup *toolchainv1a
 		})
 }
 
-func (u *StatusUpdater) setStatusMigrationSuccessful(userSignup *toolchainv1alpha1.UserSignup, message string) error {
-	return u.updateStatusConditions(
-		userSignup,
-		toolchainv1alpha1.Condition{
-			Type:    UserMigrated,
-			Status:  corev1.ConditionTrue,
-			Reason:  "MigratedOK",
-			Message: message,
-		})
+func (u *StatusUpdater) setStatusMigrationSuccessful(userSignup *toolchainv1alpha1.UserSignup) error {
+	// Set the "migrated" annotation to true
+	userSignup.Annotations["migrated"] = "true"
+
+	// Cleanup the migrated condition from the status
+	conditions := []toolchainv1alpha1.Condition{}
+	for _, cond := range userSignup.Status.Conditions {
+		if cond.Type != UserMigrated {
+			conditions = append(conditions, cond)
+		}
+	}
+
+	userSignup.Status.Conditions = conditions
+	return u.Client.Status().Update(context.TODO(), userSignup)
 }
 
 func (u *StatusUpdater) setStatusFailedToReadBannedUsers(userSignup *toolchainv1alpha1.UserSignup, message string) error {
