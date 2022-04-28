@@ -4071,8 +4071,6 @@ func TestUserSignupMigration(t *testing.T) {
 				Namespace: migrated.Namespace,
 				Name:      migrated.Name}, migrated)
 			require.NoError(t, err)
-
-			require.NotContains(t, migrated.Annotations, "toolchain.dev.openshift.com/migration-replaces")
 			require.True(t, res.Requeue)
 		})
 	})
