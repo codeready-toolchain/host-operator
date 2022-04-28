@@ -368,9 +368,6 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 					Message: fmt.Sprintf("Successfully migrated from UserSignup [%s]", userSignup.Annotations[migrationAnnotationName]),
 				})
 
-			// Remove the annotation
-			delete(userSignup.Annotations, migrationAnnotationName)
-
 			// Update the UserSignup
 			err := r.Client.Update(context.TODO(), userSignup)
 			if err != nil {
@@ -386,11 +383,13 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 
 	if err == nil {
 		// Delete the original UserSignup if it has finished migration
-		if userSignupToDelete.Annotations[migratedAnnotationName] != "true" {
+		if !condition.IsTrueWithReason(userSignupToDelete.Status.Conditions, toolchainv1alpha1.UserSignupComplete,
+			toolchainv1alpha1.UserSignupUserDeactivatedReason) {
 			// The UserSignup to delete isn't finished migrating yet, return an error
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
 				errs.New("Original UserSignup not finished migration"),
 				fmt.Sprintf("Original UserSignup [%s] not yet finished migration", userSignupToDelete.Name))
+
 		}
 
 		err := r.Client.Delete(context.TODO(), userSignupToDelete)

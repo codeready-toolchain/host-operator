@@ -220,10 +220,7 @@ func (u *StatusUpdater) setStatusMigrationFailedCleanup(userSignup *toolchainv1a
 }
 
 func (u *StatusUpdater) setStatusMigrationSuccessful(userSignup *toolchainv1alpha1.UserSignup) error {
-	// Set the "migrated" annotation to true
-	userSignup.Annotations[migratedAnnotationName] = "true"
-
-	// Cleanup the migrated condition from the status
+	// Cleanup the migrated condition from the status, if it exists
 	conditions := []toolchainv1alpha1.Condition{}
 	for _, cond := range userSignup.Status.Conditions {
 		if cond.Type != UserMigrated {

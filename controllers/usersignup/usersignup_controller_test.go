@@ -4004,9 +4004,15 @@ func TestUserSignupMigration(t *testing.T) {
 	require.Contains(t, migrated.Annotations, "foo")
 	require.Equal(t, "bar", migrated.Annotations["foo"])
 
-	t.Run("Reconcile migrated UserSignup fails if original UserSignup not deactivated", func(t *testing.T) {
+	t.Run("Reconcile migrated UserSignup fails if original UserSignup not yet deactivated", func(t *testing.T) {
 		// Remove the deactivated status from the original UserSignup
-		delete(userSignup.Annotations, migratedAnnotationName)
+		conditions := []toolchainv1alpha1.Condition{}
+		for _, cond := range userSignup.Status.Conditions {
+			if cond.Type != toolchainv1alpha1.UserSignupComplete {
+				conditions = append(conditions, cond)
+			}
+		}
+		userSignup.Status.Conditions = conditions
 
 		r, req, cl = prepareReconcile(t, migrated.Name, members, migrated, userSignup)
 		_, err := r.Reconcile(context.TODO(), req)
@@ -4026,7 +4032,8 @@ func TestUserSignupMigration(t *testing.T) {
 			Name:      userSignup.Name}, userSignup)
 		require.NoError(t, err)
 
-		require.Equal(t, "true", userSignup.Annotations[migratedAnnotationName])
+		require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete,
+			toolchainv1alpha1.UserSignupUserDeactivatedReason))
 	})
 
 	t.Run("Reconcile migrated UserSignup cleanup deletes original UserSignup", func(t *testing.T) {
