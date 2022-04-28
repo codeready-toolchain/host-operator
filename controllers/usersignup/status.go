@@ -221,7 +221,7 @@ func (u *StatusUpdater) setStatusMigrationFailedCleanup(userSignup *toolchainv1a
 
 func (u *StatusUpdater) setStatusMigrationSuccessful(userSignup *toolchainv1alpha1.UserSignup) error {
 	// Set the "migrated" annotation to true
-	userSignup.Annotations["migrated"] = "true"
+	userSignup.Annotations[migratedAnnotationName] = "true"
 
 	// Cleanup the migrated condition from the status
 	conditions := []toolchainv1alpha1.Condition{}

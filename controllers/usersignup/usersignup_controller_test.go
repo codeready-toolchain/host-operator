@@ -3963,6 +3963,7 @@ func TestUserSignupMigration(t *testing.T) {
 	userSignup.Spec.FamilyName = "Coyote"
 	userSignup.Spec.OriginalSub = "j3siujx:1235334234"
 	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+	// We insert this annotation value in the original UserSignup just so we can confirm it is migrated ok
 	userSignup.Annotations["foo"] = "bar"
 	states.SetDeactivated(userSignup, true)
 	members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
@@ -4005,19 +4006,27 @@ func TestUserSignupMigration(t *testing.T) {
 
 	t.Run("Reconcile migrated UserSignup fails if original UserSignup not deactivated", func(t *testing.T) {
 		// Remove the deactivated status from the original UserSignup
-		userSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupComplete,
-				Status: v1.ConditionTrue,
-				Reason: "",
-			})
+		delete(userSignup.Annotations, migratedAnnotationName)
 
 		r, req, cl = prepareReconcile(t, migrated.Name, members, migrated, userSignup)
 		_, err := r.Reconcile(context.TODO(), req)
 		require.Error(t, err)
-		require.Equal(t, fmt.Sprintf("Original UserSignup [%s] not yet deactivated: Original UserSignup not deactivated",
+		require.Equal(t, fmt.Sprintf("Original UserSignup [%s] not yet finished migration: Original UserSignup not finished migration",
 			userSignup.Name), err.Error())
+	})
 
+	t.Run("Reconcile original UserSignup sets migrated annotation correctly", func(t *testing.T) {
+		r, req, cl = prepareReconcile(t, userSignup.Name, members, migrated, userSignup)
+		_, err := r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+
+		// Reload the original
+		err = cl.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: userSignup.Namespace,
+			Name:      userSignup.Name}, userSignup)
+		require.NoError(t, err)
+
+		require.Equal(t, "true", userSignup.Annotations[migratedAnnotationName])
 	})
 
 	t.Run("Reconcile migrated UserSignup cleanup deletes original UserSignup", func(t *testing.T) {
@@ -4131,6 +4140,7 @@ func TestUserSignupMigration(t *testing.T) {
 
 		userSignupToDelete := commonsignup.NewUserSignup()
 		userSignupToDelete.Name = "foo"
+		userSignupToDelete.Annotations[migratedAnnotationName] = "true"
 		userSignupToDelete.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupComplete,
@@ -4146,6 +4156,7 @@ func TestUserSignupMigration(t *testing.T) {
 		_, err := r.Reconcile(context.TODO(), req)
 		require.Error(t, err)
 		require.Equal(t, "Failed to remove original UserSignup [foo]: delete failed", err.Error())
+		cl.MockDelete = nil
 
 		r, req, cl = prepareReconcile(t, userSignup.Name, members, userSignup)
 		// Now override the update
@@ -4154,6 +4165,6 @@ func TestUserSignupMigration(t *testing.T) {
 		}
 		_, err = r.Reconcile(context.TODO(), req)
 		require.Error(t, err)
-		require.Equal(t, "Failed to remove migration annotation: update failed", err.Error())
+		require.Equal(t, "Failed to update migrated UserSignup: update failed", err.Error())
 	})
 }

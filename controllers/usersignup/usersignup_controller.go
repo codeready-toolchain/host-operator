@@ -52,6 +52,7 @@ type StatusUpdaterFunc func(userAcc *toolchainv1alpha1.UserSignup, message strin
 
 const (
 	migrationAnnotationName = toolchainv1alpha1.LabelKeyPrefix + "migration-replaces"
+	migratedAnnotationName  = toolchainv1alpha1.LabelKeyPrefix + "migrated"
 )
 
 // SetupWithManager sets up the controller with the Manager.
@@ -281,12 +282,29 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 				ObjectMeta: v1.ObjectMeta{
 					Name:        encodedUsername,
 					Namespace:   userSignup.Namespace,
-					Labels:      userSignup.Labels,
-					Annotations: userSignup.Annotations,
+					Labels:      map[string]string{},
+					Annotations: map[string]string{},
 				},
 				Spec:   userSignup.Spec,
 				Status: userSignup.Status,
 			}
+
+			// Copy the labels and annotations
+			for key, value := range userSignup.Labels {
+				migratedUserSignup.Labels[key] = value
+			}
+
+			for key, value := range userSignup.Annotations {
+				migratedUserSignup.Annotations[key] = value
+			}
+
+			// Copy the states
+			migratedUserSignup.Spec.States = []toolchainv1alpha1.UserSignupState{}
+			migratedUserSignup.Spec.States = append(migratedUserSignup.Spec.States, userSignup.Spec.States...)
+
+			// Copy the conditions
+			migratedUserSignup.Status.Conditions = []toolchainv1alpha1.Condition{}
+			migratedUserSignup.Status.Conditions = append(migratedUserSignup.Status.Conditions, userSignup.Status.Conditions...)
 
 			migratedUserSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(migratedUserSignup.Status.Conditions,
 				toolchainv1alpha1.Condition{
@@ -368,7 +386,7 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 
 	if err == nil {
 		// Delete the original UserSignup if it has finished migration
-		if userSignupToDelete.Annotations["migrated"] != "true" {
+		if userSignupToDelete.Annotations[migratedAnnotationName] != "true" {
 			// The UserSignup to delete isn't finished migrating yet, return an error
 			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
 				errs.New("Original UserSignup not finished migration"),
