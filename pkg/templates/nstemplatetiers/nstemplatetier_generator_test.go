@@ -355,7 +355,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, fakeAssets)
 			// then
 			require.Error(t, err)
-			assert.Equal(t, "unable to init TierTemplate generator: unable to load templates: an error", err.Error()) // error occurred while creating TierTemplate resources
+			assert.Equal(t, "unable to init NSTemplateTier generator: unable to load templates: an error", err.Error()) // error occurred while creating TierTemplate resources
 		})
 
 		t.Run("nstemplatetiers", func(t *testing.T) {
