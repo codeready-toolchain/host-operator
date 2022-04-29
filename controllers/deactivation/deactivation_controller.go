@@ -210,22 +210,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) getDeactivationTimeoutDays(logger logr.Logger, namespace, name string) (int, error) {
-	userTier := &toolchainv1alpha1.UserTier{}
-	tierName := types.NamespacedName{Namespace: namespace, Name: name}
+func (r *Reconciler) getDeactivationTimeoutDays(logger logr.Logger, namespace, tierName string) (int, error) {
 
-	err := r.Client.Get(context.TODO(), tierName, userTier)
+	nsName := types.NamespacedName{Namespace: namespace, Name: tierName}
+
+	userTier := &toolchainv1alpha1.UserTier{}
+	err := r.Client.Get(context.TODO(), nsName, userTier)
 	if err == nil {
+		// found UserTier
 		return userTier.Spec.DeactivationTimeoutDays, nil
 	}
-	logger.Error(err, "unable to get UserTier", "name", name)
 
 	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
-	if err := r.Client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
-		logger.Error(err, "unable to get NSTemplateTier", "name", name)
-		return 0, err
+	err = r.Client.Get(context.TODO(), nsName, nsTemplateTier)
+	if err == nil {
+		// found NSTemplateTier
+		return nsTemplateTier.Spec.DeactivationTimeoutDays, nil
 	}
 
-	// If the deactivation timeout is 0 then users that belong to this tier should not be automatically deactivated
-	return nsTemplateTier.Spec.DeactivationTimeoutDays, nil
+	// neither UserTier nor NSTemplateTier found
+	return 0, err
 }
