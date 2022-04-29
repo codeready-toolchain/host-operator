@@ -305,6 +305,10 @@ spec:
                         description: DefaultTier specifies the default tier to assign
                           for new users
                         type: string
+                      defaultUserTier:
+                        description: DefaultUserTier specifies the default tier to
+                          assign for new users
+                        type: string
                       durationBeforeChangeTierRequestDeletion:
                         description: DurationBeforeChangeTierRequestDeletion specifies
                           the duration before a ChangeTierRequest resource is deleted
