@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -119,7 +118,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// Get the tier associated with the MasterUserRecord, we'll observe the deactivation timeout period from the tier spec
-	deactivationTimeoutDays, err := r.getDeactivationTimeoutDays(logger, request.Namespace, mur.Spec.TierName)
+	deactivationTimeoutDays, err := r.getDeactivationTimeoutDays(request.Namespace, mur.Spec.TierName)
 	if err != nil {
 		logger.Error(err, "unable to get the deactivationTimeoutDays from either UserTier or NSTemplateTier", "name", mur.Spec.TierName)
 		return reconcile.Result{}, err
@@ -210,7 +209,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) getDeactivationTimeoutDays(logger logr.Logger, namespace, tierName string) (int, error) {
+func (r *Reconciler) getDeactivationTimeoutDays(namespace, tierName string) (int, error) {
 
 	nsName := types.NamespacedName{Namespace: namespace, Name: tierName}
 
