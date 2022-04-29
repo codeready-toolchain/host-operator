@@ -368,6 +368,10 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 					Message: fmt.Sprintf("Successfully migrated from UserSignup [%s]", userSignup.Annotations[migrationAnnotationName]),
 				})
 
+			// Set the migrated annotation and delete the migration from annotation
+			userSignup.Annotations[migratedAnnotationName] = fmt.Sprintf("migrated from [%s]", userSignup.Annotations[migratedAnnotationName])
+			delete(userSignup.Annotations, migrationAnnotationName)
+
 			// Update the UserSignup
 			err := r.Client.Update(context.TODO(), userSignup)
 			if err != nil {
