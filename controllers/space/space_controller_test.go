@@ -1085,11 +1085,11 @@ func TestUpdateSpaceRoles(t *testing.T) {
 			HasConditions(spacetest.Updating())
 		// NSTemplateSet should have an spaceRoles entry for the `mur`
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
-			HasSpaceRoleForUser("basic-admin-123456new", johnMUR.Name).    // entry added for user as admin
-			HasNoSpaceRoleForUser("basic-viewer-123456new", johnMUR.Name). // but not added as viewer
-			HasSpaceRoleForUser("basic-admin-123456new", adminMUR.Name).   // unchanged
-			HasSpaceRoleForUser("basic-viewer-123456new", viewerMUR.Name). // unchanged
-			HasConditions(nstemplatetsettest.Provisioned())                // not changed by the SpaceController, but will be by the NSTemplateSetController
+			HasSpaceRoles(
+				nstemplatetsettest.SpaceRole("basic-admin-123456new", adminMUR.Name, johnMUR.Name), // entry added for user 'john' as admin
+				nstemplatetsettest.SpaceRole("basic-viewer-123456new", viewerMUR.Name),             // unchanged
+			).
+			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
 	})
 
 	t.Run("remove user with admin role", func(t *testing.T) {
@@ -1130,11 +1130,11 @@ func TestUpdateSpaceRoles(t *testing.T) {
 			HasConditions(spacetest.Updating())
 		// NSTemplateSet should have an spaceRoles entry for the `mur`
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
-			HasNoSpaceRoleForUser("basic-admin-123456new", johnMUR.Name).  // entry removed for user
-			HasNoSpaceRoleForUser("basic-viewer-123456new", johnMUR.Name). // no change here
-			HasSpaceRoleForUser("basic-admin-123456new", adminMUR.Name).   // unchanged
-			HasSpaceRoleForUser("basic-viewer-123456new", viewerMUR.Name). // unchanged
-			HasConditions(nstemplatetsettest.Provisioned())                // not changed by the SpaceController, but will be by the NSTemplateSetController
+			HasSpaceRoles(
+				nstemplatetsettest.SpaceRole("basic-admin-123456new", adminMUR.Name),   // entry removed for user 'john'
+				nstemplatetsettest.SpaceRole("basic-viewer-123456new", viewerMUR.Name), // unchanged
+			).
+			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
 	})
 
 	t.Run("update user from viewer to admin role", func(t *testing.T) {
@@ -1177,11 +1177,11 @@ func TestUpdateSpaceRoles(t *testing.T) {
 			HasConditions(spacetest.Updating())
 		// NSTemplateSet should have an spaceRoles entry for the `mur`
 		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
-			HasNoSpaceRoleForUser("basic-viewer-123456new", johnMUR.Name). // entry removed for user
-			HasSpaceRoleForUser("basic-admin-123456new", johnMUR.Name).    // entry added for user
-			HasSpaceRoleForUser("basic-admin-123456new", adminMUR.Name).   // unchanged
-			HasSpaceRoleForUser("basic-viewer-123456new", viewerMUR.Name). // unchanged
-			HasConditions(nstemplatetsettest.Provisioned())                // not changed by the SpaceController, but will be by the NSTemplateSetController
+			HasSpaceRoles(
+				nstemplatetsettest.SpaceRole("basic-admin-123456new", adminMUR.Name, johnMUR.Name), // entry added for user 'john'
+				nstemplatetsettest.SpaceRole("basic-viewer-123456new", viewerMUR.Name),             // entry removed for user 'john'
+			).
+			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
 	})
 }
 func TestRetargetSpace(t *testing.T) {
