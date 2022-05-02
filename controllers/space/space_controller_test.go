@@ -1041,11 +1041,12 @@ func TestUpdateSpaceRoles(t *testing.T) {
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
+	adminMUR := murtest.NewMasterUserRecord(t, "jack")
+	viewerMUR := murtest.NewMasterUserRecord(t, "jeff")
+	johnMUR := murtest.NewMasterUserRecord(t, "john")
 
 	t.Run("add user with admin role", func(t *testing.T) {
 		// given a MUR, a Space and its NSTemplateSet resource...
-		adminMUR := murtest.NewMasterUserRecord(t, "jack")
-		viewerMUR := murtest.NewMasterUserRecord(t, "jeff")
 		s := spacetest.NewSpace("oddity",
 			spacetest.WithTierName(basicTier.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
@@ -1064,7 +1065,6 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		sb2 := spacebindingtest.NewSpaceBinding(viewerMUR.Name, s.Name, "viewer", "signupViewer")
 
 		// and a SpaceBinding for John as an Admin on the Space
-		johnMUR := murtest.NewMasterUserRecord(t, "john")
 		sb3 := spacebindingtest.NewSpaceBinding(johnMUR.Name, s.Name, "admin", "signupJohn")
 
 		hostClient := test.NewFakeClient(t, s, johnMUR, adminMUR, sb1, viewerMUR, sb2, sb3, basicTier)
@@ -1099,9 +1099,6 @@ func TestUpdateSpaceRoles(t *testing.T) {
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
-		adminMUR := murtest.NewMasterUserRecord(t, "jack")
-		viewerMUR := murtest.NewMasterUserRecord(t, "jeff")
-		johnMUR := murtest.NewMasterUserRecord(t, "john")
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity",
 			nstemplatetsettest.WithReferencesFor(basicTier,
 				// include pre-existing users with role...
@@ -1142,9 +1139,6 @@ func TestUpdateSpaceRoles(t *testing.T) {
 
 	t.Run("update user from viewer to admin role", func(t *testing.T) {
 		// given a MUR, a Space and its NSTemplateSet resource...
-		johnMUR := murtest.NewMasterUserRecord(t, "john")
-		adminMUR := murtest.NewMasterUserRecord(t, "jack")
-		viewerMUR := murtest.NewMasterUserRecord(t, "jeff")
 		s := spacetest.NewSpace("oddity",
 			spacetest.WithTierName(basicTier.Name),
 			spacetest.WithSpecTargetCluster("member-1"),
