@@ -1427,68 +1427,65 @@ func requestFor(s *toolchainv1alpha1.Space) reconcile.Request {
 
 func TestNewNSTemplateSetSpec(t *testing.T) {
 
-	t.Run("full monty", func(t *testing.T) {
-		// given
-		nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage")
-		s := spacetest.NewSpace("spacejohn",
-			spacetest.WithTierName(nsTemplateTier.Name),
-			spacetest.WithSpecTargetCluster("member-1"))
-		bindings := []toolchainv1alpha1.SpaceBinding{
-			{
-				Spec: toolchainv1alpha1.SpaceBindingSpec{
-					MasterUserRecord: "john",
-					Space:            "spacejohn",
-					SpaceRole:        "admin",
-				},
+	// given
+	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage")
+	s := spacetest.NewSpace("spacejohn",
+		spacetest.WithTierName(nsTemplateTier.Name),
+		spacetest.WithSpecTargetCluster("member-1"))
+	bindings := []toolchainv1alpha1.SpaceBinding{
+		{
+			Spec: toolchainv1alpha1.SpaceBindingSpec{
+				MasterUserRecord: "john",
+				Space:            "spacejohn",
+				SpaceRole:        "admin",
 			},
-			{
-				Spec: toolchainv1alpha1.SpaceBindingSpec{
-					MasterUserRecord: "joe",
-					Space:            "spacejohn",
-					SpaceRole:        "viewer",
-				},
+		},
+		{
+			Spec: toolchainv1alpha1.SpaceBindingSpec{
+				MasterUserRecord: "joe",
+				Space:            "spacejohn",
+				SpaceRole:        "viewer",
 			},
-			{
-				Spec: toolchainv1alpha1.SpaceBindingSpec{
-					MasterUserRecord: "jack",
-					Space:            "spacejohn",
-					SpaceRole:        "viewer",
-				},
+		},
+		{
+			Spec: toolchainv1alpha1.SpaceBindingSpec{
+				MasterUserRecord: "jack",
+				Space:            "spacejohn",
+				SpaceRole:        "viewer",
 			},
-		}
+		},
+	}
 
-		// when
-		setSpec := space.NewNSTemplateSetSpec(s, bindings, nsTemplateTier)
+	// when
+	setSpec := space.NewNSTemplateSetSpec(s, bindings, nsTemplateTier)
 
-		// then
-		assert.Equal(t, toolchainv1alpha1.NSTemplateSetSpec{
-			TierName: "advanced",
-			Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
-				{
-					TemplateRef: "advanced-dev-123abc1",
-				},
-				{
-					TemplateRef: "advanced-stage-123abc2",
+	// then
+	assert.Equal(t, toolchainv1alpha1.NSTemplateSetSpec{
+		TierName: "advanced",
+		Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
+			{
+				TemplateRef: "advanced-dev-123abc1",
+			},
+			{
+				TemplateRef: "advanced-stage-123abc2",
+			},
+		},
+		ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
+			TemplateRef: "advanced-clusterresources-654321b",
+		},
+		SpaceRoles: []toolchainv1alpha1.NSTemplateSetSpaceRole{
+			{
+				TemplateRef: "advanced-admin-123abc1",
+				Usernames: []string{
+					"john",
 				},
 			},
-			ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
-				TemplateRef: "advanced-clusterresources-654321b",
-			},
-			SpaceRoles: []toolchainv1alpha1.NSTemplateSetSpaceRole{
-				{
-					TemplateRef: "advanced-admin-123abc1",
-					Usernames: []string{
-						"john",
-					},
-				},
-				{
-					TemplateRef: "advanced-viewer-123abc2",
-					Usernames: []string{
-						"jack", "joe", // sorted
-					},
+			{
+				TemplateRef: "advanced-viewer-123abc2",
+				Usernames: []string{
+					"jack", "joe", // sorted
 				},
 			},
-		}, setSpec)
-	})
-
+		},
+	}, setSpec)
 }
