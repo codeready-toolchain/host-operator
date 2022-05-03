@@ -79,6 +79,21 @@ objects:
     podSelector: {}
     policyTypes:
       - Ingress
+- apiVersion: v1
+  kind: LimitRange
+  metadata:
+    name: resource-limits
+    namespace: ${USERNAME}-dev
+  spec:
+    limits:
+    - type: "Container"
+      default:
+        cpu: 1000m
+        memory: 750Mi
+      defaultRequest:
+        cpu: 10m
+        memory: 64Mi
+
 parameters:
 - name: USERNAME
   required: true
