@@ -303,7 +303,7 @@ func (t *tierGenerator) createTierTemplates() error {
 			if err := t.client.Create(context.TODO(), tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
 				return errors.Wrapf(err, "unable to create the '%s' TierTemplate in namespace '%s'", tierTmpl.Name, tierTmpl.Namespace)
 			}
-			log.Info("TierTemplate resource created", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name, "tier_name", tierTmpl.Spec.TierName, "revision", tierTmpl.Spec.Revision, "template_name", tierTmpl.Spec.Template.GetName())
+			log.Info("TierTemplate resource created", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
 		}
 	}
 	return nil
