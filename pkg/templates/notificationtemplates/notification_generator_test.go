@@ -64,10 +64,10 @@ func TestGetNotificationTemplate(t *testing.T) {
 
 		})
 
-		t.Run("get idleractivated notification template", func(t *testing.T) {
+		t.Run("get idlertriggered notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate("idleractivated")
+			template, found, err := GetNotificationTemplate("idlertriggered")
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
