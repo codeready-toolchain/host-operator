@@ -51,8 +51,9 @@ import (
 type StatusUpdaterFunc func(userAcc *toolchainv1alpha1.UserSignup, message string) error
 
 const (
-	migrationAnnotationName = toolchainv1alpha1.LabelKeyPrefix + "migration-replaces"
-	migratedAnnotationName  = toolchainv1alpha1.LabelKeyPrefix + "migrated"
+	migrationAnnotationName           = toolchainv1alpha1.LabelKeyPrefix + "migration-replaces"
+	migratedAnnotationName            = toolchainv1alpha1.LabelKeyPrefix + "migrated"
+	migrationInProgressAnnotationName = toolchainv1alpha1.LabelKeyPrefix + "migration-in-progress"
 )
 
 // SetupWithManager sets up the controller with the Manager.
@@ -119,12 +120,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 	logger = logger.WithValues("username", userSignup.Spec.Username)
 
+	// Don't reconcile while migration is in progress
+	// TODO delete this after migration is complete
+	_, ok := userSignup.Annotations[migrationInProgressAnnotationName]
+	if ok {
+		return reconcile.Result{}, nil
+	}
+
 	if util.IsBeingDeleted(userSignup) {
 		logger.Info("The UserSignup is being deleted")
 		return reconcile.Result{}, nil
 	}
 
-	// REMOVE THIS BLOCK AFTER MIGRATION - See additional comments further below in the migrateUserIfNecessary function
+	// TODO REMOVE THIS BLOCK AFTER MIGRATION - See additional comments further below in the migrateUserIfNecessary function
 	originalUserSignupName, ok := userSignup.Annotations[migrationAnnotationName]
 	if ok {
 		return r.cleanupMigration(userSignup, originalUserSignupName, request, logger)
@@ -285,8 +293,7 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 					Labels:      map[string]string{},
 					Annotations: map[string]string{},
 				},
-				Spec:   userSignup.Spec,
-				Status: userSignup.Status,
+				Spec: userSignup.Spec,
 			}
 
 			// Copy the labels and annotations
@@ -302,34 +309,68 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 			migratedUserSignup.Spec.States = []toolchainv1alpha1.UserSignupState{}
 			migratedUserSignup.Spec.States = append(migratedUserSignup.Spec.States, userSignup.Spec.States...)
 
-			// Copy the conditions
-			migratedUserSignup.Status.Conditions = []toolchainv1alpha1.Condition{}
-			migratedUserSignup.Status.Conditions = append(migratedUserSignup.Status.Conditions, userSignup.Status.Conditions...)
-
-			migratedUserSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(migratedUserSignup.Status.Conditions,
-				toolchainv1alpha1.Condition{
-					Type:    toolchainv1alpha1.UserSignupComplete,
-					Status:  corev1.ConditionTrue,
-					Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
-					Message: "",
-				},
-				toolchainv1alpha1.Condition{
-					Type:    toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-					Status:  corev1.ConditionTrue,
-					Reason:  "UserSignupMigrated",
-					Message: "",
-				})
 			if migratedUserSignup.Annotations == nil {
 				migratedUserSignup.Annotations = map[string]string{}
 			}
 			migratedUserSignup.Annotations[migrationAnnotationName] = userSignup.Name
+			migratedUserSignup.Annotations[migrationInProgressAnnotationName] = "true"
+
 			err = r.Client.Create(context.TODO(), migratedUserSignup)
 			if err != nil {
 				// If there was an error creating the migrated UserSignup, then set the status and requeue
 				return r.wrapErrorWithStatusUpdate(logger, userSignup,
-					r.setStatusMigrationFailedCreate, err, "Failed to create UserSignup")
+					r.setStatusMigrationFailedCreate, err, "Failed to create migrated UserSignup")
+			}
+
+			// Reload the UserSignup in order to populate the status (which happens outside of this condition block)
+			err = r.Client.Get(context.TODO(), types.NamespacedName{
+				Namespace: migratedUserSignup.Namespace,
+				Name:      migratedUserSignup.Name,
+			}, migratedUserSignup)
+			if err != nil {
+				// If there was an error reloading the migrated UserSignup, then set the status and requeue
+				return r.wrapErrorWithStatusUpdate(logger, userSignup,
+					r.setStatusMigrationFailedCreate, err, "Failed to reload migrated UserSignup")
 			}
 		}
+
+		// Copy the status and conditions
+		migratedUserSignup.Status.CompliantUsername = userSignup.Status.CompliantUsername
+		migratedUserSignup.Status.Conditions = []toolchainv1alpha1.Condition{}
+		migratedUserSignup.Status.Conditions = append(migratedUserSignup.Status.Conditions, userSignup.Status.Conditions...)
+
+		// We want to force these particular conditions no matter what
+		migratedUserSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(migratedUserSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:    toolchainv1alpha1.UserSignupComplete,
+				Status:  corev1.ConditionTrue,
+				Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
+				Message: "",
+			},
+			toolchainv1alpha1.Condition{
+				Type:    toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status:  corev1.ConditionTrue,
+				Reason:  "UserSignupMigrated",
+				Message: "",
+			})
+
+		err = r.Client.Status().Update(context.TODO(), migratedUserSignup)
+		if err != nil {
+			// If there was an error updating the status for the migrated UserSignup, then set the status and requeue
+			return r.wrapErrorWithStatusUpdate(logger, userSignup,
+				r.setStatusMigrationFailedCreate, err, "Failed to update status for migrated UserSignup")
+		}
+
+		// Finally, we need to remove the migration in progress annotation
+		delete(migratedUserSignup.Annotations, migrationInProgressAnnotationName)
+
+		err = r.Client.Update(context.TODO(), migratedUserSignup)
+		if err != nil {
+			// If there was an error updating the annotations for the migrated UserSignup, then set the status and requeue
+			return r.wrapErrorWithStatusUpdate(logger, userSignup,
+				r.setStatusMigrationFailedCreate, err, "Failed to remove migration in progress annotation for migrated UserSignup")
+		}
+
 		return r.setStatusMigrationSuccessful(userSignup)
 	}
 	return nil
@@ -359,17 +400,8 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 		// migration condition from the status
 		if errors.IsNotFound(err) {
 
-			// Update the migration status
-			userSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
-				toolchainv1alpha1.Condition{
-					Type:    UserMigrated,
-					Status:  corev1.ConditionTrue,
-					Reason:  "UserMigrated",
-					Message: fmt.Sprintf("Successfully migrated from UserSignup [%s]", userSignup.Annotations[migrationAnnotationName]),
-				})
-
 			// Set the migrated annotation and delete the migration from annotation
-			userSignup.Annotations[migratedAnnotationName] = fmt.Sprintf("migrated from [%s]", userSignup.Annotations[migratedAnnotationName])
+			userSignup.Annotations[migratedAnnotationName] = fmt.Sprintf("migrated from [%s]", originalUserSignupName)
 			delete(userSignup.Annotations, migrationAnnotationName)
 
 			// Update the UserSignup
@@ -378,36 +410,33 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
 					r.setStatusMigrationFailedCleanup, err, "Failed to update migrated UserSignup")
 			}
-		} else {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
-				r.setStatusMigrationFailedLookup, err, fmt.Sprintf("Failed to lookup original UserSignup [%s]",
-					userSignup.Annotations[migrationAnnotationName]))
+			// If everything was cleaned up successfully, requeue one more time to invoke the standard reconciliation workflow
+			return reconcile.Result{Requeue: true}, nil
 		}
+
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup,
+			r.setStatusMigrationFailedLookup, err, fmt.Sprintf("Failed to lookup original UserSignup [%s]",
+				userSignup.Annotations[migrationAnnotationName]))
 	}
 
-	if err == nil {
-		// Delete the original UserSignup if it has finished migration
-		if !condition.IsTrueWithReason(userSignupToDelete.Status.Conditions, toolchainv1alpha1.UserSignupComplete,
-			toolchainv1alpha1.UserSignupUserDeactivatedReason) {
-			// The UserSignup to delete isn't finished migrating yet, return an error
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
-				errs.New("Original UserSignup not finished migration"),
-				fmt.Sprintf("Original UserSignup [%s] not yet finished migration", userSignupToDelete.Name))
+	// Delete the original UserSignup if it has finished migration
+	if !condition.IsTrueWithReason(userSignupToDelete.Status.Conditions, toolchainv1alpha1.UserSignupComplete,
+		toolchainv1alpha1.UserSignupUserDeactivatedReason) {
+		// The UserSignup to delete isn't finished migrating yet, return an error
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
+			errs.New("Original UserSignup not finished migration"),
+			fmt.Sprintf("Original UserSignup [%s] not yet finished migration", userSignupToDelete.Name))
 
-		}
-
-		err := r.Client.Delete(context.TODO(), userSignupToDelete)
-		if err != nil {
-			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
-				err, fmt.Sprintf("Failed to remove original UserSignup [%s]",
-					userSignup.Annotations[migrationAnnotationName]))
-		}
-		// Requeue so that the annotation will now be removed also
-		return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, nil
 	}
 
-	// If everything was cleaned up successfully, requeue one more time to invoke the standard reconciliation workflow
-	return reconcile.Result{Requeue: true}, nil
+	err = r.Client.Delete(context.TODO(), userSignupToDelete)
+	if err != nil {
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
+			err, fmt.Sprintf("Failed to remove original UserSignup [%s]",
+				userSignup.Annotations[migrationAnnotationName]))
+	}
+	// Requeue so that the annotation will now be removed also
+	return reconcile.Result{Requeue: true, RequeueAfter: time.Second}, nil
 }
 
 // EncodeUserIdentifier is a temporary function used by the migration procedure
