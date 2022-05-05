@@ -526,7 +526,89 @@ func TestReconcile(t *testing.T) {
 				AssertMetricsCounterEquals(t, 1, metrics.UserSignupAutoDeactivatedTotal)
 			})
 		})
+	})
 
+	t.Run("test usersignup deactivating state reset to false", func(t *testing.T) {
+		t.Run("when the provisioned time is after the deactivatingNotificationTimeout", func(t *testing.T) {
+			// given
+			userSignupFoobar := userSignupWithEmail(username, "foo@bar.com")
+
+			// Set usersignup state as already set to deactivating
+			states.SetDeactivating(userSignupFoobar, true)
+
+			// Set the notification status condition as sent
+			userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
+				{
+					Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+					Status:             corev1.ConditionTrue,
+					LastTransitionTime: metav1.Time{Time: time.Now()},
+					Reason:             toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason,
+				},
+			}
+
+			// Set the provisioned time so that we were just 2 days from the original expected 30 day deactivation time (28 days)
+			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration((expectedDeactivationTimeoutDeactivate30Tier-2)*24) * time.Hour)}
+
+			// Now the MasterUserRecord has been promoted to the 90 day tier
+			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(userTier90.Name), murtest.Account("cluster1"),
+				murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+
+			r, req, cl := prepareReconcile(t, mur.Name, userTier90, mur, userSignupFoobar, config)
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			// The RequeueAfter should be ~about 59 days...(28 days from the new deactivatingNotificationTimeout = 90-3-28) let's accept if it's within 1 hour of that
+			require.WithinDuration(t, time.Now().Add(time.Duration(59*24)*time.Hour), time.Now().Add(res.RequeueAfter), time.Duration(1)*time.Hour)
+
+			// Reload the userSignup
+			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+			require.False(t, states.Deactivating(userSignupFoobar))
+			require.False(t, states.Deactivated(userSignupFoobar))
+		})
+
+		t.Run("when provisioning state is set but user is moved to a tier without deactivation", func(t *testing.T) {
+			// given
+			userSignupFoobar := userSignupWithEmail(username, "foo@bar.com")
+
+			// Set usersignup state as already set to deactivating
+			states.SetDeactivating(userSignupFoobar, true)
+
+			// Set the notification status condition as sent
+			userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
+				{
+					Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+					Status:             corev1.ConditionTrue,
+					LastTransitionTime: metav1.Time{Time: time.Now()},
+					Reason:             toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason,
+				},
+			}
+
+			// Set the provisioned time so that we were just 2 days from the original expected 30 day deactivation time (28 days)
+			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration((expectedDeactivationTimeoutDeactivate30Tier-2)*24) * time.Hour)}
+
+			// Now the MasterUserRecord has been promoted to the tier without automatic deactivation
+			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(userTierNoDeactivation.Name), murtest.Account("cluster1"),
+				murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
+
+			r, req, cl := prepareReconcile(t, mur.Name, userTierNoDeactivation, mur, userSignupFoobar, config)
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.NoError(t, err)
+			require.False(t, res.Requeue) // no requeue since user should not be auto deactivated
+
+			// Reload the userSignup
+			require.NoError(t, cl.Get(context.TODO(), types.NamespacedName{Name: userSignupFoobar.Name, Namespace: operatorNamespace}, userSignupFoobar))
+			require.False(t, states.Deactivating(userSignupFoobar))
+			require.False(t, states.Deactivated(userSignupFoobar))
+		})
 	})
 
 	t.Run("failures", func(t *testing.T) {
