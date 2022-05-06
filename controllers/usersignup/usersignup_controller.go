@@ -206,37 +206,45 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, r.updateStatus(logger, userSignup, r.setStatusBanned)
 	}
 
-	// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
-	// send a notification to the user, and return
+	// Check if the user has been deactivated
 	if states.Deactivated(userSignup) {
-		// if the UserSignup doesn't have the state=deactivated label set, then update it
-		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
-			return reconcile.Result{}, err
-		}
-		if condition.IsNotTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
-			if err := r.sendDeactivatedNotification(logger, config, userSignup); err != nil {
-				logger.Error(err, "Failed to create user deactivation notification")
-
-				// set the failed to create notification status condition
-				return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusDeactivationNotificationCreationFailed, err, "Failed to create user deactivation notification")
-			}
-
-			if err := r.updateStatus(logger, userSignup, r.setStatusDeactivationNotificationCreated); err != nil {
-				logger.Error(err, "Failed to update notification created status")
-				return reconcile.Result{}, err
-			}
-		}
-
-		err = r.updateStatus(logger, userSignup, r.setStatusDeactivated)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Migrate the user if necessary
-		return reconcile.Result{}, r.migrateUserIfNecessary(userSignup, request, logger)
+		return r.handleDeactivatedUserSignup(logger, config, request, userSignup)
 	}
 
 	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, config, userSignup)
+}
+
+// handleDeactivatedUserSignup defines the workflow for deactivated users
+//
+// If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
+// send a notification to the user, and return
+func (r *Reconciler) handleDeactivatedUserSignup(logger logr.Logger, config toolchainconfig.ToolchainConfig,
+	request ctrl.Request, userSignup *toolchainv1alpha1.UserSignup) (ctrl.Result, error) {
+	// if the UserSignup doesn't have the state=deactivated label set, then update it
+	if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
+		return reconcile.Result{}, err
+	}
+	if condition.IsNotTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
+		if err := r.sendDeactivatedNotification(logger, config, userSignup); err != nil {
+			logger.Error(err, "Failed to create user deactivation notification")
+
+			// set the failed to create notification status condition
+			return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusDeactivationNotificationCreationFailed, err, "Failed to create user deactivation notification")
+		}
+
+		if err := r.updateStatus(logger, userSignup, r.setStatusDeactivationNotificationCreated); err != nil {
+			logger.Error(err, "Failed to update notification created status")
+			return reconcile.Result{}, err
+		}
+	}
+
+	err := r.updateStatus(logger, userSignup, r.setStatusDeactivated)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Migrate the user if necessary
+	return reconcile.Result{}, r.migrateUserIfNecessary(userSignup, request, logger)
 }
 
 // migrateUserIfNecessary migrates the UserSignup if necessary - REMOVE THIS FUNCTION AFTER MIGRATION COMPLETE
