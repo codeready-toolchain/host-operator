@@ -61,6 +61,14 @@ var PreviousBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
 		TemplateRef: "basic-clusterresources-123456old",
 	},
+	SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
+		"admin": {
+			TemplateRef: "basic-admin-123456old",
+		},
+		"viewer": {
+			TemplateRef: "basic-viewer-123456old",
+		},
+	},
 }
 
 // CurrentBasicTemplates current templates for the "basic" tier
