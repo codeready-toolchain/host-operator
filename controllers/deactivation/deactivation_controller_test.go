@@ -536,16 +536,6 @@ func TestReconcile(t *testing.T) {
 			// Set usersignup state as already set to deactivating
 			states.SetDeactivating(userSignupFoobar, true)
 
-			// Set the notification status condition as sent
-			userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
-				{
-					Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-					Status:             corev1.ConditionTrue,
-					LastTransitionTime: metav1.Time{Time: time.Now()},
-					Reason:             toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason,
-				},
-			}
-
 			// Set the provisioned time so that we were just 2 days from the original expected 30 day deactivation time (28 days)
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration((expectedDeactivationTimeoutDeactivate30Tier-2)*24) * time.Hour)}
 
@@ -576,16 +566,6 @@ func TestReconcile(t *testing.T) {
 
 			// Set usersignup state as already set to deactivating
 			states.SetDeactivating(userSignupFoobar, true)
-
-			// Set the notification status condition as sent
-			userSignupFoobar.Status.Conditions = []toolchainv1alpha1.Condition{
-				{
-					Type:               toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-					Status:             corev1.ConditionTrue,
-					LastTransitionTime: metav1.Time{Time: time.Now()},
-					Reason:             toolchainv1alpha1.UserSignupDeactivatingNotificationCRCreatedReason,
-				},
-			}
 
 			// Set the provisioned time so that we were just 2 days from the original expected 30 day deactivation time (28 days)
 			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration((expectedDeactivationTimeoutDeactivate30Tier-2)*24) * time.Hour)}
