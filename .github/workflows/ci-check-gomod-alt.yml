@@ -1,0 +1,13 @@
+# alternative workflow to ensure that the required status checks on the PR are handled
+# see https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
+name: ci-check-gomod # same name
+on:
+  pull_request:
+    paths-ignore:
+      - 'go.mod'
+jobs:
+  gomodreplacements:
+    name: go.mod replacements
+    runs-on: ubuntu-20.04
+    steps:
+      - run: 'echo "No check required" '

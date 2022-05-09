@@ -1,0 +1,22 @@
+name: ci-check-gomod
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'go.mod'
+
+jobs:
+  gomodreplacements:
+    name: go.mod replacements
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: check
+      run: |
+        if [[ -n "$(grep 'replace github.com/codeready-toolchain/.*' go.mod || true)" ]]; then
+          echo "forbidden replacement in go.mod"
+          exit 1
+        fi
