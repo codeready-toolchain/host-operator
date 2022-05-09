@@ -1080,7 +1080,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, res.Requeue) // expect a requeue since the NSTemplateSet was updated
-		// Space should be in "updating" state while the
+		// Space should be in "updating" state while the NSTemplateSet is being updated
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 			HasConditions(spacetest.Updating())
 		// NSTemplateSet should have an spaceRoles entry for the `mur`
@@ -1125,7 +1125,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, res.Requeue) // expect a requeue since the NSTemplateSet was updated
-		// Space should be in "updating" state while the
+		// Space should be in "updating" state while the NSTemplateSet is being updated
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 			HasConditions(spacetest.Updating())
 		// NSTemplateSet should have an spaceRoles entry for the `mur`
@@ -1172,7 +1172,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, res.Requeue) // expect a requeue since the NSTemplateSet was updated
-		// Space should be in "updating" state while the
+		// Space should be in "updating" state while the NSTemplateSet is being updated
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 			HasConditions(spacetest.Updating())
 		// NSTemplateSet should have an spaceRoles entry for the `mur`
