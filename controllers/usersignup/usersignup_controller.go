@@ -350,15 +350,9 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 		// We want to force these particular conditions no matter what
 		migratedUserSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(migratedUserSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
-				Type:    toolchainv1alpha1.UserSignupComplete,
-				Status:  corev1.ConditionTrue,
-				Reason:  toolchainv1alpha1.UserSignupUserDeactivatedReason,
-				Message: "",
-			},
-			toolchainv1alpha1.Condition{
-				Type:    toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-				Status:  corev1.ConditionTrue,
-				Reason:  "UserSignupMigrated",
+				Type:    UserMigrated,
+				Status:  corev1.ConditionFalse,
+				Reason:  "MigrationStarted",
 				Message: "",
 			})
 
