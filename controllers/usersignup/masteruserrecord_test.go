@@ -1,12 +1,12 @@
 package usersignup
 
 import (
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"testing"
 
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
-	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/assert"
@@ -16,10 +16,10 @@ import (
 func TestNewMasterUserRecord(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup()
-	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
+	userTier := testusertier.NewUserTier("deactivate90", 90)
 
 	// when
-	mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+	mur := newMasterUserRecord(userSignup, test.MemberClusterName, userTier, "johny")
 
 	// then
 	assert.Equal(t, newExpectedMur(userSignup), mur)
@@ -32,11 +32,11 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		t.Run("when mur is the same", func(t *testing.T) {
 			// given
 			userSignup := commonsignup.NewUserSignup()
-			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
-			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			userTier := testusertier.NewUserTier("deactivate90", 90)
+			mur := newMasterUserRecord(userSignup, test.MemberClusterName, userTier, "johny")
 
 			// when
-			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+			changed := migrateOrFixMurIfNecessary(mur, userTier, userSignup)
 
 			// then
 			assert.False(t, changed)
@@ -46,31 +46,14 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 
 	t.Run("update needed", func(t *testing.T) {
 
-		t.Run("when MUR has tier hash label, it should be removed after migration", func(t *testing.T) {
-			userSignup := commonsignup.NewUserSignup()
-			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
-			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
-			mur.Labels = map[string]string{
-				"toolchain.dev.openshift.com/owner":                    userSignup.Name,
-				tierutil.TemplateTierHashLabelKey(nsTemplateTier.Name): "abc123", // tier hash label set
-			}
-
-			// when
-			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
-
-			// then
-			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(userSignup), mur)
-		})
-
 		t.Run("when tierName is missing", func(t *testing.T) {
 			userSignup := commonsignup.NewUserSignup()
-			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
-			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			userTier := testusertier.NewUserTier("deactivate90", 90)
+			mur := newMasterUserRecord(userSignup, test.MemberClusterName, userTier, "johny")
 			mur.Spec.TierName = "" // tierName not set
 
 			// when
-			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+			changed := migrateOrFixMurIfNecessary(mur, userTier, userSignup)
 
 			// then
 			assert.True(t, changed)
@@ -95,7 +78,7 @@ func newExpectedMur(userSignup *toolchainv1alpha1.UserSignup) *toolchainv1alpha1
 		Spec: toolchainv1alpha1.MasterUserRecordSpec{
 			UserID:   userSignup.Spec.Userid,
 			Disabled: false,
-			TierName: "advanced",
+			TierName: "deactivate90",
 			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
 				{
 					TargetCluster: test.MemberClusterName,

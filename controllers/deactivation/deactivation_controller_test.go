@@ -176,7 +176,7 @@ func TestReconcile(t *testing.T) {
 			t.Run("usersignup should not be deactivated - basic tier (30 days)", func(t *testing.T) {
 				// given
 				murProvisionedTime := metav1.Now()
-				mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1"), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+				mur := murtest.NewMasterUserRecord(t, username, murtest.TierName("basic"), murtest.Account("cluster1"), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 				r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
 				// when
@@ -229,7 +229,7 @@ func TestReconcile(t *testing.T) {
 			// a mur that has not been provisioned yet
 			t.Run("mur without provisioned time", func(t *testing.T) {
 				// given
-				mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1"), murtest.UserIDFromUserSignup(userSignupFoobar))
+				mur := murtest.NewMasterUserRecord(t, username, murtest.TierName("basic"), murtest.Account("cluster1"), murtest.UserIDFromUserSignup(userSignupFoobar))
 				r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupFoobar, config)
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -250,7 +250,7 @@ func TestReconcile(t *testing.T) {
 				restore := test.SetEnvVarAndRestore(t, "HOST_OPERATOR_DEACTIVATION_DOMAINS_EXCLUDED", "@redhat.com")
 				defer restore()
 				murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
-				mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1"), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupRedhat))
+				mur := murtest.NewMasterUserRecord(t, username, murtest.TierName("basic"), murtest.Account("cluster1"), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupRedhat))
 				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupRedhat.Name
 				r, req, cl := prepareReconcile(t, mur.Name, basicTier, mur, userSignupRedhat, config)
 				// when
@@ -405,7 +405,7 @@ func TestReconcile(t *testing.T) {
 
 				// Set the provisioned time so that we are now 2 days before the expected deactivation time
 				murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration((expectedDeactivationTimeoutBasicTier-2)*24) * time.Hour)}
-				mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1"),
+				mur := murtest.NewMasterUserRecord(t, username, murtest.TierName("basic"), murtest.Account("cluster1"),
 					murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 				mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 
@@ -597,7 +597,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("unable to get NSTemplateTier", func(t *testing.T) {
 			// given
 			murProvisionedTime := metav1.Now()
-			mur := murtest.NewMasterUserRecord(t, username, murtest.Account("cluster1"), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
+			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName("basic"), murtest.Account("cluster1"), murtest.ProvisionedMur(&murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, mur, userSignupFoobar, config)
 			// when

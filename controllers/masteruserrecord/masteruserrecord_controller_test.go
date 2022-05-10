@@ -3,10 +3,11 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"os"
 	"testing"
 	"time"
+
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
@@ -148,7 +149,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur).
-		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
+		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
@@ -196,7 +197,7 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur).
-		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
+		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
@@ -241,11 +242,11 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur).
-		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
+		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
 		MatchMasterUserRecord(mur).
-		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
+		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
@@ -646,7 +647,7 @@ func TestModifyUserAccounts(t *testing.T) {
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur).
-		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
+		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
 
 	// when ensuring 2nd account
 	_, err = cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -655,7 +656,7 @@ func TestModifyUserAccounts(t *testing.T) {
 	uatest.AssertThatUserAccount(t, "john", memberClient2).
 		Exists().
 		MatchMasterUserRecord(mur).
-		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
+		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
 
 	// when ensuring 3rd account
 	_, err = cntrl.Reconcile(context.TODO(), newMurRequest(mur))
@@ -664,7 +665,7 @@ func TestModifyUserAccounts(t *testing.T) {
 	uatest.AssertThatUserAccount(t, "john", memberClient3).
 		Exists().
 		MatchMasterUserRecord(mur).
-		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic")
+		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordUpdatingReason, ""))
 	AssertThatCountersAndMetrics(t).
@@ -743,17 +744,17 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		uatest.AssertThatUserAccount(t, "john", memberClient).
 			Exists().
 			MatchMasterUserRecord(mur).
-			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic").
+			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30").
 			HasConditions(userAccount.Status.Conditions...)
 		uatest.AssertThatUserAccount(t, "john", memberClient2).
 			Exists().
 			MatchMasterUserRecord(mur).
-			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic").
+			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30").
 			HasConditions(userAccount2.Status.Conditions...)
 		uatest.AssertThatUserAccount(t, "john", memberClient3).
 			Exists().
 			MatchMasterUserRecord(mur).
-			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "basic").
+			HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30").
 			HasConditions(userAccount3.Status.Conditions...)
 
 		murtest.AssertThatMasterUserRecord(t, "john", hostClient).

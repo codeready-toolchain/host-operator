@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, defaultTier *toolchainv1alpha1.NSTemplateTier, userSignup *toolchainv1alpha1.UserSignup) bool {
+func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, defaultTier *toolchainv1alpha1.UserTier, userSignup *toolchainv1alpha1.UserSignup) bool {
 	changed := false
 
 	// TODO remove this after all users migrated to new SSO Provider client that does not modify the original subject
@@ -33,7 +33,7 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, default
 	return changed
 }
 
-func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string, nstemplateTier *toolchainv1alpha1.NSTemplateTier, compliantUserName string) *toolchainv1alpha1.MasterUserRecord {
+func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string, userTier *toolchainv1alpha1.UserTier, compliantUserName string) *toolchainv1alpha1.MasterUserRecord {
 	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 		{
 			TargetCluster: targetCluster,
@@ -57,7 +57,7 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 			UserAccounts: userAccounts,
 			UserID:       userSignup.Spec.Userid,
 			OriginalSub:  userSignup.Spec.OriginalSub,
-			TierName:     nstemplateTier.Name,
+			TierName:     userTier.Name,
 		},
 	}
 	return mur
