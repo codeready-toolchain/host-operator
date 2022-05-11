@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -265,12 +266,23 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			// Space status was *just* set to `Ready=false/Updating`, so we need to wait
 			return requeueDelay, nil
 		}
-		hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
-		if err != nil {
-			return norequeue, r.setStatusProvisioningFailed(logger, space, err)
-		}
+
 		if space.Labels == nil {
 			space.Labels = map[string]string{}
+		}
+
+		// remove any outdated tier hash labels
+		for key := range space.GetLabels() {
+			if strings.HasPrefix(key, "toolchain.dev.openshift.com/") && strings.HasSuffix(key, "-tier-hash") {
+				delete(space.Labels, key)
+			}
+		}
+
+		// add a tier hash label matching the current NSTemplateTier
+		hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
+		if err != nil {
+			err = errs.Wrap(err, "error computing hash for NSTemplateTier")
+			return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 		}
 		space.Labels[tierutil.TemplateTierHashLabelKey(space.Spec.TierName)] = hash
 		if err := r.Client.Update(context.TODO(), space); err != nil {
