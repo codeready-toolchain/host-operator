@@ -27,6 +27,7 @@ var expectedProdTiers = []string{
 	"deactivate80",
 	"deactivate90",
 	"deactivate180",
+	"deactivate365",
 }
 
 var expectedTestTiers = []string{
@@ -187,6 +188,8 @@ func TestNewUserTier(t *testing.T) {
 					assert.Equal(t, 90, tier.Spec.DeactivationTimeoutDays)
 				case "deactivate180":
 					assert.Equal(t, 180, tier.Spec.DeactivationTimeoutDays)
+				case "deactivate365":
+					assert.Equal(t, 365, tier.Spec.DeactivationTimeoutDays)
 				default:
 					require.Fail(t, "found unexpected tier", "tier '%s' found but not handled", tier.Name)
 				}

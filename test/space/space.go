@@ -41,14 +41,20 @@ func WithTierName(tierName string) Option {
 	}
 }
 
-func WithTierNameAndHashLabelFor(tier *toolchainv1alpha1.NSTemplateTier) Option {
+func WithTierHashLabelFor(tier *toolchainv1alpha1.NSTemplateTier) Option {
 	return func(space *toolchainv1alpha1.Space) {
-		space.Spec.TierName = tier.Name
 		hash, _ := tierutil.ComputeHashForNSTemplateTier(tier) // we can assume the JSON marshalling will always work
 		if space.ObjectMeta.Labels == nil {
 			space.ObjectMeta.Labels = map[string]string{}
 		}
 		space.ObjectMeta.Labels[tierutil.TemplateTierHashLabelKey(tier.Name)] = hash
+	}
+}
+
+func WithTierNameAndHashLabelFor(tier *toolchainv1alpha1.NSTemplateTier) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		WithTierName(tier.Name)(space)
+		WithTierHashLabelFor(tier)(space)
 	}
 }
 
