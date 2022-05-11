@@ -8,7 +8,6 @@ import (
 	goruntime "runtime"
 	"time"
 
-	"github.com/codeready-toolchain/host-operator/controllers/changetierrequest"
 	"github.com/codeready-toolchain/host-operator/controllers/deactivation"
 	"github.com/codeready-toolchain/host-operator/controllers/masteruserrecord"
 	"github.com/codeready-toolchain/host-operator/controllers/notification"
@@ -198,13 +197,6 @@ func main() {
 		memberClientTimeout,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ToolchainCluster")
-		os.Exit(1)
-	}
-	if err := (&changetierrequest.Reconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ChangeTierRequest")
 		os.Exit(1)
 	}
 	if err := (&deactivation.Reconciler{
