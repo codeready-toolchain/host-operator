@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -118,16 +119,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// Get the tier associated with the MasterUserRecord, we'll observe the deactivation timeout period from the tier spec
-	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
-	tierName := types.NamespacedName{Namespace: request.Namespace, Name: mur.Spec.TierName}
-	if err := r.Client.Get(context.TODO(), tierName, nsTemplateTier); err != nil {
-		logger.Error(err, "unable to get NSTemplateTier", "name", mur.Spec.TierName)
+	deactivationTimeoutDays, err := r.getDeactivationTimeoutDays(request.Namespace, mur.Spec.TierName)
+	if err != nil {
+		logger.Error(err, "unable to get the deactivationTimeoutDays from either UserTier or NSTemplateTier", "name", mur.Spec.TierName)
 		return reconcile.Result{}, err
 	}
 
 	// If the deactivation timeout is 0 then users that belong to this tier should not be automatically deactivated
-	deactivationTimeoutDays := nsTemplateTier.Spec.DeactivationTimeoutDays
 	if deactivationTimeoutDays == 0 {
+		// If the usersignup was already set to deactivating then reset it to false
+		if err := r.resetDeactivatingState(logger, usersignup); err != nil {
+			return reconcile.Result{}, err
+		}
 		logger.Info("User belongs to a tier that does not have a deactivation timeout. The user will not be automatically deactivated")
 		// Users belonging to this tier will not be auto deactivated, no need to requeue.
 		return reconcile.Result{}, nil
@@ -143,7 +146,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	deactivatingNotificationTimeout := time.Duration((deactivationTimeoutDays-deactivatingNotificationDays)*24) * time.Hour
 
 	if timeSinceProvisioned < deactivatingNotificationTimeout {
-		// It is not yet time to send the deactivating notification so requeue until it will be time to send it
+		// It is not yet time to send the deactivating notification
+
+		// If the usersignup was already set to deactivating then reset it to false
+		// Example: promotion of a user after 28 days from a user tier with deactivationTimeoutDays = 30 to one with 90, and where deactivatingNotificationDays = 3
+		//   Usersignup would have spec.states[Deactivating] = true but there are now 62 days left before deactivation so the deactivating notification should be sent again
+		//   when it is 3 days left until deactivation
+		if err := r.resetDeactivatingState(logger, usersignup); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// requeue until it will be time to send it
 		requeueAfterTimeToNotify := deactivatingNotificationTimeout - timeSinceProvisioned
 		logger.Info("requeueing request", "RequeueAfter", requeueAfterTimeToNotify,
 			"Expected deactivating notification date/time", time.Now().Add(requeueAfterTimeToNotify).String())
@@ -209,4 +222,37 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	metrics.UserSignupAutoDeactivatedTotal.Inc()
 
 	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) resetDeactivatingState(logger logr.Logger, usersignup *toolchainv1alpha1.UserSignup) error {
+	if states.Deactivating(usersignup) {
+		states.SetDeactivating(usersignup, false)
+		if err := r.Client.Update(context.TODO(), usersignup); err != nil {
+			logger.Error(err, "failed to reset usersignup deactivating state")
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *Reconciler) getDeactivationTimeoutDays(namespace, tierName string) (int, error) {
+
+	nsName := types.NamespacedName{Namespace: namespace, Name: tierName}
+
+	userTier := &toolchainv1alpha1.UserTier{}
+	err := r.Client.Get(context.TODO(), nsName, userTier)
+	if err == nil {
+		// found UserTier
+		return userTier.Spec.DeactivationTimeoutDays, nil
+	}
+
+	nsTemplateTier := &toolchainv1alpha1.NSTemplateTier{}
+	err = r.Client.Get(context.TODO(), nsName, nsTemplateTier)
+	if err == nil {
+		// found NSTemplateTier
+		return nsTemplateTier.Spec.DeactivationTimeoutDays, nil
+	}
+
+	// neither UserTier nor NSTemplateTier found
+	return 0, err
 }

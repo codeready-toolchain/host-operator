@@ -619,7 +619,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 	t.Run("tier promotion (update needed due to different tier)", func(t *testing.T) {
 		// given that Space is promoted from `basic` to `other` tier and corresponding NSTemplateSet is not up-to-date
 		s := spacetest.NewSpace("oddity",
-			spacetest.WithTierName(otherTier.Name), // assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
+			spacetest.WithTierName(otherTier.Name),    // tier changed to other tier
+			spacetest.WithTierHashLabelFor(basicTier), // still has the old tier hash label
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer(),
@@ -647,7 +648,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 			HasSpecTargetCluster("member-1").
 			HasStatusTargetCluster("member-1").
 			HasConditions(spacetest.Updating()).
-			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)) // not set yet, since NSTemplateSet must be updated first
+			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)). // not set yet, since NSTemplateSet must be updated first
+			HasMatchingTierLabelForTier(basicTier)                               // old label not removed yet, since NSTemplateSet must be updated first
 		nsTmplSet := nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member1.Client).
 			Exists().
 			HasTierName(otherTier.Name).
@@ -675,7 +677,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 				HasSpecTargetCluster("member-1").
 				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.Updating()).
-				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name))
+				DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)).
+				HasMatchingTierLabelForTier(basicTier)
 
 			t.Run("not done when NSTemplateSet is ready within 1s", func(t *testing.T) {
 				// given another round of requeue with NSTemplateSet now *ready*
@@ -699,6 +702,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 					HasStatusTargetCluster("member-1").
 					HasConditions(spacetest.Updating()).
 					DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(otherTier.Name)). // not set yet
+					HasMatchingTierLabelForTier(basicTier).                              // old label not removed yet, since NSTemplateSet not ready for more than 1s
 					HasFinalizer().
 					Get()
 
@@ -721,7 +725,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 						Exists().
 						HasStatusTargetCluster("member-1").
 						HasConditions(spacetest.Ready()).
-						HasMatchingTierLabelForTier(otherTier).
+						DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(basicTier.Name)). // old label removed
+						HasMatchingTierLabelForTier(otherTier).                              // new label matching updated tier
 						HasFinalizer()
 
 				})
@@ -870,8 +875,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 	t.Run("update not needed when already up-to-date", func(t *testing.T) {
 		// given that Space is promoted to `basic` tier and corresponding NSTemplateSet is already up-to-date and ready
 		s := spacetest.NewSpace("oddity",
-			// assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
 			spacetest.WithTierName(basicTier.Name),
+			spacetest.WithTierHashLabelFor(olderBasicTier), // tier hash label not updated yet
 			spacetest.WithCondition(spacetest.Ready()),
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
@@ -961,7 +966,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		t.Run("when updating space with new templatetierhash label", func(t *testing.T) {
 			// given that Space is promoted to `basic` tier and corresponding NSTemplateSet is already up-to-date and ready
 			s := spacetest.NewSpace("oddity",
-				// assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
+				spacetest.WithTierHashLabelFor(otherTier), // assume that at this point, the `TemplateTierHash` label still has the old value
 				spacetest.WithCondition(spacetest.Ready()),
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
@@ -995,8 +1000,8 @@ func TestUpdateSpaceTier(t *testing.T) {
 		t.Run("when NSTemplateSet update failed", func(t *testing.T) {
 			// given that Space is promoted to `other` tier and corresponding NSTemplateSet is not up-to-date
 			s := spacetest.NewSpace("oddity",
-				// assume that at this point, the `TemplateTierHash` label was already removed by the ChangeTierRequestController
 				spacetest.WithTierName(otherTier.Name),
+				spacetest.WithTierHashLabelFor(basicTier),
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 				spacetest.WithFinalizer(),
