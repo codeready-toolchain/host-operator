@@ -141,7 +141,6 @@ spec:
                 required:
                 - objects
                 type: object
-                x-kubernetes-embedded-resource: true
               tierName:
                 description: 'The tier of the template. For example: "basic", "advanced",
                   or "team"'
