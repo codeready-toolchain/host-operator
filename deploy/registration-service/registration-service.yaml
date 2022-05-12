@@ -33,6 +33,7 @@ objects:
           - masteruserrecords
           - toolchainconfigs
           - toolchainstatuses
+          - socialevents
         verbs:
           - get
       - apiGroups:
