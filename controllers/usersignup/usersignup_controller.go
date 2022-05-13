@@ -520,7 +520,7 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 			"Error generating compliant username for %s", userSignup.Spec.Username)
 	}
 
-	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), userTier, compliantUsername)
+	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), userTier.Name, compliantUsername)
 
 	if err := controllerutil.SetControllerReference(userSignup, mur, r.Scheme); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,

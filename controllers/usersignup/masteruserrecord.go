@@ -25,15 +25,31 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, default
 		}
 	}
 
-	// set the tier in the mur only if it was not set
-	if mur.Spec.TierName == "" {
+	// migrate mur TierName from NSTemplateTier to UserTier
+	switch mur.Spec.TierName {
+	case "":
 		mur.Spec.TierName = defaultTier.Name
+		changed = true
+	case "appstudio", "base", "base1ns", "baseextendedidling", "test":
+		mur.Spec.TierName = "deactivate30"
+		changed = true
+	case "hackathon":
+		mur.Spec.TierName = "deactivate80"
+		changed = true
+	case "baselarge":
+		mur.Spec.TierName = "deactivate90"
+		changed = true
+	case "baseextended":
+		mur.Spec.TierName = "deactivate180"
+		changed = true
+	case "advanced", "basedeactivationdisabled":
+		mur.Spec.TierName = "nodeactivation"
 		changed = true
 	}
 	return changed
 }
 
-func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string, userTier *toolchainv1alpha1.UserTier, compliantUserName string) *toolchainv1alpha1.MasterUserRecord {
+func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster string, userTierName string, compliantUserName string) *toolchainv1alpha1.MasterUserRecord {
 	userAccounts := []toolchainv1alpha1.UserAccountEmbedded{
 		{
 			TargetCluster: targetCluster,
@@ -57,7 +73,7 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 			UserAccounts: userAccounts,
 			UserID:       userSignup.Spec.Userid,
 			OriginalSub:  userSignup.Spec.OriginalSub,
-			TierName:     userTier.Name,
+			TierName:     userTierName,
 		},
 	}
 	return mur

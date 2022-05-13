@@ -154,7 +154,7 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 			// given
 			defer counter.Reset()
 
-			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier, "foo")
+			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, baseNSTemplateTier, deactivate30Tier)
@@ -713,8 +713,8 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 
 			objs := []runtime.Object{userSignup, v.config}
 			if strings.Contains(v.description, "spacetier") {
-				objs = append(objs, newMasterUserRecord(userSignup, "member-1", deactivate30Tier, "foo")) // when testing missing spacetier then mur should exist
-				objs = append(objs, deactivate30Tier)                                                     // when testing missing spacetier then usertier should exist
+				objs = append(objs, newMasterUserRecord(userSignup, "member-1", deactivate30Tier.Name, "foo")) // when testing missing spacetier then mur should exist
+				objs = append(objs, deactivate30Tier)                                                          // when testing missing spacetier then usertier should exist
 			}
 			r, req, _ := prepareReconcile(t, userSignup.Name, ready, objs...) // the tier does not exist
 
@@ -1441,7 +1441,7 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 			// given
 			userSignup := commonsignup.NewUserSignup(commonsignup.Approved())
 
-			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier, "foo")
+			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
 			space := newSpace(userSignup, "member1", "foo", "base")
@@ -3743,7 +3743,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 func TestMigrateMur(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup(commonsignup.Approved(), commonsignup.WithTargetCluster("east"))
-	expectedMur := newMasterUserRecord(userSignup, "east", deactivate30Tier, "foo")
+	expectedMur := newMasterUserRecord(userSignup, "east", deactivate30Tier.Name, "foo")
 
 	oldMur := expectedMur.DeepCopy()
 
