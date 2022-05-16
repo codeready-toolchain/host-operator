@@ -653,12 +653,10 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	})
 }
 
-func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
+func TestUserSignupFailedMissingTier(t *testing.T) {
 
 	type variation struct {
 		description    string
-		spaceTierName  string
-		userTierName   string
 		config         *toolchainv1alpha1.ToolchainConfig
 		expectedReason string
 		expectedMsg    string
@@ -667,32 +665,24 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 	variations := []variation{
 		{
 			description:    "default spacetier",
-			spaceTierName:  "base",
-			userTierName:   "deactivate30",
 			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
 			expectedReason: "NoTemplateTierAvailable",
 			expectedMsg:    "nstemplatetiers.toolchain.dev.openshift.com \"base\" not found",
 		},
 		{
 			description:    "non-default spacetier",
-			spaceTierName:  "nonexistent",
-			userTierName:   "deactivate30",
 			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultSpaceTier("nonexistent")),
 			expectedReason: "NoTemplateTierAvailable",
 			expectedMsg:    "nstemplatetiers.toolchain.dev.openshift.com \"nonexistent\" not found",
 		},
 		{
 			description:    "default usertier",
-			spaceTierName:  "base",
-			userTierName:   "deactivate30",
 			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)),
 			expectedReason: "NoUserTierAvailable",
 			expectedMsg:    "usertiers.toolchain.dev.openshift.com \"deactivate30\" not found",
 		},
 		{
 			description:    "non-default usertier",
-			spaceTierName:  "base",
-			userTierName:   "nonexistent",
 			config:         commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Tiers().DefaultUserTier("nonexistent")),
 			expectedReason: "NoUserTierAvailable",
 			expectedMsg:    "usertiers.toolchain.dev.openshift.com \"nonexistent\" not found",
@@ -712,9 +702,9 @@ func TestUserSignupFailedMissingNSTemplateTier(t *testing.T) {
 			ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 			objs := []runtime.Object{userSignup, v.config}
-			if strings.Contains(v.description, "spacetier") {
-				objs = append(objs, newMasterUserRecord(userSignup, "member-1", deactivate30Tier.Name, "foo")) // when testing missing spacetier then mur should exist
-				objs = append(objs, deactivate30Tier)                                                          // when testing missing spacetier then usertier should exist
+			if strings.Contains(v.description, "spacetier") { // when testing missing spacetier then create mur and usertier so that the error is about space tier
+				objs = append(objs, newMasterUserRecord(userSignup, "member-1", deactivate30Tier.Name, "foo"))
+				objs = append(objs, deactivate30Tier)
 			}
 			r, req, _ := prepareReconcile(t, userSignup.Name, ready, objs...) // the tier does not exist
 
