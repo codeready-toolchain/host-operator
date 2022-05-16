@@ -183,6 +183,56 @@ func (u *StatusUpdater) setStatusDeactivated(userSignup *toolchainv1alpha1.UserS
 		})
 }
 
+const (
+	UserMigrated toolchainv1alpha1.ConditionType = "UserMigrated"
+)
+
+func (u *StatusUpdater) setStatusMigrationFailedLookup(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    UserMigrated,
+			Status:  corev1.ConditionFalse,
+			Reason:  "UserSignupLookupFailed",
+			Message: message,
+		})
+}
+
+func (u *StatusUpdater) setStatusMigrationFailedCreate(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    UserMigrated,
+			Status:  corev1.ConditionFalse,
+			Reason:  "UserSignupCreateFailed",
+			Message: message,
+		})
+}
+
+func (u *StatusUpdater) setStatusMigrationFailedCleanup(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    UserMigrated,
+			Status:  corev1.ConditionFalse,
+			Reason:  "UserSignupCleanupFailed",
+			Message: message,
+		})
+}
+
+func (u *StatusUpdater) setStatusMigrationSuccessful(userSignup *toolchainv1alpha1.UserSignup) error {
+	// Cleanup the migrated condition from the status, if it exists
+	conditions := []toolchainv1alpha1.Condition{}
+	for _, cond := range userSignup.Status.Conditions {
+		if cond.Type != UserMigrated {
+			conditions = append(conditions, cond)
+		}
+	}
+
+	userSignup.Status.Conditions = conditions
+	return u.Client.Status().Update(context.TODO(), userSignup)
+}
+
 func (u *StatusUpdater) setStatusFailedToReadBannedUsers(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
