@@ -3985,3 +3985,222 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(0)
 	})
 }
+
+func TestUserSignupMigration(t *testing.T) {
+	// Given
+	userSignup := commonsignup.NewUserSignup()
+	userSignup.Spec.Company = "Acme"
+	userSignup.Spec.GivenName = "Wile E"
+	userSignup.Spec.FamilyName = "Coyote"
+	userSignup.Spec.OriginalSub = "j3siujx:1235334234"
+	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+	// We insert this annotation value in the original UserSignup just so we can confirm it is migrated ok
+	userSignup.Annotations["foo"] = "bar"
+	states.SetDeactivated(userSignup, true)
+	members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+
+	r, req, cl := prepareReconcile(t, userSignup.Name, members, userSignup)
+	res, err := r.Reconcile(context.TODO(), req)
+	require.NoError(t, err)
+	require.False(t, res.Requeue)
+
+	userSignups := &toolchainv1alpha1.UserSignupList{}
+	err = cl.List(context.TODO(), userSignups)
+	require.NoError(t, err)
+
+	// We should now have 2 UserSignups, the original and the migrated
+	require.Len(t, userSignups.Items, 2)
+
+	migrated := AssertThatUserSignup(t, test.HostOperatorNs, "1cf93821-fooredhatcom", cl).Get()
+
+	require.NotNil(t, migrated)
+	require.Equal(t, userSignup.Spec, migrated.Spec)
+	require.Equal(t, userSignup.Labels, migrated.Labels)
+
+	// Reload the original
+	err = cl.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: userSignup.Namespace,
+		Name:      userSignup.Name}, userSignup)
+	require.NoError(t, err)
+
+	// Confirm that the original has had its Deactivated condition set
+	require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete,
+		toolchainv1alpha1.UserSignupUserDeactivatedReason))
+
+	// Confirm that the migrated still has its migration annotation
+	require.Contains(t, migrated.Annotations, "toolchain.dev.openshift.com/migration-replaces")
+	require.Equal(t, userSignup.Name, migrated.Annotations["toolchain.dev.openshift.com/migration-replaces"])
+
+	// Confirm that the migrated also has the original annotations
+	require.Contains(t, migrated.Annotations, "foo")
+	require.Equal(t, "bar", migrated.Annotations["foo"])
+
+	t.Run("Reconcile migrated UserSignup fails if original UserSignup not yet deactivated", func(t *testing.T) {
+		// Remove the deactivated status from the original UserSignup
+		conditions := []toolchainv1alpha1.Condition{}
+		for _, cond := range userSignup.Status.Conditions {
+			if cond.Type != toolchainv1alpha1.UserSignupComplete {
+				conditions = append(conditions, cond)
+			}
+		}
+		userSignup.Status.Conditions = conditions
+
+		r, req, cl = prepareReconcile(t, migrated.Name, members, migrated, userSignup)
+		_, err := r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, fmt.Sprintf("Original UserSignup [%s] not yet finished migration: Original UserSignup not finished migration",
+			userSignup.Name), err.Error())
+	})
+
+	t.Run("Reconcile original UserSignup sets migrated annotation correctly", func(t *testing.T) {
+		r, req, cl = prepareReconcile(t, userSignup.Name, members, migrated, userSignup)
+		_, err := r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+
+		// Reload the original
+		err = cl.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: userSignup.Namespace,
+			Name:      userSignup.Name}, userSignup)
+		require.NoError(t, err)
+
+		require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete,
+			toolchainv1alpha1.UserSignupUserDeactivatedReason))
+	})
+
+	t.Run("Reconcile migrated UserSignup cleanup deletes original UserSignup", func(t *testing.T) {
+		// Re-set the deactivated status from the original UserSignup
+		userSignup.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: toolchainv1alpha1.UserSignupUserDeactivatedReason,
+			})
+
+		r, req, cl = prepareReconcile(t, migrated.Name, members, migrated, userSignup)
+		_, err := r.Reconcile(context.TODO(), req)
+		require.NoError(t, err)
+
+		// Confirm there is now only 1 UserSignup and it is the migrated one
+		err = cl.Client.List(context.TODO(), userSignups)
+		require.NoError(t, err)
+		require.Len(t, userSignups.Items, 1)
+		require.Equal(t, migrated.Name, userSignups.Items[0].Name)
+
+		// Refresh the updated migrated UserSignup
+		err = cl.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: migrated.Namespace,
+			Name:      migrated.Name}, migrated)
+		require.NoError(t, err)
+
+		t.Run("Reconcile migrated UserSignup cleanup removes annotation", func(t *testing.T) {
+			r, req, cl = prepareReconcile(t, migrated.Name, members, migrated)
+			res, err := r.Reconcile(context.TODO(), req)
+			require.NoError(t, err)
+
+			// Refresh the updated migrated UserSignup
+			err = cl.Client.Get(context.TODO(), types.NamespacedName{
+				Namespace: migrated.Namespace,
+				Name:      migrated.Name}, migrated)
+			require.NoError(t, err)
+			require.True(t, res.Requeue)
+		})
+	})
+
+	t.Run("Migration fails to lookup migrated UserSignup", func(t *testing.T) {
+		// Given
+		userSignup := commonsignup.NewUserSignup()
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+		states.SetDeactivated(userSignup, true)
+		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+
+		r, req, cl := prepareReconcile(t, userSignup.Name, members, userSignup)
+		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			if key.Name == userSignup.Name || key.Name == "config" {
+				return cl.Client.Get(ctx, key, obj)
+			}
+			return errors.New("failed")
+		}
+
+		_, err := r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, "Failed to lookup migrated UserSignup: failed", err.Error())
+
+		// Refresh the updated migrated UserSignup
+		err = cl.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: userSignup.Namespace,
+			Name:      userSignup.Name}, userSignup)
+		require.NoError(t, err)
+
+		require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, UserMigrated,
+			"UserSignupLookupFailed"))
+	})
+
+	t.Run("Migration fails to create migrated UserSignup", func(t *testing.T) {
+		// Given
+		userSignup := commonsignup.NewUserSignup()
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+		states.SetDeactivated(userSignup, true)
+		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+
+		r, req, cl := prepareReconcile(t, userSignup.Name, members, userSignup)
+		cl.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+			switch obj.(type) {
+			case *toolchainv1alpha1.Notification:
+				return cl.Client.Create(ctx, obj, opts...)
+			default:
+				return errors.New("failed to create")
+			}
+		}
+
+		_, err := r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, "Failed to create migrated UserSignup: failed to create", err.Error())
+
+		// Refresh the updated migrated UserSignup
+		err = cl.Client.Get(context.TODO(), types.NamespacedName{
+			Namespace: userSignup.Namespace,
+			Name:      userSignup.Name}, userSignup)
+		require.NoError(t, err)
+
+		require.True(t, condition.HasConditionReason(userSignup.Status.Conditions, UserMigrated,
+			"UserSignupCreateFailed"))
+	})
+
+	t.Run("Migration fails cleanup due to client errors", func(t *testing.T) {
+		// Given
+		userSignup := commonsignup.NewUserSignup()
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
+		userSignup.Annotations["toolchain.dev.openshift.com/migration-replaces"] = "foo"
+		states.SetDeactivated(userSignup, true)
+		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+
+		userSignupToDelete := commonsignup.NewUserSignup()
+		userSignupToDelete.Name = "foo"
+		userSignupToDelete.Annotations[migratedAnnotationName] = "true"
+		userSignupToDelete.Status.Conditions, _ = condition.AddOrUpdateStatusConditions(userSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: toolchainv1alpha1.UserSignupUserDeactivatedReason,
+			})
+
+		r, req, cl := prepareReconcile(t, userSignup.Name, members, userSignup, userSignupToDelete)
+		cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+			return errors.New("delete failed")
+		}
+
+		_, err := r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, "Failed to remove original UserSignup [foo]: delete failed", err.Error())
+		cl.MockDelete = nil
+
+		r, req, cl = prepareReconcile(t, userSignup.Name, members, userSignup)
+		// Now override the update
+		cl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			return errors.New("update failed")
+		}
+		_, err = r.Reconcile(context.TODO(), req)
+		require.Error(t, err)
+		require.Equal(t, "Failed to update migrated UserSignup: update failed", err.Error())
+	})
+}
