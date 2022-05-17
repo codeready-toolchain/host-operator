@@ -36,6 +36,7 @@ objects:
     - appstudio.redhat.com
     resources:
     - spiaccesstokenbindings
+    - spiaccesschecks
     verbs:
     - create
     - get
