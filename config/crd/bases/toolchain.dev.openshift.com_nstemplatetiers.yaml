@@ -95,8 +95,7 @@ spec:
             properties:
               conditions:
                 description: 'Conditions is an array of current NSTemplateTier conditions
-                  Supported condition types: ConditionReady NSTemplateTierSuccessfulUpdatesCount
-                  NSTemplateTierFailedUpdatesCount'
+                  Supported condition types: ConditionReady'
                 items:
                   properties:
                     lastTransitionTime:
