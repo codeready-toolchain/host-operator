@@ -13,50 +13,8 @@ objects:
     labels:
       name: ${USERNAME}-stage
     name: ${USERNAME}-stage
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: Role
-  metadata:
-    name: rbac-edit
-    namespace: ${USERNAME}-stage
-  rules:
-    - apiGroups:
-        - authorization.openshift.io
-        - rbac.authorization.k8s.io
-      resources:
-        - roles
-        - rolebindings
-      verbs:
-        - get
-        - list
-        - watch
-        - create
-        - update
-        - patch
-        - delete
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: user-rbac-edit
-    namespace: ${USERNAME}-stage
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: Role
-    name: rbac-edit
-  subjects:
-    - kind: User
-      name: ${USERNAME}
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: user-edit
-    namespace: ${USERNAME}-stage
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: edit
-  subjects:
-  - kind: User
-    name: ${USERNAME}
+
+# Role and RoleBindings for CRT administration (not associated with users)
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
   metadata:
@@ -100,6 +58,7 @@ objects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
     name: crtadmin-users-view
+
 - apiVersion: v1
   kind: LimitRange
   metadata:
