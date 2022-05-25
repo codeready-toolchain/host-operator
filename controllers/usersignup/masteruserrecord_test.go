@@ -63,8 +63,7 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		t.Run("when tierName is missing", func(t *testing.T) {
 			userSignup := commonsignup.NewUserSignup()
 			defaultUserTier := testusertier.NewUserTier("deactivate90", 90)
-			mur := newMasterUserRecord(userSignup, test.MemberClusterName, "deactivate90", "johny")
-			mur.Spec.TierName = "" // tierName not set
+			mur := newMasterUserRecord(userSignup, test.MemberClusterName, "", "johny") // tierName not set
 
 			// when
 			changed := migrateOrFixMurIfNecessary(mur, defaultUserTier, userSignup)
