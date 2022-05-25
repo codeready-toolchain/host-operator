@@ -45,7 +45,7 @@ const deletionTimeThreshold = 30 * time.Second
 
 // Reconcile ensures that Space which doesn't have any SpaceBinding is deleted
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx, "namespace", r.Namespace)
+	logger := log.FromContext(ctx)
 	logger.Info("reconciling Space")
 
 	// Fetch the Space

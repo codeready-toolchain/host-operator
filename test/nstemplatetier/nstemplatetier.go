@@ -32,6 +32,14 @@ func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 			ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
 				TemplateRef: nstemplatetiers.NewTierTemplateName(tierName, "clusterresources", "654321b"),
 			},
+			SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
+				"admin": {
+					TemplateRef: tierName + "-admin-123abc1",
+				},
+				"viewer": {
+					TemplateRef: tierName + "-viewer-123abc2",
+				},
+			},
 		},
 	}
 }
@@ -53,6 +61,14 @@ var PreviousBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
 		TemplateRef: "basic-clusterresources-123456old",
 	},
+	SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
+		"admin": {
+			TemplateRef: "basic-admin-123456old",
+		},
+		"viewer": {
+			TemplateRef: "basic-viewer-123456old",
+		},
+	},
 }
 
 // CurrentBasicTemplates current templates for the "basic" tier
@@ -71,6 +87,14 @@ var CurrentBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	},
 	ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
 		TemplateRef: "basic-clusterresources-123456new",
+	},
+	SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
+		"admin": {
+			TemplateRef: "basic-admin-123456new",
+		},
+		"viewer": {
+			TemplateRef: "basic-viewer-123456new",
+		},
 	},
 }
 
