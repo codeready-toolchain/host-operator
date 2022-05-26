@@ -15,8 +15,10 @@ import (
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
+	spacebindingtest "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	nstemplatetsettest "github.com/codeready-toolchain/toolchain-common/pkg/test/nstemplateset"
 
 	"github.com/stretchr/testify/assert"
@@ -1034,6 +1036,159 @@ func TestUpdateSpaceTier(t *testing.T) {
 	})
 }
 
+// TestUpdateSpaceRoles covers the cases where SpaceBindings are created/updated/deleted,
+// and how this should affect the Space and its NSTemplateSet
+func TestUpdateSpaceRoles(t *testing.T) {
+
+	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	s := scheme.Scheme
+	err := apis.AddToScheme(s)
+	require.NoError(t, err)
+	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
+	adminMUR := murtest.NewMasterUserRecord(t, "jack")
+	viewerMUR := murtest.NewMasterUserRecord(t, "jeff")
+	johnMUR := murtest.NewMasterUserRecord(t, "john")
+
+	t.Run("add user with admin role", func(t *testing.T) {
+		// given a MUR, a Space and its NSTemplateSet resource...
+		s := spacetest.NewSpace("oddity",
+			spacetest.WithTierName(basicTier.Name),
+			spacetest.WithSpecTargetCluster("member-1"),
+			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+			spacetest.WithFinalizer())
+		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity",
+			nstemplatetsettest.WithReferencesFor(basicTier,
+				// include pre-existing users with role...
+				nstemplatetsettest.WithSpaceRole("admin", adminMUR.Name),
+				nstemplatetsettest.WithSpaceRole("viewer", viewerMUR.Name),
+			),
+			nstemplatetsettest.WithReadyCondition(),
+		)
+		// ...and their corresponding space bindings
+		sb1 := spacebindingtest.NewSpaceBinding(adminMUR.Name, s.Name, "admin", "signupAdmin")
+		sb2 := spacebindingtest.NewSpaceBinding(viewerMUR.Name, s.Name, "viewer", "signupViewer")
+
+		// and a SpaceBinding for John as an Admin on the Space
+		sb3 := spacebindingtest.NewSpaceBinding(johnMUR.Name, s.Name, "admin", "signupJohn")
+
+		hostClient := test.NewFakeClient(t, s, johnMUR, adminMUR, sb1, viewerMUR, sb2, sb3, basicTier)
+		member1Client := test.NewFakeClient(t, nstmplSet)
+		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+
+		ctrl := newReconciler(hostClient, member1, member2)
+
+		// when
+		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, res.Requeue) // expect a requeue since the NSTemplateSet was updated
+		// Space should be in "updating" state while the NSTemplateSet is being updated
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
+			HasConditions(spacetest.Updating())
+		// NSTemplateSet should have an spaceRoles entry for the `mur`
+		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
+			HasSpaceRoles(
+				nstemplatetsettest.SpaceRole("basic-admin-123456new", adminMUR.Name, johnMUR.Name), // entry added for user 'john' as admin
+				nstemplatetsettest.SpaceRole("basic-viewer-123456new", viewerMUR.Name),             // unchanged
+			).
+			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
+	})
+
+	t.Run("remove user with admin role", func(t *testing.T) {
+		// given a MUR, a Space and its NSTemplateSet resource...
+		s := spacetest.NewSpace("oddity",
+			spacetest.WithTierName(basicTier.Name),
+			spacetest.WithSpecTargetCluster("member-1"),
+			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+			spacetest.WithFinalizer())
+		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity",
+			nstemplatetsettest.WithReferencesFor(basicTier,
+				// include pre-existing users with role...
+				nstemplatetsettest.WithSpaceRole("admin", adminMUR.Name),
+				nstemplatetsettest.WithSpaceRole("viewer", viewerMUR.Name),
+				// and an entry for john as an admin
+				nstemplatetsettest.WithSpaceRole("admin", johnMUR.Name),
+			),
+			nstemplatetsettest.WithReadyCondition())
+		// ...and their corresponding space bindings
+		sb1 := spacebindingtest.NewSpaceBinding(adminMUR.Name, s.Name, "admin", "signupAdmin")
+		sb2 := spacebindingtest.NewSpaceBinding(viewerMUR.Name, s.Name, "viewer", "signupViewer")
+
+		hostClient := test.NewFakeClient(t, s, adminMUR, sb1, viewerMUR, sb2, johnMUR, basicTier)
+		member1Client := test.NewFakeClient(t, nstmplSet)
+		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+
+		ctrl := newReconciler(hostClient, member1, member2)
+
+		// when
+		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, res.Requeue) // expect a requeue since the NSTemplateSet was updated
+		// Space should be in "updating" state while the NSTemplateSet is being updated
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
+			HasConditions(spacetest.Updating())
+		// NSTemplateSet should have an spaceRoles entry for the `mur`
+		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
+			HasSpaceRoles(
+				nstemplatetsettest.SpaceRole("basic-admin-123456new", adminMUR.Name),   // entry removed for user 'john'
+				nstemplatetsettest.SpaceRole("basic-viewer-123456new", viewerMUR.Name), // unchanged
+			).
+			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
+	})
+
+	t.Run("update user from viewer to admin role", func(t *testing.T) {
+		// given a MUR, a Space and its NSTemplateSet resource...
+		s := spacetest.NewSpace("oddity",
+			spacetest.WithTierName(basicTier.Name),
+			spacetest.WithSpecTargetCluster("member-1"),
+			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+			spacetest.WithFinalizer())
+		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity",
+			nstemplatetsettest.WithReferencesFor(basicTier,
+				// include pre-existing users with role...
+				nstemplatetsettest.WithSpaceRole("admin", adminMUR.Name),
+				nstemplatetsettest.WithSpaceRole("viewer", viewerMUR.Name),
+				// and user john as a viewer
+				nstemplatetsettest.WithSpaceRole("viewer", johnMUR.Name),
+			),
+			nstemplatetsettest.WithReadyCondition())
+
+		// corresponding space bindings for adminMUR and viewerMUR
+		sb1 := spacebindingtest.NewSpaceBinding(adminMUR.Name, s.Name, "admin", "signupAdmin")
+		sb2 := spacebindingtest.NewSpaceBinding(viewerMUR.Name, s.Name, "viewer", "signupViewer")
+		// but SpaceBinding for John as an _admin_ on the Space
+		sb3 := spacebindingtest.NewSpaceBinding(johnMUR.Name, s.Name, "admin", "signupJohn")
+		hostClient := test.NewFakeClient(t, s, adminMUR, sb1, viewerMUR, sb2, johnMUR, sb3, basicTier)
+		member1Client := test.NewFakeClient(t, nstmplSet)
+		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+
+		ctrl := newReconciler(hostClient, member1, member2)
+
+		// when
+		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, res.Requeue) // expect a requeue since the NSTemplateSet was updated
+		// Space should be in "updating" state while the NSTemplateSet is being updated
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
+			HasConditions(spacetest.Updating())
+		// NSTemplateSet should have an spaceRoles entry for the `mur`
+		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
+			HasSpaceRoles(
+				nstemplatetsettest.SpaceRole("basic-admin-123456new", adminMUR.Name, johnMUR.Name), // entry added for user 'john'
+				nstemplatetsettest.SpaceRole("basic-viewer-123456new", viewerMUR.Name),             // entry removed for user 'john'
+			).
+			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
+	})
+}
 func TestRetargetSpace(t *testing.T) {
 
 	// given
@@ -1275,35 +1430,42 @@ func requestFor(s *toolchainv1alpha1.Space) reconcile.Request {
 	}
 }
 
-func TestNewNsTemplateSetSpec(t *testing.T) {
-	t.Run("when clusterResources template is specified", func(t *testing.T) {
-		// given
-		nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
+func TestNewNSTemplateSetSpec(t *testing.T) {
 
-		// when
-		setSpec := space.NewNSTemplateSetSpec(nsTemplateTier)
+	// given
+	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage")
+	s := spacetest.NewSpace("spacejohn",
+		spacetest.WithTierName(nsTemplateTier.Name),
+		spacetest.WithSpecTargetCluster("member-1"))
+	bindings := []toolchainv1alpha1.SpaceBinding{
+		{
+			Spec: toolchainv1alpha1.SpaceBindingSpec{
+				MasterUserRecord: "john",
+				Space:            "spacejohn",
+				SpaceRole:        "admin",
+			},
+		},
+		{
+			Spec: toolchainv1alpha1.SpaceBindingSpec{
+				MasterUserRecord: "joe",
+				Space:            "spacejohn",
+				SpaceRole:        "viewer",
+			},
+		},
+		{
+			Spec: toolchainv1alpha1.SpaceBindingSpec{
+				MasterUserRecord: "jack",
+				Space:            "spacejohn",
+				SpaceRole:        "viewer",
+			},
+		},
+	}
 
-		// then
-		assert.Equal(t, newExpectedNsTemplateSetSpec(), setSpec)
-	})
+	// when
+	setSpec := space.NewNSTemplateSetSpec(s, bindings, nsTemplateTier)
 
-	t.Run("when clusterResources template is NOT specified", func(t *testing.T) {
-		// given
-		nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
-		nsTemplateTier.Spec.ClusterResources = nil
-
-		// when
-		setSpec := space.NewNSTemplateSetSpec(nsTemplateTier)
-
-		// then
-		withoutClusterRes := newExpectedNsTemplateSetSpec()
-		withoutClusterRes.ClusterResources = nil
-		assert.Equal(t, withoutClusterRes, setSpec)
-	})
-}
-
-func newExpectedNsTemplateSetSpec() toolchainv1alpha1.NSTemplateSetSpec {
-	return toolchainv1alpha1.NSTemplateSetSpec{
+	// then
+	assert.Equal(t, toolchainv1alpha1.NSTemplateSetSpec{
 		TierName: "advanced",
 		Namespaces: []toolchainv1alpha1.NSTemplateSetNamespace{
 			{
@@ -1312,12 +1474,23 @@ func newExpectedNsTemplateSetSpec() toolchainv1alpha1.NSTemplateSetSpec {
 			{
 				TemplateRef: "advanced-stage-123abc2",
 			},
-			{
-				TemplateRef: "advanced-extra-123abc3",
-			},
 		},
 		ClusterResources: &toolchainv1alpha1.NSTemplateSetClusterResources{
 			TemplateRef: "advanced-clusterresources-654321b",
 		},
-	}
+		SpaceRoles: []toolchainv1alpha1.NSTemplateSetSpaceRole{
+			{
+				TemplateRef: "advanced-admin-123abc1",
+				Usernames: []string{
+					"john",
+				},
+			},
+			{
+				TemplateRef: "advanced-viewer-123abc2",
+				Usernames: []string{
+					"jack", "joe", // sorted
+				},
+			},
+		},
+	}, setSpec)
 }

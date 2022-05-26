@@ -11,16 +11,17 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commonTemplate "github.com/codeready-toolchain/toolchain-common/pkg/template"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/kubernetes/scheme"
 
+	"github.com/davecgh/go-spew/spew"
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -34,7 +35,7 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 	// initialize tier generator, loads templates from assets
 	generator, err := newNSTemplateTierGenerator(s, client, namespace, assets)
 	if err != nil {
-		return errors.Wrap(err, "unable to create NSTemplateTier generator")
+		return errors.Wrap(err, "unable to init NSTemplateTier generator")
 	}
 
 	// create the TierTemplate resources
@@ -297,6 +298,7 @@ func (t *tierGenerator) createTierTemplates() error {
 	// create the templates
 	for _, tierTmpls := range t.templatesByTier {
 		for _, tierTmpl := range tierTmpls.tierTemplates {
+			log.Info("creating TierTemplate", "tiertemplate", spew.Sdump(tierTmpl))
 			// using the "standard" client since we don't need to support updates on such resources, they should be immutable
 			if err := t.client.Create(context.TODO(), tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
 				return errors.Wrapf(err, "unable to create the '%s' TierTemplate in namespace '%s'", tierTmpl.Name, tierTmpl.Namespace)
@@ -400,17 +402,19 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 			labels = make(map[string]string)
 		}
 		labels[toolchainv1alpha1.ProviderLabelKey] = toolchainv1alpha1.ProviderLabelValue
-
 		updated, err := applyCl.ApplyObject(tier, commonclient.ForceUpdate(true))
 		if err != nil {
 			return errors.Wrapf(err, "unable to create or update the '%s' NSTemplateTier", tierName)
 		}
 		tierLog := log.WithValues("name", tierName)
+		if tier.Spec.ClusterResources != nil {
+			tierLog = tierLog.WithValues("clusterResourcesTemplate", tier.Spec.ClusterResources.TemplateRef)
+		}
 		for i, nsTemplate := range tier.Spec.Namespaces {
 			tierLog = tierLog.WithValues(fmt.Sprintf("namespaceTemplate-%d", i), nsTemplate.TemplateRef)
 		}
-		if tier.Spec.ClusterResources != nil {
-			tierLog = tierLog.WithValues("clusterResourcesTemplate", tier.Spec.ClusterResources.TemplateRef)
+		for role, nsTemplate := range tier.Spec.SpaceRoles {
+			tierLog = tierLog.WithValues(fmt.Sprintf("spaceRoleTemplate-%s", role), nsTemplate.TemplateRef)
 		}
 		if updated {
 			tierLog.Info("NSTemplateTier was either updated or created")

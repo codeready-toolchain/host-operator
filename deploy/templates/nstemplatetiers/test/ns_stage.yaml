@@ -13,64 +13,6 @@ objects:
     labels:
       name: ${USERNAME}-stage
     name: ${USERNAME}-stage
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: Role
-  metadata:
-    name: rbac-edit
-    namespace: ${USERNAME}-stage
-  rules:
-    - apiGroups:
-        - authorization.openshift.io
-        - rbac.authorization.k8s.io
-      resources:
-        - roles
-        - rolebindings
-      verbs:
-        - get
-        - list
-        - watch
-        - create
-        - update
-        - patch
-        - delete
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: user-rbac-edit
-    namespace: ${USERNAME}-stage
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: Role
-    name: rbac-edit
-  subjects:
-    - kind: User
-      name: ${USERNAME}
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  metadata:
-    name: user-edit
-    namespace: ${USERNAME}-stage
-  roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: edit
-  subjects:
-  - kind: User
-    name: ${USERNAME}
-- apiVersion: v1
-  kind: LimitRange
-  metadata:
-    name: resource-limits
-    namespace: ${USERNAME}-stage
-  spec:
-    limits:
-    - type: "Container"
-      default:
-        cpu: 1000m
-        memory: 750Mi
-      defaultRequest:
-        cpu: 10m
-        memory: 64Mi
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
@@ -123,6 +65,20 @@ objects:
     podSelector: {}
     policyTypes:
       - Ingress
+- apiVersion: v1
+  kind: LimitRange
+  metadata:
+    name: resource-limits
+    namespace: ${USERNAME}-stage
+  spec:
+    limits:
+    - type: "Container"
+      default:
+        cpu: 1000m
+        memory: 750Mi
+      defaultRequest:
+        cpu: 10m
+        memory: 64Mi
 parameters:
 - name: USERNAME
   required: true
