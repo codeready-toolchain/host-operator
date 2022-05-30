@@ -66,12 +66,11 @@ func TestReconcileSocialEvent(t *testing.T) {
 			ctrl := newReconciler(hostClient)
 
 			// when
-			res, err := ctrl.Reconcile(context.TODO(), requestFor(se))
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(se))
 
 			// then
 			require.Error(t, err)
 			assert.EqualError(t, err, "unable to get the 'basic' NSTemplateTier: mock error")
-			assert.False(t, res.Requeue)
 			// check the social event status
 			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).HasNoConditions()
 		})
@@ -83,11 +82,10 @@ func TestReconcileSocialEvent(t *testing.T) {
 			ctrl := newReconciler(hostClient)
 
 			// when
-			res, err := ctrl.Reconcile(context.TODO(), requestFor(se))
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(se))
 
 			// then
 			require.NoError(t, err)
-			assert.False(t, res.Requeue)
 			// check the social event status
 			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).HasConditions(
 				toolchainv1alpha1.Condition{
