@@ -72,7 +72,13 @@ func TestReconcileSocialEvent(t *testing.T) {
 			require.Error(t, err)
 			assert.EqualError(t, err, "unable to get the 'basic' NSTemplateTier: mock error")
 			// check the social event status
-			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).HasNoConditions()
+			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).
+				HasConditions(toolchainv1alpha1.Condition{
+					Type:    toolchainv1alpha1.ConditionReady,
+					Status:  corev1.ConditionFalse,
+					Reason:  toolchainv1alpha1.SocialEventUnableToGetTierReason,
+					Message: "unable to get the 'basic' NSTemplateTier: mock error",
+				})
 		})
 
 		t.Run("unknown tier", func(t *testing.T) {

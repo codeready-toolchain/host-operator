@@ -2,13 +2,11 @@ package socialevent
 
 import (
 	"context"
-	"fmt"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/go-logr/logr"
 
 	errs "github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -68,20 +66,10 @@ func (r *Reconciler) checkTier(logger logr.Logger, event *toolchainv1alpha1.Soci
 		Name:      event.Spec.Tier,
 	}, tier); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("NSTemplateTier not found", "nstemplatetier_name", event.Spec.Tier)
-			return r.StatusUpdater.updateStatusConditions(event, toolchainv1alpha1.Condition{
-				Type:    toolchainv1alpha1.ConditionReady,
-				Status:  corev1.ConditionFalse,
-				Reason:  toolchainv1alpha1.SocialEventInvalidTierReason,
-				Message: fmt.Sprintf("NSTemplateTier '%s' not found", event.Spec.Tier),
-			})
+			return r.StatusUpdater.tierNotFound(logger, event, event.Spec.Tier)
 		}
 		// Error reading the object - requeue the request.
-		logger.Error(err, "unable to get the NSTemplateTier", "nstemplatetier_name", event.Spec.Tier)
-		return errs.Wrapf(err, "unable to get the '%s' NSTemplateTier", event.Spec.Tier)
+		return r.StatusUpdater.unableToGetTier(logger, event, event.Spec.Tier, err)
 	}
-	return r.StatusUpdater.updateStatusConditions(event, toolchainv1alpha1.Condition{
-		Type:   toolchainv1alpha1.ConditionReady,
-		Status: corev1.ConditionTrue,
-	})
+	return r.StatusUpdater.ready(event)
 }
