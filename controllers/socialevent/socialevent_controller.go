@@ -66,10 +66,10 @@ func (r *Reconciler) checkTier(logger logr.Logger, event *toolchainv1alpha1.Soci
 		Name:      event.Spec.Tier,
 	}, tier); err != nil {
 		if errors.IsNotFound(err) {
-			return r.StatusUpdater.tierNotFound(logger, event, event.Spec.Tier)
+			return r.StatusUpdater.tierNotFound(logger, event)
 		}
 		// Error reading the object - requeue the request.
-		return r.StatusUpdater.unableToGetTier(logger, event, event.Spec.Tier, err)
+		return r.StatusUpdater.unableToGetTier(logger, event, err)
 	}
 	return r.StatusUpdater.ready(event)
 }

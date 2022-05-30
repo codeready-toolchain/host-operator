@@ -24,7 +24,7 @@ func (u *StatusUpdater) ready(event *toolchainv1alpha1.SocialEvent) error {
 	})
 }
 
-func (u *StatusUpdater) tierNotFound(logger logr.Logger, event *toolchainv1alpha1.SocialEvent, tierName string) error {
+func (u *StatusUpdater) tierNotFound(logger logr.Logger, event *toolchainv1alpha1.SocialEvent) error {
 	logger.Info("NSTemplateTier not found", "nstemplatetier_name", event.Spec.Tier)
 	return u.updateStatusConditions(event, toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ConditionReady,
@@ -34,7 +34,7 @@ func (u *StatusUpdater) tierNotFound(logger logr.Logger, event *toolchainv1alpha
 	})
 }
 
-func (u *StatusUpdater) unableToGetTier(logger logr.Logger, event *toolchainv1alpha1.SocialEvent, tierName string, err error) error {
+func (u *StatusUpdater) unableToGetTier(logger logr.Logger, event *toolchainv1alpha1.SocialEvent, err error) error {
 	logger.Error(err, "unable to get the NSTemplateTier", "nstemplatetier_name", event.Spec.Tier)
 	if err2 := u.updateStatusConditions(event, toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ConditionReady,
