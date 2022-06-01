@@ -135,8 +135,8 @@ parameters:
 - name: USERNAME
   required: true
 - name: IDLER_TIMEOUT_SECONDS
-  # 12 hours
-  value: "43200"
+  # No Idling
+  value: "0"
 - name: MEMORY_LIMIT
   value: "7Gi"
 - name: MEMORY_REQUEST
