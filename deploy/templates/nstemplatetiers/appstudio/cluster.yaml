@@ -6,25 +6,6 @@ objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}-compute
-  spec:
-    quota:
-      hard:
-        limits.cpu: 20000m
-        limits.memory: ${MEMORY_LIMIT}
-        limits.ephemeral-storage: 7Gi
-        requests.cpu: 1750m
-        requests.memory: ${MEMORY_REQUEST}
-        requests.storage: 15Gi
-        requests.ephemeral-storage: 7Gi
-        count/persistentvolumeclaims: "5"
-    selector:
-      annotations:
-        openshift.io/requester: ${USERNAME}
-      labels: null
-- apiVersion: quota.openshift.io/v1
-  kind: ClusterResourceQuota
-  metadata:
     name: for-${USERNAME}-deployments
   spec:
     quota:
@@ -137,7 +118,3 @@ parameters:
 - name: IDLER_TIMEOUT_SECONDS
   # No Idling
   value: "0"
-- name: MEMORY_LIMIT
-  value: "7Gi"
-- name: MEMORY_REQUEST
-  value: "7Gi"
