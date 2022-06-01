@@ -65,6 +65,9 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 			&source.Kind{Type: &toolchainv1alpha1.Space{}},
 			handler.EnqueueRequestsFromMapFunc(commoncontrollers.MapToOwnerByLabel(r.Namespace, toolchainv1alpha1.SpaceCreatorLabelKey))).
 		Watches(
+			&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}},
+			handler.EnqueueRequestsFromMapFunc(commoncontrollers.MapToOwnerByLabel(r.Namespace, toolchainv1alpha1.SpaceCreatorLabelKey))).
+		Watches(
 			&source.Kind{Type: &toolchainv1alpha1.ToolchainStatus{}},
 			handler.EnqueueRequestsFromMapFunc(unapprovedMapper.MapToOldestPending),
 			builder.WithPredicates(&OnlyWhenAutomaticApprovalIsEnabled{
