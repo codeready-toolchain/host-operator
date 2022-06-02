@@ -2,7 +2,7 @@ module github.com/codeready-toolchain/host-operator
 
 require (
 	github.com/codeready-toolchain/api v0.0.0-20220511141428-1adfed7d17b0
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20220523142428-2558e76260fb
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20220530143713-7cfc4ff163ce
 	github.com/davecgh/go-spew v1.1.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -28,6 +28,6 @@ require (
 	sigs.k8s.io/controller-runtime v0.10.3
 )
 
-replace github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20220518200535-6c4608b0f494
+replace github.com/codeready-toolchain/api => github.com/rajivnathan/api v0.0.0-20220602142013-e43d346d0f7a
 
 go 1.16

@@ -239,8 +239,8 @@ type TiersConfig struct {
 	tiers toolchainv1alpha1.TiersConfig
 }
 
-func (d TiersConfig) DefaultTier() string {
-	return commonconfig.GetString(d.tiers.DefaultTier, "base")
+func (d TiersConfig) DefaultUserTier() string {
+	return commonconfig.GetString(d.tiers.DefaultUserTier, "deactivate30")
 }
 
 func (d TiersConfig) DefaultSpaceTier() string {
