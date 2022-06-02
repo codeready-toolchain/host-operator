@@ -447,6 +447,7 @@ func EncodeUserIdentifier(subject string) string {
 	DNS1123NameMaximumLength := 63
 	DNS1123NotAllowedCharacters := "[^-a-z0-9]"
 	DNS1123NotAllowedStartCharacters := "^[^a-z0-9]+"
+	DNS1123NotAllowedEndCharacters := "[^a-z0-9]+$"
 
 	// Convert to lower case
 	encoded := strings.ToLower(subject)
@@ -458,6 +459,10 @@ func EncodeUserIdentifier(subject string) string {
 	// Remove invalid start characters
 	nameNotAllowedStartChars := regexp.MustCompile(DNS1123NotAllowedStartCharacters)
 	encoded = nameNotAllowedStartChars.ReplaceAllString(encoded, "")
+
+	// Remove invalid end characters
+	nameNotAllowedEndChars := regexp.MustCompile(DNS1123NotAllowedEndCharacters)
+	encoded = nameNotAllowedEndChars.ReplaceAllString(encoded, "")
 
 	// Add a checksum prefix if the encoded value is different to the original subject value
 	if encoded != subject {
