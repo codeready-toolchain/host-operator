@@ -2,6 +2,7 @@ package usersignup
 
 import (
 	"fmt"
+	"hash/crc32"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
@@ -19,9 +20,9 @@ func newSpaceBinding(mur *toolchainv1alpha1.MasterUserRecord, space *toolchainv1
 
 	return &toolchainv1alpha1.SpaceBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    mur.Namespace,
-			GenerateName: spaceBindingName(mur.Name, space.Name) + "-",
-			Labels:       labels,
+			Namespace: mur.Namespace,
+			Name:      spaceBindingName(space.Name, mur.Name),
+			Labels:    labels,
 		},
 		Spec: toolchainv1alpha1.SpaceBindingSpec{
 			MasterUserRecord: mur.Name,
@@ -31,10 +32,12 @@ func newSpaceBinding(mur *toolchainv1alpha1.MasterUserRecord, space *toolchainv1
 	}
 }
 
-func spaceBindingName(murName, spaceName string) string {
-	spaceBindingName := fmt.Sprintf("%s-%s", murName, spaceName)
-	if len(spaceBindingName) > 50 {
-		spaceBindingName = spaceBindingName[0:50]
+// spaceBindingName generates a unique name for the SpaceBinding resource to create,
+// based on the name of the Space and the name of the associated MasterUserRecord
+func spaceBindingName(spaceName, murName string) string {
+	c := crc32.Checksum([]byte(fmt.Sprintf("%s-%s", spaceName, murName)), crc32.IEEETable)
+	if len(spaceName) > 50 {
+		return fmt.Sprintf("%s-%x", spaceName[:50], c)
 	}
-	return spaceBindingName
+	return fmt.Sprintf("%s-%x", spaceName, c)
 }

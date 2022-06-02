@@ -11,38 +11,34 @@ import (
 	"strings"
 	"time"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
-	"github.com/codeready-toolchain/host-operator/pkg/pending"
-	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
-
-	"github.com/codeready-toolchain/toolchain-common/pkg/states"
-	"github.com/redhat-cop/operator-utils/pkg/util"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	"github.com/codeready-toolchain/host-operator/pkg/pending"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -295,7 +291,7 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 			// 3) Set the starting status to Deactivated (technically we could let the reconciler function do this
 			//    when it reconciles the migrated UserSignup, but it shouldn't hurt to set this status up front)
 			migratedUserSignup = &toolchainv1alpha1.UserSignup{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:        encodedUsername,
 					Namespace:   userSignup.Namespace,
 					Labels:      map[string]string{},
@@ -867,22 +863,20 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchai
 	if len(spaceBindings.Items) == 1 {
 		spaceBinding := spaceBindings.Items[0]
 		if util.IsBeingDeleted(&spaceBinding) {
-			return fmt.Errorf("cannot create spacebinding because it is currently being deleted")
+			return fmt.Errorf("cannot create SpaceBinding because it is currently being deleted")
 		}
-		logger.Info("SpaceBinding exists")
+		logger.Info("SpaceBinding already exists")
 		return nil
 	} else if len(spaceBindings.Items) > 1 {
-		return fmt.Errorf(`unable to proceed because there are multiple SpaceBindings associated with mur '%s' and space '%s'`, mur.Name, space.Name)
+		return fmt.Errorf(`unable to proceed because there are multiple SpaceBindings associated with MasterUserRecord '%s' and Space '%s'`, mur.Name, space.Name)
 	}
 
 	spaceBinding := newSpaceBinding(mur, space, userSignup.Name)
 
-	err := r.Client.Create(context.TODO(), spaceBinding)
-	if err != nil {
+	if err := r.Client.Create(context.TODO(), spaceBinding); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpaceBinding, err,
 			"error creating SpaceBinding")
 	}
-
 	logger.Info("Created SpaceBinding", "MUR", mur.Name, "Space", space.Name)
 	return nil
 }
