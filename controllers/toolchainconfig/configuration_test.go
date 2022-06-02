@@ -395,7 +395,7 @@ func TestTiers(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
-		assert.Equal(t, "base", toolchainCfg.Tiers().DefaultTier())
+		assert.Equal(t, "deactivate30", toolchainCfg.Tiers().DefaultUserTier())
 		assert.Equal(t, "base", toolchainCfg.Tiers().DefaultSpaceTier())
 		assert.Equal(t, 24*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
 	})
@@ -407,12 +407,12 @@ func TestTiers(t *testing.T) {
 	})
 	t.Run("non-default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.Tiers().
-			DefaultTier("advanced").
+			DefaultUserTier("deactivate90").
 			DefaultSpaceTier("advanced").
 			DurationBeforeChangeTierRequestDeletion("48h"))
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
-		assert.Equal(t, "advanced", toolchainCfg.Tiers().DefaultTier())
+		assert.Equal(t, "deactivate90", toolchainCfg.Tiers().DefaultUserTier())
 		assert.Equal(t, "advanced", toolchainCfg.Tiers().DefaultSpaceTier())
 		assert.Equal(t, 48*time.Hour, toolchainCfg.Tiers().DurationBeforeChangeTierRequestDeletion())
 	})
