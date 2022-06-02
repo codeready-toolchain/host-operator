@@ -4203,4 +4203,13 @@ func TestUserSignupMigration(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, "Failed to update migrated UserSignup: update failed", err.Error())
 	})
+
+	t.Run("Test EncodeUserIdentifier returns expected values", func(t *testing.T) {
+		require.Equal(t, "alphabeta", EncodeUserIdentifier("alphabeta"))
+		require.Equal(t, "6ceab4a6-gammadelta", EncodeUserIdentifier("-gammadelta"))
+		require.Equal(t, "c5a75872-epsilonzeta", EncodeUserIdentifier("epsilonzeta-"))
+		require.Equal(t, "eta-theta", EncodeUserIdentifier("eta-theta"))
+		require.Equal(t, "ffaf2cbd-iota-kappa", EncodeUserIdentifier("-iota-kappa---"))
+		require.Equal(t, "29cceea2-iota-kappa", EncodeUserIdentifier("-iota-kappa-"))
+	})
 }
