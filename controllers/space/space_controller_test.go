@@ -1097,6 +1097,56 @@ func TestUpdateSpaceRoles(t *testing.T) {
 			HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
 	})
 
+	t.Run("add duplicate user with admin role", func(t *testing.T) {
+		// NOTE: should not happen because SpaceBinding names are based on space+mur names and should be unique,
+		// except if a SpaceBindg resource is not created by the UserSignupController  ¯\_(ツ)_/¯
+
+		// given a MUR, a Space and its NSTemplateSet resource...
+		s := spacetest.NewSpace("oddity",
+			spacetest.WithTierName(basicTier.Name),
+			spacetest.WithSpecTargetCluster("member-1"),
+			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+			spacetest.WithFinalizer())
+		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity",
+			nstemplatetsettest.WithReferencesFor(basicTier,
+				// include pre-existing users with role...
+				nstemplatetsettest.WithSpaceRole("admin", adminMUR.Name),
+				nstemplatetsettest.WithSpaceRole("viewer", viewerMUR.Name),
+			),
+			nstemplatetsettest.WithReadyCondition(),
+		)
+		// ...and their corresponding space bindings
+		sb1 := spacebindingtest.NewSpaceBinding(adminMUR.Name, s.Name, "admin", "signupAdmin")
+		sb2 := spacebindingtest.NewSpaceBinding(viewerMUR.Name, s.Name, "viewer", "signupViewer")
+
+		// and a SpaceBinding for John as an Admin on the Space
+		sb3 := spacebindingtest.NewSpaceBinding(adminMUR.Name, s.Name, "admin", "signupAdmin") // duplicate of sb1
+		sb3.Name = "something-else"                                                            // make sure that the sb3's name does not collide with existing sb1's name
+
+		hostClient := test.NewFakeClient(t, s, johnMUR, adminMUR, sb1, viewerMUR, sb2, sb3, basicTier)
+		member1Client := test.NewFakeClient(t, nstmplSet)
+		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+
+		ctrl := newReconciler(hostClient, member1, member2)
+
+		// when
+		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, res.Requeue) // no requeue since the NSTemplateSet was not updated
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
+			HasConditions(spacetest.Ready())
+		// NSTemplateSet should have an spaceRoles entry for the `mur`
+		nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, nstmplSet.Name, member1Client).
+			HasSpaceRoles(
+				nstemplatetsettest.SpaceRole("basic-admin-123456new", adminMUR.Name),   // NO duplicate entry for `signupAdmin` user
+				nstemplatetsettest.SpaceRole("basic-viewer-123456new", viewerMUR.Name), // unchanged
+			).
+			HasConditions(nstemplatetsettest.Provisioned())
+	})
+
 	t.Run("remove user with admin role", func(t *testing.T) {
 		// given a MUR, a Space and its NSTemplateSet resource...
 		s := spacetest.NewSpace("oddity",
