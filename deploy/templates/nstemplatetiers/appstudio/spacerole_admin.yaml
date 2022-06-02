@@ -71,6 +71,16 @@ objects:
     - create
     - delete
   - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - watch
+  - apiGroups:
     - results.tekton.dev
     resources:
     - results
