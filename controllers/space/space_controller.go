@@ -347,15 +347,9 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 		sort.Strings(roles)
 		for _, r := range roles {
 			sr := tmplTier.Spec.SpaceRoles[r]
-			usernames := []string{}
-			for _, b := range bindings {
-				if b.Spec.SpaceRole == r {
-					usernames = append(usernames, b.Spec.MasterUserRecord)
-				}
-			}
+			usernames := extractUsernames(r, bindings)
 			// no need to add an entry in space roles if there is no associated user
 			if len(usernames) > 0 {
-				sort.Strings(usernames)
 				s.SpaceRoles = append(s.SpaceRoles, toolchainv1alpha1.NSTemplateSetSpaceRole{
 					TemplateRef: sr.TemplateRef,
 					Usernames:   usernames,
@@ -364,6 +358,21 @@ func NewNSTemplateSetSpec(space *toolchainv1alpha1.Space, bindings []toolchainv1
 		}
 	}
 	return s
+}
+
+func extractUsernames(role string, bindings []toolchainv1alpha1.SpaceBinding) []string {
+	usernames := map[string]interface{}{} // using a map to avoid duplicate entries
+	for _, b := range bindings {
+		if b.Spec.SpaceRole == role {
+			usernames[b.Spec.MasterUserRecord] = struct{}{} // value doesn't matter
+		}
+	}
+	result := make([]string, 0, len(usernames))
+	for u := range usernames {
+		result = append(result, u)
+	}
+	sort.Strings(result)
+	return result
 }
 
 func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1alpha1.Space) error {
