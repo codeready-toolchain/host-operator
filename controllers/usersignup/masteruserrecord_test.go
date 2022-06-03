@@ -1,28 +1,37 @@
 package usersignup
 
 import (
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+	"fmt"
 	"testing"
 
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
-	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	commonmur "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+
+	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestNewMasterUserRecord(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup()
-	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 
 	// when
-	mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+	mur := newMasterUserRecord(userSignup, test.MemberClusterName, "deactivate90", "johny")
 
 	// then
-	assert.Equal(t, newExpectedMur(userSignup), mur)
+	expectedMUR := commonmur.NewMasterUserRecord(t, "johny",
+		commonmur.WithOwnerLabel(userSignup.Name),
+		commonmur.TierName("deactivate90"),
+		commonmur.UserID("UserID123"),
+		commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"))
+	assert.Equal(t, expectedMUR, mur)
+}
+
+type userTierMigrationCase struct {
+	originalTierName string
+	expectedTierName string
 }
 
 func TestMigrateMurIfNecessary(t *testing.T) {
@@ -32,75 +41,108 @@ func TestMigrateMurIfNecessary(t *testing.T) {
 		t.Run("when mur is the same", func(t *testing.T) {
 			// given
 			userSignup := commonsignup.NewUserSignup()
-			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
-			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+			defaultUserTier := testusertier.NewUserTier("deactivate90", 90)
+			mur := newMasterUserRecord(userSignup, test.MemberClusterName, "deactivate90", "johny")
 
 			// when
-			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+			changed := migrateOrFixMurIfNecessary(mur, defaultUserTier, userSignup)
 
 			// then
 			assert.False(t, changed)
-			assert.Equal(t, newExpectedMur(userSignup), mur)
+			expectedMUR := commonmur.NewMasterUserRecord(t, "johny",
+				commonmur.WithOwnerLabel(userSignup.Name),
+				commonmur.TierName("deactivate90"),
+				commonmur.UserID("UserID123"),
+				commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"))
+			assert.Equal(t, expectedMUR, mur)
 		})
 	})
 
 	t.Run("update needed", func(t *testing.T) {
 
-		t.Run("when MUR has tier hash label, it should be removed after migration", func(t *testing.T) {
-			userSignup := commonsignup.NewUserSignup()
-			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
-			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
-			mur.Labels = map[string]string{
-				"toolchain.dev.openshift.com/owner":                    userSignup.Name,
-				tierutil.TemplateTierHashLabelKey(nsTemplateTier.Name): "abc123", // tier hash label set
-			}
-
-			// when
-			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
-
-			// then
-			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(userSignup), mur)
-		})
-
 		t.Run("when tierName is missing", func(t *testing.T) {
 			userSignup := commonsignup.NewUserSignup()
-			nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
-			mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
-			mur.Spec.TierName = "" // tierName not set
+			defaultUserTier := testusertier.NewUserTier("deactivate90", 90)
+			mur := newMasterUserRecord(userSignup, test.MemberClusterName, "", "johny") // tierName not set
 
 			// when
-			changed := migrateOrFixMurIfNecessary(mur, nsTemplateTier, userSignup)
+			changed := migrateOrFixMurIfNecessary(mur, defaultUserTier, userSignup)
 
 			// then
 			assert.True(t, changed)
-			assert.Equal(t, newExpectedMur(userSignup), mur)
+			expectedMUR := commonmur.NewMasterUserRecord(t, "johny",
+				commonmur.WithOwnerLabel(userSignup.Name),
+				commonmur.TierName("deactivate90"),
+				commonmur.UserID("UserID123"),
+				commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"))
+			assert.Equal(t, expectedMUR, mur)
+		})
+
+		t.Run("UserTier migration tests", func(t *testing.T) {
+
+			testcases := []userTierMigrationCase{
+				{
+					originalTierName: "advanced",
+					expectedTierName: "nodeactivation",
+				},
+				{
+					originalTierName: "appstudio",
+					expectedTierName: "deactivate30",
+				},
+				{
+					originalTierName: "base",
+					expectedTierName: "deactivate30",
+				},
+				{
+					originalTierName: "base1ns",
+					expectedTierName: "deactivate30",
+				},
+				{
+					originalTierName: "basedeactivationdisabled",
+					expectedTierName: "nodeactivation",
+				},
+				{
+					originalTierName: "baseextended",
+					expectedTierName: "deactivate180",
+				},
+				{
+					originalTierName: "baseextendedidling",
+					expectedTierName: "deactivate30",
+				},
+				{
+					originalTierName: "baselarge",
+					expectedTierName: "deactivate90",
+				},
+				{
+					originalTierName: "hackathon",
+					expectedTierName: "deactivate80",
+				},
+				{
+					originalTierName: "test",
+					expectedTierName: "deactivate30",
+				},
+			}
+
+			for _, tc := range testcases {
+				t.Run(fmt.Sprintf("when tierName is %s", tc.originalTierName), func(t *testing.T) {
+					userSignup := commonsignup.NewUserSignup()
+					defaultUserTier := testusertier.NewUserTier("deactivatetest", 30)
+					mur := newMasterUserRecord(userSignup, test.MemberClusterName, tc.originalTierName, "johny")
+
+					// when
+					changed := migrateOrFixMurIfNecessary(mur, defaultUserTier, userSignup)
+
+					// then
+					assert.True(t, changed)
+					expectedMUR := commonmur.NewMasterUserRecord(t, "johny",
+						commonmur.WithOwnerLabel(userSignup.Name),
+						commonmur.TierName(tc.expectedTierName),
+						commonmur.UserID("UserID123"),
+						commonmur.WithAnnotation("toolchain.dev.openshift.com/user-email", "foo@redhat.com"))
+					assert.Equal(t, expectedMUR, mur)
+				})
+			}
 		})
 	})
 
-}
-
-func newExpectedMur(userSignup *toolchainv1alpha1.UserSignup) *toolchainv1alpha1.MasterUserRecord {
-	return &toolchainv1alpha1.MasterUserRecord{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      "johny",
-			Namespace: test.HostOperatorNs,
-			Labels: map[string]string{
-				"toolchain.dev.openshift.com/owner": userSignup.Name,
-			},
-			Annotations: map[string]string{
-				"toolchain.dev.openshift.com/user-email": "foo@redhat.com",
-			},
-		},
-		Spec: toolchainv1alpha1.MasterUserRecordSpec{
-			UserID:   userSignup.Spec.Userid,
-			Disabled: false,
-			TierName: "advanced",
-			UserAccounts: []toolchainv1alpha1.UserAccountEmbedded{
-				{
-					TargetCluster: test.MemberClusterName,
-				},
-			},
-		},
-	}
 }

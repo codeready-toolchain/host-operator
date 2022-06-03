@@ -1,8 +1,9 @@
 package usersignup
 
 import (
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"testing"
+
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
@@ -17,7 +18,7 @@ func TestNewSpaceBinding(t *testing.T) {
 	userSignup := commonsignup.NewUserSignup()
 	nsTemplateTier := tiertest.NewNSTemplateTier("advanced", "dev", "stage", "extra")
 	space := newSpace(userSignup, test.MemberClusterName, "smith", nsTemplateTier.Name)
-	mur := newMasterUserRecord(userSignup, test.MemberClusterName, nsTemplateTier, "johny")
+	mur := newMasterUserRecord(userSignup, test.MemberClusterName, "deactivate90", "johny")
 
 	// when
 	actualSpaceBinding := newSpaceBinding(mur, space, userSignup.Name)

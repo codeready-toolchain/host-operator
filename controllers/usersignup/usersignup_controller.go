@@ -11,38 +11,34 @@ import (
 	"strings"
 	"time"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
-	"github.com/codeready-toolchain/host-operator/pkg/pending"
-	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
-
-	"github.com/codeready-toolchain/toolchain-common/pkg/states"
-	"github.com/redhat-cop/operator-utils/pkg/util"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	"github.com/codeready-toolchain/host-operator/pkg/pending"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
+	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -295,7 +291,7 @@ func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSi
 			// 3) Set the starting status to Deactivated (technically we could let the reconciler function do this
 			//    when it reconciles the migrated UserSignup, but it shouldn't hurt to set this status up front)
 			migratedUserSignup = &toolchainv1alpha1.UserSignup{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:        encodedUsername,
 					Namespace:   userSignup.Namespace,
 					Labels:      map[string]string{},
@@ -447,6 +443,7 @@ func EncodeUserIdentifier(subject string) string {
 	DNS1123NameMaximumLength := 63
 	DNS1123NotAllowedCharacters := "[^-a-z0-9]"
 	DNS1123NotAllowedStartCharacters := "^[^a-z0-9]+"
+	DNS1123NotAllowedEndCharacters := "[^a-z0-9]+$"
 
 	// Convert to lower case
 	encoded := strings.ToLower(subject)
@@ -458,6 +455,10 @@ func EncodeUserIdentifier(subject string) string {
 	// Remove invalid start characters
 	nameNotAllowedStartChars := regexp.MustCompile(DNS1123NotAllowedStartCharacters)
 	encoded = nameNotAllowedStartChars.ReplaceAllString(encoded, "")
+
+	// Remove invalid end characters
+	nameNotAllowedEndChars := regexp.MustCompile(DNS1123NotAllowedEndCharacters)
+	encoded = nameNotAllowedEndChars.ReplaceAllString(encoded, "")
 
 	// Add a checksum prefix if the encoded value is different to the original subject value
 	if encoded != subject {
@@ -570,14 +571,20 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			return true, err
 		}
 
+		// look-up the default UserTier to set it on the MUR if not set
+		defaultUserTier, err := getUserTier(r.Client, config.Tiers().DefaultUserTier(), userSignup.Namespace)
+		if err != nil {
+			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoUserTierAvailable, err, "")
+		}
+
 		// look-up the default NSTemplateTier to set it on the MUR if not set
-		defaultTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
+		defaultSpaceTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultSpaceTier(), userSignup.Namespace)
 		if err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 		}
 
 		// check if anything in the MUR should be migrated/fixed
-		if changed := migrateOrFixMurIfNecessary(mur, defaultTier, userSignup); changed {
+		if changed := migrateOrFixMurIfNecessary(mur, defaultUserTier, userSignup); changed {
 			reqLogger.Info("Updating MasterUserRecord after it was migrated")
 			if err := r.Client.Update(context.TODO(), mur); err != nil {
 				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable update MasterUserRecord to complete migration")
@@ -587,7 +594,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 		reqLogger.Info("MasterUserRecord exists", "Name", mur.Name)
 
 		if shouldManageSpace(userSignup) {
-			space, created, err := r.ensureSpace(reqLogger, userSignup, mur)
+			space, created, err := r.ensureSpace(reqLogger, userSignup, mur, defaultSpaceTier)
 			// if there was an error or the space was created then return to complete the reconcile, another reconcile will occur when space is created since this controller watches spaces
 			if err != nil || created {
 				return true, err
@@ -655,14 +662,14 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 		return err
 	}
 
-	// look-up the default NSTemplateTier to get the NS templates
-	nstemplateTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
+	// look-up the default UserTier
+	userTier, err := getUserTier(r.Client, config.Tiers().DefaultUserTier(), userSignup.Namespace)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
+		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoUserTierAvailable, err, "")
 	}
 
 	// Provision the MasterUserRecord
-	return r.provisionMasterUserRecord(reqLogger, config, userSignup, targetCluster, nstemplateTier)
+	return r.provisionMasterUserRecord(reqLogger, config, userSignup, targetCluster, userTier)
 }
 
 func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, state string) error {
@@ -706,6 +713,12 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 	nstemplateTier := &toolchainv1alpha1.NSTemplateTier{}
 	err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, nstemplateTier)
 	return nstemplateTier, err
+}
+
+func getUserTier(cl client.Client, tierName, namespace string) (*toolchainv1alpha1.UserTier, error) {
+	userTier := &toolchainv1alpha1.UserTier{}
+	err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, userTier)
+	return userTier, err
 }
 
 func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainConfig, instance *toolchainv1alpha1.UserSignup) (string, error) {
@@ -759,7 +772,7 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
 func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
-	nstemplateTier *toolchainv1alpha1.NSTemplateTier) error {
+	userTier *toolchainv1alpha1.UserTier) error {
 
 	// Set the last-target-cluster annotation so that if the user signs up again later on, they can be provisioned to the same cluster
 	userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = targetCluster.getClusterName()
@@ -774,7 +787,7 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 			"Error generating compliant username for %s", userSignup.Spec.Username)
 	}
 
-	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, compliantUsername)
+	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), userTier.Name, compliantUsername)
 
 	if err := controllerutil.SetControllerReference(userSignup, mur, r.Scheme); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
@@ -796,7 +809,7 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 }
 
 // ensureSpace does the work of provisioning the Space
-func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord) (*toolchainv1alpha1.Space, bool, error) {
+func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord, spaceTier *toolchainv1alpha1.NSTemplateTier) (*toolchainv1alpha1.Space, bool, error) {
 	logger.Info("Ensuring Space", "UserSignup", userSignup.Name, "MUR", mur.Name)
 
 	space := &toolchainv1alpha1.Space{}
@@ -821,7 +834,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 	}
 	tCluster := targetCluster(mur.Spec.UserAccounts[0].TargetCluster)
 
-	space = newSpace(userSignup, tCluster, mur.Name, mur.Spec.TierName)
+	space = newSpace(userSignup, tCluster, mur.Name, spaceTier.Name)
 
 	err = r.Client.Create(context.TODO(), space)
 	if err != nil {
@@ -850,22 +863,20 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchai
 	if len(spaceBindings.Items) == 1 {
 		spaceBinding := spaceBindings.Items[0]
 		if util.IsBeingDeleted(&spaceBinding) {
-			return fmt.Errorf("cannot create spacebinding because it is currently being deleted")
+			return fmt.Errorf("cannot create SpaceBinding because it is currently being deleted")
 		}
-		logger.Info("SpaceBinding exists")
+		logger.Info("SpaceBinding already exists")
 		return nil
 	} else if len(spaceBindings.Items) > 1 {
-		return fmt.Errorf(`unable to proceed because there are multiple SpaceBindings associated with mur '%s' and space '%s'`, mur.Name, space.Name)
+		return fmt.Errorf(`unable to proceed because there are multiple SpaceBindings associated with MasterUserRecord '%s' and Space '%s'`, mur.Name, space.Name)
 	}
 
 	spaceBinding := newSpaceBinding(mur, space, userSignup.Name)
 
-	err := r.Client.Create(context.TODO(), spaceBinding)
-	if err != nil {
+	if err := r.Client.Create(context.TODO(), spaceBinding); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpaceBinding, err,
 			"error creating SpaceBinding")
 	}
-
 	logger.Info("Created SpaceBinding", "MUR", mur.Name, "Space", space.Name)
 	return nil
 }
