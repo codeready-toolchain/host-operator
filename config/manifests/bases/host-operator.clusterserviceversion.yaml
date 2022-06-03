@@ -48,12 +48,6 @@ spec:
       kind: SpaceBinding
       name: spacebindings.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: TemplateUpdateRequest is the Schema for the templateupdaterequests
-        API
-      displayName: Template Update Request
-      kind: TemplateUpdateRequest
-      name: templateupdaterequests.toolchain.dev.openshift.com
-      version: v1alpha1
     - description: TierTemplate is the Schema for the tiertemplates API
       displayName: Template Tier
       kind: TierTemplate
