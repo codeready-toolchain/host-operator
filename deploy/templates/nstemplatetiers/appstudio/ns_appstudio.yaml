@@ -57,7 +57,7 @@ objects:
     scopes:
       - NotTerminating
     hard:
-      limits.cpu: 20000m
+      limits.cpu: "20"
       limits.memory: ${MEMORY_LIMIT}
       requests.cpu: 1750m
       requests.memory: ${MEMORY_REQUEST}
@@ -70,9 +70,9 @@ objects:
     scopes:
       - Terminating
     hard:
-      limits.cpu: 20000m
+      limits.cpu: "20"
       limits.memory: ${MEMORY_BUILD_LIMIT}
-      requests.cpu: 2000m
+      requests.cpu: "2"
       requests.memory: ${MEMORY_BUILD_REQUEST}
 - apiVersion: v1
   kind: ResourceQuota
