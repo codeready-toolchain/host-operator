@@ -127,6 +127,17 @@ var statusNoClustersAvailable = func(message string) toolchainv1alpha1.Condition
 	}
 }
 
+func (u *StatusUpdater) setStatusNoUserTierAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupNoUserTierAvailableReason,
+			Message: message,
+		})
+}
+
 func (u *StatusUpdater) setStatusNoTemplateTierAvailable(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
