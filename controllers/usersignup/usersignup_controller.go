@@ -571,14 +571,20 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			return true, err
 		}
 
+		// look-up the default UserTier to set it on the MUR if not set
+		defaultUserTier, err := getUserTier(r.Client, config.Tiers().DefaultUserTier(), userSignup.Namespace)
+		if err != nil {
+			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoUserTierAvailable, err, "")
+		}
+
 		// look-up the default NSTemplateTier to set it on the MUR if not set
-		defaultTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
+		defaultSpaceTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultSpaceTier(), userSignup.Namespace)
 		if err != nil {
 			return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
 		}
 
 		// check if anything in the MUR should be migrated/fixed
-		if changed := migrateOrFixMurIfNecessary(mur, defaultTier, userSignup); changed {
+		if changed := migrateOrFixMurIfNecessary(mur, defaultUserTier, userSignup); changed {
 			reqLogger.Info("Updating MasterUserRecord after it was migrated")
 			if err := r.Client.Update(context.TODO(), mur); err != nil {
 				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err, "unable update MasterUserRecord to complete migration")
@@ -588,7 +594,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 		reqLogger.Info("MasterUserRecord exists", "Name", mur.Name)
 
 		if shouldManageSpace(userSignup) {
-			space, created, err := r.ensureSpace(reqLogger, userSignup, mur)
+			space, created, err := r.ensureSpace(reqLogger, userSignup, mur, defaultSpaceTier)
 			// if there was an error or the space was created then return to complete the reconcile, another reconcile will occur when space is created since this controller watches spaces
 			if err != nil || created {
 				return true, err
@@ -656,14 +662,14 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 		return err
 	}
 
-	// look-up the default NSTemplateTier to get the NS templates
-	nstemplateTier, err := getNsTemplateTier(r.Client, config.Tiers().DefaultTier(), userSignup.Namespace)
+	// look-up the default UserTier
+	userTier, err := getUserTier(r.Client, config.Tiers().DefaultUserTier(), userSignup.Namespace)
 	if err != nil {
-		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoTemplateTierAvailable, err, "")
+		return r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusNoUserTierAvailable, err, "")
 	}
 
 	// Provision the MasterUserRecord
-	return r.provisionMasterUserRecord(reqLogger, config, userSignup, targetCluster, nstemplateTier)
+	return r.provisionMasterUserRecord(reqLogger, config, userSignup, targetCluster, userTier)
 }
 
 func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, state string) error {
@@ -707,6 +713,12 @@ func getNsTemplateTier(cl client.Client, tierName, namespace string) (*toolchain
 	nstemplateTier := &toolchainv1alpha1.NSTemplateTier{}
 	err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, nstemplateTier)
 	return nstemplateTier, err
+}
+
+func getUserTier(cl client.Client, tierName, namespace string) (*toolchainv1alpha1.UserTier, error) {
+	userTier := &toolchainv1alpha1.UserTier{}
+	err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: tierName}, userTier)
+	return userTier, err
 }
 
 func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainConfig, instance *toolchainv1alpha1.UserSignup) (string, error) {
@@ -760,7 +772,7 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 
 // provisionMasterUserRecord does the work of provisioning the MasterUserRecord
 func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup, targetCluster targetCluster,
-	nstemplateTier *toolchainv1alpha1.NSTemplateTier) error {
+	userTier *toolchainv1alpha1.UserTier) error {
 
 	// Set the last-target-cluster annotation so that if the user signs up again later on, they can be provisioned to the same cluster
 	userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey] = targetCluster.getClusterName()
@@ -775,7 +787,7 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 			"Error generating compliant username for %s", userSignup.Spec.Username)
 	}
 
-	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), nstemplateTier, compliantUsername)
+	mur := newMasterUserRecord(userSignup, targetCluster.getClusterName(), userTier.Name, compliantUsername)
 
 	if err := controllerutil.SetControllerReference(userSignup, mur, r.Scheme); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateMUR, err,
@@ -797,7 +809,7 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 }
 
 // ensureSpace does the work of provisioning the Space
-func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord) (*toolchainv1alpha1.Space, bool, error) {
+func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord, spaceTier *toolchainv1alpha1.NSTemplateTier) (*toolchainv1alpha1.Space, bool, error) {
 	logger.Info("Ensuring Space", "UserSignup", userSignup.Name, "MUR", mur.Name)
 
 	space := &toolchainv1alpha1.Space{}
@@ -822,7 +834,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 	}
 	tCluster := targetCluster(mur.Spec.UserAccounts[0].TargetCluster)
 
-	space = newSpace(userSignup, tCluster, mur.Name, mur.Spec.TierName)
+	space = newSpace(userSignup, tCluster, mur.Name, spaceTier.Name)
 
 	err = r.Client.Create(context.TODO(), space)
 	if err != nil {

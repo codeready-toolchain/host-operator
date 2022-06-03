@@ -3,16 +3,17 @@ package masteruserrecord
 import (
 	"context"
 	"fmt"
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"os"
 	"testing"
 	"time"
+
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	. "github.com/codeready-toolchain/host-operator/test"
 	. "github.com/codeready-toolchain/host-operator/test/notification"
-	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
@@ -163,7 +164,7 @@ func setupSynchronizerItems() (toolchainv1alpha1.MasterUserRecord, toolchainv1al
 func TestSynchronizeSpec(t *testing.T) {
 	// given
 	apiScheme(t)
-	otherTier := tiertest.OtherTier()
+	otherTier := testusertier.NewUserTier("other", 90)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.StatusCondition(toBeProvisioned()), murtest.TierName(otherTier.Name))
 
 	userAccount := uatest.NewUserAccountFromMur(mur)
