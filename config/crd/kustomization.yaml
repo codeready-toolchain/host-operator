@@ -3,7 +3,6 @@
 # It should be run by config/default
 resources:
 - bases/toolchain.dev.openshift.com_bannedusers.yaml
-- bases/toolchain.dev.openshift.com_changetierrequests.yaml
 - bases/toolchain.dev.openshift.com_masteruserrecords.yaml
 - bases/toolchain.dev.openshift.com_notifications.yaml
 - bases/toolchain.dev.openshift.com_nstemplatetiers.yaml
