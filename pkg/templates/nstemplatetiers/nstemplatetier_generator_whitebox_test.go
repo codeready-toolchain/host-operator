@@ -117,7 +117,7 @@ func TestLoadTemplatesByTiers(t *testing.T) {
 			tmpls, err := loadTemplatesByTiers(assets)
 			// then
 			require.NoError(t, err)
-			require.Len(t, tmpls, 10)
+			require.Len(t, tmpls, len(expectedProdTiers))
 			require.NotContains(t, "foo", tmpls) // make sure that the `foo: bar` entry was ignored
 			for _, tier := range tiers(expectedProdTiers) {
 				t.Run(tier, func(t *testing.T) {

@@ -46,6 +46,45 @@ objects:
     kind: Group
     name: system:serviceaccounts:${MEMBER_OPERATOR_NAMESPACE}
 
+# Quotas and default limits for not-terminating containers (regular long-running containers)
+# and terminating (short-lived containers like build) containers
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: compute-deploy
+    namespace: ${USERNAME}
+  spec:
+    scopes:
+      - NotTerminating
+    hard:
+      limits.cpu: "20"
+      limits.memory: ${MEMORY_LIMIT}
+      requests.cpu: 1750m
+      requests.memory: ${MEMORY_REQUEST}
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: compute-build
+    namespace: ${USERNAME}
+  spec:
+    scopes:
+      - Terminating
+    hard:
+      limits.cpu: "20"
+      limits.memory: ${MEMORY_BUILD_LIMIT}
+      requests.cpu: "2"
+      requests.memory: ${MEMORY_BUILD_REQUEST}
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: storage
+    namespace: ${USERNAME}
+  spec:
+    hard:
+      limits.ephemeral-storage: 7Gi
+      requests.storage: 15Gi
+      requests.ephemeral-storage: 7Gi
+      count/persistentvolumeclaims: "5"
 - apiVersion: v1
   kind: LimitRange
   metadata:
@@ -55,11 +94,12 @@ objects:
     limits:
     - type: "Container"
       default:
-        cpu: 1000m
-        memory: 750Mi
+        cpu: 2000m
+        memory: 2Gi
       defaultRequest:
         cpu: 10m
-        memory: 64Mi
+        memory: 256Mi
+
 - apiVersion: networking.k8s.io/v1
   kind: NetworkPolicy
   metadata:
@@ -145,3 +185,12 @@ parameters:
   required: true
 - name: MEMBER_OPERATOR_NAMESPACE
   value: toolchain-member-operator
+- name: MEMORY_LIMIT
+  value: "7Gi"
+- name: MEMORY_REQUEST
+  value: "7Gi"
+- name: MEMORY_BUILD_LIMIT
+  value: "64Gi"
+- name: MEMORY_BUILD_REQUEST
+  value: "32Gi"
+
