@@ -28,11 +28,11 @@ func TestReconcileSocialEvent(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
-	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
+	basicTier := tiertest.BaseTier(t, tiertest.CurrentBasicTemplates)
 
 	t.Run("valid tier", func(t *testing.T) {
 		// given
-		se := socialeventtest.NewSocialEvent("lab", "basic")
+		se := socialeventtest.NewSocialEvent("lab", "base", "base")
 		hostClient := test.NewFakeClient(t, se, basicTier)
 		ctrl := newReconciler(hostClient)
 
@@ -53,12 +53,12 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 	t.Run("failures", func(t *testing.T) {
 
-		t.Run("unable to get tier", func(t *testing.T) {
+		t.Run("unable to get user tier", func(t *testing.T) {
 			// given
-			se := socialeventtest.NewSocialEvent("lab", "basic")
+			se := socialeventtest.NewSocialEvent("lab", "notfound", "base")
 			hostClient := test.NewFakeClient(t, se, basicTier)
 			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
-				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
+				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Client.Get(ctx, key, obj)
@@ -70,20 +70,20 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, "unable to get the 'basic' NSTemplateTier: mock error")
+			assert.EqualError(t, err, "unable to get the 'notfound' NSTemplateTier: mock error")
 			// check the social event status
 			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).
 				HasConditions(toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.ConditionReady,
 					Status:  corev1.ConditionFalse,
-					Reason:  toolchainv1alpha1.SocialEventUnableToGetTierReason,
-					Message: "unable to get the 'basic' NSTemplateTier: mock error",
+					Reason:  toolchainv1alpha1.SocialEventUnableToGetUserTierReason,
+					Message: "unable to get the 'notfound' NSTemplateTier: mock error",
 				})
 		})
 
-		t.Run("unknown tier", func(t *testing.T) {
+		t.Run("unknown user tier", func(t *testing.T) {
 			// given
-			se := socialeventtest.NewSocialEvent("lab", "unknown")
+			se := socialeventtest.NewSocialEvent("lab", "unknown", "base")
 			hostClient := test.NewFakeClient(t, se, basicTier)
 			ctrl := newReconciler(hostClient)
 
@@ -97,8 +97,58 @@ func TestReconcileSocialEvent(t *testing.T) {
 				toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.ConditionReady,
 					Status:  corev1.ConditionFalse,
-					Reason:  toolchainv1alpha1.SocialEventInvalidTierReason,
-					Message: fmt.Sprintf("NSTemplateTier '%s' not found", se.Spec.Tier),
+					Reason:  toolchainv1alpha1.SocialEventInvalidUserTierReason,
+					Message: "NSTemplateTier 'unknown' not found",
+				},
+			)
+		})
+
+		t.Run("unable to get space tier", func(t *testing.T) {
+			// given
+			se := socialeventtest.NewSocialEvent("lab", "base", "notfound")
+			hostClient := test.NewFakeClient(t, se, basicTier)
+			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok && key.Name == "notfound" {
+					return fmt.Errorf("mock error")
+				}
+				return hostClient.Client.Get(ctx, key, obj)
+			}
+			ctrl := newReconciler(hostClient)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(se))
+
+			// then
+			require.Error(t, err)
+			assert.EqualError(t, err, "unable to get the 'notfound' NSTemplateTier: mock error")
+			// check the social event status
+			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).
+				HasConditions(toolchainv1alpha1.Condition{
+					Type:    toolchainv1alpha1.ConditionReady,
+					Status:  corev1.ConditionFalse,
+					Reason:  toolchainv1alpha1.SocialEventUnableToGetSpaceTierReason,
+					Message: "unable to get the 'notfound' NSTemplateTier: mock error",
+				})
+		})
+
+		t.Run("unknown space tier", func(t *testing.T) {
+			// given
+			se := socialeventtest.NewSocialEvent("lab", "base", "unknown")
+			hostClient := test.NewFakeClient(t, se, basicTier)
+			ctrl := newReconciler(hostClient)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(se))
+
+			// then
+			require.NoError(t, err)
+			// check the social event status
+			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).HasConditions(
+				toolchainv1alpha1.Condition{
+					Type:    toolchainv1alpha1.ConditionReady,
+					Status:  corev1.ConditionFalse,
+					Reason:  toolchainv1alpha1.SocialEventInvalidSpaceTierReason,
+					Message: "NSTemplateTier 'unknown' not found",
 				},
 			)
 		})

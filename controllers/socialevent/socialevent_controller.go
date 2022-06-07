@@ -61,15 +61,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) checkTier(logger logr.Logger, event *toolchainv1alpha1.SocialEvent) error {
 	// fetch the NSTemplateTier tier specified in the SocialEvent
 	tier := &toolchainv1alpha1.NSTemplateTier{}
+
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: event.Namespace,
-		Name:      event.Spec.Tier,
+		Name:      event.Spec.UserTier,
 	}, tier); err != nil {
 		if errors.IsNotFound(err) {
-			return r.StatusUpdater.tierNotFound(logger, event)
+			return r.StatusUpdater.userTierNotFound(logger, event)
 		}
 		// Error reading the object - requeue the request.
-		return r.StatusUpdater.unableToGetTier(logger, event, err)
+		return r.StatusUpdater.unableToGetUserTier(logger, event, err)
+	}
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: event.Namespace,
+		Name:      event.Spec.SpaceTier,
+	}, tier); err != nil {
+		if errors.IsNotFound(err) {
+			return r.StatusUpdater.spaceTierNotFound(logger, event)
+		}
+		// Error reading the object - requeue the request.
+		return r.StatusUpdater.unableToGetSpaceTier(logger, event, err)
 	}
 	return r.StatusUpdater.ready(event)
 }

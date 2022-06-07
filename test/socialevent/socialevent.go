@@ -13,14 +13,15 @@ import (
 // starting: now
 // ending: 1hr later
 // max attendees: 10
-func NewSocialEvent(name, tierName string, options ...Option) *toolchainv1alpha1.SocialEvent {
+func NewSocialEvent(name, userTier, spaceTier string, options ...Option) *toolchainv1alpha1.SocialEvent {
 	se := &toolchainv1alpha1.SocialEvent{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: test.HostOperatorNs,
 			Name:      name,
 		},
 		Spec: toolchainv1alpha1.SocialEventSpec{
-			Tier:         tierName,
+			UserTier:     userTier,
+			SpaceTier:    spaceTier,
 			StartTime:    metav1.Now(),
 			EndTime:      metav1.NewTime(time.Now().Add(1 * time.Hour)),
 			MaxAttendees: 10,

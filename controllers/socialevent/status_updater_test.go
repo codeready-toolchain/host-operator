@@ -18,7 +18,7 @@ func TestUpdateStatusCondition(t *testing.T) {
 
 	t.Run("status condition created", func(t *testing.T) {
 		// given
-		e := socialeventtest.NewSocialEvent("lab", "base") // with no pre-existing status condition
+		e := socialeventtest.NewSocialEvent("lab", "base", "base") // with no pre-existing status condition
 		c1 := toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
 			Status: corev1.ConditionTrue,
@@ -40,10 +40,10 @@ func TestUpdateStatusCondition(t *testing.T) {
 		c1 := toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.SocialEventInvalidTierReason,
+			Reason:  toolchainv1alpha1.SocialEventInvalidUserTierReason,
 			Message: "NSTemplateTier 'foo' not found",
 		}
-		e := socialeventtest.NewSocialEvent("lab", "base",
+		e := socialeventtest.NewSocialEvent("lab", "base", "base",
 			socialeventtest.WithConditions(c1), // with pre-existing status condition
 		)
 		c2 := toolchainv1alpha1.Condition{
@@ -67,10 +67,10 @@ func TestUpdateStatusCondition(t *testing.T) {
 		c1 := toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
 			Status:  corev1.ConditionFalse,
-			Reason:  toolchainv1alpha1.SocialEventInvalidTierReason,
+			Reason:  toolchainv1alpha1.SocialEventInvalidUserTierReason,
 			Message: "NSTemplateTier 'foo' not found",
 		}
-		e := socialeventtest.NewSocialEvent("lab", "base",
+		e := socialeventtest.NewSocialEvent("lab", "base", "base",
 			socialeventtest.WithConditions(c1), // with pre-existing status condition
 		)
 		hostClient := test.NewFakeClient(t, e)
