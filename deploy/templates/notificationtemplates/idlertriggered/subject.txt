@@ -1,1 +1,1 @@
-Notice: Your running application has been idled
+Notice: Your application is being idled

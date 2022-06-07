@@ -72,7 +72,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			assert.True(t, found)
-			assert.Equal(t, "Notice: Your running application has been idled", template.Subject)
+			assert.Equal(t, "Notice: Your application is being idled", template.Subject)
 			assert.Contains(t, template.Content, "In accordance with the usage terms of Developer Sandbox, we have reduced the number of instances of your\n        application to zero (0).")
 
 		})
