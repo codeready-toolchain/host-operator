@@ -133,7 +133,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if ok {
 		return r.cleanupMigration(userSignup, originalUserSignupName, request, logger)
 	}
-
+	if labels := userSignup.GetLabels(); labels == nil {
+		userSignup.Labels = make(map[string]string)
+	}
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
