@@ -619,8 +619,8 @@ github.com/prometheus/procfs v0.6.0/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1
 github.com/prometheus/procfs v0.7.3 h1:4jVXhlkAyzOScmCkXBTOLRLTz8EeU+eyjrwB/EPq0VU=
 github.com/prometheus/procfs v0.7.3/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
-github.com/rajivnathan/api v0.0.0-20220603143545-b61349ffadd9 h1:Kb2L1bKpMoFrNOBS+hqZvRT+rTXugQaDhFaAUXtiaAw=
-github.com/rajivnathan/api v0.0.0-20220603143545-b61349ffadd9/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
+github.com/rajivnathan/api v0.0.0-20220609201647-04a661d8678d h1:e+eNPcFtWnSdIljjCplyR1QGHz5siPNFacTQ/+BYGmM=
+github.com/rajivnathan/api v0.0.0-20220609201647-04a661d8678d/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
 github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf h1:fsZiv9XuFo8G7IyzFWjG02vqzJG7kSqFvD1Wiq3V/o8=
 github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf/go.mod h1:FfTyeSCu+e2VLgeMh/1RFG8TSkVjKRPEyR6EmDt0RIw=
 github.com/remyoudompheng/bigfft v0.0.0-20170806203942-52369c62f446/go.mod h1:uYEyJGbgTkfkS4+E/PavXkNJcbFIpEtjt2B0KDQ5+9M=

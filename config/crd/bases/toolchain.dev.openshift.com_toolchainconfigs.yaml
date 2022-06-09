@@ -437,6 +437,10 @@ spec:
                               member status
                             type: string
                         type: object
+                      skipUserCreation:
+                        description: Defines the flag that determines whether User
+                          and Identity resources should be created for a UserAccount
+                        type: boolean
                       toolchainCluster:
                         description: Keeps parameters concerned with the toolchaincluster
                         properties:
@@ -540,6 +544,10 @@ spec:
                                 the member status
                               type: string
                           type: object
+                        skipUserCreation:
+                          description: Defines the flag that determines whether User
+                            and Identity resources should be created for a UserAccount
+                          type: boolean
                         toolchainCluster:
                           description: Keeps parameters concerned with the toolchaincluster
                           properties:
