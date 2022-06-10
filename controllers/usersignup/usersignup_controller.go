@@ -421,10 +421,21 @@ func (r *Reconciler) cleanupMigration(userSignup *toolchainv1alpha1.UserSignup, 
 	if !condition.IsTrueWithReason(userSignupToDelete.Status.Conditions, toolchainv1alpha1.UserSignupComplete,
 		toolchainv1alpha1.UserSignupUserDeactivatedReason) {
 		// The UserSignup to delete isn't finished migrating yet, return an error
-		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
-			errs.New("Original UserSignup not finished migration"),
-			fmt.Sprintf("Original UserSignup [%s] not yet finished migration", userSignupToDelete.Name))
+		err = errs.New("Original UserSignup not finished migration")
 
+		//
+		cond, found := condition.FindConditionByType(userSignupToDelete.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
+		if !found {
+			logger.Error(err, "UserSignup cannot be deleted - [Complete] condition not found",
+				"Name", userSignupToDelete.Name)
+		} else {
+			logger.Error(err, "UserSignup cannot be deleted - [Complete] condition reason not set to 'Deactivated'",
+				"Name", userSignupToDelete.Name,
+				"Complete", cond.Reason)
+		}
+
+		return reconcile.Result{}, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusMigrationFailedCleanup,
+			err, fmt.Sprintf("Original UserSignup [%s] not yet finished migration", userSignupToDelete.Name))
 	}
 
 	err = r.Client.Delete(context.TODO(), userSignupToDelete)
