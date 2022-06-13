@@ -42,10 +42,6 @@ const (
 	expectedDeactivationTimeoutDeactivate30Tier = 30
 	expectedDeactivationTimeoutDeactivate90Tier = 90
 
-	// NSTemplateTiers
-	expectedDeactivationTimeoutBasicTier = 30
-	expectedDeactivationTimeoutOtherTier = 60
-
 	preDeactivationNotificationDays = 3
 )
 
@@ -379,7 +375,7 @@ func TestReconcile(t *testing.T) {
 		// cannot get UserSignup
 		t.Run("UserSignup get failure", func(t *testing.T) {
 			// given
-			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutBasicTier*24) * time.Hour)}
+			murProvisionedTime := &metav1.Time{Time: time.Now().Add(-time.Duration(expectedDeactivationTimeoutDeactivate30Tier*24) * time.Hour)}
 			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(userTier30.Name), murtest.Account("cluster1"), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
