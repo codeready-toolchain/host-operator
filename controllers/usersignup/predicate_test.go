@@ -28,7 +28,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Name:      userSignupName,
 			Namespace: test.HostOperatorNs,
 			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
 			},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
@@ -36,16 +36,17 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Generation: 1,
 		},
 		Spec: toolchainv1alpha1.UserSignupSpec{
-			Username: "foo@redhat.com",
+			Username: "jane.doe@redhat.com",
 		},
 	}
 
-	userSignupNewNotChanged := &toolchainv1alpha1.UserSignup{
+	userSignupUnchanged := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userSignupName,
 			Namespace: test.HostOperatorNs,
 			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "foo@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
+				migrationInProgressAnnotationName:                  "true",
 			},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
@@ -57,12 +58,31 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 		},
 	}
 
-	userSignupNewChanged := &toolchainv1alpha1.UserSignup{
+	userSignupWithGenerationChanged := &toolchainv1alpha1.UserSignup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userSignupName,
 			Namespace: test.HostOperatorNs,
 			Annotations: map[string]string{
-				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
+				migrationInProgressAnnotationName:                  "true",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+			Generation: 2,
+		},
+		Spec: toolchainv1alpha1.UserSignupSpec{
+			Username: "alice.mayweather.doe@redhat.com",
+		},
+	}
+
+	userSignupWithEmailHashLabelChanged := &toolchainv1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userSignupName,
+			Namespace: test.HostOperatorNs,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
+				migrationInProgressAnnotationName:                  "true",
 			},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "747a250430df0c7976bf2363ebb4014a",
@@ -74,13 +94,49 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 		},
 	}
 
+	userSignupWithEmailAnnotationChanged := &toolchainv1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userSignupName,
+			Namespace: test.HostOperatorNs,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
+				migrationInProgressAnnotationName:                  "true",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+			Generation: 2,
+		},
+		Spec: toolchainv1alpha1.UserSignupSpec{
+			Username: "alice.mayweather.doe@redhat.com",
+		},
+	}
+
+	userSignupWithMigrationInProgressAnnotationRemoved := &toolchainv1alpha1.UserSignup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userSignupName,
+			Namespace: test.HostOperatorNs,
+			Annotations: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
+			},
+			Labels: map[string]string{
+				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
+			},
+			Generation: 2,
+		},
+		Spec: toolchainv1alpha1.UserSignupSpec{
+			Username: "alice.mayweather.doe@redhat.com",
+		},
+	}
+
 	t.Run("test UserSignupChangedPredicate returns false when ObjectOld not set", func(t *testing.T) {
 		e := event.UpdateEvent{
 			ObjectOld: nil,
-			ObjectNew: userSignupNewNotChanged,
+			ObjectNew: userSignupUnchanged,
 		}
 		require.False(t, pred.Update(e))
 	})
+
 	t.Run("test UserSignupChangedPredicate returns false when ObjectNew not set", func(t *testing.T) {
 		e := event.UpdateEvent{
 			ObjectOld: userSignupOld,
@@ -88,17 +144,43 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 		}
 		require.False(t, pred.Update(e))
 	})
-	t.Run("test UserSignupChangedPredicate returns false when generation unchanged and annoations unchanged", func(t *testing.T) {
+
+	t.Run("test UserSignupChangedPredicate returns false when resource unchanged", func(t *testing.T) {
 		e := event.UpdateEvent{
 			ObjectOld: userSignupOld,
-			ObjectNew: userSignupNewNotChanged,
+			ObjectNew: userSignupUnchanged,
 		}
 		require.False(t, pred.Update(e))
 	})
+
 	t.Run("test UserSignupChangedPredicate returns true when generation changed", func(t *testing.T) {
 		e := event.UpdateEvent{
 			ObjectOld: userSignupOld,
-			ObjectNew: userSignupNewChanged,
+			ObjectNew: userSignupWithGenerationChanged,
+		}
+		require.True(t, pred.Update(e))
+	})
+
+	t.Run("test UserSignupChangedPredicate returns true when email-hash label changed", func(t *testing.T) {
+		e := event.UpdateEvent{
+			ObjectOld: userSignupOld,
+			ObjectNew: userSignupWithEmailHashLabelChanged,
+		}
+		require.True(t, pred.Update(e))
+	})
+
+	t.Run("test UserSignupChangedPredicate returns true when email annotation changed", func(t *testing.T) {
+		e := event.UpdateEvent{
+			ObjectOld: userSignupOld,
+			ObjectNew: userSignupWithEmailAnnotationChanged,
+		}
+		require.True(t, pred.Update(e))
+	})
+
+	t.Run("test UserSignupChangedPredicate returns true when migration-in-progress annotation removed", func(t *testing.T) {
+		e := event.UpdateEvent{
+			ObjectOld: userSignupOld,
+			ObjectNew: userSignupWithMigrationInProgressAnnotationRemoved,
 		}
 		require.True(t, pred.Update(e))
 	})
