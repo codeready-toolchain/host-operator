@@ -25,28 +25,28 @@ func (u *StatusUpdater) ready(event *toolchainv1alpha1.SocialEvent) error {
 }
 
 func (u *StatusUpdater) userTierNotFound(logger logr.Logger, event *toolchainv1alpha1.SocialEvent) error {
-	logger.Info("NSTemplateTier not found", "nstemplatetier_name", event.Spec.UserTier)
+	logger.Info("UserTier not found", "nstemplatetier_name", event.Spec.UserTier)
 	return u.updateStatusConditions(event, toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ConditionReady,
 		Status:  corev1.ConditionFalse,
 		Reason:  toolchainv1alpha1.SocialEventInvalidUserTierReason,
-		Message: fmt.Sprintf("NSTemplateTier '%s' not found", event.Spec.UserTier),
+		Message: fmt.Sprintf("UserTier '%s' not found", event.Spec.UserTier),
 	})
 }
 
 func (u *StatusUpdater) unableToGetUserTier(logger logr.Logger, event *toolchainv1alpha1.SocialEvent, err error) error {
-	logger.Error(err, "unable to get the NSTemplateTier", "nstemplatetier_name", event.Spec.UserTier)
+	logger.Error(err, "unable to get the UserTier", "usertier_name", event.Spec.UserTier)
 	if err2 := u.updateStatusConditions(event, toolchainv1alpha1.Condition{
 		Type:    toolchainv1alpha1.ConditionReady,
 		Status:  corev1.ConditionFalse,
 		Reason:  toolchainv1alpha1.SocialEventUnableToGetUserTierReason,
-		Message: fmt.Sprintf("unable to get the '%s' NSTemplateTier: %s", event.Spec.UserTier, err.Error()),
+		Message: fmt.Sprintf("unable to get the '%s' UserTier: %s", event.Spec.UserTier, err.Error()),
 	}); err2 != nil {
 		// if status could not be updated, then return the associated error
 		return err2
 	}
 	// if status was updated, then return the "main" error
-	return errs.Wrapf(err, "unable to get the '%s' NSTemplateTier", event.Spec.UserTier)
+	return errs.Wrapf(err, "unable to get the '%s' UserTier", event.Spec.UserTier)
 }
 
 func (u *StatusUpdater) spaceTierNotFound(logger logr.Logger, event *toolchainv1alpha1.SocialEvent) error {

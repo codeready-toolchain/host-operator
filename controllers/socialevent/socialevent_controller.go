@@ -47,8 +47,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		logger.Error(err, "unable to get the current SocialEvent")
-		return reconcile.Result{}, errs.Wrap(err, "unable to get the current NSTeSocialEventplateTier")
+		return reconcile.Result{}, errs.Wrap(err, "unable to get the current SocialEvent")
 	}
 
 	if err := r.checkTier(logger, event); err != nil {
@@ -59,23 +58,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 }
 
 func (r *Reconciler) checkTier(logger logr.Logger, event *toolchainv1alpha1.SocialEvent) error {
-	// fetch the NSTemplateTier tier specified in the SocialEvent
-	tier := &toolchainv1alpha1.NSTemplateTier{}
-
+	// fetch the UserTier specified in the SocialEvent
+	userTier := &toolchainv1alpha1.UserTier{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: event.Namespace,
 		Name:      event.Spec.UserTier,
-	}, tier); err != nil {
+	}, userTier); err != nil {
 		if errors.IsNotFound(err) {
 			return r.StatusUpdater.userTierNotFound(logger, event)
 		}
 		// Error reading the object - requeue the request.
 		return r.StatusUpdater.unableToGetUserTier(logger, event, err)
 	}
+
+	// fetch the NSTemplateTier specified in the SocialEvent
+	spaceTier := &toolchainv1alpha1.NSTemplateTier{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: event.Namespace,
 		Name:      event.Spec.SpaceTier,
-	}, tier); err != nil {
+	}, spaceTier); err != nil {
 		if errors.IsNotFound(err) {
 			return r.StatusUpdater.spaceTierNotFound(logger, event)
 		}

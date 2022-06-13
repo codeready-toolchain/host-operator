@@ -10,6 +10,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	socialeventtest "github.com/codeready-toolchain/host-operator/test/socialevent"
+	"github.com/codeready-toolchain/host-operator/test/usertier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/assert"
@@ -28,12 +29,13 @@ func TestReconcileSocialEvent(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
-	basicTier := tiertest.BaseTier(t, tiertest.CurrentBasicTemplates)
+	baseSpaceTier := tiertest.BaseTier(t, tiertest.CurrentBasicTemplates)
+	baseUserTier := usertier.NewUserTier("base", 30)
 
 	t.Run("valid tier", func(t *testing.T) {
 		// given
 		se := socialeventtest.NewSocialEvent("lab", "base", "base")
-		hostClient := test.NewFakeClient(t, se, basicTier)
+		hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
 		ctrl := newReconciler(hostClient)
 
 		// when
@@ -56,9 +58,9 @@ func TestReconcileSocialEvent(t *testing.T) {
 		t.Run("unable to get user tier", func(t *testing.T) {
 			// given
 			se := socialeventtest.NewSocialEvent("lab", "notfound", "base")
-			hostClient := test.NewFakeClient(t, se, basicTier)
+			hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
 			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
-				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok && key.Name == "notfound" {
+				if _, ok := obj.(*toolchainv1alpha1.UserTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Client.Get(ctx, key, obj)
@@ -70,21 +72,21 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 			// then
 			require.Error(t, err)
-			assert.EqualError(t, err, "unable to get the 'notfound' NSTemplateTier: mock error")
+			assert.EqualError(t, err, "unable to get the 'notfound' UserTier: mock error")
 			// check the social event status
 			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).
 				HasConditions(toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.ConditionReady,
 					Status:  corev1.ConditionFalse,
 					Reason:  toolchainv1alpha1.SocialEventUnableToGetUserTierReason,
-					Message: "unable to get the 'notfound' NSTemplateTier: mock error",
+					Message: "unable to get the 'notfound' UserTier: mock error",
 				})
 		})
 
 		t.Run("unknown user tier", func(t *testing.T) {
 			// given
 			se := socialeventtest.NewSocialEvent("lab", "unknown", "base")
-			hostClient := test.NewFakeClient(t, se, basicTier)
+			hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
 			ctrl := newReconciler(hostClient)
 
 			// when
@@ -98,7 +100,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 					Type:    toolchainv1alpha1.ConditionReady,
 					Status:  corev1.ConditionFalse,
 					Reason:  toolchainv1alpha1.SocialEventInvalidUserTierReason,
-					Message: "NSTemplateTier 'unknown' not found",
+					Message: "UserTier 'unknown' not found",
 				},
 			)
 		})
@@ -106,7 +108,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 		t.Run("unable to get space tier", func(t *testing.T) {
 			// given
 			se := socialeventtest.NewSocialEvent("lab", "base", "notfound")
-			hostClient := test.NewFakeClient(t, se, basicTier)
+			hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
 			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
@@ -134,7 +136,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 		t.Run("unknown space tier", func(t *testing.T) {
 			// given
 			se := socialeventtest.NewSocialEvent("lab", "base", "unknown")
-			hostClient := test.NewFakeClient(t, se, basicTier)
+			hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
 			ctrl := newReconciler(hostClient)
 
 			// when
