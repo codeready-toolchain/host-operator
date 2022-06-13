@@ -98,26 +98,6 @@ var CurrentBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	},
 }
 
-// BaseTier returns a "base" NSTemplateTier with template refs in the given spec
-func BaseTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
-	tier := &toolchainv1alpha1.NSTemplateTier{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "toolchain-host-operator",
-			Name:      "base",
-		},
-		Spec: spec,
-	}
-	hash, err := tierutil.ComputeHashForNSTemplateTier(tier)
-	require.NoError(t, err)
-	tier.Labels = map[string]string{
-		"toolchain.dev.openshift.com/" + tier.Name + "-tier-hash": hash,
-	}
-	for _, set := range options {
-		set(tier)
-	}
-	return tier
-}
-
 // BasicTier returns a "basic" NSTemplateTier with template refs in the given spec
 func BasicTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
 	tier := &toolchainv1alpha1.NSTemplateTier{
