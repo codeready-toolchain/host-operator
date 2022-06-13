@@ -35,7 +35,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=socialevents/finalizers,verbs=update
 
 // Reconcile takes care of:
-// - checking that the target tier specifiec in the SocialEvent is valid and set the status condition accordingly
+// - checking that the target User and Space tiers specified in the SocialEvent are valid and set the status condition accordingly
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
