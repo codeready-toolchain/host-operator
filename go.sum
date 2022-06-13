@@ -129,8 +129,11 @@ github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:z
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220530143713-7cfc4ff163ce h1:Zyv3cdI1/WdAG6mTOQnxFpjeLQHeOn58Tb1Q9GKgy3w=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220530143713-7cfc4ff163ce/go.mod h1:3AJ9BfCZIJRG3SIvLk/8nG94AbpGsJR/rSvQCg39OCQ=
+github.com/codeready-toolchain/api v0.0.0-20220609025355-2975f9599a9e/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
+github.com/codeready-toolchain/api v0.0.0-20220613074006-851fcc33aeec h1:toVpKEFsQD5YwLLSXHJu0pA7xPXFEprp3ZpnOQ/T0xw=
+github.com/codeready-toolchain/api v0.0.0-20220613074006-851fcc33aeec/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220609030046-0cf4fe5a7bb4 h1:413GOD/VzxutsGKB5kxXA9w9nTbpjZbCfNccy77H7R0=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220609030046-0cf4fe5a7bb4/go.mod h1:VM0AdY82/jCqZjJ5/Uvv7uo6N1FkRIXCwJGb5H7H1uU=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -689,8 +692,6 @@ github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGr
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv3vaXspKw=
-github.com/xcoulon/api v0.0.0-20220610072812-98f46a1677d1 h1:2o9zq3T/xKTFMbq3jrNl5TluGFWpd/PWmhQSSLNEDHg=
-github.com/xcoulon/api v0.0.0-20220610072812-98f46a1677d1/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xlab/handysort v0.0.0-20150421192137-fb3537ed64a1/go.mod h1:QcJo0QPSfTONNIgpN5RA8prR7fF8nkF6cTWTcNerRO8=
 github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca/go.mod h1:ce1O1j6UtZfjr22oyGxGLbauSBp2YVXpARAosm7dHBg=

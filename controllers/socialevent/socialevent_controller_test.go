@@ -30,11 +30,11 @@ func TestReconcileSocialEvent(t *testing.T) {
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
 	baseSpaceTier := tiertest.BaseTier(t, tiertest.CurrentBasicTemplates)
-	baseUserTier := usertier.NewUserTier("base", 30)
+	baseUserTier := usertier.NewUserTier("deactivate30", 30)
 
 	t.Run("valid tier", func(t *testing.T) {
 		// given
-		se := socialeventtest.NewSocialEvent("lab", "base", "base")
+		se := socialeventtest.NewSocialEvent("lab", "deactivate30", "base")
 		hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
 		ctrl := newReconciler(hostClient)
 
@@ -107,7 +107,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 		t.Run("unable to get space tier", func(t *testing.T) {
 			// given
-			se := socialeventtest.NewSocialEvent("lab", "base", "notfound")
+			se := socialeventtest.NewSocialEvent("lab", "deactivate30", "notfound")
 			hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
 			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok && key.Name == "notfound" {
@@ -135,7 +135,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 		t.Run("unknown space tier", func(t *testing.T) {
 			// given
-			se := socialeventtest.NewSocialEvent("lab", "base", "unknown")
+			se := socialeventtest.NewSocialEvent("lab", "deactivate30", "unknown")
 			hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
 			ctrl := newReconciler(hostClient)
 
