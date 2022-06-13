@@ -186,9 +186,9 @@ parameters:
 - name: MEMBER_OPERATOR_NAMESPACE
   value: toolchain-member-operator
 - name: MEMORY_LIMIT
-  value: "7Gi"
+  value: "32Gi"
 - name: MEMORY_REQUEST
-  value: "7Gi"
+  value: "32Gi"
 - name: MEMORY_BUILD_LIMIT
   value: "64Gi"
 - name: MEMORY_BUILD_REQUEST
