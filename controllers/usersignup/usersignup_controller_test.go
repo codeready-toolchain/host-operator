@@ -11,7 +11,6 @@ import (
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
@@ -3745,8 +3744,7 @@ func TestMigrateMur(t *testing.T) {
 
 	// old MUR has tier hash label set
 	oldMur.Labels = map[string]string{
-		toolchainv1alpha1.MasterUserRecordOwnerLabelKey:            userSignup.Name,
-		tierutil.TemplateTierHashLabelKey(baseNSTemplateTier.Name): "123abc",
+		toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
 	}
 
 	t.Run("mur should be migrated", func(t *testing.T) {
@@ -3762,7 +3760,6 @@ func TestMigrateMur(t *testing.T) {
 		murtest.AssertThatMasterUserRecord(t, expectedMur.Name, r.Client).
 			Exists().
 			HasTier(*deactivate30Tier).                                                         // tier name should be set
-			DoesNotHaveLabel(tierutil.TemplateTierHashLabelKey(baseNSTemplateTier.Name)).       // should not have tier hash label anymore
 			HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name) // other labels unchanged
 
 	})

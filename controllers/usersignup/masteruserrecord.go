@@ -1,8 +1,6 @@
 package usersignup
 
 import (
-	"strings"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,35 +15,12 @@ func migrateOrFixMurIfNecessary(mur *toolchainv1alpha1.MasterUserRecord, default
 		changed = true
 	}
 
-	// ensure that the MUR does not have any tier hash labels since NSTemplateSet will be handled by Spaces
-	for key := range mur.Labels {
-		if strings.HasSuffix(key, "-tier-hash") {
-			delete(mur.Labels, key)
-			changed = true
-		}
-	}
-
-	// migrate mur TierName from NSTemplateTier to UserTier
-	switch mur.Spec.TierName {
-	case "":
+	// set tierName to default if not set
+	if mur.Spec.TierName == "" {
 		mur.Spec.TierName = defaultTier.Name
 		changed = true
-	case "appstudio", "base", "base1ns", "baseextendedidling", "test":
-		mur.Spec.TierName = "deactivate30"
-		changed = true
-	case "hackathon":
-		mur.Spec.TierName = "deactivate80"
-		changed = true
-	case "baselarge":
-		mur.Spec.TierName = "deactivate90"
-		changed = true
-	case "baseextended":
-		mur.Spec.TierName = "deactivate180"
-		changed = true
-	case "advanced", "basedeactivationdisabled":
-		mur.Spec.TierName = "nodeactivation"
-		changed = true
 	}
+
 	return changed
 }
 
