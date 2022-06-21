@@ -298,7 +298,8 @@ func main() { // nolint:gocyclo
 		os.Exit(1)
 	}
 	if err = (&socialevent.Reconciler{
-		Client: mgr.GetClient(),
+		Client:    mgr.GetClient(),
+		Namespace: namespace,
 		StatusUpdater: &socialevent.StatusUpdater{
 			Client: mgr.GetClient(),
 		},
