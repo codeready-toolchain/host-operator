@@ -30,6 +30,7 @@ objects:
     - applications
     - components
     - componentdetectionqueries
+    - environments
     verbs:
     - "*"
   - apiGroups:
