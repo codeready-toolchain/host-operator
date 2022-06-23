@@ -51,6 +51,31 @@ func TestGetNotificationTemplate(t *testing.T) {
 			assert.Contains(t, template["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
 			assert.Equal(t, template["userprovisioned"], *UserProvisioned)
 		})
+		t.Run("get userdeactivating notification template", func(t *testing.T) {
+			// when
+			defer resetNotificationTemplateCache()
+			template, found, err := GetNotificationTemplate("userdeactivating")
+			// then
+			require.NoError(t, err)
+			require.NotNil(t, template)
+			assert.True(t, found)
+			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account will be deactivated soon", template.Subject)
+			assert.Contains(t, template.Content, "Your sandbox will expire in 3 days.  We recommend you save your work as all data in your sandbox will be\n        deleted upon expiry.")
+
+		})
+
+		t.Run("get idlertriggered notification template", func(t *testing.T) {
+			// when
+			defer resetNotificationTemplateCache()
+			template, found, err := GetNotificationTemplate("idlertriggered")
+			// then
+			require.NoError(t, err)
+			require.NotNil(t, template)
+			assert.True(t, found)
+			assert.Equal(t, "Notice: Your application is being idled", template.Subject)
+			assert.Contains(t, template.Content, "In accordance with the usage terms of Developer Sandbox, we have reduced the number of instances of your\n        application to zero (0).")
+
+		})
 	})
 	t.Run("failures", func(t *testing.T) {
 		t.Run("failed to get notification templates", func(t *testing.T) {
