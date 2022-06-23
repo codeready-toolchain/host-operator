@@ -35,6 +35,21 @@ objects:
   - apiGroups:
     - appstudio.redhat.com
     resources:
+    - applicationpromotionruns
+    - applicationsnapshotenvironmentbindings
+    - applicationsnapshots
+    - environments
+    verbs:
+    - create
+    - get
+    - list
+    - watch
+    - update
+    - patch
+    - delete
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
     - spiaccesstokenbindings
     - spiaccesschecks
     verbs:

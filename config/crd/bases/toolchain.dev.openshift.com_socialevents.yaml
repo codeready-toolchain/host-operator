@@ -64,14 +64,19 @@ spec:
                 description: If true, best effort is made to provision all attendees
                   of the event on the same cluster
                 type: boolean
+              spaceTier:
+                description: The tier to assign to spaces created for users who registered
+                  for the event. This must be the valid name of an nstemplatetier
+                  resource.
+                type: string
               startTime:
                 description: The timestamp from which users may register via this
                   event's activation code
                 format: date-time
                 type: string
-              tier:
-                description: The tier to assign to users registering for the event.  This
-                  must be the valid name of an nstemplatetier resource.
+              userTier:
+                description: The tier to assign to users registering for the event.
+                  This must be the valid name of an nstemplatetier resource.
                 type: string
               verificationRequired:
                 description: If true, the user will also be required to complete standard
@@ -80,7 +85,9 @@ spec:
             required:
             - endTime
             - maxAttendees
+            - spaceTier
             - startTime
+            - userTier
             type: object
           status:
             description: SocialEventStatus defines the observed state of SocialEvent
