@@ -1,1 +1,1 @@
-Notice: Your application is being idled
+Notice: Your running application in namespace {{.Namespace}} has been idled
