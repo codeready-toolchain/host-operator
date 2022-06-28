@@ -131,7 +131,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if originalUserSignupName, found := userSignup.Annotations[migrationReplacesAnnotationName]; found {
 		return r.cleanupMigration(userSignup, originalUserSignupName, request, logger)
 	}
-
+	if userSignup.GetLabels() == nil {
+		userSignup.Labels = make(map[string]string)
+	}
 	if userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] == "" {
 		if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady); err != nil {
 			return reconcile.Result{}, err
