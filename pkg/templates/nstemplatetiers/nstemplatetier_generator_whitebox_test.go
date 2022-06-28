@@ -27,16 +27,13 @@ import (
 )
 
 var expectedProdTiers = map[string]bool{
-	"advanced":                 true, // tier_name: true/false (if based on the other tier)
-	"base":                     false,
-	"base1ns":                  false,
-	"baselarge":                true,
-	"baseextended":             true,
-	"baseextendedidling":       true,
-	"basedeactivationdisabled": true,
-	"hackathon":                true,
-	"test":                     false,
-	"appstudio":                false,
+	"advanced":           true, // tier_name: true/false (if based on the other tier)
+	"base":               false,
+	"base1ns":            false,
+	"baselarge":          true,
+	"baseextendedidling": true,
+	"test":               false,
+	"appstudio":          false,
 }
 
 var expectedTestTiers = map[string]bool{
