@@ -454,9 +454,6 @@ func TestNewNSTemplateTier(t *testing.T) {
 
 					// then
 					deactivationTimeout := 30
-					if tier == "advanced" {
-						deactivationTimeout = 0
-					}
 					expected, err := newNSTemplateTierFromYAML(s, tier, namespace, deactivationTimeout, clusterResourcesRevisions[tier], namespaceRevisions[tier], spaceRoleRevisions[tier])
 					require.NoError(t, err)
 					// here we don't compare objects because the generated NSTemplateTier
