@@ -131,6 +131,8 @@ github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoC
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/codeready-toolchain/api v0.0.0-20220620073500-4403ea044a96 h1:cUUpd5vcZkE6di9Zmd2iu28hwxQo+dWVc3YtiZHF7As=
 github.com/codeready-toolchain/api v0.0.0-20220620073500-4403ea044a96/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220628122057-9108fb0609bd h1:asiXwFwy7NrhmVeLLQr9uK95eudcz1lV/vbn8WkPNcA=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220628122057-9108fb0609bd/go.mod h1:hdF7PQh9e9V3Wi+QFJ58Z9a/GATbHAiFQtMMzbMy7NQ=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -689,8 +691,6 @@ github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGr
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
 github.com/vektah/gqlparser v1.1.2/go.mod h1:1ycwN7Ij5njmMkPPAOaRFY4rET2Enx7IkVv3vaXspKw=
-github.com/xcoulon/toolchain-common v0.0.0-20220621125820-deffeb606e5d h1:+UMKqvd/N2hmFpGC4hGEOFPUtu/mIBsqNIg61aOw5wg=
-github.com/xcoulon/toolchain-common v0.0.0-20220621125820-deffeb606e5d/go.mod h1:hdF7PQh9e9V3Wi+QFJ58Z9a/GATbHAiFQtMMzbMy7NQ=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xlab/handysort v0.0.0-20150421192137-fb3537ed64a1/go.mod h1:QcJo0QPSfTONNIgpN5RA8prR7fF8nkF6cTWTcNerRO8=
 github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca/go.mod h1:ce1O1j6UtZfjr22oyGxGLbauSBp2YVXpARAosm7dHBg=
