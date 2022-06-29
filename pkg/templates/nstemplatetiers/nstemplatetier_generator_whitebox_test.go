@@ -453,8 +453,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 					actual := runtimeObjectToNSTemplateTier(t, s, objects[0])
 
 					// then
-					deactivationTimeout := 30
-					expected, err := newNSTemplateTierFromYAML(s, tier, namespace, deactivationTimeout, clusterResourcesRevisions[tier], namespaceRevisions[tier], spaceRoleRevisions[tier])
+					expected, err := newNSTemplateTierFromYAML(s, tier, namespace, clusterResourcesRevisions[tier], namespaceRevisions[tier], spaceRoleRevisions[tier])
 					require.NoError(t, err)
 					// here we don't compare objects because the generated NSTemplateTier
 					// has no specific values for the `TypeMeta`: the `APIVersion: toolchain.dev.openshift.com/v1alpha1`
@@ -680,7 +679,7 @@ var ExpectedRevisions = map[string]map[string]string{
 }
 
 // newNSTemplateTierFromYAML generates toolchainv1alpha1.NSTemplateTier using a golang template which is applied to the given tier.
-func newNSTemplateTierFromYAML(s *runtime.Scheme, tier, namespace string, deactivationTimeout int, clusterResourcesRevision string, namespaceRevisions map[string]string, spaceRoleRevisions map[string]string) (*toolchainv1alpha1.NSTemplateTier, error) {
+func newNSTemplateTierFromYAML(s *runtime.Scheme, tier, namespace string, clusterResourcesRevision string, namespaceRevisions map[string]string, spaceRoleRevisions map[string]string) (*toolchainv1alpha1.NSTemplateTier, error) {
 	expectedTmpl, err := texttemplate.New("template").Parse(`
 {{ $tier := .Tier}}
 kind: NSTemplateTier
@@ -720,7 +719,6 @@ spec:
 		ClusterResourcesRevision: clusterResourcesRevision,
 		NamespaceRevisions:       namespaceRevisions,
 		SpaceRoleRevisions:       spaceRoleRevisions,
-		DeactivationTimeout:      deactivationTimeout,
 	})
 	if err != nil {
 		return nil, err
