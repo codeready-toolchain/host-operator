@@ -301,10 +301,6 @@ spec:
                         description: DefaultSpaceTier specifies the default tier to
                           assign for new spaces
                         type: string
-                      defaultTier:
-                        description: DefaultTier specifies the default tier to assign
-                          for new users
-                        type: string
                       defaultUserTier:
                         description: DefaultUserTier specifies the default tier to
                           assign for new users

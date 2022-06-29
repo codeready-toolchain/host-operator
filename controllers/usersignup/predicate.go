@@ -22,29 +22,32 @@ var _ controllerPredicate.Predicate = UserSignupChangedPredicate{}
 var predicateLog = ctrl.Log.WithName("UserSignupChangedPredicate")
 
 // Update filters update events and let the reconcile loop to be triggered when any of the following conditions is met:
-//
 // * generation number has changed
-//
 // * annotation toolchain.dev.openshift.com/user-email has changed
-//
+// * annotation toolchain.dev.openshift.com/migration-in-progress was removed
 // * label toolchain.dev.openshift.com/email-hash has changed
 func (p UserSignupChangedPredicate) Update(e event.UpdateEvent) bool {
 	if !checkMetaObjects(changedLog, e) {
 		return false
 	}
-	if e.ObjectNew.GetGeneration() == e.ObjectOld.GetGeneration() &&
-		!p.AnnotationChanged(e, toolchainv1alpha1.UserSignupUserEmailAnnotationKey) &&
-		!p.LabelChanged(e, toolchainv1alpha1.UserSignupUserEmailHashLabelKey) {
-		return false
-	}
-	return true
+	return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration() ||
+		p.annotationChanged(e, toolchainv1alpha1.UserSignupUserEmailAnnotationKey) ||
+		p.annotationRemoved(e, migrationInProgressAnnotationName) ||
+		p.labelChanged(e, toolchainv1alpha1.UserSignupUserEmailHashLabelKey)
 }
 
-func (p UserSignupChangedPredicate) AnnotationChanged(e event.UpdateEvent, annotationName string) bool {
+func (p UserSignupChangedPredicate) annotationChanged(e event.UpdateEvent, annotationName string) bool {
 	return e.ObjectOld.GetAnnotations()[annotationName] != e.ObjectNew.GetAnnotations()[annotationName]
 }
 
-func (p UserSignupChangedPredicate) LabelChanged(e event.UpdateEvent, labelName string) bool {
+func (p UserSignupChangedPredicate) annotationRemoved(e event.UpdateEvent, annotationName string) bool {
+	_, existed := e.ObjectOld.GetAnnotations()[annotationName]
+	_, exists := e.ObjectNew.GetAnnotations()[annotationName]
+	return existed && !exists
+
+}
+
+func (p UserSignupChangedPredicate) labelChanged(e event.UpdateEvent, labelName string) bool {
 	return e.ObjectOld.GetLabels()[labelName] != e.ObjectNew.GetLabels()[labelName]
 }
 
