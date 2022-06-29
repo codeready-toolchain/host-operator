@@ -12,6 +12,7 @@ import (
 	socialeventtest "github.com/codeready-toolchain/host-operator/test/socialevent"
 	"github.com/codeready-toolchain/host-operator/test/usertier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,18 +35,18 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 	t.Run("valid tier", func(t *testing.T) {
 		// given
-		se := socialeventtest.NewSocialEvent("lab", "deactivate30", "basic")
-		hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
+		event := socialeventtest.NewSocialEvent("deactivate30", "basic")
+		hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
 		ctrl := newReconciler(hostClient)
 
 		// when
-		_, err := ctrl.Reconcile(context.TODO(), requestFor(se))
+		_, err := ctrl.Reconcile(context.TODO(), requestFor(event))
 
 		// then
 		require.NoError(t, err)
 
 		// check the social event status
-		socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).HasConditions(
+		socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, event.Name, hostClient).HasConditions(
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.ConditionReady,
 				Status: corev1.ConditionTrue,
@@ -53,12 +54,43 @@ func TestReconcileSocialEvent(t *testing.T) {
 		)
 	})
 
+	t.Run("with usersignups", func(t *testing.T) {
+		// given 2 approved users and 1 not yet approved
+		event := socialeventtest.NewSocialEvent("deactivate30", "basic")
+		approvedUser1 := commonsignup.NewUserSignup(commonsignup.WithName("user1"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
+			commonsignup.WithLabel(toolchainv1alpha1.SocialEventUserSignupLabelKey, event.Name))
+		approvedUser2 := commonsignup.NewUserSignup(commonsignup.WithName("user2"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
+			commonsignup.WithLabel(toolchainv1alpha1.SocialEventUserSignupLabelKey, event.Name))
+		unapprovedUser3 := commonsignup.NewUserSignup(commonsignup.WithName("user3"),
+			commonsignup.WithLabel(toolchainv1alpha1.SocialEventUserSignupLabelKey, event.Name))
+		hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier, approvedUser1, approvedUser2, unapprovedUser3)
+		ctrl := newReconciler(hostClient)
+
+		// when
+		res, err := ctrl.Reconcile(context.TODO(), requestFor(event))
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, res.Requeue)
+		// check the social event status
+		socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, event.Name, hostClient).
+			HasStatusActivations(2).
+			HasConditions(
+				toolchainv1alpha1.Condition{
+					Type:   toolchainv1alpha1.ConditionReady,
+					Status: corev1.ConditionTrue,
+				},
+			)
+	})
+
 	t.Run("failures", func(t *testing.T) {
 
 		t.Run("unable to get user tier", func(t *testing.T) {
 			// given
-			se := socialeventtest.NewSocialEvent("lab", "notfound", "basic")
-			hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
+			event := socialeventtest.NewSocialEvent("notfound", "basic")
+			hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
 			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.UserTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
@@ -68,13 +100,13 @@ func TestReconcileSocialEvent(t *testing.T) {
 			ctrl := newReconciler(hostClient)
 
 			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(se))
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(event))
 
 			// then
 			require.Error(t, err)
 			assert.EqualError(t, err, "unable to get the 'notfound' UserTier: mock error")
 			// check the social event status
-			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).
+			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, event.Name, hostClient).
 				HasConditions(toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.ConditionReady,
 					Status:  corev1.ConditionFalse,
@@ -85,17 +117,17 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 		t.Run("unknown user tier", func(t *testing.T) {
 			// given
-			se := socialeventtest.NewSocialEvent("lab", "unknown", "basic")
-			hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
+			event := socialeventtest.NewSocialEvent("unknown", "basic")
+			hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
 			ctrl := newReconciler(hostClient)
 
 			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(se))
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(event))
 
 			// then
 			require.NoError(t, err)
 			// check the social event status
-			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).HasConditions(
+			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, event.Name, hostClient).HasConditions(
 				toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.ConditionReady,
 					Status:  corev1.ConditionFalse,
@@ -107,8 +139,8 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 		t.Run("unable to get space tier", func(t *testing.T) {
 			// given
-			se := socialeventtest.NewSocialEvent("lab", "deactivate30", "notfound")
-			hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
+			event := socialeventtest.NewSocialEvent("deactivate30", "notfound")
+			hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
 			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
@@ -118,13 +150,13 @@ func TestReconcileSocialEvent(t *testing.T) {
 			ctrl := newReconciler(hostClient)
 
 			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(se))
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(event))
 
 			// then
 			require.Error(t, err)
 			assert.EqualError(t, err, "unable to get the 'notfound' NSTemplateTier: mock error")
 			// check the social event status
-			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).
+			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, event.Name, hostClient).
 				HasConditions(toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.ConditionReady,
 					Status:  corev1.ConditionFalse,
@@ -135,17 +167,17 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 		t.Run("unknown space tier", func(t *testing.T) {
 			// given
-			se := socialeventtest.NewSocialEvent("lab", "deactivate30", "unknown")
-			hostClient := test.NewFakeClient(t, se, baseUserTier, baseSpaceTier)
+			event := socialeventtest.NewSocialEvent("deactivate30", "unknown")
+			hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
 			ctrl := newReconciler(hostClient)
 
 			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(se))
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(event))
 
 			// then
 			require.NoError(t, err)
 			// check the social event status
-			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, "lab", hostClient).HasConditions(
+			socialeventtest.AssertThatSocialEvent(t, test.HostOperatorNs, event.Name, hostClient).HasConditions(
 				toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.ConditionReady,
 					Status:  corev1.ConditionFalse,
@@ -159,7 +191,8 @@ func TestReconcileSocialEvent(t *testing.T) {
 
 func newReconciler(hostClient client.Client) *socialevent.Reconciler {
 	return &socialevent.Reconciler{
-		Client: hostClient,
+		Client:    hostClient,
+		Namespace: test.HostOperatorNs,
 		StatusUpdater: &socialevent.StatusUpdater{
 			Client: hostClient,
 		},
