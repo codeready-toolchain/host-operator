@@ -50,6 +50,22 @@ objects:
   - apiGroups:
     - appstudio.redhat.com
     resources:
+    - enterprisecontractpolicies
+    - integrationtestscenarios
+    - releases
+    - releasestrategies
+    - releaselinks
+    verbs:
+    - create
+    - get
+    - list
+    - watch
+    - update
+    - patch
+    - delete
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
     - spiaccesstokenbindings
     - spiaccesschecks
     verbs:
