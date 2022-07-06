@@ -26,6 +26,12 @@ spec:
     - jsonPath: .spec.description
       name: Description
       type: string
+    - jsonPath: .spec.maxAttendees
+      name: MaxAttendees
+      type: string
+    - jsonPath: .status.activationCount
+      name: CurrentAttendees
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
