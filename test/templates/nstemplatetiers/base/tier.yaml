@@ -9,7 +9,6 @@ objects:
     name: base
     namespace: ${NAMESPACE}
   spec:
-    deactivationTimeoutDays: ${{DEACTIVATION_TIMEOUT_DAYS}}
     clusterResources:
       templateRef: ${CLUSTER_TEMPL_REF}
     namespaces:
@@ -24,5 +23,3 @@ parameters:
 - name: DEV_TEMPL_REF
 - name: STAGE_TEMPL_REF
 - name: ADMIN_TEMPL_REF
-- name: DEACTIVATION_TIMEOUT_DAYS
-  value: "30"
