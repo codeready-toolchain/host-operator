@@ -1,7 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20220707060359-424e59d6e8d4
+	github.com/codeready-toolchain/api v0.0.0-20220712190140-fca2282ae885
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20220628122057-9108fb0609bd
 	github.com/davecgh/go-spew v1.1.1
 	github.com/ghodss/yaml v1.0.0
