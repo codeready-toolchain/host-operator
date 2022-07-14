@@ -183,10 +183,10 @@ func TestUserCleanup(t *testing.T) {
 		err = r.Client.Get(context.Background(), key, userSignup)
 		require.NoError(t, err)
 		require.NotNil(t, userSignup)
-		expectRequeue(t, res, 10)
+		require.False(t, res.Requeue)
 	})
 
-	t.Run("test that reactivated, unverified UserSignup long time ago is deleted", func(t *testing.T) {
+	t.Run("test that reactivated, unverified UserSignup long time ago is reset", func(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(threeYears),

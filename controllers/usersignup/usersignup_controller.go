@@ -216,11 +216,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // send a notification to the user, and return
 func (r *Reconciler) handleDeactivatedUserSignup(logger logr.Logger, config toolchainconfig.ToolchainConfig,
 	request ctrl.Request, userSignup *toolchainv1alpha1.UserSignup) (ctrl.Result, error) {
+
+	previousState := userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]
+
 	// if the UserSignup doesn't have the state=deactivated label set, then update it
 	if err := r.setStateLabel(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
 		return reconcile.Result{}, err
 	}
-	if condition.IsNotTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
+
+	// Only send the deactivated notification if the previous state was "approved", i.e. we will only send the
+	// deactivated notification to the user if the account is currently active and is being deactivated
+	if previousState == toolchainv1alpha1.UserSignupStateLabelValueApproved &&
+		condition.IsNotTrue(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated) {
 		if err := r.sendDeactivatedNotification(logger, config, userSignup); err != nil {
 			logger.Error(err, "Failed to create user deactivation notification")
 
