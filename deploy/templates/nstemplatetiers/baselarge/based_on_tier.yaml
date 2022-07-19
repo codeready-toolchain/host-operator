@@ -4,5 +4,3 @@ parameters:
   value: "16Gi"
 - name: MEMORY_REQUEST
   value: "16Gi"
-- name: DEACTIVATION_TIMEOUT_DAYS
-  value: 90

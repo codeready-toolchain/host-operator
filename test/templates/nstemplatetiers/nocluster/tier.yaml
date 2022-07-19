@@ -9,7 +9,6 @@ objects:
     name: nocluster
     namespace: ${NAMESPACE}
   spec:
-    deactivationTimeoutDays: ${{DEACTIVATION_TIMEOUT_DAYS}}
     namespaces:
       - templateRef: ${DEV_TEMPL_REF}
       - templateRef: ${STAGE_TEMPL_REF}
@@ -18,8 +17,6 @@ objects:
         templateRef: ${ADMIN_TEMPL_REF}
 parameters:
 - name: NAMESPACE
-- name: DEACTIVATION_TIMEOUT_DAYS
-  value: "30"
 - name: DEV_TEMPL_REF
 - name: STAGE_TEMPL_REF
 - name: ADMIN_TEMPL_REF

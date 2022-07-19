@@ -1,4 +1,6 @@
 from: base
 parameters:
-- name: DEACTIVATION_TIMEOUT_DAYS
-  value: 0
+- name: IDLER_TIMEOUT_SECONDS
+  # 144 hours
+  value: "518400"
+  

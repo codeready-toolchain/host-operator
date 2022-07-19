@@ -11,7 +11,6 @@ objects:
   spec:
     clusterResources:
       templateRef: ${CLUSTER_TEMPL_REF}
-    deactivationTimeoutDays: ${{DEACTIVATION_TIMEOUT_DAYS}}
     namespaces:
       - templateRef: ${APPSTUDIO_TEMPL_REF}
     spaceRoles:
@@ -25,5 +24,3 @@ parameters:
 - name: APPSTUDIO_TEMPL_REF
 - name: ADMIN_TEMPL_REF
 - name: VIEWER_TEMPL_REF
-- name: DEACTIVATION_TIMEOUT_DAYS
-  value: "30"
