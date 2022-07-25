@@ -549,9 +549,9 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 		// If the user has been deactivated, then we need to delete the MUR
 		if states.Deactivated(userSignup) {
 			// set the state label to deactivated
-			if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
-				return true, err
-			}
+			//	if err := r.setStateLabel(reqLogger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueDeactivated); err != nil {
+			//		return true, err
+			//	}
 
 			// We set the inProgressStatusUpdater parameter here to setStatusDeactivationInProgress, as a temporary status before
 			// the main reconcile function completes the deactivation process

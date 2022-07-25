@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	test "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -25,7 +26,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	"github.com/gofrs/uuid"
@@ -1943,6 +1943,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		CompliantUsername: "john-doe",
 	}
 
+	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = toolchainv1alpha1.UserSignupStateLabelValueApproved
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
 
@@ -1977,10 +1978,11 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		require.NoError(t, err)
 		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
-		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal) // 0 because usersignup was originally deactivated
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)   // 1 because state was initially empty
+		// The state label should still be set to approved until the controller reconciles the deactivation
+		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // 0 because usersignup has not reconciled the deactivation
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)    // 0 because usersignup was originally deactivated
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)      // 1 because state was initially set to approved
 
 		// Confirm the status is now set to Deactivating
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -2036,7 +2038,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 		err = r.Client.Get(context.TODO(), key, userSignup)
 		require.NoError(t, err)
 		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // zero because state didn't change
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal) // one because the deactivation was reconciled
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
@@ -2175,7 +2177,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			CompliantUsername: "john-doe",
 		},
 	}
-	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = toolchainv1alpha1.NotificationTypeDeactivated
+	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = toolchainv1alpha1.UserSignupStateLabelValueApproved
 	userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
 	// NotificationUserNameLabelKey is only used for easy lookup for debugging and e2e tests
 	userSignup.Labels[toolchainv1alpha1.NotificationUserNameLabelKey] = "john-doe"
@@ -2201,7 +2203,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			case *toolchainv1alpha1.Notification:
 				return errors.New("unable to create deactivation notification")
 			default:
-				return fakeClient.Create(ctx, obj)
+				return test.Create(ctx, fakeClient, obj, opts...)
 			}
 		}
 
@@ -2241,7 +2243,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 				"1,external": 2,
 			})
 		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal) // zero because state didn't change
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
@@ -2552,8 +2554,8 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 			require.NoError(t, err)
 			err = r.Client.Get(context.TODO(), key, userSignup)
 			require.NoError(t, err)
-			assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
+			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]) // State should still be approved at this stage
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
@@ -3153,8 +3155,8 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 			// Lookup the UserSignup
 			err = r.Client.Get(context.TODO(), key, userSignup)
 			require.NoError(t, err)
-			assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
+			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
@@ -3187,8 +3189,9 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 				_, err := r.Reconcile(context.TODO(), req)
 				require.Error(t, err)
 				ntest.AssertNoNotificationsExist(t, r.Client)
+				assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey]) // UserSignup should still be approved
 				// the metrics should be the same, deactivation should only be counted once
-				AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
+				AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 				AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 				AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
@@ -3260,8 +3263,8 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 	// Lookup the UserSignup
 	err = r.Client.Get(context.TODO(), key, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
+	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
