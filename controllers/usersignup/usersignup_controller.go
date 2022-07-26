@@ -16,6 +16,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/pending"
+	"github.com/codeready-toolchain/host-operator/pkg/segment"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
@@ -82,6 +83,7 @@ type Reconciler struct {
 	Namespace         string
 	Scheme            *runtime.Scheme
 	GetMemberClusters cluster.GetMemberClustersFunc
+	SegmentClient     *segment.Client
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usersignups,verbs=get;list;watch;create;update;patch;delete
@@ -655,7 +657,14 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 	}
 
 	// Provision the MasterUserRecord
-	return r.provisionMasterUserRecord(reqLogger, config, userSignup, targetCluster, userTier)
+	if err := r.provisionMasterUserRecord(reqLogger, config, userSignup, targetCluster, userTier); err != nil {
+		return err
+	}
+	// track activation in Segment
+	if r.SegmentClient != nil {
+		return r.SegmentClient.TrackAccountActivation(userSignup.Spec.Username)
+	}
+	return nil
 }
 
 func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, state string) error {

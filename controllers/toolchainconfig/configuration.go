@@ -231,6 +231,18 @@ func (r RegistrationServiceConfig) Replicas() int32 {
 	return commonconfig.GetInt32(r.c.Replicas, 3)
 }
 
+func (r RegistrationServiceConfig) Analytics() AnalyticsConfig {
+	return AnalyticsConfig{r.c.Analytics}
+}
+
+type AnalyticsConfig struct {
+	c toolchainv1alpha1.RegistrationServiceAnalyticsConfig
+}
+
+func (r AnalyticsConfig) SegmentWriteKey() string {
+	return commonconfig.GetString(r.c.SegmentWriteKey, "")
+}
+
 func (r RegistrationServiceConfig) RegistrationServiceURL() string {
 	return commonconfig.GetString(r.c.RegistrationServiceURL, "https://registration.crt-placeholder.com")
 }
