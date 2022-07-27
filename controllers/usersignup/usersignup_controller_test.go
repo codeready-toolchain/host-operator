@@ -2242,8 +2242,8 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 			HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,external": 2,
 			})
-		assert.Equal(t, "deactivated", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
+		assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+		AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 		AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 
