@@ -14,6 +14,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.0
 	github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf
+	github.com/segmentio/analytics-go/v3 v3.2.1 // indirect
 	github.com/spf13/cast v1.3.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.19.0
