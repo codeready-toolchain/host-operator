@@ -1,0 +1,14 @@
+=== RUN   TestUpdateMetricsByState
+=== RUN   TestUpdateMetricsByState/common_state_changes
+=== RUN   TestUpdateMetricsByState/common_state_changes/empty_->_not-ready_-_increment_UserSignupUniqueTotal
+    assertions.go:16: 
+        	Error Trace:	assertions.go:16
+        	            				usersignup_controller_test.go:3803
+        	Error:      	"[]" should have 1 item(s), but has 0
+        	Test:       	TestUpdateMetricsByState/common_state_changes/empty_->_not-ready_-_increment_UserSignupUniqueTotal
+--- FAIL: TestUpdateMetricsByState (0.00s)
+    --- FAIL: TestUpdateMetricsByState/common_state_changes (0.00s)
+        --- FAIL: TestUpdateMetricsByState/common_state_changes/empty_->_not-ready_-_increment_UserSignupUniqueTotal (0.00s)
+FAIL
+FAIL	github.com/codeready-toolchain/host-operator/controllers/usersignup	0.567s
+FAIL

@@ -174,7 +174,7 @@ func main() { // nolint:gocyclo
 	crtConfig.Print()
 
 	// initialize the Segment client
-	segmentClient, err := segment.NewClient(crtConfig.RegistrationService().Analytics().SegmentWriteKey())
+	segmentClient, err := segment.DefaultClient(crtConfig.RegistrationService().Analytics().SegmentWriteKey())
 	if err != nil {
 		setupLog.Error(err, "unable to init the Segment client")
 		os.Exit(1)
