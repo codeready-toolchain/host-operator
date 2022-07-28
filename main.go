@@ -24,6 +24,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	"github.com/codeready-toolchain/host-operator/pkg/segment"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
@@ -172,6 +173,20 @@ func main() { // nolint:gocyclo
 	}
 	crtConfig.Print()
 
+	// initialize the Segment client
+	segmentClient, err := segment.DefaultClient(crtConfig.RegistrationService().Analytics().SegmentWriteKey())
+	if err != nil {
+		setupLog.Error(err, "unable to init the Segment client")
+		os.Exit(1)
+	}
+	if segmentClient != nil {
+		defer func() {
+			if err := segmentClient.Close(); err != nil {
+				setupLog.Error(err, "error while closing the Segment client")
+			}
+		}()
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -255,6 +270,7 @@ func main() { // nolint:gocyclo
 		Namespace:         namespace,
 		Scheme:            mgr.GetScheme(),
 		GetMemberClusters: commoncluster.GetMemberClusters,
+		SegmentClient:     segmentClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignup")
 		os.Exit(1)
