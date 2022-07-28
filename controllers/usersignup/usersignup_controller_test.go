@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
