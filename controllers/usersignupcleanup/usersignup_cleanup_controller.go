@@ -72,34 +72,53 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	activations, activationsAnnotationPresent := instance.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]
 
 	// Check if the UserSignup is waiting for phone verification to be finished
-	// Check also if the UserSignup doesn't have at least one activation - if it has, then it means that it's reactivated UserSignup and we should skip it here
-	if states.VerificationRequired(instance) && (!activationsAnnotationPresent || activations == "0") {
+	if states.VerificationRequired(instance) {
+		// If the UserSignup has no previous activations (i.e. it's a new, never-provisioned UserSignup) then
+		// it should be deleted if it has been in an unverified state beyond a configured period of time
+		if !activationsAnnotationPresent || activations == "0" {
+			createdTime := instance.ObjectMeta.CreationTimestamp
 
-		createdTime := instance.ObjectMeta.CreationTimestamp
+			unverifiedThreshold := time.Now().Add(-time.Duration(config.Deactivation().UserSignupUnverifiedRetentionDays()*24) * time.Hour)
 
-		unverifiedThreshold := time.Now().Add(-time.Duration(config.Deactivation().UserSignupUnverifiedRetentionDays()*24) * time.Hour)
+			if createdTime.Time.Before(unverifiedThreshold) {
+				reqLogger.Info("Deleting UserSignup due to exceeding unverified retention period")
+				return reconcile.Result{}, r.DeleteUserSignup(instance, reqLogger)
+			}
 
-		if createdTime.Time.Before(unverifiedThreshold) {
-			reqLogger.Info("Deleting UserSignup due to exceeding unverified retention period")
-			return reconcile.Result{}, r.DeleteUserSignup(instance, reqLogger)
+			// Requeue this for reconciliation after the time has passed between the last active time
+			// and the current unverified user deletion expiry threshold
+			requeueAfter := createdTime.Sub(unverifiedThreshold)
+
+			// Requeue the reconciler to process this resource again after the threshold for unverified user deletion
+			return reconcile.Result{
+				Requeue:      true,
+				RequeueAfter: requeueAfter,
+			}, nil
 		}
 
-		// Requeue this for reconciliation after the time has passed between the last active time
-		// and the current unverified user deletion expiry threshold
-		requeueAfter := createdTime.Sub(unverifiedThreshold)
+		// If the UserSignup has been reactivated however the user has failed to complete the verification process
+		// after a configured threshold, then it should be returned to deactivated state.
+		cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
+		// If the "Complete" condition is found, and its Reason value is equal to "VerificationRequired" then proceed
+		if found && cond.Reason == toolchainv1alpha1.UserSignupVerificationRequiredReason {
 
-		// Requeue the reconciler to process this resource again after the threshold for unverified user deletion
-		return reconcile.Result{
-			Requeue:      true,
-			RequeueAfter: requeueAfter,
-		}, nil
+			// Use the same "unverified retention days" configuration parameter to determine whether the UserSignup should
+			// be returned to a deactivated state
+			unverifiedThreshold := time.Now().Add(-time.Duration(config.Deactivation().UserSignupUnverifiedRetentionDays()*24) * time.Hour)
+			if cond.LastTransitionTime.Time.Before(unverifiedThreshold) {
+				// The UserSignup has been in an unverified state for an excessive period of time, reset it to deactivated state
+				states.SetDeactivated(instance, true)
+				states.SetVerificationRequired(instance, false)
+
+				reqLogger.Info("Resetting UserSignup back to deactivated state due to exceeding unverified period threshold")
+				return reconcile.Result{}, r.Client.Update(ctx, instance)
+			}
+		}
 	}
 
 	// Check if the UserSignup is:
 	// * either deactivated
-	// * or if it is waiting for phone verification to be finished and at the same it has at least one activation stored in the annotation
-	//   (in other words the UserSignup is reactivated but the phone verification hasn't been finished)
-	if states.Deactivated(instance) || (states.VerificationRequired(instance) && activationsAnnotationPresent && activations != "0") {
+	if states.Deactivated(instance) {
 		// Find the UserSignupComplete condition
 		cond, found := condition.FindConditionByType(instance.Status.Conditions, toolchainv1alpha1.UserSignupComplete)
 		if !found {
