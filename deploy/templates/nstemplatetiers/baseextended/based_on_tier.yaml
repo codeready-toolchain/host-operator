@@ -1,4 +1,0 @@
-from: base
-parameters:
-- name: DEACTIVATION_TIMEOUT_DAYS
-  value: 180

@@ -46,7 +46,6 @@ func NewNSTemplateTier(tierName string, nsTypes ...string) *toolchainv1alpha1.NS
 
 // PreviousBasicTemplates previous templates for the "basic" tier
 var PreviousBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
-	DeactivationTimeoutDays: 30,
 	Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 		{
 			TemplateRef: "basic-code-123456old",
@@ -73,7 +72,6 @@ var PreviousBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 
 // CurrentBasicTemplates current templates for the "basic" tier
 var CurrentBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
-	DeactivationTimeoutDays: 30,
 	Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 		{
 			TemplateRef: "basic-code-123456new",
@@ -173,7 +171,6 @@ func OtherTier() *toolchainv1alpha1.NSTemplateTier {
 			Name:      "other",
 		},
 		Spec: toolchainv1alpha1.NSTemplateTierSpec{
-			DeactivationTimeoutDays: 60,
 			Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
 				{
 					TemplateRef: "other-code-123456a",

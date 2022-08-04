@@ -35,6 +35,13 @@ func AssertThatSocialEvent(t test.T, namespace, name string, client client.Clien
 	}
 }
 
+func (a *Assertion) HasStatusActivations(expected int) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, expected, a.socialevent.Status.ActivationCount)
+	return a
+}
+
 func (a *Assertion) HasConditions(expected ...toolchainv1alpha1.Condition) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)

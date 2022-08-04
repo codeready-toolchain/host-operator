@@ -1,8 +1,9 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20220613151616-73e8768b85f4
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20220609030046-0cf4fe5a7bb4
+	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
+	github.com/codeready-toolchain/api v0.0.0-20220712190140-fca2282ae885
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20220628122057-9108fb0609bd
 	github.com/davecgh/go-spew v1.1.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -14,6 +15,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.0
 	github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf
+	github.com/segmentio/analytics-go/v3 v3.2.1
 	github.com/spf13/cast v1.3.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.19.0
