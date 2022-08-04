@@ -222,6 +222,14 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
 				return norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 			}
+			// ensure nsTmplSet is created
+			nsTmplSetRetrieved := &toolchainv1alpha1.NSTemplateSet{}
+			if err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{Namespace: nsTmplSet.Namespace, Name: nsTmplSet.Name}, nsTmplSetRetrieved); err !=nil {
+				if errors.IsNotFound(err){
+					logger.Info("NSTemplateSet isn't available yet")
+					return requeueDelay, r.setStatusProvisioning(space)
+				}
+			}
 			logger.Info("NSTemplateSet created on target member cluster")
 			return requeueDelay, r.setStatusProvisioning(space)
 		}

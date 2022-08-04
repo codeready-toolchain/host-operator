@@ -167,6 +167,15 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 			if !isStatusPresent {
 				counter.IncrementUserAccountCount(logger, murAccount.TargetCluster)
 			}
+			// check the userAccount has actually been created
+			userAccountRetrieved := &toolchainv1alpha1.UserAccount{}
+			if err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
+				Namespace: userAccount.Namespace,
+				Name: userAccount.Name}, userAccountRetrieved) ; err!=nil {
+				if errors.IsNotFound(err) {
+					return updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "UserAccount created isn't ready yet"))
+				}
+			}
 			return updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 		}
 		// another/unexpected error occurred while trying to fetch the user account on the member cluster

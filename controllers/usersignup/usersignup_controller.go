@@ -790,6 +790,15 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 	domain := metrics.GetEmailDomain(mur)
 	counter.IncrementMasterUserRecordCount(logger, domain)
 
+	//check MUR was actually created
+	murRetrieved := &toolchainv1alpha1.MasterUserRecord{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: mur.Namespace}, murRetrieved)
+	if  err != nil {
+		if errors.IsNotFound(err){
+			return fmt.Errorf(`MUR %s created isn't available yet`, mur.Name)
+		}
+		return err
+	}
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
 }
@@ -827,7 +836,17 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 		return nil, false, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
 			"error creating Space")
 	}
-
+	// ensure space is actually created before returning
+	spaceRetrieved := &toolchainv1alpha1.Space{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: space.Namespace, Name: space.Name}, spaceRetrieved)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("Space isn't available yet")
+			return spaceRetrieved, false, nil
+		} else {
+			return spaceRetrieved, false, err
+		}
+	}
 	logger.Info("Created Space", "Name", space.Name, "TargetCluster", tCluster, "Tier", mur.Spec.TierName)
 	return space, true, nil
 }
@@ -863,6 +882,14 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchai
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpaceBinding, err,
 			"error creating SpaceBinding")
 	}
+	// ensure spacebinding actually created
+	spaceBindingRetrieved := &toolchainv1alpha1.SpaceBinding{}
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{}, spaceBindingRetrieved) ; err !=nil{
+		if errors.IsNotFound(err){
+			return fmt.Errorf(`spaceBinding '%s' has not been created yet`,spaceBinding.Name)
+		}
+	}
+
 	logger.Info("Created SpaceBinding", "MUR", mur.Name, "Space", space.Name)
 	return nil
 }
