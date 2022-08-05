@@ -171,7 +171,7 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 			userAccountRetrieved := &toolchainv1alpha1.UserAccount{}
 			if err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
 				Namespace: userAccount.Namespace,
-				Name: userAccount.Name}, userAccountRetrieved) ; err!=nil {
+				Name:      userAccount.Name}, userAccountRetrieved); err != nil {
 				if errors.IsNotFound(err) {
 					return updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "UserAccount created isn't ready yet"))
 				}

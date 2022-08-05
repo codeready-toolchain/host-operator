@@ -800,8 +800,8 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 	//check MUR was actually created
 	murRetrieved := &toolchainv1alpha1.MasterUserRecord{}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: mur.Namespace}, murRetrieved)
-	if  err != nil {
-		if errors.IsNotFound(err){
+	if err != nil {
+		if errors.IsNotFound(err) {
 			return fmt.Errorf(`MUR %s created isn't available yet`, mur.Name)
 		}
 		return err
@@ -891,9 +891,9 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchai
 	}
 	// ensure spacebinding actually created
 	spaceBindingRetrieved := &toolchainv1alpha1.SpaceBinding{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{}, spaceBindingRetrieved) ; err !=nil{
-		if errors.IsNotFound(err){
-			return fmt.Errorf(`spaceBinding '%s' has not been created yet`,spaceBinding.Name)
+	if err := r.Client.Get(context.TODO(), types.NamespacedName{Name: spaceBinding.Name, Namespace: spaceBinding.Namespace}, spaceBindingRetrieved); err != nil {
+		if errors.IsNotFound(err) {
+			return fmt.Errorf(`spaceBinding '%s' has not been created yet`, spaceBinding.Name)
 		}
 	}
 

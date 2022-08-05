@@ -158,6 +158,8 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 
 			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
+			//space := newSpace(userSignup, "member1", "foo", "base")
+			//spaceBinding := newSpaceBinding(mur,space,userSignup.Name)
 
 			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, baseNSTemplateTier, deactivate30Tier)
 
