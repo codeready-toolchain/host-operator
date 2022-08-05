@@ -850,9 +850,8 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 		if errors.IsNotFound(err) {
 			logger.Info("Space isn't available yet")
 			return spaceRetrieved, false, nil
-		} else {
-			return spaceRetrieved, false, err
 		}
+		return spaceRetrieved, false, err
 	}
 	logger.Info("Created Space", "Name", space.Name, "TargetCluster", tCluster, "Tier", mur.Spec.TierName)
 	return space, true, nil
