@@ -3863,6 +3863,23 @@ func TestUpdateMetricsByState(t *testing.T) {
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
+		t.Run("pending -> deactivated - do NOT increment UserSignupDeactivatedTotal", func(t *testing.T) {
+			// given
+			metrics.Reset()
+			r := &Reconciler{
+				SegmentClient: segment.NewClient(segmenttest.NewClient()),
+			}
+			// when
+			r.updateUserSignupMetricsByState(logger, userSignup, "pending", "deactivated")
+			// then
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
+		})
+
 		t.Run("deactivated -> banned - increment UserSignupBannedTotal", func(t *testing.T) {
 			// given
 			metrics.Reset()
