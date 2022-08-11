@@ -696,7 +696,9 @@ func (r *Reconciler) updateUserSignupMetricsByState(logger logr.Logger, userSign
 			logger.Info("segment client not configure to track account activations")
 		}
 	case toolchainv1alpha1.UserSignupStateLabelValueDeactivated:
-		metrics.UserSignupDeactivatedTotal.Inc()
+		if oldState == toolchainv1alpha1.UserSignupStateLabelValueApproved {
+			metrics.UserSignupDeactivatedTotal.Inc()
+		}
 	case toolchainv1alpha1.UserSignupStateLabelValueBanned:
 		metrics.UserSignupBannedTotal.Inc()
 	}
