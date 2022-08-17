@@ -591,6 +591,12 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			if err = r.ensureSpaceBinding(reqLogger, userSignup, mur, space); err != nil {
 				return true, err
 			}
+
+			ready, err := r.ensureSpaceReady(reqLogger, space)
+			// if there was an error or the Space is not Ready, another reconcile will occur when space status is updated since this controller watches space (without a predicate)
+			if !ready || err != nil {
+				return true, err
+			}
 		}
 
 		reqLogger.Info("Setting UserSignup status to 'Complete'")
@@ -843,18 +849,31 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 		return nil, false, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
 			"error creating Space")
 	}
-	// ensure space is actually created before returning
-	spaceRetrieved := &toolchainv1alpha1.Space{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: space.Namespace, Name: space.Name}, spaceRetrieved)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("Space isn't available yet")
-			return spaceRetrieved, false, nil
-		}
-		return spaceRetrieved, false, err
-	}
+	//// ensure space is actually created before returning
+	//spaceRetrieved := &toolchainv1alpha1.Space{}
+	//err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: space.Namespace, Name: space.Name}, spaceRetrieved)
+	//if err != nil {
+	//	if errors.IsNotFound(err) {
+	//		logger.Info("Space isn't available yet")
+	//		return spaceRetrieved, false, nil
+	//	}
+	//	return spaceRetrieved, false, err
+	//}
 	logger.Info("Created Space", "Name", space.Name, "TargetCluster", tCluster, "Tier", mur.Spec.TierName)
 	return space, true, nil
+}
+
+func (r *Reconciler) ensureSpaceReady(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error){
+	readyCond, ok := condition.FindConditionByType(space.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	if ok {
+		if readyCond.Status == corev1.ConditionTrue && readyCond.Reason == toolchainv1alpha1.SpaceProvisionedReason {
+			return true, nil
+		} else {
+			return false, nil
+		}
+	} else {
+		return false, fmt.Errorf("ready condition not found")
+	}
 }
 
 // ensureSpaceBinding creates a SpaceBinding for the provided MUR and Space if one does not exist
@@ -888,13 +907,13 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchai
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpaceBinding, err,
 			"error creating SpaceBinding")
 	}
-	// ensure spacebinding actually created
-	spaceBindingRetrieved := &toolchainv1alpha1.SpaceBinding{}
-	if err := r.Client.Get(context.TODO(), types.NamespacedName{Name: spaceBinding.Name, Namespace: spaceBinding.Namespace}, spaceBindingRetrieved); err != nil {
-		if errors.IsNotFound(err) {
-			return fmt.Errorf(`spaceBinding '%s' has not been created yet`, spaceBinding.Name)
-		}
-	}
+	//// ensure spacebinding actually created
+	//spaceBindingRetrieved := &toolchainv1alpha1.SpaceBinding{}
+	//if err := r.Client.Get(context.TODO(), types.NamespacedName{Name: spaceBinding.Name, Namespace: spaceBinding.Namespace}, spaceBindingRetrieved); err != nil {
+	//	if errors.IsNotFound(err) {
+	//		return fmt.Errorf(`spaceBinding '%s' has not been created yet`, spaceBinding.Name)
+	//	}
+	//}
 
 	logger.Info("Created SpaceBinding", "MUR", mur.Name, "Space", space.Name)
 	return nil
