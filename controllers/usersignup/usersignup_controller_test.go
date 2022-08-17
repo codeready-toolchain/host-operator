@@ -4297,14 +4297,14 @@ func TestUserSignupMigration(t *testing.T) {
 	})
 }
 
-func TestUserSignupStatusNotReady(t *testing.T){
+func TestUserSignupStatusNotReady(t *testing.T) {
 	member := NewMemberCluster(t, "member1", v1.ConditionTrue)
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	userSignup :=  commonsignup.NewUserSignup(
-			commonsignup.Approved(),
-			commonsignup.WithTargetCluster("member1"),
-			commonsignup.WithStateLabel("not-ready"),
-			commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey))
+	userSignup := commonsignup.NewUserSignup(
+		commonsignup.Approved(),
+		commonsignup.WithTargetCluster("member1"),
+		commonsignup.WithStateLabel("not-ready"),
+		commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey))
 
 	mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
@@ -4315,8 +4315,6 @@ func TestUserSignupStatusNotReady(t *testing.T){
 
 	spacebinding := spacebindingtest.NewSpaceBinding("foo", "foo", "admin", userSignup.Name)
 
-
-
 	t.Run("until Space is provisioned", func(t *testing.T) {
 		//given
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
@@ -4325,15 +4323,15 @@ func TestUserSignupStatusNotReady(t *testing.T){
 		// then
 		require.Error(t, err)
 		require.Equal(t, "ready condition not found", err.Error())
-		require.Equal(t,  reconcile.Result{}, res)
+		require.Equal(t, reconcile.Result{}, res)
 		// and
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
-		test.AssertConditionsMatch(t,userSignup.Status.Conditions,
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-			Status: v1.ConditionFalse,
-			Reason: "UserNotInPreDeactivation",
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
 			},
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
@@ -4355,15 +4353,15 @@ func TestUserSignupStatusNotReady(t *testing.T){
 		res, err := r.Reconcile(context.TODO(), req)
 		// then
 		require.NoError(t, err)
-		require.Equal(t,  reconcile.Result{}, res)
+		require.Equal(t, reconcile.Result{}, res)
 		// and
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
-		test.AssertConditionsMatch(t,userSignup.Status.Conditions,
+		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
-				Type: toolchainv1alpha1.UserSignupComplete,
+				Type:   toolchainv1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
-				Reason:"",
+				Reason: "",
 			},
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
