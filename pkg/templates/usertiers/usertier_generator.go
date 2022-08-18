@@ -169,7 +169,7 @@ func (t *tierGenerator) initUserTiers() error {
 
 // createUserTiers creates the UserTier resources from the tier map
 func (t *tierGenerator) createUserTiers() error {
-	applyCl := commonclient.NewApplyClient(t.client, t.scheme)
+	applyCl := commonclient.NewApplyClient(t.client)
 
 	for tierName, tierData := range t.templatesByTier {
 		if len(tierData.objects) != 1 {
