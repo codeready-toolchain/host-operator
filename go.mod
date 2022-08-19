@@ -3,7 +3,7 @@ module github.com/codeready-toolchain/host-operator
 require (
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/codeready-toolchain/api v0.0.0-20220712190140-fca2282ae885
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20220628122057-9108fb0609bd
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20220819062429-45f4670d7a18
 	github.com/davecgh/go-spew v1.1.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -29,7 +29,5 @@ require (
 	k8s.io/klog/v2 v2.9.0
 	sigs.k8s.io/controller-runtime v0.10.3
 )
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/xcoulon/toolchain-common v0.0.0-20220818135810-8a5387a22f71
 
 go 1.16
