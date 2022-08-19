@@ -339,7 +339,7 @@ func main() { // nolint:gocyclo
 
 		// create or update Toolchain status during the operator deployment
 		setupLog.Info("Creating/updating the ToolchainStatus resource")
-		if err := toolchainstatus.CreateOrUpdateResources(mgr.GetClient(), mgr.GetScheme(), namespace, toolchainconfig.ToolchainStatusName); err != nil {
+		if err := toolchainstatus.CreateOrUpdateResources(mgr.GetClient(), namespace, toolchainconfig.ToolchainStatusName); err != nil {
 			setupLog.Error(err, "cannot create/update ToolchainStatus resource")
 			os.Exit(1)
 		}
