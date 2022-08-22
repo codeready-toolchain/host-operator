@@ -381,7 +381,7 @@ func (t *tierGenerator) initNSTemplateTiers() error {
 
 // createNSTemplateTiers creates the NSTemplateTier resources from the tier map
 func (t *tierGenerator) createNSTemplateTiers() error {
-	applyCl := commonclient.NewApplyClient(t.client, t.scheme)
+	applyCl := commonclient.NewApplyClient(t.client)
 
 	for tierName, tierData := range t.templatesByTier {
 		if len(tierData.objects) != 1 {
