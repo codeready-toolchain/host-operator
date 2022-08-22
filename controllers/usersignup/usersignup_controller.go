@@ -872,7 +872,7 @@ func (r *Reconciler) ensureSpaceReady(logger logr.Logger, space *toolchainv1alph
 		}
 		return false, nil
 	}
-	return false, fmt.Errorf("ready condition not found")
+	return false, fmt.Errorf("ready condition not found on space %s", space.Name)
 }
 
 // ensureSpaceBinding creates a SpaceBinding for the provided MUR and Space if one does not exist

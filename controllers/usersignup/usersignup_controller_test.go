@@ -158,9 +158,6 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 
 			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
-			//space := newSpace(userSignup, "member1", "foo", "base")
-			//spaceBinding := newSpaceBinding(mur,space,userSignup.Name)
-
 			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, baseNSTemplateTier, deactivate30Tier)
 
 			// when
@@ -185,15 +182,15 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 			}
 
 			t.Run("second reconcile", func(t *testing.T) {
-
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
 
 				// then
-				require.NoError(t, err)
 				require.Equal(t, reconcile.Result{}, res)
 				switch testname {
 				case "without skip space creation annotation", "with skip space creation annotation set to false":
+					require.Error(t, err)
+					require.Equal(t, "ready condition not found on space foo", err.Error()) // Space ready condition is set by space controller,thus this error is expected
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						Exists().
 						HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
@@ -201,6 +198,7 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 						HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
 						HasSpec("foo", "foo", "admin")
 				case "with skip space creation annotation set to true":
+					require.NoError(t, err)
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						DoesNotExist()
 				default:
@@ -334,6 +332,9 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 			DoesNotExist()
 		t.Run("third reconcile", func(t *testing.T) {
+			// set the space to ready
+			err = r.setSpaceToReady("foo")
+			require.NoError(t, err)
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
 
@@ -972,6 +973,9 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			HasTier(baseNSTemplateTier.Name)
 
 		t.Run("third reconcile - spacebinding created and usersignup completed", func(t *testing.T) {
+			// given
+			err = r.setSpaceToReady("foo")
+			require.NoError(t, err)
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
 
@@ -1106,6 +1110,9 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			HasTier(baseNSTemplateTier.Name)
 
 		t.Run("third reconcile", func(t *testing.T) {
+			//given
+			err = r.setSpaceToReady("foo")
+			require.NoError(t, err)
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
 
@@ -1304,6 +1311,9 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			HasTier(baseNSTemplateTier.Name)
 
 		t.Run("third reconcile", func(t *testing.T) {
+			// given
+			err = r.setSpaceToReady("foo")
+			require.NoError(t, err)
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
 
@@ -1765,6 +1775,9 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 	require.Equal(t, userSignup.Spec.OriginalSub, murInstance.Spec.OriginalSub)
 
 	t.Run("reconcile a second time to update UserSignup.Status", func(t *testing.T) {
+		// given the space is ready
+		err = r.setSpaceToReady("foo")
+		require.NoError(t, err)
 		// Reconcile again so that the userSignup status is now updated
 		_, err = r.Reconcile(context.TODO(), req)
 
@@ -1872,6 +1885,9 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 		segmenttest.AssertMessageQueued(t, r.SegmentClient, userSignup, segment.AccountActivated)
 
 		t.Run("verify usersignup on third reconcile", func(t *testing.T) {
+			// given space is ready
+			err = r.setSpaceToReady("foo-2")
+			require.NoError(t, err)
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
 
@@ -2512,7 +2528,9 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 
 	t.Run("when MUR exists and not deactivated, nothing should happen", func(t *testing.T) {
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
-		_, err := r.Reconcile(context.TODO(), req)
+		err := r.setSpaceToReady(mur.Name) // given space is ready
+		require.NoError(t, err)
+		_, err = r.Reconcile(context.TODO(), req)
 
 		// then
 		require.NoError(t, err)
@@ -3730,7 +3748,9 @@ func TestChangedCompliantUsername(t *testing.T) {
 		Exists().
 		HasSpecTargetCluster("east").
 		HasTier(baseNSTemplateTier.Name)
-
+	// given space is ready
+	err = r.setSpaceToReady("foo")
+	require.NoError(t, err)
 	// 3rd reconcile should create a new SpaceBinding for the new MUR
 	res, err = r.Reconcile(context.TODO(), req)
 	require.NoError(t, err)
@@ -4322,7 +4342,7 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 		res, err := r.Reconcile(context.TODO(), req)
 		// then
 		require.Error(t, err)
-		require.Equal(t, "ready condition not found", err.Error())
+		require.Equal(t, "ready condition not found on space foo", err.Error())
 		require.Equal(t, reconcile.Result{}, res)
 		// and
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -4374,4 +4394,22 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 				Reason: "UserIsActive",
 			})
 	})
+}
+
+func (r *Reconciler) setSpaceToReady(name string) error {
+	space := toolchainv1alpha1.Space{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{
+		Name:      name,
+		Namespace: test.HostOperatorNs,
+	}, &space)
+	if err != nil {
+		return err
+	}
+	space.Status.Conditions = append(space.Status.Conditions, toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.ConditionReady,
+		Status: v1.ConditionTrue,
+		Reason: toolchainv1alpha1.SpaceProvisionedReason,
+	})
+	err = r.Client.Update(context.TODO(), &space)
+	return err
 }
