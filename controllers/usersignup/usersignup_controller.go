@@ -849,16 +849,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 		return nil, false, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
 			"error creating Space")
 	}
-	//// ensure space is actually created before returning
-	//spaceRetrieved := &toolchainv1alpha1.Space{}
-	//err = r.Client.Get(context.TODO(), types.NamespacedName{Namespace: space.Namespace, Name: space.Name}, spaceRetrieved)
-	//if err != nil {
-	//	if errors.IsNotFound(err) {
-	//		logger.Info("Space isn't available yet")
-	//		return spaceRetrieved, false, nil
-	//	}
-	//	return spaceRetrieved, false, err
-	//}
+
 	logger.Info("Created Space", "Name", space.Name, "TargetCluster", tCluster, "Tier", mur.Spec.TierName)
 	return space, true, nil
 }
@@ -906,13 +897,6 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchai
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpaceBinding, err,
 			"error creating SpaceBinding")
 	}
-	//// ensure spacebinding actually created
-	//spaceBindingRetrieved := &toolchainv1alpha1.SpaceBinding{}
-	//if err := r.Client.Get(context.TODO(), types.NamespacedName{Name: spaceBinding.Name, Namespace: spaceBinding.Namespace}, spaceBindingRetrieved); err != nil {
-	//	if errors.IsNotFound(err) {
-	//		return fmt.Errorf(`spaceBinding '%s' has not been created yet`, spaceBinding.Name)
-	//	}
-	//}
 
 	logger.Info("Created SpaceBinding", "MUR", mur.Name, "Space", space.Name)
 	return nil
