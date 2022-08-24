@@ -90,7 +90,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-			murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+			murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 				HasOriginalSub(userSignup.Spec.OriginalSub).
 				HasUserAccounts(1).
@@ -282,7 +282,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	segmenttest.AssertMessageQueued(t, r.SegmentClient, userSignup, segment.AccountActivated)
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Spec.Username, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
@@ -290,8 +290,8 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		Get()
 
 	// space and spacebinding should be created after the next reconcile
-	spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).DoesNotExist()
-	spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).DoesNotExist()
+	spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Spec.Username, r.Client).DoesNotExist()
+	spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Spec.Username, userSignup.Spec.Username, r.Client).DoesNotExist()
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -324,7 +324,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		require.Equal(t, reconcile.Result{}, res)
 
 		// space should now be created
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Spec.Username, r.Client).
 			HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 			Exists().
 			HasSpecTargetCluster("member1").
@@ -340,12 +340,12 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			require.Equal(t, reconcile.Result{}, res)
 
 			// spacebinding should be created
-			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
+			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Spec.Username, userSignup.Spec.Username, r.Client).
 				Exists().
 				HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
-				HasSpec("foo", "foo", "admin")
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, userSignup.Spec.Username).
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, userSignup.Spec.Username).
+				HasSpec(userSignup.Spec.Username, userSignup.Spec.Username, "admin")
 
 			// Lookup the userSignup one more time and check the conditions are updated
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -608,7 +608,7 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 	segmenttest.AssertMessageQueued(t, r.SegmentClient, userSignup, segment.AccountActivated)
 
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-	murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+	murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
@@ -650,7 +650,7 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 		require.Equal(t, reconcile.Result{}, res)
 
 		// space should be created on the second reconcile
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Name, r.Client).
 			Exists().
 			HasSpecTargetCluster("member1").
 			HasTier(customUserTier.Name)
@@ -925,7 +925,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	segmenttest.AssertMessageQueued(t, r.SegmentClient, userSignup, segment.AccountActivated)
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasUserAccounts(1).
 		Get()
@@ -964,7 +964,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		require.Equal(t, reconcile.Result{}, res)
 
 		// space should be created on the second reconcile
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Name, r.Client).
 			Exists().
 			HasSpecTargetCluster("member1").
 			HasTier(baseNSTemplateTier.Name)
@@ -976,12 +976,12 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
-			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
+			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Name, userSignup.Name, r.Client).
 				Exists().
 				HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
-				HasSpec("foo", "foo", "admin")
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, userSignup.Name).
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, userSignup.Name).
+				HasSpec(userSignup.Name, userSignup.Name, "admin")
 
 			// Lookup the userSignup one more time and check the conditions are updated
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -1058,7 +1058,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	segmenttest.AssertMessageQueued(t, r.SegmentClient, userSignup, segment.AccountActivated)
 
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasUserAccounts(1).
 		Get()
@@ -1098,7 +1098,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		require.Equal(t, reconcile.Result{}, res)
 
 		// space should be created on the second reconcile
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Name, r.Client).
 			Exists().
 			HasSpecTargetCluster("member1").
 			HasTier(baseNSTemplateTier.Name)
@@ -1111,12 +1111,12 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 
-			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
+			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Name, userSignup.Name, r.Client).
 				Exists().
 				HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
-				HasSpec("foo", "foo", "admin")
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, userSignup.Name).
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, userSignup.Name).
+				HasSpec(userSignup.Name, userSignup.Name, "admin")
 
 			// Lookup the userSignup one more and check the conditions are updated
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -1254,7 +1254,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 	segmenttest.AssertMessageQueued(t, r.SegmentClient, userSignup, segment.AccountActivated)
 
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasOriginalSub(userSignup.Spec.OriginalSub).
 		HasUserAccounts(1).
@@ -1296,7 +1296,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		require.Equal(t, reconcile.Result{}, res)
 
 		// space should be created on the second reconcile
-		spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Name, r.Client).
 			Exists().
 			HasSpecTargetCluster("east").
 			HasTier(baseNSTemplateTier.Name)
@@ -1309,12 +1309,12 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
 
-			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
+			spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Name, userSignup.Name, r.Client).
 				Exists().
 				HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
-				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
-				HasSpec("foo", "foo", "admin")
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, userSignup.Name).
+				HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, userSignup.Name).
+				HasSpec(userSignup.Name, userSignup.Name, "admin")
 
 			// Lookup the userSignup one more and check the conditions are updated
 			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
@@ -1880,7 +1880,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 			err = r.Client.Get(context.TODO(), key, instance)
 			require.NoError(t, err)
 
-			require.Equal(t, "foo-2", instance.Status.CompliantUsername)
+			require.Equal(t, userSignup.Name, instance.Status.CompliantUsername)
 
 			// Confirm that the mur exists
 			mur = &toolchainv1alpha1.MasterUserRecord{}
@@ -2173,11 +2173,12 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 	// given
+	meta := commonsignup.NewUserSignupObjectMeta("", "john.doe@redhat.com")
 	userSignup := &toolchainv1alpha1.UserSignup{
-		ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "john.doe@redhat.com"),
+		ObjectMeta: meta,
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			Userid:   "UserID123",
-			Username: "john.doe@redhat.com",
+			Username: meta.Name,
 			States:   []toolchainv1alpha1.UserSignupState{toolchainv1alpha1.UserSignupStateDeactivated},
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
@@ -2275,11 +2276,12 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 
 func TestUserSignupReactivateAfterDeactivated(t *testing.T) {
 	// given
+	meta := commonsignup.NewUserSignupObjectMeta("", "john.doe@redhat.com")
 	userSignup := &toolchainv1alpha1.UserSignup{
-		ObjectMeta: commonsignup.NewUserSignupObjectMeta("", "john.doe@redhat.com"),
+		ObjectMeta: meta,
 		Spec: toolchainv1alpha1.UserSignupSpec{
 			Userid:   "UserID123",
-			Username: "john.doe@redhat.com",
+			Username: meta.Name,
 		},
 		Status: toolchainv1alpha1.UserSignupStatus{
 			CompliantUsername: "john-doe",
@@ -3311,7 +3313,7 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 func TestDeathBy100Signups(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	userSignup := commonsignup.NewUserSignup(commonsignup.Approved())
+	userSignup := commonsignup.NewUserSignup(commonsignup.WithName("foo@redhat.com"), commonsignup.Approved())
 
 	initObjs := make([]runtime.Object, 0, 110)
 	initObjs = append(initObjs, userSignup, deactivate30Tier)
@@ -3708,7 +3710,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 
 	// verify the new MUR is provisioned
 	murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-	mur := murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+	mur := murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 		Exists().
 		HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
 		HasUserAccounts(1).
@@ -3723,7 +3725,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
-	spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
+	spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 		Exists().
 		HasSpecTargetCluster("east").
@@ -3734,12 +3736,12 @@ func TestChangedCompliantUsername(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, reconcile.Result{}, res)
 
-	spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
+	spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, userSignup.Name, userSignup.Name, r.Client).
 		Exists().
 		HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
-		HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, "foo").
-		HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
-		HasSpec("foo", "foo", "admin")
+		HasLabelWithValue(toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey, userSignup.Name).
+		HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, userSignup.Name).
+		HasSpec(userSignup.Name, userSignup.Name, "admin")
 
 	// 4th reconcile should update the CompliantUsername on the UserSignup status
 	res, err = r.Reconcile(context.TODO(), req)
@@ -3972,7 +3974,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
 			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+		murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 			HasTargetCluster("member1")
 	})
 
@@ -3995,7 +3997,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		assert.False(t, res.Requeue)
 		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).HasTargetCluster("member1")
+		murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).HasTargetCluster("member1")
 	})
 
 	t.Run("last target cluster annotation is set and cluster has capacity", func(t *testing.T) {
@@ -4025,7 +4027,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
 			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member2")
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+		murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 			HasTargetCluster("member2")
 	})
 
@@ -4046,7 +4048,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		AssertThatUserSignup(t, req.Namespace, userSignup.Name, r.Client).
 			HasAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey, "member1")
 		murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
-		murtest.AssertThatMasterUserRecord(t, "foo", r.Client).
+		murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 			HasTargetCluster("member1")
 	})
 
@@ -4086,7 +4088,9 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 
 func TestUserSignupMigration(t *testing.T) {
 	// Given
+	originalName := uuid.Must(uuid.NewV4()).String()
 	userSignup := commonsignup.NewUserSignup()
+	userSignup.Name = originalName
 	userSignup.Spec.Company = "Acme"
 	userSignup.Spec.GivenName = "Wile E"
 	userSignup.Spec.FamilyName = "Coyote"
@@ -4109,7 +4113,7 @@ func TestUserSignupMigration(t *testing.T) {
 	// We should now have 2 UserSignups, the original and the migrated
 	require.Len(t, userSignups.Items, 2)
 
-	migrated := AssertThatUserSignup(t, test.HostOperatorNs, "1cf93821-fooredhatcom", cl).Get()
+	migrated := AssertThatUserSignup(t, test.HostOperatorNs, userSignup.Spec.Username, cl).Get()
 
 	require.NotNil(t, migrated)
 	require.Equal(t, userSignup.Spec, migrated.Spec)
@@ -4207,6 +4211,7 @@ func TestUserSignupMigration(t *testing.T) {
 	t.Run("Migration fails to lookup migrated UserSignup", func(t *testing.T) {
 		// Given
 		userSignup := commonsignup.NewUserSignup()
+		userSignup.Name = "foo"
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
 		states.SetDeactivated(userSignup, true)
 		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
@@ -4236,6 +4241,7 @@ func TestUserSignupMigration(t *testing.T) {
 	t.Run("Migration fails to create migrated UserSignup", func(t *testing.T) {
 		// Given
 		userSignup := commonsignup.NewUserSignup()
+		userSignup.Name = "foo"
 		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "deactivated"
 		states.SetDeactivated(userSignup, true)
 		members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
