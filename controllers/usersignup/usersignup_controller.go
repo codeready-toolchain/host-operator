@@ -803,15 +803,6 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 	domain := metrics.GetEmailDomain(mur)
 	counter.IncrementMasterUserRecordCount(logger, domain)
 
-	//check MUR was actually created
-	murRetrieved := &toolchainv1alpha1.MasterUserRecord{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: mur.Name, Namespace: mur.Namespace}, murRetrieved)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return fmt.Errorf(`MUR %s created isn't available yet`, mur.Name)
-		}
-		return err
-	}
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
 }
