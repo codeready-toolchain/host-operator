@@ -68,20 +68,15 @@ objects:
     resources:
     - spiaccesstokenbindings
     - spiaccesschecks
+    - spiaccesstokens
     verbs:
     - create
     - get
     - list
     - watch
+    - update
+    - patch
     - delete
-  - apiGroups:
-    - appstudio.redhat.com
-    resources:
-    - spiaccesstokens
-    verbs:
-    - get
-    - list
-    - watch
   - apiGroups:
     - appstudio.redhat.com
     resources:

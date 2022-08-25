@@ -131,7 +131,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 func (r *Reconciler) ensureRegistrationService(reqLogger logr.Logger, toolchainConfig *toolchainv1alpha1.ToolchainConfig, vars templateVars) error {
 	// process template with variables taken from the RegistrationService CRD
-	cl := applycl.NewApplyClient(r.Client, r.Scheme)
+	cl := applycl.NewApplyClient(r.Client)
 	toolchainObjects, err := template.NewProcessor(r.Scheme).Process(r.RegServiceTemplate.DeepCopy(), vars)
 	if err != nil {
 		return r.WrapErrorWithStatusUpdate(reqLogger, toolchainConfig, r.setStatusDeployRegistrationServiceFailed, err, "failed to process registration service template")

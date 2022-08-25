@@ -131,11 +131,10 @@ github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:z
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
-github.com/codeready-toolchain/api v0.0.0-20220620073500-4403ea044a96/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
 github.com/codeready-toolchain/api v0.0.0-20220712190140-fca2282ae885 h1:eTomeoiGTJ8jPNIpwGXogNafIQ4GV4fPMM6fcBbNKnU=
 github.com/codeready-toolchain/api v0.0.0-20220712190140-fca2282ae885/go.mod h1:yxINrgni3bMTyGKMjMaLmWwgwZt/P+WT09c/pIMP02w=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220628122057-9108fb0609bd h1:asiXwFwy7NrhmVeLLQr9uK95eudcz1lV/vbn8WkPNcA=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20220628122057-9108fb0609bd/go.mod h1:hdF7PQh9e9V3Wi+QFJ58Z9a/GATbHAiFQtMMzbMy7NQ=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220824075653-be1e476c99ef h1:J5bVKTWCYSR1oY5ZVeG/PGaevB2v3v89Kj6JOqcsNRc=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20220824075653-be1e476c99ef/go.mod h1:yQ3WrhP+JiPXPT3RlLyQGkf9NYbmcc2a2eDcoU8f538=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -636,6 +635,8 @@ github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFR
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/ryanuber/columnize v0.0.0-20160712163229-9b3edd62028f/go.mod h1:sm1tb6uqfes/u+d4ooFouqFdy9/2g9QGwK3SQygK0Ts=
+github.com/sbryzak/toolchain-common v0.0.0-20220823111457-e37c86e557b1 h1:Ih89+AfDyHjjjVv9qlVYRKaz8IUomujcfwD+S0X8QOg=
+github.com/sbryzak/toolchain-common v0.0.0-20220823111457-e37c86e557b1/go.mod h1:yQ3WrhP+JiPXPT3RlLyQGkf9NYbmcc2a2eDcoU8f538=
 github.com/scylladb/go-set v1.0.2/go.mod h1:DkpGd78rljTxKAnTDPFqXSGxvETQnJyuSOQwsHycqfs=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
 github.com/segmentio/analytics-go/v3 v3.2.1 h1:G+f90zxtc1p9G+WigVyTR0xNfOghOGs/PYAlljLOyeg=
