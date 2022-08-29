@@ -190,7 +190,7 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 				switch testname {
 				case "without skip space creation annotation", "with skip space creation annotation set to false":
 					require.Error(t, err)
-					require.Equal(t, "ready condition not found on space foo", err.Error()) // Space ready condition is set by space controller,thus this error is expected
+					require.Equal(t, "space foo is not Ready", err.Error()) // Space ready condition is set by space controller,thus this error is expected
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						Exists().
 						HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
@@ -333,7 +333,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			DoesNotExist()
 		t.Run("third reconcile", func(t *testing.T) {
 			// set the space to ready
-			err = r.setSpaceToReady("foo")
+			err = r.setSpaceToReady(userSignup.Spec.Username)
 			require.NoError(t, err)
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
@@ -974,7 +974,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 
 		t.Run("third reconcile - spacebinding created and usersignup completed", func(t *testing.T) {
 			// given
-			err = r.setSpaceToReady("foo")
+			err = r.setSpaceToReady(userSignup.Name)
 			require.NoError(t, err)
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
@@ -1111,7 +1111,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 
 		t.Run("third reconcile", func(t *testing.T) {
 			//given
-			err = r.setSpaceToReady("foo")
+			err = r.setSpaceToReady(userSignup.Name)
 			require.NoError(t, err)
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
@@ -1312,7 +1312,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 
 		t.Run("third reconcile", func(t *testing.T) {
 			// given
-			err = r.setSpaceToReady("foo")
+			err = r.setSpaceToReady(userSignup.Name)
 			require.NoError(t, err)
 			// when
 			res, err = r.Reconcile(context.TODO(), req)
@@ -1886,7 +1886,7 @@ func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 
 		t.Run("verify usersignup on third reconcile", func(t *testing.T) {
 			// given space is ready
-			err = r.setSpaceToReady("foo-2")
+			err = r.setSpaceToReady(userSignup.Name)
 			require.NoError(t, err)
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
@@ -3751,7 +3751,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 		HasSpecTargetCluster("east").
 		HasTier(baseNSTemplateTier.Name)
 	// given space is ready
-	err = r.setSpaceToReady("foo")
+	err = r.setSpaceToReady(userSignup.Name)
 	require.NoError(t, err)
 	// 3rd reconcile should create a new SpaceBinding for the new MUR
 	res, err = r.Reconcile(context.TODO(), req)
@@ -4365,7 +4365,7 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 		res, err := r.Reconcile(context.TODO(), req)
 		// then
 		require.Error(t, err)
-		require.Equal(t, "ready condition not found on space foo", err.Error())
+		require.Equal(t, "space foo is not Ready", err.Error())
 		require.Equal(t, reconcile.Result{}, res)
 		// and
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)

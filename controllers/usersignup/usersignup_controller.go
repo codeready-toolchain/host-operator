@@ -592,10 +592,9 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 				return true, err
 			}
 
-			ready, err := r.ensureSpaceReady(reqLogger, space)
-			// if there was an error or the Space is not Ready, another reconcile will occur when space status is updated since this controller watches space (without a predicate)
-			if !ready || err != nil {
-				return true, err
+			// if the Space is not Ready, another reconcile will occur when space status is updated since this controller watches space (without a predicate)
+			if !r.isSpaceReady(reqLogger, space) {
+				return true, fmt.Errorf("space %s is not Ready", space.Name)
 			}
 		}
 
@@ -847,16 +846,10 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 	return space, true, nil
 }
 
-func (r *Reconciler) ensureSpaceReady(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
+func (r *Reconciler) isSpaceReady(logger logr.Logger, space *toolchainv1alpha1.Space) bool {
 	logger.Info("Ensuring Space is Ready", "Space", space.Name)
 	readyCond, ok := condition.FindConditionByType(space.Status.Conditions, toolchainv1alpha1.ConditionReady)
-	if ok {
-		if readyCond.Status == corev1.ConditionTrue && readyCond.Reason == toolchainv1alpha1.SpaceProvisionedReason {
-			return true, nil
-		}
-		return false, nil
-	}
-	return false, fmt.Errorf("ready condition not found on space %s", space.Name)
+	return ok && readyCond.Status == corev1.ConditionTrue && readyCond.Reason == toolchainv1alpha1.SpaceProvisionedReason
 }
 
 // ensureSpaceBinding creates a SpaceBinding for the provided MUR and Space if one does not exist
