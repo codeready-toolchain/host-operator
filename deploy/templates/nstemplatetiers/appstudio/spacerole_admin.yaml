@@ -54,7 +54,8 @@ objects:
     - integrationtestscenarios
     - releases
     - releasestrategies
-    - releaselinks
+    - releaseplans
+    - releaseplanadmissions
     verbs:
     - create
     - get
