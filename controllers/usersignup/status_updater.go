@@ -394,6 +394,17 @@ func (u *StatusUpdater) updateStatus(logger logr.Logger, userSignup *toolchainv1
 	return nil
 }
 
+func (u* StatusUpdater) updateProvisioningStatus(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+	return u.updateStatusConditions(
+		userSignup,
+		toolchainv1alpha1.Condition{
+			Type: toolchainv1alpha1.UserSignupProvisioning,
+			Status: corev1.ConditionTrue,
+			Reason: toolchainv1alpha1.UserSignupProvisioningSpaceReason,
+			Message: message,
+		})
+}
+
 // updateCompleteStatus updates the `CompliantUsername` and `Conditions` in the status, should only be invoked on completion because
 // both completion and the compliant username require the master user record to be created.
 func (u *StatusUpdater) updateCompleteStatus(logger logr.Logger, compliantUsername string) func(userSignup *toolchainv1alpha1.UserSignup, message string) error { //nolint: unparam

@@ -184,13 +184,13 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 			t.Run("second reconcile", func(t *testing.T) {
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
-
+				require.NoError(t, err)
 				// then
 				require.Equal(t, reconcile.Result{}, res)
 				switch testname {
 				case "without skip space creation annotation", "with skip space creation annotation set to false":
-					require.Error(t, err)
-					require.Equal(t, "space foo is not Ready", err.Error()) // Space ready condition is set by space controller,thus this error is expected
+					//require.Error(t, err)
+					//require.Equal(t, "space foo is not Ready", err.Error())
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						Exists().
 						HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
@@ -198,7 +198,7 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 						HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
 						HasSpec("foo", "foo", "admin")
 				case "with skip space creation annotation set to true":
-					require.NoError(t, err)
+					//require.NoError(t, err)
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						DoesNotExist()
 				default:
@@ -4363,14 +4363,18 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 		r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, mur, space, spacebinding, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
-		// then
-		require.Error(t, err)
-		require.Equal(t, "space foo is not Ready", err.Error())
+		require.NoError(t, err)
 		require.Equal(t, reconcile.Result{}, res)
 		// and
 		err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 		require.NoError(t, err)
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+			toolchainv1alpha1.Condition{
+				Type: toolchainv1alpha1.UserSignupProvisioning,
+				Status: v1.ConditionTrue,
+				Reason: toolchainv1alpha1.UserSignupProvisioningSpaceReason,
+				Message: "space foo was not ready",
+			},
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
 				Status: v1.ConditionFalse,
@@ -4405,6 +4409,12 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 				Type:   toolchainv1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 				Reason: "",
+			},
+			toolchainv1alpha1.Condition{
+				Type: toolchainv1alpha1.UserSignupProvisioning,
+				Status: v1.ConditionTrue,
+				Reason: toolchainv1alpha1.UserSignupProvisioningSpaceReason,
+				Message: "space foo was not ready",
 			},
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,

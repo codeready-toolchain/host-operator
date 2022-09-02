@@ -29,5 +29,7 @@ require (
 	k8s.io/klog/v2 v2.9.0
 	sigs.k8s.io/controller-runtime v0.10.3
 )
-
+replace (
+	github.com/codeready-toolchain/api v0.0.0-20220712190140-fca2282ae885 => github.com/ranakan19/api  v0.0.0-20220831202800-b8dc922b53fb
+)
 go 1.16
