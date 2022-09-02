@@ -847,10 +847,6 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 	return space, true, nil
 }
 
-func (r *Reconciler) isSpaceReady(logger logr.Logger, space *toolchainv1alpha1.Space) bool {
-	logger.Info("Checking whether Space is Ready", "Space", space.Name)
-	return condition.IsTrueWithReason(space.Status.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.SpaceProvisionedReason)
-}
 
 // ensureSpaceBinding creates a SpaceBinding for the provided MUR and Space if one does not exist
 func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord, space *toolchainv1alpha1.Space) error {
