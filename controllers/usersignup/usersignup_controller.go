@@ -594,8 +594,8 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 
 			// if the Space is not Ready, another reconcile will occur when space status is updated since this controller watches space (without a predicate)
 			reqLogger.Info("Checking whether Space is Ready", "Space", space.Name)
-			if !condition.IsTrueWithReason(space.Status.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.SpaceProvisionedReason){
-				return true, r.updateProvisioningStatus(userSignup, fmt.Sprintf("space %s was not ready", space.Name))
+			if !condition.IsTrueWithReason(space.Status.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.SpaceProvisionedReason) {
+				return true, r.updateIncompleteStatus(userSignup, fmt.Sprintf("space %s was not ready", space.Name))
 			}
 		}
 
@@ -846,7 +846,6 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 	logger.Info("Created Space", "Name", space.Name, "TargetCluster", tCluster, "Tier", mur.Spec.TierName)
 	return space, true, nil
 }
-
 
 // ensureSpaceBinding creates a SpaceBinding for the provided MUR and Space if one does not exist
 func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord, space *toolchainv1alpha1.Space) error {

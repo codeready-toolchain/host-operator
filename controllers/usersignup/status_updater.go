@@ -394,13 +394,13 @@ func (u *StatusUpdater) updateStatus(logger logr.Logger, userSignup *toolchainv1
 	return nil
 }
 
-func (u* StatusUpdater) updateProvisioningStatus(userSignup *toolchainv1alpha1.UserSignup, message string) error {
+func (u *StatusUpdater) updateIncompleteStatus(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 	return u.updateStatusConditions(
 		userSignup,
 		toolchainv1alpha1.Condition{
-			Type: toolchainv1alpha1.UserSignupProvisioning,
-			Status: corev1.ConditionTrue,
-			Reason: toolchainv1alpha1.UserSignupProvisioningSpaceReason,
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  corev1.ConditionFalse,
+			Reason:  toolchainv1alpha1.UserSignupProvisioningSpaceReason,
 			Message: message,
 		})
 }

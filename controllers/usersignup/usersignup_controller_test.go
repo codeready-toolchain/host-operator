@@ -4370,9 +4370,9 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 		require.NoError(t, err)
 		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 			toolchainv1alpha1.Condition{
-				Type: toolchainv1alpha1.UserSignupProvisioning,
-				Status: v1.ConditionTrue,
-				Reason: toolchainv1alpha1.UserSignupProvisioningSpaceReason,
+				Type:    toolchainv1alpha1.UserSignupComplete,
+				Status:  v1.ConditionFalse,
+				Reason:  toolchainv1alpha1.UserSignupProvisioningSpaceReason,
 				Message: "space foo was not ready",
 			},
 			toolchainv1alpha1.Condition{
@@ -4409,12 +4409,6 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 				Type:   toolchainv1alpha1.UserSignupComplete,
 				Status: v1.ConditionTrue,
 				Reason: "",
-			},
-			toolchainv1alpha1.Condition{
-				Type: toolchainv1alpha1.UserSignupProvisioning,
-				Status: v1.ConditionTrue,
-				Reason: toolchainv1alpha1.UserSignupProvisioningSpaceReason,
-				Message: "space foo was not ready",
 			},
 			toolchainv1alpha1.Condition{
 				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
