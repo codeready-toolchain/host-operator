@@ -286,10 +286,12 @@ spec:
                               service verification configuration
                             properties:
                               awsAccessKeyID:
-                                description: AWSAccessKeyId
+                                description: AWSAccessKeyId is the AWS Access Key
+                                  used to authenticate in order to access AWS services
                                 type: string
                               awsSecretAccessKey:
-                                description: AWSSecretAccessKey
+                                description: AWSSecretAccessKey is the AWS credential
+                                  used to authenticate in order to access AWS services
                                 type: string
                               ref:
                                 description: Reference is the name of the secret resource
