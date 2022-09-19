@@ -244,6 +244,19 @@ spec:
                               a verification code, if they fail then they must request
                               another code
                             type: integer
+                          awsRegion:
+                            description: AWSRegion to use when sending notification
+                              SMS
+                            type: string
+                          awsSMSType:
+                            description: AWSSMSType is the type of SMS message to
+                              send, either `Promotional` or `Transactional` See https://docs.aws.amazon.com/sns/latest/dg/sms_publish-to-phone.html
+                              for details
+                            type: string
+                          awsSenderId:
+                            description: AWSSenderID the Alphanumeric Sender ID to
+                              use, e.g. "DevSandbox"
+                            type: string
                           codeExpiresInMin:
                             description: VerificationCodeExpiresInMin specifies an
                               int representing the number of minutes before a verification
@@ -272,6 +285,12 @@ spec:
                             description: Defines all secrets related to the registration
                               service verification configuration
                             properties:
+                              awsAccessKeyID:
+                                description: AWSAccessKeyId
+                                type: string
+                              awsSecretAccessKey:
+                                description: AWSSecretAccessKey
+                                type: string
                               ref:
                                 description: Reference is the name of the secret resource
                                   to look up
