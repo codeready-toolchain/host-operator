@@ -189,8 +189,6 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 				require.Equal(t, reconcile.Result{}, res)
 				switch testname {
 				case "without skip space creation annotation", "with skip space creation annotation set to false":
-					//require.Error(t, err)
-					//require.Equal(t, "space foo is not Ready", err.Error())
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						Exists().
 						HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
@@ -198,7 +196,6 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 						HasLabelWithValue(toolchainv1alpha1.SpaceBindingSpaceLabelKey, "foo").
 						HasSpec("foo", "foo", "admin")
 				case "with skip space creation annotation set to true":
-					//require.NoError(t, err)
 					spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 						DoesNotExist()
 				default:
