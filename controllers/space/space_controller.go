@@ -222,7 +222,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
 				return norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 			}
-
 			logger.Info("NSTemplateSet created on target member cluster")
 			return requeueDelay, r.setStatusProvisioning(space)
 		}

@@ -167,7 +167,6 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 			if !isStatusPresent {
 				counter.IncrementUserAccountCount(logger, murAccount.TargetCluster)
 			}
-
 			return updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 		}
 		// another/unexpected error occurred while trying to fetch the user account on the member cluster
