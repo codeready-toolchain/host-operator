@@ -591,6 +591,12 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			if err = r.ensureSpaceBinding(reqLogger, userSignup, mur, space); err != nil {
 				return true, err
 			}
+
+			// if the Space is not Ready, another reconcile will occur when space status is updated since this controller watches space (without a predicate)
+			reqLogger.Info("Checking whether Space is Ready", "Space", space.Name)
+			if !condition.IsTrueWithReason(space.Status.Conditions, toolchainv1alpha1.ConditionReady, toolchainv1alpha1.SpaceProvisionedReason) {
+				return true, r.updateIncompleteStatus(userSignup, fmt.Sprintf("space %s was not ready", space.Name))
+			}
 		}
 
 		reqLogger.Info("Setting UserSignup status to 'Complete'")
@@ -798,6 +804,7 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 	// increment the counter of MasterUserRecords
 	domain := metrics.GetEmailDomain(mur)
 	counter.IncrementMasterUserRecordCount(logger, domain)
+
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
 }
@@ -871,6 +878,7 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchai
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpaceBinding, err,
 			"error creating SpaceBinding")
 	}
+
 	logger.Info("Created SpaceBinding", "MUR", mur.Name, "Space", space.Name)
 	return nil
 }
