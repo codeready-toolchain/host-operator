@@ -1,12 +1,11 @@
 package util
 
 import (
-	"crypto/md5" //nolint:gosec
-	"encoding/hex"
 	"encoding/json"
 	"sort"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 )
 
 // TemplateTierHashLabelKey returns the label key to specify the version of the templates of the given tier
@@ -62,9 +61,5 @@ func computeHash(refs []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	md5hash := md5.New() //nolint:gosec
-	// Ignore the error, as this implementation cannot return one
-	_, _ = md5hash.Write(m)
-	hash := hex.EncodeToString(md5hash.Sum(nil))
-	return hash, nil
+	return hash.Encode(m), nil
 }

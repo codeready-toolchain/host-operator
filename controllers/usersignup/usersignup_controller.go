@@ -2,8 +2,6 @@ package usersignup
 
 import (
 	"context"
-	"crypto/md5" //nolint:gosec
-	"encoding/hex"
 	"fmt"
 	"hash/crc32"
 	"regexp"
@@ -21,6 +19,7 @@ import (
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
@@ -999,10 +998,7 @@ func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config tool
 // validateEmailHash calculates an md5 hash value for the provided userEmail string, and compares it to the provided
 // userEmailHash.  If the values are the same the function returns true, otherwise it will return false
 func validateEmailHash(userEmail, userEmailHash string) bool {
-	md5hash := md5.New() //nolint:gosec
-	// Ignore the error, as this implementation cannot return one
-	_, _ = md5hash.Write([]byte(userEmail))
-	return hex.EncodeToString(md5hash.Sum(nil)) == userEmailHash
+	return hash.EncodeString(userEmail) == userEmailHash
 }
 
 func shouldManageSpace(userSignup *toolchainv1alpha1.UserSignup) bool {
