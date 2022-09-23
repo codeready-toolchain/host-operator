@@ -281,6 +281,12 @@ spec:
                               message template used to generate the content sent to
                               users via SMS for phone verification
                             type: string
+                          notificationSender:
+                            description: NotificationSender is used to specify which
+                              service should be used to send verification notifications.
+                              Allowed values are "twilio", "aws".  If not specified,
+                              the Twilio sender will be used.
+                            type: string
                           secret:
                             description: Defines all secrets related to the registration
                               service verification configuration
