@@ -185,7 +185,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Check if the user has been deactivated
 	if states.Deactivated(userSignup) {
-		return r.handleDeactivatedUserSignup(logger, config, request, userSignup)
+		return r.handleDeactivatedUserSignup(logger, config, userSignup)
 	}
 
 	return reconcile.Result{}, r.ensureNewMurIfApproved(logger, config, userSignup)
@@ -196,7 +196,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // If there is no MasterUserRecord created, yet the UserSignup is marked as Deactivated, set the status,
 // send a notification to the user, and return
 func (r *Reconciler) handleDeactivatedUserSignup(logger logr.Logger, config toolchainconfig.ToolchainConfig,
-	request ctrl.Request, userSignup *toolchainv1alpha1.UserSignup) (ctrl.Result, error) {
+	userSignup *toolchainv1alpha1.UserSignup) (ctrl.Result, error) {
 
 	// Only send the deactivated notification if the previous state was "approved", i.e. we will only send the
 	// deactivated notification to the user if the account is currently active and is being deactivated

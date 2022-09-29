@@ -39,13 +39,6 @@ func (p UserSignupChangedPredicate) annotationChanged(e event.UpdateEvent, annot
 	return e.ObjectOld.GetAnnotations()[annotationName] != e.ObjectNew.GetAnnotations()[annotationName]
 }
 
-func (p UserSignupChangedPredicate) annotationRemoved(e event.UpdateEvent, annotationName string) bool {
-	_, existed := e.ObjectOld.GetAnnotations()[annotationName]
-	_, exists := e.ObjectNew.GetAnnotations()[annotationName]
-	return existed && !exists
-
-}
-
 func (p UserSignupChangedPredicate) labelChanged(e event.UpdateEvent, labelName string) bool {
 	return e.ObjectOld.GetLabels()[labelName] != e.ObjectNew.GetLabels()[labelName]
 }
