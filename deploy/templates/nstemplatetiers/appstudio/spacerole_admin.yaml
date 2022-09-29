@@ -4,7 +4,7 @@ metadata:
   name: appstudio-spacerole-admin # name is used in e2e tests
 objects:
 
-# ServiceAccounts that represents the AppStudio user - the token of this SA is used by the proxy for forwarding the requests from UI (or any other client) 
+# ServiceAccounts that represents the AppStudio user - the token of this SA is used by the proxy for forwarding the requests from UI (or any other client)
 - apiVersion: v1
   kind: ServiceAccount
   metadata:

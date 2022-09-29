@@ -90,15 +90,24 @@ func newUserTierGenerator(s *runtime.Scheme, client client.Client, namespace str
 // loadTemplatesByTiers loads the assets and dispatches them by tiers, assuming the given `assets` has the following structure:
 //
 // nodeactivation/
-//   tier.yaml
+//
+//	tier.yaml
+//
 // deactivate30/
-//   tier.yaml
+//
+//	tier.yaml
+//
 // deactivate80/
-//   tier.yaml
+//
+//	tier.yaml
+//
 // deactivate90/
-//   tier.yaml
+//
+//	tier.yaml
+//
 // deactivate180/
-//   tier.yaml
+//
+//	tier.yaml
 //
 // The output is a map of `tierData` indexed by tier.
 // Each `tierData` object contains template objects for the tier.
@@ -211,10 +220,12 @@ func (t *tierGenerator) createUserTiers() error {
 // After processing the Openshift Template the UserTier should look something like:
 // ------
 // kind: UserTier
-//   metadata:
-//     name: base
-//   spec:
-//     deactivationTimeoutDays: 30
+//
+//	metadata:
+//	  name: base
+//	spec:
+//	  deactivationTimeoutDays: 30
+//
 // ------
 func (t *tierGenerator) newUserTier(sourceTierName, tierName string, userTierTemplate template, parameters []templatev1.Parameter) ([]client.Object, error) {
 	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer()
