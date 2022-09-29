@@ -32,7 +32,6 @@ func (p UserSignupChangedPredicate) Update(e event.UpdateEvent) bool {
 	}
 	return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration() ||
 		p.annotationChanged(e, toolchainv1alpha1.UserSignupUserEmailAnnotationKey) ||
-		p.annotationRemoved(e, migrationInProgressAnnotationName) ||
 		p.labelChanged(e, toolchainv1alpha1.UserSignupUserEmailHashLabelKey)
 }
 
