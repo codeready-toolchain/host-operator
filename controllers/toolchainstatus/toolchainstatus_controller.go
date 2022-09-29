@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -791,7 +791,7 @@ func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger
 
 	// decode the response to JSON
 	defer func() {
-		if _, err := ioutil.ReadAll(resp.Body); err != nil {
+		if _, err := io.ReadAll(resp.Body); err != nil {
 			reqLogger.Error(err, "unable to read the response")
 		}
 		if err := resp.Body.Close(); err != nil {

@@ -254,11 +254,11 @@ func (r *Reconciler) handleDeactivatedUserSignup(logger logr.Logger, config tool
 // TODO remove this function once all basic tier users have been migrated
 // The migration process is as follows:
 //
-// 1) Check if the UserSignup has been migrated.  This is done by checking if a UserSignup with a name equal
-//    to the encoded username exists (while also checking that the currently reconciling UserSignup isn't actually it)
+//  1. Check if the UserSignup has been migrated.  This is done by checking if a UserSignup with a name equal
+//     to the encoded username exists (while also checking that the currently reconciling UserSignup isn't actually it)
 //
-// 2) If the UserSignup hasn't been migrated, then migrate it by creating a new UserSignup with the name set to
-//    the encoded username, and the "migration-replaces" annotation set to the name of this (the old) UserSignup
+//  2. If the UserSignup hasn't been migrated, then migrate it by creating a new UserSignup with the name set to
+//     the encoded username, and the "migration-replaces" annotation set to the name of this (the old) UserSignup
 //
 // 3)
 //
@@ -273,7 +273,6 @@ func (r *Reconciler) handleDeactivatedUserSignup(logger logr.Logger, config tool
 // 7) The above block of code in this function that deletes the original UserSignup if the "migration-replaces" annotation is set
 // 8) The cleanupMigration function from this file
 // 9) The TestUserSignupMigration() test in usersignup_controller_test.go
-//
 func (r *Reconciler) migrateUserIfNecessary(userSignup *toolchainv1alpha1.UserSignup, request ctrl.Request, logger logr.Logger) error {
 	encodedUsername := EncodeUserIdentifier(userSignup.Spec.Username)
 	if userSignup.Name == encodedUsername {
