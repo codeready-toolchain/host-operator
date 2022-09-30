@@ -48,7 +48,7 @@ func nsTypes(tier string) []string {
 	switch tier {
 	case "appstudio":
 		return []string{"appstudio"}
-	case "base1ns", "base1nsnoidling":
+	case "base1ns", "base1nsnoidling", "test":
 		return []string{"dev"}
 	default:
 		return []string{"dev", "stage"}
