@@ -116,8 +116,8 @@ func newNSTemplateTierGenerator(s *runtime.Scheme, client client.Client, namespa
 //
 // from: base
 // parameters:
-// - name: IDLER_TIMEOUT_SECONDS
-//   value: 43200
+//   - name: IDLER_TIMEOUT_SECONDS
+//     value: 43200
 //
 // Which defines that for creating baseextendedidling tier the base tier should be used and
 // the parameter IDLER_TIMEOUT_SECONDS should be set to 43200
@@ -131,15 +131,20 @@ type BasedOnTier struct {
 //
 // metadata.yaml
 // advanced/
-//   based_on_tier.yaml
+//
+//	based_on_tier.yaml
+//
 // basic/
-//   cluster.yaml
-//   ns_dev.yaml
-//   ns_stage.yaml
-//   spacerole_admin.yaml
-//   tier.yaml
+//
+//	cluster.yaml
+//	ns_dev.yaml
+//	ns_stage.yaml
+//	spacerole_admin.yaml
+//	tier.yaml
+//
 // team/
-//   based_on_tier.yaml
+//
+//	based_on_tier.yaml
 //
 // The output is a map of `tierData` indexed by tier.
 // Each `tierData` object contains itself a map of `template` objects indexed by the namespace type (`namespaceTemplates`);
@@ -431,21 +436,23 @@ func (t *tierGenerator) createNSTemplateTiers() error {
 // After processing the Openshift Template the NSTemplateTier should look something like:
 // ------
 // kind: NSTemplateTier
-//   metadata:
-//     name: appstudio
-//   spec:
-//     deactivationTimeoutDays: 30
-//     clusterResources:
-//       templateRef: appstudio-clusterresources-07cac69-07cac69
-//     namespaces:
-//     - templateRef: appstudio-code-cb6fbd2-cb6fbd2
-//     - templateRef: appstudio-dev-4d49fe0-4d49fe0
-//     - templateRef: appstudio-stage-4d49fe0-4d49fe0
-//     spaceRoles:
-//       admin:
-//         templateRef: appstudio-admin-ab12cd34-ab12cd34
-//       viewer:
-//         templateRef: appstudio-admin-ab12cd34-ab12cd34
+//
+//	metadata:
+//	  name: appstudio
+//	spec:
+//	  deactivationTimeoutDays: 30
+//	  clusterResources:
+//	    templateRef: appstudio-clusterresources-07cac69-07cac69
+//	  namespaces:
+//	  - templateRef: appstudio-code-cb6fbd2-cb6fbd2
+//	  - templateRef: appstudio-dev-4d49fe0-4d49fe0
+//	  - templateRef: appstudio-stage-4d49fe0-4d49fe0
+//	  spaceRoles:
+//	    admin:
+//	      templateRef: appstudio-admin-ab12cd34-ab12cd34
+//	    viewer:
+//	      templateRef: appstudio-admin-ab12cd34-ab12cd34
+//
 // ------
 func (t *tierGenerator) newNSTemplateTier(sourceTierName, tierName string, nsTemplateTier template, tierTemplates []*toolchainv1alpha1.TierTemplate, parameters []templatev1.Parameter) ([]client.Object, error) {
 	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer()
