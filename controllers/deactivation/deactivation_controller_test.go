@@ -2,8 +2,6 @@ package deactivation
 
 import (
 	"context"
-	"crypto/md5" // nolint:gosec
-	"encoding/hex"
 	"fmt"
 	"os"
 	"testing"
@@ -18,6 +16,7 @@ import (
 	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
@@ -461,12 +460,7 @@ func newObjectMeta(name, email string) metav1.ObjectMeta {
 	if name == "" {
 		name = uuid.Must(uuid.NewV4()).String()
 	}
-
-	md5hash := md5.New() // nolint:gosec
-	// Ignore the error, as this implementation cannot return one
-	_, _ = md5hash.Write([]byte(email))
-	emailHash := hex.EncodeToString(md5hash.Sum(nil))
-
+	emailHash := hash.EncodeString(email)
 	return metav1.ObjectMeta{
 		Name:      name,
 		Namespace: operatorNamespace,
