@@ -13,6 +13,7 @@ build: generate $(OUT_DIR)/operator
 
 $(OUT_DIR)/operator:
 	@echo "building host-operator in ${GO_PACKAGE_PATH}"
+	$(Q)go version
 	$(Q)CGO_ENABLED=0 GOARCH=${goarch} GOOS=linux \
 		go build ${V_FLAG} \
 		-ldflags "-X ${GO_PACKAGE_PATH}/version.Commit=${GIT_COMMIT_ID} -X ${GO_PACKAGE_PATH}/version.BuildTime=${BUILD_TIME}" \
