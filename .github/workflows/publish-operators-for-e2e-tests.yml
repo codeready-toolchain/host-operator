@@ -64,12 +64,12 @@ jobs:
         python-version: '3.x'
 
     - name: Prepare tools
-      uses: codeready-toolchain/toolchain-cicd/prepare-tools-action@master
+      uses: xcoulon/toolchain-cicd/prepare-tools-action@d426c7b
 
     # Execute composite action using values from PR event
     # Is executed only for PR events - in that case the comment field is empty
     - name: Publish current operator bundles for host & member based on PR event
-      uses: codeready-toolchain/toolchain-cicd/publish-operators-for-e2e-tests@master
+      uses: xcoulon/toolchain-cicd/publish-operators-for-e2e-tests@d426c7b
       if: ${{ github.event.comment == '' }}
       with:
         quay-token: ${{ secrets.TEST_QUAY_TOKEN }}
@@ -82,7 +82,7 @@ jobs:
     # Execute composite action using values from PR event
     # Is executed only for comment events - in that case the pull_request field is empty
     - name: Publish current operator bundles for host & member based on comment event
-      uses: codeready-toolchain/toolchain-cicd/publish-operators-for-e2e-tests@master
+      uses: xcoulon/toolchain-cicd/publish-operators-for-e2e-tests@d426c7b
       if: ${{ github.event.pull_request == '' }}
       with:
         quay-token: ${{ secrets.TEST_QUAY_TOKEN }}

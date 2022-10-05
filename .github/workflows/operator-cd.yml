@@ -39,10 +39,10 @@ jobs:
         python-version: '3.x'
 
     - name: Prepare tools
-      uses: codeready-toolchain/toolchain-cicd/prepare-tools-action@master
+      uses: xcoulon/toolchain-cicd/prepare-tools-action@d426c7b
 
     - name: Release operator
-      uses: codeready-toolchain/toolchain-cicd/release-operator-action@master
+      uses: xcoulon/toolchain-cicd/release-operator-action@d426c7b
       with:
         quay-token: ${{ secrets.QUAY_TOKEN }}
         quay-namespace: codeready-toolchain
