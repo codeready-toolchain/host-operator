@@ -199,4 +199,3 @@ parameters:
   value: "64Gi"
 - name: MEMORY_BUILD_REQUEST
   value: "32Gi"
-

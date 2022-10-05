@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -1557,7 +1557,7 @@ func newResponseGood() *fakeHTTPClient {
 	return &fakeHTTPClient{
 		response: http.Response{
 			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(respBodyGood))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(respBodyGood))),
 		},
 	}
 }
@@ -1566,7 +1566,7 @@ func newResponseBadCode() *fakeHTTPClient {
 	return &fakeHTTPClient{
 		response: http.Response{
 			StatusCode: 500,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(""))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(""))),
 		},
 	}
 }
@@ -1575,7 +1575,7 @@ func newResponseBodyNotAlive() *fakeHTTPClient {
 	return &fakeHTTPClient{
 		response: http.Response{
 			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(respBodyBad))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(respBodyBad))),
 		},
 	}
 }
@@ -1584,7 +1584,7 @@ func newResponseInvalid() *fakeHTTPClient {
 	return &fakeHTTPClient{
 		response: http.Response{
 			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(respBodyInvalid))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(respBodyInvalid))),
 		},
 	}
 }

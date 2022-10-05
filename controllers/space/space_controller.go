@@ -403,7 +403,9 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 // Returns `true/nil` if the NSTemplateSet is being deleted (whether deletion was triggered during this call,
 // or if it was triggered earlier and is still in progress)
 // Returns `false/nil` if the NSTemplateSet doesn't exist anymore,
-//   or if there is no target cluster specified in the given space, or if the target cluster is unknown.
+//
+//	or if there is no target cluster specified in the given space, or if the target cluster is unknown.
+//
 // Returns `false/error` if an error occurred
 func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
 	targetCluster := space.Spec.TargetCluster
@@ -421,7 +423,9 @@ func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1a
 // Returns `false/nil` if the NSTemplateSet is being deleted (whether deletion was triggered during this call,
 // or if it was triggered earlier and is still in progress)
 // Returns `true/nil` if the NSTemplateSet doesn't exist anymore,
-//   or if there is no target cluster specified in the given space, or if the target cluster is unknown.
+//
+//	or if there is no target cluster specified in the given space, or if the target cluster is unknown.
+//
 // Returns `false/error` if an error occurred
 func (r *Reconciler) deleteNSTemplateSetFromCluster(logger logr.Logger, space *toolchainv1alpha1.Space, targetCluster string) (bool, error) {
 	memberCluster, found := r.MemberClusters[targetCluster]
