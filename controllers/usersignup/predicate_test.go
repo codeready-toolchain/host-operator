@@ -46,7 +46,6 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Namespace: test.HostOperatorNs,
 			Annotations: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
-				migrationInProgressAnnotationName:                  "true",
 			},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
@@ -64,7 +63,6 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Namespace: test.HostOperatorNs,
 			Annotations: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
-				migrationInProgressAnnotationName:                  "true",
 			},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
@@ -82,7 +80,6 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Namespace: test.HostOperatorNs,
 			Annotations: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "jane.doe@redhat.com",
-				migrationInProgressAnnotationName:                  "true",
 			},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "747a250430df0c7976bf2363ebb4014a",
@@ -100,7 +97,6 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 			Namespace: test.HostOperatorNs,
 			Annotations: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "alice.mayweather.doe@redhat.com",
-				migrationInProgressAnnotationName:                  "true",
 			},
 			Labels: map[string]string{
 				toolchainv1alpha1.UserSignupUserEmailHashLabelKey: "fd2addbd8d82f0d2dc088fa122377eaa",
