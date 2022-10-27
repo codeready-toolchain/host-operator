@@ -32,19 +32,11 @@ func (p UserSignupChangedPredicate) Update(e event.UpdateEvent) bool {
 	}
 	return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration() ||
 		p.annotationChanged(e, toolchainv1alpha1.UserSignupUserEmailAnnotationKey) ||
-		p.annotationRemoved(e, migrationInProgressAnnotationName) ||
 		p.labelChanged(e, toolchainv1alpha1.UserSignupUserEmailHashLabelKey)
 }
 
 func (p UserSignupChangedPredicate) annotationChanged(e event.UpdateEvent, annotationName string) bool {
 	return e.ObjectOld.GetAnnotations()[annotationName] != e.ObjectNew.GetAnnotations()[annotationName]
-}
-
-func (p UserSignupChangedPredicate) annotationRemoved(e event.UpdateEvent, annotationName string) bool {
-	_, existed := e.ObjectOld.GetAnnotations()[annotationName]
-	_, exists := e.ObjectNew.GetAnnotations()[annotationName]
-	return existed && !exists
-
 }
 
 func (p UserSignupChangedPredicate) labelChanged(e event.UpdateEvent, labelName string) bool {
