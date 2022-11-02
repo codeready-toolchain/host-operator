@@ -1,0 +1,5 @@
+from: base1ns
+parameters:
+- name: IDLER_TIMEOUT_SECONDS
+  # 6 days
+  value: "518400"
