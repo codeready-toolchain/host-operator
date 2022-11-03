@@ -2,16 +2,17 @@ module github.com/codeready-toolchain/host-operator
 
 require (
 	github.com/codeready-toolchain/api v0.0.0-20221102132326-7a7f4eb137db
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20221005123624-3d62803fccbe
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20221102133138-cb707e6790f7
 	github.com/davecgh/go-spew v1.1.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v1.2.0
 	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/mailgun/mailgun-go/v4 v4.8.1
-	github.com/openshift/api v0.0.0-20220912162045-8cfbc78b21bd
-	// using latest commit from 'github.com/openshift/library-go branch release-4.10'
-	github.com/openshift/library-go v0.0.0-20220630204433-c71d40c7de49 // indirect
+	// using latest commit from 'github.com/openshift/api branch release-4.11'
+	github.com/openshift/api v0.0.0-20220912161038-458ad9ca9ca5
+	// using latest commit from 'github.com/openshift/library-go branch release-4.11'
+	github.com/openshift/library-go v0.0.0-20221018134251-bdb4fc834221 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.1
 	github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf
@@ -86,7 +87,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
-	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
+	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5 // indirect
 	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
