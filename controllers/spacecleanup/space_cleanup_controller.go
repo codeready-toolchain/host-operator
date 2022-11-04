@@ -5,6 +5,7 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
 	"github.com/go-logr/logr"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -97,6 +98,8 @@ func (r *Reconciler) ensureDeletionIfNeeded(logger logr.Logger, space *toolchain
 		if err := r.Client.Delete(context.TODO(), space); err != nil {
 			return false, 0, errs.Wrap(err, "unable to delete Space")
 		}
+
+		counter.DecrementSpaceCount(logger, space.ClusterName)
 		logger.Info("Space has been deleted")
 		return false, 0, nil
 	}

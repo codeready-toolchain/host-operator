@@ -842,6 +842,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 		return nil, false, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
 			"error creating Space")
 	}
+	counter.IncrementSpaceCount(logger, tCluster.getClusterName())
 
 	logger.Info("Created Space", "Name", space.Name, "TargetCluster", tCluster, "Tier", mur.Spec.TierName)
 	return space, true, nil

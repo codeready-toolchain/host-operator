@@ -21,6 +21,7 @@ var log = logf.Log.WithName("counter_cache")
 
 var cachedCounts = cache{
 	Counts: Counts{
+		SpacesPerClusterCounts:                  map[string]int{},
 		UserAccountsPerClusterCounts:            map[string]int{},
 		UserSignupsPerActivationAndDomainCounts: map[string]int{},
 		MasterUserRecordPerDomainCounts:         map[string]int{},
@@ -33,6 +34,8 @@ type Counts struct {
 	MasterUserRecordPerDomainCounts map[string]int
 	// UserAccountsPerClusterCounts the number of UserAccounts by cluster name
 	UserAccountsPerClusterCounts map[string]int
+	// SpacesPerClusterCounts the number of UserAccounts by cluster name
+	SpacesPerClusterCounts map[string]int
 	// UsersPerActivationCounts the number of users indexed by their number of activations and their email address domain. Eg: "1,internal","1,external",etc.
 	UserSignupsPerActivationAndDomainCounts map[string]int
 }
@@ -58,11 +61,13 @@ func Reset() {
 
 func reset() {
 	cachedCounts.Counts = Counts{
+		SpacesPerClusterCounts:                  map[string]int{},
 		UserAccountsPerClusterCounts:            map[string]int{},
 		UserSignupsPerActivationAndDomainCounts: map[string]int{},
 		MasterUserRecordPerDomainCounts:         map[string]int{},
 	}
 	cachedCounts.initialized = false
+	metrics.SpaceGaugeVec.Reset()
 	metrics.UserAccountGaugeVec.Reset()
 	metrics.UserSignupsPerActivationAndDomainGaugeVec.Reset()
 	metrics.MasterUserRecordGaugeVec.Reset()
@@ -113,6 +118,29 @@ func DecrementUserAccountCount(logger logr.Logger, clusterName string) {
 		} else {
 			logger.Error(fmt.Errorf("the count of UserAccounts is zero"),
 				"unable to decrement the number of UserAccounts for the given cluster", "cluster", clusterName)
+		}
+	})
+}
+
+// IncrementSpaceCount increments the number of Space's for the given member cluster in the cached counter
+func IncrementSpaceCount(logger logr.Logger, clusterName string) {
+	write(func() {
+		cachedCounts.SpacesPerClusterCounts[clusterName]++
+		logger.Info("incremented SpacesPerClusterCounts", "clusterName", clusterName, "value", cachedCounts.SpacesPerClusterCounts[clusterName])
+		metrics.SpaceGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.SpacesPerClusterCounts[clusterName]))
+	})
+}
+
+// DecrementSpaceCount decreases the number of Spaces for the given member cluster in the cached counter
+func DecrementSpaceCount(logger logr.Logger, clusterName string) {
+	write(func() {
+		if cachedCounts.SpacesPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
+			cachedCounts.SpacesPerClusterCounts[clusterName]--
+			metrics.SpaceGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.SpacesPerClusterCounts[clusterName]))
+			logger.Info("decremented Spaces count", "value", cachedCounts.SpacesPerClusterCounts[clusterName])
+		} else {
+			logger.Error(fmt.Errorf("the count of Spaces is zero"),
+				"unable to decrement the number of Spaces for the given cluster", "cluster", clusterName)
 		}
 	})
 }
