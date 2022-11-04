@@ -30,6 +30,8 @@ var expectedProdTiers = map[string]bool{
 	"advanced":           true, // tier_name: true/false (if based on the other tier)
 	"base":               false,
 	"base1ns":            false,
+	"base1nsnoidling":    true,
+	"base1ns6didler":     true,
 	"baselarge":          true,
 	"baseextendedidling": true,
 	"test":               false,
@@ -47,7 +49,7 @@ func nsTypes(tier string) []string {
 	switch tier {
 	case "appstudio":
 		return []string{"appstudio"}
-	case "base1ns":
+	case "base1ns", "base1nsnoidling", "base1ns6didler", "test":
 		return []string{"dev"}
 	default:
 		return []string{"dev", "stage"}
