@@ -1,5 +1,6 @@
 TMP_DIR?=/tmp
 IMAGE_BUILDER?=podman
+IMAGE_PLATFORM?=linux/amd64
 INDEX_IMAGE_NAME?=host-operator-index
 FIRST_RELEASE?=false
 CHANNEL=staging
@@ -26,7 +27,7 @@ push-bundle-and-index-image:
 ifneq (${BUNDLE_TAG},"")
 	$(eval BUNDLE_TAG_PARAM = -bt ${BUNDLE_TAG})
 endif
-	$(MAKE) run-cicd-script SCRIPT_PATH=scripts/cd/push-bundle-and-index-image.sh SCRIPT_PARAMS="-pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service -qn ${QUAY_NAMESPACE} -ch ${CHANNEL} -td ${TMP_DIR} -ib ${IMAGE_BUILDER} -iin ${INDEX_IMAGE_NAME} -iit ${INDEX_IMAGE_TAG} ${BUNDLE_TAG_PARAM}"
+	$(MAKE) run-cicd-script SCRIPT_PATH=scripts/cd/push-bundle-and-index-image.sh SCRIPT_PARAMS="-pr ../host-operator/ -er https://github.com/codeready-toolchain/registration-service -qn ${QUAY_NAMESPACE} -ch ${CHANNEL} -td ${TMP_DIR} -ib ${IMAGE_BUILDER} -iin ${INDEX_IMAGE_NAME} -iit ${INDEX_IMAGE_TAG} -ip ${IMAGE_PLATFORM} ${BUNDLE_TAG_PARAM}"
 
 .PHONY: generate-rbac
 generate-rbac: build controller-gen
