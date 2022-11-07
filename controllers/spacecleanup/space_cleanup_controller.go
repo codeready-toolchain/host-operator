@@ -99,7 +99,7 @@ func (r *Reconciler) ensureDeletionIfNeeded(logger logr.Logger, space *toolchain
 			return false, 0, errs.Wrap(err, "unable to delete Space")
 		}
 
-		counter.DecrementSpaceCount(logger, space.ClusterName)
+		counter.DecrementSpaceCount(logger, space.Spec.TargetCluster)
 		logger.Info("Space has been deleted")
 		return false, 0, nil
 	}
