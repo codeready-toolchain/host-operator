@@ -37,7 +37,7 @@ func TestUserCleanup(t *testing.T) {
 			commonsignup.CreatedBefore(threeYears),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			commonsignup.SignupComplete(""),
-			commonsignup.ApprovedAutomatically(threeYears),
+			commonsignup.AutomaticallyApprovedAgo(threeYears),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -54,7 +54,7 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that user cleanup doesn't delete a recently deactivated UserSignup", func(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
-			commonsignup.ApprovedAutomatically(threeYears),
+			commonsignup.AutomaticallyApprovedAgo(threeYears),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			commonsignup.DeactivatedWithLastTransitionTime(time.Duration(5*time.Minute)),
 			commonsignup.CreatedBefore(threeYears),
@@ -77,7 +77,7 @@ func TestUserCleanup(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
-			commonsignup.ApprovedAutomatically(threeYears),
+			commonsignup.AutomaticallyApprovedAgo(threeYears),
 			commonsignup.DeactivatedWithLastTransitionTime(threeYears),
 			commonsignup.CreatedBefore(threeYears),
 		)
@@ -168,7 +168,7 @@ func TestUserCleanup(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(threeYears),
-			commonsignup.ApprovedAutomatically(days(40)),
+			commonsignup.AutomaticallyApprovedAgo(days(40)),
 			commonsignup.VerificationRequired(days(10)),
 			commonsignup.WithActivations("1"),
 		)
@@ -190,7 +190,7 @@ func TestUserCleanup(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.CreatedBefore(threeYears),
-			commonsignup.ApprovedAutomatically(days(730+21)),
+			commonsignup.AutomaticallyApprovedAgo(days(730+21)),
 			commonsignup.VerificationRequired(days(730+1)),
 			commonsignup.WithActivations("2"),
 		)
@@ -214,7 +214,7 @@ func TestUserCleanup(t *testing.T) {
 			commonsignup.CreatedBefore(threeYears),
 		)
 		states.SetVerificationRequired(userSignup, false)
-		states.SetApproved(userSignup, false)
+		states.SetManuallyApproved(userSignup, false)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
 

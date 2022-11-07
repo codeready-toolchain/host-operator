@@ -373,6 +373,7 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 	}
 
 	approved, targetCluster, err := getClusterIfApproved(r.Client, userSignup, r.GetMemberClusters)
+	reqLogger.Info("ensuring MUR", "approved", approved, "target_cluster", targetCluster, "error", err)
 	// if error was returned or no available cluster found
 	if err != nil || targetCluster == notFound {
 		// set the state label to pending
@@ -380,7 +381,7 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 			return err
 		}
 		// if user was approved manually
-		if states.Approved(userSignup) {
+		if states.ManuallyApproved(userSignup) {
 			if err == nil {
 				err = fmt.Errorf("no suitable member cluster found - capacity was reached")
 			}
@@ -403,7 +404,7 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 		return r.updateStatus(reqLogger, userSignup, r.set(statusPendingApproval, statusIncompletePendingApproval))
 	}
 
-	if states.Approved(userSignup) {
+	if states.ManuallyApproved(userSignup) {
 		if err := r.updateStatus(reqLogger, userSignup, r.set(statusApprovedByAdmin)); err != nil {
 			return err
 		}
