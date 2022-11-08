@@ -7,6 +7,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
+	"github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,7 @@ func TestNewSpaceBinding(t *testing.T) {
 	mur := newMasterUserRecord(userSignup, test.MemberClusterName, "deactivate90", "johny")
 
 	// when
-	actualSpaceBinding := newSpaceBinding(mur, space, userSignup.Name)
+	actualSpaceBinding := spacebinding.NewSpaceBinding(mur, space, userSignup.Name)
 
 	// then
 	assert.Equal(t, "johny", actualSpaceBinding.Spec.MasterUserRecord)
