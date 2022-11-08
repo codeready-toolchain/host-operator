@@ -84,6 +84,92 @@ func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): -1})
 }
 
+// spaces tests ----------
+
+func TestAddSpaceToCounter(t *testing.T) {
+	// given
+	InitializeCounters(t, NewToolchainStatus(
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,internal": 1,
+		}),
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			string(metrics.Internal): 1,
+		}),
+	))
+	defer counter.Reset()
+
+	// when
+	counter.IncrementSpaceCount(logger, "member-1")
+
+	// then
+	AssertThatCountersAndMetrics(t).
+		HaveSpacesForCluster("member-1", 1).
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			string(metrics.Internal): 1,
+		})
+}
+
+func TestRemoveSpaceFromCounter(t *testing.T) {
+	// given
+	InitializeCounters(t,
+		NewToolchainStatus(
+			WithMember("member-1", WithSpaceCount(2)),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,internal": 1,
+			}),
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1,
+			}),
+		))
+	defer counter.Reset()
+
+	// when
+	counter.DecrementSpaceCount(logger, "member-1")
+
+	// then
+	AssertThatCountersAndMetrics(t).
+		HaveSpacesForCluster("member-1", 1)
+}
+
+func TestRemoveSpaceFromCounterWhenIsAlreadyZero(t *testing.T) {
+	// given
+	InitializeCounters(t,
+		NewToolchainStatus(
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,internal": 1,
+				"1,external": 1,
+			}),
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1,
+				string(metrics.External): 1,
+			}),
+			WithMember("member-1", WithSpaceCount(0)),
+			WithMember("member-2", WithSpaceCount(2))))
+	defer counter.Reset()
+
+	// when
+	counter.DecrementSpaceCount(logger, "member-1")
+
+	// then
+	AssertThatCountersAndMetrics(t).
+		HaveSpacesForCluster("member-1", 0).
+		HaveSpacesForCluster("member-2", 2)
+}
+
+func TestRemoveSpaceFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
+	// given
+	defer counter.Reset()
+
+	// when
+	counter.DecrementSpaceCount(logger, "member-1")
+
+	// then
+	AssertThatUninitializedCounters(t).
+		HaveSpacesForCluster("member-1", -1)
+}
+
+// end spaces tests ------
+
 func TestAddUserAccountToCounter(t *testing.T) {
 	// given
 	InitializeCounters(t, NewToolchainStatus(

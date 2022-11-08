@@ -42,6 +42,12 @@ func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
 	}
 }
 
+func (a *CounterAssertion) HaveSpacesForCluster(clusterName string, number int) *CounterAssertion {
+	assert.Equal(a.t, number, a.counts.SpacesPerClusterCounts[clusterName])
+	AssertMetricsGaugeEquals(a.t, number, metrics.SpaceGaugeVec.WithLabelValues(clusterName))
+	return a
+}
+
 func (a *CounterAssertion) HaveUserAccountsForCluster(clusterName string, number int) *CounterAssertion {
 	assert.Equal(a.t, number, a.counts.UserAccountsPerClusterCounts[clusterName])
 	AssertMetricsGaugeEquals(a.t, number, metrics.UserAccountGaugeVec.WithLabelValues(clusterName))
