@@ -220,7 +220,7 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 		metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName).Set(float64(count))
 	}
 
-	// update the toolchainStatus.Status.Metrics and Pronetheus metrics
+	// update the toolchainStatus.Status.Metrics and Prometheus metrics
 	// from the cachedCounts
 	toolchainStatus.Status.Metrics = map[string]toolchainv1alpha1.Metric{} // reset, so any outdated/deprecated entry is automatically removed
 	// `userSignupsPerActivationAndDomain` metric
@@ -233,6 +233,11 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 	toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey] = toolchainv1alpha1.Metric(cachedCounts.MasterUserRecordPerDomainCounts)
 	for domain, count := range cachedCounts.MasterUserRecordPerDomainCounts {
 		metrics.MasterUserRecordGaugeVec.WithLabelValues(domain).Set(float64(count))
+	}
+	// `spaceCountPerCluster` metric
+	toolchainStatus.Status.Metrics[toolchainv1alpha1.SpacesPerClusterMetricKey] = toolchainv1alpha1.Metric(cachedCounts.SpacesPerClusterCounts)
+	for cluster, count := range cachedCounts.SpacesPerClusterCounts {
+		metrics.MasterUserRecordGaugeVec.WithLabelValues(cluster).Set(float64(count))
 	}
 	log.Info("synchronized counters", "counts", cachedCounts.Counts)
 	return nil
@@ -261,9 +266,11 @@ func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainSt
 	}
 	_, masterUserRecordsPerDomainMetricExists := toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey]
 	_, usersPerActivationAndDomainMetricKeyExists := toolchainStatus.Status.Metrics[toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey]
+	_, spacesPerClusterMetricKeyExists := toolchainStatus.Status.Metrics[toolchainv1alpha1.SpacesPerClusterMetricKey]
 	if config.Metrics().ForceSynchronization() ||
 		!usersPerActivationAndDomainMetricKeyExists ||
-		!masterUserRecordsPerDomainMetricExists {
+		!masterUserRecordsPerDomainMetricExists ||
+		!spacesPerClusterMetricKeyExists {
 		return initializeFromResources(cl, toolchainStatus.Namespace)
 	}
 	// otherwise, initialize the cached counters from the ToolchainStatus resource.
@@ -280,6 +287,10 @@ func initializeFromResources(cl client.Client, namespace string) error {
 	}
 	murs := &toolchainv1alpha1.MasterUserRecordList{}
 	if err := cl.List(context.TODO(), murs, client.InNamespace(namespace)); err != nil {
+		return err
+	}
+	spaces := &toolchainv1alpha1.SpaceList{}
+	if err := cl.List(context.TODO(), spaces, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 	reset()
@@ -302,11 +313,15 @@ func initializeFromResources(cl client.Client, namespace string) error {
 			cachedCounts.UserAccountsPerClusterCounts[ua.TargetCluster]++
 		}
 	}
+	for _, space := range spaces.Items {
+		cachedCounts.SpacesPerClusterCounts[space.Spec.TargetCluster]++
+	}
 	cachedCounts.initialized = true
 	log.Info("cached counts initialized from UserSignups and MasterUserRecords",
 		"MasterUserRecordPerDomainCounts", cachedCounts.MasterUserRecordPerDomainCounts,
 		"UserAccountsPerClusterCounts", cachedCounts.UserAccountsPerClusterCounts,
 		"UserSignupsPerActivationAndDomainCounts", cachedCounts.UserSignupsPerActivationAndDomainCounts,
+		"SpacesPerClusterCounts", cachedCounts.SpacesPerClusterCounts,
 	)
 	return nil
 }
@@ -320,7 +335,10 @@ func initializeFromToolchainStatus(toolchainStatus *toolchainv1alpha1.ToolchainS
 	if toolchainStatus.Status.HostOperator == nil {
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
 	}
-
+	// SpacesPerClusterCounts
+	for _, memberStatus := range toolchainStatus.Status.Members {
+		cachedCounts.SpacesPerClusterCounts[memberStatus.ClusterName] += memberStatus.SpaceCount
+	}
 	// UserAccountsPerClusterCounts
 	for _, memberStatus := range toolchainStatus.Status.Members {
 		cachedCounts.UserAccountsPerClusterCounts[memberStatus.ClusterName] += memberStatus.UserAccountCount

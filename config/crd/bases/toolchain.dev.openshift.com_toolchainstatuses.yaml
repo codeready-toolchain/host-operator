@@ -490,6 +490,9 @@ spec:
                               type: string
                           type: object
                       type: object
+                    spaceCount:
+                      description: Number of Spaces created within the member cluster
+                      type: integer
                     userAccountCount:
                       description: Number of UserAccounts created within the member
                         cluster
