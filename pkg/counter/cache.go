@@ -204,7 +204,7 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
 	}
 
-	// update the toolchainStatus.Status.Members and metrics.UserAccountGaugeVec
+	// update the toolchainStatus.Status.Members and metrics.UserAccountGaugeVec, metrics.SpaceGaugeVec
 	// from the cachedCounts.UserAccountsPerClusterCounts
 	for _, member := range toolchainStatus.Status.Members {
 		count := cachedCounts.UserAccountsPerClusterCounts[member.ClusterName]
@@ -218,6 +218,10 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 		toolchainStatus.Status.Members[index].UserAccountCount = count
 		log.Info("synchronized user_accounts_current gauge", "member_cluster", member.ClusterName, "count", count)
 		metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName).Set(float64(count))
+
+		toolchainStatus.Status.Members[index].SpaceCount = count
+		log.Info("synchronized spaces_current gauge", "member_cluster", member.ClusterName, "count", count)
+		metrics.SpaceGaugeVec.WithLabelValues(member.ClusterName).Set(float64(count))
 	}
 
 	// update the toolchainStatus.Status.Metrics and Prometheus metrics
@@ -233,10 +237,6 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 	toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey] = toolchainv1alpha1.Metric(cachedCounts.MasterUserRecordPerDomainCounts)
 	for domain, count := range cachedCounts.MasterUserRecordPerDomainCounts {
 		metrics.MasterUserRecordGaugeVec.WithLabelValues(domain).Set(float64(count))
-	}
-	// `spaceCountPerCluster` metric
-	for cluster, count := range cachedCounts.SpacesPerClusterCounts {
-		metrics.SpaceGaugeVec.WithLabelValues(cluster).Set(float64(count))
 	}
 	log.Info("synchronized counters", "counts", cachedCounts.Counts)
 	return nil
