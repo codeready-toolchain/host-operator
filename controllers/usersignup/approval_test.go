@@ -111,7 +111,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
-		signup := commonsignup.NewUserSignup(commonsignup.ManuallyApproved())
+		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -129,7 +129,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
-		signup := commonsignup.NewUserSignup(commonsignup.ManuallyApproved())
+		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -149,7 +149,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
-		signup := commonsignup.NewUserSignup(commonsignup.ManuallyApproved())
+		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -167,7 +167,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
-		signup := commonsignup.NewUserSignup(commonsignup.ManuallyApproved(), commonsignup.WithTargetCluster("member1"))
+		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)

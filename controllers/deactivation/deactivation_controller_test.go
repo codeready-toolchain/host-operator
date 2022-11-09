@@ -482,7 +482,7 @@ func userSignupWithEmail(username, email string) *toolchainv1alpha1.UserSignup {
 			Userid:        username,
 		},
 	}
-	states.SetAutomaticallyApproved(us, true)
+	states.SetApprovedManually(us, true)
 
 	return us
 }
