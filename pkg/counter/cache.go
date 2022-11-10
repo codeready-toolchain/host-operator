@@ -207,7 +207,7 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 	// update the toolchainStatus.Status.Members and metrics.UserAccountGaugeVec, metrics.SpaceGaugeVec
 	// from the cachedCounts.UserAccountsPerClusterCounts
 	for _, member := range toolchainStatus.Status.Members {
-		count := cachedCounts.UserAccountsPerClusterCounts[member.ClusterName]
+		userCount := cachedCounts.UserAccountsPerClusterCounts[member.ClusterName]
 		index := indexOfMember(toolchainStatus.Status.Members, member.ClusterName)
 		if index == -1 {
 			toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
@@ -215,13 +215,14 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 			})
 			index = len(toolchainStatus.Status.Members) - 1
 		}
-		toolchainStatus.Status.Members[index].UserAccountCount = count
-		log.Info("synchronized user_accounts_current gauge", "member_cluster", member.ClusterName, "count", count)
-		metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName).Set(float64(count))
+		toolchainStatus.Status.Members[index].UserAccountCount = userCount
+		log.Info("synchronized user_accounts_current gauge", "member_cluster", member.ClusterName, "count", userCount)
+		metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName).Set(float64(userCount))
 
-		toolchainStatus.Status.Members[index].SpaceCount = count
-		log.Info("synchronized spaces_current gauge", "member_cluster", member.ClusterName, "count", count)
-		metrics.SpaceGaugeVec.WithLabelValues(member.ClusterName).Set(float64(count))
+		spaceCount := cachedCounts.SpacesPerClusterCounts[member.ClusterName]
+		toolchainStatus.Status.Members[index].SpaceCount = spaceCount
+		log.Info("synchronized spaces_current gauge", "member_cluster", member.ClusterName, "count", spaceCount)
+		metrics.SpaceGaugeVec.WithLabelValues(member.ClusterName).Set(float64(spaceCount))
 	}
 
 	// update the toolchainStatus.Status.Metrics and Prometheus metrics
