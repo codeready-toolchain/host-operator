@@ -396,6 +396,8 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 		logger.Error(err, "failed to remove finalizer")
 		return r.setStatusTerminatingFailed(logger, space, err)
 	}
+
+	counter.DecrementSpaceCount(logger, space.Spec.TargetCluster)
 	logger.Info("removed finalizer")
 	// no need to update the status of the Space once the finalizer has been removed, since
 	// the resource will be deleted
