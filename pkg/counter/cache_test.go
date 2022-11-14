@@ -557,9 +557,9 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 	var waitForFinished sync.WaitGroup
 
 	for i := 0; i < 1002; i++ {
-		waitForFinished.Add(6) // 4 routines to increment counters
+		waitForFinished.Add(6) // 6 routines to increment counters
 		if i < 1000 {
-			waitForFinished.Add(6) // 4 routines to decrement counters until 1000th iteration
+			waitForFinished.Add(6) // 6 routines to decrement counters until 1000th iteration
 		}
 		go func(index int) {
 			defer waitForFinished.Done()
