@@ -157,7 +157,7 @@ func (d DeactivationConfig) DeactivationDomainsExcluded() []string {
 }
 
 func (d DeactivationConfig) UserSignupDeactivatedRetentionDays() int {
-	return commonconfig.GetInt(d.dctv.UserSignupDeactivatedRetentionDays, 730)
+	return commonconfig.GetInt(d.dctv.UserSignupDeactivatedRetentionDays, 1460)
 }
 
 func (d DeactivationConfig) UserSignupUnverifiedRetentionDays() int {
