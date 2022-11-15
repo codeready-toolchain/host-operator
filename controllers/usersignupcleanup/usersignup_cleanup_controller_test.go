@@ -28,7 +28,7 @@ import (
 )
 
 func TestUserCleanup(t *testing.T) {
-	// A creation time three years in the past
+	// A creation time five years in the past
 	fiveYears := time.Duration(time.Hour * 24 * 365 * 5)
 
 	t.Run("test that user cleanup doesn't delete an active UserSignup", func(t *testing.T) {
