@@ -28,16 +28,16 @@ import (
 )
 
 func TestUserCleanup(t *testing.T) {
-	// A creation time three years in the past
-	threeYears := time.Duration(time.Hour * 24 * 365 * 3)
+	// A creation time five years in the past
+	fiveYears := time.Duration(time.Hour * 24 * 365 * 5)
 
 	t.Run("test that user cleanup doesn't delete an active UserSignup", func(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
-			commonsignup.CreatedBefore(threeYears),
+			commonsignup.CreatedBefore(fiveYears),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			commonsignup.SignupComplete(""),
-			commonsignup.ApprovedAutomatically(threeYears),
+			commonsignup.ApprovedAutomatically(fiveYears),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -54,10 +54,10 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that user cleanup doesn't delete a recently deactivated UserSignup", func(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
-			commonsignup.ApprovedAutomatically(threeYears),
+			commonsignup.ApprovedAutomatically(fiveYears),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
 			commonsignup.DeactivatedWithLastTransitionTime(time.Duration(5*time.Minute)),
-			commonsignup.CreatedBefore(threeYears),
+			commonsignup.CreatedBefore(fiveYears),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -77,9 +77,9 @@ func TestUserCleanup(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueApproved),
-			commonsignup.ApprovedAutomatically(threeYears),
-			commonsignup.DeactivatedWithLastTransitionTime(threeYears),
-			commonsignup.CreatedBefore(threeYears),
+			commonsignup.ApprovedAutomatically(fiveYears),
+			commonsignup.DeactivatedWithLastTransitionTime(fiveYears),
+			commonsignup.CreatedBefore(fiveYears),
 		)
 
 		r, req, _ := prepareReconcile(t, userSignup.Name, userSignup)
@@ -167,7 +167,7 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that recently reactivated, unverified UserSignup is NOT deleted", func(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
-			commonsignup.CreatedBefore(threeYears),
+			commonsignup.CreatedBefore(fiveYears),
 			commonsignup.ApprovedAutomatically(days(40)),
 			commonsignup.VerificationRequired(days(10)),
 			commonsignup.WithActivations("1"),
@@ -189,7 +189,7 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that reactivated, unverified UserSignup long time ago is reset", func(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
-			commonsignup.CreatedBefore(threeYears),
+			commonsignup.CreatedBefore(fiveYears),
 			commonsignup.ApprovedAutomatically(days(730+21)),
 			commonsignup.VerificationRequired(days(730+1)),
 			commonsignup.WithActivations("2"),
@@ -211,7 +211,7 @@ func TestUserCleanup(t *testing.T) {
 	t.Run("test that an old, verified but unapproved UserSignup is not deleted", func(t *testing.T) {
 
 		userSignup := commonsignup.NewUserSignup(
-			commonsignup.CreatedBefore(threeYears),
+			commonsignup.CreatedBefore(fiveYears),
 		)
 		states.SetVerificationRequired(userSignup, false)
 		states.SetApproved(userSignup, false)
@@ -231,7 +231,7 @@ func TestUserCleanup(t *testing.T) {
 
 	t.Run("test propagation policy", func(t *testing.T) {
 		userSignup := commonsignup.NewUserSignup(
-			commonsignup.CreatedBefore(threeYears),
+			commonsignup.CreatedBefore(fiveYears),
 			commonsignup.VerificationRequired(days(8)),
 		)
 
@@ -255,10 +255,10 @@ func TestUserCleanup(t *testing.T) {
 }
 
 func expectRequeue(t *testing.T, res reconcile.Result, margin int) {
-	// We expect the requeue duration to be approximately equal to the default retention time of 730 days. Let's
+	// We expect the requeue duration to be approximately equal to the default retention time of 1460 days. Let's
 	// accept any value here between the range of 364 days and 366 days
-	durLower := time.Duration(days(730 - 1 - margin))
-	durUpper := time.Duration(days(730 + 1 - margin))
+	durLower := time.Duration(days(1460 - 1 - margin))
+	durUpper := time.Duration(days(1460 + 1 - margin))
 
 	require.True(t, res.Requeue)
 	require.Greater(t, res.RequeueAfter, durLower)
