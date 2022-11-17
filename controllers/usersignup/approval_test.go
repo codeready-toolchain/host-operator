@@ -3,7 +3,6 @@ package usersignup
 import (
 	"context"
 	"fmt"
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -12,10 +11,11 @@ import (
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,7 +47,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -80,7 +80,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// given
 		fakeClient := NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t))
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -95,7 +95,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// given
 		fakeClient := NewFakeClient(t, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -106,12 +106,12 @@ func TestGetClusterIfApproved(t *testing.T) {
 		assert.Equal(t, unknown, clusterName)
 	})
 
-	t.Run("ToolchainConfig not found and user approved without target cluster", func(t *testing.T) {
+	t.Run("ToolchainConfig not found and user manually approved without target cluster", func(t *testing.T) {
 		// given
 		fakeClient := NewFakeClient(t, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-		signup := commonsignup.NewUserSignup(commonsignup.Approved())
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -122,14 +122,14 @@ func TestGetClusterIfApproved(t *testing.T) {
 		assert.Equal(t, "member1", clusterName.getClusterName())
 	})
 
-	t.Run("automatic approval not enabled, user approved but no cluster has capacity", func(t *testing.T) {
+	t.Run("automatic approval not enabled, user manually approved but no cluster has capacity", func(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().ResourceCapacityThreshold(50))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-		signup := commonsignup.NewUserSignup(commonsignup.Approved())
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -140,7 +140,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		assert.Equal(t, notFound, clusterName)
 	})
 
-	t.Run("automatic approval not enabled, user approved and second cluster has capacity", func(t *testing.T) {
+	t.Run("automatic approval not enabled, user manually approved and second cluster has capacity", func(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
@@ -148,8 +148,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 				ResourceCapacityThreshold(62))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-		signup := commonsignup.NewUserSignup(commonsignup.Approved())
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -160,14 +160,14 @@ func TestGetClusterIfApproved(t *testing.T) {
 		assert.Equal(t, "member2", clusterName.getClusterName())
 	})
 
-	t.Run("automatic approval not enabled, user approved, no cluster has capacity but targetCluster is specified", func(t *testing.T) {
+	t.Run("automatic approval not enabled, user manually approved, no cluster has capacity but targetCluster is specified", func(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().MaxNumberOfUsers(1000))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
-		signup := commonsignup.NewUserSignup(commonsignup.Approved(), commonsignup.WithTargetCluster("member1"))
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -187,7 +187,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				return fmt.Errorf("some error")
 			}
 			InitializeCounters(t, toolchainStatus)
-			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue))
 
 			// when
 			approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
@@ -208,7 +208,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				return fakeClient.Client.Get(ctx, key, obj)
 			}
 			InitializeCounters(t, toolchainStatus)
-			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue))
 
 			// when
 			approved, clusterName, err := getClusterIfApproved(fakeClient, signup, clusters)
