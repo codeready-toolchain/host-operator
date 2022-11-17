@@ -35,7 +35,7 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 		return false, unknown, errors.Wrapf(err, "unable to get ToolchainConfig")
 	}
 
-	if !states.Approved(userSignup) && !config.AutomaticApproval().IsEnabled() {
+	if !states.ApprovedManually(userSignup) && !config.AutomaticApproval().IsEnabled() {
 		return false, unknown, nil
 	}
 
@@ -53,7 +53,7 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 		return false, unknown, errors.Wrapf(err, "unable to get the optimal target cluster")
 	}
 	if clusterName == "" {
-		return states.Approved(userSignup), notFound, nil
+		return states.ApprovedManually(userSignup), notFound, nil
 	}
 	return true, targetCluster(clusterName), nil
 }
