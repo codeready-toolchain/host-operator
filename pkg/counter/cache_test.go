@@ -9,6 +9,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
+	"github.com/codeready-toolchain/host-operator/test/space"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
@@ -83,6 +84,92 @@ func TestRemoveMurFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
 	AssertThatUninitializedCounters(t).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): -1})
 }
+
+// spaces tests ----------
+
+func TestAddSpaceToCounter(t *testing.T) {
+	// given
+	InitializeCounters(t, NewToolchainStatus(
+		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+			"1,internal": 1,
+		}),
+		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+			string(metrics.Internal): 1,
+		}),
+	))
+	defer counter.Reset()
+
+	// when
+	counter.IncrementSpaceCount(logger, "member-1")
+
+	// then
+	AssertThatCountersAndMetrics(t).
+		HaveSpacesForCluster("member-1", 1).
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+			string(metrics.Internal): 1,
+		})
+}
+
+func TestRemoveSpaceFromCounter(t *testing.T) {
+	// given
+	InitializeCounters(t,
+		NewToolchainStatus(
+			WithMember("member-1", WithSpaceCount(2)),
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,internal": 1,
+			}),
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1,
+			}),
+		))
+	defer counter.Reset()
+
+	// when
+	counter.DecrementSpaceCount(logger, "member-1")
+
+	// then
+	AssertThatCountersAndMetrics(t).
+		HaveSpacesForCluster("member-1", 1)
+}
+
+func TestRemoveSpaceFromCounterWhenIsAlreadyZero(t *testing.T) {
+	// given
+	InitializeCounters(t,
+		NewToolchainStatus(
+			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+				"1,internal": 1,
+				"1,external": 1,
+			}),
+			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+				string(metrics.Internal): 1,
+				string(metrics.External): 1,
+			}),
+			WithMember("member-1", WithSpaceCount(0)),
+			WithMember("member-2", WithSpaceCount(2))))
+	defer counter.Reset()
+
+	// when
+	counter.DecrementSpaceCount(logger, "member-1")
+
+	// then
+	AssertThatCountersAndMetrics(t).
+		HaveSpacesForCluster("member-1", 0).
+		HaveSpacesForCluster("member-2", 2)
+}
+
+func TestRemoveSpaceFromCounterWhenIsAlreadyZeroAndNotInitialized(t *testing.T) {
+	// given
+	defer counter.Reset()
+
+	// when
+	counter.DecrementSpaceCount(logger, "member-1")
+
+	// then
+	AssertThatUninitializedCounters(t).
+		HaveSpacesForCluster("member-1", -1)
+}
+
+// end spaces tests ------
 
 func TestAddUserAccountToCounter(t *testing.T) {
 	// given
@@ -198,8 +285,8 @@ func TestUpdateUsersPerActivationMetric(t *testing.T) {
 func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	// given
 	toolchainStatus := NewToolchainStatus(
-		WithMember("member-1", WithUserAccountCount(10)),
-		WithMember("member-2", WithUserAccountCount(3)),
+		WithMember("member-1", WithUserAccountCount(10), WithSpaceCount(10)),
+		WithMember("member-2", WithUserAccountCount(3), WithSpaceCount(3)),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 7,
 			"1,external": 2,
@@ -219,6 +306,8 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	AssertThatCountersAndMetrics(t).
 		HaveUserAccountsForCluster("member-1", 10).
 		HaveUserAccountsForCluster("member-2", 3).
+		HaveSpacesForCluster("member-1", 10).
+		HaveSpacesForCluster("member-2", 3).
 		HaveUsersPerActivationsAndDomain(map[string]int{
 			"1,internal": 7,
 			"1,external": 2,
@@ -232,6 +321,8 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasUserAccountCount("member-1", 10).
 		HasUserAccountCount("member-2", 3).
+		HasSpaceCount("member-1", 10).
+		HasSpaceCount("member-2", 3).
 		HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 7,
 			"1,external": 2,
@@ -247,12 +338,13 @@ func TestInitializeCounterFromToolchainCluster(t *testing.T) {
 func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 	// given
 	counter.DecrementUserAccountCount(logger, "member-1")
+	counter.DecrementSpaceCount(logger, "member-1")
 	counter.DecrementMasterUserRecordCount(logger, metrics.Internal)
 	counter.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal) // a user signup once
 	counter.UpdateUsersPerActivationCounters(logger, 2, metrics.Internal) // a user signup twice (hence counter for "1" will be decreased)
 	toolchainStatus := NewToolchainStatus(
-		WithMember("member-1", WithUserAccountCount(10)),
-		WithMember("member-2", WithUserAccountCount(3)),
+		WithMember("member-1", WithUserAccountCount(10), WithSpaceCount(10)),
+		WithMember("member-2", WithUserAccountCount(3), WithSpaceCount(3)),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 10,
 			"1,external": 3,
@@ -269,6 +361,8 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 	AssertThatCountersAndMetrics(t).
 		HaveUserAccountsForCluster("member-1", 9).
 		HaveUserAccountsForCluster("member-2", 3).
+		HaveSpacesForCluster("member-1", 9).
+		HaveSpacesForCluster("member-2", 3).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 10,
 			"1,external": 3,
@@ -281,6 +375,8 @@ func TestInitializeCounterFromToolchainClusterWithoutReset(t *testing.T) {
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasUserAccountCount("member-1", 9).
 		HasUserAccountCount("member-2", 3).
+		HasSpaceCount("member-1", 9).
+		HasSpaceCount("member-2", 3).
 		HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 10,
 			"1,external": 3,
@@ -298,11 +394,13 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	//this will be ignored by resetting when initializing counters
 	counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 	counter.IncrementUserAccountCount(logger, "member-1")
+	counter.IncrementSpaceCount(logger, "member-1")
 
 	usersignups := CreateMultipleUserSignups("user-", 3) // all users have an `@redhat.com` email address
 	murs := CreateMultipleMurs(t, "user-", 3, "member-1")
+	spaces := CreateMultipleSpaces("user-", 3, "member-1")
 	toolchainStatus := NewToolchainStatus(
-		WithMember("member-1", WithUserAccountCount(0)),
+		WithMember("member-1", WithUserAccountCount(0), WithSpaceCount(0)),
 		WithMetric("outdated", toolchainv1alpha1.Metric{
 			"cookie":    1,
 			"chocolate": 2,
@@ -310,6 +408,7 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	)
 	initObjs := append([]runtime.Object{}, murs...)
 	initObjs = append(initObjs, usersignups...)
+	initObjs = append(initObjs, spaces...)
 
 	// when
 	InitializeCounters(t, toolchainStatus, initObjs...)
@@ -317,6 +416,7 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 	// then
 	AssertThatCountersAndMetrics(t).
 		HaveUserAccountsForCluster("member-1", 3).
+		HaveSpacesForCluster("member-1", 3).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 1,
 			"2,internal": 1,
@@ -327,6 +427,7 @@ func TestInitializeCounterByLoadingExistingResources(t *testing.T) {
 		})
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasUserAccountCount("member-1", 3).
+		HasSpaceCount("member-1", 3).
 		HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 1,
 			"2,internal": 1,
@@ -347,9 +448,10 @@ func TestForceInitializeCounterByLoadingExistingResources(t *testing.T) {
 
 	usersignups := CreateMultipleUserSignups("user-", 3) // all users have an `@redhat.com` email address
 	murs := CreateMultipleMurs(t, "user-", 3, "member-1")
+	spaces := CreateMultipleSpaces("user-", 3, "member-1")
 	// all expected metrics are set ...
 	toolchainStatus := NewToolchainStatus(
-		WithMember("member-1", WithUserAccountCount(0)),
+		WithMember("member-1", WithUserAccountCount(0), WithSpaceCount(0)),
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1,
 			string(metrics.External): 1,
@@ -369,6 +471,7 @@ func TestForceInitializeCounterByLoadingExistingResources(t *testing.T) {
 	initObjs := append([]runtime.Object{}, murs...)
 	initObjs = append(initObjs, usersignups...)
 	initObjs = append(initObjs, toolchainConfig)
+	initObjs = append(initObjs, spaces...)
 
 	// when
 	InitializeCounters(t, toolchainStatus, initObjs...)
@@ -376,6 +479,7 @@ func TestForceInitializeCounterByLoadingExistingResources(t *testing.T) {
 	// then
 	AssertThatCountersAndMetrics(t).
 		HaveUserAccountsForCluster("member-1", 3).
+		HaveSpacesForCluster("member-1", 3).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 1,
 			"2,internal": 1,
@@ -386,6 +490,7 @@ func TestForceInitializeCounterByLoadingExistingResources(t *testing.T) {
 		})
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasUserAccountCount("member-1", 3).
+		HasSpaceCount("member-1", 3).
 		HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 1,
 			"2,internal": 1,
@@ -402,13 +507,19 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 	//this will be ignored by resetting when loading existing MURs
 	counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 	counter.IncrementUserAccountCount(logger, "member-1")
+	counter.IncrementSpaceCount(logger, "member-1")
 
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
+	spaces := CreateMultipleSpaces("user-", 10, "member-1")
 	toolchainStatus := NewToolchainStatus(
-		WithMember("member-1", WithUserAccountCount(0)))
-	InitializeCounters(t, toolchainStatus, murs...)
-	fakeClient := test.NewFakeClient(t, murs...)
+		WithMember("member-1", WithUserAccountCount(0), WithSpaceCount(0)))
+	initObjs := append([]runtime.Object{}, murs...)
+	initObjs = append(initObjs, spaces...)
+	InitializeCounters(t, toolchainStatus, initObjs...)
+	fakeClient := test.NewFakeClient(t, initObjs...)
 	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-1")))
+	require.NoError(t, err)
+	err = fakeClient.Create(context.TODO(), space.NewSpace("ignored", space.WithSpecTargetCluster("member-1")))
 	require.NoError(t, err)
 
 	// when
@@ -420,30 +531,35 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 10, // all MURs have `@redhat.com` email address
 		}).
-		HaveUserAccountsForCluster("member-1", 10)
+		HaveUserAccountsForCluster("member-1", 10).
+		HaveSpacesForCluster("member-1", 10)
 	AssertThatGivenToolchainStatus(t, toolchainStatus).
 		HasMasterUserRecordsPerDomain(map[string]int{
 			string(metrics.Internal): 10, // all MURs have `@redhat.com` email address
 		}).
-		HasUserAccountCount("member-1", 10)
+		HasUserAccountCount("member-1", 10).
+		HasSpaceCount("member-1", 10)
 }
 
 func TestMultipleExecutionsInParallel(t *testing.T) {
 	// given
 	murs := CreateMultipleMurs(t, "user-", 10, "member-1")
+	spaces := CreateMultipleSpaces("user-", 10, "member-1")
 	toolchainStatus := NewToolchainStatus(
-		WithMember("member-1", WithUserAccountCount(0)),
-		WithMember("member-2", WithUserAccountCount(0)))
-	InitializeCounters(t, toolchainStatus, murs...)
-	fakeClient := test.NewFakeClient(t, murs...)
+		WithMember("member-1", WithUserAccountCount(0), WithSpaceCount(0)),
+		WithMember("member-2", WithUserAccountCount(0), WithSpaceCount(0)))
+	initObjs := append([]runtime.Object{}, murs...)
+	initObjs = append(initObjs, spaces...)
+	InitializeCounters(t, toolchainStatus, initObjs...)
+	fakeClient := test.NewFakeClient(t, initObjs...)
 	var latch sync.WaitGroup
 	latch.Add(1)
 	var waitForFinished sync.WaitGroup
 
 	for i := 0; i < 1002; i++ {
-		waitForFinished.Add(4) // 4 routines to increment counters
+		waitForFinished.Add(6) // 6 routines to increment counters
 		if i < 1000 {
-			waitForFinished.Add(4) // 4 routines to decrement counters until 1000th iteration
+			waitForFinished.Add(6) // 6 routines to decrement counters until 1000th iteration
 		}
 		go func(index int) {
 			defer waitForFinished.Done()
@@ -470,11 +586,33 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		go func(index int) {
 			defer waitForFinished.Done()
 			latch.Wait()
+			counter.IncrementSpaceCount(logger, "member-2")
+			if index < 1000 {
+				go func() {
+					defer waitForFinished.Done()
+					counter.DecrementSpaceCount(logger, "member-2")
+				}()
+			}
+		}(i)
+		go func(index int) {
+			defer waitForFinished.Done()
+			latch.Wait()
 			counter.IncrementUserAccountCount(logger, "member-1")
 			if index < 1000 {
 				go func() {
 					defer waitForFinished.Done()
 					counter.DecrementUserAccountCount(logger, "member-1")
+				}()
+			}
+		}(i)
+		go func(index int) {
+			defer waitForFinished.Done()
+			latch.Wait()
+			counter.IncrementSpaceCount(logger, "member-1")
+			if index < 1000 {
+				go func() {
+					defer waitForFinished.Done()
+					counter.DecrementSpaceCount(logger, "member-1")
 				}()
 			}
 		}(i)
@@ -514,6 +652,8 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		}).
 		HaveUserAccountsForCluster("member-1", 12).
 		HaveUserAccountsForCluster("member-2", 2).
+		HaveSpacesForCluster("member-1", 12).
+		HaveSpacesForCluster("member-2", 2).
 		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 2,
 			"2,internal": 1000,
@@ -524,6 +664,8 @@ func TestMultipleExecutionsInParallel(t *testing.T) {
 		}).
 		HasUserAccountCount("member-1", 12).
 		HasUserAccountCount("member-2", 2).
+		HasSpaceCount("member-1", 12).
+		HasSpaceCount("member-2", 2).
 		HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 2,
 			"2,internal": 1000,

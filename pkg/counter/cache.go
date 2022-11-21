@@ -21,6 +21,7 @@ var log = logf.Log.WithName("counter_cache")
 
 var cachedCounts = cache{
 	Counts: Counts{
+		SpacesPerClusterCounts:                  map[string]int{},
 		UserAccountsPerClusterCounts:            map[string]int{},
 		UserSignupsPerActivationAndDomainCounts: map[string]int{},
 		MasterUserRecordPerDomainCounts:         map[string]int{},
@@ -33,6 +34,8 @@ type Counts struct {
 	MasterUserRecordPerDomainCounts map[string]int
 	// UserAccountsPerClusterCounts the number of UserAccounts by cluster name
 	UserAccountsPerClusterCounts map[string]int
+	// SpacesPerClusterCounts the number of UserAccounts by cluster name
+	SpacesPerClusterCounts map[string]int
 	// UsersPerActivationCounts the number of users indexed by their number of activations and their email address domain. Eg: "1,internal","1,external",etc.
 	UserSignupsPerActivationAndDomainCounts map[string]int
 }
@@ -58,11 +61,13 @@ func Reset() {
 
 func reset() {
 	cachedCounts.Counts = Counts{
+		SpacesPerClusterCounts:                  map[string]int{},
 		UserAccountsPerClusterCounts:            map[string]int{},
 		UserSignupsPerActivationAndDomainCounts: map[string]int{},
 		MasterUserRecordPerDomainCounts:         map[string]int{},
 	}
 	cachedCounts.initialized = false
+	metrics.SpaceGaugeVec.Reset()
 	metrics.UserAccountGaugeVec.Reset()
 	metrics.UserSignupsPerActivationAndDomainGaugeVec.Reset()
 	metrics.MasterUserRecordGaugeVec.Reset()
@@ -113,6 +118,29 @@ func DecrementUserAccountCount(logger logr.Logger, clusterName string) {
 		} else {
 			logger.Error(fmt.Errorf("the count of UserAccounts is zero"),
 				"unable to decrement the number of UserAccounts for the given cluster", "cluster", clusterName)
+		}
+	})
+}
+
+// IncrementSpaceCount increments the number of Space's for the given member cluster in the cached counter
+func IncrementSpaceCount(logger logr.Logger, clusterName string) {
+	write(func() {
+		cachedCounts.SpacesPerClusterCounts[clusterName]++
+		logger.Info("incremented SpacesPerClusterCounts", "clusterName", clusterName, "value", cachedCounts.SpacesPerClusterCounts[clusterName])
+		metrics.SpaceGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.SpacesPerClusterCounts[clusterName]))
+	})
+}
+
+// DecrementSpaceCount decreases the number of Spaces for the given member cluster in the cached counter
+func DecrementSpaceCount(logger logr.Logger, clusterName string) {
+	write(func() {
+		if cachedCounts.SpacesPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
+			cachedCounts.SpacesPerClusterCounts[clusterName]--
+			metrics.SpaceGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.SpacesPerClusterCounts[clusterName]))
+			logger.Info("decremented Spaces count", "value", cachedCounts.SpacesPerClusterCounts[clusterName])
+		} else {
+			logger.Error(fmt.Errorf("the count of Spaces is zero"),
+				"unable to decrement the number of Spaces for the given cluster", "cluster", clusterName)
 		}
 	})
 }
@@ -176,10 +204,10 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
 	}
 
-	// update the toolchainStatus.Status.Members and metrics.UserAccountGaugeVec
+	// update the toolchainStatus.Status.Members and metrics.UserAccountGaugeVec, metrics.SpaceGaugeVec
 	// from the cachedCounts.UserAccountsPerClusterCounts
 	for _, member := range toolchainStatus.Status.Members {
-		count := cachedCounts.UserAccountsPerClusterCounts[member.ClusterName]
+		userCount := cachedCounts.UserAccountsPerClusterCounts[member.ClusterName]
 		index := indexOfMember(toolchainStatus.Status.Members, member.ClusterName)
 		if index == -1 {
 			toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
@@ -187,12 +215,17 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 			})
 			index = len(toolchainStatus.Status.Members) - 1
 		}
-		toolchainStatus.Status.Members[index].UserAccountCount = count
-		log.Info("synchronized user_accounts_current gauge", "member_cluster", member.ClusterName, "count", count)
-		metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName).Set(float64(count))
+		toolchainStatus.Status.Members[index].UserAccountCount = userCount
+		log.Info("synchronized user_accounts_current gauge", "member_cluster", member.ClusterName, "count", userCount)
+		metrics.UserAccountGaugeVec.WithLabelValues(member.ClusterName).Set(float64(userCount))
+
+		spaceCount := cachedCounts.SpacesPerClusterCounts[member.ClusterName]
+		toolchainStatus.Status.Members[index].SpaceCount = spaceCount
+		log.Info("synchronized spaces_current gauge", "member_cluster", member.ClusterName, "count", spaceCount)
+		metrics.SpaceGaugeVec.WithLabelValues(member.ClusterName).Set(float64(spaceCount))
 	}
 
-	// update the toolchainStatus.Status.Metrics and Pronetheus metrics
+	// update the toolchainStatus.Status.Metrics and Prometheus metrics
 	// from the cachedCounts
 	toolchainStatus.Status.Metrics = map[string]toolchainv1alpha1.Metric{} // reset, so any outdated/deprecated entry is automatically removed
 	// `userSignupsPerActivationAndDomain` metric
@@ -254,6 +287,10 @@ func initializeFromResources(cl client.Client, namespace string) error {
 	if err := cl.List(context.TODO(), murs, client.InNamespace(namespace)); err != nil {
 		return err
 	}
+	spaces := &toolchainv1alpha1.SpaceList{}
+	if err := cl.List(context.TODO(), spaces, client.InNamespace(namespace)); err != nil {
+		return err
+	}
 	reset()
 	for _, usersignup := range usersignups.Items {
 		activations, activationsExists := usersignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]
@@ -274,11 +311,15 @@ func initializeFromResources(cl client.Client, namespace string) error {
 			cachedCounts.UserAccountsPerClusterCounts[ua.TargetCluster]++
 		}
 	}
+	for _, space := range spaces.Items {
+		cachedCounts.SpacesPerClusterCounts[space.Spec.TargetCluster]++
+	}
 	cachedCounts.initialized = true
 	log.Info("cached counts initialized from UserSignups and MasterUserRecords",
 		"MasterUserRecordPerDomainCounts", cachedCounts.MasterUserRecordPerDomainCounts,
 		"UserAccountsPerClusterCounts", cachedCounts.UserAccountsPerClusterCounts,
 		"UserSignupsPerActivationAndDomainCounts", cachedCounts.UserSignupsPerActivationAndDomainCounts,
+		"SpacesPerClusterCounts", cachedCounts.SpacesPerClusterCounts,
 	)
 	return nil
 }
@@ -292,7 +333,10 @@ func initializeFromToolchainStatus(toolchainStatus *toolchainv1alpha1.ToolchainS
 	if toolchainStatus.Status.HostOperator == nil {
 		toolchainStatus.Status.HostOperator = &toolchainv1alpha1.HostOperatorStatus{}
 	}
-
+	// SpacesPerClusterCounts
+	for _, memberStatus := range toolchainStatus.Status.Members {
+		cachedCounts.SpacesPerClusterCounts[memberStatus.ClusterName] += memberStatus.SpaceCount
+	}
 	// UserAccountsPerClusterCounts
 	for _, memberStatus := range toolchainStatus.Status.Members {
 		cachedCounts.UserAccountsPerClusterCounts[memberStatus.ClusterName] += memberStatus.UserAccountCount
@@ -310,7 +354,6 @@ func initializeFromToolchainStatus(toolchainStatus *toolchainv1alpha1.ToolchainS
 				cachedCounts.MasterUserRecordPerDomainCounts[k] += v
 			}
 		}
-
 	}
 	cachedCounts.initialized = true
 	log.Info("cached counts initialized from ToolchainStatus")
