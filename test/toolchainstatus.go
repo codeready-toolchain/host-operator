@@ -80,6 +80,12 @@ func WithMember(name string, options ...MemberToolchainStatusOption) ToolchainSt
 
 type MemberToolchainStatusOption func(*toolchainv1alpha1.Member)
 
+func WithSpaceCount(count int) MemberToolchainStatusOption {
+	return func(status *toolchainv1alpha1.Member) {
+		status.SpaceCount = count
+	}
+}
+
 func WithUserAccountCount(count int) MemberToolchainStatusOption {
 	return func(status *toolchainv1alpha1.Member) {
 		status.UserAccountCount = count
