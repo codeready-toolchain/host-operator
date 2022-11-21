@@ -525,6 +525,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182aff
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
 github.com/mfrancisc/api v0.0.0-20221108133602-c5b3a69211db h1:3gp1Zf+dIJQ6GOkHZyVNOsZZrV7Yq7W0PqKE5c6Pjwo=
 github.com/mfrancisc/api v0.0.0-20221108133602-c5b3a69211db/go.mod h1:gY0608ZR+9w2kLyIdMOD9+fYH4tSCF4G6WrjSBVEUm4=
+github.com/mfrancisc/api v0.0.0-20221121104124-e1debc6f2cc3 h1:DXrCMwSK/95jx+JYNiNlHQJIVnTVxSX0zJ8Fbqgd9I8=
+github.com/mfrancisc/api v0.0.0-20221121104124-e1debc6f2cc3/go.mod h1:gY0608ZR+9w2kLyIdMOD9+fYH4tSCF4G6WrjSBVEUm4=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
 github.com/mitchellh/cli v1.0.0/go.mod h1:hNIlj7HEI86fIcpObd7a0FcrxTWetlwJDGcceTlRvqc=
 github.com/mitchellh/copystructure v1.0.0 h1:Laisrj+bAB6b/yJwB5Bt3ITZhGJdqmxquMKeZ+mmkFQ=
