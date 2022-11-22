@@ -164,8 +164,7 @@ objects:
     kind: Role
     name: appstudio-user-actions
   subjects:
-  - apiGroup: ""
-    kind: User
+  - kind: User
     name: ${USERNAME}
 # RoleBinding that grants view permissions to the User
 - apiVersion: rbac.authorization.k8s.io/v1
@@ -178,8 +177,7 @@ objects:
     kind: ClusterRole
     name: view
   subjects:
-  - apiGroup: ""
-    kind: User
+  - kind: User
     name: ${USERNAME}
 
 parameters:

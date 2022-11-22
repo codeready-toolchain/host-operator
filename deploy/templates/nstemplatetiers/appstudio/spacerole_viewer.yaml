@@ -35,8 +35,7 @@ objects:
     kind: ClusterRole
     name: view
   subjects:
-  - apiGroup: ""
-    kind: User
+  - kind: User
     name: ${USERNAME}
 
 parameters:
