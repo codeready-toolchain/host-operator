@@ -139,7 +139,7 @@ objects:
     kind: ServiceAccount
     name: appstudio-${USERNAME}
 
-# Role & RoleBinding that grants view permissions to the user's SA
+# RoleBinding that grants view permissions to the User's SA
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
@@ -153,12 +153,26 @@ objects:
   - apiGroup: ""
     kind: ServiceAccount
     name: appstudio-${USERNAME}
-# Role & RoleBinding that grants view permissions to the User
+# RoleBinding that grants more permissions to the User
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-${USERNAME}-user-view
+    name: appstudio-${USERNAME}-actions-user
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: appstudio-user-actions
+  subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: ${USERNAME}
+# RoleBinding that grants view permissions to the User
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    namespace: ${NAMESPACE}
+    name: appstudio-${USERNAME}-view-user
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
