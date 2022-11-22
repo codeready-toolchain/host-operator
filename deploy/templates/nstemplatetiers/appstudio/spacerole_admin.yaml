@@ -165,7 +165,7 @@ objects:
     name: appstudio-user-actions
   subjects:
   - apiGroup: ""
-    kind: ServiceAccount
+    kind: User
     name: ${USERNAME}
 # RoleBinding that grants view permissions to the User
 - apiVersion: rbac.authorization.k8s.io/v1
