@@ -42,8 +42,9 @@ func TestGetClusterIfApproved(t *testing.T) {
 		}
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
-				Enabled(true).
-				MaxNumberOfUsers(2000, testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
+				Enabled(true),
+			testconfig.CapacityThresholds().
+				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
@@ -125,7 +126,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("automatic approval not enabled, user manually approved but no cluster has capacity", func(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().ResourceCapacityThreshold(50))
+			testconfig.CapacityThresholds().ResourceCapacityThreshold(50),
+		)
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
@@ -143,8 +145,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("automatic approval not enabled, user manually approved and second cluster has capacity", func(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().
-				MaxNumberOfUsers(2000).
+			testconfig.CapacityThresholds().
+				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 2000)).
 				ResourceCapacityThreshold(62))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
@@ -163,7 +165,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("automatic approval not enabled, user manually approved, no cluster has capacity but targetCluster is specified", func(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.AutomaticApproval().MaxNumberOfUsers(1000))
+			testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
