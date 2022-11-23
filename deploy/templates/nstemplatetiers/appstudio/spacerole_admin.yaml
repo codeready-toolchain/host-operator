@@ -35,9 +35,9 @@ objects:
   - apiGroups:
     - appstudio.redhat.com
     resources:
-    - applicationpromotionruns
-    - applicationsnapshotenvironmentbindings
-    - applicationsnapshots
+    - promotionruns
+    - snapshotenvironmentbindings
+    - snapshots
     - environments
     verbs:
     - create
