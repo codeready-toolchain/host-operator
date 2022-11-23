@@ -8,8 +8,8 @@ ENV LANG=en_US.utf8 \
     GOCACHE=/tmp/.cache \
     GIT_COMMITTER_NAME=devtools \
     GIT_COMMITTER_EMAIL=devtools@redhat.com \
-    GOLANG_VERSION=go1.17.13 \
-    GOLANG_SHA256=4cdd2bc664724dc7db94ad51b503512c5ae7220951cac568120f64f8e94399fc
+    GOLANG_VERSION=go1.18.8 \
+    GOLANG_SHA256=4d854c7bad52d53470cf32f1b287a5c0c441dc6b98306dea27358e099698142a
 
 ARG GO_PACKAGE_PATH=github.com/codeready-toolchain/host-operator
 
