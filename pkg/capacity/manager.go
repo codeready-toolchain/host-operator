@@ -26,11 +26,19 @@ func hasNotReachedMaxNumberOfUsersThreshold(config toolchainconfig.ToolchainConf
 	}
 }
 
+func hasNotReachedMaxNumberOfSpacesThreshold(config toolchainconfig.ToolchainConfig, counts counter.Counts) cluster.Condition {
+	return func(cluster *cluster.CachedToolchainCluster) bool {
+		numberOfSpaces := counts.SpacesPerClusterCounts[cluster.Name]
+		threshold := config.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster()[cluster.Name]
+		return threshold == 0 || numberOfSpaces < threshold
+	}
+}
+
 func hasEnoughResources(config toolchainconfig.ToolchainConfig, status *toolchainv1alpha1.ToolchainStatus) cluster.Condition {
 	return func(cluster *cluster.CachedToolchainCluster) bool {
-		threshold, found := config.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster()[cluster.Name]
+		threshold, found := config.CapacityThresholds().ResourceCapacityThresholdSpecificPerMemberCluster()[cluster.Name]
 		if !found {
-			threshold = config.AutomaticApproval().ResourceCapacityThresholdDefault()
+			threshold = config.CapacityThresholds().ResourceCapacityThresholdDefault()
 		}
 		if threshold == 0 {
 			return true
@@ -58,10 +66,10 @@ func hasMemberREnoughResources(memberStatus toolchainv1alpha1.Member, threshold 
 
 // GetOptimalTargetCluster returns the name of the cluster with the most available capacity where a Space could be provisioned.
 //
-// If two clusters have the same limit and they both have the same usage, then the logic distributes users in a batches of 50.
+// If two clusters have the same limit and they both have the same usage, then the logic distributes spaces in a batches of 50.
 //
 // If the two clusters don't have the same limit, then the batch is based on the scale of the limits.
-// Let's say that the limit for member1 is 1000 and for member2 is 2000, then the batch of users would be 50 for member1 and 100 for member2.
+// Let's say that the limit for member1 is 1000 and for member2 is 2000, then the batch of spaces would be 50 for member1 and 100 for member2.
 //
 // If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned.
 func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberClusters cluster.GetMemberClustersFunc, cl client.Client) (string, error) {
@@ -72,21 +80,21 @@ func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberCluste
 
 	counts, err := counter.GetCounts()
 	if err != nil {
-		return "", errors.Wrapf(err, "unable to get the number of provisioned users")
+		return "", errors.Wrapf(err, "unable to get the number of provisioned spaces")
 	}
 
 	status := &toolchainv1alpha1.ToolchainStatus{}
 	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
 		return "", errors.Wrapf(err, "unable to read ToolchainStatus resource")
 	}
-	optimalTargetClusters := getOptimalTargetClusters(preferredCluster, getMemberClusters, hasNotReachedMaxNumberOfUsersThreshold(config, counts), hasEnoughResources(config, status))
+	optimalTargetClusters := getOptimalTargetClusters(preferredCluster, getMemberClusters, hasNotReachedMaxNumberOfSpacesThreshold(config, counts), hasEnoughResources(config, status))
 
 	sort.Slice(optimalTargetClusters, func(i, j int) bool {
-		provisioned1 := counts.UserAccountsPerClusterCounts[optimalTargetClusters[i]]
-		threshold1 := config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster()[optimalTargetClusters[i]]
+		provisioned1 := counts.SpacesPerClusterCounts[optimalTargetClusters[i]]
+		threshold1 := config.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster()[optimalTargetClusters[i]]
 
-		provisioned2 := counts.UserAccountsPerClusterCounts[optimalTargetClusters[j]]
-		threshold2 := config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster()[optimalTargetClusters[j]]
+		provisioned2 := counts.SpacesPerClusterCounts[optimalTargetClusters[j]]
+		threshold2 := config.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster()[optimalTargetClusters[j]]
 
 		// Let's round the number of provisioned users down to closest multiple of 50
 		// This is a trick we need to do before comparing the capacity, so we can distribute the users in batches by 50 (if the clusters have the same limit)
