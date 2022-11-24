@@ -624,7 +624,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 			"error creating Space")
 	}
 
-	logger.Info("Created Space", "name", space.Name, "target_cluster", tCluster, "Tier", spaceTier.Name)
+	logger.Info("Created Space", "name", space.Name, "target_cluster", tCluster, "NSTemplateTier", spaceTier.Name)
 	return space, true, nil
 }
 
