@@ -91,6 +91,20 @@ func (a *ToolchainStatusAssertion) HasNoMetric(key string) *ToolchainStatusAsser
 	return a
 }
 
+func (a *ToolchainStatusAssertion) HasSpaceCount(memberClusterName string, expectedCount int) *ToolchainStatusAssertion {
+	err := a.loadToolchainStatus()
+	require.NoError(a.t, err)
+	require.NotNil(a.t, *a.toolchainStatus.Status.HostOperator)
+	for _, member := range a.toolchainStatus.Status.Members {
+		if member.ClusterName == memberClusterName {
+			assert.Equal(a.t, expectedCount, member.SpaceCount)
+			return a
+		}
+	}
+	require.Fail(a.t, fmt.Sprintf("cluster with the name %s wasn't found", memberClusterName))
+	return a
+}
+
 func (a *ToolchainStatusAssertion) HasUserAccountCount(memberClusterName string, expectedCount int) *ToolchainStatusAssertion {
 	err := a.loadToolchainStatus()
 	require.NoError(a.t, err)

@@ -10,6 +10,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
+	"github.com/codeready-toolchain/host-operator/test/space"
 	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
@@ -40,6 +41,12 @@ func AssertThatUninitializedCounters(t *testing.T) *CounterAssertion {
 		t:      t,
 		counts: counts,
 	}
+}
+
+func (a *CounterAssertion) HaveSpacesForCluster(clusterName string, number int) *CounterAssertion {
+	assert.Equal(a.t, number, a.counts.SpacesPerClusterCounts[clusterName])
+	AssertMetricsGaugeEquals(a.t, number, metrics.SpaceGaugeVec.WithLabelValues(clusterName))
+	return a
 }
 
 func (a *CounterAssertion) HaveUserAccountsForCluster(clusterName string, number int) *CounterAssertion {
@@ -83,6 +90,14 @@ func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
 		)
 	}
 	return usersignups
+}
+
+func CreateMultipleSpaces(prefix string, number int, targetCluster string) []runtime.Object {
+	spaces := make([]runtime.Object, number)
+	for index := range spaces {
+		spaces[index] = space.NewSpace(fmt.Sprintf("%s%d", prefix, index), space.WithSpecTargetCluster(targetCluster))
+	}
+	return spaces
 }
 
 func InitializeCounters(t *testing.T, toolchainStatus *toolchainv1alpha1.ToolchainStatus, initObjs ...runtime.Object) {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
@@ -52,27 +53,34 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 	member := NewMemberCluster(t, "member1", v1.ConditionTrue)
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	for testname, userSignup := range map[string]*toolchainv1alpha1.UserSignup{
-		"with valid activation annotation": commonsignup.NewUserSignup(
-			commonsignup.Approved(),
+		"manually approved with valid activation annotation": commonsignup.NewUserSignup(
+			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
-			commonsignup.WithStateLabel("not-ready"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"),
 			commonsignup.WithOriginalSub("original-sub-value:1234")), // this is a returning user
-		"with invalid activation annotation": commonsignup.NewUserSignup(
-			commonsignup.Approved(),
+		"automatically approved with valid activation annotation": commonsignup.NewUserSignup(
+			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
-			commonsignup.WithStateLabel("not-ready"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueDeactivated),
+			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"),
+			commonsignup.WithOriginalSub("original-sub-value:1234")), // this is a returning user
+		"manually approved with invalid activation annotation": commonsignup.NewUserSignup(
+			commonsignup.ApprovedManually(),
+			commonsignup.WithTargetCluster("member1"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "?")), // annotation value is not an 'int'
-		"without activation annotation": commonsignup.NewUserSignup(
-			commonsignup.Approved(),
+		"manually approved without activation annotation": commonsignup.NewUserSignup(
+			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
-			commonsignup.WithStateLabel("not-ready"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithoutAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey)), // no annotation on this user, so the value will not be incremented
 	} {
 		t.Run(testname, func(t *testing.T) {
 			// given
 			defer counter.Reset()
-			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier, deactivate30Tier)
+			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true))
+			r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), config, userSignup, baseNSTemplateTier, deactivate30Tier)
 			InitializeCounters(t, NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 					"1,internal": 0,
@@ -109,7 +117,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, "approved", actualUserSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 			switch testname {
-			case "with valid activation annotation":
+			case "manually approved with valid activation annotation", "automatically approved with valid activation annotation":
 				assert.Equal(t, "3", actualUserSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]) // annotation value is incremented
 				AssertThatCountersAndMetrics(t).
 					HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
@@ -117,7 +125,7 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 						"2,internal": 0, // decreased
 						"3,internal": 1, // increased
 					})
-			case "without activation annotation", "with invalid activation annotation":
+			case "manually approved without activation annotation", "manually approved with invalid activation annotation":
 				assert.Equal(t, "1", actualUserSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey]) // annotation was set to "1" since it was missing
 				AssertThatCountersAndMetrics(t).
 					HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
@@ -137,19 +145,19 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	for testname, userSignup := range map[string]*toolchainv1alpha1.UserSignup{
 		"without skip space creation annotation": commonsignup.NewUserSignup(
-			commonsignup.Approved(),
+			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
-			commonsignup.WithStateLabel("not-ready"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey)),
 		"with skip space creation annotation set to false": commonsignup.NewUserSignup(
-			commonsignup.Approved(),
+			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
-			commonsignup.WithStateLabel("not-ready"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey, "false")),
 		"with skip space creation annotation set to true": commonsignup.NewUserSignup(
-			commonsignup.Approved(),
+			commonsignup.ApprovedManually(),
 			commonsignup.WithTargetCluster("member1"),
-			commonsignup.WithStateLabel("not-ready"),
+			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey, "true")),
 	} {
 		t.Run(testname, func(t *testing.T) {
@@ -211,8 +219,10 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 	member := NewMemberCluster(t, "member1", v1.ConditionTrue)
 	defer counter.Reset()
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	userSignup := commonsignup.NewUserSignup(commonsignup.BeingDeleted(), commonsignup.Approved(),
-		commonsignup.WithStateLabel("not-ready"),
+	userSignup := commonsignup.NewUserSignup(
+		commonsignup.ApprovedManually(),
+		commonsignup.BeingDeleted(),
+		commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 		commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"))
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
@@ -409,7 +419,7 @@ func TestUserSignupWithMissingEmailAnnotationFails(t *testing.T) {
 	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "not-ready", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -457,7 +467,7 @@ func TestUserSignupWithInvalidEmailHashLabelFails(t *testing.T) {
 	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "not-ready", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -550,7 +560,7 @@ func TestUserSignupWithMissingEmailHashLabelFails(t *testing.T) {
 	// Lookup the user signup again
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "not-ready", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
@@ -897,7 +907,7 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 
 func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 	// given
-	userSignup := commonsignup.NewUserSignup(commonsignup.Approved())
+	userSignup := commonsignup.NewUserSignup(commonsignup.ApprovedManuallyAgo(time.Minute))
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier)
@@ -1029,7 +1039,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 
 func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 	// given
-	userSignup := commonsignup.NewUserSignup(commonsignup.Approved())
+	userSignup := commonsignup.NewUserSignup(commonsignup.ApprovedManuallyAgo(time.Minute))
 
 	config := commonconfig.NewToolchainConfigObjWithReset(t)
 
@@ -1450,7 +1460,7 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 		t.Run(testcase.testName, func(t *testing.T) {
 
 			// given
-			userSignup := commonsignup.NewUserSignup(commonsignup.Approved())
+			userSignup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
@@ -1525,7 +1535,7 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 
 func TestUserSignupMURReadFails(t *testing.T) {
 	// given
-	userSignup := commonsignup.NewUserSignup(commonsignup.Approved())
+	userSignup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 	r, req, fakeClient := prepareReconcile(t, userSignup.Name, ready, userSignup)
@@ -1571,7 +1581,7 @@ func TestUserSignupMURReadFails(t *testing.T) {
 
 func TestUserSignupSetStatusApprovedByAdminFails(t *testing.T) {
 	// given
-	userSignup := commonsignup.NewUserSignup(commonsignup.Approved())
+	userSignup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 	userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
 
 	ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
@@ -1656,7 +1666,7 @@ func TestUserSignupSetStatusApprovedAutomaticallyFails(t *testing.T) {
 
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "not-ready", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 	assert.Empty(t, userSignup.Status.Conditions)
@@ -1811,7 +1821,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 
 func TestUserSignupWithExistingMURDifferentUserIDOK(t *testing.T) {
 	// given
-	userSignup := commonsignup.NewUserSignup(commonsignup.Approved())
+	userSignup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 	// Create a MUR with a different UserID
 	mur := &toolchainv1alpha1.MasterUserRecord{
@@ -2913,7 +2923,7 @@ func TestUserSignupVerificationRequired(t *testing.T) {
 	require.NoError(t, err)
 	err = r.Client.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, userSignup.Name), userSignup)
 	require.NoError(t, err)
-	assert.Equal(t, "not-ready", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+	assert.Equal(t, toolchainv1alpha1.UserSignupStateLabelValueNotReady, userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
@@ -3330,7 +3340,9 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 func TestDeathBy100Signups(t *testing.T) {
 	// given
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	userSignup := commonsignup.NewUserSignup(commonsignup.WithName("foo@redhat.com"), commonsignup.Approved())
+	userSignup := commonsignup.NewUserSignup(
+		commonsignup.WithName("foo@redhat.com"),
+		commonsignup.ApprovedManually())
 
 	initObjs := make([]runtime.Object, 0, 110)
 	initObjs = append(initObjs, userSignup, deactivate30Tier)
@@ -3495,9 +3507,9 @@ func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
 }
 
-func TestManuallyApprovedUserSignupWhenNoMembersAvailable(t *testing.T) {
+func TestApprovedManuallyUserSignupWhenNoMembersAvailable(t *testing.T) {
 	// given
-	userSignup := commonsignup.NewUserSignup(commonsignup.Approved())
+	userSignup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(), userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
@@ -3613,8 +3625,10 @@ func TestUsernameWithForbiddenPrefix(t *testing.T) {
 	names := []string{"-Bob", "-Dave", "Linda", ""}
 
 	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
-		userSignup := commonsignup.NewUserSignup(commonsignup.Approved(), commonsignup.WithTargetCluster("east"))
-		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "not-ready"
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.ApprovedManually(),
+			commonsignup.WithTargetCluster("east"))
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = toolchainv1alpha1.UserSignupStateLabelValueNotReady
 
 		for _, name := range names {
 			userSignup.Spec.Username = fmt.Sprintf("%s%s", prefix, name)
@@ -3656,8 +3670,10 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 	names := []string{"dedicated-", "cluster-", "bob", ""}
 
 	for _, suffix := range config.Users().ForbiddenUsernameSuffixes() {
-		userSignup := commonsignup.NewUserSignup(commonsignup.Approved(), commonsignup.WithTargetCluster("east"))
-		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "not-ready"
+		userSignup := commonsignup.NewUserSignup(
+			commonsignup.ApprovedManually(),
+			commonsignup.WithTargetCluster("east"))
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = toolchainv1alpha1.UserSignupStateLabelValueNotReady
 
 		for _, name := range names {
 			userSignup.Spec.Username = fmt.Sprintf("%s%s", name, suffix)
@@ -3690,7 +3706,9 @@ func TestUsernameWithForbiddenSuffixes(t *testing.T) {
 // Test the scenario where the existing usersignup is reactivated and the CompliantUsername becomes outdated eg. transformUsername func is changed
 func TestChangedCompliantUsername(t *testing.T) {
 	// starting with a UserSignup that exists and was just approved again (reactivated) and has the now outdated CompliantUsername
-	userSignup := commonsignup.NewUserSignup(commonsignup.Approved(), commonsignup.WithTargetCluster("east"))
+	userSignup := commonsignup.NewUserSignup(
+		commonsignup.ApprovedManually(),
+		commonsignup.WithTargetCluster("east"))
 	userSignup.Status = toolchainv1alpha1.UserSignupStatus{
 		Conditions: []toolchainv1alpha1.Condition{
 			{
@@ -3776,7 +3794,9 @@ func TestChangedCompliantUsername(t *testing.T) {
 
 func TestMigrateMur(t *testing.T) {
 	// given
-	userSignup := commonsignup.NewUserSignup(commonsignup.Approved(), commonsignup.WithTargetCluster("east"))
+	userSignup := commonsignup.NewUserSignup(
+		commonsignup.ApprovedManually(),
+		commonsignup.WithTargetCluster("east"))
 	expectedMur := newMasterUserRecord(userSignup, "east", deactivate30Tier.Name, "foo")
 
 	oldMur := expectedMur.DeepCopy()
@@ -3823,7 +3843,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, "", "not-ready")
+			r.updateUserSignupMetricsByState(logger, userSignup, "", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -3840,7 +3860,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, "not-ready", "pending")
+			r.updateUserSignupMetricsByState(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady, "pending")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -3944,7 +3964,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, "any-value", "not-ready")
+			r.updateUserSignupMetricsByState(logger, userSignup, "any-value", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -4109,9 +4129,9 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 	member := NewMemberCluster(t, "member1", v1.ConditionTrue)
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	userSignup := commonsignup.NewUserSignup(
-		commonsignup.Approved(),
+		commonsignup.ApprovedManually(),
 		commonsignup.WithTargetCluster("member1"),
-		commonsignup.WithStateLabel("not-ready"),
+		commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 		commonsignup.WithoutAnnotation(toolchainv1alpha1.SkipAutoCreateSpaceAnnotationKey))
 
 	mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")

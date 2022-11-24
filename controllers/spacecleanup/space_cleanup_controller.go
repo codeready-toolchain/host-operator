@@ -97,6 +97,7 @@ func (r *Reconciler) ensureDeletionIfNeeded(logger logr.Logger, space *toolchain
 		if err := r.Client.Delete(context.TODO(), space); err != nil {
 			return false, 0, errs.Wrap(err, "unable to delete Space")
 		}
+
 		logger.Info("Space has been deleted")
 		return false, 0, nil
 	}

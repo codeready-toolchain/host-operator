@@ -18,6 +18,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
+	"github.com/codeready-toolchain/toolchain-common/pkg/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 	"github.com/redhat-cop/operator-utils/pkg/util"
@@ -373,6 +374,7 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 	}
 
 	approved, targetCluster, err := getClusterIfApproved(r.Client, userSignup, r.GetMemberClusters)
+	reqLogger.Info("ensuring MUR", "approved", approved, "target_cluster", targetCluster, "error", err)
 	// if error was returned or no available cluster found
 	if err != nil || targetCluster == notFound {
 		// set the state label to pending
@@ -380,7 +382,7 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 			return err
 		}
 		// if user was approved manually
-		if states.Approved(userSignup) {
+		if states.ApprovedManually(userSignup) {
 			if err == nil {
 				err = fmt.Errorf("no suitable member cluster found - capacity was reached")
 			}
@@ -403,7 +405,7 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 		return r.updateStatus(reqLogger, userSignup, r.set(statusPendingApproval, statusIncompletePendingApproval))
 	}
 
-	if states.Approved(userSignup) {
+	if states.ApprovedManually(userSignup) {
 		if err := r.updateStatus(reqLogger, userSignup, r.set(statusApprovedByAdmin)); err != nil {
 			return err
 		}
@@ -633,7 +635,7 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchai
 		return fmt.Errorf(`unable to proceed because there are multiple SpaceBindings associated with MasterUserRecord '%s' and Space '%s'`, mur.Name, space.Name)
 	}
 
-	spaceBinding := newSpaceBinding(mur, space, userSignup.Name)
+	spaceBinding := spacebinding.NewSpaceBinding(mur, space, userSignup.Name)
 
 	if err := r.Client.Create(context.TODO(), spaceBinding); err != nil {
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpaceBinding, err,

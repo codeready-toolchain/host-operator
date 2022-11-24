@@ -118,6 +118,10 @@ github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWH
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
+github.com/codeready-toolchain/api v0.0.0-20221122101422-7c02c4c86dc7 h1:piARQQv3/ilX/GOdstaanqLWBthyF1p7AqkUP7UJ50M=
+github.com/codeready-toolchain/api v0.0.0-20221122101422-7c02c4c86dc7/go.mod h1:gY0608ZR+9w2kLyIdMOD9+fYH4tSCF4G6WrjSBVEUm4=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20221117081323-252a38460fa1 h1:RIto+kiBO8ZgN22fslwNdzJmXPFgKr084RF5TTu6aC0=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20221117081323-252a38460fa1/go.mod h1:A/iDLHUo3elfbgiOZSGWUOsRzPYC9fAdc9W0k5rbUp8=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -505,10 +509,6 @@ github.com/prometheus/procfs v0.6.0/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1
 github.com/prometheus/procfs v0.7.3 h1:4jVXhlkAyzOScmCkXBTOLRLTz8EeU+eyjrwB/EPq0VU=
 github.com/prometheus/procfs v0.7.3/go.mod h1:cz+aTbrPOrUb4q7XlbU9ygM+/jj0fzG6c1xBZuNvfVA=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
-github.com/ranakan19/api v0.0.0-20221122050106-406cc22306f2 h1:oyZheVe/YPyP7neCr8L95js9alp/fz8+VhTzzQlUATk=
-github.com/ranakan19/api v0.0.0-20221122050106-406cc22306f2/go.mod h1:4BhC+uBP9LbSKzQ1ggRAmKIl9pSj0uxdISj0s/HRwEw=
-github.com/ranakan19/toolchain-common v0.0.0-20221123064031-269baea3d763 h1:G7K+YKj70ppP2KxPtG/XdMalWOCatlFi/zyEw5tvfjw=
-github.com/ranakan19/toolchain-common v0.0.0-20221123064031-269baea3d763/go.mod h1:rGAbW2YezytUjgx0E846cEWHmqD67xyQHmzFhvWD/Bo=
 github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf h1:fsZiv9XuFo8G7IyzFWjG02vqzJG7kSqFvD1Wiq3V/o8=
 github.com/redhat-cop/operator-utils v1.3.3-0.20220121120056-862ef22b8cdf/go.mod h1:FfTyeSCu+e2VLgeMh/1RFG8TSkVjKRPEyR6EmDt0RIw=
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=
