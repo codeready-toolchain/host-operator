@@ -429,13 +429,10 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 
 func (r *Reconciler) getUserTier(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) (*toolchainv1alpha1.UserTier, error) {
 	tierName := config.Tiers().DefaultUserTier()
-	if eventName, found := userSignup.Labels[toolchainv1alpha1.SocialEventUserSignupLabelKey]; found {
-		event := &toolchainv1alpha1.SocialEvent{}
-		if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: eventName}, event); err != nil && !errors.IsNotFound(err) {
-			return nil, err
-		} else if err == nil {
-			tierName = event.Spec.UserTier
-		}
+	if event, err := r.getSocialEvent(userSignup); err != nil {
+		return nil, err
+	} else if event != nil {
+		tierName = event.Spec.UserTier
 	}
 	reqLogger.Info("looking-up UserTier", "name", tierName)
 	userTier := &toolchainv1alpha1.UserTier{}
@@ -445,18 +442,32 @@ func (r *Reconciler) getUserTier(reqLogger logr.Logger, config toolchainconfig.T
 
 func (r *Reconciler) getNSTemplateTier(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) (*toolchainv1alpha1.NSTemplateTier, error) {
 	tierName := config.Tiers().DefaultSpaceTier()
-	if eventName, found := userSignup.Labels[toolchainv1alpha1.SocialEventUserSignupLabelKey]; found {
-		event := &toolchainv1alpha1.SocialEvent{}
-		if err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: eventName}, event); err != nil && !errors.IsNotFound(err) {
-			return nil, err
-		} else if err == nil {
-			tierName = event.Spec.SpaceTier
-		}
+	if event, err := r.getSocialEvent(userSignup); err != nil {
+		return nil, err
+	} else if event != nil {
+		tierName = event.Spec.SpaceTier
 	}
 	reqLogger.Info("looking-up NSTemplateTier", "name", tierName)
 	nstemplateTier := &toolchainv1alpha1.NSTemplateTier{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: tierName}, nstemplateTier)
 	return nstemplateTier, err
+}
+
+func (r *Reconciler) getSocialEvent(userSignup *toolchainv1alpha1.UserSignup) (*toolchainv1alpha1.SocialEvent, error) {
+	eventName, found := userSignup.Labels[toolchainv1alpha1.SocialEventUserSignupLabelKey]
+	if !found {
+		return nil, nil
+	}
+	event := &toolchainv1alpha1.SocialEvent{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Namespace: userSignup.Namespace, Name: eventName}, event)
+	switch {
+	case err != nil && errors.IsNotFound(err):
+		return nil, nil
+	case err != nil:
+		return nil, err
+	default:
+		return event, nil
+	}
 }
 
 func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, state string) error {
