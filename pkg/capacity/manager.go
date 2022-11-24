@@ -13,19 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func hasNotReachedMaxNumberOfUsersThreshold(config toolchainconfig.ToolchainConfig, counts counter.Counts) cluster.Condition {
-	return func(cluster *cluster.CachedToolchainCluster) bool {
-		if config.AutomaticApproval().MaxNumberOfUsersOverall() != 0 {
-			if config.AutomaticApproval().MaxNumberOfUsersOverall() <= (counts.MasterUserRecords()) {
-				return false
-			}
-		}
-		numberOfUserAccounts := counts.UserAccountsPerClusterCounts[cluster.Name]
-		threshold := config.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster()[cluster.Name]
-		return threshold == 0 || numberOfUserAccounts < threshold
-	}
-}
-
 func hasNotReachedMaxNumberOfSpacesThreshold(config toolchainconfig.ToolchainConfig, counts counter.Counts) cluster.Condition {
 	return func(cluster *cluster.CachedToolchainCluster) bool {
 		numberOfSpaces := counts.SpacesPerClusterCounts[cluster.Name]
