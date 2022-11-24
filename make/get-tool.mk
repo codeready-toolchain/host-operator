@@ -26,7 +26,7 @@ define go-get-tool
 	cd $${TMP_DIR} ;\
 	go mod init tmp ;\
 	echo "Downloading ${2}" ;\
-	GOBIN=$(PROJECT_DIR)/bin go get ${2}@${3} ;\
+	GOBIN=$(PROJECT_DIR)/bin go install ${2}@${3} ;\
 	touch ${VERSIONS_FILE} ;\
 	sed '\|${2}|d' ${VERSIONS_FILE} > $${TMP_DIR}/versions ;\
 	mv $${TMP_DIR}/versions ${VERSIONS_FILE} ;\
