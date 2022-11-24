@@ -592,7 +592,7 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 
 // ensureSpace does the work of provisioning the Space
 func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord, spaceTier *toolchainv1alpha1.NSTemplateTier) (*toolchainv1alpha1.Space, bool, error) {
-	logger.Info("Ensuring Space", "UserSignup", userSignup.Name, "MUR", mur.Name, "space_tier", spaceTier.Name)
+	logger.Info("Ensuring Space", "UserSignup", userSignup.Name, "MUR", mur.Name, "NSTemplateTier", spaceTier.Name)
 
 	space := &toolchainv1alpha1.Space{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{
