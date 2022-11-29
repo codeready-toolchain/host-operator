@@ -31,8 +31,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 			"1,internal": 200,
 			"1,external": 700,
 		}),
-		WithMember("member1", WithUserAccountCount(700), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
-		WithMember("member2", WithUserAccountCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
+		WithMember("member1", WithUserAccountCount(700), WithSpaceCount(700), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
+		WithMember("member2", WithUserAccountCount(200), WithSpaceCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)))
 
 	t.Run("with two clusters available, the second one is defined as the last-used one", func(t *testing.T) {
 		// given
