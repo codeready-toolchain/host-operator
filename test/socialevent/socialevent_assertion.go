@@ -20,9 +20,9 @@ type Assertion struct {
 }
 
 func (a *Assertion) loadResource() error {
-	se := &toolchainv1alpha1.SocialEvent{}
-	err := a.client.Get(context.TODO(), a.namespacedName, se)
-	a.socialevent = se
+	event := &toolchainv1alpha1.SocialEvent{}
+	err := a.client.Get(context.TODO(), a.namespacedName, event)
+	a.socialevent = event
 	return err
 }
 

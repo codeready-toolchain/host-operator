@@ -62,3 +62,16 @@ jobs:
         skip-pkg-cache: true
         skip-build-cache: true
         args: --config=./.golangci.yml --verbose
+  
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Generate SBOM
+      uses: CycloneDX/gh-gomod-generate-sbom@v1
+      with:
+        version: v1
+        args: mod -licenses -json -output -

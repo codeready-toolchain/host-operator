@@ -15,7 +15,7 @@ import (
 // ending: 1hr later
 // max attendees: 10
 func NewSocialEvent(userTier, spaceTier string, options ...Option) *toolchainv1alpha1.SocialEvent {
-	se := &toolchainv1alpha1.SocialEvent{
+	event := &toolchainv1alpha1.SocialEvent{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: test.HostOperatorNs,
 			Name:      commonsocialevent.NewName(),
@@ -29,15 +29,15 @@ func NewSocialEvent(userTier, spaceTier string, options ...Option) *toolchainv1a
 		},
 	}
 	for _, apply := range options {
-		apply(se)
+		apply(event)
 	}
-	return se
+	return event
 }
 
 type Option func(*toolchainv1alpha1.SocialEvent)
 
 func WithConditions(c ...toolchainv1alpha1.Condition) Option {
-	return func(se *toolchainv1alpha1.SocialEvent) {
-		se.Status.Conditions = c
+	return func(event *toolchainv1alpha1.SocialEvent) {
+		event.Status.Conditions = c
 	}
 }
