@@ -85,6 +85,10 @@ func (c *ToolchainConfig) AutomaticApproval() AutoApprovalConfig {
 	return AutoApprovalConfig{c.cfg.Host.AutomaticApproval}
 }
 
+func (c *ToolchainConfig) CapacityThresholds() CapacityThresholdsConfig {
+	return CapacityThresholdsConfig{c.cfg.Host.CapacityThresholds}
+}
+
 func (c *ToolchainConfig) Deactivation() DeactivationConfig {
 	return DeactivationConfig{c.cfg.Host.Deactivation}
 }
@@ -138,6 +142,22 @@ func (a AutoApprovalConfig) MaxNumberOfUsersOverall() int {
 
 func (a AutoApprovalConfig) MaxNumberOfUsersSpecificPerMemberCluster() map[string]int {
 	return a.approval.MaxNumberOfUsers.SpecificPerMemberCluster
+}
+
+type CapacityThresholdsConfig struct {
+	capacityThresholds toolchainv1alpha1.CapacityThresholds
+}
+
+func (c CapacityThresholdsConfig) MaxNumberOfSpacesSpecificPerMemberCluster() map[string]int {
+	return c.capacityThresholds.MaxNumberOfSpacesPerMemberCluster
+}
+
+func (c CapacityThresholdsConfig) ResourceCapacityThresholdDefault() int {
+	return commonconfig.GetInt(c.capacityThresholds.ResourceCapacityThreshold.DefaultThreshold, 80)
+}
+
+func (c CapacityThresholdsConfig) ResourceCapacityThresholdSpecificPerMemberCluster() map[string]int {
+	return c.capacityThresholds.ResourceCapacityThreshold.SpecificPerMemberCluster
 }
 
 type DeactivationConfig struct {

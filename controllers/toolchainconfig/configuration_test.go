@@ -256,6 +256,25 @@ func TestAutomaticApprovalConfig(t *testing.T) {
 	})
 }
 
+func TestCapacityThresholdsConfig(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.Empty(t, toolchainCfg.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
+		assert.Equal(t, 80, toolchainCfg.CapacityThresholds().ResourceCapacityThresholdDefault())
+		assert.Empty(t, toolchainCfg.CapacityThresholds().ResourceCapacityThresholdSpecificPerMemberCluster())
+	})
+	t.Run("non-default", func(t *testing.T) {
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)).ResourceCapacityThreshold(456, testconfig.PerMemberCluster("member1", 654)))
+		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
+
+		assert.Equal(t, cfg.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, toolchainCfg.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
+		assert.Equal(t, 456, toolchainCfg.CapacityThresholds().ResourceCapacityThresholdDefault())
+		assert.Equal(t, cfg.Spec.Host.CapacityThresholds.ResourceCapacityThreshold.SpecificPerMemberCluster, toolchainCfg.CapacityThresholds().ResourceCapacityThresholdSpecificPerMemberCluster())
+	})
+}
+
 func TestDeactivationConfig(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t)
