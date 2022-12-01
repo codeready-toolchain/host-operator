@@ -51,44 +51,6 @@ spec:
                         description: Defines if the automatic approval is enabled
                           or not
                         type: boolean
-                      maxNumberOfUsers:
-                        description: Defines the maximal number of users to be allowed
-                          for automatic approval. When the number is reached, then
-                          the automatic approval is stopped.
-                        properties:
-                          overall:
-                            description: It is the maximal number of users provisioned
-                              in the system overall - equals to max number of MasterUserRecords
-                              in host cluster
-                            type: integer
-                          specificPerMemberCluster:
-                            additionalProperties:
-                              type: integer
-                            description: Contains a map of maximal number of users
-                              provisioned per member cluster mapped by the cluster
-                              name - equals to max number of UserAccounts in member
-                              cluster
-                            type: object
-                            x-kubernetes-map-type: atomic
-                        type: object
-                      resourceCapacityThreshold:
-                        description: Contains threshold (in percentage of usage) that
-                          defines when the automatic approval should be stopped
-                        properties:
-                          defaultThreshold:
-                            description: It is the default capacity threshold (in
-                              percentage of usage) to be used for all member clusters
-                              if no special threshold is defined
-                            type: integer
-                          specificPerMemberCluster:
-                            additionalProperties:
-                              type: integer
-                            description: Contains a map of specific capacity thresholds
-                              (in percentage of usage) for particular member clusters
-                              mapped by their names
-                            type: object
-                            x-kubernetes-map-type: atomic
-                        type: object
                     type: object
                   capacityThresholds:
                     description: Keeps parameters necessary for configuring capacity
