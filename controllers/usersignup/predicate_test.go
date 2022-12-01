@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/event"
+	runtimeevent "sigs.k8s.io/controller-runtime/pkg/event"
 )
 
 func TestUserSignupChangedPredicate(t *testing.T) {
@@ -126,7 +126,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	}
 
 	t.Run("test UserSignupChangedPredicate returns false when ObjectOld not set", func(t *testing.T) {
-		e := event.UpdateEvent{
+		e := runtimeevent.UpdateEvent{
 			ObjectOld: nil,
 			ObjectNew: userSignupUnchanged,
 		}
@@ -134,7 +134,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	})
 
 	t.Run("test UserSignupChangedPredicate returns false when ObjectNew not set", func(t *testing.T) {
-		e := event.UpdateEvent{
+		e := runtimeevent.UpdateEvent{
 			ObjectOld: userSignupOld,
 			ObjectNew: nil,
 		}
@@ -142,7 +142,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	})
 
 	t.Run("test UserSignupChangedPredicate returns false when resource unchanged", func(t *testing.T) {
-		e := event.UpdateEvent{
+		e := runtimeevent.UpdateEvent{
 			ObjectOld: userSignupOld,
 			ObjectNew: userSignupUnchanged,
 		}
@@ -150,7 +150,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	})
 
 	t.Run("test UserSignupChangedPredicate returns true when generation changed", func(t *testing.T) {
-		e := event.UpdateEvent{
+		e := runtimeevent.UpdateEvent{
 			ObjectOld: userSignupOld,
 			ObjectNew: userSignupWithGenerationChanged,
 		}
@@ -158,7 +158,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	})
 
 	t.Run("test UserSignupChangedPredicate returns true when email-hash label changed", func(t *testing.T) {
-		e := event.UpdateEvent{
+		e := runtimeevent.UpdateEvent{
 			ObjectOld: userSignupOld,
 			ObjectNew: userSignupWithEmailHashLabelChanged,
 		}
@@ -166,7 +166,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	})
 
 	t.Run("test UserSignupChangedPredicate returns true when email annotation changed", func(t *testing.T) {
-		e := event.UpdateEvent{
+		e := runtimeevent.UpdateEvent{
 			ObjectOld: userSignupOld,
 			ObjectNew: userSignupWithEmailAnnotationChanged,
 		}
@@ -174,7 +174,7 @@ func TestUserSignupChangedPredicate(t *testing.T) {
 	})
 
 	t.Run("test UserSignupChangedPredicate returns true when migration-in-progress annotation removed", func(t *testing.T) {
-		e := event.UpdateEvent{
+		e := runtimeevent.UpdateEvent{
 			ObjectOld: userSignupOld,
 			ObjectNew: userSignupWithMigrationInProgressAnnotationRemoved,
 		}
@@ -193,7 +193,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 	t.Run("update", func(t *testing.T) {
 		t.Run("when all fields are set", func(t *testing.T) {
 			// given
-			updateEvent := event.UpdateEvent{
+			updateEvent := runtimeevent.UpdateEvent{
 				ObjectOld: toolchainStatus,
 				ObjectNew: toolchainStatus,
 			}
@@ -207,7 +207,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 
 		t.Run("when ObjectOld is missing", func(t *testing.T) {
 			// given
-			updateEvent := event.UpdateEvent{
+			updateEvent := runtimeevent.UpdateEvent{
 				ObjectNew: toolchainStatus,
 			}
 
@@ -220,7 +220,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 
 		t.Run("when ObjectNew is missing", func(t *testing.T) {
 			// given
-			updateEvent := event.UpdateEvent{
+			updateEvent := runtimeevent.UpdateEvent{
 				ObjectOld: toolchainStatus,
 			}
 
@@ -234,7 +234,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 
 	t.Run("create", func(t *testing.T) {
 		// given
-		createEvent := event.CreateEvent{
+		createEvent := runtimeevent.CreateEvent{
 			Object: toolchainStatus,
 		}
 
@@ -247,7 +247,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 
 	t.Run("delete", func(t *testing.T) {
 		// given
-		deleteEvent := event.DeleteEvent{
+		deleteEvent := runtimeevent.DeleteEvent{
 			Object: toolchainStatus,
 		}
 
@@ -260,7 +260,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsEnabled(t *testing.T) {
 
 	t.Run("generic", func(t *testing.T) {
 		// given
-		genericEvent := event.GenericEvent{
+		genericEvent := runtimeevent.GenericEvent{
 			Object: toolchainStatus,
 		}
 
@@ -282,7 +282,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsNotEnabled(t *testing.T) {
 
 	t.Run("update", func(t *testing.T) {
 		// given
-		updateEvent := event.UpdateEvent{
+		updateEvent := runtimeevent.UpdateEvent{
 			ObjectOld: toolchainStatus,
 			ObjectNew: toolchainStatus,
 		}
@@ -296,7 +296,7 @@ func TestAutomaticApprovalPredicateWhenApprovalIsNotEnabled(t *testing.T) {
 
 	t.Run("generic", func(t *testing.T) {
 		// given
-		genericEvent := event.GenericEvent{
+		genericEvent := runtimeevent.GenericEvent{
 			Object: toolchainStatus,
 		}
 
