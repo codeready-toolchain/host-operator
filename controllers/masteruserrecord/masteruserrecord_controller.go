@@ -157,16 +157,6 @@ func (r *Reconciler) ensureUserAccount(logger logr.Logger, murAccount toolchainv
 				return r.wrapErrorWithStatusUpdate(logger, mur, r.setStatusFailed(toolchainv1alpha1.MasterUserRecordUnableToCreateUserAccountReason), err,
 					"failed to create UserAccount in the member cluster '%s'", murAccount.TargetCluster)
 			}
-			isStatusPresent := false
-			for _, uaStatus := range mur.Status.UserAccounts {
-				if uaStatus.Cluster.Name == murAccount.TargetCluster {
-					isStatusPresent = true
-					break
-				}
-			}
-			if !isStatusPresent {
-				counter.IncrementUserAccountCount(logger, murAccount.TargetCluster)
-			}
 			return updateStatusConditions(logger, r.Client, mur, toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, ""))
 		}
 		// another/unexpected error occurred while trying to fetch the user account on the member cluster
@@ -299,7 +289,6 @@ func (r *Reconciler) deleteUserAccount(logger logr.Logger, targetCluster, name s
 	if err != nil {
 		return 0, err
 	}
-	counter.DecrementUserAccountCount(logger, targetCluster)
 
 	return requeueTime, nil
 }

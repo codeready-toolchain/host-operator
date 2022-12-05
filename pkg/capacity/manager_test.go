@@ -32,9 +32,9 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			"1,internal": 200,
 			"1,external": 700,
 		}),
-		WithMember("member1", WithUserAccountCount(700), WithSpaceCount(700), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
-		WithMember("member2", WithUserAccountCount(200), WithSpaceCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)),
-		WithMember("member3", WithUserAccountCount(200), WithSpaceCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 50)))
+		WithMember("member1", WithSpaceCount(700), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
+		WithMember("member2", WithSpaceCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)),
+		WithMember("member3", WithSpaceCount(200), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 50)))
 
 	t.Run("with one cluster and enough capacity", func(t *testing.T) {
 		// given
@@ -280,9 +280,9 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 									"1,internal": 1000,
 								}),
-								WithMember("member1", WithUserAccountCount(1000), WithSpaceCount(1000), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
-								WithMember("member2", WithUserAccountCount(numberOfSpaces), WithSpaceCount(numberOfSpaces), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)),
-								WithMember("member3", WithUserAccountCount(numberOfSpaces*makeItBigger), WithSpaceCount(numberOfSpaces*makeItBigger), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 50)))
+								WithMember("member1", WithSpaceCount(1000), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
+								WithMember("member2", WithSpaceCount(numberOfSpaces), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)),
+								WithMember("member3", WithSpaceCount(numberOfSpaces*makeItBigger), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 50)))
 
 							// member2 and member3 have the same capacity left and the member1 is full, so no one can be provisioned there
 							toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
