@@ -1,6 +1,6 @@
 # see go.mod
-CONTROLLER_GEN_VERSION=v0.8.0
-KUSTOMIZE_VERSION=v4.2.0
+CONTROLLER_GEN_VERSION=v0.9.2
+KUSTOMIZE_VERSION=v4.5.5
 GO_BINDATA_VERSION=v3.1.2
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
@@ -26,7 +26,7 @@ define go-get-tool
 	cd $${TMP_DIR} ;\
 	go mod init tmp ;\
 	echo "Downloading ${2}" ;\
-	GOBIN=$(PROJECT_DIR)/bin go get ${2}@${3} ;\
+	GOBIN=$(PROJECT_DIR)/bin go install ${2}@${3} ;\
 	touch ${VERSIONS_FILE} ;\
 	sed '\|${2}|d' ${VERSIONS_FILE} > $${TMP_DIR}/versions ;\
 	mv $${TMP_DIR}/versions ${VERSIONS_FILE} ;\
