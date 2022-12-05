@@ -351,4 +351,6 @@ config/rbac/role.yaml
 bundle/
 bundle.Dockerfile
 
-/bindatabase
+/bin
+database
+
