@@ -125,6 +125,20 @@ objects:
     - list
     - watch
     - delete
+  - apiGroups:
+    - jvmbuildservice.io
+    resources:
+    - jbsconfigs
+    - artifactbuilds
+    verbs:
+    - create
+    - get
+    - list
+    - watch
+    - update
+    - patch
+    - delete
+    - deletecollection
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
