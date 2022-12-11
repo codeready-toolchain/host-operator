@@ -149,7 +149,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 6), testconfig.PerMemberCluster("member2", 10)).
+				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1), testconfig.PerMemberCluster("member2", 1)).
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 60), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
@@ -167,7 +167,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 700), testconfig.PerMemberCluster("member2", 1000)).
+				MaxNumberOfSpaces().
 				ResourceCapacityThreshold(62))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
@@ -185,7 +185,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 2500), testconfig.PerMemberCluster("member2", 2500)).
+				MaxNumberOfSpaces().
 				ResourceCapacityThreshold(1))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
