@@ -502,8 +502,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 					"1,external": 20,
 				}),
-				WithMember("member-1", WithUserAccountCount(10)),
-				WithMember("member-2", WithUserAccountCount(10)),
+				WithMember("member-1", WithUserAccountCount(10), WithSpaceCount(10)),
+				WithMember("member-2", WithUserAccountCount(10), WithSpaceCount(10)),
 			)
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
@@ -519,8 +519,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(
-					memberCluster("member-1", userAccountCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
-					memberCluster("member-2", userAccountCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
+					memberCluster("member-1", userAccountCount(10), spaceCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
+					memberCluster("member-2", userAccountCount(10), spaceCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
 				).
 				HasRegistrationServiceStatus(registrationServiceReady()).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
@@ -539,8 +539,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 			)
 
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
-				memberCluster("member-1", ready(), userAccountCount(10)),
-				memberCluster("member-2", ready(), userAccountCount(10)),
+				memberCluster("member-1", ready(), userAccountCount(10), spaceCount(10)),
+				memberCluster("member-2", ready(), userAccountCount(10), spaceCount(10)),
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
@@ -556,8 +556,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(
-					memberCluster("member-1", userAccountCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
-					memberCluster("member-2", userAccountCount(10), ready()),
+					memberCluster("member-1", userAccountCount(10), spaceCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-1` that was previously registered in the host")),
+					memberCluster("member-2", userAccountCount(10), spaceCount(10), ready()),
 				).
 				HasRegistrationServiceStatus(registrationServiceReady()).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
@@ -575,8 +575,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				}),
 			)
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
-				memberCluster("member-1", ready(), userAccountCount(10)),
-				memberCluster("member-2", ready(), userAccountCount(10)),
+				memberCluster("member-1", ready(), userAccountCount(10), spaceCount(10)),
+				memberCluster("member-2", ready(), userAccountCount(10), spaceCount(10)),
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
@@ -592,8 +592,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(
-					memberCluster("member-1", userAccountCount(10), ready()),
-					memberCluster("member-2", userAccountCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
+					memberCluster("member-1", userAccountCount(10), spaceCount(10), ready()),
+					memberCluster("member-2", userAccountCount(10), spaceCount(10), noResourceUsage(), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-2` that was previously registered in the host")),
 				).
 				HasRegistrationServiceStatus(registrationServiceReady()).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
@@ -604,7 +604,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			memberStatus := newMemberStatus(ready())
 			toolchainStatus := NewToolchainStatus()
 			toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
-				memberCluster("member-1", userAccountCount(0), notReady("NoMemberClustersFound", "no member clusters found")),
+				memberCluster("member-1", userAccountCount(0), spaceCount(10), notReady("NoMemberClustersFound", "no member clusters found")),
 			}
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
@@ -641,8 +641,8 @@ func TestToolchainStatusConditions(t *testing.T) {
 				HasConditions(componentsNotReady(string(memberConnectionsTag))).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(
-					memberCluster("member-1", noResourceUsage(), userAccountCount(0), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
-					memberCluster("member-2", noResourceUsage(), userAccountCount(0), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
+					memberCluster("member-1", noResourceUsage(), userAccountCount(0), spaceCount(0), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
+					memberCluster("member-2", noResourceUsage(), userAccountCount(0), spaceCount(0), notReady("MemberStatusNotFound", "memberstatuses.toolchain.dev.openshift.com \"toolchain-member-status\" not found")),
 				).
 				HasRegistrationServiceStatus(registrationServiceReady()).
 				HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
@@ -756,7 +756,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 				// given
 				toolchainStatus.Status.Members = []toolchainv1alpha1.Member{
 					// member-1 and member-2 will be added since there are MemberStatus resources for each one of them
-					memberCluster("member-3", ready(), userAccountCount(10)), // will move to `NotReady` since there is no CachedToolchainCluster for this member
+					memberCluster("member-3", ready(), userAccountCount(10), spaceCount(10)), // will move to `NotReady` since there is no CachedToolchainCluster for this member
 				}
 				reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 					hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
@@ -774,7 +774,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 					HasMemberClusterStatus(
 						memberCluster("member-1", ready()),
 						memberCluster("member-2", ready()),
-						memberCluster("member-3", noResourceUsage(), userAccountCount(0), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-3` that was previously registered in the host")),
+						memberCluster("member-3", noResourceUsage(), userAccountCount(0), spaceCount(0), notReady("MemberToolchainClusterMissing", "ToolchainCluster CR wasn't found for member cluster `member-3` that was previously registered in the host")),
 					).
 					HasRegistrationServiceStatus(registrationServiceReady()).
 					HasHostRoutesStatus("https://api-toolchain-host-operator.host-cluster", hostRoutesAvailable())
@@ -1158,8 +1158,10 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		initObjects := append([]runtime.Object{}, hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
 		initObjects = append(initObjects, CreateMultipleUserSignups("cookie-", 8)...)
 		initObjects = append(initObjects, CreateMultipleMurs(t, "cookie-", 8, "member-1")...)
+		initObjects = append(initObjects, CreateMultipleSpaces("cookie-", 8, "member-1")...)
 		initObjects = append(initObjects, CreateMultipleUserSignups("pasta-", 2)...)
 		initObjects = append(initObjects, CreateMultipleMurs(t, "pasta-", 2, "member-2")...)
+		initObjects = append(initObjects, CreateMultipleSpaces("pasta-", 2, "member-2")...)
 
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"}, initObjects...)
 
@@ -1173,8 +1175,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMemberClusterStatus(
-				memberCluster("member-1", ready(), userAccountCount(8)),
-				memberCluster("member-2", ready(), userAccountCount(2))).
+				memberCluster("member-1", ready(), userAccountCount(8), spaceCount(8)),
+				memberCluster("member-2", ready(), userAccountCount(2), spaceCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady()).
 			Exists().HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 			"1,internal": 2, // users "cookie-00" and "pasta-00"
@@ -1192,6 +1194,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 			counter.IncrementMasterUserRecordCount(logger, metrics.External)
 			counter.IncrementUserAccountCount(logger, "member-1")
+			counter.IncrementSpaceCount(logger, "member-1")
 			toolchainStatus := NewToolchainStatus()
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, toolchainStatus, proxyRoute())
@@ -1206,8 +1209,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 				HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 				HasHostOperatorStatus(hostOperatorStatusReady()).
 				HasMemberClusterStatus(
-					memberCluster("member-1", ready(), userAccountCount(9)),
-					memberCluster("member-2", ready(), userAccountCount(2))).
+					memberCluster("member-1", ready(), userAccountCount(9), spaceCount(9)),
+					memberCluster("member-2", ready(), userAccountCount(2), spaceCount(2))).
 				HasRegistrationServiceStatus(registrationServiceReady())
 		})
 
@@ -1217,8 +1220,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		// given
 		defer counter.Reset()
 		toolchainStatus := NewToolchainStatus(
-			WithMember("member-1", WithUserAccountCount(6)), // will increase
-			WithMember("member-2", WithUserAccountCount(2)), // will remain the same
+			WithMember("member-1", WithUserAccountCount(6), WithSpaceCount(6)), // will increase
+			WithMember("member-2", WithUserAccountCount(2), WithSpaceCount(2)), // will remain the same
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 4,
 				"1,external": 1,
@@ -1236,6 +1239,7 @@ func TestSynchronizationWithCounter(t *testing.T) {
 		// when
 		counter.IncrementMasterUserRecordCount(logger, metrics.Internal)
 		counter.IncrementUserAccountCount(logger, "member-1")
+		counter.IncrementSpaceCount(logger, "member-1")
 		counter.UpdateUsersPerActivationCounters(logger, 1, metrics.Internal)
 		counter.UpdateUsersPerActivationCounters(logger, 2, metrics.Internal)
 		res, err := reconciler.Reconcile(context.TODO(), req)
@@ -1247,8 +1251,8 @@ func TestSynchronizationWithCounter(t *testing.T) {
 			HasConditions(componentsReady(), unreadyNotificationNotCreated()).
 			HasHostOperatorStatus(hostOperatorStatusReady()).
 			HasMemberClusterStatus(
-				memberCluster("member-1", ready(), userAccountCount(7)), // was incremented
-				memberCluster("member-2", ready(), userAccountCount(2))).
+				memberCluster("member-1", ready(), userAccountCount(7), spaceCount(7)), // was incremented
+				memberCluster("member-2", ready(), userAccountCount(2), spaceCount(2))).
 			HasRegistrationServiceStatus(registrationServiceReady()).
 			HasUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
 				"1,internal": 4, // was incremented by `counter.UpdateUsersPerActivationCounters(1)` but decremented `counter.UpdateUsersPerActivationCounters(2)`
@@ -1686,6 +1690,12 @@ func (n resourceUsage) applyToMember(m *toolchainv1alpha1.Member) {
 	}
 }
 
+type spaceCount int
+
+func (s spaceCount) applyToMember(m *toolchainv1alpha1.Member) {
+	m.SpaceCount = int(s)
+}
+
 type userAccountCount int
 
 func (c userAccountCount) applyToMember(m *toolchainv1alpha1.Member) {
@@ -1715,6 +1725,7 @@ func memberCluster(name string, options ...memberClusterOption) toolchainv1alpha
 			},
 		},
 		UserAccountCount: 0,
+		SpaceCount:       0,
 	}
 	for _, opt := range options {
 		opt.applyToMember(&m)
