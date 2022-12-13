@@ -64,7 +64,6 @@ func reset() {
 	}
 	cachedCounts.initialized = false
 	metrics.SpaceGaugeVec.Reset()
-	metrics.UserAccountGaugeVec.Reset()
 	metrics.UserSignupsPerActivationAndDomainGaugeVec.Reset()
 	metrics.MasterUserRecordGaugeVec.Reset()
 }
