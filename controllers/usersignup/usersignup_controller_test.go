@@ -831,7 +831,8 @@ func TestUnapprovedUserSignupWhenNoClusterReady(t *testing.T) {
 	notReady := NewGetMemberClusters(
 		NewMemberCluster(t, "member1", v1.ConditionFalse),
 		NewMemberCluster(t, "member2", v1.ConditionFalse))
-	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(1))
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
+		testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1)))
 	r, req, _ := prepareReconcile(t, userSignup.Name, notReady, userSignup, config, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -893,7 +894,9 @@ func TestUserSignupFailedNoClusterWithCapacityAvailable(t *testing.T) {
 	noCapacity := NewGetMemberClusters(
 		NewMemberCluster(t, "member1", v1.ConditionTrue),
 		NewMemberCluster(t, "member2", v1.ConditionTrue))
-	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true).ResourceCapacityThreshold(60))
+	config := commonconfig.NewToolchainConfigObjWithReset(t,
+		testconfig.AutomaticApproval().Enabled(true),
+		testconfig.CapacityThresholds().ResourceCapacityThreshold(60))
 	r, req, _ := prepareReconcile(t, userSignup.Name, noCapacity, userSignup, config, baseNSTemplateTier)
 	InitializeCounters(t, NewToolchainStatus(
 		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{

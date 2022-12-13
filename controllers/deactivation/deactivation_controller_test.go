@@ -45,7 +45,7 @@ const (
 )
 
 func TestReconcile(t *testing.T) {
-	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.CapacityThresholds().MaxNumberOfSpaces(
 		testconfig.PerMemberCluster("member1", 321)),
 		testconfig.Deactivation().DeactivatingNotificationDays(3))
 
@@ -137,7 +137,7 @@ func TestReconcile(t *testing.T) {
 		// a user that belongs to the deactivation domain excluded list
 		t.Run("user deactivation excluded", func(t *testing.T) {
 			// given
-			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().MaxNumberOfUsers(123,
+			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.CapacityThresholds().MaxNumberOfSpaces(
 				testconfig.PerMemberCluster("member1", 321)),
 				testconfig.Deactivation().DeactivatingNotificationDays(3),
 			)

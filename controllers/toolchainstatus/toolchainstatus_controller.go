@@ -622,7 +622,7 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 		if ok {
 			toolchainStatus.Status.Members[index].MemberStatus = newMemberStatus
 			delete(members, member.ClusterName)
-		} else if member.UserAccountCount > 0 {
+		} else if member.SpaceCount > 0 {
 			err := fmt.Errorf("ToolchainCluster CR wasn't found for member cluster `%s` that was previously registered in the host", member.ClusterName)
 			logger.Error(err, "the member cluster seems to be removed")
 			memberStatusNotFoundCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusMemberToolchainClusterMissingReason, err.Error())
@@ -639,6 +639,7 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 			ClusterName:      clusterName,
 			MemberStatus:     memberStatus,
 			UserAccountCount: 0,
+			SpaceCount:       0,
 		})
 		logger.Info("added member status", "cluster_name", clusterName)
 	}
