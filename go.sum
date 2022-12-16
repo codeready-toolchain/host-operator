@@ -403,8 +403,8 @@ github.com/mattn/go-runewidth v0.0.7/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 h1:I0XW9+e1XWDxdcEniV4rQAIOPUGDq67JSCiRCgGCZLI=
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
-github.com/mfrancisc/api v0.0.0-20221204201849-a5b2363b5d69 h1:yD+msQf80e5lY9G5kmbQvOIpgXC15nczvEhLvPVnEUI=
-github.com/mfrancisc/api v0.0.0-20221204201849-a5b2363b5d69/go.mod h1:gY0608ZR+9w2kLyIdMOD9+fYH4tSCF4G6WrjSBVEUm4=
+github.com/mfrancisc/api v0.0.0-20221205110700-f7cdcd29d698 h1:ht1kxsGI8U5/7qGXhOCWo84tR6WJQWuwfG84unchRW4=
+github.com/mfrancisc/api v0.0.0-20221205110700-f7cdcd29d698/go.mod h1:4BhC+uBP9LbSKzQ1ggRAmKIl9pSj0uxdISj0s/HRwEw=
 github.com/mfrancisc/toolchain-common v0.0.0-20221213094525-fa5cf2aa499b h1:F5EQyilgJNHdKKZrqAGrQS03YYTVifCd6qDDvM31yMk=
 github.com/mfrancisc/toolchain-common v0.0.0-20221213094525-fa5cf2aa499b/go.mod h1:MDqL9rC53vsujATfvQpKwayKmZZ8kBjTU6oAH5VDy20=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
