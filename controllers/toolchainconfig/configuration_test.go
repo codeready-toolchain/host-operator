@@ -241,10 +241,10 @@ func TestAutomaticApprovalConfig(t *testing.T) {
 		assert.False(t, toolchainCfg.AutomaticApproval().IsEnabled())
 	})
 	t.Run("non-default", func(t *testing.T) {
-		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(false))
+		cfg := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true))
 		toolchainCfg := newToolchainConfig(cfg, map[string]map[string]string{})
 
-		assert.False(t, toolchainCfg.AutomaticApproval().IsEnabled())
+		assert.True(t, toolchainCfg.AutomaticApproval().IsEnabled())
 	})
 }
 
