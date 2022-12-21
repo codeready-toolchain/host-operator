@@ -36,8 +36,6 @@ var (
 var (
 	// SpaceGaugeVec reflects the current number of spaces in the system, with a label to partition per member cluster
 	SpaceGaugeVec *prometheus.GaugeVec
-	// UserAccountGaugeVec reflects the current number of master user records in the system, with a label to partition per member cluster
-	UserAccountGaugeVec *prometheus.GaugeVec
 	// UserSignupsPerActivationAndDomainGaugeVec reflects the number of users labelled with on their current number of activations and email address domain
 	UserSignupsPerActivationAndDomainGaugeVec *prometheus.GaugeVec
 	// MasterUserRecordGaugeVec reflects the current number of MasterUserRecords, labelled with their email address domain (`internal` vs `external`)
@@ -69,7 +67,6 @@ func initMetrics() {
 	UserSignupDeletedWithoutInitiatingVerificationTotal = newCounter("user_signups_deleted_without_initiating_verification_total", "Total number of deleted UserSignups after verification time trial but without verification initiated")
 	// Gauges with labels
 	SpaceGaugeVec = newGaugeVec("spaces_current", "Current number of Spaces (per member cluster)", "cluster_name")
-	UserAccountGaugeVec = newGaugeVec("user_accounts_current", "Current number of UserAccounts (per member cluster)", "cluster_name")
 	UserSignupsPerActivationAndDomainGaugeVec = newGaugeVec("users_per_activations_and_domain", "Number of UserSignups per activations and domain", []string{"activations", "domain"}...)
 	MasterUserRecordGaugeVec = newGaugeVec("master_user_records", "Number of MasterUserRecords per email address domain ('internal' vs 'external')", "domain")
 	log.Info("custom metrics initialized")

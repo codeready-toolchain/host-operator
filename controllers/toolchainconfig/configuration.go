@@ -128,22 +128,6 @@ func (a AutoApprovalConfig) IsEnabled() bool {
 	return commonconfig.GetBool(a.approval.Enabled, false)
 }
 
-func (a AutoApprovalConfig) ResourceCapacityThresholdDefault() int {
-	return commonconfig.GetInt(a.approval.ResourceCapacityThreshold.DefaultThreshold, 80)
-}
-
-func (a AutoApprovalConfig) ResourceCapacityThresholdSpecificPerMemberCluster() map[string]int {
-	return a.approval.ResourceCapacityThreshold.SpecificPerMemberCluster
-}
-
-func (a AutoApprovalConfig) MaxNumberOfUsersOverall() int {
-	return commonconfig.GetInt(a.approval.MaxNumberOfUsers.Overall, 1000)
-}
-
-func (a AutoApprovalConfig) MaxNumberOfUsersSpecificPerMemberCluster() map[string]int {
-	return a.approval.MaxNumberOfUsers.SpecificPerMemberCluster
-}
-
 type CapacityThresholdsConfig struct {
 	capacityThresholds toolchainv1alpha1.CapacityThresholds
 }

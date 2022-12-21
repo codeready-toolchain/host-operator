@@ -635,11 +635,10 @@ func compareAndAssignMemberStatuses(logger logr.Logger, toolchainStatus *toolcha
 	for clusterName, memberStatus := range members {
 		apiEndpoint := getAPIEndpoint(clusterName, memberClusters)
 		toolchainStatus.Status.Members = append(toolchainStatus.Status.Members, toolchainv1alpha1.Member{
-			APIEndpoint:      apiEndpoint,
-			ClusterName:      clusterName,
-			MemberStatus:     memberStatus,
-			UserAccountCount: 0,
-			SpaceCount:       0,
+			APIEndpoint:  apiEndpoint,
+			ClusterName:  clusterName,
+			MemberStatus: memberStatus,
+			SpaceCount:   0,
 		})
 		logger.Info("added member status", "cluster_name", clusterName)
 	}

@@ -493,10 +493,6 @@ spec:
                     spaceCount:
                       description: Number of Spaces created within the member cluster
                       type: integer
-                    userAccountCount:
-                      description: Number of UserAccounts created within the member
-                        cluster
-                      type: integer
                   required:
                   - clusterName
                   - memberStatus

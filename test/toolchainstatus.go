@@ -86,12 +86,6 @@ func WithSpaceCount(count int) MemberToolchainStatusOption {
 	}
 }
 
-func WithUserAccountCount(count int) MemberToolchainStatusOption {
-	return func(status *toolchainv1alpha1.Member) {
-		status.UserAccountCount = count
-	}
-}
-
 func WithNodeRoleUsage(role string, usage int) MemberToolchainStatusOption {
 	return func(status *toolchainv1alpha1.Member) {
 		if status.MemberStatus.ResourceUsage.MemoryUsagePerNodeRole == nil {

@@ -49,12 +49,6 @@ func (a *CounterAssertion) HaveSpacesForCluster(clusterName string, number int) 
 	return a
 }
 
-func (a *CounterAssertion) HaveUserAccountsForCluster(clusterName string, number int) *CounterAssertion {
-	assert.Equal(a.t, number, a.counts.UserAccountsPerClusterCounts[clusterName])
-	AssertMetricsGaugeEquals(a.t, number, metrics.UserAccountGaugeVec.WithLabelValues(clusterName))
-	return a
-}
-
 func (a *CounterAssertion) HaveUsersPerActivationsAndDomain(expected toolchainv1alpha1.Metric) *CounterAssertion {
 	actual := a.counts.UserSignupsPerActivationAndDomainCounts
 	assert.Equal(a.t, map[string]int(expected), actual)

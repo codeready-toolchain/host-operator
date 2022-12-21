@@ -49,7 +49,7 @@ func TestAddFinalizer(t *testing.T) {
 		memberClient := test.NewFakeClient(t)
 		hostClient := test.NewFakeClient(t, mur)
 		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+			WithMember(test.MemberClusterName),
 			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1,
 			}),
@@ -76,7 +76,7 @@ func TestAddFinalizer(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).HaveUserAccountsForCluster(test.MemberClusterName, 2) // UserAccount created
+			})
 	})
 
 	t.Run("fails because it cannot add finalizer", func(t *testing.T) {
@@ -88,7 +88,7 @@ func TestAddFinalizer(t *testing.T) {
 			return fmt.Errorf("unable to add finalizer to MUR %s", mur.Name)
 		}
 		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+			WithMember(test.MemberClusterName),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -115,8 +115,7 @@ func TestAddFinalizer(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
+			})
 	})
 }
 
@@ -131,7 +130,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	memberClient := test.NewFakeClient(t)
 	hostClient := test.NewFakeClient(t, mur)
 	InitializeCounters(t, NewToolchainStatus(
-		WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+		WithMember(test.MemberClusterName),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -159,8 +158,7 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 		}).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1, // unchanged
-		}).
-		HaveUserAccountsForCluster(test.MemberClusterName, 2) // UserAccount was created
+		})
 }
 
 func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
@@ -179,7 +177,7 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 	memberClient := test.NewFakeClient(t)
 	hostClient := test.NewFakeClient(t, mur)
 	InitializeCounters(t, NewToolchainStatus(
-		WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+		WithMember(test.MemberClusterName),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -207,8 +205,7 @@ func TestCreateUserAccountWhenItWasPreviouslyDeleted(t *testing.T) {
 		}).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1, // unchanged
-		}).
-		HaveUserAccountsForCluster(test.MemberClusterName, 1) // unchanged
+		})
 
 }
 
@@ -218,8 +215,8 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john", murtest.AdditionalAccounts(test.Member2ClusterName), murtest.Finalizer("finalizer.toolchain.dev.openshift.com"))
 	toolchainStatus := NewToolchainStatus(
-		WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-		WithMember(test.Member2ClusterName, WithUserAccountCount(0), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember(test.Member2ClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -256,9 +253,7 @@ func TestCreateMultipleUserAccountsSuccessful(t *testing.T) {
 		}).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1, // unchanged
-		}).
-		HaveUserAccountsForCluster(test.MemberClusterName, 2). // UserAccount created
-		HaveUserAccountsForCluster(test.Member2ClusterName, 1) // UserAccount created
+		})
 }
 
 func TestRequeueWhenUserAccountDeleted(t *testing.T) {
@@ -269,9 +264,9 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 	userAccount1 := uatest.NewUserAccountFromMur(mur)
 	userAccount3 := uatest.NewUserAccountFromMur(mur)
 	toolchainStatus := NewToolchainStatus(
-		WithMember(test.MemberClusterName, WithUserAccountCount(2), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-		WithMember(test.Member2ClusterName, WithUserAccountCount(2), WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
-		WithMember("member3-cluster", WithUserAccountCount(2), WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
+		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember(test.Member2ClusterName, WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
+		WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -302,10 +297,7 @@ func TestRequeueWhenUserAccountDeleted(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 2).
-			HaveUserAccountsForCluster(test.Member2ClusterName, 2).
-			HaveUserAccountsForCluster("member3-cluster", 2)
+			})
 	})
 }
 
@@ -319,7 +311,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 	t.Run("when member cluster does not exist and UA hasn't been created yet", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+			WithMember(test.MemberClusterName),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -349,14 +341,13 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
+			})
 	})
 
 	t.Run("when member cluster does not exist and UA was already created", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+			WithMember(test.MemberClusterName),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -383,14 +374,13 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
+			})
 	})
 
 	t.Run("status update of the MasterUserRecord failed", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+			WithMember(test.MemberClusterName),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -417,14 +407,13 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
+			})
 	})
 
 	t.Run("creation of the UserAccount failed", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+			WithMember(test.MemberClusterName),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -455,14 +444,13 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
+			})
 	})
 
 	t.Run("spec synchronization of the UserAccount failed", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+			WithMember(test.MemberClusterName),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -505,14 +493,13 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
+			})
 	})
 
 	t.Run("status synchronization between UserAccount and MasterUserRecord failed", func(t *testing.T) {
 		// given
 		toolchainStatus := NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -554,14 +541,13 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
+			})
 	})
 
 	t.Run("deletion of the UserAccount failed", func(t *testing.T) {
 		// given
 		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1)),
+			WithMember(test.MemberClusterName),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 			}),
@@ -598,8 +584,7 @@ func TestCreateSynchronizeOrDeleteUserAccountFailed(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
+			})
 	})
 }
 
@@ -620,9 +605,9 @@ func TestModifyUserAccounts(t *testing.T) {
 	require.NoError(t, err)
 
 	toolchainStatus := NewToolchainStatus(
-		WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
-		WithMember(test.Member2ClusterName, WithUserAccountCount(1), WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
-		WithMember("member3-cluster", WithUserAccountCount(1), WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
+		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember(test.Member2ClusterName, WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
+		WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -674,10 +659,7 @@ func TestModifyUserAccounts(t *testing.T) {
 		}).
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 1, // unchanged
-		}).
-		HaveUserAccountsForCluster(test.MemberClusterName, 1).
-		HaveUserAccountsForCluster(test.Member2ClusterName, 1).
-		HaveUserAccountsForCluster("member3-cluster", 1)
+		})
 }
 
 func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
@@ -720,7 +702,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		memberClient3 := test.NewFakeClient(t, userAccount3)
 
 		toolchainStatus := NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
 			WithMember(test.Member2ClusterName, WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
 			WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -767,10 +749,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1).
-			HaveUserAccountsForCluster(test.Member2ClusterName, 0).
-			HaveUserAccountsForCluster("member3-cluster", 0)
+			})
 	})
 
 	t.Run("outdated mur status error cleaned", func(t *testing.T) {
@@ -802,7 +781,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 		}
 
 		toolchainStatus := NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+			WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
 			WithMember(test.Member2ClusterName, WithRoutes("https://console.member2-cluster/", "", ToBeReady())),
 			WithMember("member3-cluster", WithRoutes("https://console.member3-cluster/", "", ToBeReady())),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
@@ -852,10 +831,7 @@ func TestSyncMurStatusWithUserAccountStatuses(t *testing.T) {
 			}).
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1).
-			HaveUserAccountsForCluster(test.Member2ClusterName, 0).
-			HaveUserAccountsForCluster("member3-cluster", 0)
+			})
 	})
 }
 
@@ -871,7 +847,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		memberClient := test.NewFakeClient(t, userAcc)
 		hostClient := test.NewFakeClient(t, mur)
 		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(2)),
+			WithMember(test.MemberClusterName),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 				"1,external": 1,
@@ -907,8 +883,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 0, // decremented
 				string(metrics.External): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 1)
+			})
 	})
 
 	t.Run("test wait for UserAccount deletion in progress before removing MUR finalizer", func(t *testing.T) {
@@ -924,7 +899,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		hostClient := test.NewFakeClient(t, mur)
 		memberClient := test.NewFakeClient(t, userAcc)
 		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(2)),
+			WithMember(test.MemberClusterName),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 				"1,external": 1,
@@ -961,8 +936,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 			HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 				string(metrics.Internal): 0, // decremented
 				string(metrics.External): 1, // unchanged
-			}).
-			HaveUserAccountsForCluster(test.MemberClusterName, 2)
+			})
 	})
 
 	t.Run("test wait for UserAccount deletion takes too long", func(t *testing.T) {
@@ -985,7 +959,7 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 		hostClient := test.NewFakeClient(t, mur)
 		memberClient := test.NewFakeClient(t, userAcc)
 		InitializeCounters(t, NewToolchainStatus(
-			WithMember(test.MemberClusterName, WithUserAccountCount(2)),
+			WithMember(test.MemberClusterName),
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 				"1,internal": 1,
 				"1,external": 1,
@@ -1008,8 +982,6 @@ func TestDeleteUserAccountViaMasterUserRecordBeingDeleted(t *testing.T) {
 			Exists()
 		murtest.AssertThatMasterUserRecord(t, "john-wait-for-ua", hostClient).
 			HasFinalizer()
-		AssertThatCountersAndMetrics(t).
-			HaveUserAccountsForCluster(test.MemberClusterName, 2)
 	})
 
 	t.Run("test UserAccount deletion has foreground propagation policy", func(t *testing.T) {
@@ -1057,9 +1029,9 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 	memberClient2 := test.NewFakeClient(t, userAcc)
 	hostClient := test.NewFakeClient(t, mur)
 	InitializeCounters(t, NewToolchainStatus(
-		WithMember(test.MemberClusterName, WithUserAccountCount(2)),
-		WithMember(test.Member2ClusterName, WithUserAccountCount(2)),
-		WithMember("member3-cluster", WithUserAccountCount(2)),
+		WithMember(test.MemberClusterName),
+		WithMember(test.Member2ClusterName),
+		WithMember("member3-cluster"),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 			"1,external": 1,
@@ -1098,10 +1070,7 @@ func TestDeleteMultipleUserAccountsViaMasterUserRecordBeingDeleted(t *testing.T)
 		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
 			string(metrics.Internal): 0, // decremented
 			string(metrics.External): 1, // unchanged
-		}).
-		HaveUserAccountsForCluster(test.MemberClusterName, 1).
-		HaveUserAccountsForCluster(test.Member2ClusterName, 1).
-		HaveUserAccountsForCluster("member3-cluster", 2)
+		})
 }
 
 func TestDisablingMasterUserRecord(t *testing.T) {
@@ -1114,7 +1083,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	userAccount := uatest.NewUserAccountFromMur(mur, uatest.DisabledUa(false))
 	memberClient := test.NewFakeClient(t, userAccount)
 	toolchainStatus := NewToolchainStatus(
-		WithMember(test.MemberClusterName, WithUserAccountCount(1), WithRoutes("https://console.member-cluster/", "", ToBeReady())),
+		WithMember(test.MemberClusterName, WithRoutes("https://console.member-cluster/", "", ToBeReady())),
 		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
 			"1,internal": 1,
 		}),
@@ -1135,8 +1104,7 @@ func TestDisablingMasterUserRecord(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, userAcc.Spec.Disabled)
 	AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 1}). // unchanged
-		HaveUserAccountsForCluster(test.MemberClusterName, 1)
+		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{string(metrics.Internal): 1}) // unchanged
 }
 
 func newMurRequest(mur *toolchainv1alpha1.MasterUserRecord) reconcile.Request {

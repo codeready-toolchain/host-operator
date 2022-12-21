@@ -66,7 +66,7 @@ func TestReconcile(t *testing.T) {
 
 		t.Run("config exists", func(t *testing.T) {
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
-				testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)),
+				testconfig.AutomaticApproval().Enabled(true),
 				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)),
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
@@ -85,8 +85,6 @@ func TestReconcile(t *testing.T) {
 			actual, err := toolchainconfig.GetToolchainConfig(hostCl)
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
-			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
 			assert.Equal(t, config.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
 			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).
 				Exists().
@@ -110,7 +108,6 @@ func TestReconcile(t *testing.T) {
 				err := hostCl.Get(context.TODO(), types.NamespacedName{Name: config.Name, Namespace: config.Namespace}, config)
 				require.NoError(t, err)
 				threshold := 100
-				config.Spec.Host.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold = &threshold
 				config.Spec.Host.CapacityThresholds.ResourceCapacityThreshold.DefaultThreshold = &threshold
 				newRefreshPeriod := "20s"
 				config.Spec.Members.Default.MemberStatus.RefreshPeriod = &newRefreshPeriod
@@ -126,9 +123,6 @@ func TestReconcile(t *testing.T) {
 				actual, err := toolchainconfig.GetToolchainConfig(hostCl)
 				require.NoError(t, err)
 				assert.True(t, actual.AutomaticApproval().IsEnabled())
-				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-				assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-				assert.Equal(t, 100, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
 				assert.Equal(t, config.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
 				assert.Equal(t, 100, actual.CapacityThresholds().ResourceCapacityThresholdDefault())
 				testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).
@@ -154,7 +148,6 @@ func TestReconcile(t *testing.T) {
 				err := hostCl.Get(context.TODO(), types.NamespacedName{Name: config.Name, Namespace: config.Namespace}, config)
 				require.NoError(t, err)
 				threshold := 100
-				config.Spec.Host.AutomaticApproval.ResourceCapacityThreshold.DefaultThreshold = &threshold
 				config.Spec.Host.CapacityThresholds.ResourceCapacityThreshold.DefaultThreshold = &threshold
 				err = hostCl.Update(context.TODO(), config)
 				require.NoError(t, err)
@@ -171,9 +164,6 @@ func TestReconcile(t *testing.T) {
 				actual, err := toolchainconfig.GetToolchainConfig(hostCl)
 				require.NoError(t, err)
 				assert.True(t, actual.AutomaticApproval().IsEnabled())
-				assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-				assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-				assert.Equal(t, 100, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
 				assert.Equal(t, config.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
 				assert.Equal(t, 100, actual.CapacityThresholds().ResourceCapacityThresholdDefault())
 
@@ -195,7 +185,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("error getting the toolchainconfig resource", func(t *testing.T) {
 			// given
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
-				testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)),
+				testconfig.AutomaticApproval().Enabled(true),
 				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)),
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
@@ -224,7 +214,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("error loading toolchainconfig", func(t *testing.T) {
 			// given
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
-				testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)),
+				testconfig.AutomaticApproval().Enabled(true),
 				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)),
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
@@ -256,7 +246,7 @@ func TestReconcile(t *testing.T) {
 		t.Run("reg service deploy failed", func(t *testing.T) {
 			// given
 			config := commonconfig.NewToolchainConfigObjWithReset(t,
-				testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)), testconfig.Members().Default(defaultMemberConfig.Spec), testconfig.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec),
+				testconfig.AutomaticApproval().Enabled(true),
 				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)))
 			hostCl := test.NewFakeClient(t, config)
 			hostCl.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
@@ -273,9 +263,6 @@ func TestReconcile(t *testing.T) {
 			actual, err := toolchainconfig.GetToolchainConfig(hostCl)
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
-			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-			assert.Equal(t, 80, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
 			assert.Equal(t, config.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
 			assert.Equal(t, 80, actual.CapacityThresholds().ResourceCapacityThresholdDefault())
 			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).
@@ -287,7 +274,7 @@ func TestReconcile(t *testing.T) {
 
 		t.Run("sync failed", func(t *testing.T) {
 			// given
-			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)), testconfig.Members().Default(defaultMemberConfig.Spec), testconfig.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec),
+			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Members().Default(defaultMemberConfig.Spec), testconfig.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec),
 				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)))
 			hostCl := test.NewFakeClient(t, config)
 			members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
@@ -302,9 +289,6 @@ func TestReconcile(t *testing.T) {
 			actual, err := toolchainconfig.GetToolchainConfig(hostCl)
 			require.NoError(t, err)
 			assert.True(t, actual.AutomaticApproval().IsEnabled())
-			assert.Equal(t, 123, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-			assert.Equal(t, config.Spec.Host.AutomaticApproval.MaxNumberOfUsers.SpecificPerMemberCluster, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-			assert.Equal(t, 80, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
 			assert.Equal(t, config.Spec.Host.CapacityThresholds.MaxNumberOfSpacesPerMemberCluster, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
 			assert.Equal(t, 80, actual.CapacityThresholds().ResourceCapacityThresholdDefault())
 			testconfig.AssertThatToolchainConfig(t, test.HostOperatorNs, hostCl).
@@ -319,7 +303,7 @@ func TestReconcile(t *testing.T) {
 
 func TestWrapErrorWithUpdateStatus(t *testing.T) {
 	// given
-	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true).MaxNumberOfUsers(123, testconfig.PerMemberCluster("member1", 321)),
+	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
 		testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)))
 	hostCl := test.NewFakeClient(t, config)
 	members := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
@@ -371,10 +355,6 @@ func newRequest() reconcile.Request {
 
 func matchesDefaultConfig(t *testing.T, actual toolchainconfig.ToolchainConfig) {
 	assert.False(t, actual.AutomaticApproval().IsEnabled())
-	assert.Equal(t, 1000, actual.AutomaticApproval().MaxNumberOfUsersOverall())
-	assert.Empty(t, actual.AutomaticApproval().MaxNumberOfUsersSpecificPerMemberCluster())
-	assert.Equal(t, 80, actual.AutomaticApproval().ResourceCapacityThresholdDefault())
-	assert.Empty(t, actual.AutomaticApproval().ResourceCapacityThresholdSpecificPerMemberCluster())
 	assert.Empty(t, actual.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster())
 	assert.Equal(t, 80, actual.CapacityThresholds().ResourceCapacityThresholdDefault())
 	assert.Empty(t, actual.CapacityThresholds().ResourceCapacityThresholdSpecificPerMemberCluster())
