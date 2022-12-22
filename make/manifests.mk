@@ -37,7 +37,10 @@ generate-rbac: build controller-gen
 .PHONY: bundle
 bundle: clean-bundle generate-rbac kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	operator-sdk generate kustomize manifests -q
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle --overwrite --version=${NEXT_VERSION} --channels ${CHANNEL} --default-channel ${CHANNEL} --package toolchain-host-operator
+	$(eval TMP_MANIFEST_FILE := $(shell mktemp))
+	@echo "generating manifests to temporary file: ${TMP_MANIFEST_FILE}"
+	$(KUSTOMIZE) build config/manifests -o ${TMP_MANIFEST_FILE}
+	cat ${TMP_MANIFEST_FILE} | operator-sdk generate bundle --overwrite --version=${NEXT_VERSION} --channels ${CHANNEL} --default-channel ${CHANNEL} --package toolchain-host-operator
 	operator-sdk bundle validate ./bundle
 
 .PHONY: publish-current-bundle
