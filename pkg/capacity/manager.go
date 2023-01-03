@@ -51,6 +51,19 @@ func hasMemberREnoughResources(memberStatus toolchainv1alpha1.Member, threshold 
 	return false
 }
 
+func NewClusterManager(getMemberClusters cluster.GetMemberClustersFunc, cl client.Client) *ClusterManager {
+	return &ClusterManager{
+		getMemberClusters: getMemberClusters,
+		client:            cl,
+	}
+}
+
+type ClusterManager struct {
+	getMemberClusters cluster.GetMemberClustersFunc
+	client            client.Client
+	lastUsed          string
+}
+
 // GetOptimalTargetCluster returns the name of the cluster with the most available capacity where a Space could be provisioned.
 //
 // If two clusters have the same limit and they both have the same usage, then the logic distributes spaces in a batches of 50.
@@ -59,8 +72,8 @@ func hasMemberREnoughResources(memberStatus toolchainv1alpha1.Member, threshold 
 // Let's say that the limit for member1 is 1000 and for member2 is 2000, then the batch of spaces would be 50 for member1 and 100 for member2.
 //
 // If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned.
-func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberClusters cluster.GetMemberClustersFunc, cl client.Client) (string, error) {
-	config, err := toolchainconfig.GetToolchainConfig(cl)
+func (b *ClusterManager) GetOptimalTargetCluster(preferredCluster, namespace string) (string, error) {
+	config, err := toolchainconfig.GetToolchainConfig(b.client)
 	if err != nil {
 		return "", errors.Wrapf(err, "unable to get ToolchainConfig")
 	}
@@ -71,10 +84,19 @@ func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberCluste
 	}
 
 	status := &toolchainv1alpha1.ToolchainStatus{}
-	if err := cl.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
+	if err := b.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: toolchainconfig.ToolchainStatusName}, status); err != nil {
 		return "", errors.Wrapf(err, "unable to read ToolchainStatus resource")
 	}
-	optimalTargetClusters := getOptimalTargetClusters(preferredCluster, getMemberClusters, hasNotReachedMaxNumberOfSpacesThreshold(config, counts), hasEnoughResources(config, status))
+	optimalTargetClusters := getOptimalTargetClusters(preferredCluster, b.getMemberClusters, hasNotReachedMaxNumberOfSpacesThreshold(config, counts), hasEnoughResources(config, status))
+
+	for _, cluster := range optimalTargetClusters {
+		if cluster == b.lastUsed {
+			provisioned := counts.SpacesPerClusterCounts[cluster]
+			if provisioned%50 != 0 {
+				return cluster, nil
+			}
+		}
+	}
 
 	sort.Slice(optimalTargetClusters, func(i, j int) bool {
 		provisioned1 := counts.SpacesPerClusterCounts[optimalTargetClusters[i]]
@@ -83,15 +105,16 @@ func GetOptimalTargetCluster(preferredCluster, namespace string, getMemberCluste
 		provisioned2 := counts.SpacesPerClusterCounts[optimalTargetClusters[j]]
 		threshold2 := config.CapacityThresholds().MaxNumberOfSpacesSpecificPerMemberCluster()[optimalTargetClusters[j]]
 
-		// Let's round the number of provisioned users down to closest multiple of 50
+		// Let's round the number of provisioned users down to the closest multiple of 50
 		// This is a trick we need to do before comparing the capacity, so we can distribute the users in batches by 50 (if the clusters have the same limit)
-		provisioned1 = (provisioned1 / 50) * 50
-		provisioned2 = (provisioned2 / 50) * 50
+		provisioned1By50 := (provisioned1 / 50) * 50
+		provisioned2By50 := (provisioned2 / 50) * 50
 
 		// now we can calculate what is the actual usage of the clusters (how many users are provisioned there compared to the threshold) and compare them
-		return float64(provisioned1)/float64(threshold1) < float64(provisioned2)/float64(threshold2)
+		return float64(provisioned1By50)/float64(threshold1) < float64(provisioned2By50)/float64(threshold2)
 	})
 
+	b.lastUsed = optimalTargetClusters[0]
 	return optimalTargetClusters[0], nil
 }
 
