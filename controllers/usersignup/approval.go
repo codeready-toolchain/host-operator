@@ -4,7 +4,6 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +28,7 @@ func (c targetCluster) getClusterName() string {
 // If the user is not approved manually, then it loads ToolchainConfig to check if automatic approval is enabled or not. If it is then it checks
 // capacity thresholds and the actual use if there is any suitable member cluster. If it is not then it returns false as the first value and
 // targetCluster unknown as the second value.
-func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSignup, getMemberClusters cluster.GetMemberClustersFunc) (bool, targetCluster, error) {
+func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSignup, clusterManager *capacity.ClusterManager) (bool, targetCluster, error) {
 	config, err := toolchainconfig.GetToolchainConfig(cl)
 	if err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to get ToolchainConfig")
@@ -48,7 +47,7 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 	// The last cluster is used for returning users to ensure they can be provisioned back to the same cluster as they were previously using so they don't need to update URLs and kube contexts
 	preferredCluster := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
 
-	clusterName, err := capacity.GetOptimalTargetCluster(preferredCluster, userSignup.Namespace, getMemberClusters, cl)
+	clusterName, err := clusterManager.GetOptimalTargetCluster(preferredCluster, userSignup.Namespace)
 	if err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to get the optimal target cluster")
 	}
