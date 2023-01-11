@@ -48,7 +48,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -66,7 +66,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -84,7 +84,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -102,7 +102,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.GetOptimalTargetCluster("member2", HostOperatorNs, clusters, fakeClient)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("member2", HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -120,7 +120,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -138,7 +138,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.GetOptimalTargetCluster("member1", HostOperatorNs, clusters, fakeClient)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("member1", HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -156,7 +156,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.GetOptimalTargetCluster("member2", HostOperatorNs, clusters, fakeClient)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("member2", HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -174,7 +174,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -192,7 +192,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -210,7 +210,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionFalse), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
 
 		// then
 		require.NoError(t, err)
@@ -229,7 +229,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 			// when
-			clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
 
 			// then
 			require.EqualError(t, err, "unable to get ToolchainConfig: some error")
@@ -249,7 +249,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 			// when
-			clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
 
 			// then
 			require.EqualError(t, err, "unable to read ToolchainStatus resource: some error")
@@ -263,73 +263,90 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 	for _, limit := range []int{800, 1000, 1234, 2500, 10000} {
 		t.Run(fmt.Sprintf("for the given limit of max number of spaces per cluster: %d", limit), func(t *testing.T) {
 
-			for _, numberOfSpaces := range []int{0, 50, 100, 550} {
+			for _, numberOfSpaces := range []int{0, 8, 50, 88, 100, 123, 555} {
 				t.Run(fmt.Sprintf("when there is a number of spaces at the very beginning %d", numberOfSpaces), func(t *testing.T) {
 
-					for _, makeItBigger := range []int{1, 2} {
-						name := "member3 has the same size as member2"
-						if makeItBigger > 1 {
-							name = fmt.Sprintf("member3 is %d times bigger than member2", makeItBigger)
+					toolchainStatus := NewToolchainStatus(
+						WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+							string(metrics.Internal): 1000,
+						}),
+						WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+							"1,internal": 1000,
+						}),
+						WithMember("member1", WithSpaceCount(1000), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
+						WithMember("member2", WithSpaceCount(numberOfSpaces), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)),
+						WithMember("member3", WithSpaceCount(numberOfSpaces), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 50)))
+
+					// member2 and member3 have the same capacity left and the member1 is full, so no one can be provisioned there
+					toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
+						testconfig.CapacityThresholds().
+							MaxNumberOfSpaces(testconfig.PerMemberCluster("member2", limit), testconfig.PerMemberCluster("member3", limit)))
+
+					fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+					InitializeCounters(t, toolchainStatus)
+					clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
+					clusterBalancer := capacity.NewClusterManager(clusters, fakeClient)
+
+					// now run in 4 cycles and expect that the users will be provisioned in batches of 50
+					member2CurrentCount := numberOfSpaces
+					member3CurrentCount := numberOfSpaces
+					for cycle := 0; cycle < 4; cycle++ {
+
+						member2MissingTo50 := 50 - member2CurrentCount%50
+						// this 50 users should go into member2 - it will be always 50
+						for i := 0; i < member2MissingTo50; i++ {
+							t.Run(fmt.Sprintf("cycle %d user %d for member2", cycle, i), func(t *testing.T) {
+								//given
+								// even when the counter of the other member is decremented, it should still use the last used one
+								// but we can decrement it only in the second cycle when the member3 has at least 50 Spaces
+								if i == 2 && cycle > 1 {
+									counter.DecrementSpaceCount(log.Log, "member3")
+									member3CurrentCount--
+								}
+
+								// when
+								clusterName, err := clusterBalancer.GetOptimalTargetCluster("", HostOperatorNs)
+
+								// then
+								require.NoError(t, err)
+								assert.Equal(t, "member2", clusterName)
+
+								counter.IncrementSpaceCount(log.Log, "member2")
+								member2CurrentCount++
+							})
 						}
-						t.Run(name, func(t *testing.T) {
 
-							toolchainStatus := NewToolchainStatus(
-								WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-									string(metrics.Internal): 1000,
-								}),
-								WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-									"1,internal": 1000,
-								}),
-								WithMember("member1", WithSpaceCount(1000), WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)),
-								WithMember("member2", WithSpaceCount(numberOfSpaces), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 60)),
-								WithMember("member3", WithSpaceCount(numberOfSpaces*makeItBigger), WithNodeRoleUsage("worker", 55), WithNodeRoleUsage("master", 50)))
+						// reset the decremented counter back
+						if member2MissingTo50 > 2 && cycle > 1 {
+							counter.IncrementSpaceCount(log.Log, "member3")
+							member3CurrentCount++
+						}
 
-							// member2 and member3 have the same capacity left and the member1 is full, so no one can be provisioned there
-							toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-								testconfig.CapacityThresholds().
-									MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1001), testconfig.PerMemberCluster("member2", limit), testconfig.PerMemberCluster("member3", limit*makeItBigger)))
+						member3MissingTo50 := 50 - member3CurrentCount%50
+						// this batch of users should go into member3 - the size of the batch depends on how many times the cluster is bigger than member2
+						for i := 0; i < member3MissingTo50; i++ {
+							t.Run(fmt.Sprintf("cycle %d user %d for member3", cycle, i), func(t *testing.T) {
+								// when
+								clusterName, err := clusterBalancer.GetOptimalTargetCluster("", HostOperatorNs)
 
-							fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
-							InitializeCounters(t, toolchainStatus)
-							clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
+								// then
+								require.NoError(t, err)
+								assert.Equal(t, "member3", clusterName)
 
-							// now run in 4 cycles and expect that the users will be provisioned in batches of 50
-							for cycle := 0; cycle < 4; cycle++ {
+								counter.IncrementSpaceCount(log.Log, "member3")
+								member3CurrentCount++
+							})
+						}
 
-								// this 50 users should go into member2 - it will be always 50
-								for i := 0; i < 50; i++ {
-									// when
-									clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
-
-									// then
-									require.NoError(t, err)
-									assert.Equal(t, "member2", clusterName)
-
-									counter.IncrementSpaceCount(log.Log, "member2")
-								}
-
-								// this batch of users should go into member3 - the size of the batch depends how many times the cluster is bigger than member2
-								for i := 0; i < 50*makeItBigger; i++ {
-									// when
-									clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
-
-									// then
-									require.NoError(t, err)
-									assert.Equal(t, "member3", clusterName)
-
-									counter.IncrementSpaceCount(log.Log, "member3")
-								}
-							}
-
-							// when
-							clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
-
-							// then
-							require.NoError(t, err)
-							// expect that it would start provisioning in member2 again
-							assert.Equal(t, "member2", clusterName)
-						})
 					}
+
+					// when
+					clusterName, err := clusterBalancer.GetOptimalTargetCluster("", HostOperatorNs)
+
+					// then
+					require.NoError(t, err)
+					// expect that it would start provisioning in member2 again
+					assert.Equal(t, "member2", clusterName)
 				})
 			}
 		})
@@ -344,7 +361,7 @@ func TestGetOptimalTargetClusterWhenCounterIsNotInitialized(t *testing.T) {
 	clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 	// when
-	clusterName, err := capacity.GetOptimalTargetCluster("", HostOperatorNs, clusters, fakeClient)
+	clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
 
 	// then
 	require.EqualError(t, err, "unable to get the number of provisioned spaces: counter is not initialized")

@@ -7,7 +7,6 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/pending"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/go-logr/logr"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 
@@ -26,9 +25,9 @@ import (
 
 // Reconciler reconciles a Space object
 type Reconciler struct {
-	Client            client.Client
-	Namespace         string
-	GetMemberClusters cluster.GetMemberClustersFunc
+	Client         client.Client
+	Namespace      string
+	ClusterManager *capacity.ClusterManager
 }
 
 // SetupWithManager sets up the controller reconciler with the Manager
@@ -94,7 +93,7 @@ func (r *Reconciler) ensureFields(logger logr.Logger, space *toolchainv1alpha1.S
 	}
 
 	if space.Spec.TargetCluster == "" {
-		targetCluster, err := capacity.GetOptimalTargetCluster("", space.Namespace, r.GetMemberClusters, r.Client)
+		targetCluster, err := r.ClusterManager.GetOptimalTargetCluster("", space.Namespace)
 		if err != nil {
 			return false, errs.Wrapf(err, "unable to get the optimal target cluster")
 		}
