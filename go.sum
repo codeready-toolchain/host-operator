@@ -571,8 +571,8 @@ github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
-github.com/xcoulon/toolchain-common v0.0.0-20230111075124-54af51c504ae h1:es6bgIIMm2NZveq58xFSxuiMUE0APLKcIrZeR1yzrGQ=
-github.com/xcoulon/toolchain-common v0.0.0-20230111075124-54af51c504ae/go.mod h1:MDqL9rC53vsujATfvQpKwayKmZZ8kBjTU6oAH5VDy20=
+github.com/xcoulon/toolchain-common v0.0.0-20230111085908-1dc1cb70f1e9 h1:k7om6RBjRwXHblPV/VOcCS+2S7iBlkBrVDs8hbkjvGc=
+github.com/xcoulon/toolchain-common v0.0.0-20230111085908-1dc1cb70f1e9/go.mod h1:MDqL9rC53vsujATfvQpKwayKmZZ8kBjTU6oAH5VDy20=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca/go.mod h1:ce1O1j6UtZfjr22oyGxGLbauSBp2YVXpARAosm7dHBg=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
