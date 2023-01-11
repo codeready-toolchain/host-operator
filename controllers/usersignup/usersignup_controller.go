@@ -8,13 +8,13 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
+	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/pending"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
-	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/hash"
 	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
@@ -69,10 +69,10 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 // Reconciler reconciles a UserSignup object
 type Reconciler struct {
 	*StatusUpdater
-	Namespace         string
-	Scheme            *runtime.Scheme
-	GetMemberClusters cluster.GetMemberClustersFunc
-	SegmentClient     *segment.Client
+	Namespace      string
+	Scheme         *runtime.Scheme
+	SegmentClient  *segment.Client
+	ClusterManager *capacity.ClusterManager
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=usersignups,verbs=get;list;watch;create;update;patch;delete
@@ -373,7 +373,7 @@ func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolch
 		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
 	}
 
-	approved, targetCluster, err := getClusterIfApproved(r.Client, userSignup, r.GetMemberClusters)
+	approved, targetCluster, err := getClusterIfApproved(r.Client, userSignup, r.ClusterManager)
 	reqLogger.Info("ensuring MUR", "approved", approved, "target_cluster", targetCluster, "error", err)
 	// if error was returned or no available cluster found
 	if err != nil || targetCluster == notFound {
