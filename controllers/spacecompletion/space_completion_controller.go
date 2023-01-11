@@ -49,7 +49,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 // Reconcile ensures that Space has set all missing fields that are needed for proper provisoning
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx, "namespace", r.Namespace)
-	logger.Info("reconciling Space")
+	// logger.Info("reconciling Space")
 
 	// Fetch the Space
 	space := &toolchainv1alpha1.Space{}

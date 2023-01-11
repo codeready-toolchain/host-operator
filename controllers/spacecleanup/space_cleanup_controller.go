@@ -46,7 +46,7 @@ const deletionTimeThreshold = 30 * time.Second
 // Reconcile ensures that Space which doesn't have any SpaceBinding is deleted
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
-	logger.Info("reconciling Space")
+	// logger.Info("reconciling Space")
 
 	// Fetch the Space
 	space := &toolchainv1alpha1.Space{}
@@ -68,7 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// if is already being deleted, then skip it
 	if util.IsBeingDeleted(space) {
-		logger.Info("Space is already being deleted - skipping...")
+		// logger.Info("Space is already being deleted - skipping...")
 		return reconcile.Result{}, nil
 	}
 
