@@ -168,7 +168,7 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 		return err
 	}
 
-	// log.Info("synchronizing counters", "cachedCounts.initialized", cachedCounts.initialized, "members", toolchainStatus.Status.Members)
+	log.Info("synchronizing counters", "cachedCounts.initialized", cachedCounts.initialized, "members", toolchainStatus.Status.Members)
 
 	// update the toolchainStatus.HostOperator.MasterUserRecordCount and metrics.MasterUserRecordGauge
 	// from the cachedCounts.MasterUserRecordCount
@@ -208,7 +208,7 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 		log.Info("synchronized master_user_records gauge", "domaim", domain, "count", count)
 		metrics.MasterUserRecordGaugeVec.WithLabelValues(domain).Set(float64(count))
 	}
-	// log.Info("synchronized counters", "counts", cachedCounts.Counts)
+	log.Info("synchronized counters", "counts", cachedCounts.Counts)
 	return nil
 }
 

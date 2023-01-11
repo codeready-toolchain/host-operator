@@ -127,7 +127,7 @@ type Reconciler struct {
 // Reconcile reads the state of toolchain host and member cluster components and updates the ToolchainStatus resource with information useful for observation or troubleshooting
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	reqLogger := log.FromContext(ctx)
-	// reqLogger.Info("Reconciling ToolchainStatus")
+	reqLogger.Info("Reconciling ToolchainStatus")
 
 	config, err := toolchainconfig.GetToolchainConfig(r.Client)
 	if err != nil {
@@ -370,7 +370,7 @@ func (r *Reconciler) proxyURL() (string, error) {
 // if any of the members are not ready or if no member clusters are found
 func (r *Reconciler) membersHandleStatus(logger logr.Logger, toolchainStatus *toolchainv1alpha1.ToolchainStatus) bool {
 	// get member clusters
-	// logger.Info("updating member status")
+	logger.Info("updating member status")
 	memberClusters := r.GetMembersFunc()
 	members := map[string]toolchainv1alpha1.MemberStatusStatus{}
 	ready := true
