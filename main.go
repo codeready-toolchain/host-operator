@@ -22,6 +22,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignupcleanup"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
@@ -267,10 +268,10 @@ func main() { // nolint:gocyclo
 		StatusUpdater: &usersignup.StatusUpdater{
 			Client: mgr.GetClient(),
 		},
-		Namespace:         namespace,
-		Scheme:            mgr.GetScheme(),
-		GetMemberClusters: commoncluster.GetMemberClusters,
-		SegmentClient:     segmentClient,
+		Namespace:      namespace,
+		Scheme:         mgr.GetScheme(),
+		SegmentClient:  segmentClient,
+		ClusterManager: capacity.NewClusterManager(commoncluster.GetMemberClusters, mgr.GetClient()),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignup")
 		os.Exit(1)
@@ -291,9 +292,9 @@ func main() { // nolint:gocyclo
 		os.Exit(1)
 	}
 	if err = (&spacecompletion.Reconciler{
-		Client:            mgr.GetClient(),
-		Namespace:         namespace,
-		GetMemberClusters: commoncluster.GetMemberClusters,
+		Client:         mgr.GetClient(),
+		Namespace:      namespace,
+		ClusterManager: capacity.NewClusterManager(commoncluster.GetMemberClusters, mgr.GetClient()),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SpaceCompletion")
 		os.Exit(1)

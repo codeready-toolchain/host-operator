@@ -9,6 +9,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecompletion"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	. "github.com/codeready-toolchain/host-operator/test"
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
@@ -227,9 +228,9 @@ func prepareReconcile(t *testing.T, space *toolchainv1alpha1.Space, getMemberClu
 	fakeClient := test.NewFakeClient(t, toolchainStatus, space, conf)
 
 	r := &spacecompletion.Reconciler{
-		Client:            fakeClient,
-		Namespace:         test.HostOperatorNs,
-		GetMemberClusters: getMemberClusters,
+		Client:         fakeClient,
+		Namespace:      test.HostOperatorNs,
+		ClusterManager: capacity.NewClusterManager(getMemberClusters, fakeClient),
 	}
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{

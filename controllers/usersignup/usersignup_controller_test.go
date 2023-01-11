@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -3643,9 +3644,9 @@ func prepareReconcile(t *testing.T, name string, getMemberClusters cluster.GetMe
 		StatusUpdater: &StatusUpdater{
 			Client: fakeClient,
 		},
-		Scheme:            s,
-		GetMemberClusters: getMemberClusters,
-		SegmentClient:     segment.NewClient(segmenttest.NewClient()),
+		Scheme:         s,
+		ClusterManager: capacity.NewClusterManager(getMemberClusters, fakeClient),
+		SegmentClient:  segment.NewClient(segmenttest.NewClient()),
 	}
 	return r, newReconcileRequest(name), fakeClient
 }
