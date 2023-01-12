@@ -37,6 +37,8 @@ objects:
           - socialevents
         verbs:
           - get
+          - list
+          - watch
       - apiGroups:
           - toolchain.dev.openshift.com
         resources:
