@@ -179,6 +179,61 @@ func TestCreateSpace(t *testing.T) {
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // no counters since `spec.TargetCluster` is not specified
 		})
+
+		t.Run("update parent-space label with parentSpace spec field", func(t *testing.T) {
+			// given
+			subSpace := spacetest.NewSpace("subSpace",
+				spacetest.WithTierName(basicTier.Name),
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"),
+				spacetest.WithSpecParentSpace("parentSpace"))
+
+			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("subSpace", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(basicTier))
+			memberClient := test.NewFakeClient(t, nsTmplSet)
+			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, subSpace, basicTier)
+			ctrl := newReconciler(hostClient, member)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
+
+			// then
+			require.NoError(t, err)
+			spacetest.AssertThatSpace(t, subSpace.Namespace, subSpace.Name, hostClient).
+				Exists().
+				HasStatusTargetCluster("member-1").
+				HasConditions(spacetest.Ready()).
+				HasStateLabel("cluster-assigned").
+				HasLabelWithValue(toolchainv1alpha1.ParentSpaceLabelKey, "parentSpace"). // check that the parent-space label was set according to spec.ParentSpace field value
+				HasFinalizer()
+		})
+
+		t.Run("without parentSpace spec field", func(t *testing.T) {
+			// given
+			subSpace := spacetest.NewSpace("myspace",
+				spacetest.WithTierName(basicTier.Name),
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"))
+
+			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("myspace", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(basicTier))
+			memberClient := test.NewFakeClient(t, nsTmplSet)
+			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, subSpace, basicTier)
+			ctrl := newReconciler(hostClient, member)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
+
+			// then
+			require.NoError(t, err)
+			spacetest.AssertThatSpace(t, subSpace.Namespace, subSpace.Name, hostClient).
+				Exists().
+				HasStatusTargetCluster("member-1").
+				HasConditions(spacetest.Ready()).
+				HasStateLabel("cluster-assigned").
+				DoesNotHaveLabel(toolchainv1alpha1.ParentSpaceLabelKey). // check that the parent-space label is not present
+				HasFinalizer()
+		})
 	})
 
 	t.Run("failure", func(t *testing.T) {
@@ -744,6 +799,125 @@ func TestDeleteSpace(t *testing.T) {
 				HaveSpacesForCluster("member-1", 1).
 				HaveSpacesForCluster("member-2", 0) // space counter is not decremented when there NSTemplateSet deletion is stuck
 		})
+	})
+}
+
+func TestDeleteWithSubSpace(t *testing.T) {
+	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	err := apis.AddToScheme(scheme.Scheme)
+	require.NoError(t, err)
+	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
+
+	t.Run("when space has sub-space", func(t *testing.T) {
+		// given a parentSpace that is being deleted
+		parentSpace := spacetest.NewSpace("parentSpace",
+			spacetest.WithDeletionTimestamp(), // deletion was requested
+			spacetest.WithFinalizer(),
+			spacetest.WithSpecTargetCluster("member-1"),
+			spacetest.WithStatusTargetCluster("member-1"))
+		parentNsTmplSet := nstemplatetsettest.NewNSTemplateSet("parentSpace", nstemplatetsettest.WithReadyCondition())
+		// and a sub-space
+		subSpace := spacetest.NewSpace("subSpace",
+			spacetest.WithSpecParentSpace(parentSpace.Name),
+			spacetest.WithLabel(
+				toolchainv1alpha1.ParentSpaceLabelKey, parentSpace.Name,
+			),
+			spacetest.WithFinalizer(),
+			spacetest.WithSpecTargetCluster("member-1"),
+			spacetest.WithStatusTargetCluster("member-1"))
+		subSpaceNsTmplSet := nstemplatetsettest.NewNSTemplateSet("subSpace", nstemplatetsettest.WithReadyCondition())
+		memberClient := test.NewFakeClient(t, subSpaceNsTmplSet, parentNsTmplSet)
+		memberClient.MockDelete = mockDeleteNSTemplateSet(memberClient.Client)
+		InitializeCounters(t,
+			NewToolchainStatus(
+				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+					"1,internal": 2,
+				}),
+				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+					string(metrics.Internal): 2,
+				}),
+				WithMember("member-1", WithSpaceCount(2)),
+			))
+
+		t.Run("we trigger deletion of parentSpace", func(t *testing.T) {
+			// given
+			hostClient := test.NewFakeClient(t, parentSpace, subSpace, basicTier)
+			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member)
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(parentSpace))
+
+			// then
+			require.NoError(t, err)
+			assert.True(t, res.Requeue) // requeue while the sub-spaces are terminating
+			spacetest.AssertThatSpace(t, parentSpace.Namespace, parentSpace.Name, hostClient).
+				Exists().
+				HasFinalizer(). // finalizer is still present while the sub-space is being deleted
+				HasStatusTargetCluster("member-1")
+
+			AssertThatCountersAndMetrics(t).
+				HaveSpacesForCluster("member-1", 2) // space count is not decremented
+
+			t.Run("space controller deletes sub-space", func(t *testing.T) {
+				// given
+				subSpace := spacetest.NewSpace("subSpace",
+					spacetest.WithDeletionTimestamp(), // deletion was requested
+					spacetest.WithFinalizer(),
+					spacetest.WithSpecTargetCluster("member-1"),
+					spacetest.WithStatusTargetCluster("member-1"))
+				subSpaceNStmplSet := nstemplatetsettest.NewNSTemplateSet(subSpace.Name, nstemplatetsettest.WithReadyCondition())
+				memberClient := test.NewFakeClient(t, subSpaceNStmplSet)
+				memberClient.MockDelete = mockDeleteNSTemplateSet(memberClient.Client)
+				member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
+				hostClient := test.NewFakeClient(t, parentSpace, subSpace, basicTier)
+				ctrl := newReconciler(hostClient, member)
+
+				// when
+				_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
+
+				// then
+				require.NoError(t, err)
+				spacetest.AssertThatSpace(t, subSpace.Namespace, subSpace.Name, hostClient).
+					HasFinalizer().
+					HasStatusTargetCluster("member-1").
+					HasConditions(spacetest.Terminating())
+				spacetest.AssertThatSpace(t, parentSpace.Namespace, parentSpace.Name, hostClient).
+					Exists().
+					HasFinalizer(). // finalizer is still present while the sub-space is being deleted
+					HasStatusTargetCluster("member-1")
+
+				t.Run("when the sub-space is deleted ", func(t *testing.T) {
+					// given sub-space is terminating
+
+					// when
+					_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
+
+					// then
+					require.NoError(t, err)
+					spacetest.AssertThatSpace(t, subSpace.Namespace, subSpace.Name, hostClient).
+						DoesNotExist()
+					AssertThatCountersAndMetrics(t).
+						HaveSpacesForCluster("member-1", 1) // only parent-space remains
+
+					t.Run("parent-space is deleted as well", func(t *testing.T) {
+						// given sub-space is gone
+
+						// when
+						_, err := ctrl.Reconcile(context.TODO(), requestFor(parentSpace))
+
+						// then
+						require.NoError(t, err)
+						spacetest.AssertThatSpace(t, parentSpace.Namespace, parentSpace.Name, hostClient).
+							DoesNotExist()
+						AssertThatCountersAndMetrics(t).
+							HaveSpacesForCluster("member-1", 0) // parent-space is deleted
+					})
+				})
+			})
+		})
+
 	})
 }
 
