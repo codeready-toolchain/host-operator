@@ -315,6 +315,12 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 }
 
 func setParentSpaceLabel(space *toolchainv1alpha1.Space) {
+	if space.Spec.ParentSpace == "" {
+		// there is no parent-space label to be set
+		return
+	}
+
+	// set parent-space label according to .spec.ParentSpace field value
 	if parentSpace, found := space.Labels[toolchainv1alpha1.ParentSpaceLabelKey]; !found || parentSpace != space.Spec.ParentSpace {
 		space.Labels[toolchainv1alpha1.ParentSpaceLabelKey] = space.Spec.ParentSpace
 	}

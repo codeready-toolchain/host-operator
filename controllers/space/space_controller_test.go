@@ -179,6 +179,60 @@ func TestCreateSpace(t *testing.T) {
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // no counters since `spec.TargetCluster` is not specified
 		})
+		t.Run("update parent-space label with parentSpace spec field", func(t *testing.T) {
+			// given
+			subSpace := spacetest.NewSpace("subSpace",
+				spacetest.WithTierName(basicTier.Name),
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"),
+				spacetest.WithSpecParentSpace("parentSpace"))
+
+			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("subSpace", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(basicTier))
+			memberClient := test.NewFakeClient(t, nsTmplSet)
+			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, subSpace, basicTier)
+			ctrl := newReconciler(hostClient, member)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
+
+			// then
+			require.NoError(t, err)
+			spacetest.AssertThatSpace(t, subSpace.Namespace, subSpace.Name, hostClient).
+				Exists().
+				HasStatusTargetCluster("member-1").
+				HasConditions(spacetest.Ready()).
+				HasStateLabel("cluster-assigned").
+				HasLabelWithValue(toolchainv1alpha1.ParentSpaceLabelKey, "parentSpace"). // check that the parent-space label was set according to spec.ParentSpace field value
+				HasFinalizer()
+		})
+
+		t.Run("without parentSpace spec field", func(t *testing.T) {
+			// given
+			subSpace := spacetest.NewSpace("myspace",
+				spacetest.WithTierName(basicTier.Name),
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"))
+
+			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("myspace", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(basicTier))
+			memberClient := test.NewFakeClient(t, nsTmplSet)
+			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, subSpace, basicTier)
+			ctrl := newReconciler(hostClient, member)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
+
+			// then
+			require.NoError(t, err)
+			spacetest.AssertThatSpace(t, subSpace.Namespace, subSpace.Name, hostClient).
+				Exists().
+				HasStatusTargetCluster("member-1").
+				HasConditions(spacetest.Ready()).
+				HasStateLabel("cluster-assigned").
+				DoesNotHaveLabel(toolchainv1alpha1.ParentSpaceLabelKey). // check that the parent-space label is not present
+				HasFinalizer()
+		})
 	})
 
 	t.Run("failure", func(t *testing.T) {
