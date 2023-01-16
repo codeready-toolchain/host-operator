@@ -426,11 +426,10 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 }
 
 // deleteSubSpaces triggers the deletion of the sub-spaces, in case current Space is a parent of other sub-spaces.
-// the subspaces are searched by label in all member clusters.
-// Returns `true/nil` if the sub-spaces are being deleted (whether deletion was triggered during this call,
-// or if it was triggered earlier and is still in progress).
-// Returns `false/nil` if there are no sub-spaces were not found
-// Returns `false/error` if an error occurred
+// the subspaces are searched by label (parent-label=nameOfParentSpace).
+// Returns `0/nil` if there were no sub-spaces to be deleted,
+// Returns `Duration/nil` if there are no sub-spaces were not found
+// Returns `0/error` if an error occurred
 func (r *Reconciler) deleteSubSpaces(logger logr.Logger, space *toolchainv1alpha1.Space) (time.Duration, error) {
 	subSpaces := &toolchainv1alpha1.SpaceList{}
 	if err := r.Client.List(context.TODO(),
