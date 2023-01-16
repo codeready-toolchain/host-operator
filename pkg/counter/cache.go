@@ -205,6 +205,7 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 	// `masterUserRecordsPerDomain` metric
 	toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey] = toolchainv1alpha1.Metric(cachedCounts.MasterUserRecordPerDomainCounts)
 	for domain, count := range cachedCounts.MasterUserRecordPerDomainCounts {
+		log.Info("synchronized master_user_records gauge", "domaim", domain, "count", count)
 		metrics.MasterUserRecordGaugeVec.WithLabelValues(domain).Set(float64(count))
 	}
 	log.Info("synchronized counters", "counts", cachedCounts.Counts)
