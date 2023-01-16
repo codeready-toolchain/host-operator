@@ -12,7 +12,6 @@ import (
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commonTemplate "github.com/codeready-toolchain/toolchain-common/pkg/template"
 
-	"github.com/davecgh/go-spew/spew"
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -303,7 +302,7 @@ func (t *tierGenerator) createTierTemplates() error {
 	// create the templates
 	for _, tierTmpls := range t.templatesByTier {
 		for _, tierTmpl := range tierTmpls.tierTemplates {
-			log.Info("creating TierTemplate", "tiertemplate", spew.Sdump(tierTmpl))
+			log.Info("creating TierTemplate", "namespace", tierTmpl.Namespace, "name", tierTmpl.Name)
 			// using the "standard" client since we don't need to support updates on such resources, they should be immutable
 			if err := t.client.Create(context.TODO(), tierTmpl); err != nil && !apierrors.IsAlreadyExists(err) {
 				return errors.Wrapf(err, "unable to create the '%s' TierTemplate in namespace '%s'", tierTmpl.Name, tierTmpl.Namespace)
