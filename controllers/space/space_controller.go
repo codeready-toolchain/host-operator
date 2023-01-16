@@ -291,10 +291,12 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 
 		// remove any outdated tier hash labels
 		for key := range space.GetLabels() {
-			if strings.HasPrefix(key, "toolchain.dev.openshift.com/") && strings.HasSuffix(key, "-tier-hash") {
+			if strings.HasPrefix(key, toolchainv1alpha1.LabelKeyPrefix) && strings.HasSuffix(key, "-tier-hash") {
 				delete(space.Labels, key)
 			}
 		}
+		// check parentSpace label and update it if needed
+		setParentSpaceLabel(space)
 
 		// add a tier hash label matching the current NSTemplateTier
 		hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
@@ -309,6 +311,18 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return norequeue, r.setStatusProvisioned(space)
 	default:
 		return norequeue, r.setStatusProvisioningFailed(logger, space, fmt.Errorf(nsTmplSetReady.Message))
+	}
+}
+
+func setParentSpaceLabel(space *toolchainv1alpha1.Space) {
+	if space.Spec.ParentSpace == "" {
+		// there is no parent-space label to be set
+		return
+	}
+
+	// set parent-space label according to .spec.ParentSpace field value
+	if parentSpace, found := space.Labels[toolchainv1alpha1.ParentSpaceLabelKey]; !found || parentSpace != space.Spec.ParentSpace {
+		space.Labels[toolchainv1alpha1.ParentSpaceLabelKey] = space.Spec.ParentSpace
 	}
 }
 

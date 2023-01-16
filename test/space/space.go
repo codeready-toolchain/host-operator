@@ -26,6 +26,12 @@ func WithSpecTargetCluster(name string) Option {
 	}
 }
 
+func WithSpecParentSpace(name string) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		space.Spec.ParentSpace = name
+	}
+}
+
 func WithLabel(key, value string) Option {
 	return func(space *toolchainv1alpha1.Space) {
 		if space.ObjectMeta.Labels == nil {
