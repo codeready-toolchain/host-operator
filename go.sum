@@ -118,15 +118,10 @@ github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWH
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
-<<<<<<< HEAD
-github.com/codeready-toolchain/api v0.0.0-20221220133801-e9fb0b2352db h1:gteG1RPLhfcqeC4gG7NFo5/cU2Q4hLFn69+YDD5jR6A=
-github.com/codeready-toolchain/api v0.0.0-20221220133801-e9fb0b2352db/go.mod h1:4BhC+uBP9LbSKzQ1ggRAmKIl9pSj0uxdISj0s/HRwEw=
-=======
 github.com/codeready-toolchain/api v0.0.0-20230112114359-7b98ad24caf0 h1:5dfe1GpDcl0AyBTYJmjEXQfPj/n0Az5f5/sHBWENKg0=
 github.com/codeready-toolchain/api v0.0.0-20230112114359-7b98ad24caf0/go.mod h1:4BhC+uBP9LbSKzQ1ggRAmKIl9pSj0uxdISj0s/HRwEw=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20230112091129-d06f31ddd2f6 h1:6QH0TWIP2i6wdzEKn/J2ubDoWd0Ix3dZZvCMJWQrfIs=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20230112091129-d06f31ddd2f6/go.mod h1:MDqL9rC53vsujATfvQpKwayKmZZ8kBjTU6oAH5VDy20=
->>>>>>> 43a49ea (add parentSpace field in Space CRD, minor comment fix (#723))
+github.com/codeready-toolchain/toolchain-common v0.0.0-20230116090156-aeb1d42f0227 h1:DuDjQYPYYZKPh8I/uPi4b3J3IPePNTCFtnnOQf9wm80=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20230116090156-aeb1d42f0227/go.mod h1:MDqL9rC53vsujATfvQpKwayKmZZ8kBjTU6oAH5VDy20=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -578,8 +573,6 @@ github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
-github.com/xcoulon/toolchain-common v0.0.0-20230111085908-1dc1cb70f1e9 h1:k7om6RBjRwXHblPV/VOcCS+2S7iBlkBrVDs8hbkjvGc=
-github.com/xcoulon/toolchain-common v0.0.0-20230111085908-1dc1cb70f1e9/go.mod h1:MDqL9rC53vsujATfvQpKwayKmZZ8kBjTU6oAH5VDy20=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca/go.mod h1:ce1O1j6UtZfjr22oyGxGLbauSBp2YVXpARAosm7dHBg=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
