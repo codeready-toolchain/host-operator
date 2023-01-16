@@ -450,7 +450,8 @@ func (r *Reconciler) deleteSubSpaces(logger logr.Logger, space *toolchainv1alpha
 
 	// delete subspaces
 	for _, subSpace := range subSpaces.Items {
-		if util.IsBeingDeleted(&subSpace) {
+		subSpaceObj := subSpace
+		if util.IsBeingDeleted(&subSpaceObj) {
 			logger.Info("the sub-space resource is already being deleted")
 			deletionTimestamp := subSpace.GetDeletionTimestamp()
 			if time.Since(deletionTimestamp.Time) > 60*time.Second {
@@ -461,7 +462,7 @@ func (r *Reconciler) deleteSubSpaces(logger logr.Logger, space *toolchainv1alpha
 		}
 		logger.Info("deleting sub-space: " + subSpace.Name)
 		// Delete NSTemplateSet associated with Space
-		if err := r.Client.Delete(context.TODO(), &subSpace); err != nil {
+		if err := r.Client.Delete(context.TODO(), &subSpaceObj); err != nil {
 			if !errors.IsNotFound(err) {
 				return 0, err // something wrong happened
 			}
