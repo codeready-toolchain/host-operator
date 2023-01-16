@@ -861,7 +861,7 @@ func TestDeleteWithSubSpace(t *testing.T) {
 				HaveSpacesForCluster("member-1", 2) // space count is not decremented
 
 			t.Run("space controller deletes sub-space", func(t *testing.T) {
-				// given
+				// given the sub-space is being deleted
 				subSpace := spacetest.NewSpace("subSpace",
 					spacetest.WithDeletionTimestamp(), // deletion was requested
 					spacetest.WithFinalizer(),
@@ -882,7 +882,7 @@ func TestDeleteWithSubSpace(t *testing.T) {
 				spacetest.AssertThatSpace(t, subSpace.Namespace, subSpace.Name, hostClient).
 					HasFinalizer().
 					HasStatusTargetCluster("member-1").
-					HasConditions(spacetest.Terminating())
+					HasConditions(spacetest.Terminating()) // sub-space is terminating
 				spacetest.AssertThatSpace(t, parentSpace.Namespace, parentSpace.Name, hostClient).
 					Exists().
 					HasFinalizer(). // finalizer is still present while the sub-space is being deleted
@@ -890,7 +890,6 @@ func TestDeleteWithSubSpace(t *testing.T) {
 
 				t.Run("when the sub-space is deleted ", func(t *testing.T) {
 					// given sub-space is terminating
-
 					// when
 					_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
 
@@ -903,7 +902,6 @@ func TestDeleteWithSubSpace(t *testing.T) {
 
 					t.Run("parent-space is deleted as well", func(t *testing.T) {
 						// given sub-space is gone
-
 						// when
 						_, err := ctrl.Reconcile(context.TODO(), requestFor(parentSpace))
 
@@ -917,7 +915,6 @@ func TestDeleteWithSubSpace(t *testing.T) {
 				})
 			})
 		})
-
 	})
 }
 
