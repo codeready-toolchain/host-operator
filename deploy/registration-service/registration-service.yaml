@@ -113,7 +113,7 @@ objects:
                   path: /api/v1/health
                   port: 8080
                   scheme: HTTP
-                initialDelaySeconds: 1
+                initialDelaySeconds: 30
                 periodSeconds: 1
                 successThreshold: 1
                 timeoutSeconds: 1
