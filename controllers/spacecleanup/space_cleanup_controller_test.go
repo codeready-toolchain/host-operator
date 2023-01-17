@@ -104,6 +104,69 @@ func TestCleanupSpace(t *testing.T) {
 		assert.False(t, res.Requeue)
 	})
 
+	t.Run("with ParentSpace - Space shouldn't be deleted", func(t *testing.T) {
+		// given
+		parentSpace := spacetest.NewSpace("parentSpace",
+			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
+		)
+		spaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
+		subSpace := spacetest.NewSpace("with-parentSpace",
+			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
+			spacetest.WithSpecParentSpace(parentSpace.Name),
+		)
+		r, req, cl := prepareReconcile(t, subSpace, parentSpace, spaceBinding)
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, res.Requeue)
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, subSpace.Name, cl).
+			Exists()
+	})
+
+	t.Run("with terminating ParentSpace - Space should be deleted", func(t *testing.T) {
+		// given
+		parentSpace := spacetest.NewSpace("parentSpace",
+			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
+			spacetest.WithDeletionTimestamp(),
+		)
+		spaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
+		subSpace := spacetest.NewSpace("with-parentSpace",
+			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
+			spacetest.WithSpecParentSpace(parentSpace.Name),
+		)
+		r, req, cl := prepareReconcile(t, subSpace, parentSpace, spaceBinding)
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, res.Requeue)
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, subSpace.Name, cl).
+			DoesNotExist()
+	})
+
+	t.Run("with deleted ParentSpace - Space should be deleted", func(t *testing.T) {
+		// given
+		subSpace := spacetest.NewSpace("with-parentSpace",
+			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
+			spacetest.WithSpecParentSpace("parentSpace"),
+		)
+		r, req, cl := prepareReconcile(t, subSpace)
+
+		// when
+		res, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+		assert.False(t, res.Requeue)
+		spacetest.AssertThatSpace(t, test.HostOperatorNs, subSpace.Name, cl).
+			DoesNotExist()
+	})
+
 	t.Run("failures", func(t *testing.T) {
 
 		t.Run("when getting space fails", func(t *testing.T) {
