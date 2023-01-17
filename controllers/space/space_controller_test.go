@@ -179,7 +179,6 @@ func TestCreateSpace(t *testing.T) {
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // no counters since `spec.TargetCluster` is not specified
 		})
-
 		t.Run("update parent-space label with parentSpace spec field", func(t *testing.T) {
 			// given
 			subSpace := spacetest.NewSpace("subSpace",
