@@ -109,12 +109,12 @@ func TestCleanupSpace(t *testing.T) {
 		parentSpace := spacetest.NewSpace("parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 		)
-		spaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
+		parentSpaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
 		subSpace := spacetest.NewSpace("with-parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithSpecParentSpace(parentSpace.Name),
 		)
-		r, req, cl := prepareReconcile(t, subSpace, parentSpace, spaceBinding)
+		r, req, cl := prepareReconcile(t, subSpace, parentSpace, parentSpaceBinding)
 
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
@@ -132,12 +132,12 @@ func TestCleanupSpace(t *testing.T) {
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithDeletionTimestamp(),
 		)
-		spaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
+		parentSpaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
 		subSpace := spacetest.NewSpace("with-parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithSpecParentSpace(parentSpace.Name),
 		)
-		r, req, cl := prepareReconcile(t, subSpace, parentSpace, spaceBinding)
+		r, req, cl := prepareReconcile(t, subSpace, parentSpace, parentSpaceBinding)
 
 		// when
 		res, err := r.Reconcile(context.TODO(), req)

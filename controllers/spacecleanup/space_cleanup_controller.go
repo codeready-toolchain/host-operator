@@ -93,7 +93,7 @@ func (r *Reconciler) ensureDeletionIfNeeded(logger logr.Logger, space *toolchain
 	}
 
 	// check if space has an "active" parentSpace
-	if exists, err := r.parentSpaceExists(logger, space); exists {
+	if exists, err := r.parentSpaceExists(logger, space); exists || err != nil {
 		return false, 0, err
 	}
 
