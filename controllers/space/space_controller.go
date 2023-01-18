@@ -95,13 +95,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, err
 		}
 	} else {
-		requeueAfter, err := r.deleteSubSpaces(logger, space)
-		if err != nil {
-			logger.Error(err, "unable to clean up sub-spaces as part of deletion")
-			return reconcile.Result{}, err
-		} else if requeueAfter > 0 {
-			return reconcile.Result{Requeue: true, RequeueAfter: requeueAfter}, nil
-		}
 		return reconcile.Result{}, r.ensureSpaceDeletion(logger, space)
 	}
 
@@ -423,56 +416,6 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 	// no need to update the status of the Space once the finalizer has been removed, since
 	// the resource will be deleted
 	return nil
-}
-
-// deleteSubSpaces triggers the deletion of the sub-spaces, in case current Space is a parent of other sub-spaces.
-// the subspaces are searched by label (parent-label=nameOfParentSpace).
-// Returns `0/nil` if there were no sub-spaces to be deleted,
-// Returns `Duration/nil` if there are no sub-spaces were not found
-// Returns `0/error` if an error occurred
-func (r *Reconciler) deleteSubSpaces(logger logr.Logger, space *toolchainv1alpha1.Space) (time.Duration, error) {
-	subSpaces := &toolchainv1alpha1.SpaceList{}
-	if err := r.Client.List(context.TODO(),
-		subSpaces,
-		client.InNamespace(r.Namespace),
-		client.MatchingLabels{
-			toolchainv1alpha1.ParentSpaceLabelKey: space.Name,
-		},
-	); err != nil {
-		logger.Error(err, "failed to list sub-spaces")
-		return 0, err
-	}
-
-	// there are no subspaces
-	if len(subSpaces.Items) == 0 {
-		return 0, nil
-	}
-
-	// delete subspaces
-	for _, subSpace := range subSpaces.Items {
-		subSpaceObj := subSpace
-		if util.IsBeingDeleted(&subSpaceObj) {
-			logger.Info("the sub-space resource is already being deleted")
-			deletionTimestamp := subSpace.GetDeletionTimestamp()
-			if time.Since(deletionTimestamp.Time) > 60*time.Second {
-				return 0, fmt.Errorf("sub-space deletion has not completed in over 1 minute")
-			}
-			// go to next sub-space
-			continue
-		}
-		logger.Info("deleting sub-space: " + subSpace.Name)
-		// Delete NSTemplateSet associated with Space
-		if err := r.Client.Delete(context.TODO(), &subSpaceObj); err != nil {
-			if !errors.IsNotFound(err) {
-				return 0, err // something wrong happened
-			}
-			logger.Info("sub-space was already deleted")
-			continue
-		}
-		logger.Info("deleted the sub-space resource")
-	}
-
-	return requeueDelay, nil // requeue until fully deleted
 }
 
 // deleteNSTemplateSet triggers the deletion of the NSTemplateSet on the target member cluster.
