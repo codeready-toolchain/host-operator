@@ -126,7 +126,7 @@ func TestCleanupSpace(t *testing.T) {
 			Exists()
 	})
 
-	t.Run("with terminating ParentSpace - Space should be deleted", func(t *testing.T) {
+	t.Run("with terminating ParentSpace - Space should not be deleted", func(t *testing.T) {
 		// given
 		parentSpace := spacetest.NewSpace("parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
@@ -146,10 +146,10 @@ func TestCleanupSpace(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, res.Requeue)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, subSpace.Name, cl).
-			DoesNotExist()
+			Exists()
 	})
 
-	t.Run("with deleted ParentSpace - Space should be deleted", func(t *testing.T) {
+	t.Run("with deleted ParentSpace - Space should not be deleted", func(t *testing.T) {
 		// given
 		subSpace := spacetest.NewSpace("with-parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
@@ -164,7 +164,7 @@ func TestCleanupSpace(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, res.Requeue)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, subSpace.Name, cl).
-			DoesNotExist()
+			Exists()
 	})
 
 	t.Run("failures", func(t *testing.T) {
