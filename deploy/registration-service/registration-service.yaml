@@ -32,9 +32,10 @@ objects:
           - toolchain.dev.openshift.com
         resources:
           - masteruserrecords
+          - socialevents
+          - spaces
           - toolchainconfigs
           - toolchainstatuses
-          - socialevents
         verbs:
           - get
           - list
@@ -98,7 +99,7 @@ objects:
                 - registration-service
               imagePullPolicy: IfNotPresent
               livenessProbe:
-                failureThreshold: 3
+                failureThreshold: 5
                 httpGet:
                   path: /api/v1/health
                   port: 8080
