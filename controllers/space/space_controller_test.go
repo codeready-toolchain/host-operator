@@ -1810,7 +1810,7 @@ func TestSubSpace(t *testing.T) {
 	t.Run("SpaceBindings inheritance ", func(t *testing.T) {
 
 		t.Run("create parentSpace with admin and viewer roles, and expect subSpace will have same usernames and roles", func(t *testing.T) {
-			// given a MUR, a Space and its NSTemplateSet resource...
+			// given a Space and its NSTemplateSet resource...
 			parentSpace := spacetest.NewSpace("parentSpace",
 				spacetest.WithTierName(basicTier.Name),
 				spacetest.WithSpecTargetCluster("member-1"),
@@ -1866,13 +1866,13 @@ func TestSubSpace(t *testing.T) {
 					nstemplatetsettest.SpaceRole("basic-admin-123456new", "parentSpaceAdmin"),
 					nstemplatetsettest.SpaceRole("basic-viewer-123456new", "parentSpaceViewer"),
 				).
-				HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
+				HasConditions(nstemplatetsettest.Provisioned())
 			AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 2) // space counter is unchanged
 		})
 
 		t.Run("create SpaceBindings for both parentSpace and subSpace, and expect subSpace will have merged roles and usernames", func(t *testing.T) {
-			// given a MUR, a Space and its NSTemplateSet resource...
+			// given a Space and its NSTemplateSet resource...
 			parentSpace := spacetest.NewSpace("parentSpace",
 				spacetest.WithTierName(basicTier.Name),
 				spacetest.WithSpecTargetCluster("member-1"),
@@ -1938,7 +1938,7 @@ func TestSubSpace(t *testing.T) {
 		})
 
 		t.Run("create SpaceBindings for both parentSpace and subSpace with same username, and expect user role from subSpace will override role from parentSpace", func(t *testing.T) {
-			// given a MUR, a Space and its NSTemplateSet resource...
+			// given a Space and its NSTemplateSet resource...
 			parentSpace := spacetest.NewSpace("parentSpace",
 				spacetest.WithTierName(basicTier.Name),
 				spacetest.WithSpecTargetCluster("member-1"),
@@ -1948,7 +1948,7 @@ func TestSubSpace(t *testing.T) {
 				nstemplatetsettest.WithReferencesFor(basicTier,
 					// include pre-existing users with role...
 					nstemplatetsettest.WithSpaceRole("admin", "john"),
-					nstemplatetsettest.WithSpaceRole("viewer", "jane"),
+					nstemplatetsettest.WithSpaceRole("viewer", "jane"), // jane is viewer in parentSpace
 				),
 				nstemplatetsettest.WithReadyCondition(),
 			)
@@ -1967,7 +1967,7 @@ func TestSubSpace(t *testing.T) {
 				nstemplatetsettest.WithReadyCondition(),
 				nstemplatetsettest.WithReferencesFor(basicTier,
 					// upgrade jane to admin for this sub-space...
-					nstemplatetsettest.WithSpaceRole("admin", "jane"),
+					nstemplatetsettest.WithSpaceRole("admin", "jane"), // jane is admin in subSpace
 				),
 			)
 			// ...and the corresponding space bindings for the subSpace
@@ -1997,9 +1997,9 @@ func TestSubSpace(t *testing.T) {
 			// subNSTemplateSet should have both users as admin
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, subNStmplSet.Name, member1Client).
 				HasSpaceRoles(
-					nstemplatetsettest.SpaceRole("basic-admin-123456new", "jane", "john"),
+					nstemplatetsettest.SpaceRole("basic-admin-123456new", "jane", "john"), // jane remains admin for subSpace
 				).
-				HasConditions(nstemplatetsettest.Provisioned()) // not changed by the SpaceController, but will be by the NSTemplateSetController
+				HasConditions(nstemplatetsettest.Provisioned())
 			AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 2) // space counter is unchanged
 		})

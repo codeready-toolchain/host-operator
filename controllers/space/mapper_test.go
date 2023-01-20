@@ -18,7 +18,7 @@ import (
 
 func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 	// given
-	sbSpaceWithSubspaces := sb.NewSpaceBinding("parentSpace", "parentSpace", "admin", "signupA")
+	sbSpaceWithSubspaces := sb.NewSpaceBinding("jane", "parentSpace", "admin", "signupA")
 	sbSpaceNoSubspaces := sb.NewSpaceBinding("joe", "single", "view", "signupB")
 	// this space binding is not bound to any space
 	sbOrphan := sb.NewSpaceBinding("orphan", "", "view", "signupC")
