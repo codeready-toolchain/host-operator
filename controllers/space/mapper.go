@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var mapperLog = ctrl.Log.WithName("MapToSpaceBindingByParentObjectName")
+var mapperLog = ctrl.Log.WithName("MapToSubSpacesByParentObjectName")
 
 // MapToSubSpacesByParentObjectName maps the sup-spaces to the SpaceBinding of a given parent-space.
 // The correct Spaces are listed using the parent-label whose value should equal to the Space name from object's .
