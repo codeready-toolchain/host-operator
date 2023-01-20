@@ -92,6 +92,13 @@ func (r *Reconciler) ensureDeletionIfNeeded(logger logr.Logger, space *toolchain
 		return false, 0, nil
 	}
 
+	// check if space has a parentSpace
+	// in this case the deletion will be handled by the SR controller
+	if found := r.hasParentSpaceSpec(space); found {
+		// do not delete this space since has a parent-space set
+		return false, 0, nil
+	}
+
 	timeSinceCreation := time.Since(space.GetCreationTimestamp().Time)
 	if timeSinceCreation > deletionTimeThreshold {
 		if err := r.Client.Delete(context.TODO(), space); err != nil {
@@ -106,4 +113,11 @@ func (r *Reconciler) ensureDeletionIfNeeded(logger logr.Logger, space *toolchain
 	logger.Info("Space is not ready for deletion yet", "requeue-after", requeueAfter, "created", space.CreationTimestamp)
 
 	return true, requeueAfter, nil
+}
+
+// hasParentSpaceSpec verifies if there .spec.ParentSpace field is set in the current Space.
+// return true if .spec.ParentSpace is set
+// return false if .spec.ParentSpace is not set
+func (r *Reconciler) hasParentSpaceSpec(space *toolchainv1alpha1.Space) bool {
+	return space.Spec.ParentSpace != ""
 }
