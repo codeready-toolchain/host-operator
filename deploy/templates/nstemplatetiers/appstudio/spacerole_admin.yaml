@@ -63,7 +63,7 @@ objects:
     - spiaccesstokenbindings
     - spiaccesschecks
     - spiaccesstokens
-    - spifilecontentrequest
+    - spifilecontentrequests
     verbs:
     - create
     - get
