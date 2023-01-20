@@ -19,7 +19,7 @@ func MapToSubSpacesByParentObjectName(cl client.Client) func(object client.Objec
 		logger := mapperLog.WithValues("object-name", obj.GetName(), "object-kind", obj.GetObjectKind())
 
 		// initialize request slice to be returned
-		reconcileRequestObj := []reconcile.Request{}
+		var reconcileRequestObj []reconcile.Request
 		// temporary variable that will be used to search for eventual sub-spaces
 		parentSpaceName := ""
 
