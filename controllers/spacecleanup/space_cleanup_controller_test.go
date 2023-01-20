@@ -109,12 +109,12 @@ func TestCleanupSpace(t *testing.T) {
 		parentSpace := spacetest.NewSpace("parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 		)
-		spaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
+		parentSpaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
 		subSpace := spacetest.NewSpace("with-parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithSpecParentSpace(parentSpace.Name),
 		)
-		r, req, cl := prepareReconcile(t, subSpace, parentSpace, spaceBinding)
+		r, req, cl := prepareReconcile(t, subSpace, parentSpace, parentSpaceBinding)
 
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
@@ -126,18 +126,18 @@ func TestCleanupSpace(t *testing.T) {
 			Exists()
 	})
 
-	t.Run("with terminating ParentSpace - Space should be deleted", func(t *testing.T) {
+	t.Run("with terminating ParentSpace - Space should not be deleted", func(t *testing.T) {
 		// given
 		parentSpace := spacetest.NewSpace("parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithDeletionTimestamp(),
 		)
-		spaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
+		parentSpaceBinding := spacebinding.NewSpaceBinding("johny", parentSpace.Name, "admin", "a-creator")
 		subSpace := spacetest.NewSpace("with-parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
 			spacetest.WithSpecParentSpace(parentSpace.Name),
 		)
-		r, req, cl := prepareReconcile(t, subSpace, parentSpace, spaceBinding)
+		r, req, cl := prepareReconcile(t, subSpace, parentSpace, parentSpaceBinding)
 
 		// when
 		res, err := r.Reconcile(context.TODO(), req)
@@ -146,10 +146,10 @@ func TestCleanupSpace(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, res.Requeue)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, subSpace.Name, cl).
-			DoesNotExist()
+			Exists()
 	})
 
-	t.Run("with deleted ParentSpace - Space should be deleted", func(t *testing.T) {
+	t.Run("with deleted ParentSpace - Space should not be deleted", func(t *testing.T) {
 		// given
 		subSpace := spacetest.NewSpace("with-parentSpace",
 			spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)),
@@ -164,7 +164,7 @@ func TestCleanupSpace(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, res.Requeue)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, subSpace.Name, cl).
-			DoesNotExist()
+			Exists()
 	})
 
 	t.Run("failures", func(t *testing.T) {

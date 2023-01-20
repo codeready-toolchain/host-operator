@@ -92,9 +92,11 @@ func (r *Reconciler) ensureDeletionIfNeeded(logger logr.Logger, space *toolchain
 		return false, 0, nil
 	}
 
-	// check if space has an "active" parentSpace
-	if exists, err := r.parentSpaceExists(logger, space); exists {
-		return false, 0, err
+	// check if space has a parentSpace
+	// in this case the deletion will be handled by the SR controller
+	if found := r.hasParentSpaceSpec(space); found {
+		// do not delete this space since has a parent-space set
+		return false, 0, nil
 	}
 
 	timeSinceCreation := time.Since(space.GetCreationTimestamp().Time)
@@ -113,35 +115,9 @@ func (r *Reconciler) ensureDeletionIfNeeded(logger logr.Logger, space *toolchain
 	return true, requeueAfter, nil
 }
 
-// checkParentSpace verifies if there is an "active" parentSpace for a given Space object.
-// return true/nil if there is a parentSpace
-// return true/error if something went wrong while reading parentSpace
-// return false/nil if parentSpace was not found or it's being deleted
-func (r *Reconciler) parentSpaceExists(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
-	// parentSpace spec not set, returning
-	if space.Spec.ParentSpace == "" {
-		return false, nil
-	}
-
-	// search for parentSpace
-	parentSpace := &toolchainv1alpha1.Space{}
-	err := r.Client.Get(context.TODO(), types.NamespacedName{
-		Namespace: r.Namespace,
-		Name:      space.Spec.ParentSpace,
-	}, parentSpace)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("parentSpace not found")
-			return false, nil
-		}
-		// Error reading the object - requeue the request.
-		return true, errs.Wrap(err, "unable to get the current parentSpace")
-	}
-
-	// if parent-space is already being deleted, then we can proceed with deleting the space
-	if util.IsBeingDeleted(parentSpace) {
-		logger.Info("parentSpace is being deleted..")
-		return false, nil
-	}
-	return true, nil
+// hasParentSpaceSpec verifies if there .spec.ParentSpace field is set in the current Space.
+// return true if .spec.ParentSpace is set
+// return false if .spec.ParentSpace is not set
+func (r *Reconciler) hasParentSpaceSpec(space *toolchainv1alpha1.Space) bool {
+	return space.Spec.ParentSpace != ""
 }
