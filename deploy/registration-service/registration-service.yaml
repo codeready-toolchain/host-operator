@@ -119,13 +119,13 @@ objects:
                 successThreshold: 1
                 timeoutSeconds: 1
               startupProbe:
-                failureThreshold: 18
+                failureThreshold: 180
                 httpGet:
                   path: /api/v1/health
                   port: 8080
                   scheme: HTTP
                 initialDelaySeconds: 1
-                periodSeconds: 10
+                periodSeconds: 1
                 successThreshold: 1
                 timeoutSeconds: 1
               env:
