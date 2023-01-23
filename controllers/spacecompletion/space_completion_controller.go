@@ -92,17 +92,20 @@ func (r *Reconciler) ensureFields(logger logr.Logger, space *toolchainv1alpha1.S
 		return true, nil
 	}
 
-	if space.Spec.TargetCluster == "" {
-		targetCluster, err := r.ClusterManager.GetOptimalTargetCluster("", space.Namespace)
+	if space.Spec.TargetCluster.Name == "" {
+		targetClusterName, err := r.ClusterManager.GetOptimalTargetCluster(&capacity.OptimalTargetClusterFilter{
+			ToolchainStatusNamespace: space.Namespace,
+			ClusterRoles:             space.Spec.TargetCluster.Roles,
+		})
 		if err != nil {
 			return false, errs.Wrapf(err, "unable to get the optimal target cluster")
 		}
-		if targetCluster == "" {
+		if targetClusterName == "" {
 			logger.Info("no cluster available")
 			return false, nil
 		}
-		space.Spec.TargetCluster = targetCluster
-		logger.Info("TargetCluster has been set", "targetCluster", targetCluster)
+		space.Spec.TargetCluster.Name = targetClusterName
+		logger.Info("TargetCluster has been set", "targetClusterName", targetClusterName)
 		return true, nil
 	}
 

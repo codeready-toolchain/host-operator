@@ -278,7 +278,7 @@ func initializeFromResources(cl client.Client, namespace string) error {
 		cachedCounts.MasterUserRecordPerDomainCounts[string(domain)]++
 	}
 	for _, space := range spaces.Items {
-		cachedCounts.SpacesPerClusterCounts[space.Spec.TargetCluster]++
+		cachedCounts.SpacesPerClusterCounts[space.Spec.TargetCluster.Name]++
 	}
 	cachedCounts.initialized = true
 	log.Info("cached counts initialized from UserSignups and MasterUserRecords",

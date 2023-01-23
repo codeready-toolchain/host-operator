@@ -48,7 +48,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: HostOperatorNs,
+			},
+		)
 
 		// then
 		require.NoError(t, err)
@@ -66,7 +70,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: HostOperatorNs,
+			},
+		)
 
 		// then
 		require.NoError(t, err)
@@ -84,7 +92,10 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: HostOperatorNs,
+			})
 
 		// then
 		require.NoError(t, err)
@@ -102,7 +113,12 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("member2", HostOperatorNs)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				PreferredCluster:         "member2",
+				ToolchainStatusNamespace: HostOperatorNs,
+			},
+		)
 
 		// then
 		require.NoError(t, err)
@@ -120,7 +136,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: HostOperatorNs,
+			},
+		)
 
 		// then
 		require.NoError(t, err)
@@ -138,7 +158,12 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("member1", HostOperatorNs)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				PreferredCluster:         "member1",
+				ToolchainStatusNamespace: HostOperatorNs,
+			},
+		)
 
 		// then
 		require.NoError(t, err)
@@ -156,7 +181,12 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("member2", HostOperatorNs)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				PreferredCluster:         "member2",
+				ToolchainStatusNamespace: HostOperatorNs,
+			},
+		)
 
 		// then
 		require.NoError(t, err)
@@ -174,7 +204,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: HostOperatorNs,
+			},
+		)
 
 		// then
 		require.NoError(t, err)
@@ -192,7 +226,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: HostOperatorNs,
+			},
+		)
 
 		// then
 		require.NoError(t, err)
@@ -210,7 +248,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionFalse), NewMemberCluster(t, "member2", v1.ConditionTrue))
 
 		// when
-		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: HostOperatorNs,
+			},
+		)
 
 		// then
 		require.NoError(t, err)
@@ -229,7 +271,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 			// when
-			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
+			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+				&capacity.OptimalTargetClusterFilter{
+					ToolchainStatusNamespace: HostOperatorNs,
+				},
+			)
 
 			// then
 			require.EqualError(t, err, "unable to get ToolchainConfig: some error")
@@ -249,7 +295,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 			// when
-			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
+			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+				&capacity.OptimalTargetClusterFilter{
+					ToolchainStatusNamespace: HostOperatorNs,
+				},
+			)
 
 			// then
 			require.EqualError(t, err, "unable to read ToolchainStatus resource: some error")
@@ -305,7 +355,11 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 								}
 
 								// when
-								clusterName, err := clusterBalancer.GetOptimalTargetCluster("", HostOperatorNs)
+								clusterName, err := clusterBalancer.GetOptimalTargetCluster(
+									&capacity.OptimalTargetClusterFilter{
+										ToolchainStatusNamespace: HostOperatorNs,
+									},
+								)
 
 								// then
 								require.NoError(t, err)
@@ -327,7 +381,11 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 						for i := 0; i < member3MissingTo50; i++ {
 							t.Run(fmt.Sprintf("cycle %d user %d for member3", cycle, i), func(t *testing.T) {
 								// when
-								clusterName, err := clusterBalancer.GetOptimalTargetCluster("", HostOperatorNs)
+								clusterName, err := clusterBalancer.GetOptimalTargetCluster(
+									&capacity.OptimalTargetClusterFilter{
+										ToolchainStatusNamespace: HostOperatorNs,
+									},
+								)
 
 								// then
 								require.NoError(t, err)
@@ -341,7 +399,11 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 					}
 
 					// when
-					clusterName, err := clusterBalancer.GetOptimalTargetCluster("", HostOperatorNs)
+					clusterName, err := clusterBalancer.GetOptimalTargetCluster(
+						&capacity.OptimalTargetClusterFilter{
+							ToolchainStatusNamespace: HostOperatorNs,
+						},
+					)
 
 					// then
 					require.NoError(t, err)
@@ -361,7 +423,11 @@ func TestGetOptimalTargetClusterWhenCounterIsNotInitialized(t *testing.T) {
 	clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
 
 	// when
-	clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster("", HostOperatorNs)
+	clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+		&capacity.OptimalTargetClusterFilter{
+			ToolchainStatusNamespace: HostOperatorNs,
+		},
+	)
 
 	// then
 	require.EqualError(t, err, "unable to get the number of provisioned spaces: counter is not initialized")

@@ -89,7 +89,7 @@ func CreateMultipleUserSignups(prefix string, number int) []runtime.Object {
 func CreateMultipleSpaces(prefix string, number int, targetCluster string) []runtime.Object {
 	spaces := make([]runtime.Object, number)
 	for index := range spaces {
-		spaces[index] = space.NewSpace(fmt.Sprintf("%s%d", prefix, index), space.WithSpecTargetCluster(targetCluster))
+		spaces[index] = space.NewSpace(fmt.Sprintf("%s%d", prefix, index), space.WithSpecTargetClusterName(targetCluster))
 	}
 	return spaces
 }

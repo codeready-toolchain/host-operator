@@ -59,7 +59,19 @@ spec:
                 description: TargetCluster The cluster in which this Space is going
                   to be provisioned If not set then the target cluster will be picked
                   automatically
-                type: string
+                properties:
+                  name:
+                    description: Name allows to select a specific target cluster for
+                      the Space to be provisioned.
+                    type: string
+                  roles:
+                    description: Roles allows to specify a list of cluster-roles,
+                      the capacity manager will use those labels to select the target
+                      cluster for the Space.
+                    items:
+                      type: string
+                    type: array
+                type: object
               tierName:
                 description: TierName is introduced to retain the name of the tier
                   for which this Space is provisioned If not set then the tier name
@@ -109,7 +121,19 @@ spec:
                   provisioned Can be empty if provisioning did not start or failed
                   To be used to de-provision the NSTemplateSet if the Spec.TargetCluster
                   is either changed or removed
-                type: string
+                properties:
+                  name:
+                    description: Name allows to select a specific target cluster for
+                      the Space to be provisioned.
+                    type: string
+                  roles:
+                    description: Roles allows to specify a list of cluster-roles,
+                      the capacity manager will use those labels to select the target
+                      cluster for the Space.
+                    items:
+                      type: string
+                    type: array
+                type: object
             type: object
         type: object
         x-kubernetes-preserve-unknown-fields: true

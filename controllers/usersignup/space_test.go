@@ -1,8 +1,9 @@
 package usersignup
 
 import (
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"testing"
+
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 
@@ -20,7 +21,7 @@ func TestNewSpace(t *testing.T) {
 	// then
 	expectedSpace := spacetest.NewSpace("johny",
 		spacetest.WithTierName("advanced"),
-		spacetest.WithSpecTargetCluster("member-cluster"),
+		spacetest.WithSpecTargetClusterName("member-cluster"),
 		spacetest.WithCreatorLabel(userSignup.Name))
 	assert.Equal(t, expectedSpace, space)
 }

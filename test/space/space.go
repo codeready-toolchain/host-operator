@@ -14,15 +14,15 @@ import (
 
 type Option func(space *toolchainv1alpha1.Space)
 
-func WithoutSpecTargetCluster() Option {
+func WithoutSpecTargetClusterName() Option {
 	return func(space *toolchainv1alpha1.Space) {
-		space.Spec.TargetCluster = ""
+		space.Spec.TargetCluster.Name = ""
 	}
 }
 
-func WithSpecTargetCluster(name string) Option {
+func WithSpecTargetClusterName(name string) Option {
 	return func(space *toolchainv1alpha1.Space) {
-		space.Spec.TargetCluster = name
+		space.Spec.TargetCluster.Name = name
 	}
 }
 
@@ -66,7 +66,7 @@ func WithTierNameAndHashLabelFor(tier *toolchainv1alpha1.NSTemplateTier) Option 
 
 func WithStatusTargetCluster(name string) Option {
 	return func(space *toolchainv1alpha1.Space) {
-		space.Status.TargetCluster = name
+		space.Status.TargetCluster.Name = name
 	}
 }
 

@@ -18,8 +18,10 @@ func newSpace(userSignup *toolchainv1alpha1.UserSignup, targetCluster targetClus
 			Labels:    labels,
 		},
 		Spec: toolchainv1alpha1.SpaceSpec{
-			TargetCluster: targetCluster.getClusterName(),
-			TierName:      tier,
+			TargetCluster: toolchainv1alpha1.TargetCluster{
+				Name: targetCluster.getClusterName(),
+			},
+			TierName: tier,
 		},
 	}
 	return space

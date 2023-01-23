@@ -47,7 +47,10 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 	// The last cluster is used for returning users to ensure they can be provisioned back to the same cluster as they were previously using so they don't need to update URLs and kube contexts
 	preferredCluster := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
 
-	clusterName, err := clusterManager.GetOptimalTargetCluster(preferredCluster, userSignup.Namespace)
+	clusterName, err := clusterManager.GetOptimalTargetCluster(&capacity.OptimalTargetClusterFilter{
+		PreferredCluster:         preferredCluster,
+		ToolchainStatusNamespace: userSignup.Namespace,
+	})
 	if err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to get the optimal target cluster")
 	}
