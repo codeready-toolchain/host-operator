@@ -71,7 +71,7 @@ type OptimalTargetClusterFilter struct {
 	// it will be used to find the desired member cluster by name.
 	PreferredCluster string
 	// ToolchainStatusNamespace is the namespace where the toolchainstatus CR will be searched,
-	// in order to check which cluster have enough resources and can be candidate for the "optimal" cluster for Space provisioning.
+	// in order to check which cluster has enough resources and can be candidate for the "optimal" cluster for Space provisioning.
 	ToolchainStatusNamespace string
 	// ClusterRoles is a list of cluster-role labels,
 	// if provided, only the clusters matching those labels will be selected as candidates for the "optimal" cluster.
