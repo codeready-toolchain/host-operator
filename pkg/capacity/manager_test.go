@@ -10,6 +10,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
@@ -257,6 +258,58 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.Equal(t, "member2", clusterName)
+	})
+
+	t.Run("with two clusters and enough capacity in both of them but passing specific cluster-role label", func(t *testing.T) {
+		// given
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
+			testconfig.CapacityThresholds().
+				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
+				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
+		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		InitializeCounters(t, toolchainStatus)
+		clusters := NewGetMemberClusters(
+			NewMemberCluster(t, "member1", v1.ConditionTrue, WithClusterRoleLabel(cluster.RoleLabel(cluster.Tenant))),
+			NewMemberCluster(t, "member2", v1.ConditionTrue),
+		)
+
+		// when
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: HostOperatorNs,
+				ClusterRoles:             []string{cluster.RoleLabel(cluster.Tenant)},
+			},
+		)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "member1", clusterName) // only member one has required label
+	})
+
+	t.Run("with two clusters and not enough capacity on the cluster with specific cluster-role label", func(t *testing.T) {
+		// given
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
+			testconfig.CapacityThresholds().
+				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1), testconfig.PerMemberCluster("member2", 1000)).
+				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 1), testconfig.PerMemberCluster("member2", 75)))
+		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		InitializeCounters(t, toolchainStatus)
+		clusters := NewGetMemberClusters(
+			NewMemberCluster(t, "member1", v1.ConditionTrue, WithClusterRoleLabel(cluster.RoleLabel(cluster.Tenant))),
+			NewMemberCluster(t, "member2", v1.ConditionTrue),
+		)
+
+		// when
+		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
+			&capacity.OptimalTargetClusterFilter{
+				ToolchainStatusNamespace: HostOperatorNs,
+				ClusterRoles:             []string{cluster.RoleLabel(cluster.Tenant)},
+			},
+		)
+
+		// then
+		require.NoError(t, err)
+		assert.Equal(t, "", clusterName) // only member one has required label
 	})
 
 	t.Run("failures", func(t *testing.T) {

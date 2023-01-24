@@ -220,12 +220,14 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 					Exists().
 					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 					HasSpecTargetClusterName("member1").
+					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
 					HasTier("base")
 			case "with social event":
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
 					Exists().
 					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 					HasSpecTargetClusterName("member1").
+					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
 					HasTier("base2")
 			case "with skip space creation annotation set to true":
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
@@ -380,6 +382,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 			HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 			Exists().
 			HasSpecTargetClusterName("member1").
+			HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
 			HasTier(baseNSTemplateTier.Name)
 		spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
 			DoesNotExist()
