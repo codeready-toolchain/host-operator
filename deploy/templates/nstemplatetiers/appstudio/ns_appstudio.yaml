@@ -87,10 +87,10 @@ objects:
     namespace: ${USERNAME}
   spec:
     hard:
-      limits.ephemeral-storage: 15Gi
-      requests.storage: 15Gi
-      requests.ephemeral-storage: 15Gi
-      count/persistentvolumeclaims: "5"
+      limits.ephemeral-storage: 50Gi
+      requests.storage: 50Gi
+      requests.ephemeral-storage: 50Gi
+      count/persistentvolumeclaims: "12"
 - apiVersion: v1
   kind: LimitRange
   metadata:
