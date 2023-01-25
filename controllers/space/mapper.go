@@ -52,13 +52,11 @@ func MapToSubSpacesByParentObjectName(cl client.Client) func(object client.Objec
 			return []reconcile.Request{}
 		}
 		if len(subSpaces.Items) == 0 {
-			logger.Info("no sub-spaces found for an object")
 			return reconcileRequestObj
 		}
 
 		// add sub-spaces to the reconcile request together with the parent-space
 		for _, item := range subSpaces.Items {
-			logger.Info("adding sub-space to reconcile request: " + item.Name)
 			reconcileRequestObj = append(reconcileRequestObj, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: item.Namespace,

@@ -197,11 +197,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 	}
 
-	spaceBindings, err := r.listSpaceBindings(space)
-	if err != nil {
-		logger.Error(err, "failed to list space bindings")
-	}
-	nsTmplSetReady, duration, err := r.manageNSTemplateSet(logger, space, memberCluster, spaceBindings, tmplTier)
+	nsTmplSetReady, duration, err := r.manageNSTemplateSet(logger, space, memberCluster, tmplTier)
 	// return if there was an error or a requeue was requested
 	if err != nil || duration > 0 {
 		return duration, err
@@ -290,12 +286,6 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchai
 		return spaceBindings, nil
 	}
 
-	// if no SpaceBindings found while searching with Space.Name
-	// let's return the spaceBindings found using the Space.Name
-	if len(spaceBindings.Items) == 0 {
-		return parentSpaceBindings, nil
-	}
-
 	// if both list are not empty, we have to merge them.
 	// roles for the same username on SpaceBindings will override those on parentSpaceBindings,
 	// so let's remove them from parentSpaceBinding before merging the two lists.
@@ -321,7 +311,11 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchai
 
 // manageNSTemplateSet creates or updates the NSTemplateSet of a given space.
 // returns Condition{}, error
-func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space, memberCluster cluster.Cluster, spaceBindings toolchainv1alpha1.SpaceBindingList, tmplTier *toolchainv1alpha1.NSTemplateTier) (toolchainv1alpha1.Condition, time.Duration, error) {
+func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space, memberCluster cluster.Cluster, tmplTier *toolchainv1alpha1.NSTemplateTier) (toolchainv1alpha1.Condition, time.Duration, error) {
+	spaceBindings, err := r.listSpaceBindings(space)
+	if err != nil {
+		logger.Error(err, "failed to list space bindings")
+	}
 	// create if not found on the expected target cluster
 	nsTmplSet := &toolchainv1alpha1.NSTemplateSet{}
 	if err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{

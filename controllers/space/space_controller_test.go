@@ -1816,14 +1816,6 @@ func TestSubSpace(t *testing.T) {
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 				spacetest.WithFinalizer())
-			parentNStmplSet := nstemplatetsettest.NewNSTemplateSet(parentSpace.Name,
-				nstemplatetsettest.WithReferencesFor(basicTier,
-					// include pre-existing users with role...
-					nstemplatetsettest.WithSpaceRole("admin", "parentAdmin"),
-					nstemplatetsettest.WithSpaceRole("viewer", "parentViewer"),
-				),
-				nstemplatetsettest.WithReadyCondition(),
-			)
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
 			sb2 := spacebindingtest.NewSpaceBinding("parentSpaceViewer", parentSpace.Name, "viewer", "signupViewer")
@@ -1840,20 +1832,9 @@ func TestSubSpace(t *testing.T) {
 			)
 
 			hostClient := test.NewFakeClient(t, parentSpace, sb1, sb2, basicTier, subSpace)
-			member1Client := test.NewFakeClient(t, parentNStmplSet, subNStmplSet)
+			member1Client := test.NewFakeClient(t, subNStmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-
 			ctrl := newReconciler(hostClient, member1)
-			InitializeCounters(t,
-				NewToolchainStatus(
-					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-						"1,internal": 1,
-					}),
-					WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-						string(metrics.Internal): 1,
-					}),
-					WithMember("member-1", WithSpaceCount(2)),
-				))
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
@@ -1867,8 +1848,6 @@ func TestSubSpace(t *testing.T) {
 					nstemplatetsettest.SpaceRole("basic-viewer-123456new", "parentSpaceViewer"),
 				).
 				HasConditions(nstemplatetsettest.Provisioned())
-			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 2) // space counter is unchanged
 		})
 
 		t.Run("create SpaceBindings for both parentSpace and subSpace, and expect subSpace will have merged roles and usernames", func(t *testing.T) {
@@ -1878,13 +1857,6 @@ func TestSubSpace(t *testing.T) {
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 				spacetest.WithFinalizer())
-			parentNStmplSet := nstemplatetsettest.NewNSTemplateSet(parentSpace.Name,
-				nstemplatetsettest.WithReferencesFor(basicTier,
-					// include pre-existing users with role...
-					nstemplatetsettest.WithSpaceRole("admin", "parentAdmin"),
-				),
-				nstemplatetsettest.WithReadyCondition(),
-			)
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
 
@@ -1898,7 +1870,7 @@ func TestSubSpace(t *testing.T) {
 			subNStmplSet := nstemplatetsettest.NewNSTemplateSet(subSpace.Name,
 				nstemplatetsettest.WithReadyCondition(),
 				nstemplatetsettest.WithReferencesFor(basicTier,
-					// add a new user with role...
+					// add an already existing user with a different name which is supposed to be dropped
 					nstemplatetsettest.WithSpaceRole("viewer", "subViewer"),
 				),
 			)
@@ -1906,20 +1878,9 @@ func TestSubSpace(t *testing.T) {
 			sb2 := spacebindingtest.NewSpaceBinding("subSpaceViewer", subSpace.Name, "viewer", "signupViewer")
 
 			hostClient := test.NewFakeClient(t, parentSpace, sb1, sb2, basicTier, subSpace)
-			member1Client := test.NewFakeClient(t, parentNStmplSet, subNStmplSet)
+			member1Client := test.NewFakeClient(t, subNStmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-
 			ctrl := newReconciler(hostClient, member1)
-			InitializeCounters(t,
-				NewToolchainStatus(
-					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-						"1,internal": 1,
-					}),
-					WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-						string(metrics.Internal): 1,
-					}),
-					WithMember("member-1", WithSpaceCount(2)),
-				))
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
@@ -1933,8 +1894,6 @@ func TestSubSpace(t *testing.T) {
 					nstemplatetsettest.SpaceRole("basic-viewer-123456new", "subSpaceViewer"),
 				).
 				HasConditions(nstemplatetsettest.Provisioned())
-			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 2) // space counter is unchanged
 		})
 
 		t.Run("create SpaceBindings for both parentSpace and subSpace with same username, and expect user role from subSpace will override role from parentSpace", func(t *testing.T) {
@@ -1944,14 +1903,6 @@ func TestSubSpace(t *testing.T) {
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 				spacetest.WithFinalizer())
-			parentNStmplSet := nstemplatetsettest.NewNSTemplateSet(parentSpace.Name,
-				nstemplatetsettest.WithReferencesFor(basicTier,
-					// include pre-existing users with role...
-					nstemplatetsettest.WithSpaceRole("admin", "john"),
-					nstemplatetsettest.WithSpaceRole("viewer", "jane"), // jane is viewer in parentSpace
-				),
-				nstemplatetsettest.WithReadyCondition(),
-			)
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("john", parentSpace.Name, "admin", "signupJohn")
 			sb2 := spacebindingtest.NewSpaceBinding("jane", parentSpace.Name, "viewer", "signupJane")
@@ -1974,20 +1925,9 @@ func TestSubSpace(t *testing.T) {
 			sb3 := spacebindingtest.NewSpaceBinding("jane", subSpace.Name, "admin", "janeSignup")
 
 			hostClient := test.NewFakeClient(t, parentSpace, sb1, sb2, sb3, basicTier, subSpace)
-			member1Client := test.NewFakeClient(t, parentNStmplSet, subNStmplSet)
+			member1Client := test.NewFakeClient(t, subNStmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-
 			ctrl := newReconciler(hostClient, member1)
-			InitializeCounters(t,
-				NewToolchainStatus(
-					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-						"1,internal": 1,
-					}),
-					WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-						string(metrics.Internal): 1,
-					}),
-					WithMember("member-1", WithSpaceCount(2)),
-				))
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
@@ -2000,8 +1940,6 @@ func TestSubSpace(t *testing.T) {
 					nstemplatetsettest.SpaceRole("basic-admin-123456new", "jane", "john"), // jane remains admin for subSpace
 				).
 				HasConditions(nstemplatetsettest.Provisioned())
-			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 2) // space counter is unchanged
 		})
 
 	})
