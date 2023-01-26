@@ -70,7 +70,10 @@ func TestGetClusterIfApproved(t *testing.T) {
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(
+			NewMemberClusterWithClient(NewFakeClient(t), "member1", corev1.ConditionTrue), // no cluster-role label on this member
+			NewMemberCluster(t, "member2", corev1.ConditionTrue),
+		)
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
@@ -85,7 +88,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// given
 		signup := commonsignup.NewUserSignup()
 		signup.Annotations = map[string]string{
-			toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey: "member1",
+			toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey: "member1", // set preferred member cluster name
 		}
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
