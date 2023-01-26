@@ -41,7 +41,7 @@ func TestCreateSpace(t *testing.T) {
 		require.NoError(t, err)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 			HasTier("base").
-			HasSpecTargetClusterName("")
+			HasSpecTargetCluster("")
 	})
 
 	t.Run("with tierName but without targetCluster - only targetCluster should be set", func(t *testing.T) {
@@ -57,14 +57,14 @@ func TestCreateSpace(t *testing.T) {
 		require.NoError(t, err)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 			HasTier("advanced").
-			HasSpecTargetClusterName("member1")
+			HasSpecTargetCluster("member1")
 	})
 
 	t.Run("with targetCluster but without tierName - only tierName should be set", func(t *testing.T) {
 		// given
 		space := spacetest.NewSpace("without-tierName",
 			spacetest.WithTierName(""),
-			spacetest.WithSpecTargetClusterName("member2"))
+			spacetest.WithSpecTargetCluster("member2"))
 		r, req, cl := prepareReconcile(t, space, getMemberClusters)
 
 		// when
@@ -74,7 +74,7 @@ func TestCreateSpace(t *testing.T) {
 		require.NoError(t, err)
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 			HasTier("base").
-			HasSpecTargetClusterName("member2")
+			HasSpecTargetCluster("member2")
 	})
 
 	t.Run("no updates expected", func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace("with-fields",
 				spacetest.WithTierName("advanced"),
-				spacetest.WithSpecTargetClusterName("member2"))
+				spacetest.WithSpecTargetCluster("member2"))
 			r, req, cl := prepareReconcile(t, space, getMemberClusters)
 
 			// when
@@ -92,7 +92,7 @@ func TestCreateSpace(t *testing.T) {
 			require.NoError(t, err)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier("advanced").
-				HasSpecTargetClusterName("member2")
+				HasSpecTargetCluster("member2")
 		})
 
 		t.Run("when is being deleted, then nothing should be set", func(t *testing.T) {
@@ -109,7 +109,7 @@ func TestCreateSpace(t *testing.T) {
 			require.NoError(t, err)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier("").
-				HasSpecTargetClusterName("")
+				HasSpecTargetCluster("")
 		})
 
 		t.Run("when no member cluster available and when tierName is set", func(t *testing.T) {
@@ -125,7 +125,7 @@ func TestCreateSpace(t *testing.T) {
 			require.NoError(t, err)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier("advanced").
-				HasSpecTargetClusterName("")
+				HasSpecTargetCluster("")
 		})
 
 		t.Run("when the space is not there, then just skip it", func(t *testing.T) {
@@ -163,7 +163,7 @@ func TestCreateSpace(t *testing.T) {
 			cl.MockGet = nil
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier("advanced").
-				HasSpecTargetClusterName("")
+				HasSpecTargetCluster("")
 		})
 
 		t.Run("when Get ToolchainConfig fails and no field is set", func(t *testing.T) {
@@ -185,7 +185,7 @@ func TestCreateSpace(t *testing.T) {
 			require.Error(t, err)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier("").
-				HasSpecTargetClusterName("")
+				HasSpecTargetCluster("")
 		})
 
 		t.Run("when Get ToolchainConfig fails and only targetCluster is missing", func(t *testing.T) {
@@ -207,7 +207,7 @@ func TestCreateSpace(t *testing.T) {
 			require.Error(t, err)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, space.Name, cl).
 				HasTier("advanced").
-				HasSpecTargetClusterName("")
+				HasSpecTargetCluster("")
 		})
 	})
 }

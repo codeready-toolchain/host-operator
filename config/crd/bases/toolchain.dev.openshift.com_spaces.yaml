@@ -59,19 +59,18 @@ spec:
                 description: TargetCluster The cluster in which this Space is going
                   to be provisioned If not set then the target cluster will be picked
                   automatically
-                properties:
-                  name:
-                    description: Name allows to select a specific target cluster for
-                      the Space to be provisioned.
-                    type: string
-                  roles:
-                    description: Roles allows to specify a list of cluster-roles,
-                      the capacity manager will use those labels to select the target
-                      cluster for the Space.
-                    items:
-                      type: string
-                    type: array
-                type: object
+                type: string
+              targetClusterRoles:
+                description: TargetClusterRoles one or more label keys that define
+                  a set of clusters where the Space can be provisioned. The target
+                  cluster has to match ALL the roles defined in this field in order
+                  for the space to be provisioned there. It can be used as an alternative
+                  to targetCluster field, which has precedence in case both roles
+                  and name are provided.
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: atomic
               tierName:
                 description: TierName is introduced to retain the name of the tier
                   for which this Space is provisioned If not set then the tier name
@@ -121,19 +120,7 @@ spec:
                   provisioned Can be empty if provisioning did not start or failed
                   To be used to de-provision the NSTemplateSet if the Spec.TargetCluster
                   is either changed or removed
-                properties:
-                  name:
-                    description: Name allows to select a specific target cluster for
-                      the Space to be provisioned.
-                    type: string
-                  roles:
-                    description: Roles allows to specify a list of cluster-roles,
-                      the capacity manager will use those labels to select the target
-                      cluster for the Space.
-                    items:
-                      type: string
-                    type: array
-                type: object
+                type: string
             type: object
         type: object
         x-kubernetes-preserve-unknown-fields: true

@@ -13,7 +13,6 @@ import (
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -58,6 +57,57 @@ func TestGetClusterIfApproved(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, approved)
 		assert.Equal(t, "member2", clusterName.getClusterName())
+	})
+
+	t.Run("with two clusters available, the second one has required cluster-role label", func(t *testing.T) {
+		// given
+		signup := commonsignup.NewUserSignup()
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
+			testconfig.AutomaticApproval().
+				Enabled(true),
+			testconfig.CapacityThresholds().
+				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
+				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
+		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		InitializeCounters(t, toolchainStatus)
+		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+
+		// when
+		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, approved)
+		assert.Equal(t, "member2", clusterName.getClusterName())
+	})
+
+	t.Run("return preferred cluster name even if without required cluster role", func(t *testing.T) {
+		// given
+		signup := commonsignup.NewUserSignup()
+		signup.Annotations = map[string]string{
+			toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey: "member1",
+		}
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
+			testconfig.AutomaticApproval().
+				Enabled(true),
+			testconfig.CapacityThresholds().
+				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
+				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
+		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		InitializeCounters(t, toolchainStatus)
+		clusters := NewGetMemberClusters(
+			// member1 doesn't have the cluster-role tenant but it's preferred one
+			NewMemberClusterWithClient(NewFakeClient(t), "member1", corev1.ConditionTrue),
+			NewMemberCluster(t, "member1", corev1.ConditionTrue),
+		)
+
+		// when
+		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
+
+		// then
+		require.NoError(t, err)
+		assert.True(t, approved)
+		assert.Equal(t, "member1", clusterName.getClusterName())
 	})
 
 	t.Run("with no cluster available", func(t *testing.T) {

@@ -13,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -269,8 +270,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(
-			NewMemberCluster(t, "member1", v1.ConditionTrue, WithClusterRoleLabel(cluster.RoleLabel(cluster.Tenant))),
-			NewMemberCluster(t, "member2", v1.ConditionTrue),
+			NewMemberCluster(t, "member1", v1.ConditionTrue),
+			NewMemberClusterWithClient(commontest.NewFakeClient(t), "member2", v1.ConditionTrue), // member2 has capacity but doesn't have the required cluster role
 		)
 
 		// when
@@ -295,8 +296,8 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(
-			NewMemberCluster(t, "member1", v1.ConditionTrue, WithClusterRoleLabel(cluster.RoleLabel(cluster.Tenant))),
-			NewMemberCluster(t, "member2", v1.ConditionTrue),
+			NewMemberCluster(t, "member1", v1.ConditionTrue),
+			NewMemberClusterWithClient(commontest.NewFakeClient(t), "member2", v1.ConditionTrue), // member2 has capacity but doesn't have the required cluster role
 		)
 
 		// when

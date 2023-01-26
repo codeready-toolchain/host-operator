@@ -414,7 +414,7 @@ func TestShouldNotInitializeAgain(t *testing.T) {
 	fakeClient := test.NewFakeClient(t, initObjs...)
 	err := fakeClient.Create(context.TODO(), masteruserrecord.NewMasterUserRecord(t, "ignored", masteruserrecord.TargetCluster("member-1")))
 	require.NoError(t, err)
-	err = fakeClient.Create(context.TODO(), space.NewSpace("ignored", space.WithSpecTargetClusterName("member-1")))
+	err = fakeClient.Create(context.TODO(), space.NewSpace("ignored", space.WithSpecTargetCluster("member-1")))
 	require.NoError(t, err)
 
 	// when

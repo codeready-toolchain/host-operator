@@ -19,11 +19,9 @@ func newSpace(userSignup *toolchainv1alpha1.UserSignup, targetCluster targetClus
 			Labels:    labels,
 		},
 		Spec: toolchainv1alpha1.SpaceSpec{
-			TargetCluster: toolchainv1alpha1.TargetCluster{
-				Name:  targetCluster.getClusterName(),
-				Roles: []string{cluster.RoleLabel(cluster.Tenant)}, // by default usersignups should be provisioned to tenant clusters
-			},
-			TierName: tier,
+			TargetCluster:      targetCluster.getClusterName(),
+			TargetClusterRoles: []string{cluster.RoleLabel(cluster.Tenant)}, // by default usersignups should be provisioned to tenant clusters
+			TierName:           tier,
 		},
 	}
 	return space

@@ -145,10 +145,10 @@ const postponeDelay = 2 * time.Second
 // Returns `false` otherwise
 func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (time.Duration, error) { //nolint:gocyclo
 	// deprovision from space.Status.TargetCluster if needed
-	if space.Status.TargetCluster.Name != "" && space.Spec.TargetCluster.Name != space.Status.TargetCluster.Name {
-		logger.Info("retargeting space", "from_cluster", space.Status.TargetCluster.Name, "to_cluster", space.Spec.TargetCluster.Name)
+	if space.Status.TargetCluster != "" && space.Spec.TargetCluster != space.Status.TargetCluster {
+		logger.Info("retargeting space", "from_cluster", space.Status.TargetCluster, "to_cluster", space.Spec.TargetCluster)
 		// look-up and delete the NSTemplateSet on the current member cluster
-		if isBeingDeleted, err := r.deleteNSTemplateSetFromCluster(logger, space, space.Status.TargetCluster.Name); err != nil {
+		if isBeingDeleted, err := r.deleteNSTemplateSetFromCluster(logger, space, space.Status.TargetCluster); err != nil {
 			return norequeue, r.setStatusRetargetFailed(logger, space, err)
 
 		} else if isBeingDeleted {
@@ -157,7 +157,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		} else {
 			logger.Info("resetting 'space.Status.TargetCluster' field")
 			// NSTemplateSet was removed: reset `space.Status.TargetCluster`
-			space.Status.TargetCluster.Name = ""
+			space.Status.TargetCluster = ""
 			if err := r.Client.Status().Update(context.TODO(), space); err != nil {
 				return norequeue, err
 			}
@@ -171,7 +171,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		}
 		return norequeue, r.setStatusProvisioningPending(space, "unspecified tier name")
 	}
-	if space.Spec.TargetCluster.Name == "" {
+	if space.Spec.TargetCluster == "" {
 		if err := r.setStateLabel(logger, space, toolchainv1alpha1.SpaceStateLabelValuePending); err != nil {
 			return norequeue, err
 		}
@@ -183,12 +183,12 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
 	space.Status.TargetCluster = space.Spec.TargetCluster
 
-	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster.Name]
+	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
-		return norequeue, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster.Name))
+		return norequeue, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
 	}
 
-	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster.Name)
+	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster)
 	// look-up the NSTemplateTier used by this Space
 	tmplTier := &toolchainv1alpha1.NSTemplateTier{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{
@@ -224,7 +224,7 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 				return norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 			}
 			logger.Info("NSTemplateSet created on target member cluster")
-			counter.IncrementSpaceCount(logger, space.Spec.TargetCluster.Name)
+			counter.IncrementSpaceCount(logger, space.Spec.TargetCluster)
 
 			return requeueDelay, r.setStatusProvisioning(space)
 		}
@@ -411,7 +411,7 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 		return r.setStatusTerminatingFailed(logger, space, err)
 	}
 
-	counter.DecrementSpaceCount(logger, space.Spec.TargetCluster.Name)
+	counter.DecrementSpaceCount(logger, space.Spec.TargetCluster)
 	logger.Info("removed finalizer")
 	// no need to update the status of the Space once the finalizer has been removed, since
 	// the resource will be deleted
@@ -427,15 +427,15 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 //
 // Returns `false/error` if an error occurred
 func (r *Reconciler) deleteNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space) (bool, error) {
-	targetClusterName := space.Spec.TargetCluster.Name
-	if targetClusterName == "" {
-		targetClusterName = space.Status.TargetCluster.Name
+	targetCluster := space.Spec.TargetCluster
+	if targetCluster == "" {
+		targetCluster = space.Status.TargetCluster
 	}
-	if targetClusterName == "" {
+	if targetCluster == "" {
 		logger.Info("cannot delete NSTemplateSet: no target cluster specified")
 		return false, nil // skip NSTemplateSet deletion
 	}
-	return r.deleteNSTemplateSetFromCluster(logger, space, targetClusterName)
+	return r.deleteNSTemplateSetFromCluster(logger, space, targetCluster)
 }
 
 // deleteNSTemplateSetFromCluster triggers the deletion of the NSTemplateSet on the given member cluster.

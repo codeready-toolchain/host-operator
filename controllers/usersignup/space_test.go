@@ -22,7 +22,7 @@ func TestNewSpace(t *testing.T) {
 	// then
 	expectedSpace := spacetest.NewSpace("johny",
 		spacetest.WithTierName("advanced"),
-		spacetest.WithSpecTargetClusterName("member-cluster"),
+		spacetest.WithSpecTargetCluster("member-cluster"),
 		spacetest.WithSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}),
 		spacetest.WithCreatorLabel(userSignup.Name))
 	assert.Equal(t, expectedSpace, space)

@@ -41,8 +41,9 @@ func WithClusterRoleLabel(labelKey string) Modifier {
 	}
 }
 
-func NewMemberCluster(t *testing.T, name string, status corev1.ConditionStatus, modifiers ...Modifier) *cluster.CachedToolchainCluster {
-	return NewMemberClusterWithClient(test.NewFakeClient(t), name, status, modifiers...)
+func NewMemberCluster(t *testing.T, name string, status corev1.ConditionStatus) *cluster.CachedToolchainCluster {
+	clusterRoleLabelModifier := WithClusterRoleLabel(cluster.RoleLabel(cluster.Tenant))
+	return NewMemberClusterWithClient(test.NewFakeClient(t), name, status, clusterRoleLabelModifier)
 }
 
 func NewMemberClusterWithClient(cl client.Client, name string, status corev1.ConditionStatus, modifiers ...Modifier) *cluster.CachedToolchainCluster {

@@ -219,14 +219,14 @@ func TestUserSignupCreateSpaceAndSpaceBindingOk(t *testing.T) {
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
 					Exists().
 					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
-					HasSpecTargetClusterName("member1").
+					HasSpecTargetCluster("member1").
 					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
 					HasTier("base")
 			case "with social event":
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "foo", r.Client).
 					Exists().
 					HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
-					HasSpecTargetClusterName("member1").
+					HasSpecTargetCluster("member1").
 					HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
 					HasTier("base2")
 			case "with skip space creation annotation set to true":
@@ -381,7 +381,7 @@ func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Spec.Username, r.Client).
 			HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 			Exists().
-			HasSpecTargetClusterName("member1").
+			HasSpecTargetCluster("member1").
 			HasSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}).
 			HasTier(baseNSTemplateTier.Name)
 		spacebindingtest.AssertThatSpaceBinding(t, test.HostOperatorNs, "foo", "foo", r.Client).
@@ -710,7 +710,7 @@ func TestNonDefaultNSTemplateTier(t *testing.T) {
 		// space should be created on the second reconcile
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Name, r.Client).
 			Exists().
-			HasSpecTargetClusterName("member1").
+			HasSpecTargetCluster("member1").
 			HasTier(customUserTier.Name)
 
 	})
@@ -1027,7 +1027,7 @@ func TestUserSignupWithManualApprovalApproved(t *testing.T) {
 		// space should be created on the second reconcile
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Name, r.Client).
 			Exists().
-			HasSpecTargetClusterName("member1").
+			HasSpecTargetCluster("member1").
 			HasTier(baseNSTemplateTier.Name)
 
 		t.Run("third reconcile - spacebinding created and usersignup completed", func(t *testing.T) {
@@ -1164,7 +1164,7 @@ func TestUserSignupWithNoApprovalPolicyTreatedAsManualApproved(t *testing.T) {
 		// space should be created on the second reconcile
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Name, r.Client).
 			Exists().
-			HasSpecTargetClusterName("member1").
+			HasSpecTargetCluster("member1").
 			HasTier(baseNSTemplateTier.Name)
 
 		t.Run("third reconcile", func(t *testing.T) {
@@ -1365,7 +1365,7 @@ func TestUserSignupWithAutoApprovalWithTargetCluster(t *testing.T) {
 		// space should be created on the second reconcile
 		spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Name, r.Client).
 			Exists().
-			HasSpecTargetClusterName("east").
+			HasSpecTargetCluster("east").
 			HasTier(baseNSTemplateTier.Name)
 
 		t.Run("third reconcile", func(t *testing.T) {
@@ -2048,7 +2048,7 @@ func TestUserSignupDeactivatedAfterMURCreated(t *testing.T) {
 
 		space := spacetest.NewSpace(mur.Name,
 			spacetest.WithCreatorLabel(userSignup.Name),
-			spacetest.WithSpecTargetClusterName("member-1"),
+			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
 
@@ -2578,7 +2578,7 @@ func TestUserSignupDeactivatedWhenMURAndSpaceAndSpaceBindingExists(t *testing.T)
 	}
 
 	space := spacetest.NewSpace("edward-jones",
-		spacetest.WithSpecTargetClusterName("member-1"),
+		spacetest.WithSpecTargetCluster("member-1"),
 		spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 		spacetest.WithFinalizer())
 
@@ -3047,7 +3047,7 @@ func TestUserSignupBannedMURAndSpaceExists(t *testing.T) {
 
 	space := spacetest.NewSpace(mur.Name,
 		spacetest.WithCreatorLabel(userSignup.Name),
-		spacetest.WithSpecTargetClusterName("member-1"),
+		spacetest.WithSpecTargetCluster("member-1"),
 		spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 		spacetest.WithFinalizer())
 
@@ -3219,7 +3219,7 @@ func TestUserSignupDeactivatedButMURDeleteFails(t *testing.T) {
 
 		space := spacetest.NewSpace("alice-mayweather",
 			spacetest.WithCreatorLabel(userSignup.Name),
-			spacetest.WithSpecTargetClusterName("member-1"),
+			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 			spacetest.WithFinalizer())
 
@@ -3814,7 +3814,7 @@ func TestChangedCompliantUsername(t *testing.T) {
 	spacetest.AssertThatSpace(t, test.HostOperatorNs, userSignup.Name, r.Client).
 		HasLabelWithValue(toolchainv1alpha1.SpaceCreatorLabelKey, userSignup.Name).
 		Exists().
-		HasSpecTargetClusterName("east").
+		HasSpecTargetCluster("east").
 		HasTier(baseNSTemplateTier.Name)
 	// given space is ready
 	err = r.setSpaceToReady(userSignup.Name)
@@ -4188,7 +4188,7 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 	mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 	mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 	space := spacetest.NewSpace("foo",
-		spacetest.WithSpecTargetClusterName("member-1"),
+		spacetest.WithSpecTargetCluster("member-1"),
 		spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 		spacetest.WithFinalizer())
 

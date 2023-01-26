@@ -149,19 +149,20 @@ func getOptimalTargetClusters(preferredCluster string, getMemberClusters cluster
 		}
 	}
 
-	memberNames := make([]string, len(members))
-	for i := range members {
-		if len(clusterRoles) > 0 {
-			// if cluster-role labels were provided, let's filter out only the members with those labels
-			if hasClusterRoles(clusterRoles, members[i]) {
-				memberNames[i] = members[i].Name
-			}
-		} else {
-			// if filtering on roles is not required
-			// just add the new member to the list
-			memberNames[i] = members[i].Name
+	var memberNames []string
+	for _, member := range members {
+		// if cluster-role labels were provided, it will check for matching on the member labels
+		// if no clusterRoles labels are required, then the function will simple return true
+		if hasClusterRoles(clusterRoles, member) {
+			memberNames = append(memberNames, member.Name)
 		}
 	}
+	// return empty string if no members available with roles
+	if len(memberNames) == 0 {
+		return []string{""}
+	}
+
+	// return the member names in case some were found
 	return memberNames
 }
 

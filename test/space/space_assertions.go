@@ -113,38 +113,38 @@ func (a *Assertion) DoesNotHaveLabel(key string) *Assertion {
 	return a
 }
 
-func (a *Assertion) HasNoSpecTargetClusterName() *Assertion {
+func (a *Assertion) HasNoSpecTargetCluster() *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
-	assert.Empty(a.t, a.space.Spec.TargetCluster.Name)
+	assert.Empty(a.t, a.space.Spec.TargetCluster)
 	return a
 }
 
-func (a *Assertion) HasSpecTargetClusterName(targetCluster string) *Assertion {
+func (a *Assertion) HasSpecTargetCluster(targetCluster string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
-	assert.Equal(a.t, targetCluster, a.space.Spec.TargetCluster.Name)
+	assert.Equal(a.t, targetCluster, a.space.Spec.TargetCluster)
 	return a
 }
 
 func (a *Assertion) HasSpecTargetClusterRoles(roles []string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
-	assert.Equal(a.t, roles, a.space.Spec.TargetCluster.Roles)
+	assert.Equal(a.t, roles, a.space.Spec.TargetClusterRoles)
 	return a
 }
 
-func (a *Assertion) HasNoStatusTargetClusterName() *Assertion {
+func (a *Assertion) HasNoStatusTargetCluster() *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
-	assert.Empty(a.t, a.space.Status.TargetCluster.Name)
+	assert.Empty(a.t, a.space.Status.TargetCluster)
 	return a
 }
 
-func (a *Assertion) HasStatusTargetClusterName(targetClusterName string) *Assertion {
+func (a *Assertion) HasStatusTargetCluster(targetCluster string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
-	assert.Equal(a.t, targetClusterName, a.space.Status.TargetCluster.Name)
+	assert.Equal(a.t, targetCluster, a.space.Status.TargetCluster)
 	return a
 }
 

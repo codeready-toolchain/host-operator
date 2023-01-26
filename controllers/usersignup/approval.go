@@ -4,6 +4,7 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,9 +48,13 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 	// The last cluster is used for returning users to ensure they can be provisioned back to the same cluster as they were previously using so they don't need to update URLs and kube contexts
 	preferredCluster := userSignup.Annotations[toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey]
 
+	// in case a preferredCluster is not set, let's ensure it picks a member cluster with the 'tenant' cluster-role
+	clusterRoles := []string{cluster.RoleLabel(cluster.Tenant)}
+
 	clusterName, err := clusterManager.GetOptimalTargetCluster(&capacity.OptimalTargetClusterFilter{
 		PreferredCluster:         preferredCluster,
 		ToolchainStatusNamespace: userSignup.Namespace,
+		ClusterRoles:             clusterRoles,
 	})
 	if err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to get the optimal target cluster")
