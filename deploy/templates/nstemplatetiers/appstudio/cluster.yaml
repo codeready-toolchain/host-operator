@@ -12,7 +12,7 @@ objects:
       hard:
         count/deployments.apps: "30"
         count/deploymentconfigs.apps: "30"
-        count/pods: "50"
+        count/pods: "150"
     selector:
       annotations:
         openshift.io/requester: ${USERNAME}
