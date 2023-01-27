@@ -1810,7 +1810,7 @@ func TestSubSpace(t *testing.T) {
 	t.Run("SpaceBindings inheritance ", func(t *testing.T) {
 
 		t.Run("create parentSpace with admin and viewer roles, and expect subSpace will have same usernames and roles", func(t *testing.T) {
-			// given a Space and its NSTemplateSet resource...
+			// given a parentSpace...
 			parentSpace := spacetest.NewSpace("parentSpace")
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
@@ -1847,7 +1847,7 @@ func TestSubSpace(t *testing.T) {
 		})
 
 		t.Run("create SpaceBindings for both parentSpace and subSpace, and expect subSpace will have merged roles and usernames", func(t *testing.T) {
-			// given a Space and its NSTemplateSet resource...
+			// given a parentSpace...
 			parentSpace := spacetest.NewSpace("parentSpace")
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
@@ -1889,7 +1889,7 @@ func TestSubSpace(t *testing.T) {
 		})
 
 		t.Run("create SpaceBindings for both parentSpace and subSpace with same username, and expect user role from subSpace will override role from parentSpace", func(t *testing.T) {
-			// given a Space and its NSTemplateSet resource...
+			// given a parentSpace...
 			parentSpace := spacetest.NewSpace("parentSpace")
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("john", parentSpace.Name, "admin", "signupJohn")
