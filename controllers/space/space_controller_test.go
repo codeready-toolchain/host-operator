@@ -1811,11 +1811,7 @@ func TestSubSpace(t *testing.T) {
 
 		t.Run("create parentSpace with admin and viewer roles, and expect subSpace will have same usernames and roles", func(t *testing.T) {
 			// given a Space and its NSTemplateSet resource...
-			parentSpace := spacetest.NewSpace("parentSpace",
-				spacetest.WithTierName(basicTier.Name),
-				spacetest.WithSpecTargetCluster("member-1"),
-				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
-				spacetest.WithFinalizer())
+			parentSpace := spacetest.NewSpace("parentSpace")
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
 			sb2 := spacebindingtest.NewSpaceBinding("parentSpaceViewer", parentSpace.Name, "viewer", "signupViewer")
@@ -1852,11 +1848,7 @@ func TestSubSpace(t *testing.T) {
 
 		t.Run("create SpaceBindings for both parentSpace and subSpace, and expect subSpace will have merged roles and usernames", func(t *testing.T) {
 			// given a Space and its NSTemplateSet resource...
-			parentSpace := spacetest.NewSpace("parentSpace",
-				spacetest.WithTierName(basicTier.Name),
-				spacetest.WithSpecTargetCluster("member-1"),
-				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
-				spacetest.WithFinalizer())
+			parentSpace := spacetest.NewSpace("parentSpace")
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
 
@@ -1898,11 +1890,7 @@ func TestSubSpace(t *testing.T) {
 
 		t.Run("create SpaceBindings for both parentSpace and subSpace with same username, and expect user role from subSpace will override role from parentSpace", func(t *testing.T) {
 			// given a Space and its NSTemplateSet resource...
-			parentSpace := spacetest.NewSpace("parentSpace",
-				spacetest.WithTierName(basicTier.Name),
-				spacetest.WithSpecTargetCluster("member-1"),
-				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
-				spacetest.WithFinalizer())
+			parentSpace := spacetest.NewSpace("parentSpace")
 			// ...and their corresponding space bindings
 			sb1 := spacebindingtest.NewSpaceBinding("john", parentSpace.Name, "admin", "signupJohn")
 			sb2 := spacebindingtest.NewSpaceBinding("jane", parentSpace.Name, "viewer", "signupJane")
