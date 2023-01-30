@@ -1794,6 +1794,145 @@ func TestRetargetSpace(t *testing.T) {
 	})
 }
 
+// TestSubSpace covers the cases where there is a relationship between a parentSpace and a subSpace
+// and all the consequences and expectations of this link between two different spaces.
+func TestSubSpace(t *testing.T) {
+
+	// given
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	s := scheme.Scheme
+	err := apis.AddToScheme(s)
+	require.NoError(t, err)
+	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
+
+	// test SpaceBindings of a parentSpace are created/updated/deleted ,
+	// and how this should affect the subSpace and its NSTemplateSet
+	t.Run("SpaceBindings inheritance ", func(t *testing.T) {
+
+		t.Run("create parentSpace with admin and viewer roles, and expect subSpace will have same usernames and roles", func(t *testing.T) {
+			// given a parentSpace...
+			parentSpace := spacetest.NewSpace("parentSpace")
+			// ...and their corresponding space bindings
+			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
+			sb2 := spacebindingtest.NewSpaceBinding("parentSpaceViewer", parentSpace.Name, "viewer", "signupViewer")
+
+			// ...now create a subSpace
+			subSpace := spacetest.NewSpace("subSpace",
+				spacetest.WithTierName(basicTier.Name),
+				spacetest.WithSpecTargetCluster("member-1"),     // already provisioned on a target cluster
+				spacetest.WithStatusTargetCluster("member-1"),   // already provisioned on a target cluster
+				spacetest.WithSpecParentSpace(parentSpace.Name), // set the parentSpace spec
+				spacetest.WithFinalizer())
+			subNStmplSet := nstemplatetsettest.NewNSTemplateSet(subSpace.Name,
+				nstemplatetsettest.WithReadyCondition(), // create empty NSTemplate set for subSpace
+			)
+
+			hostClient := test.NewFakeClient(t, parentSpace, sb1, sb2, basicTier, subSpace)
+			member1Client := test.NewFakeClient(t, subNStmplSet)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
+
+			// then
+			require.NoError(t, err)
+			// subNSTemplateSet should have same usernames and roles as parentNSTemplateSet
+			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, subNStmplSet.Name, member1Client).
+				HasSpaceRoles(
+					nstemplatetsettest.SpaceRole("basic-admin-123456new", "parentSpaceAdmin"),
+					nstemplatetsettest.SpaceRole("basic-viewer-123456new", "parentSpaceViewer"),
+				).
+				HasConditions(nstemplatetsettest.Provisioned())
+		})
+
+		t.Run("create SpaceBindings for both parentSpace and subSpace, and expect subSpace will have merged roles and usernames", func(t *testing.T) {
+			// given a parentSpace...
+			parentSpace := spacetest.NewSpace("parentSpace")
+			// ...and their corresponding space bindings
+			sb1 := spacebindingtest.NewSpaceBinding("parentSpaceAdmin", parentSpace.Name, "admin", "signupAdmin")
+
+			// ...now create a subSpace
+			subSpace := spacetest.NewSpace("subSpace",
+				spacetest.WithTierName(basicTier.Name),
+				spacetest.WithSpecTargetCluster("member-1"),     // already provisioned on a target cluster
+				spacetest.WithStatusTargetCluster("member-1"),   // already provisioned on a target cluster
+				spacetest.WithSpecParentSpace(parentSpace.Name), // set the parentSpace spec
+				spacetest.WithFinalizer())
+			subNStmplSet := nstemplatetsettest.NewNSTemplateSet(subSpace.Name,
+				nstemplatetsettest.WithReadyCondition(),
+				nstemplatetsettest.WithReferencesFor(basicTier,
+					// add an already existing user with a different name which is supposed to be dropped
+					nstemplatetsettest.WithSpaceRole("viewer", "subViewer"),
+				),
+			)
+			// ...and the corresponding space bindings for the subSpace
+			sb2 := spacebindingtest.NewSpaceBinding("subSpaceViewer", subSpace.Name, "viewer", "signupViewer")
+
+			hostClient := test.NewFakeClient(t, parentSpace, sb1, sb2, basicTier, subSpace)
+			member1Client := test.NewFakeClient(t, subNStmplSet)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
+
+			// then
+			require.NoError(t, err)
+			// subNSTemplateSet should have same merged roles and usernames
+			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, subNStmplSet.Name, member1Client).
+				HasSpaceRoles(
+					nstemplatetsettest.SpaceRole("basic-admin-123456new", "parentSpaceAdmin"),
+					nstemplatetsettest.SpaceRole("basic-viewer-123456new", "subSpaceViewer"),
+				).
+				HasConditions(nstemplatetsettest.Provisioned())
+		})
+
+		t.Run("create SpaceBindings for both parentSpace and subSpace with same username, and expect user role from subSpace will override role from parentSpace", func(t *testing.T) {
+			// given a parentSpace...
+			parentSpace := spacetest.NewSpace("parentSpace")
+			// ...and their corresponding space bindings
+			sb1 := spacebindingtest.NewSpaceBinding("john", parentSpace.Name, "admin", "signupJohn")
+			sb2 := spacebindingtest.NewSpaceBinding("jane", parentSpace.Name, "viewer", "signupJane")
+
+			// ...now create a subSpace
+			subSpace := spacetest.NewSpace("subSpace",
+				spacetest.WithTierName(basicTier.Name),
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"),   // already provisioned on a target cluster
+				spacetest.WithSpecParentSpace(parentSpace.Name), // already provisioned on a target cluster
+				spacetest.WithFinalizer())
+			subNStmplSet := nstemplatetsettest.NewNSTemplateSet(subSpace.Name,
+				nstemplatetsettest.WithReadyCondition(),
+				nstemplatetsettest.WithReferencesFor(basicTier,
+					// upgrade jane to admin for this sub-space...
+					nstemplatetsettest.WithSpaceRole("admin", "jane"), // jane is admin in subSpace
+				),
+			)
+			// ...and the corresponding space bindings for the subSpace
+			sb3 := spacebindingtest.NewSpaceBinding("jane", subSpace.Name, "admin", "janeSignup")
+
+			hostClient := test.NewFakeClient(t, parentSpace, sb1, sb2, sb3, basicTier, subSpace)
+			member1Client := test.NewFakeClient(t, subNStmplSet)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(subSpace))
+
+			// then
+			require.NoError(t, err)
+			// subNSTemplateSet should have both users as admin
+			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, subNStmplSet.Name, member1Client).
+				HasSpaceRoles(
+					nstemplatetsettest.SpaceRole("basic-admin-123456new", "jane", "john"), // jane remains admin for subSpace
+				).
+				HasConditions(nstemplatetsettest.Provisioned())
+		})
+
+	})
+}
+
 func mockDeleteNSTemplateSet(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 	return func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 		if nstmplSet, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
