@@ -86,7 +86,7 @@ type OptimalTargetClusterFilter struct {
 // Let's say that the limit for member1 is 1000 and for member2 is 2000, then the batch of spaces would be 50 for member1 and 100 for member2.
 //
 // If the preferredCluster is provided and it is also one of the available clusters, then the same name is returned.
-// If the clusterRoles are provided then the candidates optimal cluster pool will be made out by only those matching the labels, if any available.
+// In case the preferredCluster was not provided or not found/available and the clusterRoles are provided then the candidates optimal cluster pool will be made out by only those matching the labels, if any available.
 func (b *ClusterManager) GetOptimalTargetCluster(optimalClusterFilter *OptimalTargetClusterFilter) (string, error) {
 	config, err := toolchainconfig.GetToolchainConfig(b.client)
 	if err != nil {
@@ -133,11 +133,16 @@ func (b *ClusterManager) GetOptimalTargetCluster(optimalClusterFilter *OptimalTa
 	return optimalTargetClusters[0], nil
 }
 
+// getOptimalTargetClusters checks if a preferred target cluster was provided and available from the cluster pool.
+// If the preferred target cluster was not provided or not available, but a list of clusterRoles was provided, then it filters only the available clusters matching all those roles.
+// If no cluster roles were provided then it returns all the available clusters.
+// The function returns a slice with an empty string if not optimal target clusters where found.
 func getOptimalTargetClusters(preferredCluster string, getMemberClusters cluster.GetMemberClustersFunc, clusterRoles []string, conditions ...cluster.Condition) []string {
+	emptyTargetCluster := []string{""}
 	// Automatic cluster selection based on cluster readiness
 	members := getMemberClusters(append(conditions, cluster.Ready)...)
 	if len(members) == 0 {
-		return []string{""}
+		return emptyTargetCluster
 	}
 
 	// if the preferred cluster is provided and it is also one of the available clusters, then the same name is returned, otherwise, it returns the first available one
@@ -159,7 +164,7 @@ func getOptimalTargetClusters(preferredCluster string, getMemberClusters cluster
 	}
 	// return empty string if no members available with roles
 	if len(memberNames) == 0 {
-		return []string{""}
+		return emptyTargetCluster
 	}
 
 	// return the member names in case some were found

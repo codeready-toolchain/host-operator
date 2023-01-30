@@ -71,8 +71,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(
-			NewMemberClusterWithClient(NewFakeClient(t), "member1", corev1.ConditionTrue), // no cluster-role label on this member
-			NewMemberCluster(t, "member2", corev1.ConditionTrue),
+			NewMemberClusterWithoutClusterRoles(t, "member1", corev1.ConditionTrue), // no cluster-role label on this member
+			NewMemberCluster(t, "member2", corev1.ConditionTrue),                    // by default all member clusters will have the 'tenant' cluster-role
 		)
 
 		// when
@@ -100,8 +100,8 @@ func TestGetClusterIfApproved(t *testing.T) {
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(
 			// member1 doesn't have the cluster-role tenant but it's preferred one
-			NewMemberClusterWithClient(NewFakeClient(t), "member1", corev1.ConditionTrue),
-			NewMemberCluster(t, "member1", corev1.ConditionTrue),
+			NewMemberClusterWithoutClusterRoles(t, "member1", corev1.ConditionTrue),
+			NewMemberCluster(t, "member1", corev1.ConditionTrue), // by default all member clusters will have the 'tenant' cluster-role
 		)
 
 		// when
