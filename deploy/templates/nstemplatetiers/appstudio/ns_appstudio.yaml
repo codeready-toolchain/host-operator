@@ -87,9 +87,9 @@ objects:
     scopes:
       - Terminating
     hard:
-      limits.cpu: "20"
+      limits.cpu: "60"
       limits.memory: ${MEMORY_BUILD_LIMIT}
-      requests.cpu: "2"
+      requests.cpu: "6"
       requests.memory: ${MEMORY_BUILD_REQUEST}
 - apiVersion: v1
   kind: ResourceQuota
