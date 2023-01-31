@@ -69,7 +69,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			"appstudio": {
 				"clusterresources": "appstudio-clusterresources-654321a-654321a",
 				"namespaces": []string{
-					"appstudio-appstudio-123456b-123456b",
+					"appstudio-tenant-123456b-123456b",
 				},
 				"spaceRoles": map[string]string{
 					"admin":  "appstudio-admin-123456c-123456c",
@@ -123,7 +123,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				"nocluster-stage-1234567-1234567",
 				"nocluster-admin-123456k-123456k",
 				"appstudio-clusterresources-654321a-654321a",
-				"appstudio-appstudio-123456b-123456b",
+				"appstudio-tenant-123456b-123456b",
 				"appstudio-admin-123456c-123456c",
 				"appstudio-viewer-123456d-123456d",
 			}, names)
@@ -239,7 +239,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 							`nocluster/ns_stage: "333333b"` + "\n" +
 							`nocluster/spacerole_admin: "333333c"` + "\n" +
 							`appstudio/cluster: "444444a"` + "\n" +
-							`appstudio/ns_appstudio: "444444b"` + "\n" +
+							`appstudio/ns_tenant: "444444b"` + "\n" +
 							`appstudio/spacerole_admin: "444444c"` + "\n" +
 							`appstudio/spacerole_viewer: "444444d"` + "\n"), nil
 				}
