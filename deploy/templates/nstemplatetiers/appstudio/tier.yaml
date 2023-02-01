@@ -12,7 +12,7 @@ objects:
     clusterResources:
       templateRef: ${CLUSTER_TEMPL_REF}
     namespaces:
-      - templateRef: ${APPSTUDIO_TEMPL_REF}
+      - templateRef: ${TENANT_TEMPL_REF}
     spaceRoles:
       admin:
         templateRef: ${ADMIN_TEMPL_REF}
@@ -21,6 +21,6 @@ objects:
 parameters:
 - name: NAMESPACE
 - name: CLUSTER_TEMPL_REF
-- name: APPSTUDIO_TEMPL_REF
+- name: TENANT_TEMPL_REF
 - name: ADMIN_TEMPL_REF
 - name: VIEWER_TEMPL_REF

@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: appstudio-ns
+  name: appstudio-tenant
 objects:
 - apiVersion: v1
   kind: Namespace
@@ -11,9 +11,9 @@ objects:
       openshift.io/display-name: ${USERNAME}
       openshift.io/requester: ${USERNAME}
     labels:
-      name: ${USERNAME}
+      name: ${USERNAME}-tenant
       toolchain.dev.openshift.com/workspace: ${USERNAME}
-    name: ${USERNAME}
+    name: ${USERNAME}-tenant
 
 parameters:
 - name: USERNAME
