@@ -12,6 +12,9 @@ objects:
       openshift.io/requester: ${USERNAME}
     labels:
       name: ${USERNAME}-dev
+      # For RHODS: Allow user namespace to be treated as a DSP to enable Model Serving on this NS
+      modelmesh-enabled: "true" 
+      opendatahub.io/dashboard: "true"
     name: ${USERNAME}-dev
 
 # Role and RoleBindings for CRT administration (not associated with users)
