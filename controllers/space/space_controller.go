@@ -378,6 +378,10 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		logger.Info("NSTemplateSet updated on target member cluster")
 		return toolchainv1alpha1.Condition{}, requeueDelay, r.setStatusUpdating(space)
 	}
+	// copy provisioned namespaces list from NSTemplateSet
+	// so that we have the list available both on host cluster and member clusters
+	space.Status.ProvisionedNamespaces = nsTmplSet.Status.ProvisionedNamespaces
+
 	logger.Info("NSTemplateSet is up-to-date")
 	return nsTmplSetReady, 0, nil
 }
@@ -710,6 +714,12 @@ func (r *Reconciler) setStatusNSTemplateSetUpdateFailed(logger logr.Logger, spac
 		return err
 	}
 	return cause
+}
+
+func (r *Reconciler) setProvisionedNamespaceList(nsTmplSet *toolchainv1alpha1.NSTemplateSet, space *toolchainv1alpha1.Space) error {
+	// copy provisioned namespaces list from NSTemplateSet
+	space.Status.ProvisionedNamespaces = nsTmplSet.Status.ProvisionedNamespaces
+	return r.Client.Status().Update(context.TODO(), space)
 }
 
 // updateStatus updates space status conditions with the new conditions

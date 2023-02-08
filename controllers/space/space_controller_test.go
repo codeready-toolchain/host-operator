@@ -108,6 +108,15 @@ func TestCreateSpace(t *testing.T) {
 				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 					nstemplatetsettest.Provisioned(),
 				}
+				nsTmplSet.Status.ProvisionedNamespaces = []toolchainv1alpha1.Namespace{
+					{
+						Name: "john-dev",
+						Type: "default",
+					},
+					{
+						Name: "john-stage",
+					},
+				}
 				err := member1.Client.Update(context.TODO(), nsTmplSet)
 				require.NoError(t, err)
 				ctrl := newReconciler(hostClient, member1, member2)
@@ -121,6 +130,7 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
+					HasStatusProvisionedNamespaces(nsTmplSet.Status.ProvisionedNamespaces).
 					HasConditions(spacetest.Ready()).
 					HasStateLabel("cluster-assigned").
 					HasFinalizer()
