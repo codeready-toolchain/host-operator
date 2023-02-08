@@ -93,7 +93,7 @@ func (r *Reconciler) ensureFields(logger logr.Logger, space *toolchainv1alpha1.S
 	}
 
 	if space.Spec.TargetCluster == "" {
-		targetCluster, err := r.ClusterManager.GetOptimalTargetCluster(&capacity.OptimalTargetClusterFilter{
+		targetCluster, err := r.ClusterManager.GetOptimalTargetCluster(capacity.OptimalTargetClusterFilter{
 			ToolchainStatusNamespace: space.Namespace,
 			ClusterRoles:             space.Spec.TargetClusterRoles,
 		})

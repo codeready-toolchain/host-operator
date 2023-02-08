@@ -48,7 +48,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
@@ -65,14 +65,12 @@ func TestGetClusterIfApproved(t *testing.T) {
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
 				Enabled(true),
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
+		)
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(
 			NewMemberClusterWithoutClusterRoles(t, "member1", corev1.ConditionTrue), // no cluster-role label on this member
-			NewMemberCluster(t, "member2", corev1.ConditionTrue),                    // by default all member clusters will have the 'tenant' cluster-role
+			NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue),      // by default all member clusters will have the 'tenant' cluster-role
 		)
 
 		// when
@@ -84,7 +82,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		assert.Equal(t, "member2", clusterName.getClusterName())
 	})
 
-	t.Run("return preferred cluster name even if without required cluster role", func(t *testing.T) {
+	t.Run("don't return preferred cluster name if without required cluster role", func(t *testing.T) {
 		// given
 		signup := commonsignup.NewUserSignup()
 		signup.Annotations = map[string]string{
@@ -92,16 +90,13 @@ func TestGetClusterIfApproved(t *testing.T) {
 		}
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
-				Enabled(true),
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
+				Enabled(true))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(
 			// member1 doesn't have the cluster-role tenant but it's preferred one
 			NewMemberClusterWithoutClusterRoles(t, "member1", corev1.ConditionTrue),
-			NewMemberCluster(t, "member1", corev1.ConditionTrue), // by default all member clusters will have the 'tenant' cluster-role
+			NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue), // by default all member clusters will have the 'tenant' cluster-role
 		)
 
 		// when
@@ -110,7 +105,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// then
 		require.NoError(t, err)
 		assert.True(t, approved)
-		assert.Equal(t, "member1", clusterName.getClusterName())
+		assert.Equal(t, "member2", clusterName.getClusterName())
 	})
 
 	t.Run("with no cluster available", func(t *testing.T) {
@@ -135,7 +130,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// given
 		fakeClient := NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t))
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
@@ -150,7 +145,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// given
 		fakeClient := NewFakeClient(t, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
 		// when
 		approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
@@ -165,7 +160,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// given
 		fakeClient := NewFakeClient(t, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
@@ -184,7 +179,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		)
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
@@ -204,7 +199,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				ResourceCapacityThreshold(62))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
 
 		// when
@@ -222,7 +217,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue), NewMemberCluster(t, "member2", corev1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
 
 		// when
@@ -243,7 +238,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				return fmt.Errorf("some error")
 			}
 			InitializeCounters(t, toolchainStatus)
-			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue))
+			clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 
 			// when
 			approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
@@ -264,7 +259,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 				return fakeClient.Client.Get(ctx, key, obj)
 			}
 			InitializeCounters(t, toolchainStatus)
-			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", corev1.ConditionTrue))
+			clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 
 			// when
 			approved, clusterName, err := getClusterIfApproved(fakeClient, signup, capacity.NewClusterManager(clusters, fakeClient))
