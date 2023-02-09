@@ -33,6 +33,7 @@ objects:
         resources:
           - masteruserrecords
           - socialevents
+          - spacebindings
           - spaces
           - toolchainconfigs
           - toolchainstatuses
