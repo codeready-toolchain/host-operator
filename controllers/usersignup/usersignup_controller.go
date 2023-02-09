@@ -347,7 +347,8 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 			space, created, err := r.ensureSpace(reqLogger, userSignup, mur, spaceTier)
 			// if there was an error or the space was created then return to complete the reconcile, another reconcile will occur when space is created since this controller watches spaces
 			if err != nil || created {
-				return true, err
+				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToCreateSpace, err,
+					"error creating Space")
 			}
 
 			if err = r.ensureSpaceBinding(reqLogger, userSignup, mur, space); err != nil {
@@ -631,8 +632,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 
 	err = r.Client.Create(context.TODO(), space)
 	if err != nil {
-		return nil, false, r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToCreateSpace, err,
-			"error creating Space")
+		return nil, false, err
 	}
 
 	logger.Info("Created Space", "name", space.Name, "target_cluster", tCluster, "NSTemplateTier", spaceTier.Name)
