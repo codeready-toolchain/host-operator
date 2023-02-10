@@ -144,33 +144,29 @@ func getOptimalTargetClusters(preferredCluster string, getMemberClusters cluster
 	if len(members) == 0 {
 		return emptyTargetCluster
 	}
-	var filteredMembers []*cluster.CachedToolchainCluster
+
+	// extract only names of the available clusters
+	var memberNames []string
 	for _, member := range members {
 		// if cluster-role labels were provided, it will check for matching on the member labels
 		// if no clusterRoles labels are required, then the function will return all member cluster with the `tenant` cluster role label
 		if hasClusterRoles(clusterRoles, member) {
-			filteredMembers = append(filteredMembers, member)
+			memberNames = append(memberNames, member.Name)
 		}
 	}
 
 	// return empty string if no members available with roles
-	if len(filteredMembers) == 0 {
+	if len(memberNames) == 0 {
 		return emptyTargetCluster
 	}
 
 	// if the preferred cluster is provided and it is also one of the available clusters, then the same name is returned, otherwise, it returns the first available one
 	if preferredCluster != "" {
-		for _, m := range filteredMembers {
-			if preferredCluster == m.Name {
-				return []string{m.Name}
+		for _, memberName := range memberNames {
+			if preferredCluster == memberName {
+				return []string{memberName}
 			}
 		}
-	}
-
-	// extract only names of the available clusters
-	var memberNames []string
-	for _, m := range filteredMembers {
-		memberNames = append(memberNames, m.Name)
 	}
 
 	// return the member names in case some were found
