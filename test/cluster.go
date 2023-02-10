@@ -33,16 +33,30 @@ func NewGetMemberClusters(memberClusters ...*cluster.CachedToolchainCluster) clu
 	}
 }
 
-func NewMemberCluster(t *testing.T, name string, status corev1.ConditionStatus) *cluster.CachedToolchainCluster {
-	return NewMemberClusterWithClient(test.NewFakeClient(t), name, status)
+type Modifier func(toolchainCluster *cluster.CachedToolchainCluster)
+
+func WithClusterRoleLabel(labelKey string) Modifier {
+	return func(cluster *cluster.CachedToolchainCluster) {
+		cluster.Config.Labels[labelKey] = "" // we don't care about the label value, only the key is used
+	}
 }
 
-func NewMemberClusterWithClient(cl client.Client, name string, status corev1.ConditionStatus) *cluster.CachedToolchainCluster {
-	toolchainCluster, _ := NewGetMemberCluster(true, status)(ClusterClient(name, cl))(name)
+func NewMemberClusterWithTenantRole(t *testing.T, name string, status corev1.ConditionStatus) *cluster.CachedToolchainCluster {
+	clusterRoleLabelModifier := WithClusterRoleLabel(cluster.RoleLabel(cluster.Tenant))
+	return NewMemberClusterWithClient(test.NewFakeClient(t), name, status, clusterRoleLabelModifier)
+}
+
+func NewMemberClusterWithClient(cl client.Client, name string, status corev1.ConditionStatus, modifiers ...Modifier) *cluster.CachedToolchainCluster {
+	toolchainCluster, _ := NewGetMemberCluster(true, status, modifiers...)(ClusterClient(name, cl))(name)
 	return toolchainCluster
 }
 
-func NewGetMemberCluster(ok bool, status corev1.ConditionStatus) GetMemberClusterFunc {
+// NewMemberClusterWithoutClusterRoles returns a cached toolchaincluster config that doesn't have the default cluster-roles which a member cluster should have
+func NewMemberClusterWithoutClusterRoles(t *testing.T, name string, status corev1.ConditionStatus) *cluster.CachedToolchainCluster {
+	return NewMemberClusterWithClient(test.NewFakeClient(t), name, status)
+}
+
+func NewGetMemberCluster(ok bool, status corev1.ConditionStatus, modifiers ...Modifier) GetMemberClusterFunc {
 	if !ok {
 		return func(clusters ...ClientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool) {
 			return func(name string) (*cluster.CachedToolchainCluster, bool) {
@@ -61,12 +75,13 @@ func NewGetMemberCluster(ok bool, status corev1.ConditionStatus) GetMemberCluste
 			if !ok {
 				return nil, false
 			}
-			return &cluster.CachedToolchainCluster{
+			cachedCluster := &cluster.CachedToolchainCluster{
 				Config: &cluster.Config{
 					Name:              name,
 					Type:              cluster.Member,
 					OperatorNamespace: test.MemberOperatorNs,
 					OwnerClusterName:  test.HostClusterName,
+					Labels:            map[string]string{},
 				},
 				Client: cl,
 				ClusterStatus: &toolchainv1alpha1.ToolchainClusterStatus{
@@ -75,7 +90,13 @@ func NewGetMemberCluster(ok bool, status corev1.ConditionStatus) GetMemberCluste
 						Status: status,
 					}},
 				},
-			}, true
+			}
+
+			for _, modify := range modifiers {
+				modify(cachedCluster)
+			}
+
+			return cachedCluster, true
 		}
 	}
 }
