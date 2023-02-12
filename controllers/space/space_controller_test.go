@@ -108,7 +108,7 @@ func TestCreateSpace(t *testing.T) {
 				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 					nstemplatetsettest.Provisioned(),
 				}
-				nsTmplSet.Status.ProvisionedNamespaces = []toolchainv1alpha1.Namespace{
+				nsTmplSet.Status.ProvisionedNamespaces = []toolchainv1alpha1.SpaceNamespace{
 					{
 						Name: "john-dev",
 						Type: "default",
@@ -475,6 +475,33 @@ func TestCreateSpace(t *testing.T) {
 			AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // no counters are incremented
+		})
+
+		t.Run("error while setting provisioned namespace list", func(t *testing.T) {
+			// given
+			s := spacetest.NewSpace("oddity",
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithFinalizer())
+			hostClient := test.NewFakeClient(t, s, basicTier)
+			member1Client := test.NewFakeClient(t)
+			member1Client.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
+					return fmt.Errorf("mock error")
+				}
+				return member1Client.Client.Get(ctx, key, obj)
+			}
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			ctrl := newReconciler(hostClient, member1)
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+			// then
+			require.EqualError(t, err, "mock error")
+			assert.False(t, res.Requeue)
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
+				HasConditions(spacetest.UnableToCreateNSTemplateSet("mock error")).
+				HasStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace(nil)) // unable to set list of namespaces
 		})
 	})
 }

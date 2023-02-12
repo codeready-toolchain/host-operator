@@ -148,7 +148,7 @@ func (a *Assertion) HasStatusTargetCluster(targetCluster string) *Assertion {
 	return a
 }
 
-func (a *Assertion) HasStatusProvisionedNamespaces(provisionedNamespaces []toolchainv1alpha1.Namespace) *Assertion {
+func (a *Assertion) HasStatusProvisionedNamespaces(provisionedNamespaces []toolchainv1alpha1.SpaceNamespace) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	assert.Equal(a.t, provisionedNamespaces, a.space.Status.ProvisionedNamespaces)
