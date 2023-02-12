@@ -51,7 +51,7 @@ func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSi
 	// in case a preferredCluster is not set, let's ensure it picks a member cluster with the 'tenant' cluster-role
 	clusterRoles := []string{cluster.RoleLabel(cluster.Tenant)}
 
-	clusterName, err := clusterManager.GetOptimalTargetCluster(&capacity.OptimalTargetClusterFilter{
+	clusterName, err := clusterManager.GetOptimalTargetCluster(capacity.OptimalTargetClusterFilter{
 		PreferredCluster:         preferredCluster,
 		ToolchainStatusNamespace: userSignup.Namespace,
 		ClusterRoles:             clusterRoles,

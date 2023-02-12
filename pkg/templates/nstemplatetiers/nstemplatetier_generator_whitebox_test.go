@@ -48,7 +48,7 @@ var expectedTestTiers = map[string]bool{
 func nsTypes(tier string) []string {
 	switch tier {
 	case "appstudio":
-		return []string{"appstudio"}
+		return []string{"tenant"}
 	case "base1ns", "base1nsnoidling", "base1ns6didler", "test":
 		return []string{"dev"}
 	default:
@@ -428,7 +428,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 					"stage": "1234567-1234567",
 				},
 				"appstudio": {
-					"appstudio": "123456b-123456b",
+					"tenant": "123456b-123456b",
 				},
 			}
 			spaceRoleRevisions := map[string]map[string]string{

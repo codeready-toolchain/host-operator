@@ -45,8 +45,8 @@ func TestCreateSpace(t *testing.T) {
 		// given
 		s := spacetest.NewSpace("oddity", spacetest.WithSpecTargetCluster("member-1"))
 		hostClient := test.NewFakeClient(t, s, basicTier)
-		member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		InitializeCounters(t,
 			NewToolchainStatus())
 		ctrl := newReconciler(hostClient, member1, member2)
@@ -144,8 +144,8 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("oddity")
 			hostClient := test.NewFakeClient(t, s)
-			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -169,8 +169,8 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("oddity", spacetest.WithTierName(""))
 			hostClient := test.NewFakeClient(t, s)
-			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -250,8 +250,8 @@ func TestCreateSpace(t *testing.T) {
 		t.Run("space not found", func(t *testing.T) {
 			// given
 			hostClient := test.NewFakeClient(t)
-			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -277,8 +277,8 @@ func TestCreateSpace(t *testing.T) {
 				}
 				return hostClient.Client.Get(ctx, key, obj)
 			}
-			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -304,8 +304,8 @@ func TestCreateSpace(t *testing.T) {
 				}
 				return hostClient.Client.Update(ctx, obj, opts...)
 			}
-			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -325,8 +325,8 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("oddity", spacetest.WithSpecTargetCluster("unknown"))
 			hostClient := test.NewFakeClient(t, s)
-			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -358,8 +358,8 @@ func TestCreateSpace(t *testing.T) {
 				}
 				return hostClient.Client.Get(ctx, key, obj)
 			}
-			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -393,7 +393,7 @@ func TestCreateSpace(t *testing.T) {
 				return member1Client.Client.Get(ctx, key, obj)
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -426,7 +426,7 @@ func TestCreateSpace(t *testing.T) {
 				return member1Client.Client.Create(ctx, obj, opts...)
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -457,8 +457,8 @@ func TestCreateSpace(t *testing.T) {
 				}
 				return hostClient.Client.Status().Update(ctx, obj, opts...)
 			}
-			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -577,7 +577,7 @@ func TestDeleteSpace(t *testing.T) {
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1Client.MockDelete = mockDeleteNSTemplateSet(member1Client.Client)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t, NewToolchainStatus())
 
@@ -636,7 +636,7 @@ func TestDeleteSpace(t *testing.T) {
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1Client.MockDelete = mockDeleteNSTemplateSet(member1Client.Client)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t, NewToolchainStatus(WithMember("member-1", WithSpaceCount(1))))
 
@@ -669,8 +669,8 @@ func TestDeleteSpace(t *testing.T) {
 				spacetest.WithCondition(spacetest.ProvisioningFailed("missing target member cluster")),
 			)
 			hostClient := test.NewFakeClient(t, s, basicTier)
-			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -700,8 +700,8 @@ func TestDeleteSpace(t *testing.T) {
 				spacetest.WithCondition(spacetest.ProvisioningFailed("unknown target member cluster 'member-3'")),
 			)
 			hostClient := test.NewFakeClient(t, s, basicTier)
-			member1 := NewMemberCluster(t, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -745,7 +745,7 @@ func TestDeleteSpace(t *testing.T) {
 				return member1Client.Client.Get(ctx, key, obj)
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus())
@@ -779,7 +779,7 @@ func TestDeleteSpace(t *testing.T) {
 			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithDeletionTimestamp(time.Now().Add(-2*time.Minute)))
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus(
@@ -836,7 +836,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(basicTier), nstemplatetsettest.WithReadyCondition())
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
 		ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
 		InitializeCounters(t,
@@ -977,7 +977,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		nsTmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(olderBasicTier), nstemplatetsettest.WithReadyCondition()) // NSTemplateSet has references to old basic tier
 		member1Client := test.NewFakeClient(t, nsTmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
 		ctrl.LastExecutedUpdate = time.Now().Add(-1 * time.Minute) // assume that last executed update happened a long time ago
 		InitializeCounters(t,
@@ -1142,7 +1142,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(basicTier), nstemplatetsettest.WithReadyCondition())
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
 		InitializeCounters(t,
 			NewToolchainStatus(
@@ -1274,7 +1274,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReferencesFor(basicTier), nstemplatetsettest.WithReadyCondition())
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus(
@@ -1316,7 +1316,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 			member1Client := test.NewFakeClient(t, nstmplSet)
 			member1Client.MockUpdate = mockUpdateNSTemplateSetFail(member1Client.Client)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
 				NewToolchainStatus(
@@ -1392,7 +1392,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		hostClient := test.NewFakeClient(t, s, johnMUR, adminMUR, sb1, viewerMUR, sb2, sb3, basicTier)
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 
 		ctrl := newReconciler(hostClient, member1, member2)
 		InitializeCounters(t,
@@ -1455,7 +1455,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		hostClient := test.NewFakeClient(t, s, johnMUR, adminMUR, sb1, viewerMUR, sb2, sb3, basicTier)
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 
 		ctrl := newReconciler(hostClient, member1, member2)
 		InitializeCounters(t,
@@ -1511,7 +1511,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		hostClient := test.NewFakeClient(t, s, adminMUR, sb1, viewerMUR, sb2, johnMUR, basicTier)
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 
 		ctrl := newReconciler(hostClient, member1, member2)
 		InitializeCounters(t,
@@ -1570,7 +1570,7 @@ func TestUpdateSpaceRoles(t *testing.T) {
 		hostClient := test.NewFakeClient(t, s, adminMUR, sb1, viewerMUR, sb2, johnMUR, sb3, basicTier)
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 
 		ctrl := newReconciler(hostClient, member1, member2)
 		InitializeCounters(t,
@@ -1624,7 +1624,7 @@ func TestRetargetSpace(t *testing.T) {
 		member1Client := test.NewFakeClient(t, nstmplSet)
 		member1Client.MockDelete = mockDeleteNSTemplateSet(member1Client.Client)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-		member2 := NewMemberCluster(t, "member-2", corev1.ConditionTrue)
+		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
 		InitializeCounters(t,
 			NewToolchainStatus())

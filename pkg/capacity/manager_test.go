@@ -46,11 +46,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: HostOperatorNs,
 			},
 		)
@@ -68,11 +68,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member3", v1.ConditionTrue))
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: HostOperatorNs,
 			},
 		)
@@ -90,11 +90,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member3", v1.ConditionTrue))
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: HostOperatorNs,
 			})
 
@@ -111,11 +111,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member2",
 				ToolchainStatusNamespace: HostOperatorNs,
 			},
@@ -134,11 +134,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 60), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: HostOperatorNs,
 			},
 		)
@@ -156,11 +156,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 90), testconfig.PerMemberCluster("member2", 95)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member1",
 				ToolchainStatusNamespace: HostOperatorNs,
 			},
@@ -179,11 +179,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 60), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member2",
 				ToolchainStatusNamespace: HostOperatorNs,
 			},
@@ -202,11 +202,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				ResourceCapacityThreshold(62))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: HostOperatorNs,
 			},
 		)
@@ -224,11 +224,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				ResourceCapacityThreshold(1))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: HostOperatorNs,
 			},
 		)
@@ -246,11 +246,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
-		clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionFalse), NewMemberCluster(t, "member2", v1.ConditionTrue))
+		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionFalse), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: HostOperatorNs,
 			},
 		)
@@ -269,13 +269,13 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(
-			NewMemberCluster(t, "member1", v1.ConditionTrue),
+			NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue),
 			NewMemberClusterWithoutClusterRoles(t, "member2", v1.ConditionTrue), // member2 has capacity but doesn't have the required cluster role
 		)
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: HostOperatorNs,
 				ClusterRoles:             []string{cluster.RoleLabel(cluster.Tenant)},
 			},
@@ -295,13 +295,13 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(
-			NewMemberCluster(t, "member1", v1.ConditionTrue),
+			NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue),
 			NewMemberClusterWithoutClusterRoles(t, "member2", v1.ConditionTrue), // member2 has capacity but doesn't have the required cluster role
 		)
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				ToolchainStatusNamespace: HostOperatorNs,
 				ClusterRoles:             []string{cluster.RoleLabel(cluster.Tenant)},
 			},
@@ -312,21 +312,18 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		assert.Equal(t, "", clusterName) // only member one has required label but no capacity
 	})
 
-	t.Run("with two clusters, the preferred one is return even if it doesn't have the required cluster-roles", func(t *testing.T) {
+	t.Run("with two clusters, the preferred one is returned if it has the required cluster-roles", func(t *testing.T) {
 		// given
-		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
-			testconfig.CapacityThresholds().
-				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
-				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 60), testconfig.PerMemberCluster("member2", 75)))
+		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t)
 		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(
-			NewMemberCluster(t, "member1", v1.ConditionTrue),
-			NewMemberClusterWithoutClusterRoles(t, "member2", v1.ConditionTrue)) // this member doesn't have the required cluster roles
+			NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue),
+			NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue)) // this is set as preferred
 
 		// when
 		clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-			&capacity.OptimalTargetClusterFilter{
+			capacity.OptimalTargetClusterFilter{
 				PreferredCluster:         "member2",                                   // request specifically this member eve if it doesn't match the cluster-roles from below
 				ClusterRoles:             []string{cluster.RoleLabel(cluster.Tenant)}, // set
 				ToolchainStatusNamespace: HostOperatorNs,
@@ -347,11 +344,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				return fmt.Errorf("some error")
 			}
 			InitializeCounters(t, toolchainStatus)
-			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+			clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
 
 			// when
 			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-				&capacity.OptimalTargetClusterFilter{
+				capacity.OptimalTargetClusterFilter{
 					ToolchainStatusNamespace: HostOperatorNs,
 				},
 			)
@@ -371,11 +368,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 				return fakeClient.Client.Get(ctx, key, obj)
 			}
 			InitializeCounters(t, toolchainStatus)
-			clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+			clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
 
 			// when
 			clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-				&capacity.OptimalTargetClusterFilter{
+				capacity.OptimalTargetClusterFilter{
 					ToolchainStatusNamespace: HostOperatorNs,
 				},
 			)
@@ -413,7 +410,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 					fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
 					InitializeCounters(t, toolchainStatus)
-					clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue), NewMemberCluster(t, "member3", v1.ConditionTrue))
+					clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member3", v1.ConditionTrue))
 					clusterBalancer := capacity.NewClusterManager(clusters, fakeClient)
 
 					// now run in 4 cycles and expect that the users will be provisioned in batches of 50
@@ -435,7 +432,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 								// when
 								clusterName, err := clusterBalancer.GetOptimalTargetCluster(
-									&capacity.OptimalTargetClusterFilter{
+									capacity.OptimalTargetClusterFilter{
 										ToolchainStatusNamespace: HostOperatorNs,
 									},
 								)
@@ -461,7 +458,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 							t.Run(fmt.Sprintf("cycle %d user %d for member3", cycle, i), func(t *testing.T) {
 								// when
 								clusterName, err := clusterBalancer.GetOptimalTargetCluster(
-									&capacity.OptimalTargetClusterFilter{
+									capacity.OptimalTargetClusterFilter{
 										ToolchainStatusNamespace: HostOperatorNs,
 									},
 								)
@@ -479,7 +476,7 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 					// when
 					clusterName, err := clusterBalancer.GetOptimalTargetCluster(
-						&capacity.OptimalTargetClusterFilter{
+						capacity.OptimalTargetClusterFilter{
 							ToolchainStatusNamespace: HostOperatorNs,
 						},
 					)
@@ -499,11 +496,11 @@ func TestGetOptimalTargetClusterWhenCounterIsNotInitialized(t *testing.T) {
 	toolchainStatus := NewToolchainStatus(
 		WithMember("member1", WithNodeRoleUsage("worker", 68), WithNodeRoleUsage("master", 65)))
 	fakeClient := NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-	clusters := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+	clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
 
 	// when
 	clusterName, err := capacity.NewClusterManager(clusters, fakeClient).GetOptimalTargetCluster(
-		&capacity.OptimalTargetClusterFilter{
+		capacity.OptimalTargetClusterFilter{
 			ToolchainStatusNamespace: HostOperatorNs,
 		},
 	)
