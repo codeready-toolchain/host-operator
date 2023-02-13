@@ -4315,7 +4315,7 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 				Reason: "UserIsActive",
 			},
 		}
-		ready := NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue))
+		ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
 		r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier, mur, space)
 		InitializeCounters(t, NewToolchainStatus(
 			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
