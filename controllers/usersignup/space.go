@@ -2,6 +2,7 @@ package usersignup
 
 import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -18,8 +19,9 @@ func newSpace(userSignup *toolchainv1alpha1.UserSignup, targetCluster targetClus
 			Labels:    labels,
 		},
 		Spec: toolchainv1alpha1.SpaceSpec{
-			TargetCluster: targetCluster.getClusterName(),
-			TierName:      tier,
+			TargetCluster:      targetCluster.getClusterName(),
+			TargetClusterRoles: []string{cluster.RoleLabel(cluster.Tenant)}, // by default usersignups should be provisioned to tenant clusters
+			TierName:           tier,
 		},
 	}
 	return space
