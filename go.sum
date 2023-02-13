@@ -118,10 +118,10 @@ github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWH
 github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h6jFvWxBdQXxjopDMZyH2UVceIRfR84bdzbkoKrsWNo=
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
-github.com/codeready-toolchain/api v0.0.0-20230112114359-7b98ad24caf0 h1:5dfe1GpDcl0AyBTYJmjEXQfPj/n0Az5f5/sHBWENKg0=
-github.com/codeready-toolchain/api v0.0.0-20230112114359-7b98ad24caf0/go.mod h1:4BhC+uBP9LbSKzQ1ggRAmKIl9pSj0uxdISj0s/HRwEw=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20230116090156-aeb1d42f0227 h1:DuDjQYPYYZKPh8I/uPi4b3J3IPePNTCFtnnOQf9wm80=
-github.com/codeready-toolchain/toolchain-common v0.0.0-20230116090156-aeb1d42f0227/go.mod h1:MDqL9rC53vsujATfvQpKwayKmZZ8kBjTU6oAH5VDy20=
+github.com/codeready-toolchain/api v0.0.0-20230210095221-59de0ef9b59c h1:CZXvsMJhWqa6U5kRqzc3h8+KFVEIOb16rdgDNt5RqhE=
+github.com/codeready-toolchain/api v0.0.0-20230210095221-59de0ef9b59c/go.mod h1:eOu09m3Vyr5/gmTKQ0w1z6bOmujX6l6PuaXqCx3whpw=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20230210095314-aaad0396b1d7 h1:37WBfAN8AV0iS466A4B4nKMbLgCEvxztBNlVM5j9B8Y=
+github.com/codeready-toolchain/toolchain-common v0.0.0-20230210095314-aaad0396b1d7/go.mod h1:kgakgnW2HRy0baWd3b3ZYqaDQWnZ3qKHya3PsAf+pZc=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.13+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
@@ -153,8 +153,8 @@ github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25Kn
 github.com/elazarl/goproxy v0.0.0-20180725130230-947c36da3153/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
 github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633/go.mod h1:otzb+WCGbkyDHkqmQmT5YD2WR4BBwUdeQoFo8l/7tVs=
 github.com/emicklei/go-restful v2.9.5+incompatible/go.mod h1:otzb+WCGbkyDHkqmQmT5YD2WR4BBwUdeQoFo8l/7tVs=
-github.com/emicklei/go-restful v2.12.0+incompatible h1:SIvoTSbsMEwuM3dzFirLwKc4BH6VXP5CNf+G1FfJVr4=
-github.com/emicklei/go-restful v2.12.0+incompatible/go.mod h1:otzb+WCGbkyDHkqmQmT5YD2WR4BBwUdeQoFo8l/7tVs=
+github.com/emicklei/go-restful v2.16.0+incompatible h1:rgqiKNjTnFQA6kkhFe16D8epTksy9HQ1MyrbDXSdYhM=
+github.com/emicklei/go-restful v2.16.0+incompatible/go.mod h1:otzb+WCGbkyDHkqmQmT5YD2WR4BBwUdeQoFo8l/7tVs=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
