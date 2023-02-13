@@ -231,9 +231,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		// check parentSpace label and update it if needed
 		setParentSpaceLabel(space)
 
-		// update provisioned namespace list
-		space.Status.ProvisionedNamespaces = nsTmplSet.Status.ProvisionedNamespaces
-
 		// add a tier hash label matching the current NSTemplateTier
 		hash, err := tierutil.ComputeHashForNSTemplateTier(tmplTier)
 		if err != nil {
@@ -244,6 +241,9 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		if err := r.Client.Update(context.TODO(), space); err != nil {
 			return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 		}
+
+		// update provisioned namespace list
+		space.Status.ProvisionedNamespaces = nsTmplSet.Status.ProvisionedNamespaces
 		return norequeue, r.setStatusProvisioned(space)
 	default:
 		return norequeue, r.setStatusProvisioningFailed(logger, space, fmt.Errorf(nsTmplSetReady.Message))
