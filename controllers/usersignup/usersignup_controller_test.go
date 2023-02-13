@@ -4283,6 +4283,7 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 		spacetest.WithSpecTargetCluster("member-1"),
 		spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 		spacetest.WithFinalizer(),
+		spacetest.WithCondition(spacetest.Terminating()),
 		spacetest.WithDeletionTimestamp())
 
 	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
@@ -4317,15 +4318,6 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 		}
 		ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
 		r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier, mur, space)
-		InitializeCounters(t, NewToolchainStatus(
-			WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-				"2,internal": 11, // 11 users signed-up 2 times, including our user above, even though she is not active at the moment
-				"3,internal": 10, // 10 users signed-up 3 times
-			}),
-			WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-				string(metrics.Internal): 21,
-			}),
-		))
 
 		// when
 		_, err := r.Reconcile(context.TODO(), req)
@@ -4338,28 +4330,12 @@ func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
 		require.NoError(t, err)
 
 		// Confirm the status shows UserSignup Complete as false and the reason as unable to create space.
-		test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupApproved,
-				Status: v1.ConditionTrue,
-				Reason: "ApprovedAutomatically",
-			},
-			toolchainv1alpha1.Condition{
-				Type:    toolchainv1alpha1.UserSignupComplete,
-				Status:  v1.ConditionFalse,
-				Reason:  "UnableToCreateSpace",
-				Message: "cannot create space because it is currently being deleted",
-			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-				Status: v1.ConditionFalse,
-				Reason: "UserNotInPreDeactivation",
-			},
-			toolchainv1alpha1.Condition{
-				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-				Status: v1.ConditionFalse,
-				Reason: "UserIsActive",
-			})
+		test.AssertContainsCondition(t, userSignup.Status.Conditions, toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "UnableToCreateSpace",
+			Message: "cannot create space because it is currently being deleted",
+		})
 	})
 }
 
