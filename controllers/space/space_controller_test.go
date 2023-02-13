@@ -103,7 +103,7 @@ func TestCreateSpace(t *testing.T) {
 				HaveSpacesForCluster("member-1", 1).
 				HaveSpacesForCluster("member-2", 0) // nothing has changed since previous increment
 
-			t.Run("done when NSTemplateSet is ready", func(t *testing.T) {
+			t.Run("when NSTemplateSet is ready update the provisioned namespace list", func(t *testing.T) {
 				// given another round of requeue without with NSTemplateSet now *ready*
 				nsTmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
 					nstemplatetsettest.Provisioned(),
@@ -126,17 +126,38 @@ func TestCreateSpace(t *testing.T) {
 
 				// then
 				require.NoError(t, err)
-				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+				assert.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: 1 * time.Second}, res) // requeue since status with new provisioned namespaces was updated
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
 					HasStatusProvisionedNamespaces(nsTmplSet.Status.ProvisionedNamespaces).
-					HasConditions(spacetest.Ready()).
+					HasConditions(spacetest.Provisioning()). // space is still provisioning
 					HasStateLabel("cluster-assigned").
 					HasFinalizer()
 				AssertThatCountersAndMetrics(t).
 					HaveSpacesForCluster("member-1", 1).
 					HaveSpacesForCluster("member-2", 0) // space counter unchanged
+
+				t.Run("done when provisioned namespace list is up to date", func(t *testing.T) {
+					// given another round of requeue with updated list of provisioned namespaces in status
+					// when
+					res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+					// then
+					require.NoError(t, err)
+					assert.Equal(t, reconcile.Result{Requeue: false}, res) // no more requeue.
+					spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
+						Exists().
+						HasStatusTargetCluster("member-1").
+						HasStatusProvisionedNamespaces(nsTmplSet.Status.ProvisionedNamespaces).
+						HasConditions(spacetest.Ready()). // space is now ready
+						HasStateLabel("cluster-assigned").
+						HasFinalizer()
+					AssertThatCountersAndMetrics(t).
+						HaveSpacesForCluster("member-1", 1).
+						HaveSpacesForCluster("member-2", 0) // space counter unchanged
+				})
+
 			})
 		})
 
@@ -475,6 +496,48 @@ func TestCreateSpace(t *testing.T) {
 			AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).
 				HaveSpacesForCluster("member-2", 0) // no counters are incremented
+		})
+
+		t.Run("error while setting provisioned namespace list", func(t *testing.T) {
+			// given
+			s := spacetest.NewSpace("john",
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithFinalizer())
+			hostClient := test.NewFakeClient(t, s, basicTier)
+			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("john", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(basicTier))
+			member1Client := test.NewFakeClient(t, nsTmplSet)
+			hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+				if space, ok := obj.(*toolchainv1alpha1.Space); ok {
+					if len(space.Status.ProvisionedNamespaces) > 0 {
+						return fmt.Errorf("update error")
+					}
+				}
+				return hostClient.Client.Status().Update(ctx, obj, opts...)
+			}
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			// set list of namespace in NSTemplateSet so that they can be copied to the space.status
+			nsTmplSet.Status.ProvisionedNamespaces = []toolchainv1alpha1.SpaceNamespace{
+				{
+					Name: "john-dev",
+					Type: "default",
+				},
+				{
+					Name: "john-stage",
+				},
+			}
+			err := member1.Client.Update(context.TODO(), nsTmplSet)
+			require.NoError(t, err)
+			ctrl := newReconciler(hostClient, member1)
+
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+
+			// then
+			require.EqualError(t, err, "error setting provisioned namespaces: update error")
+			assert.False(t, res.Requeue)
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
+				HasConditions(spacetest.ProvisioningFailed("error setting provisioned namespaces: update error")).
+				HasStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace(nil)) // unable to set list of namespaces
 		})
 	})
 }
