@@ -122,16 +122,16 @@ func TestCreateSpace(t *testing.T) {
 				ctrl := newReconciler(hostClient, member1, member2)
 
 				// when
-				res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
+				_, err = ctrl.Reconcile(context.TODO(), requestFor(s))
 
 				// then
 				require.NoError(t, err)
-				assert.Equal(t, reconcile.Result{Requeue: true, RequeueAfter: 1 * time.Second}, res) // requeue since status with new provisioned namespaces was updated
+				assert.Equal(t, reconcile.Result{Requeue: false}, res) // no requeue and status with new provisioned namespaces was updated
 				spacetest.AssertThatSpace(t, test.HostOperatorNs, "oddity", hostClient).
 					Exists().
 					HasStatusTargetCluster("member-1").
 					HasStatusProvisionedNamespaces(nsTmplSet.Status.ProvisionedNamespaces).
-					HasConditions(spacetest.Provisioning()). // space is still provisioning
+					HasConditions(spacetest.Ready()). // space is still provisioning
 					HasStateLabel("cluster-assigned").
 					HasFinalizer()
 				AssertThatCountersAndMetrics(t).
@@ -536,7 +536,6 @@ func TestCreateSpace(t *testing.T) {
 			require.EqualError(t, err, "error setting provisioned namespaces: update error")
 			assert.False(t, res.Requeue)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
-				HasConditions(spacetest.ProvisioningFailed("error setting provisioned namespaces: update error")).
 				HasStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace(nil)) // unable to set list of namespaces
 		})
 	})

@@ -203,8 +203,10 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return duration, err
 	}
 
-	// also, replicates (translate) the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
+	// we don't need to check if the condition was found here, since it is already done in the `manageNSTemplateSet` function, if we reach this point,
+	// it's guaranteed that it exists and we only need to check the Reason.
 	nsTmplSetReady, _ := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	// also, replicates (translate) the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
 	switch nsTmplSetReady.Reason {
 	case toolchainv1alpha1.NSTemplateSetUpdatingReason:
 		return norequeue, r.setStatusUpdating(space)
@@ -243,17 +245,10 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		}
 
 		// update provisioned namespace list
-		oldProvisionedNamespaces := space.Status.ProvisionedNamespaces
-		requeue, err := r.setStatusProvisionedNamespaces(space, nsTmplSet.Status.ProvisionedNamespaces)
+		err = r.setStatusProvisionedNamespaces(space, nsTmplSet.Status.ProvisionedNamespaces)
 		if err != nil {
 			err = errs.Wrap(err, "error setting provisioned namespaces")
-			// restore old list of provisioned namespace since update of the Status.ProvisionedNamespace field failed.
-			space.Status.ProvisionedNamespaces = oldProvisionedNamespaces
-			return norequeue, r.setStatusProvisioningFailed(logger, space, err)
-		}
-		// list of provisioned namespaces was updated in space status, need requeue
-		if requeue > 0 {
-			return requeue, nil
+			return norequeue, err
 		}
 
 		return norequeue, r.setStatusProvisioned(space)
@@ -729,15 +724,15 @@ func (r *Reconciler) setStatusNSTemplateSetUpdateFailed(logger logr.Logger, spac
 }
 
 // setStatusProvisionedNamespaces updates the provisioned namespace list status of the space if something changed.
-func (r *Reconciler) setStatusProvisionedNamespaces(space *toolchainv1alpha1.Space, provisionedNamespaces []toolchainv1alpha1.SpaceNamespace) (time.Duration, error) {
+func (r *Reconciler) setStatusProvisionedNamespaces(space *toolchainv1alpha1.Space, provisionedNamespaces []toolchainv1alpha1.SpaceNamespace) error {
 	if reflect.DeepEqual(space.Status.ProvisionedNamespaces, provisionedNamespaces) {
 		// nothing changed
-		return 0, nil
+		return nil
 	}
 
 	// update provisioned namespace list with the one from the NSTemplateSet
 	space.Status.ProvisionedNamespaces = provisionedNamespaces
-	return requeueDelay, r.Client.Status().Update(context.TODO(), space)
+	return r.Client.Status().Update(context.TODO(), space)
 }
 
 // updateStatus updates space status conditions with the new conditions
