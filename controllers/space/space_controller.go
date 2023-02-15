@@ -321,7 +321,7 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchai
 }
 
 // manageNSTemplateSet creates or updates the NSTemplateSet of a given space.
-// returns Condition{}, error
+// returns NSTemplateSet{}, requeueDelay, error
 func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space, memberCluster cluster.Cluster, tmplTier *toolchainv1alpha1.NSTemplateTier) (*toolchainv1alpha1.NSTemplateSet, time.Duration, error) {
 	spaceBindings, err := r.listSpaceBindings(space)
 	if err != nil {
