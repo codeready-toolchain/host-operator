@@ -197,12 +197,15 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 	}
 
-	nsTmplSetReady, duration, err := r.manageNSTemplateSet(logger, space, memberCluster, tmplTier)
+	nsTmplSet, duration, err := r.manageNSTemplateSet(logger, space, memberCluster, tmplTier)
 	// return if there was an error or a requeue was requested
 	if err != nil || duration > 0 {
 		return duration, err
 	}
 
+	// we don't need to check if the condition was found here, since it is already done in the `manageNSTemplateSet` function, if we reach this point,
+	// it's guaranteed that it exists and we only need to check the Reason.
+	nsTmplSetReady, _ := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	// also, replicates (translate) the NSTemplateSet's `ready` condition into the Space, including when `ready/true/provisioned`
 	switch nsTmplSetReady.Reason {
 	case toolchainv1alpha1.NSTemplateSetUpdatingReason:
@@ -240,6 +243,14 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		if err := r.Client.Update(context.TODO(), space); err != nil {
 			return norequeue, r.setStatusProvisioningFailed(logger, space, err)
 		}
+
+		// update provisioned namespace list
+		err = r.setStatusProvisionedNamespaces(space, nsTmplSet.Status.ProvisionedNamespaces)
+		if err != nil {
+			err = errs.Wrap(err, "error setting provisioned namespaces")
+			return norequeue, err
+		}
+
 		return norequeue, r.setStatusProvisioned(space)
 	default:
 		return norequeue, r.setStatusProvisioningFailed(logger, space, fmt.Errorf(nsTmplSetReady.Message))
@@ -310,8 +321,8 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchai
 }
 
 // manageNSTemplateSet creates or updates the NSTemplateSet of a given space.
-// returns Condition{}, error
-func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space, memberCluster cluster.Cluster, tmplTier *toolchainv1alpha1.NSTemplateTier) (toolchainv1alpha1.Condition, time.Duration, error) {
+// returns NSTemplateSet{}, requeueDelay, error
+func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space, memberCluster cluster.Cluster, tmplTier *toolchainv1alpha1.NSTemplateTier) (*toolchainv1alpha1.NSTemplateSet, time.Duration, error) {
 	spaceBindings, err := r.listSpaceBindings(space)
 	if err != nil {
 		logger.Error(err, "failed to list space bindings")
@@ -325,27 +336,27 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		if errors.IsNotFound(err) {
 			logger.Info("creating NSTemplateSet on target member cluster")
 			if err := r.setStatusProvisioning(space); err != nil {
-				return toolchainv1alpha1.Condition{}, norequeue, r.setStatusProvisioningFailed(logger, space, err)
+				return nsTmplSet, norequeue, r.setStatusProvisioningFailed(logger, space, err)
 			}
 			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spaceBindings.Items, tmplTier)
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
-				return toolchainv1alpha1.Condition{}, norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
+				return nsTmplSet, norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 			}
 			logger.Info("NSTemplateSet created on target member cluster")
 			counter.IncrementSpaceCount(logger, space.Spec.TargetCluster)
 
-			return toolchainv1alpha1.Condition{}, requeueDelay, r.setStatusProvisioning(space)
+			return nsTmplSet, requeueDelay, r.setStatusProvisioning(space)
 		}
-		return toolchainv1alpha1.Condition{}, norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
+		return nsTmplSet, norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 	}
 	logger.Info("NSTemplateSet already exists")
 
-	nsTmplSetReady, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
+	_, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
 	// skip until there's a `Ready` condition
 	if !found {
 		// just created, but there is no `Ready` condition yet
-		return toolchainv1alpha1.Condition{}, requeueDelay, nil
+		return nsTmplSet, requeueDelay, nil
 	}
 
 	// update the NSTemplateSet if needed (including in case of missing space roles)
@@ -366,20 +377,20 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 				}
 				// return the duration when it should be requeued
 				logger.Info("postponing NSTemplateSet update", "until", r.NextScheduledUpdate.String())
-				return toolchainv1alpha1.Condition{}, time.Until(r.NextScheduledUpdate), nil
+				return nsTmplSet, time.Until(r.NextScheduledUpdate), nil
 			}
 			r.LastExecutedUpdate = time.Now()
 		}
 		nsTmplSet.Spec = nsTmplSetSpec
 		if err := memberCluster.Client.Update(context.TODO(), nsTmplSet); err != nil {
-			return toolchainv1alpha1.Condition{}, norequeue, r.setStatusNSTemplateSetUpdateFailed(logger, space, err)
+			return nsTmplSet, norequeue, r.setStatusNSTemplateSetUpdateFailed(logger, space, err)
 		}
 		// also, immediately update Space condition
 		logger.Info("NSTemplateSet updated on target member cluster")
-		return toolchainv1alpha1.Condition{}, requeueDelay, r.setStatusUpdating(space)
+		return nsTmplSet, requeueDelay, r.setStatusUpdating(space)
 	}
 	logger.Info("NSTemplateSet is up-to-date")
-	return nsTmplSetReady, 0, nil
+	return nsTmplSet, 0, nil
 }
 
 func setParentSpaceLabel(space *toolchainv1alpha1.Space) {
@@ -710,6 +721,18 @@ func (r *Reconciler) setStatusNSTemplateSetUpdateFailed(logger logr.Logger, spac
 		return err
 	}
 	return cause
+}
+
+// setStatusProvisionedNamespaces updates the provisioned namespace list status of the space if something changed.
+func (r *Reconciler) setStatusProvisionedNamespaces(space *toolchainv1alpha1.Space, provisionedNamespaces []toolchainv1alpha1.SpaceNamespace) error {
+	if reflect.DeepEqual(space.Status.ProvisionedNamespaces, provisionedNamespaces) {
+		// nothing changed
+		return nil
+	}
+
+	// update provisioned namespace list with the one from the NSTemplateSet
+	space.Status.ProvisionedNamespaces = provisionedNamespaces
+	return r.Client.Status().Update(context.TODO(), space)
 }
 
 // updateStatus updates space status conditions with the new conditions
