@@ -46,10 +46,10 @@ func TestGetNotificationTemplate(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
-			require.NotEmpty(t, template["userprovisioned"])
-			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account is provisioned", template["userprovisioned"].Subject)
-			assert.Contains(t, template["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
-			assert.Equal(t, template["userprovisioned"], *UserProvisioned)
+			require.NotEmpty(t, template["sandbox"]["userprovisioned"])
+			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account is provisioned", template["sandbox"]["userprovisioned"].Subject)
+			assert.Contains(t, template["sandbox"]["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
+			assert.Equal(t, template["sandbox"]["userprovisioned"], *UserProvisioned)
 		})
 		t.Run("get userdeactivating notification template", func(t *testing.T) {
 			// when
@@ -109,14 +109,14 @@ func TestGetNotificationTemplate(t *testing.T) {
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
-			assert.Equal(t, "unable to load templates: path must contain directory and file", err.Error())
+			assert.Equal(t, "unable to load templates: path must contain env, directory and file", err.Error())
 		})
 		t.Run("non-existent notification template", func(t *testing.T) {
 			// given
 			defer resetNotificationTemplateCache()
 			fakeAssets := assets.NewAssets(func() []string {
-				// error occurs when fetching the content of the a notification template
-				return []string{"test/test"}
+				// error occurs when fetching the content of the notification template
+				return []string{"test/test/test"}
 			}, func(s string) (bytes []byte, err error) {
 				return bytes, err
 			})
