@@ -115,6 +115,23 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              provisionedNamespaces:
+                description: ProvisionedNamespaces is a list of Namespaces that were
+                  provisioned for the Space.
+                items:
+                  description: SpaceNamespace is a common type to define the information
+                    about a namespace within a Space Used in NSTemplateSet, Space
+                    and Workspace status
+                  properties:
+                    name:
+                      description: Name the name of the namespace.
+                      type: string
+                    type:
+                      description: Type the type of the namespace. eg. default
+                      type: string
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
               targetCluster:
                 description: TargetCluster The cluster in which this Space is currently
                   provisioned Can be empty if provisioning did not start or failed

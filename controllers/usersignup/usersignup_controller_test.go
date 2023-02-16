@@ -4276,6 +4276,86 @@ func TestUserSignupStatusNotReady(t *testing.T) {
 	})
 }
 
+// Test the scenario where the user trying to reactivate but their old space still exists
+func TestUserReactivatingWhileOldSpaceExists(t *testing.T) {
+	// given
+	meta := commonsignup.NewUserSignupObjectMeta("", "john.doe@redhat.com")
+	userSignup := &toolchainv1alpha1.UserSignup{
+		ObjectMeta: meta,
+		Spec: toolchainv1alpha1.UserSignupSpec{
+			Userid:   "UserID123",
+			Username: meta.Name,
+		},
+		Status: toolchainv1alpha1.UserSignupStatus{
+			CompliantUsername: "john-doe",
+		},
+	}
+	mur := murtest.NewMasterUserRecord(t, "john-doe", murtest.MetaNamespace(test.HostOperatorNs))
+	mur.Labels = map[string]string{
+		toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name,
+		toolchainv1alpha1.UserSignupStateLabelKey:       "approved",
+	}
+
+	space := spacetest.NewSpace("john-doe",
+		spacetest.WithSpecTargetCluster("member-1"),
+		spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
+		spacetest.WithFinalizer(),
+		spacetest.WithCondition(spacetest.Terminating()),
+		spacetest.WithDeletionTimestamp())
+
+	key := test.NamespacedName(test.HostOperatorNs, userSignup.Name)
+
+	t.Run("when reactivating usersignup has space in terminating state", func(t *testing.T) {
+		// given
+		// start with a usersignup that has been just reactivated, and MUR has been created
+		userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey] = "approved"
+		userSignup.Labels["toolchain.dev.openshift.com/approved"] = "true"
+		userSignup.Annotations[toolchainv1alpha1.UserSignupActivationCounterAnnotationKey] = "2" // the user signed up twice
+		userSignup.Status.Conditions = []toolchainv1alpha1.Condition{
+			{
+				Type:   toolchainv1alpha1.UserSignupComplete,
+				Status: v1.ConditionTrue,
+				Reason: "Deactivated",
+			},
+			{
+				Type:   toolchainv1alpha1.UserSignupApproved,
+				Status: v1.ConditionTrue,
+				Reason: "ApprovedAutomatically",
+			},
+			{
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserNotInPreDeactivation",
+			},
+			{
+				Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+				Status: v1.ConditionFalse,
+				Reason: "UserIsActive",
+			},
+		}
+		ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
+		r, req, _ := prepareReconcile(t, userSignup.Name, ready, userSignup, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)), baseNSTemplateTier, deactivate30Tier, mur, space)
+
+		// when
+		_, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.Error(t, err)
+
+		// Lookup the UserSignup
+		err = r.Client.Get(context.TODO(), key, userSignup)
+		require.NoError(t, err)
+
+		// Confirm the status shows UserSignup Complete as false and the reason as unable to create space.
+		test.AssertContainsCondition(t, userSignup.Status.Conditions, toolchainv1alpha1.Condition{
+			Type:    toolchainv1alpha1.UserSignupComplete,
+			Status:  v1.ConditionFalse,
+			Reason:  "UnableToCreateSpace",
+			Message: "cannot create space because it is currently being deleted",
+		})
+	})
+}
+
 func (r *Reconciler) setSpaceToReady(name string) error {
 	space := toolchainv1alpha1.Space{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{
