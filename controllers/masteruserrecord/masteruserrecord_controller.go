@@ -368,7 +368,7 @@ func newUserAccount(nsdName types.NamespacedName, mur *toolchainv1alpha1.MasterU
 	if found && val != "" {
 		ua.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey] = val
 	}
-	
+
 	return ua
 }
 
