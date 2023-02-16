@@ -342,7 +342,7 @@ func updateStatusConditions(logger logr.Logger, cl client.Client, mur *toolchain
 }
 
 func newUserAccount(nsdName types.NamespacedName, mur *toolchainv1alpha1.MasterUserRecord) *toolchainv1alpha1.UserAccount {
-	return &toolchainv1alpha1.UserAccount{
+	ua := &toolchainv1alpha1.UserAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nsdName.Name,
 			Namespace: nsdName.Namespace,
@@ -358,6 +358,18 @@ func newUserAccount(nsdName types.NamespacedName, mur *toolchainv1alpha1.MasterU
 			Disabled: mur.Spec.Disabled,
 		},
 	}
+
+	val, found := mur.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey]
+	if found && val != "" {
+		ua.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey] = val
+	}
+
+	val, found = mur.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey]
+	if found && val != "" {
+		ua.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey] = val
+	}
+	
+	return ua
 }
 
 func namespacedName(namespace, name string) types.NamespacedName {

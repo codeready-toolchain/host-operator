@@ -66,6 +66,8 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			commonsignup.WithTargetCluster("member1"),
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueNotReady),
 			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"), // this is a returning user
+			commonsignup.WithAnnotation(toolchainv1alpha1.SSOUserIDAnnotationKey, "198573"),
+			commonsignup.WithAnnotation(toolchainv1alpha1.SSOAccountIDAnnotationKey, "387832"),
 			commonsignup.WithOriginalSub("original-sub-value:1234")),
 		"automatically approved with valid activation annotation": commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
@@ -79,6 +81,8 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			commonsignup.WithStateLabel(toolchainv1alpha1.UserSignupStateLabelValueDeactivated),
 			commonsignup.WithAnnotation(toolchainv1alpha1.UserSignupActivationCounterAnnotationKey, "2"), // this is a returning user
 			commonsignup.WithLabel(toolchainv1alpha1.SocialEventUserSignupLabelKey, event.Name),
+			commonsignup.WithAnnotation(toolchainv1alpha1.SSOUserIDAnnotationKey, "9834722"),
+			commonsignup.WithAnnotation(toolchainv1alpha1.SSOAccountIDAnnotationKey, "4837262"),
 			commonsignup.WithOriginalSub("original-sub-value:1234")),
 		"automatically approved via unknown social event": commonsignup.NewUserSignup(
 			commonsignup.ApprovedManually(),
@@ -119,6 +123,19 @@ func TestUserSignupCreateMUROk(t *testing.T) {
 			// then verify that the MUR exists and is complete
 			require.NoError(t, err)
 			require.Equal(t, reconcile.Result{}, res)
+
+			val, ok := userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey]
+			if ok {
+				murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
+					HasAnnotationWithValue(toolchainv1alpha1.SSOUserIDAnnotationKey, val)
+			}
+
+			val, ok = userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey]
+			if ok {
+				murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
+					HasAnnotationWithValue(toolchainv1alpha1.SSOAccountIDAnnotationKey, val)
+			}
+
 			murtest.AssertThatMasterUserRecords(t, r.Client).HaveCount(1)
 			murtest.AssertThatMasterUserRecord(t, userSignup.Name, r.Client).
 				HasLabelWithValue(toolchainv1alpha1.MasterUserRecordOwnerLabelKey, userSignup.Name).
