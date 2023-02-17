@@ -125,6 +125,8 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	s := apiScheme(t)
 	mur := murtest.NewMasterUserRecord(t, "john")
 	mur.Spec.OriginalSub = "original-sub:12345"
+	mur.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey] = "123456"
+	mur.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey] = "987654"
 
 	require.NoError(t, murtest.Modify(mur, murtest.Finalizer("finalizer.toolchain.dev.openshift.com")))
 	memberClient := test.NewFakeClient(t)
@@ -148,7 +150,10 @@ func TestCreateUserAccountSuccessful(t *testing.T) {
 	uatest.AssertThatUserAccount(t, "john", memberClient).
 		Exists().
 		MatchMasterUserRecord(mur).
-		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30")
+		HasLabelWithValue(toolchainv1alpha1.TierLabelKey, "deactivate30").
+		HasAnnotationWithValue(toolchainv1alpha1.SSOUserIDAnnotationKey, "123456").
+		HasAnnotationWithValue(toolchainv1alpha1.SSOAccountIDAnnotationKey, "987654")
+
 	murtest.AssertThatMasterUserRecord(t, "john", hostClient).
 		HasConditions(toBeNotReady(toolchainv1alpha1.MasterUserRecordProvisioningReason, "")).
 		HasFinalizer()
