@@ -51,5 +51,16 @@ func newMasterUserRecord(userSignup *toolchainv1alpha1.UserSignup, targetCluster
 			TierName:     userTierName,
 		},
 	}
+
+	val, found := userSignup.Annotations[toolchainv1alpha1.SSOUserIDAnnotationKey]
+	if found && val != "" {
+		annotations[toolchainv1alpha1.SSOUserIDAnnotationKey] = val
+	}
+
+	val, found = userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey]
+	if found && val != "" {
+		annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey] = val
+	}
+
 	return mur
 }
