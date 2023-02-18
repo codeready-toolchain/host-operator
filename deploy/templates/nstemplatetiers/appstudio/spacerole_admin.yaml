@@ -16,7 +16,9 @@ objects:
     resources:
     - gitopsdeployments
     verbs:
-    - "*"
+    - get
+    - list
+    - watch
   - apiGroups:
     - appstudio.redhat.com
     resources:
