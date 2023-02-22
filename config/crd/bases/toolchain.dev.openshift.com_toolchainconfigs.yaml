@@ -316,7 +316,7 @@ spec:
                     description: Keeps parameters necessary for configuring Space
                       provisioning functionality
                     properties:
-                      enabled:
+                      spaceRequestEnabled:
                         description: SpaceRequestEnabled specifies whether the SpaceRequest
                           controller should start or not. This is specifically useful
                           in order to enable/disable this functionality from configuration
