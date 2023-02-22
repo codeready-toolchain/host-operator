@@ -108,4 +108,4 @@ require (
 
 go 1.18
 
-replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230222093318-c35aaba80208
+replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230222192622-040712c5e939
