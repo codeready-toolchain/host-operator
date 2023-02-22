@@ -1,7 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20230216033204-23e19e045d50
+	github.com/codeready-toolchain/api v0.0.0-20230222193913-dcab91c2e81f
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20230217033022-295cba634c6d
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0
@@ -107,5 +107,3 @@ require (
 )
 
 go 1.18
-
-replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230222192622-040712c5e939
