@@ -60,6 +60,17 @@ spec:
                   to be provisioned If not set then the target cluster will be picked
                   automatically
                 type: string
+              targetClusterRoles:
+                description: TargetClusterRoles one or more label keys that define
+                  a set of clusters where the Space can be provisioned. The target
+                  cluster has to match ALL the roles defined in this field in order
+                  for the space to be provisioned there. It can be used as an alternative
+                  to targetCluster field, which has precedence in case both roles
+                  and name are provided.
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: atomic
               tierName:
                 description: TierName is introduced to retain the name of the tier
                   for which this Space is provisioned If not set then the tier name
@@ -104,6 +115,23 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              provisionedNamespaces:
+                description: ProvisionedNamespaces is a list of Namespaces that were
+                  provisioned for the Space.
+                items:
+                  description: SpaceNamespace is a common type to define the information
+                    about a namespace within a Space Used in NSTemplateSet, Space
+                    and Workspace status
+                  properties:
+                    name:
+                      description: Name the name of the namespace.
+                      type: string
+                    type:
+                      description: Type the type of the namespace. eg. default
+                      type: string
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
               targetCluster:
                 description: TargetCluster The cluster in which this Space is currently
                   provisioned Can be empty if provisioning did not start or failed

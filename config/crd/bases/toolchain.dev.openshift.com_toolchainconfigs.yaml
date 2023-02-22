@@ -141,6 +141,11 @@ spec:
                         description: NotificationDeliveryService is notification delivery
                           service to use for notifications
                         type: string
+                      notificationEnvironment:
+                        description: 'NotificationEnvironment is to distinguish the
+                          cluster environment being run in, eg: whether it is for
+                          sandbox or stonesoup'
+                        type: string
                       secret:
                         description: Defines all secrets related to notification configuration
                         properties:

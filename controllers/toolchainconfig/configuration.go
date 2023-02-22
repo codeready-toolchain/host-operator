@@ -203,6 +203,10 @@ func (n NotificationsConfig) AdminEmail() string {
 	return commonconfig.GetString(n.c.AdminEmail, "")
 }
 
+func (n NotificationsConfig) NotificationEnvironment() string {
+	return commonconfig.GetString(n.c.NotificationEnvironment, "sandbox")
+}
+
 func (n NotificationsConfig) MailgunDomain() string {
 	key := commonconfig.GetString(n.c.Secret.MailgunDomain, "")
 	return n.notificationSecret(key)

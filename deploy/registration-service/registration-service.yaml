@@ -32,9 +32,11 @@ objects:
           - toolchain.dev.openshift.com
         resources:
           - masteruserrecords
+          - socialevents
+          - spacebindings
+          - spaces
           - toolchainconfigs
           - toolchainstatuses
-          - socialevents
         verbs:
           - get
           - list
@@ -103,7 +105,7 @@ objects:
                   path: /api/v1/health
                   port: 8080
                   scheme: HTTP
-                initialDelaySeconds: 30
+                initialDelaySeconds: 1
                 periodSeconds: 10
                 successThreshold: 1
                 timeoutSeconds: 1
@@ -113,7 +115,17 @@ objects:
                   path: /api/v1/health
                   port: 8080
                   scheme: HTTP
-                initialDelaySeconds: 30
+                initialDelaySeconds: 1
+                periodSeconds: 1
+                successThreshold: 1
+                timeoutSeconds: 1
+              startupProbe:
+                failureThreshold: 180
+                httpGet:
+                  path: /api/v1/health
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 1
                 periodSeconds: 1
                 successThreshold: 1
                 timeoutSeconds: 1

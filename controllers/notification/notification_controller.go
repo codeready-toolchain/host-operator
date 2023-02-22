@@ -88,8 +88,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// if the environment is set to e2e do not attempt sending via mailgun
 	if config.Environment() != "e2e-tests" {
+		// get the notification environment
+		notificationEnvironment := config.Notifications().NotificationEnvironment()
 		// Send the notification via the configured delivery service
-		err = r.deliveryService.Send(notification)
+		err = r.deliveryService.Send(notification, notificationEnvironment)
 		if err != nil {
 			reqLogger.Error(err, "delivery service failed to send notification",
 				"notification spec", notification.Spec,

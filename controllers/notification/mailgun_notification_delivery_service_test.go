@@ -72,7 +72,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Content:   "abc",
 				Context:   notCtx,
 			},
-		})
+		}, "")
 
 		// then
 		require.NoError(t, err)
@@ -87,7 +87,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Content: "abc",
 				Context: notCtx,
 			},
-		})
+		}, "")
 
 		// then
 		require.Error(t, err)
@@ -105,7 +105,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template: "bar",
 				Context:  notCtx,
 			},
-		})
+		}, "")
 
 		// then
 		require.Error(t, err)
@@ -120,7 +120,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template: "invalid_subject",
 				Context:  notCtx,
 			},
-		})
+		}, "")
 
 		// then
 		require.Error(t, err)
@@ -135,7 +135,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template: "invalid_content",
 				Context:  notCtx,
 			},
-		})
+		}, "")
 
 		// then
 		require.Error(t, err)
@@ -155,7 +155,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Content:   "abc",
 				Context:   notCtx,
 			},
-		})
+		}, "")
 
 		// then
 		require.NoError(t, err)
@@ -186,7 +186,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template:  "replyto",
 				Context:   notCtx,
 			},
-		})
+		}, "")
 
 		// then
 		require.NoError(t, err)

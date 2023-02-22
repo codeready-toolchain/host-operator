@@ -736,7 +736,7 @@ func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, config too
 		}
 
 		notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
-			WithTemplate(notificationtemplates.UserDeactivating.Name).
+			WithTemplate(notificationtemplates.SandboxUserDeactivating.Name).
 			WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivating).
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).
@@ -771,7 +771,7 @@ func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config tool
 		}
 
 		notification, err := notify.NewNotificationBuilder(r.Client, userSignup.Namespace).
-			WithTemplate(notificationtemplates.UserDeactivated.Name).
+			WithTemplate(notificationtemplates.SandboxUserDeactivated.Name).
 			WithNotificationType(toolchainv1alpha1.NotificationTypeDeactivated).
 			WithControllerReference(userSignup, r.Scheme).
 			WithUserContext(userSignup).

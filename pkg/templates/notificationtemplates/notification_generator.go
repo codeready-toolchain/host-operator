@@ -3,17 +3,21 @@ package notificationtemplates
 import (
 	"strings"
 
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/pkg/errors"
 )
 
+const (
+	sandboxNotificationEnvironment   = "sandbox"
+	stonesoupNotificationEnvironment = "stonesoup"
+)
+
 var notificationTemplates map[string]map[string]NotificationTemplate
-var env = toolchainconfig.NotificationDeliveryServiceMailgun
-var UserProvisioned, _, _ = GetNotificationTemplate("userprovisioned")
-var UserDeactivated, _, _ = GetNotificationTemplate("userdeactivated")
-var UserDeactivating, _, _ = GetNotificationTemplate("userdeactivating")
-var IdlerTriggered, _, _ = GetNotificationTemplate("idlertriggered")
+
+var SandboxUserProvisioned, _, _ = GetNotificationTemplate("userprovisioned", sandboxNotificationEnvironment)
+var SandboxUserDeactivated, _, _ = GetNotificationTemplate("userdeactivated", sandboxNotificationEnvironment)
+var SandboxUserDeactivating, _, _ = GetNotificationTemplate("userdeactivating", sandboxNotificationEnvironment)
+var SandboxIdlerTriggered, _, _ = GetNotificationTemplate("idlertriggered", sandboxNotificationEnvironment)
 
 // NotificationTemplate contains the template subject and content
 type NotificationTemplate struct {
@@ -24,20 +28,20 @@ type NotificationTemplate struct {
 
 // GetNotificationTemplate returns a notification subject, body and a boolean
 // indicating whether or not a template was found. Otherwise, an error will be returned
-func GetNotificationTemplate(name string) (*NotificationTemplate, bool, error) {
+func GetNotificationTemplate(name string, notificationEnvironment string) (*NotificationTemplate, bool, error) {
 	templates, err := loadTemplates()
 	if err != nil {
 		return nil, false, errors.Wrap(err, "unable to get notification templates")
 	}
-	template, found := templates["sandbox"][name]
+	template, found := templates[notificationEnvironment][name]
 	return &template, found, nil
 }
 
 func templatesForAssets(assets assets.Assets) (map[string]map[string]NotificationTemplate, error) {
 	paths := assets.Names()
 	notificationTemplates = make(map[string]map[string]NotificationTemplate)
-	notificationTemplates["sandbox"] = make(map[string]NotificationTemplate)
-	notificationTemplates["stonesoup"] = make(map[string]NotificationTemplate)
+	notificationTemplates[sandboxNotificationEnvironment] = make(map[string]NotificationTemplate)
+	notificationTemplates[stonesoupNotificationEnvironment] = make(map[string]NotificationTemplate)
 	for _, path := range paths {
 		content, err := assets.Asset(path)
 		if err != nil {

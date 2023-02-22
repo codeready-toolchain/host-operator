@@ -221,7 +221,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 			_, err = notify.NewNotificationBuilder(s.hostClient, s.record.Namespace).
 				WithNotificationType(toolchainv1alpha1.NotificationTypeProvisioned).
 				WithControllerReference(s.record, s.scheme).
-				WithTemplate(notificationtemplates.UserProvisioned.Name).
+				WithTemplate(notificationtemplates.SandboxUserProvisioned.Name).
 				WithUserContext(userSignup).
 				WithKeysAndValues(keysAndVals).
 				Create(userSignup.Annotations[toolchainv1alpha1.UserSignupUserEmailAnnotationKey])

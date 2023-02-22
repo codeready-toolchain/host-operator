@@ -62,7 +62,7 @@ type MockTemplateLoader struct {
 	templates map[string]*notificationtemplates.NotificationTemplate
 }
 
-func (l *MockTemplateLoader) GetNotificationTemplate(name string) (*notificationtemplates.NotificationTemplate, bool, error) {
+func (l *MockTemplateLoader) GetNotificationTemplate(name string, notificationEnvironment string) (*notificationtemplates.NotificationTemplate, bool, error) {
 	template := l.templates[name]
 	if template != nil {
 		return template, true, nil

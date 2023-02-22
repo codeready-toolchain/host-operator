@@ -18,7 +18,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("get userdeactivated notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate("userdeactivated")
+			template, found, err := GetNotificationTemplate("userdeactivated", sandboxNotificationEnvironment)
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -29,7 +29,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("get userprovisioned notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate("userprovisioned")
+			template, found, err := GetNotificationTemplate("userprovisioned", sandboxNotificationEnvironment)
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -40,7 +40,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("ensure cache is used", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			_, _, err := GetNotificationTemplate("userprovisioned")
+			_, _, err := GetNotificationTemplate("userprovisioned", sandboxNotificationEnvironment)
 			require.NoError(t, err)
 			template, err := loadTemplates()
 			// then
@@ -49,12 +49,12 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NotEmpty(t, template["sandbox"]["userprovisioned"])
 			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account is provisioned", template["sandbox"]["userprovisioned"].Subject)
 			assert.Contains(t, template["sandbox"]["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
-			assert.Equal(t, template["sandbox"]["userprovisioned"], *UserProvisioned)
+			assert.Equal(t, template["sandbox"]["userprovisioned"], *SandboxUserProvisioned)
 		})
 		t.Run("get userdeactivating notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate("userdeactivating")
+			template, found, err := GetNotificationTemplate("userdeactivating", sandboxNotificationEnvironment)
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -67,7 +67,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("get idlertriggered notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate("idlertriggered")
+			template, found, err := GetNotificationTemplate("idlertriggered", sandboxNotificationEnvironment)
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
