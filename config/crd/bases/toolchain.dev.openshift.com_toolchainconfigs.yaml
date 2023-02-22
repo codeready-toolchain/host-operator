@@ -312,14 +312,14 @@ spec:
                             type: object
                         type: object
                     type: object
-                  spaceRequest:
-                    description: Keeps parameters necessary for configuring SpaceRequest
-                      functionality
+                  spaceConfig:
+                    description: Keeps parameters necessary for configuring Space
+                      provisioning functionality
                     properties:
                       enabled:
-                        description: Enabled specifies whether the SpaceRequest controller
-                          should start or not. This is specifically useful in order
-                          to enable/disable this functionality from configuration
+                        description: SpaceRequestEnabled specifies whether the SpaceRequest
+                          controller should start or not. This is specifically useful
+                          in order to enable/disable this functionality from configuration
                           (e.g. disabled by default in Sandbox and enabled only for
                           StoneSoup stage/prod ...).
                         type: boolean
