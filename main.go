@@ -17,6 +17,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/spacebindingcleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecleanup"
 	"github.com/codeready-toolchain/host-operator/controllers/spacecompletion"
+	"github.com/codeready-toolchain/host-operator/controllers/spacerequest"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainstatus"
 	"github.com/codeready-toolchain/host-operator/controllers/usersignup"
@@ -282,6 +283,16 @@ func main() { // nolint:gocyclo
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "UserSignupCleanup")
 		os.Exit(1)
+	}
+	if crtConfig.SpaceConfig().SpaceRequestIsEnabled() {
+		if err = (&spacerequest.Reconciler{
+			Client:         mgr.GetClient(),
+			Namespace:      namespace,
+			MemberClusters: memberClusters,
+		}).SetupWithManager(mgr, memberClusters); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SpaceRequest")
+			os.Exit(1)
+		}
 	}
 	if err = (&space.Reconciler{
 		Client:         mgr.GetClient(),

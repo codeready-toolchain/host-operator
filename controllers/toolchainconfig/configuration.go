@@ -89,6 +89,10 @@ func (c *ToolchainConfig) CapacityThresholds() CapacityThresholdsConfig {
 	return CapacityThresholdsConfig{c.cfg.Host.CapacityThresholds}
 }
 
+func (c *ToolchainConfig) SpaceConfig() SpaceConfig {
+	return SpaceConfig{c.cfg.Host.SpaceConfig}
+}
+
 func (c *ToolchainConfig) Deactivation() DeactivationConfig {
 	return DeactivationConfig{c.cfg.Host.Deactivation}
 }
@@ -126,6 +130,14 @@ type AutoApprovalConfig struct {
 
 func (a AutoApprovalConfig) IsEnabled() bool {
 	return commonconfig.GetBool(a.approval.Enabled, false)
+}
+
+type SpaceConfig struct {
+	spaceConfig toolchainv1alpha1.SpaceConfig
+}
+
+func (s SpaceConfig) SpaceRequestIsEnabled() bool {
+	return commonconfig.GetBool(s.spaceConfig.SpaceRequestEnabled, false)
 }
 
 type CapacityThresholdsConfig struct {
