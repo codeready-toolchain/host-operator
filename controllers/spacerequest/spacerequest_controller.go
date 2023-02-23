@@ -31,8 +31,10 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	b := ctrl.NewControllerManagedBy(mgr).For(&toolchainv1alpha1.SpaceRequest{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	// watch SpaceRequests in the member clusters
 	for _, memberCluster := range memberClusters {
-		b = b.Watches(source.NewKindWithCache(&toolchainv1alpha1.SpaceRequest{}, memberCluster.Cache),
+		b = b.Watches(
+			source.NewKindWithCache(&toolchainv1alpha1.SpaceRequest{}, memberCluster.Cache),
 			handler.EnqueueRequestsFromMapFunc(mapper.MapByResourceName(r.Namespace)),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		)
 	}
 	return b.Complete(r)
@@ -42,7 +44,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spacerequests/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spacerequests/finalizers,verbs=update
 
-// Reconcile ensures that there is an NSTemplateSet resource defined in the target member cluster
+// Reconcile ensures that there is an SpaceRequest resource defined in the target member cluster
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("reconciling SpaceRequest")

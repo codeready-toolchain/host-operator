@@ -2,7 +2,6 @@ package spacerequest_test
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -45,7 +44,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 	})
 
 	t.Run("failure", func(t *testing.T) {
-
+		// TODO implement error cases
 	})
 }
 
@@ -58,11 +57,10 @@ func TestUpdateSpaceRequestTier(t *testing.T) {
 }
 
 func TestUpdateSpaceRequestTargetClusterRoles(t *testing.T) {
-	// TODO implement
+	// TODO implement update to cluster roles
 }
 
 func newReconciler(memberClusters ...*commoncluster.CachedToolchainCluster) *spacerequest.Reconciler {
-	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	clusters := map[string]cluster.Cluster{}
 	for _, c := range memberClusters {
 		clusters[c.Name] = cluster.Cluster{
