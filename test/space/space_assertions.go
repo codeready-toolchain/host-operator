@@ -127,6 +127,13 @@ func (a *Assertion) HasSpecTargetCluster(targetCluster string) *Assertion {
 	return a
 }
 
+func (a *Assertion) HasSpecTargetClusterRoles(roles []string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, roles, a.space.Spec.TargetClusterRoles)
+	return a
+}
+
 func (a *Assertion) HasNoStatusTargetCluster() *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
@@ -138,6 +145,13 @@ func (a *Assertion) HasStatusTargetCluster(targetCluster string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	assert.Equal(a.t, targetCluster, a.space.Status.TargetCluster)
+	return a
+}
+
+func (a *Assertion) HasStatusProvisionedNamespaces(provisionedNamespaces []toolchainv1alpha1.SpaceNamespace) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, provisionedNamespaces, a.space.Status.ProvisionedNamespaces)
 	return a
 }
 

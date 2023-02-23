@@ -50,7 +50,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
 				ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-				NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberCluster(t, "member2", v1.ConditionTrue)),
+				NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue)),
 			)
 
 			// when
@@ -74,7 +74,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
 				ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-				NewGetMemberClusters(NewMemberCluster(t, "member1", v1.ConditionTrue), NewMemberClusterWithClient(memberCl, "member2", v1.ConditionTrue)),
+				NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithClient(memberCl, "member2", v1.ConditionTrue)),
 			)
 
 			// when

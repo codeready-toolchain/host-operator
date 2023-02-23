@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: appstudio-ns
+  name: appstudio-tenant
 objects:
 - apiVersion: v1
   kind: Namespace
@@ -11,10 +11,21 @@ objects:
       openshift.io/display-name: ${USERNAME}
       openshift.io/requester: ${USERNAME}
     labels:
-      name: ${USERNAME}
+      name: ${USERNAME}-tenant
       toolchain.dev.openshift.com/workspace: ${USERNAME}
       argocd.argoproj.io/managed-by: gitops-service-argocd
-    name: ${USERNAME}
+    name: ${USERNAME}-tenant
+
+# Built-n developer environment is available for all users OOTB
+- apiVersion: appstudio.redhat.com/v1alpha1
+  kind: Environment
+  metadata:
+    name: development
+    namespace: ${USERNAME}-tenant
+  spec:
+    deploymentStrategy: AppStudioAutomated
+    displayName: Development
+    type: Non-POC
 
 # Role & RoleBinding that grant limited read permissions to all SAs in member-operator namespace.
 # This is needed to let Proxy read the ServiceAccounts and Secrets in this namespace.
@@ -22,7 +33,7 @@ objects:
   kind: Role
   metadata:
     name: toolchain-sa-read
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   rules:
   - apiGroups:
     - ""
@@ -42,7 +53,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: member-operator-sa-read
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
@@ -58,7 +69,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: compute-deploy
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   spec:
     scopes:
       - NotTerminating
@@ -71,31 +82,31 @@ objects:
   kind: ResourceQuota
   metadata:
     name: compute-build
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   spec:
     scopes:
       - Terminating
     hard:
-      limits.cpu: "20"
+      limits.cpu: "60"
       limits.memory: ${MEMORY_BUILD_LIMIT}
-      requests.cpu: "2"
+      requests.cpu: "6"
       requests.memory: ${MEMORY_BUILD_REQUEST}
 - apiVersion: v1
   kind: ResourceQuota
   metadata:
     name: storage
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   spec:
     hard:
-      limits.ephemeral-storage: 15Gi
-      requests.storage: 15Gi
-      requests.ephemeral-storage: 15Gi
-      count/persistentvolumeclaims: "5"
+      limits.ephemeral-storage: 50Gi
+      requests.storage: 50Gi
+      requests.ephemeral-storage: 50Gi
+      count/persistentvolumeclaims: "12"
 - apiVersion: v1
   kind: LimitRange
   metadata:
     name: resource-limits
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   spec:
     limits:
     - type: "Container"
@@ -110,7 +121,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-same-namespace
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   spec:
     podSelector: {}
     ingress:
@@ -120,7 +131,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-ingress
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   spec:
     ingress:
     - from:
@@ -134,7 +145,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-monitoring
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   spec:
     ingress:
     - from:
@@ -148,7 +159,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-codeready-workspaces-operator
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   spec:
     ingress:
     - from:
@@ -162,7 +173,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-olm-namespaces
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   spec:
     ingress:
     - from:
@@ -176,7 +187,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-console-namespaces
-    namespace: ${USERNAME}
+    namespace: ${USERNAME}-tenant
   spec:
     ingress:
     - from:

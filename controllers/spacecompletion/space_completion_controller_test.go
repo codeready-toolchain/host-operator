@@ -25,7 +25,7 @@ import (
 )
 
 func TestCreateSpace(t *testing.T) {
-	member1 := NewMemberCluster(t, "member1", corev1.ConditionTrue)
+	member1 := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
 	getMemberClusters := NewGetMemberClusters(member1)
 
 	t.Run("without any field set - then it sets only tierName", func(t *testing.T) {
