@@ -39,14 +39,14 @@ func TestGetNotificationTemplate(t *testing.T) {
 			defer resetNotificationTemplateCache()
 			_, _, err := GetNotificationTemplate("userprovisioned", sandboxNotificationEnvironment)
 			require.NoError(t, err)
-			template, err := loadTemplates()
+			template, err := loadTemplates("sandbox")
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
-			require.NotEmpty(t, template["sandbox"]["userprovisioned"])
-			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account is provisioned", template["sandbox"]["userprovisioned"].Subject)
-			assert.Contains(t, template["sandbox"]["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
-			assert.Equal(t, template["sandbox"]["userprovisioned"], *SandboxUserProvisioned)
+			require.NotEmpty(t, template["userprovisioned"])
+			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account is provisioned", template["userprovisioned"].Subject)
+			assert.Contains(t, template["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
+			assert.Equal(t, template["userprovisioned"], *SandboxUserProvisioned)
 		})
 		t.Run("get userdeactivating notification template", func(t *testing.T) {
 			// when
@@ -106,7 +106,7 @@ func TestTemplatesForAssets(t *testing.T) {
 			//})
 
 			// when
-			template, err := templatesForAssets(fakeTemplates, "testTemplates")
+			template, err := templatesForAssets(fakeTemplates, "testTemplates", "sandbox")
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
