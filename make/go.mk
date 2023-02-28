@@ -31,7 +31,6 @@ NSTEMPLATES_TEST_BASEDIR = test/templates/nstemplatetiers
 USERTEMPLATES_BASEDIR = deploy/templates/usertiers
 USERTEMPLATES_TEST_BASEDIR = test/templates/usertiers
 
-NOTIFICATION_BASEDIR = deploy/templates/notificationtemplates
 REGISTRATION_SERVICE_DIR=deploy/registration-service
 
 .PHONY: generate
@@ -68,9 +67,7 @@ generate-assets: go-bindata
 	@echo "generating bindata for files in $(USERTEMPLATES_TEST_BASEDIR) ..."
 	@rm ./test/templates/usertiers/usertier_assets.go 2>/dev/null || true
 	@$(GO_BINDATA) -pkg usertiers_test -o ./test/templates/usertiers/usertier_assets.go -nometadata -nocompress -prefix $(USERTEMPLATES_TEST_BASEDIR) -ignore doc.go $(USERTEMPLATES_TEST_BASEDIR)/...
-	
-	@echo "generating notification service template data..."
-	@$(GO_BINDATA) -pkg notificationtemplates -o ./pkg/templates/notificationtemplates/notification_assets.go -nometadata -nocompress -prefix $(NOTIFICATION_BASEDIR) -ignore doc.go $(NOTIFICATION_BASEDIR)/...
+
 	@echo "generating registration service template data..."
 	@$(GO_BINDATA) -pkg registrationservice -o ./pkg/templates/registrationservice/template_assets.go -nocompress -prefix $(REGISTRATION_SERVICE_DIR) $(REGISTRATION_SERVICE_DIR)
 

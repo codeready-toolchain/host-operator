@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/codeready-toolchain/host-operator/deploy"
-	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/pkg/errors"
 )
 
@@ -40,11 +39,11 @@ func GetNotificationTemplate(name string, notificationEnvironment string) (*Noti
 	return &template, found, nil
 }
 
-func templatesForAssets(assets assets.Assets) (map[string]map[string]NotificationTemplate, error) {
+func templatesForAssets(efs embed.FS, root string) (map[string]map[string]NotificationTemplate, error) {
 	//paths := assets.Names()
 	//paths, _ := file.ReadDir("deploy/templates/notificationtemplates")
 	//newpaths, err := deploy.Files.ReadDir("templates/notificationtemplates/sandbox")
-	newpaths, err := getAllFilenames(&deploy.Files, "templates/notificationtemplates")
+	newpaths, err := getAllFilenames(&efs, root)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +53,7 @@ func templatesForAssets(assets assets.Assets) (map[string]map[string]Notificatio
 	notificationTemplates[stonesoupNotificationEnvironment] = make(map[string]NotificationTemplate)
 	for _, path := range newpaths {
 		//content, err := assets.Asset(path)
-		content, err := deploy.Files.ReadFile(path)
+		content, err := efs.ReadFile(path)
 		//if newContent != nil {
 		//	res := bytes.Compare(content, newContent)
 		//	if res == 0 {
@@ -94,7 +93,7 @@ func loadTemplates() (map[string]map[string]NotificationTemplate, error) {
 	if notificationTemplates != nil {
 		return notificationTemplates, nil
 	}
-	return templatesForAssets(assets.NewAssets(AssetNames, Asset))
+	return templatesForAssets(deploy.Files, "templates/notificationtemplates")
 }
 
 func getAllFilenames(efs *embed.FS, root string) (files []string, err error) {
