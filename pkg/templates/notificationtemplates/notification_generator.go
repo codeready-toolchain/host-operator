@@ -2,6 +2,7 @@ package notificationtemplates
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"strings"
 
@@ -40,36 +41,26 @@ func GetNotificationTemplate(name string, notificationEnvironment string) (*Noti
 }
 
 func templatesForAssets(efs embed.FS, root string, env string) (map[string]NotificationTemplate, error) {
-	//paths := assets.Names()
-	//paths, _ := file.ReadDir("deploy/templates/notificationtemplates")
-	//newpaths, err := deploy.Files.ReadDir("templates/notificationtemplates/sandbox")
 	paths, err := getAllFilenames(&efs, root)
 	if err != nil {
 		return nil, err
 	}
-	newpaths, err := getTemplatesForNotificationEnvironment(paths, env)
+	filteredPaths := getTemplatesForNotificationEnvironment(paths, env)
 	if err != nil {
 		return nil, err
 	}
+	if len(filteredPaths) == 0 {
+		return nil, fmt.Errorf("Could not find any emails templates for the environment %v", env)
+	}
 	notificationTemplates = make(map[string]NotificationTemplate)
-	//notificationTemplates[sandboxNotificationEnvironment] = make(map[string]NotificationTemplate)
-	//notificationTemplates[stonesoupNotificationEnvironment] = make(map[string]NotificationTemplate)
-	for _, path := range newpaths {
-		//content, err := assets.Asset(path)
+	for _, path := range filteredPaths {
 		content, err := efs.ReadFile(path)
-		//if newContent != nil {
-		//	res := bytes.Compare(content, newContent)
-		//	if res == 0 {
-		//		fmt.Printf("perfect")
-		//	}
-		//	fmt.Printf("hilarious")
-		//}
 		if err != nil {
 			return nil, err
 		}
 		segments := strings.Split(path, "/")
 		if len(segments) != 5 {
-			return nil, errors.Wrapf(errors.New("path must contain env, directory and file"), "unable to load templates")
+			return nil, errors.Wrapf(errors.New("path must contain directory and file"), "unable to load templates")
 		}
 		directoryName := segments[3]
 		filename := segments[4]
@@ -115,11 +106,11 @@ func getAllFilenames(efs *embed.FS, root string) (files []string, err error) {
 	return files, nil
 }
 
-func getTemplatesForNotificationEnvironment(paths []string, env string) (files []string, err error) {
+func getTemplatesForNotificationEnvironment(paths []string, env string) (files []string) {
 	for _, path := range paths {
 		if strings.Contains(path, env) {
 			files = append(files, path)
 		}
 	}
-	return files, nil
+	return files
 }
