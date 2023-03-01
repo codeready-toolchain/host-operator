@@ -202,7 +202,12 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-	memberClusters, err := addMemberClusters(mgr, cl, namespace)
+	memberClusters, err := addMemberClusters(mgr, cl, namespace, true)
+	if err != nil {
+		setupLog.Error(err, "")
+		os.Exit(1)
+	}
+	clusterScopedMemberClusters, err := addMemberClusters(mgr, cl, namespace, false)
 	if err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
@@ -288,8 +293,8 @@ func main() { // nolint:gocyclo
 		if err = (&spacerequest.Reconciler{
 			Client:         mgr.GetClient(),
 			Namespace:      namespace,
-			MemberClusters: memberClusters,
-		}).SetupWithManager(mgr, memberClusters); err != nil {
+			MemberClusters: clusterScopedMemberClusters,
+		}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SpaceRequest")
 			os.Exit(1)
 		}
@@ -392,7 +397,7 @@ func main() { // nolint:gocyclo
 	}
 }
 
-func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string) (map[string]cluster.Cluster, error) {
+func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string, namespacedCache bool) (map[string]cluster.Cluster, error) {
 	memberConfigs, err := commoncluster.ListToolchainClusterConfigs(cl, namespace, commoncluster.Member, memberClientTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get ToolchainCluster configs for members")
@@ -403,7 +408,11 @@ func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string) (ma
 
 		memberCluster, err := runtimecluster.New(memberConfig.RestConfig, func(options *runtimecluster.Options) {
 			options.Scheme = scheme
-			options.Namespace = memberConfig.OperatorNamespace
+			// for some resources like SpaceRequest we need the cache to be cluster scoped
+			// because those resources are in user namespaces and not member operator namespace.
+			if namespacedCache {
+				options.Namespace = memberConfig.OperatorNamespace
+			}
 		})
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to create member cluster definition for "+memberConfig.Name)
