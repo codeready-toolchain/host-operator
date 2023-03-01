@@ -41,19 +41,15 @@ func GetNotificationTemplate(name string, notificationEnvironment string) (*Noti
 }
 
 func templatesForAssets(efs embed.FS, root string, env string) (map[string]NotificationTemplate, error) {
-	paths, err := getAllFilenames(&efs, root)
+	paths, err := getAllFilenames(&efs, root, env)
 	if err != nil {
 		return nil, err
 	}
-	filteredPaths := getTemplatesForNotificationEnvironment(paths, env)
-	if err != nil {
-		return nil, err
-	}
-	if len(filteredPaths) == 0 {
+	if len(paths) == 0 {
 		return nil, fmt.Errorf("Could not find any emails templates for the environment %v", env)
 	}
 	notificationTemplates = make(map[string]NotificationTemplate)
-	for _, path := range filteredPaths {
+	for _, path := range paths {
 		content, err := efs.ReadFile(path)
 		if err != nil {
 			return nil, err
@@ -86,17 +82,19 @@ func loadTemplates(env string) (map[string]NotificationTemplate, error) {
 	if notificationTemplates != nil {
 		return notificationTemplates, nil
 	}
-	return templatesForAssets(deploy.Files, "templates/notificationtemplates", env)
+
+	return templatesForAssets(deploy.NotificationTemplateFS, "templates/notificationtemplates", env)
 }
 
-func getAllFilenames(efs *embed.FS, root string) (files []string, err error) {
+func getAllFilenames(efs *embed.FS, root string, env string) (files []string, err error) {
 
 	if err := fs.WalkDir(efs, root, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
 		}
-
-		files = append(files, path)
+		if strings.Contains(path, env) {
+			files = append(files, path)
+		}
 
 		return nil
 	}); err != nil {
@@ -104,13 +102,4 @@ func getAllFilenames(efs *embed.FS, root string) (files []string, err error) {
 	}
 
 	return files, nil
-}
-
-func getTemplatesForNotificationEnvironment(paths []string, env string) (files []string) {
-	for _, path := range paths {
-		if strings.Contains(path, env) {
-			files = append(files, path)
-		}
-	}
-	return files
 }

@@ -23,7 +23,3 @@ func (d DeliveryServiceFactoryConfig) GetMailgunSenderEmail() string {
 func (d DeliveryServiceFactoryConfig) GetMailgunReplyToEmail() string {
 	return d.Notifications().MailgunReplyToEmail()
 }
-
-//func (d DeliveryServiceFactoryConfig) GetNotificationEnvironment() string {
-//	return d.Notifications().Environment()
-//}
