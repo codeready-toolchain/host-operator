@@ -28,9 +28,11 @@ type Reconciler struct {
 // SetupWithManager sets up the controller reconciler with the Manager and the given member clusters.
 // Watches SpaceRequests on the member clusters as its primary resources.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluster) error {
-	// we need to reconcile also spaces and those are present in the host cluster (while SpaceRequests are only on member clusters)
-	b := ctrl.NewControllerManagedBy(mgr).For(&toolchainv1alpha1.Space{})
-	// watch SpaceRequests in the member clusters
+	// since it's mandatory to add a primary resource when creating a new controller,
+	// we add the SpaceRequest CR even if there should be not reconciles triggered from the host cluster,
+	// only from member clusters, see Watches below.
+	b := ctrl.NewControllerManagedBy(mgr).For(&toolchainv1alpha1.SpaceRequest{})
+	// Watch SpaceRequests in all member clusters and all namespaces.
 	for _, memberCluster := range memberClusters {
 		b = b.Watches(
 			source.NewKindWithCache(&toolchainv1alpha1.SpaceRequest{}, memberCluster.Cache),
