@@ -312,18 +312,6 @@ spec:
                             type: object
                         type: object
                     type: object
-                  spaceConfig:
-                    description: Keeps parameters necessary for configuring Space
-                      provisioning functionality
-                    properties:
-                      spaceRequestEnabled:
-                        description: SpaceRequestEnabled specifies whether the SpaceRequest
-                          controller should start or not. This is specifically useful
-                          in order to enable/disable this functionality from configuration
-                          (e.g. disabled by default in Sandbox and enabled only for
-                          StoneSoup stage/prod ...).
-                        type: boolean
-                    type: object
                   tiers:
                     description: Keeps parameters concerned with tiers
                     properties:
@@ -477,6 +465,23 @@ spec:
                             description: Defines the timeout for each health check
                             type: string
                         type: object
+                      webConsolePlugin:
+                        description: WebConsolePlugin is used to configure the Web
+                          Console Plugin parameters
+                        properties:
+                          deploy:
+                            description: Deploy determines whether the plugin will
+                              be deployed or not
+                            type: boolean
+                          pendoKey:
+                            description: PendoKey is the key value used to interact
+                              with the Pendo API
+                            type: string
+                          pendoProxy:
+                            description: PendoProxy allows a proxy URL to be configured
+                              instead of communicating directly with the Pendo domain
+                            type: string
+                        type: object
                       webhook:
                         description: Keeps parameters concerned with the webhook
                         properties:
@@ -582,6 +587,23 @@ spec:
                               type: string
                             healthCheckTimeout:
                               description: Defines the timeout for each health check
+                              type: string
+                          type: object
+                        webConsolePlugin:
+                          description: WebConsolePlugin is used to configure the Web
+                            Console Plugin parameters
+                          properties:
+                            deploy:
+                              description: Deploy determines whether the plugin will
+                                be deployed or not
+                              type: boolean
+                            pendoKey:
+                              description: PendoKey is the key value used to interact
+                                with the Pendo API
+                              type: string
+                            pendoProxy:
+                              description: PendoProxy allows a proxy URL to be configured
+                                instead of communicating directly with the Pendo domain
                               type: string
                           type: object
                         webhook:
