@@ -12,15 +12,14 @@ import (
 
 const (
 	sandboxNotificationEnvironment   = "sandbox"
-	stonesoupNotificationEnvironment = "stonesoup"
+	appstudioNotificationEnvironment = "appstudio"
+	UserProvisionedTemplateName      = "userprovisioned"
+	UserDeactivatedTemplateName      = "userdeactivated"
+	UserDeactivatingTemplateName     = "userdeactivating"
+	IdlerTriggeredTemplateName       = "idlertriggered"
 )
 
 var notificationTemplates map[string]NotificationTemplate
-
-var SandboxUserProvisioned, _, _ = GetNotificationTemplate("userprovisioned", sandboxNotificationEnvironment)
-var SandboxUserDeactivated, _, _ = GetNotificationTemplate("userdeactivated", sandboxNotificationEnvironment)
-var SandboxUserDeactivating, _, _ = GetNotificationTemplate("userdeactivating", sandboxNotificationEnvironment)
-var SandboxIdlerTriggered, _, _ = GetNotificationTemplate("idlertriggered", sandboxNotificationEnvironment)
 
 // NotificationTemplate contains the template subject and content
 type NotificationTemplate struct {

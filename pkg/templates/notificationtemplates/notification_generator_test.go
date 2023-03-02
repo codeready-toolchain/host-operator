@@ -11,7 +11,7 @@ import (
 
 func TestGetNotificationTemplate(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	t.Run("ok", func(t *testing.T) {
+	t.Run("sandbox ok", func(t *testing.T) {
 		t.Run("get userdeactivated notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
@@ -46,7 +46,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NotEmpty(t, template["userprovisioned"])
 			assert.Equal(t, "Notice: Your Developer Sandbox for Red Hat OpenShift account is provisioned", template["userprovisioned"].Subject)
 			assert.Contains(t, template["userprovisioned"].Content, "Your account has been provisioned and is ready to use. Your account will be active for 30 days.")
-			assert.Equal(t, template["userprovisioned"], *SandboxUserProvisioned)
+			assert.Equal(t, template["userprovisioned"].Name, UserProvisionedTemplateName)
 		})
 		t.Run("get userdeactivating notification template", func(t *testing.T) {
 			// when
@@ -72,6 +72,61 @@ func TestGetNotificationTemplate(t *testing.T) {
 			assert.Equal(t, "Notice: Your running application in namespace {{.Namespace}} has been idled", template.Subject)
 			assert.Contains(t, template.Content, "In accordance with the usage terms of Developer Sandbox, we have reduced the number of instances of your\n        application to zero (0).")
 
+		})
+	})
+
+	t.Run("appstudio ok", func(t *testing.T) {
+		t.Run("get userprovisioned notification template", func(t *testing.T) {
+			// when
+			defer resetNotificationTemplateCache()
+			template, found, err := GetNotificationTemplate(UserProvisionedTemplateName, appstudioNotificationEnvironment)
+			// then
+			require.NoError(t, err)
+			assert.True(t, found)
+			require.NotNil(t, template)
+			assert.Equal(t, "Welcome to Red Hat CI/CD!", template.Subject)
+			assert.Contains(t, template.Content, "Welcome to Red Hat CI/CD! Red Hat CI/CD saves you weeks of time by automating the onboarding process for containerized apps with CI/CD. It also offers granular customization for pipelines, once they are running.")
+			assert.NotContains(t, template.Content, "Sandbox")
+			assert.Equal(t, UserProvisionedTemplateName, template.Name)
+		})
+		t.Run("get userdeactivating notification template", func(t *testing.T) {
+			// when
+			defer resetNotificationTemplateCache()
+			template, found, err := GetNotificationTemplate(UserDeactivatingTemplateName, appstudioNotificationEnvironment)
+			// then
+			require.NoError(t, err)
+			assert.True(t, found)
+			require.NotNil(t, template)
+			assert.Equal(t, "Notice: Your account will be deactivated soon", template.Subject)
+			assert.Contains(t, template.Content, "The Red Hat CI/CD team")
+			assert.NotContains(t, template.Content, "Sandbox")
+			assert.Equal(t, UserDeactivatingTemplateName, template.Name)
+		})
+		t.Run("get userdeactivated notification template", func(t *testing.T) {
+			// when
+			defer resetNotificationTemplateCache()
+			template, found, err := GetNotificationTemplate(UserDeactivatedTemplateName, appstudioNotificationEnvironment)
+			// then
+			require.NoError(t, err)
+			assert.True(t, found)
+			require.NotNil(t, template)
+			assert.Equal(t, "Notice: Your account is deactivated", template.Subject)
+			assert.Contains(t, template.Content, "The Red Hat CI/CD team")
+			assert.NotContains(t, template.Content, "Sandbox")
+			assert.Equal(t, UserDeactivatedTemplateName, template.Name)
+		})
+		t.Run("get idlertriggered notification template", func(t *testing.T) {
+			// when
+			defer resetNotificationTemplateCache()
+			template, found, err := GetNotificationTemplate(IdlerTriggeredTemplateName, appstudioNotificationEnvironment)
+			// then
+			require.NoError(t, err)
+			assert.True(t, found)
+			require.NotNil(t, template)
+			assert.Equal(t, "Notice: Your running application has been idled", template.Subject)
+			assert.Contains(t, template.Content, "The Red Hat CI/CD team")
+			assert.NotContains(t, template.Content, "Sandbox")
+			assert.Equal(t, IdlerTriggeredTemplateName, template.Name)
 		})
 	})
 }
@@ -104,7 +159,7 @@ func TestTemplatesForAssets(t *testing.T) {
 			// given
 			defer resetNotificationTemplateCache()
 			// when
-			template, err := templatesForAssets(fakeTemplates, "testTemplates", stonesoupNotificationEnvironment)
+			template, err := templatesForAssets(fakeTemplates, "testTemplates", appstudioNotificationEnvironment)
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
