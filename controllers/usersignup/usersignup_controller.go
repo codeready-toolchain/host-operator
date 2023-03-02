@@ -346,7 +346,9 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 		if shouldManageSpace(userSignup) {
 			space, created, err := r.ensureSpace(reqLogger, userSignup, mur, spaceTier)
 			// if there was an error or the space was created then return to complete the reconcile, another reconcile will occur when space is created since this controller watches spaces
-			if err != nil || created {
+			if created {
+				return true, nil
+			} else if err != nil {
 				return true, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusFailedToCreateSpace, err,
 					"error creating Space")
 			}
