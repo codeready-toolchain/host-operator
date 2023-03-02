@@ -207,11 +207,6 @@ func main() { // nolint:gocyclo
 		setupLog.Error(err, "")
 		os.Exit(1)
 	}
-	clusterScopedMemberClusters, err := addMemberClusters(mgr, cl, namespace, false)
-	if err != nil {
-		setupLog.Error(err, "")
-		os.Exit(1)
-	}
 
 	// Setup all Controllers
 	if err = toolchaincluster.NewReconciler(
@@ -290,6 +285,11 @@ func main() { // nolint:gocyclo
 		os.Exit(1)
 	}
 	if crtConfig.SpaceConfig().SpaceRequestIsEnabled() {
+		clusterScopedMemberClusters, err := addMemberClusters(mgr, cl, namespace, false)
+		if err != nil {
+			setupLog.Error(err, "")
+			os.Exit(1)
+		}
 		if err = (&spacerequest.Reconciler{
 			Client:         mgr.GetClient(),
 			Namespace:      namespace,
@@ -408,7 +408,7 @@ func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string, nam
 
 		memberCluster, err := runtimecluster.New(memberConfig.RestConfig, func(options *runtimecluster.Options) {
 			options.Scheme = scheme
-			// for some resources like SpaceRequest we need the cache to be cluster scoped
+			// for some resources like SpaceRequest we need the cache to be clustered scoped
 			// because those resources are in user namespaces and not member operator namespace.
 			if namespacedCache {
 				options.Namespace = memberConfig.OperatorNamespace
