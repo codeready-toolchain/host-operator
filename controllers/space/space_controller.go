@@ -341,8 +341,8 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spaceBindings.Items, tmplTier)
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				if errors.IsAlreadyExists(err) {
-					// move to next part but don't incremenent space count again (assuming it was already incremented before)
-					goto nstmpl_exists
+					// requeue immediately, there's probably a race condition between the host client cache and the member cluster state
+					return nsTmplSet, norequeue, nil
 				}
 				return nsTmplSet, norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 			}
@@ -353,7 +353,6 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		}
 		return nsTmplSet, norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 	}
-nstmpl_exists:
 	logger.Info("NSTemplateSet already exists")
 
 	_, found := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
