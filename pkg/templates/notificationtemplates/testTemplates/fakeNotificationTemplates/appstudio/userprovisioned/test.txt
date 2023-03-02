@@ -1,0 +1,1 @@
+There should have been notification.html and subject.txt files in this repository instead.

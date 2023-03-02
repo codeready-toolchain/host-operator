@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	sandboxNotificationEnvironment   = "sandbox"
-	appstudioNotificationEnvironment = "appstudio"
+	SandboxNotificationEnvironment   = "sandbox"
+	AppstudioNotificationEnvironment = "appstudio"
 	UserProvisionedTemplateName      = "userprovisioned"
 	UserDeactivatedTemplateName      = "userdeactivated"
 	UserDeactivatingTemplateName     = "userdeactivating"

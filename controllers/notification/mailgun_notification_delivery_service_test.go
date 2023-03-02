@@ -60,6 +60,16 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 			Subject: "Hi",
 			Content: "{{invalid_expression}}",
 			Name:    "invalid_content",
+		},
+		&notificationtemplates.NotificationTemplate{
+			Subject: "",
+			Content: "valid content",
+			Name:    "empty_subject",
+		},
+		&notificationtemplates.NotificationTemplate{
+			Subject: "valid subject",
+			Content: "",
+			Name:    "empty_content",
 		})
 
 	t.Run("test mailgun notification delivery service send", func(t *testing.T) {
@@ -72,7 +82,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Content:   "abc",
 				Context:   notCtx,
 			},
-		}, "")
+		}, notificationtemplates.SandboxNotificationEnvironment)
 
 		// then
 		require.NoError(t, err)
@@ -87,7 +97,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Content: "abc",
 				Context: notCtx,
 			},
-		}, "")
+		}, notificationtemplates.SandboxNotificationEnvironment)
 
 		// then
 		require.Error(t, err)
@@ -105,7 +115,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template: "bar",
 				Context:  notCtx,
 			},
-		}, "")
+		}, notificationtemplates.SandboxNotificationEnvironment)
 
 		// then
 		require.Error(t, err)
@@ -120,7 +130,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template: "invalid_subject",
 				Context:  notCtx,
 			},
-		}, "")
+		}, notificationtemplates.SandboxNotificationEnvironment)
 
 		// then
 		require.Error(t, err)
@@ -135,7 +145,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template: "invalid_content",
 				Context:  notCtx,
 			},
-		}, "")
+		}, notificationtemplates.SandboxNotificationEnvironment)
 
 		// then
 		require.Error(t, err)
@@ -155,7 +165,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Content:   "abc",
 				Context:   notCtx,
 			},
-		}, "")
+		}, notificationtemplates.SandboxNotificationEnvironment)
 
 		// then
 		require.NoError(t, err)
@@ -186,11 +196,57 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template:  "replyto",
 				Context:   notCtx,
 			},
-		}, "")
+		}, notificationtemplates.SandboxNotificationEnvironment)
 
 		// then
 		require.NoError(t, err)
 		require.Equal(t, "a message sent to info@foo.com", formValues.Get("html"))
 
+	})
+
+	t.Run("test mailgun notification delivery empty subject template", func(t *testing.T) {
+		// when
+		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
+		err := mgds.Send(&toolchainv1alpha1.Notification{
+			Spec: toolchainv1alpha1.NotificationSpec{
+				Template: "empty_subject",
+				Context:  notCtx,
+			},
+		}, notificationtemplates.SandboxNotificationEnvironment)
+
+		// then
+		require.Error(t, err)
+		require.Equal(t, "no subject or body specified for notification", err.Error())
+	})
+
+	t.Run("test mailgun notification delivery empty content template", func(t *testing.T) {
+		// when
+		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
+		err := mgds.Send(&toolchainv1alpha1.Notification{
+			Spec: toolchainv1alpha1.NotificationSpec{
+				Template: "empty_content",
+				Context:  notCtx,
+			},
+		}, notificationtemplates.SandboxNotificationEnvironment)
+
+		// then
+		require.Error(t, err)
+		require.Equal(t, "no subject or body specified for notification", err.Error())
+	})
+
+	t.Run("test mailgun notification delivery send for appstudio", func(t *testing.T) {
+		// when
+		mgds := NewMailgunNotificationDeliveryService(config, templateLoader, mockServerOption)
+		err := mgds.Send(&toolchainv1alpha1.Notification{
+			Spec: toolchainv1alpha1.NotificationSpec{
+				Recipient: "foo@bar.com",
+				Subject:   "test",
+				Content:   "abc",
+				Context:   notCtx,
+			},
+		}, notificationtemplates.AppstudioNotificationEnvironment)
+
+		// then
+		require.NoError(t, err)
 	})
 }

@@ -107,7 +107,7 @@ func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha
 		body = notification.Spec.Content
 	}
 
-	if subject == "" && body == "" {
+	if subject == "" || body == "" {
 		return fmt.Errorf("no subject or body specified for notification")
 	}
 
