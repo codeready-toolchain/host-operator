@@ -342,7 +342,7 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
 				if errors.IsAlreadyExists(err) {
 					// requeue immediately, there's probably a race condition between the host client cache and the member cluster state
-					return nsTmplSet, norequeue, nil
+					return nsTmplSet, requeueDelay, nil
 				}
 				return nsTmplSet, norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 			}
