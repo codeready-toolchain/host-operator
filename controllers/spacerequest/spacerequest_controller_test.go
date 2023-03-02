@@ -9,6 +9,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	. "github.com/codeready-toolchain/host-operator/test"
+	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
@@ -17,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -28,12 +30,14 @@ func TestCreateSpaceRequest(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
 	require.NoError(t, err)
+	basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 	t.Run("success", func(t *testing.T) {
 		// given
 		sr := spacerequesttest.NewSpaceRequest("jane", "jane-tenant", spacerequesttest.WithTierName("basic"), spacerequesttest.WithTargetClusterRoles([]string{commoncluster.RoleLabel(commoncluster.Tenant)}))
 		member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
-		ctrl := newReconciler(member1, member2)
+		hostClient := test.NewFakeClient(t, sr, basicTier)
+		ctrl := newReconciler(hostClient, member1, member2)
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -60,7 +64,7 @@ func TestUpdateSpaceRequestTargetClusterRoles(t *testing.T) {
 	// TODO implement update to cluster roles
 }
 
-func newReconciler(memberClusters ...*commoncluster.CachedToolchainCluster) *spacerequest.Reconciler {
+func newReconciler(hostCl client.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *spacerequest.Reconciler {
 	clusters := map[string]cluster.Cluster{}
 	for _, c := range memberClusters {
 		clusters[c.Name] = cluster.Cluster{
@@ -73,6 +77,7 @@ func newReconciler(memberClusters ...*commoncluster.CachedToolchainCluster) *spa
 		}
 	}
 	return &spacerequest.Reconciler{
+		Client:         hostCl,
 		Namespace:      test.HostOperatorNs,
 		MemberClusters: clusters,
 	}
