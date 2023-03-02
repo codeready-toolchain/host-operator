@@ -485,13 +485,13 @@ spec:
                             description: Deploy determines whether the plugin will
                               be deployed or not
                             type: boolean
+                          pendoHost:
+                            description: PendoHost allows a host URL to be configured
+                              instead of communicating directly with the Pendo domain
+                            type: string
                           pendoKey:
                             description: PendoKey is the key value used to interact
                               with the Pendo API
-                            type: string
-                          pendoProxy:
-                            description: PendoProxy allows a proxy URL to be configured
-                              instead of communicating directly with the Pendo domain
                             type: string
                         type: object
                       webhook:
@@ -609,13 +609,13 @@ spec:
                               description: Deploy determines whether the plugin will
                                 be deployed or not
                               type: boolean
+                            pendoHost:
+                              description: PendoHost allows a host URL to be configured
+                                instead of communicating directly with the Pendo domain
+                              type: string
                             pendoKey:
                               description: PendoKey is the key value used to interact
                                 with the Pendo API
-                              type: string
-                            pendoProxy:
-                              description: PendoProxy allows a proxy URL to be configured
-                                instead of communicating directly with the Pendo domain
                               type: string
                           type: object
                         webhook:
