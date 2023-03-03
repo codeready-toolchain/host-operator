@@ -477,6 +477,23 @@ spec:
                             description: Defines the timeout for each health check
                             type: string
                         type: object
+                      webConsolePlugin:
+                        description: WebConsolePlugin is used to configure the Web
+                          Console Plugin parameters
+                        properties:
+                          deploy:
+                            description: Deploy determines whether the plugin will
+                              be deployed or not
+                            type: boolean
+                          pendoHost:
+                            description: PendoHost allows a host URL to be configured
+                              instead of communicating directly with the Pendo domain
+                            type: string
+                          pendoKey:
+                            description: PendoKey is the key value used to interact
+                              with the Pendo API
+                            type: string
+                        type: object
                       webhook:
                         description: Keeps parameters concerned with the webhook
                         properties:
@@ -582,6 +599,23 @@ spec:
                               type: string
                             healthCheckTimeout:
                               description: Defines the timeout for each health check
+                              type: string
+                          type: object
+                        webConsolePlugin:
+                          description: WebConsolePlugin is used to configure the Web
+                            Console Plugin parameters
+                          properties:
+                            deploy:
+                              description: Deploy determines whether the plugin will
+                                be deployed or not
+                              type: boolean
+                            pendoHost:
+                              description: PendoHost allows a host URL to be configured
+                                instead of communicating directly with the Pendo domain
+                              type: string
+                            pendoKey:
+                              description: PendoKey is the key value used to interact
+                                with the Pendo API
                               type: string
                           type: object
                         webhook:
