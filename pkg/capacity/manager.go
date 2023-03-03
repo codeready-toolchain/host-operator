@@ -104,6 +104,10 @@ func (b *ClusterManager) GetOptimalTargetCluster(optimalClusterFilter OptimalTar
 	}
 	optimalTargetClusters := getOptimalTargetClusters(optimalClusterFilter.PreferredCluster, b.getMemberClusters, optimalClusterFilter.ClusterRoles, hasNotReachedMaxNumberOfSpacesThreshold(config, counts), hasEnoughResources(config, status))
 
+	if len(optimalTargetClusters) == 1 {
+		return optimalTargetClusters[0], nil
+	}
+
 	for _, cluster := range optimalTargetClusters {
 		if cluster == b.lastUsed {
 			provisioned := counts.SpacesPerClusterCounts[cluster]
