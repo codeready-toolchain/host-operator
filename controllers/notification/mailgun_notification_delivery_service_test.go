@@ -82,7 +82,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Content:   "abc",
 				Context:   notCtx,
 			},
-		}, notificationtemplates.SandboxNotificationEnvironment)
+		}, notificationtemplates.SandboxNotificationTemplateSetName)
 
 		// then
 		require.NoError(t, err)
@@ -97,7 +97,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Content: "abc",
 				Context: notCtx,
 			},
-		}, notificationtemplates.SandboxNotificationEnvironment)
+		}, notificationtemplates.SandboxNotificationTemplateSetName)
 
 		// then
 		require.Error(t, err)
@@ -115,7 +115,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template: "bar",
 				Context:  notCtx,
 			},
-		}, notificationtemplates.SandboxNotificationEnvironment)
+		}, notificationtemplates.SandboxNotificationTemplateSetName)
 
 		// then
 		require.Error(t, err)
@@ -130,7 +130,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template: "invalid_subject",
 				Context:  notCtx,
 			},
-		}, notificationtemplates.SandboxNotificationEnvironment)
+		}, notificationtemplates.SandboxNotificationTemplateSetName)
 
 		// then
 		require.Error(t, err)
@@ -145,7 +145,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template: "invalid_content",
 				Context:  notCtx,
 			},
-		}, notificationtemplates.SandboxNotificationEnvironment)
+		}, notificationtemplates.SandboxNotificationTemplateSetName)
 
 		// then
 		require.Error(t, err)
@@ -165,7 +165,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Content:   "abc",
 				Context:   notCtx,
 			},
-		}, notificationtemplates.SandboxNotificationEnvironment)
+		}, notificationtemplates.SandboxNotificationTemplateSetName)
 
 		// then
 		require.NoError(t, err)
@@ -196,7 +196,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template:  "replyto",
 				Context:   notCtx,
 			},
-		}, notificationtemplates.SandboxNotificationEnvironment)
+		}, notificationtemplates.SandboxNotificationTemplateSetName)
 
 		// then
 		require.NoError(t, err)
@@ -212,7 +212,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template: "empty_subject",
 				Context:  notCtx,
 			},
-		}, notificationtemplates.SandboxNotificationEnvironment)
+		}, notificationtemplates.SandboxNotificationTemplateSetName)
 
 		// then
 		require.Error(t, err)
@@ -227,7 +227,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Template: "empty_content",
 				Context:  notCtx,
 			},
-		}, notificationtemplates.SandboxNotificationEnvironment)
+		}, notificationtemplates.SandboxNotificationTemplateSetName)
 
 		// then
 		require.Error(t, err)
@@ -244,7 +244,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 				Content:   "abc",
 				Context:   notCtx,
 			},
-		}, notificationtemplates.AppstudioNotificationEnvironment)
+		}, notificationtemplates.AppstudioNotificationTemplateSetName)
 
 		// then
 		require.NoError(t, err)

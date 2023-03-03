@@ -11,12 +11,12 @@ import (
 )
 
 const (
-	SandboxNotificationEnvironment   = "sandbox"
-	AppstudioNotificationEnvironment = "appstudio"
-	UserProvisionedTemplateName      = "userprovisioned"
-	UserDeactivatedTemplateName      = "userdeactivated"
-	UserDeactivatingTemplateName     = "userdeactivating"
-	IdlerTriggeredTemplateName       = "idlertriggered"
+	SandboxNotificationTemplateSetName   = "sandbox"
+	AppstudioNotificationTemplateSetName = "appstudio"
+	UserProvisionedTemplateName          = "userprovisioned"
+	UserDeactivatedTemplateName          = "userdeactivated"
+	UserDeactivatingTemplateName         = "userdeactivating"
+	IdlerTriggeredTemplateName           = "idlertriggered"
 )
 
 var notificationTemplates map[string]NotificationTemplate
@@ -30,8 +30,8 @@ type NotificationTemplate struct {
 
 // GetNotificationTemplate returns a notification subject, body and a boolean
 // indicating whether a template was found. Otherwise, an error will be returned
-func GetNotificationTemplate(name string, notificationEnvironment string) (*NotificationTemplate, bool, error) {
-	templates, err := loadTemplates(notificationEnvironment)
+func GetNotificationTemplate(name string, notificationTemplateSetName string) (*NotificationTemplate, bool, error) {
+	templates, err := loadTemplates(notificationTemplateSetName)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "unable to get notification templates")
 	}

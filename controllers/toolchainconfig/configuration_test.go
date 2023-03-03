@@ -36,7 +36,7 @@ func TestGetToolchainConfig(t *testing.T) {
 	t.Run("config object retrieved", func(t *testing.T) {
 		// given
 		commonconfig.ResetCache()
-		toolchainCfgObj := testconfig.NewToolchainConfigObj(t, testconfig.Environment("e2e-tests"), testconfig.Notifications().Secret().Ref("notifications-secret").MailgunAPIKey("mailgunAPIKey"), testconfig.Notifications().NotificationEnvironment("sandbox"))
+		toolchainCfgObj := testconfig.NewToolchainConfigObj(t, testconfig.Environment("e2e-tests"), testconfig.Notifications().Secret().Ref("notifications-secret").MailgunAPIKey("mailgunAPIKey"), testconfig.Notifications().NotificationTemplateSetName("sandbox"))
 		secret := test.CreateSecret("notifications-secret", test.HostOperatorNs, map[string][]byte{
 			"mailgunAPIKey": []byte("abc123"),
 		})
@@ -49,11 +49,11 @@ func TestGetToolchainConfig(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "e2e-tests", toolchainCfg.Environment())
 		assert.Equal(t, "abc123", toolchainCfg.Notifications().MailgunAPIKey())
-		assert.Equal(t, "sandbox", toolchainCfg.Notifications().NotificationEnvironment())
+		assert.Equal(t, "sandbox", toolchainCfg.Notifications().NotificationTemplateSetName())
 
 		t.Run("config object updated but cache not updated", func(t *testing.T) {
 			// given
-			obj := testconfig.ModifyToolchainConfigObj(t, cl, testconfig.Environment("unit-tests"), testconfig.Notifications().NotificationEnvironment("appstudio"))
+			obj := testconfig.ModifyToolchainConfigObj(t, cl, testconfig.Environment("unit-tests"), testconfig.Notifications().NotificationTemplateSetName("appstudio"))
 			err := cl.Update(context.TODO(), obj)
 			assert.NoError(t, err)
 
@@ -73,7 +73,7 @@ func TestGetToolchainConfig(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "e2e-tests", toolchainCfg.Environment()) // returns cached value
 			assert.Equal(t, "abc123", toolchainCfg.Notifications().MailgunAPIKey())
-			assert.Equal(t, "sandbox", toolchainCfg.Notifications().NotificationEnvironment())
+			assert.Equal(t, "sandbox", toolchainCfg.Notifications().NotificationTemplateSetName())
 		})
 	})
 
@@ -336,13 +336,13 @@ func TestNotifications(t *testing.T) {
 		assert.Empty(t, toolchainCfg.Notifications().MailgunReplyToEmail())
 		assert.Equal(t, "mailgun", toolchainCfg.Notifications().NotificationDeliveryService())
 		assert.Equal(t, 24*time.Hour, toolchainCfg.Notifications().DurationBeforeNotificationDeletion())
-		assert.Equal(t, "sandbox", toolchainCfg.Notifications().NotificationEnvironment()) //default notificationEnv
+		assert.Equal(t, "sandbox", toolchainCfg.Notifications().NotificationTemplateSetName()) //default notificationEnv
 	})
 	t.Run("non-default", func(t *testing.T) {
 		cfg := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.Notifications().
 				AdminEmail("joe.schmoe@redhat.com").
-				NotificationEnvironment("appstudio").
+				NotificationTemplateSetName("appstudio").
 				DurationBeforeNotificationDeletion("48h").
 				NotificationDeliveryService("mailknife").
 				Secret().
@@ -368,7 +368,7 @@ func TestNotifications(t *testing.T) {
 		assert.Equal(t, "devsandbox@redhat.com", toolchainCfg.Notifications().MailgunSenderEmail())
 		assert.Equal(t, "mailknife", toolchainCfg.Notifications().NotificationDeliveryService())
 		assert.Equal(t, 48*time.Hour, toolchainCfg.Notifications().DurationBeforeNotificationDeletion())
-		assert.Equal(t, "appstudio", toolchainCfg.Notifications().NotificationEnvironment())
+		assert.Equal(t, "appstudio", toolchainCfg.Notifications().NotificationTemplateSetName())
 	})
 
 	t.Run("edge case", func(t *testing.T) {

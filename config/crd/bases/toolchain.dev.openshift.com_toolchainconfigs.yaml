@@ -141,10 +141,12 @@ spec:
                         description: NotificationDeliveryService is notification delivery
                           service to use for notifications
                         type: string
-                      notificationEnvironment:
-                        description: 'NotificationEnvironment is to distinguish the
-                          cluster environment being run in, eg: whether it is for
-                          sandbox or stonesoup'
+                      notificationTemplateSetName:
+                        description: NotificationTemplateSetName defines the set of
+                          notification templates. Different Sandbox instances can
+                          use different notification templates. For example Dev Sandbox
+                          and AppStudio instances use different templates. By default,
+                          the "sandbox" template set name is used.
                         type: string
                       secret:
                         description: Defines all secrets related to notification configuration

@@ -15,7 +15,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("get userdeactivated notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate("userdeactivated", SandboxNotificationEnvironment)
+			template, found, err := GetNotificationTemplate("userdeactivated", SandboxNotificationTemplateSetName)
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -26,7 +26,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("get userprovisioned notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate("userprovisioned", SandboxNotificationEnvironment)
+			template, found, err := GetNotificationTemplate("userprovisioned", SandboxNotificationTemplateSetName)
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -37,7 +37,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("ensure cache is used", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			_, _, err := GetNotificationTemplate("userprovisioned", SandboxNotificationEnvironment)
+			_, _, err := GetNotificationTemplate("userprovisioned", SandboxNotificationTemplateSetName)
 			require.NoError(t, err)
 			template, err := loadTemplates("sandbox")
 			// then
@@ -51,7 +51,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("get userdeactivating notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate("userdeactivating", SandboxNotificationEnvironment)
+			template, found, err := GetNotificationTemplate("userdeactivating", SandboxNotificationTemplateSetName)
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -64,7 +64,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("get idlertriggered notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate("idlertriggered", SandboxNotificationEnvironment)
+			template, found, err := GetNotificationTemplate("idlertriggered", SandboxNotificationTemplateSetName)
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
@@ -79,7 +79,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("get userprovisioned notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate(UserProvisionedTemplateName, AppstudioNotificationEnvironment)
+			template, found, err := GetNotificationTemplate(UserProvisionedTemplateName, AppstudioNotificationTemplateSetName)
 			// then
 			require.NoError(t, err)
 			assert.True(t, found)
@@ -92,7 +92,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("get userdeactivating notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate(UserDeactivatingTemplateName, AppstudioNotificationEnvironment)
+			template, found, err := GetNotificationTemplate(UserDeactivatingTemplateName, AppstudioNotificationTemplateSetName)
 			// then
 			require.NoError(t, err)
 			assert.True(t, found)
@@ -105,7 +105,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("get userdeactivated notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate(UserDeactivatedTemplateName, AppstudioNotificationEnvironment)
+			template, found, err := GetNotificationTemplate(UserDeactivatedTemplateName, AppstudioNotificationTemplateSetName)
 			// then
 			require.NoError(t, err)
 			assert.True(t, found)
@@ -118,7 +118,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 		t.Run("get idlertriggered notification template", func(t *testing.T) {
 			// when
 			defer resetNotificationTemplateCache()
-			template, found, err := GetNotificationTemplate(IdlerTriggeredTemplateName, AppstudioNotificationEnvironment)
+			template, found, err := GetNotificationTemplate(IdlerTriggeredTemplateName, AppstudioNotificationTemplateSetName)
 			// then
 			require.NoError(t, err)
 			assert.True(t, found)
@@ -149,7 +149,7 @@ func TestTemplatesForAssets(t *testing.T) {
 			// given
 			defer resetNotificationTemplateCache()
 			// when
-			template, err := templatesForAssets(fakeTemplates, "testTemplates", SandboxNotificationEnvironment)
+			template, err := templatesForAssets(fakeTemplates, "testTemplates", SandboxNotificationTemplateSetName)
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
@@ -159,7 +159,7 @@ func TestTemplatesForAssets(t *testing.T) {
 			// given
 			defer resetNotificationTemplateCache()
 			// when
-			template, err := templatesForAssets(fakeTemplates, "testTemplates", AppstudioNotificationEnvironment)
+			template, err := templatesForAssets(fakeTemplates, "testTemplates", AppstudioNotificationTemplateSetName)
 			// then
 			require.Error(t, err)
 			assert.Nil(t, template)
