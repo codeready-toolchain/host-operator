@@ -74,13 +74,9 @@ func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha
 	var subject, body string
 
 	if notification.Spec.Template != "" {
-		template, found, err := s.base.TemplateLoader.GetNotificationTemplate(notification.Spec.Template, notificationTemplateSetName)
+		template, err := s.base.TemplateLoader.GetNotificationTemplate(notification.Spec.Template, notificationTemplateSetName)
 		if err != nil {
 			return err
-		}
-
-		if !found {
-			return fmt.Errorf("notification template [%s] not found", notification.Spec.Template)
 		}
 
 		// Copy the context to a local variable, we will add some more values to it here

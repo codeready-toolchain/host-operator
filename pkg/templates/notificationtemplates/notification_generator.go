@@ -17,6 +17,7 @@ const (
 	UserDeactivatedTemplateName          = "userdeactivated"
 	UserDeactivatingTemplateName         = "userdeactivating"
 	IdlerTriggeredTemplateName           = "idlertriggered"
+	rootDirectory                        = "templates/notificationtemplates"
 )
 
 var notificationTemplates map[string]NotificationTemplate
@@ -28,15 +29,19 @@ type NotificationTemplate struct {
 	Name    string
 }
 
-// GetNotificationTemplate returns a notification subject, body and a boolean
-// indicating whether a template was found. Otherwise, an error will be returned
-func GetNotificationTemplate(name string, notificationTemplateSetName string) (*NotificationTemplate, bool, error) {
+// GetNotificationTemplate returns a NotificationTemplate with the given name for the specified notificationTemplateSetName. An error will be returned if such a template is not found or there is an error in loading templates.
+// This function expects the templates to be organized under rootDirectory as rootDirectory/notificationTemplateSetName/templateName/notification.html and rootDirectory/notificationTemplateSetName/templateName/subject.txt
+// making the function dependent on the path length.
+func GetNotificationTemplate(name string, notificationTemplateSetName string) (*NotificationTemplate, error) {
 	templates, err := loadTemplates(notificationTemplateSetName)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "unable to get notification templates")
+		return nil, errors.Wrap(err, "unable to get notification templates")
 	}
 	template, found := templates[name]
-	return &template, found, nil
+	if !found {
+		return &template, fmt.Errorf("notification template %v not found in %v", name, notificationTemplateSetName)
+	}
+	return &template, nil
 }
 
 func templatesForAssets(efs embed.FS, root string, env string) (map[string]NotificationTemplate, error) {
@@ -82,7 +87,7 @@ func loadTemplates(env string) (map[string]NotificationTemplate, error) {
 		return notificationTemplates, nil
 	}
 
-	return templatesForAssets(deploy.NotificationTemplateFS, "templates/notificationtemplates", env)
+	return templatesForAssets(deploy.NotificationTemplateFS, rootDirectory, env)
 }
 
 func getAllFilenames(efs *embed.FS, root string, env string) (files []string, err error) {

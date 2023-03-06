@@ -62,12 +62,12 @@ type MockTemplateLoader struct {
 	templates map[string]*notificationtemplates.NotificationTemplate
 }
 
-func (l *MockTemplateLoader) GetNotificationTemplate(name string, notificationTemplateSetName string) (*notificationtemplates.NotificationTemplate, bool, error) {
+func (l *MockTemplateLoader) GetNotificationTemplate(name string, notificationTemplateSetName string) (*notificationtemplates.NotificationTemplate, error) {
 	template := l.templates[name]
 	if template != nil {
-		return template, true, nil
+		return template, nil
 	}
-	return nil, false, errors.New("template not found")
+	return nil, errors.New("template not found")
 }
 
 func NewMockTemplateLoader(templates ...*notificationtemplates.NotificationTemplate) TemplateLoader {
