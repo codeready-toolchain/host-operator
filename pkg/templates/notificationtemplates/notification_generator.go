@@ -90,13 +90,13 @@ func loadTemplates(env string) (map[string]NotificationTemplate, error) {
 	return templatesForAssets(deploy.NotificationTemplateFS, rootDirectory, env)
 }
 
-func getAllFilenames(efs *embed.FS, root string, env string) (files []string, err error) {
+func getAllFilenames(notificationFS *embed.FS, root string, setName string) (files []string, err error) {
 
-	if err := fs.WalkDir(efs, root, func(path string, d fs.DirEntry, err error) error {
+	if err := fs.WalkDir(notificationFS, root, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
 		}
-		if strings.Contains(path, env) {
+		if strings.Contains(path, setName) {
 			files = append(files, path)
 		}
 
