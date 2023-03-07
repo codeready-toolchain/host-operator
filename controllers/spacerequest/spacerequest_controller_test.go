@@ -94,7 +94,7 @@ func requestFor(s *toolchainv1alpha1.SpaceRequest) reconcile.Request {
 	}
 	return reconcile.Request{
 		NamespacedName: types.NamespacedName{
-			Namespace: "john-tenant"
+			Namespace: "john-tenant",
 			Name:      "unknown",
 		},
 	}
