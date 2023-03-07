@@ -1,0 +1,110 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: proxyplugins.toolchain.dev.openshift.com
+spec:
+  group: toolchain.dev.openshift.com
+  names:
+    kind: ProxyPlugin
+    listKind: ProxyPluginList
+    plural: proxyplugins
+    singular: proxyplugin
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].reason
+      name: Reason
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: 'ProxyPlugin represents the configuration to handle GET''s to
+          k8s services in member clusters that first route through the registration
+          service running in the sandbox host cluster.  Two forms of URL are supported:
+          https://<proxy-host>/plugins/<ProxyPlugin.ObjectMeta.Name>/v1alpha2/<namespace-name>/
+          https://<proxy-host>/plugins/<ProxyPlugin.ObjectMeta.Name>/workspaces/<workspace-name>/v1alpha2/<namespace-name>'
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ProxyPluginSpec defines the desired state of ProxyPlugin
+            properties:
+              openShiftRouteTargetEndpoint:
+                description: OpenShiftRouteTargetEndpoint is an optional field that
+                  represents the look up information for an OpenShift Route as the
+                  endpoint for the registration service to proxy requests to that
+                  have the https://<proxy-host>/plugins/<ProxyPlugin.ObjectMeta.Name>
+                  in its incoming URL.  As we add more types besides OpenShift Routes,
+                  we will add more optional fields to this spec object
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                required:
+                - name
+                - namespace
+                type: object
+            type: object
+          status:
+            description: ProxyPluginStatus defines the observed state of ProxyPlugin
+            properties:
+              conditions:
+                description: 'Conditions is an array of current Proxy Plugin conditions
+                  Supported condition types: ConditionReady'
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transit from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdatedTime:
+                      description: Last time the condition was updated
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        last transition.
+                      type: string
+                    reason:
+                      description: (brief) reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            type: object
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+    served: true
+    storage: true
+    subresources:
+      status: {}

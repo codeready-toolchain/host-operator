@@ -340,7 +340,10 @@ func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1a
 			}
 			nsTmplSet = NewNSTemplateSet(memberCluster.OperatorNamespace, space, spaceBindings.Items, tmplTier)
 			if err := memberCluster.Client.Create(context.TODO(), nsTmplSet); err != nil {
-				logger.Error(err, "failed to create NSTemplateSet on target member cluster")
+				if errors.IsAlreadyExists(err) {
+					// requeue, there's probably a race condition between the host client cache and the member cluster state
+					return nsTmplSet, requeueDelay, nil
+				}
 				return nsTmplSet, norequeue, r.setStatusNSTemplateSetCreationFailed(logger, space, err)
 			}
 			logger.Info("NSTemplateSet created on target member cluster")
