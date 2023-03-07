@@ -80,7 +80,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, template)
 			assert.Equal(t, "Welcome to Red Hat CI/CD!", template.Subject)
-			assert.Contains(t, template.Content, "Welcome to Red Hat CI/CD! Red Hat CI/CD saves you weeks of time by automating the onboarding process for containerized apps with CI/CD. It also offers granular customization for pipelines, once they are running.")
+			assert.Contains(t, template.Content, "Welcome to Red Hat CI/CD! This new platform saves you weeks of time by automating the onboarding process for containerized apps with CI/CD. It also offers granular customization for build pipelines. And it provides unparalleled security for your software supply chain.")
 			assert.NotContains(t, template.Content, "Sandbox")
 			assert.Equal(t, UserProvisionedTemplateName, template.Name)
 		})
