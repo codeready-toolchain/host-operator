@@ -2,11 +2,9 @@ package spacerequest
 
 import (
 	"context"
-	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
-	"github.com/codeready-toolchain/host-operator/pkg/mapper"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,11 +16,9 @@ import (
 
 // Reconciler reconciles a SpaceRequest object
 type Reconciler struct {
-	Client              client.Client
-	Namespace           string
-	MemberClusters      map[string]cluster.Cluster
-	NextScheduledUpdate time.Time
-	LastExecutedUpdate  time.Time
+	Client         client.Client
+	Namespace      string
+	MemberClusters map[string]cluster.Cluster
 }
 
 // SetupWithManager sets up the controller reconciler with the Manager and the given member clusters.
@@ -36,7 +32,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 	for _, memberCluster := range memberClusters {
 		b = b.Watches(
 			source.NewKindWithCache(&toolchainv1alpha1.SpaceRequest{}, memberCluster.Cache),
-			handler.EnqueueRequestsFromMapFunc(mapper.MapByResourceName("")),
+			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		)
 	}
