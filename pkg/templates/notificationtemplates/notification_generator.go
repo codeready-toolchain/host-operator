@@ -44,17 +44,17 @@ func GetNotificationTemplate(name string, notificationTemplateSetName string) (*
 	return &template, nil
 }
 
-func templatesForAssets(efs embed.FS, root string, env string) (map[string]NotificationTemplate, error) {
-	paths, err := getAllFilenames(&efs, root, env)
+func templatesForAssets(notificationFS embed.FS, root string, setName string) (map[string]NotificationTemplate, error) {
+	paths, err := getAllFilenames(&notificationFS, root, setName)
 	if err != nil {
 		return nil, err
 	}
 	if len(paths) == 0 {
-		return nil, fmt.Errorf("Could not find any emails templates for the environment %v", env)
+		return nil, fmt.Errorf("Could not find any emails templates for the environment %v", setName)
 	}
 	notificationTemplates = make(map[string]NotificationTemplate)
 	for _, path := range paths {
-		content, err := efs.ReadFile(path)
+		content, err := notificationFS.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}
@@ -82,12 +82,12 @@ func templatesForAssets(efs embed.FS, root string, env string) (map[string]Notif
 	return notificationTemplates, nil
 }
 
-func loadTemplates(env string) (map[string]NotificationTemplate, error) {
+func loadTemplates(setName string) (map[string]NotificationTemplate, error) {
 	if notificationTemplates != nil {
 		return notificationTemplates, nil
 	}
 
-	return templatesForAssets(deploy.NotificationTemplateFS, rootDirectory, env)
+	return templatesForAssets(deploy.NotificationTemplateFS, rootDirectory, setName)
 }
 
 func getAllFilenames(notificationFS *embed.FS, root string, setName string) (files []string, err error) {
