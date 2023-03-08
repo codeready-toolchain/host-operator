@@ -85,6 +85,11 @@ spec:
       kind: ProxyPlugin
       name: proxyplugins.toolchain.dev.openshift.com
       version: v1alpha1
+    - description: SpaceRequest allows to request creation of a Space
+      displayName: Space Request
+      kind: SpaceRequest
+      name: spacerequests.toolchain.dev.openshift.com
+      version: v1alpha1
   description: Toolchain Host Operator
   displayName: Toolchain Host Operator
   icon:
