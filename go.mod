@@ -109,6 +109,6 @@ require (
 go 1.18
 
 replace (
-	github.com/codeready-toolchain/api v0.0.0-20230222193913-dcab91c2e81f => github.com/ranakan19/api v0.0.0-20230308200132-2d0bcc2affee
+	github.com/codeready-toolchain/api v0.0.0-20230308135744-bc6b31f307cd => github.com/ranakan19/api v0.0.0-20230308200132-2d0bcc2affee
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20230217033022-295cba634c6d => github.com/ranakan19/toolchain-common v0.0.0-20230308200748-d352600a1c23
 )
