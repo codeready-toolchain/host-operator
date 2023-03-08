@@ -37,7 +37,7 @@ import (
 type MockDeliveryService struct {
 }
 
-func (s *MockDeliveryService) Send(notification *toolchainv1alpha1.Notification, notificationTemplateSetName string) error {
+func (s *MockDeliveryService) Send(notification *toolchainv1alpha1.Notification, templateSetName string) error {
 	return errors.New("delivery error")
 }
 

@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	SandboxNotificationTemplateSetName   = "sandbox"
-	AppstudioNotificationTemplateSetName = "appstudio"
-	UserProvisionedTemplateName          = "userprovisioned"
-	UserDeactivatedTemplateName          = "userdeactivated"
-	UserDeactivatingTemplateName         = "userdeactivating"
-	IdlerTriggeredTemplateName           = "idlertriggered"
-	rootDirectory                        = "templates/notificationtemplates"
+	SandboxTemplateSetName       = "sandbox"
+	AppstudioTemplateSetName     = "appstudio"
+	UserProvisionedTemplateName  = "userprovisioned"
+	UserDeactivatedTemplateName  = "userdeactivated"
+	UserDeactivatingTemplateName = "userdeactivating"
+	IdlerTriggeredTemplateName   = "idlertriggered"
+	rootDirectory                = "templates/notificationtemplates"
 )
 
 var notificationTemplates map[string]NotificationTemplate
@@ -29,17 +29,17 @@ type NotificationTemplate struct {
 	Name    string
 }
 
-// GetNotificationTemplate returns a NotificationTemplate with the given name for the specified notificationTemplateSetName. An error will be returned if such a template is not found or there is an error in loading templates.
-// This function expects the templates to be organized under rootDirectory as rootDirectory/notificationTemplateSetName/templateName/notification.html and rootDirectory/notificationTemplateSetName/templateName/subject.txt
+// GetNotificationTemplate returns a NotificationTemplate with the given name for the specified templateSetName. An error will be returned if such a template is not found or there is an error in loading templates.
+// This function expects the templates to be organized under rootDirectory as rootDirectory/templateSetName/templateName/notification.html and rootDirectory/templateSetName/templateName/subject.txt
 // making the function dependent on the path length.
-func GetNotificationTemplate(name string, notificationTemplateSetName string) (*NotificationTemplate, error) {
-	templates, err := loadTemplates(notificationTemplateSetName)
+func GetNotificationTemplate(name string, templateSetName string) (*NotificationTemplate, error) {
+	templates, err := loadTemplates(templateSetName)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get notification templates")
 	}
 	template, found := templates[name]
 	if !found {
-		return &template, fmt.Errorf("notification template %v not found in %v", name, notificationTemplateSetName)
+		return &template, fmt.Errorf("notification template %v not found in %v", name, templateSetName)
 	}
 	return &template, nil
 }

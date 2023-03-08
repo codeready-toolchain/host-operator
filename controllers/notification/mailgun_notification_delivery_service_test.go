@@ -72,7 +72,7 @@ func TestMailgunNotificationDeliveryService(t *testing.T) {
 			Name:    "empty_content",
 		})
 
-	for _, setName := range []string{notificationtemplates.SandboxNotificationTemplateSetName, notificationtemplates.AppstudioNotificationTemplateSetName} {
+	for _, setName := range []string{notificationtemplates.SandboxTemplateSetName, notificationtemplates.AppstudioTemplateSetName} {
 
 		t.Run("test mailgun notification delivery service send", func(t *testing.T) {
 			// when

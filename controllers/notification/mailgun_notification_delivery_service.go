@@ -69,12 +69,12 @@ func NewMailgunNotificationDeliveryService(config DeliveryServiceFactoryConfig, 
 	}
 }
 
-func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha1.Notification, notificationTemplateSetName string) error {
+func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha1.Notification, templateSetName string) error {
 
 	var subject, body string
 
 	if notification.Spec.Template != "" {
-		template, err := s.base.TemplateLoader.GetNotificationTemplate(notification.Spec.Template, notificationTemplateSetName)
+		template, err := s.base.TemplateLoader.GetNotificationTemplate(notification.Spec.Template, templateSetName)
 		if err != nil {
 			return err
 		}

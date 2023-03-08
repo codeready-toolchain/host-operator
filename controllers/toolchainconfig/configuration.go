@@ -203,8 +203,8 @@ func (n NotificationsConfig) AdminEmail() string {
 	return commonconfig.GetString(n.c.AdminEmail, "")
 }
 
-func (n NotificationsConfig) NotificationTemplateSetName() string {
-	return commonconfig.GetString(n.c.NotificationTemplateSetName, "sandbox")
+func (n NotificationsConfig) TemplateSetName() string {
+	return commonconfig.GetString(n.c.TemplateSetName, "sandbox")
 }
 
 func (n NotificationsConfig) MailgunDomain() string {
