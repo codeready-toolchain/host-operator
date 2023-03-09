@@ -443,6 +443,18 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 								counter.IncrementSpaceCount(log.Log, "member2")
 								member2CurrentCount++
+
+								// and when calling it with the other cluster as preferred
+								clusterName, err = clusterBalancer.GetOptimalTargetCluster(
+									capacity.OptimalTargetClusterFilter{
+										ToolchainStatusNamespace: HostOperatorNs,
+										PreferredCluster:         "member3",
+									},
+								)
+
+								// then it should return the preferred one, but it shouldn't have any effect on the "balancing and batching" logic in the following iteration.
+								require.NoError(t, err)
+								assert.Equal(t, "member3", clusterName)
 							})
 						}
 
@@ -469,6 +481,18 @@ func TestGetOptimalTargetClusterInBatchesBy50WhenTwoClusterHaveTheSameUsage(t *t
 
 								counter.IncrementSpaceCount(log.Log, "member3")
 								member3CurrentCount++
+
+								// and when calling it with the other cluster as preferred
+								clusterName, err = clusterBalancer.GetOptimalTargetCluster(
+									capacity.OptimalTargetClusterFilter{
+										ToolchainStatusNamespace: HostOperatorNs,
+										PreferredCluster:         "member2",
+									},
+								)
+
+								// then it should return the preferred one, but it shouldn't have any effect on the "balancing and batching" logic in the following iteration.
+								require.NoError(t, err)
+								assert.Equal(t, "member2", clusterName)
 							})
 						}
 
