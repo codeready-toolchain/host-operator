@@ -1,18 +1,26 @@
 package notificationtemplates
 
 import (
+	"embed"
+	"fmt"
+	"io/fs"
 	"strings"
 
-	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
-
+	"github.com/codeready-toolchain/host-operator/deploy"
 	"github.com/pkg/errors"
 )
 
+const (
+	SandboxTemplateSetName       = "sandbox"
+	AppstudioTemplateSetName     = "appstudio"
+	UserProvisionedTemplateName  = "userprovisioned"
+	UserDeactivatedTemplateName  = "userdeactivated"
+	UserDeactivatingTemplateName = "userdeactivating"
+	IdlerTriggeredTemplateName   = "idlertriggered"
+	rootDirectory                = "templates/notificationtemplates"
+)
+
 var notificationTemplates map[string]NotificationTemplate
-var UserProvisioned, _, _ = GetNotificationTemplate("userprovisioned")
-var UserDeactivated, _, _ = GetNotificationTemplate("userdeactivated")
-var UserDeactivating, _, _ = GetNotificationTemplate("userdeactivating")
-var IdlerTriggered, _, _ = GetNotificationTemplate("idlertriggered")
 
 // NotificationTemplate contains the template subject and content
 type NotificationTemplate struct {
@@ -21,31 +29,41 @@ type NotificationTemplate struct {
 	Name    string
 }
 
-// GetNotificationTemplate returns a notification subject, body and a boolean
-// indicating whether or not a template was found. Otherwise, an error will be returned
-func GetNotificationTemplate(name string) (*NotificationTemplate, bool, error) {
-	templates, err := loadTemplates()
+// GetNotificationTemplate returns a NotificationTemplate with the given name for the specified templateSetName. An error will be returned if such a template is not found or there is an error in loading templates.
+// This function expects the templates to be organized under rootDirectory as rootDirectory/templateSetName/templateName/notification.html and rootDirectory/templateSetName/templateName/subject.txt
+// making the function dependent on the path length.
+func GetNotificationTemplate(name string, templateSetName string) (*NotificationTemplate, error) {
+	templates, err := loadTemplates(templateSetName)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "unable to get notification templates")
+		return nil, errors.Wrap(err, "unable to get notification templates")
 	}
 	template, found := templates[name]
-	return &template, found, nil
+	if !found {
+		return &template, fmt.Errorf("notification template %v not found in %v", name, templateSetName)
+	}
+	return &template, nil
 }
 
-func templatesForAssets(assets assets.Assets) (map[string]NotificationTemplate, error) {
-	paths := assets.Names()
+func templatesForAssets(notificationFS embed.FS, root string, setName string) (map[string]NotificationTemplate, error) {
+	paths, err := getAllFilenames(&notificationFS, root, setName)
+	if err != nil {
+		return nil, err
+	}
+	if len(paths) == 0 {
+		return nil, fmt.Errorf("Could not find any emails templates for the environment %v", setName)
+	}
 	notificationTemplates = make(map[string]NotificationTemplate)
 	for _, path := range paths {
-		content, err := assets.Asset(path)
+		content, err := notificationFS.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}
 		segments := strings.Split(path, "/")
-		if len(segments) != 2 {
+		if len(segments) != 5 {
 			return nil, errors.Wrapf(errors.New("path must contain directory and file"), "unable to load templates")
 		}
-		directoryName := segments[0]
-		filename := segments[1]
+		directoryName := segments[3]
+		filename := segments[4]
 
 		template := notificationTemplates[directoryName]
 		template.Name = directoryName
@@ -64,9 +82,28 @@ func templatesForAssets(assets assets.Assets) (map[string]NotificationTemplate, 
 	return notificationTemplates, nil
 }
 
-func loadTemplates() (map[string]NotificationTemplate, error) {
+func loadTemplates(setName string) (map[string]NotificationTemplate, error) {
 	if notificationTemplates != nil {
 		return notificationTemplates, nil
 	}
-	return templatesForAssets(assets.NewAssets(AssetNames, Asset))
+
+	return templatesForAssets(deploy.NotificationTemplateFS, rootDirectory, setName)
+}
+
+func getAllFilenames(notificationFS *embed.FS, root string, setName string) (files []string, err error) {
+
+	if err := fs.WalkDir(notificationFS, root, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		if strings.Contains(path, setName) {
+			files = append(files, path)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return files, nil
 }

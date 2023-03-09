@@ -18,17 +18,17 @@ type notificationDeliveryServiceConfig interface {
 }
 
 type TemplateLoader interface {
-	GetNotificationTemplate(name string) (*notificationtemplates.NotificationTemplate, bool, error)
+	GetNotificationTemplate(name string, templateSetName string) (*notificationtemplates.NotificationTemplate, error)
 }
 
 type DefaultTemplateLoader struct{}
 
-func (l *DefaultTemplateLoader) GetNotificationTemplate(name string) (*notificationtemplates.NotificationTemplate, bool, error) {
-	return notificationtemplates.GetNotificationTemplate(name)
+func (l *DefaultTemplateLoader) GetNotificationTemplate(name string, templateSetName string) (*notificationtemplates.NotificationTemplate, error) {
+	return notificationtemplates.GetNotificationTemplate(name, templateSetName)
 }
 
 type DeliveryService interface {
-	Send(notification *toolchainv1alpha1.Notification) error
+	Send(notification *toolchainv1alpha1.Notification, templateSetName string) error
 }
 
 type DeliveryServiceFactory struct {

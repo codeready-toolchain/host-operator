@@ -69,18 +69,14 @@ func NewMailgunNotificationDeliveryService(config DeliveryServiceFactoryConfig, 
 	}
 }
 
-func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha1.Notification) error {
+func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha1.Notification, templateSetName string) error {
 
 	var subject, body string
 
 	if notification.Spec.Template != "" {
-		template, found, err := s.base.TemplateLoader.GetNotificationTemplate(notification.Spec.Template)
+		template, err := s.base.TemplateLoader.GetNotificationTemplate(notification.Spec.Template, templateSetName)
 		if err != nil {
 			return err
-		}
-
-		if !found {
-			return fmt.Errorf("notification template [%s] not found", notification.Spec.Template)
 		}
 
 		// Copy the context to a local variable, we will add some more values to it here
@@ -107,7 +103,7 @@ func (s *MailgunNotificationDeliveryService) Send(notification *toolchainv1alpha
 		body = notification.Spec.Content
 	}
 
-	if subject == "" && body == "" {
+	if subject == "" || body == "" {
 		return fmt.Errorf("no subject or body specified for notification")
 	}
 
