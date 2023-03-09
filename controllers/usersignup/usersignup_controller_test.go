@@ -2324,7 +2324,7 @@ func TestUserSignupFailedToCreateDeactivationNotification(t *testing.T) {
 
 		// then
 		require.Error(t, err)
-		require.Equal(t, "Failed to create user deactivation notification: unable to create deactivation notification", err.Error())
+		require.Equal(t, "failed to create user deactivation notification: unable to create deactivation notification", err.Error())
 
 		// Lookup the UserSignup
 		err = r.Client.Get(context.TODO(), key, userSignup)
@@ -4185,7 +4185,7 @@ func TestUserSignupLastTargetClusterAnnotation(t *testing.T) {
 		res, err := r.Reconcile(context.TODO(), req)
 
 		// then
-		require.EqualError(t, err, "unable to update last target cluster annotation on UserSignup resource: error")
+		require.EqualError(t, err, "some error")
 		assert.False(t, res.Requeue)
 		AssertThatUserSignup(t, req.Namespace, userSignupName, cl).
 			HasNoAnnotation(toolchainv1alpha1.UserSignupLastTargetClusterAnnotationKey)

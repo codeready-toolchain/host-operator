@@ -1,15 +1,14 @@
 package deactivation
 
 import (
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"testing"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/stretchr/testify/require"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
