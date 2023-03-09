@@ -37,6 +37,7 @@ objects:
           - spaces
           - toolchainconfigs
           - toolchainstatuses
+          - proxyplugins
         verbs:
           - get
           - list
