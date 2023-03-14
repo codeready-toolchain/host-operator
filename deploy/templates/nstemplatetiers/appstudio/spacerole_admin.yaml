@@ -158,6 +158,12 @@ objects:
     - watch
     - update
     - patch
+  - apiGroups:
+    - authorization.k8s.io
+    resources:
+    - selfsubjectaccessreview
+    verbs:
+    - create
 
 # RoleBinding that grants limited CRUD permissions to the User
 - apiVersion: rbac.authorization.k8s.io/v1
