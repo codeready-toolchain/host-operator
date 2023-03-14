@@ -45,6 +45,16 @@ objects:
   - apiGroups:
     - appstudio.redhat.com
     resources:
+    - deploymenttargets
+    - deploymenttargetclaims
+    - deploymenttargetclasses
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
     - enterprisecontractpolicies
     - integrationtestscenarios
     - releases
