@@ -161,7 +161,7 @@ objects:
   - apiGroups:
     - authorization.k8s.io
     resources:
-    - selfsubjectaccessreview
+    - selfsubjectaccessreviews
     verbs:
     - create
 
