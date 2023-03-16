@@ -37,8 +37,8 @@ objects:
   spec:
     quota:
       hard:
-        count/ingresses.extensions: "10"
-        count/routes.route.openshift.io: "10"
+        count/ingresses.extensions: "30"
+        count/routes.route.openshift.io: "30"
     selector:
       annotations:
         openshift.io/requester: ${USERNAME}
