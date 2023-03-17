@@ -139,7 +139,7 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, memberCluster cluster.Clus
 		logger.Info("adding finalizer on SpaceRequest")
 		util.AddFinalizer(spaceRequest, toolchainv1alpha1.FinalizerName)
 		if err := memberCluster.Client.Update(context.TODO(), spaceRequest); err != nil {
-			return err
+			return errs.Wrap(err, "error while adding finalizer")
 		}
 	}
 	return nil
@@ -252,7 +252,7 @@ func (r *Reconciler) updateSubSpace(logger logr.Logger, subSpace toolchainv1alph
 	subSpace.Spec.TargetClusterRoles = spaceRequest.Spec.TargetClusterRoles
 	err := r.Client.Update(context.TODO(), &subSpace)
 	if err != nil {
-		return false, errs.Wrap(err, "unable to create space")
+		return false, errs.Wrap(err, "unable to update tiername and targetclusterroles")
 	}
 
 	logger.Info("subSpace updated", "name", subSpace.Name, "target_cluster_roles", subSpace.Spec.TargetClusterRoles, "tierName", subSpace.Spec.TierName)

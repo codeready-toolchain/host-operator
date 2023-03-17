@@ -38,11 +38,10 @@ func TestCreateSpaceRequest(t *testing.T) {
 		srNamespace := newNamespace("jane", "tenant")
 		srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
 		sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(), spacerequesttest.WithTierName("appstudio"), spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-		clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
 		parentSpace := spacetest.NewSpace("jane",
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithCondition(spacetest.Ready()))
-		member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+		member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 		hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
 		ctrl := newReconciler(hostClient, member1)
 
@@ -67,7 +66,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasParentSpace("jane") // the parent space is set as expected
 		})
 
-		t.Run("space is not ready", func(t *testing.T) {
+		t.Run("space exists but is not ready yet", func(t *testing.T) {
 			// given
 			subSpace := spacetest.NewSpace("jane-subs",
 				spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, sr.GetName()), // subSpace belongs to spaceRequest
@@ -95,7 +94,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
 				Exists().
 				HasSpecTargetClusterRoles(srClusterRoles).
-				HasConditions(spacetest.Provisioning()). // condition is reflected from space status
+				HasConditions(spacetest.Provisioning()).
 				HasTier(sr.Spec.TierName).
 				HasParentSpace("jane") // the parent space is set as expected
 		})
@@ -133,12 +132,36 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasTier(sr.Spec.TierName).
 				HasParentSpace("jane") // the parent space is set as expected
 		})
+
+		t.Run("spacerequest created on member2", func(t *testing.T) {
+			// when
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-2", corev1.ConditionTrue) // space request and namespace are on member2
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
+			ctrl := newReconciler(hostClient, member1, member2)
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.NoError(t, err)
+			assert.True(t, res.Requeue) // requeue while space is still provisioning
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member2.Client).
+				Exists().
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasConditions(spacetest.Provisioning()).
+				HasFinalizer()
+			// a subspace is created with the tierName and cluster roles from the spacerequests
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
+				Exists().
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasTier(sr.Spec.TierName).
+				HasParentSpace("jane") // the parent space is set as expected
+		})
 	})
 
 	t.Run("failure", func(t *testing.T) {
 		t.Run("unable to find SpaceRequest", func(t *testing.T) {
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
-			member1 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -149,11 +172,10 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// space request should not be there
 			require.EqualError(t, err, "unable to find SpaceRequest: spacerequests.toolchain.dev.openshift.com \"unknown\" not found")
 		})
-		t.Run("unable to find SpaceRequest", func(t *testing.T) {
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
+		t.Run("unable to get SpaceRequest", func(t *testing.T) {
 			member1Client := test.NewFakeClient(t)
 			member1Client.MockGet = mockGetSpaceRequestFail(member1Client)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -169,10 +191,9 @@ func TestCreateSpaceRequest(t *testing.T) {
 			srNamespace := newNamespace("jane", "tenant")
 			srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
 			sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(), spacerequesttest.WithTierName("appstudio"), spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
 			member1Client := test.NewFakeClient(t, sr)
 			member1Client.MockUpdate = mockUpdateSpaceRequestFail(member1Client)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -181,15 +202,14 @@ func TestCreateSpaceRequest(t *testing.T) {
 
 			// then
 			// space request should not be there
-			require.EqualError(t, err, "mock error")
+			require.EqualError(t, err, "error while adding finalizer: mock error")
 		})
 		t.Run("unable to get parent space name", func(t *testing.T) {
 			// given
 			srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
 			sr := spacerequesttest.NewSpaceRequest("jane", "unknown-namespace", spacerequesttest.WithTierName("appstudio"), spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
 			member1Client := test.NewFakeClient(t, sr)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -202,12 +222,11 @@ func TestCreateSpaceRequest(t *testing.T) {
 		})
 		t.Run("unable to find owner label in spaceRequest namespace", func(t *testing.T) {
 			// given
-			srNamespace := newNamespace("", "tenant")
+			srNamespace := newNamespace("noowner", "tenant")
 			srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
 			sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(), spacerequesttest.WithTierName("appstudio"), spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -216,7 +235,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 
 			// then
 			// space request should not be there
-			require.EqualError(t, err, "unable to find owner label toolchain.dev.openshift.com/owner on namespace -tenant")
+			require.EqualError(t, err, "unable to find owner label toolchain.dev.openshift.com/owner on namespace noowner-tenant")
 		})
 
 		t.Run("unable to create space since it's being deleted", func(t *testing.T) {
@@ -224,8 +243,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			srNamespace := newNamespace("jane", "tenant")
 			srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
 			sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(), spacerequesttest.WithTierName("appstudio"), spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
-			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			parentSpace := spacetest.NewSpace("jane",
 				spacetest.WithCondition(spacetest.Ready()))
 			subSpace := spacetest.NewSpace("jane-subs",
@@ -249,14 +267,12 @@ func TestCreateSpaceRequest(t *testing.T) {
 			srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
 			parentSpace := spacetest.NewSpace("jane",
 				spacetest.WithCondition(spacetest.Ready()))
-			// the tier doesn't exist
 			sr := spacerequesttest.NewSpaceRequest("jane",
 				srNamespace.GetName(),
-				spacerequesttest.WithTierName("unknown"),
+				spacerequesttest.WithTierName("unknown"), // this tier doesn't exist
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -277,9 +293,8 @@ func TestCreateSpaceRequest(t *testing.T) {
 				srNamespace.GetName(),
 				spacerequesttest.WithTierName(""),
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -302,9 +317,8 @@ func TestCreateSpaceRequest(t *testing.T) {
 				srNamespace.GetName(),
 				spacerequesttest.WithTierName("appstudio"),
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
 			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
@@ -330,9 +344,8 @@ func TestCreateSpaceRequest(t *testing.T) {
 			sr := spacerequesttest.NewSpaceRequest("jane",
 				srNamespace.GetName(),
 				spacerequesttest.WithTierName("appstudio"))
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
 			hostClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
@@ -349,6 +362,31 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// space request should not be there
 			require.EqualError(t, err, "unable to create space: mock error")
 		})
+		t.Run("parent space is being deleted", func(t *testing.T) {
+			// given
+			parentSpace := spacetest.NewSpace("jane",
+				spacetest.WithCondition(spacetest.Terminating()),
+				spacetest.WithDeletionTimestamp(), // parent space for some reason is being deleted
+				spacetest.WithCondition(spacetest.Ready()))
+			srNamespace := newNamespace("jane", "tenant")
+			srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
+			// the tier doesn't exist
+			sr := spacerequesttest.NewSpaceRequest("jane",
+				srNamespace.GetName(),
+				spacerequesttest.WithTierName("appstudio"),
+				spacerequesttest.WithTargetClusterRoles(srClusterRoles))
+			member1Client := test.NewFakeClient(t, sr, srNamespace)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
+			ctrl := newReconciler(hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			// space request should not be there
+			require.EqualError(t, err, "parentSpace is being deleted")
+		})
 
 		t.Run("parent space is deleted", func(t *testing.T) {
 			// given
@@ -359,9 +397,8 @@ func TestCreateSpaceRequest(t *testing.T) {
 				srNamespace.GetName(),
 				spacerequesttest.WithTierName("appstudio"),
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles))
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -400,8 +437,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			spacetest.WithSpecParentSpace("jane"),
 			spacetest.WithSpecTargetClusterRoles(srClusterRoles),
 			spacetest.WithTierName(sr.Spec.TierName))
-		clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
-		member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+		member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 		hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
 		ctrl := newReconciler(hostClient, member1)
 
@@ -452,7 +488,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
 				spacetest.WithTierName(sr.Spec.TierName))
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -460,25 +496,24 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
-			// requeue is issued since subSpace is already being deleted
+			// requeue is issued since subSpace is being deleted
 			require.True(t, res.Requeue)
 			require.NoError(t, err)
 		})
 	})
 
 	t.Run("failure", func(t *testing.T) {
-		srNamespace := newNamespace("", "tenant") // space request namespace is missing owner label
+		srNamespace := newNamespace("noowner", "tenant") // space request namespace is missing owner label
 		srClusterRoles := []string{commoncluster.RoleLabel(commoncluster.Tenant)}
 		sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(),
 			spacerequesttest.WithTierName("appstudio"),
 			spacerequesttest.WithTargetClusterRoles(srClusterRoles),
 			spacerequesttest.WithDeletionTimestamp()) // spacerequest is being deleted
-		clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
 
 		t.Run("unable to get parent space", func(t *testing.T) {
 			// given
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -487,7 +522,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 
 			// then
 			// space request should not be there
-			require.EqualError(t, err, "unable to get parentSpaceName: unable to find owner label toolchain.dev.openshift.com/owner on namespace -tenant")
+			require.EqualError(t, err, "unable to get parentSpaceName: unable to find owner label toolchain.dev.openshift.com/owner on namespace noowner-tenant")
 		})
 
 	})
@@ -500,8 +535,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 	appstudioTier := tiertest.AppStudioTier(t, tiertest.AppStudioTemplates)
 
 	t.Run("success", func(t *testing.T) {
-
-		t.Run("update tier", func(t *testing.T) {
+		t.Run("update subSpace tier", func(t *testing.T) {
 			// given
 			newTier := tiertest.Tier(t, "mynewtier", tiertest.AppStudioTemplates)
 			srNamespace := newNamespace("jane", "tenant")
@@ -520,8 +554,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				spacetest.WithSpecParentSpace("jane"),
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
 				spacetest.WithTierName("appstudio")) // subSpace doesn't have yet the new tier
-			clusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
-			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue, clusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, newTier, parentSpace, subSpace)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -538,7 +571,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				HasSpecTierName(newTier.Name). // space request still has the new tier
 				HasConditions(spacetest.Provisioning()).
 				HasFinalizer()
-			// a subspace is created with the tierName and cluster roles from the spacerequests
+			// the subspace is updated with tierName and cluster roles from the spacerequests
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
 				Exists().
 				HasSpecTargetClusterRoles(srClusterRoles).
@@ -561,13 +594,11 @@ func TestUpdateSpaceRequest(t *testing.T) {
 			subSpace := spacetest.NewSpace("jane-subs",
 				spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, sr.GetName()), // subSpace belongs to spaceRequest
 				spacetest.WithSpecTargetCluster("member-1"),
-				spacetest.WithCondition(spacetest.Ready()), // space is still in ready state
+				spacetest.WithCondition(spacetest.Ready()),
 				spacetest.WithSpecParentSpace("jane"),
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles), // initially the subSpace has only the tenant cluster role label
 				spacetest.WithTierName("appstudio"))
-			tenantClusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel(commoncluster.Tenant))
-			newClusterRoleLabelModifier := WithClusterRoleLabel(commoncluster.RoleLabel("newcoolcluster"))
-			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue, tenantClusterRoleLabelModifier, newClusterRoleLabelModifier)
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
 			ctrl := newReconciler(hostClient, member1)
 
@@ -576,7 +607,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 
 			// then
 			require.NoError(t, err)
-			assert.True(t, res.Requeue) // requeue while space is still provisioning
+			assert.True(t, res.Requeue) // requeue while space is being updated
 			// spacerequest exists with expected cluster roles and finalizer
 			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
 				Exists().
@@ -584,7 +615,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				HasSpecTierName("appstudio").
 				HasConditions(spacetest.Provisioning()).
 				HasFinalizer()
-			// a subspace is created with the tierName and cluster roles from the spacerequests
+			// the subspace is udpated with the tierName and new cluster roles from the spacerequest
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
 				Exists().
 				HasSpecTargetClusterRoles(updatedSRClusterRoles). // now also subSpace has the updated cluster roles
@@ -593,7 +624,39 @@ func TestUpdateSpaceRequest(t *testing.T) {
 		})
 	})
 	t.Run("failure", func(t *testing.T) {
+		t.Run("unable to update subSpace", func(t *testing.T) {
+			// given
+			srNamespace := newNamespace("jane", "tenant")
+			parentSpace := spacetest.NewSpace("jane",
+				spacetest.WithCondition(spacetest.Ready()))
+			sr := spacerequesttest.NewSpaceRequest("jane",
+				srNamespace.GetName(),
+				spacerequesttest.WithTierName("appstudio"),
+				spacerequesttest.WithFinalizer())
+			subSpace := spacetest.NewSpace("jane-subs",
+				spacetest.WithLabel(toolchainv1alpha1.SpaceCreatorLabelKey, sr.GetName()),
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithSpecParentSpace("jane"),
+				spacetest.WithTierName("anothertier")) // tier name will have to be updated
+			member1Client := test.NewFakeClient(t, sr, srNamespace)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
+			hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
+					return fmt.Errorf("mock error")
+				}
+				return hostClient.Update(ctx, obj, opts...)
+			}
+			ctrl := newReconciler(hostClient, member1)
 
+			// when
+			res, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.False(t, res.Requeue)
+			require.EqualError(t, err, "unable to update subSpace: unable to update tiername and targetclusterroles: mock error")
+		})
 	})
 }
 
@@ -635,9 +698,11 @@ func requestFor(s *toolchainv1alpha1.SpaceRequest) reconcile.Request {
 
 func newNamespace(owner, typeName string) *corev1.Namespace {
 	labels := map[string]string{
-		"toolchain.dev.openshift.com/owner":    owner,
 		"toolchain.dev.openshift.com/type":     typeName,
 		"toolchain.dev.openshift.com/provider": "codeready-toolchain",
+	}
+	if owner != "noowner" {
+		labels["toolchain.dev.openshift.com/owner"] = owner
 	}
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
