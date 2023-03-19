@@ -15,6 +15,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -26,12 +27,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const norequeue = 0 * time.Second
-const requeueDelay = 1 * time.Second
-
 // Reconciler reconciles a SpaceRequest object
 type Reconciler struct {
 	Client         client.Client
+	Scheme         *runtime.Scheme
 	Namespace      string
 	MemberClusters map[string]cluster.Cluster
 }
@@ -40,9 +39,13 @@ type Reconciler struct {
 // Watches SpaceRequests on the member clusters as its primary resources.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[string]cluster.Cluster) error {
 	// since it's mandatory to add a primary resource when creating a new controller,
-	// we add the SpaceRequest CR even if there should be not reconciles triggered from the host cluster,
-	// only from member clusters, see Watches below.
-	b := ctrl.NewControllerManagedBy(mgr).For(&toolchainv1alpha1.SpaceRequest{})
+	// we add the SpaceRequest CR even if there should be no reconciles triggered from the host cluster,
+	// only from member clusters (see watches below)
+	// SpaceRequest owns subSpaces so events will be triggered for those from the host cluster.
+	b := ctrl.NewControllerManagedBy(mgr).For(&toolchainv1alpha1.SpaceRequest{}).Watches(&source.Kind{Type: &toolchainv1alpha1.Space{}},
+		handler.EnqueueRequestsFromMapFunc(MapSubSpaceToSpaceRequest()),
+	)
+
 	// Watch SpaceRequests in all member clusters and all namespaces.
 	for _, memberCluster := range memberClusters {
 		b = b.Watches(
@@ -58,7 +61,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spacerequests/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=spacerequests/finalizers,verbs=update
 
-// Reconcile ensures that there is an SpaceRequest resource defined in the target member cluster
+// Reconcile ensures that there is a SpaceRequest resource defined in the target member cluster
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("reconciling SpaceRequest")
@@ -67,8 +70,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// search on all member clusters
 	spaceRequest := &toolchainv1alpha1.SpaceRequest{}
 	var memberClusterWithSpaceRequest cluster.Cluster
-	var err error
 	memberClusterIndex := 0
+	var err error
 	for _, memberCluster := range r.MemberClusters {
 		memberClusterIndex++
 		err = memberCluster.Client.Get(context.TODO(), types.NamespacedName{
@@ -76,46 +79,37 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			Name:      request.Name,
 		}, spaceRequest)
 		if err != nil {
-			if errors.IsNotFound(err) {
-				// if this was the last member cluster to check
-				// and still we couldn't find the spacerequest object
-				// let's return the error
-				if memberClusterIndex == len(r.MemberClusters) {
-					return reconcile.Result{}, errs.Wrap(err, "unable to find SpaceRequest")
-				}
-
-				//  spacerequest CR not found on current membercluster
-				continue
+			if !errors.IsNotFound(err) {
+				// Error reading the object - requeue the request.
+				return reconcile.Result{}, errs.Wrap(err, "unable to get the current SpaceRequest")
 			}
-			// Error reading the object - requeue the request.
-			return reconcile.Result{}, errs.Wrap(err, "unable to get the current SpaceRequest")
+
+			//  spacerequest CR not found on current membercluster
+			continue
 		}
+
 		// save the member cluster on which the SpaceRequest CR was found
 		memberClusterWithSpaceRequest = memberCluster
 	}
+	// if we exited with a notFound error
+	// it means that we couldn't find the spacerequest object on any of the given member clusters,
+	// let's return the error.
+	if err != nil && errors.IsNotFound(err) {
+		return reconcile.Result{}, errs.Wrap(err, "unable to find SpaceRequest")
+	}
+
 	if util.IsBeingDeleted(spaceRequest) {
-		requeueTime, err := r.ensureSpaceRequestDeletion(logger, memberClusterWithSpaceRequest, spaceRequest)
-		// wait for subSpace to be deleted
-		if requeueTime > 0 {
-			return reconcile.Result{Requeue: true, RequeueAfter: requeueTime}, err
-		}
-		return reconcile.Result{}, err
+		logger.Info("spaceRequest is being deleted")
+		return reconcile.Result{}, r.ensureSpaceRequestDeletion(logger, memberClusterWithSpaceRequest, spaceRequest)
 	}
 	// Add the finalizer if it is not present
 	if err := r.addFinalizer(logger, memberClusterWithSpaceRequest, spaceRequest); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	subSpace, requeueAfter, err := r.ensureSpace(logger, memberClusterWithSpaceRequest, spaceRequest)
+	subSpace, err := r.ensureSpace(logger, memberClusterWithSpaceRequest, spaceRequest)
 	if err != nil {
 		return ctrl.Result{}, err
-	} else if requeueAfter > 0 {
-		// if requeue was returned means that space was created let's set provisioning status for the SpaceRequest
-		err = r.setStatusProvisioning(spaceRequest, memberClusterWithSpaceRequest)
-		return ctrl.Result{
-			Requeue:      true,
-			RequeueAfter: requeueAfter,
-		}, err
 	}
 
 	// update spaceRequest conditions and target cluster url
@@ -128,7 +122,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func updateSpaceRequest(memberClusterWithSpaceRequest cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest, subSpace *toolchainv1alpha1.Space) error {
 	// reflect space conditions and target URL to spaceRequest conditions
 	spaceRequest.Status.Conditions = subSpace.Status.Conditions
-	spaceRequest.Status.TargetClusterURL = subSpace.Spec.TargetCluster
+	spaceRequest.Status.TargetClusterURL = subSpace.Status.TargetCluster
 	return memberClusterWithSpaceRequest.Client.Status().Update(context.TODO(), spaceRequest)
 }
 
@@ -145,191 +139,132 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, memberCluster cluster.Clus
 	return nil
 }
 
-func (r *Reconciler) ensureSpace(logger logr.Logger, memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.Space, time.Duration, error) {
+func (r *Reconciler) ensureSpace(logger logr.Logger, memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.Space, error) {
 	logger.Info("ensuring Space", "SpaceRequest", spaceRequest.Name)
 
-	subSpace := &toolchainv1alpha1.Space{}
 	// validate tierName
-	if spaceRequest.Spec.TierName == "" {
-		return subSpace, norequeue, fmt.Errorf("tierName cannot be blank")
+	if err := r.validateNSTemplateTier(logger, spaceRequest.Spec.TierName); err != nil {
+		return nil, err
 	}
 
 	// find parent space from namespace labels
 	parentSpace, err := r.getParentSpace(logger, memberCluster, spaceRequest)
 	if err != nil {
 		logger.Error(err, "unable to get parentSpaceName")
-		return subSpace, 0, err
+		return nil, err
 	}
 	// parentSpace is being deleted
 	if util.IsBeingDeleted(parentSpace) {
-		return subSpace, 0, errs.New("parentSpace is being deleted")
+		return nil, errs.New("parentSpace is being deleted")
 	}
 
-	// TODO: subspace name as of now is made by <parentSpace>-subs
-	// we may need to review this logic for the naming,
-	// also in case we need to support multiple spacerequests per namespace
-	subSpaceName := createSubSpaceName(parentSpace.GetName())
-	err = r.Client.Get(context.TODO(), types.NamespacedName{
-		Namespace: r.Namespace,
-		Name:      subSpaceName,
-	}, subSpace)
-	if err == nil {
-		if util.IsBeingDeleted(subSpace) {
-			return subSpace, norequeue, fmt.Errorf("cannot create subSpace because it is currently being deleted")
-		}
-		logger.Info("subSpace already exists")
-		if !isSubSpaceReady(subSpace) {
-			return subSpace, requeueDelay, nil
-		}
-
-		// update tier and clusterroles in the subspace
-		// if they do not match the ones on the spaceRequest
-		if updated, err := r.updateSubSpace(logger, *subSpace, spaceRequest); err != nil {
-			return subSpace, norequeue, errs.Wrap(err, "unable to update subSpace")
-		} else if updated {
-			// requeue if we updated the subSpace
-			return subSpace, requeueDelay, nil
-		}
-
-		// space is updated and ready
-		return subSpace, norequeue, nil
-	}
-	if !errors.IsNotFound(err) {
-		return subSpace, norequeue, errs.Wrap(err, fmt.Sprintf(`failed to get subSpace "%s"`, subSpaceName))
+	// get subSpace resource
+	spaceList, err := r.listSubSpaces(spaceRequest)
+	if err != nil {
+		return nil, err
 	}
 
+	var subSpace *toolchainv1alpha1.Space
+	switch {
+	case len(spaceList.Items) == 0:
+		// no spaces found, let's create it
+		subSpace, err = r.createNewSubSpace(logger, spaceRequest, parentSpace)
+		if err != nil {
+			// failed to create subSpace
+			return subSpace, r.setStatusFailedToCreateSubSpace(logger, memberCluster, spaceRequest, err)
+		}
+		return subSpace, nil
+
+	case len(spaceList.Items) == 1:
+		return r.updateExistingSubSpace(logger, spaceRequest, &spaceList.Items[0])
+
+	default:
+		// some unexpected issue causing to many subspaces
+		return nil, fmt.Errorf("invalid number of spaces found: %d for spacerequest: %s", len(spaceList.Items), spaceRequest.GetName())
+	}
+}
+
+func (r *Reconciler) listSubSpaces(spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.SpaceList, error) {
+	spaceList := &toolchainv1alpha1.SpaceList{}
+	spaceRequestLabel := client.MatchingLabels{
+		toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
+		toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
+	}
+	if err := r.Client.List(context.TODO(), spaceList, spaceRequestLabel); err != nil {
+		return nil, errs.Wrap(err, fmt.Sprintf(`attempt to list Spaces associated with spaceRequest %s in namespace %s failed`, spaceRequest.GetName(), spaceRequest.GetNamespace()))
+	}
+	return spaceList, nil
+}
+
+func (r *Reconciler) createNewSubSpace(logger logr.Logger, spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) (*toolchainv1alpha1.Space, error) {
+	subSpace := newSpace(spaceRequest, parentSpace.GetName(), r.Namespace)
+	err := r.Client.Create(context.TODO(), subSpace)
+	if err != nil {
+		return subSpace, errs.Wrap(err, "unable to create space")
+	}
+
+	logger.Info("Created subSpace", "name", subSpace.Name, "target_cluster_roles", spaceRequest.Spec.TargetClusterRoles, "tierName", spaceRequest.Spec.TierName)
+	return subSpace, nil
+}
+
+func (r *Reconciler) updateExistingSubSpace(logger logr.Logger, spaceRequest *toolchainv1alpha1.SpaceRequest, subSpace *toolchainv1alpha1.Space) (*toolchainv1alpha1.Space, error) {
+	// subSpace found let's check if it's up to date
+	logger.Info("subSpace already exists")
+	// check if subSpace is being deleted
+	if util.IsBeingDeleted(subSpace) {
+		return nil, fmt.Errorf("cannot update subSpace because it is currently being deleted")
+	}
+	// update tier and clusterroles in the subspace
+	// if they do not match the ones on the spaceRequest
+	return r.updateSubSpace(logger, subSpace, spaceRequest)
+}
+
+// validateNSTemplateTier checks if the provided tierName in the spaceRequest exists and is valid
+func (r *Reconciler) validateNSTemplateTier(logger logr.Logger, tierName string) error {
+	if tierName == "" {
+		return fmt.Errorf("tierName cannot be blank")
+	}
 	// check if requested tier exists
 	tier := &toolchainv1alpha1.NSTemplateTier{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: r.Namespace,
-		Name:      spaceRequest.Spec.TierName,
+		Name:      tierName,
 	}, tier); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Error(err, "NSTemplateTier not found")
-			return subSpace, norequeue, err
+			return err
 		}
 		// Error reading the object - requeue the request.
 		logger.Error(err, "unable to get the current NSTemplateTier")
-		return subSpace, norequeue, errs.Wrap(err, "unable to get the current NSTemplateTier")
+		return errs.Wrap(err, "unable to get the current NSTemplateTier")
 	}
-
-	subSpace = newSpace(subSpaceName, r.Namespace, parentSpace.GetName(), spaceRequest)
-	err = r.Client.Create(context.TODO(), subSpace)
-	if err != nil {
-		return subSpace, norequeue, errs.Wrap(err, "unable to create space")
-	}
-
-	logger.Info("Created subSpace", "name", subSpace.Name, "target_cluster_roles", spaceRequest.Spec.TargetClusterRoles, "tierName", spaceRequest.Spec.TierName)
-	return subSpace, requeueDelay, nil
-}
-
-func isSubSpaceReady(subSpace *toolchainv1alpha1.Space) bool {
-	readyCond, found := condition.FindConditionByType(subSpace.Status.Conditions, toolchainv1alpha1.ConditionReady)
-	// skip until there's a `Ready` condition
-	if !found || readyCond.Status != "True" {
-		// just created, but there is no `Ready` condition yet
-		return false
-	}
-	// it's ready
-	return true
+	return nil
 }
 
 // updateSubSpace updates the tierName and targetClusterRoles from the spaceRequest to the subSpace object.
-// returns true/nil if the subSpace was updated and a reconcile is required
-// returns false/nil if the subSpace was already up to date and no reconcile is required
-// returns false/err in case an error occurred
-func (r *Reconciler) updateSubSpace(logger logr.Logger, subSpace toolchainv1alpha1.Space, spaceRequest *toolchainv1alpha1.SpaceRequest) (bool, error) {
+func (r *Reconciler) updateSubSpace(logger logr.Logger, subSpace *toolchainv1alpha1.Space, spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.Space, error) {
 	logger.Info("update subSpace")
 	if spaceRequest.Spec.TierName == subSpace.Spec.TierName &&
 		reflect.DeepEqual(spaceRequest.Spec.TargetClusterRoles, subSpace.Spec.TargetClusterRoles) {
 		// everything is up to date let's return
-		return false, nil
+		return subSpace, nil
 	}
 
 	// update tier name and target cluster roles
 	logger.Info("updating subSpace", "name", subSpace.Name)
 	subSpace.Spec.TierName = spaceRequest.Spec.TierName
 	subSpace.Spec.TargetClusterRoles = spaceRequest.Spec.TargetClusterRoles
-	err := r.Client.Update(context.TODO(), &subSpace)
+	err := r.Client.Update(context.TODO(), subSpace)
 	if err != nil {
-		return false, errs.Wrap(err, "unable to update tiername and targetclusterroles")
+		return subSpace, errs.Wrap(err, "unable to update tiername and targetclusterroles")
 	}
 
 	logger.Info("subSpace updated", "name", subSpace.Name, "target_cluster_roles", subSpace.Spec.TargetClusterRoles, "tierName", subSpace.Spec.TierName)
-	return true, nil
+	return subSpace, nil
 }
 
-func (r *Reconciler) ensureSpaceRequestDeletion(logger logr.Logger, memberClusterWithSpaceRequest cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) (time.Duration, error) {
-	logger.Info("ensure SpaceRequest deletion")
-	if isBeingDeleted, err := r.deleteSubSpace(logger, spaceRequest, memberClusterWithSpaceRequest); err != nil {
-		logger.Error(err, "failed to delete the subSpace")
-		return norequeue, r.setStatusTerminatingFailed(logger, memberClusterWithSpaceRequest, spaceRequest, err)
-	} else if isBeingDeleted {
-		if err := r.setStatusTerminating(memberClusterWithSpaceRequest, spaceRequest); err != nil {
-			logger.Error(err, "error updating status")
-			return norequeue, err
-		}
-		return requeueDelay, nil // requeue until subSpace is gone
-	}
-	// Remove finalizer from Space
-	util.RemoveFinalizer(spaceRequest, toolchainv1alpha1.FinalizerName)
-	if err := memberClusterWithSpaceRequest.Client.Update(context.TODO(), spaceRequest); err != nil {
-		logger.Error(err, "failed to remove finalizer")
-		return norequeue, r.setStatusTerminatingFailed(logger, memberClusterWithSpaceRequest, spaceRequest, err)
-	}
-	logger.Info("removed finalizer")
-	return norequeue, nil
-}
-
-func (r *Reconciler) deleteSubSpace(logger logr.Logger, spaceRequest *toolchainv1alpha1.SpaceRequest, memberCluster cluster.Cluster) (bool, error) {
-	parentSpace, err := r.getParentSpace(logger, memberCluster, spaceRequest)
-	if err != nil {
-		logger.Error(err, "unable to get parentSpaceName")
-		return false, errs.Wrap(err, "unable to get parentSpaceName")
-	}
-	// Get the subSpace created by the SpaceRequest
-	subSpace := &toolchainv1alpha1.Space{}
-	err = r.Client.Get(context.TODO(), types.NamespacedName{
-		Namespace: r.Namespace,
-		Name:      createSubSpaceName(parentSpace.GetName()),
-	}, subSpace)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// subSpace was already deleted
-			logger.Info("the subSpace is already deleted")
-			return false, nil
-		}
-		logger.Error(err, "unable to get subSpace")
-		return false, errs.Wrap(err, "unable to get subSpace")
-	}
-	if util.IsBeingDeleted(subSpace) {
-		logger.Info("the subSpace resource is already being deleted")
-		deletionTimestamp := subSpace.GetDeletionTimestamp()
-		if time.Since(deletionTimestamp.Time) > 120*time.Second {
-			return false, fmt.Errorf("subSpace deletion has not completed in over 2 minutes")
-		}
-		return true, nil
-	}
-
-	logger.Info("deleting the subSpace resource", "subSpace name", subSpace.Name)
-	// Delete subSpace associated with SpaceRequest
-	if err := r.Client.Delete(context.TODO(), subSpace); err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil // was already deleted
-		}
-		return false, err // something wrong happened
-	}
-	logger.Info("deleted the subSpace resources", "subSpace name", subSpace.Name)
-	return true, nil // requeue until fully deleted
-}
-
-// createSubSpaceName creates the name of the subSpace based on the parent one.
-func createSubSpaceName(parentSpaceName string) string {
-	// todo check how many spacerequest exist in current namespace
-	// and use that as an id to append to the subSpace name
-	return fmt.Sprintf("%s-%s", parentSpaceName, "subs")
-}
-
+// getParentSpace retrieves the name of the space that provisioned the namespace in which the spacerequest was issued.
+// we need to find the parentSpace so we can `link` the 2 spaces and inherit the spacebindings from the parent.
 func (r *Reconciler) getParentSpace(logger logr.Logger, memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.Space, error) {
 	parentSpace := &toolchainv1alpha1.Space{}
 	namespace := &v1.Namespace{}
@@ -367,17 +302,17 @@ func (r *Reconciler) getParentSpace(logger logr.Logger, memberCluster cluster.Cl
 	return parentSpace, nil // all good
 }
 
-func newSpace(subSpaceName, subSpaceNamespace, parentSpaceName string, spaceRequest *toolchainv1alpha1.SpaceRequest) *toolchainv1alpha1.Space {
+func newSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpaceName, subSpaceNamespace string) *toolchainv1alpha1.Space {
 	labels := map[string]string{
-		toolchainv1alpha1.SpaceCreatorLabelKey: spaceRequest.GetName(),
-		toolchainv1alpha1.OwnerLabelKey:        spaceRequest.GetName(),
+		toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
+		toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
 	}
 
 	space := &toolchainv1alpha1.Space{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: subSpaceNamespace,
-			Name:      subSpaceName,
-			Labels:    labels,
+			Namespace:    subSpaceNamespace,
+			GenerateName: parentSpaceName + "-",
+			Labels:       labels,
 		},
 		Spec: toolchainv1alpha1.SpaceSpec{
 			TargetClusterRoles: spaceRequest.Spec.TargetClusterRoles,
@@ -386,6 +321,83 @@ func newSpace(subSpaceName, subSpaceNamespace, parentSpaceName string, spaceRequ
 		},
 	}
 	return space
+}
+
+func (r *Reconciler) ensureSpaceRequestDeletion(logger logr.Logger, memberClusterWithSpaceRequest cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) error {
+	logger.Info("ensure SpaceRequest deletion")
+	if isBeingDeleted, err := r.deleteSubSpace(logger, spaceRequest); err != nil {
+		logger.Error(err, "failed to delete the subSpace")
+		return r.setStatusTerminatingFailed(logger, memberClusterWithSpaceRequest, spaceRequest, err)
+	} else if isBeingDeleted {
+		if err := r.setStatusTerminating(memberClusterWithSpaceRequest, spaceRequest); err != nil {
+			logger.Error(err, "error updating status")
+			return errs.Wrap(err, "error updating status")
+		}
+		return nil
+	}
+
+	// Remove finalizer from SpaceRequest
+	util.RemoveFinalizer(spaceRequest, toolchainv1alpha1.FinalizerName)
+	if err := memberClusterWithSpaceRequest.Client.Update(context.TODO(), spaceRequest); err != nil {
+		logger.Error(err, "failed to remove finalizer")
+		return r.setStatusTerminatingFailed(logger, memberClusterWithSpaceRequest, spaceRequest, errs.Wrap(err, "failed to remove finalizer"))
+	}
+	logger.Info("removed finalizer")
+	return nil
+}
+
+// deleteSubSpace checks if the subSpace is still provisioned and in case deletes it.
+// returns true/nil if the deletion of the subSpace was triggered
+// returns false/nil if the subSpace was already deleted
+// return false/err if something went wrong
+func (r *Reconciler) deleteSubSpace(logger logr.Logger, spaceRequest *toolchainv1alpha1.SpaceRequest) (bool, error) {
+	subSpaces, err := r.listSubSpaces(spaceRequest)
+	if err != nil {
+		logger.Error(err, "unable to list subSpaces")
+		return false, errs.Wrap(err, "unable to list subSpaces")
+	}
+
+	switch {
+	case len(subSpaces.Items) == 0:
+		// subSpace was already deleted
+		return false, nil
+
+	case len(subSpaces.Items) == 1:
+		// deleting subSpace
+		return r.deleteExistingSubSpace(logger, &subSpaces.Items[0])
+
+	default:
+		// something went wrong and there are too many subspaces
+		logger.Error(err, "invalid number of subSpaces found")
+		return false, fmt.Errorf("invalid number of subSpaces found")
+	}
+
+}
+
+// deleteExistingSubSpace deletes a given space object in case deletion was not issued already.
+// returns true/nil if the deletion of the space was triggered
+// returns false/nil if the space was already deleted
+// return false/err if something went wrong
+func (r *Reconciler) deleteExistingSubSpace(logger logr.Logger, subSpace *toolchainv1alpha1.Space) (bool, error) {
+	if util.IsBeingDeleted(subSpace) {
+		logger.Info("the subSpace resource is already being deleted")
+		deletionTimestamp := subSpace.GetDeletionTimestamp()
+		if time.Since(deletionTimestamp.Time) > 120*time.Second {
+			return false, fmt.Errorf("subSpace deletion has not completed in over 2 minutes")
+		}
+		return true, nil // subspace is still being deleted
+	}
+
+	logger.Info("deleting the subSpace resource", "subSpace name", subSpace.Name)
+	// Delete subSpace associated with SpaceRequest
+	if err := r.Client.Delete(context.TODO(), subSpace); err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil // was already deleted
+		}
+		return false, errs.Wrap(err, "unable to delete subspace") // something wrong happened
+	}
+	logger.Info("deleted the subSpace resource", "subSpace name", subSpace.Name)
+	return true, nil
 }
 
 func (r *Reconciler) setStatusTerminating(memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) error {
@@ -415,15 +427,20 @@ func (r *Reconciler) setStatusTerminatingFailed(logger logr.Logger, memberCluste
 	return cause
 }
 
-func (r *Reconciler) setStatusProvisioning(spaceRequest *toolchainv1alpha1.SpaceRequest, memberCluster cluster.Cluster) error {
-	return r.updateStatus(
+func (r *Reconciler) setStatusFailedToCreateSubSpace(logger logr.Logger, memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest, cause error) error {
+	if err := r.updateStatus(
 		spaceRequest,
 		memberCluster,
 		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.ConditionReady,
-			Status: v1.ConditionFalse,
-			Reason: toolchainv1alpha1.SpaceProvisioningReason,
-		})
+			Type:    toolchainv1alpha1.ConditionReady,
+			Status:  v1.ConditionFalse,
+			Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
+			Message: cause.Error(),
+		}); err != nil {
+		logger.Error(err, "unable to terminate Space")
+		return err
+	}
+	return cause
 }
 
 func (r *Reconciler) updateStatus(spaceRequest *toolchainv1alpha1.SpaceRequest, memberCluster cluster.Cluster, conditions ...toolchainv1alpha1.Condition) error {

@@ -62,6 +62,13 @@ func (a *Assertion) HasSpecTargetClusterRoles(roles []string) *Assertion {
 	return a
 }
 
+func (a *Assertion) HasStatusTargetClusterURL(targetCluster string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Equal(a.t, targetCluster, a.spaceRequest.Status.TargetClusterURL)
+	return a
+}
+
 func (a *Assertion) HasSpecTierName(tierName string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
