@@ -15,8 +15,7 @@ import (
 
 func TestMapToSpaceRequestByLabel(t *testing.T) {
 	// given
-	srNamespace := newNamespace("jane")
-	spaceRequest := spacerequesttest.NewSpaceRequest("mySpaceRequest", srNamespace.GetName())
+	spaceRequest := spacerequesttest.NewSpaceRequest("mySpaceRequest", "jane")
 	// following space has a spaceRequest associated
 	subSpace := space.NewSpace("subSpace", space.WithLabel(v1alpha1.SpaceRequestLabelKey, spaceRequest.GetName()), space.WithLabel(v1alpha1.SpaceRequestNamespaceLabelKey, spaceRequest.GetNamespace()))
 	// following space has no spaceRequest associated

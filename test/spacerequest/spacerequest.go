@@ -46,3 +46,9 @@ func WithFinalizer() Option {
 		spaceRequest.Finalizers = append(spaceRequest.Finalizers, toolchainv1alpha1.FinalizerName)
 	}
 }
+
+func WithStatusTargetClusterURL(targetClusterURL string) Option {
+	return func(spaceRequest *toolchainv1alpha1.SpaceRequest) {
+		spaceRequest.Status.TargetClusterURL = targetClusterURL
+	}
+}

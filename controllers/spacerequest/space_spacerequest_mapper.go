@@ -8,7 +8,7 @@ import (
 )
 
 // MapSubSpaceToSpaceRequest checks whether a space was created from a spacerequest, in case it finds the required labels,
-// triggeres an event for the given spacerequest associated with the space.
+// triggers an event for the given spacerequest associated with the space.
 func MapSubSpaceToSpaceRequest() func(object client.Object) []reconcile.Request {
 	return func(obj client.Object) []reconcile.Request {
 		// get eventual spaceRequest name and namespace associated with current Space
