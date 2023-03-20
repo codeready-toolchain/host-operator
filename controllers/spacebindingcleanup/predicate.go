@@ -10,18 +10,18 @@ var _ predicate.Predicate = OnlyDeleteAndGenericPredicate{}
 type OnlyDeleteAndGenericPredicate struct {
 }
 
-func (p OnlyDeleteAndGenericPredicate) Create(e event.CreateEvent) bool {
+func (p OnlyDeleteAndGenericPredicate) Create(_ event.CreateEvent) bool {
 	return false
 }
 
-func (p OnlyDeleteAndGenericPredicate) Update(e event.UpdateEvent) bool {
+func (p OnlyDeleteAndGenericPredicate) Update(_ event.UpdateEvent) bool {
 	return false
 }
 
-func (p OnlyDeleteAndGenericPredicate) Delete(e event.DeleteEvent) bool {
+func (p OnlyDeleteAndGenericPredicate) Delete(_ event.DeleteEvent) bool {
 	return true
 }
 
-func (p OnlyDeleteAndGenericPredicate) Generic(e event.GenericEvent) bool {
+func (p OnlyDeleteAndGenericPredicate) Generic(_ event.GenericEvent) bool {
 	return true
 }

@@ -52,15 +52,15 @@ func TestCreateSpaceRequest(t *testing.T) {
 	})
 }
 
-func TestDeleteSpaceRequest(t *testing.T) {
+func TestDeleteSpaceRequest(_ *testing.T) {
 	// TODO implement deletion testcase
 }
 
-func TestUpdateSpaceRequestTier(t *testing.T) {
+func TestUpdateSpaceRequestTier(_ *testing.T) {
 	// TODO implement spacerequest tier field update
 }
 
-func TestUpdateSpaceRequestTargetClusterRoles(t *testing.T) {
+func TestUpdateSpaceRequestTargetClusterRoles(_ *testing.T) {
 	// TODO implement update to cluster roles
 }
 
