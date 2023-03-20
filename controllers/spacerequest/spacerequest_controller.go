@@ -70,10 +70,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// search on all member clusters
 	spaceRequest := &toolchainv1alpha1.SpaceRequest{}
 	var memberClusterWithSpaceRequest cluster.Cluster
-	memberClusterIndex := 0
 	var err error
 	for _, memberCluster := range r.MemberClusters {
-		memberClusterIndex++
 		err = memberCluster.Client.Get(context.TODO(), types.NamespacedName{
 			Namespace: request.Namespace,
 			Name:      request.Name,
@@ -90,6 +88,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		// save the member cluster on which the SpaceRequest CR was found
 		memberClusterWithSpaceRequest = memberCluster
+		break // exit once found
 	}
 	// if we exited with a notFound error
 	// it means that we couldn't find the spacerequest object on any of the given member clusters,

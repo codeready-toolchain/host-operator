@@ -54,6 +54,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
 				Exists().
 				HasSpecTargetClusterRoles(srClusterRoles).
+				HasSpecTierName("appstudio").
 				HasFinalizer()
 		})
 
