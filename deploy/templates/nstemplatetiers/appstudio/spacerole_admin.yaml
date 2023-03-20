@@ -47,11 +47,14 @@ objects:
     resources:
     - deploymenttargets
     - deploymenttargetclaims
-    - deploymenttargetclasses
     verbs:
+    - create
     - get
     - list
     - watch
+    - update
+    - patch
+    - delete
   - apiGroups:
     - appstudio.redhat.com
     resources:
