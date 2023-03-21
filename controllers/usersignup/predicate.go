@@ -59,12 +59,12 @@ func (p OnlyWhenAutomaticApprovalIsEnabled) Update(e runtimeevent.UpdateEvent) b
 }
 
 // Create implements Predicate
-func (OnlyWhenAutomaticApprovalIsEnabled) Create(e runtimeevent.CreateEvent) bool {
+func (OnlyWhenAutomaticApprovalIsEnabled) Create(_ runtimeevent.CreateEvent) bool {
 	return false
 }
 
 // Delete implements Predicate
-func (OnlyWhenAutomaticApprovalIsEnabled) Delete(e runtimeevent.DeleteEvent) bool {
+func (OnlyWhenAutomaticApprovalIsEnabled) Delete(_ runtimeevent.DeleteEvent) bool {
 	return false
 }
 

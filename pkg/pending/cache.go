@@ -31,13 +31,13 @@ func (c *cache) getOldestPendingObject(namespace string) client.Object {
 	defer c.Unlock()
 	oldest := c.getFirstExisting(namespace)
 	if oldest == nil {
-		c.loadLatest(namespace)
+		c.loadLatest()
 		oldest = c.getFirstExisting(namespace)
 	}
 	return oldest
 }
 
-func (c *cache) loadLatest(namespace string) { //nolint:unparam
+func (c *cache) loadLatest() { //nolint:unparam
 	labels := map[string]string{toolchainv1alpha1.StateLabelKey: toolchainv1alpha1.StateLabelValuePending}
 	opts := client.MatchingLabels(labels)
 
