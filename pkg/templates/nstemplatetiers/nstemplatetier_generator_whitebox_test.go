@@ -380,7 +380,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 						switch {
 						case strings.Contains(tierTmpl.Name, "clusterresources"):
 							expectedClusterResourcesTmplRef = tierTmpl.Name
-						case strings.Contains(tierTmpl.Name, "admin") || strings.Contains(tierTmpl.Name, "viewer"):
+						case strings.Contains(tierTmpl.Name, "admin") || strings.Contains(tierTmpl.Name, "maintainer"):
 							expectedSpaceRoleTmplRefs = append(expectedSpaceRoleTmplRefs, tierTmpl.Name)
 						default:
 							expectedNamespaceTmplRefs = append(expectedNamespaceTmplRefs, tierTmpl.Name)
@@ -442,8 +442,8 @@ func TestNewNSTemplateTier(t *testing.T) {
 					"admin": "123456k-123456k",
 				},
 				"appstudio": {
-					"admin":  "123456c-123456c",
-					"viewer": "123456d-123456d",
+					"admin":      "123456c-123456c",
+					"maintainer": "123456d-123456d",
 				},
 			}
 			for tier := range namespaceRevisions {

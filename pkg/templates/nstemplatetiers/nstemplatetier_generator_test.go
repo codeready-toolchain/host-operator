@@ -72,8 +72,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					"appstudio-tenant-123456b-123456b",
 				},
 				"spaceRoles": map[string]string{
-					"admin":  "appstudio-admin-123456c-123456c",
-					"viewer": "appstudio-viewer-123456d-123456d",
+					"admin":      "appstudio-admin-123456c-123456c",
+					"maintainer": "appstudio-maintainer-123456d-123456d",
 				},
 			},
 		}
@@ -125,7 +125,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				"appstudio-clusterresources-654321a-654321a",
 				"appstudio-tenant-123456b-123456b",
 				"appstudio-admin-123456c-123456c",
-				"appstudio-viewer-123456d-123456d",
+				"appstudio-maintainer-123456d-123456d",
 			}, names)
 
 			// verify that 4 NSTemplateTier CRs were created:
@@ -241,7 +241,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 							`appstudio/cluster: "444444a"` + "\n" +
 							`appstudio/ns_tenant: "444444b"` + "\n" +
 							`appstudio/spacerole_admin: "444444c"` + "\n" +
-							`appstudio/spacerole_viewer: "444444d"` + "\n"), nil
+							`appstudio/spacerole_maintainer: "444444d"` + "\n"), nil
 				}
 				// return default content for other assets
 				return testnstemplatetiers.Asset(name)
@@ -298,8 +298,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 						"appstudio-stage-444444b-444444b",
 					},
 					"spaceRoles": map[string]string{
-						"admin":  "appstudio-admin-444444c-444444c",
-						"viewer": "appstudio-viewer-444444d-444444d",
+						"admin":      "appstudio-admin-444444c-444444c",
+						"maintainer": "appstudio-maintainer-444444d-444444d",
 					},
 				},
 			}

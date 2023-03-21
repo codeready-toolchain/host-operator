@@ -16,7 +16,7 @@ objects:
     spaceRoles:
       admin:
         templateRef: ${ADMIN_TEMPL_REF}
-      viewer:
+      maintainer:
         templateRef: ${MAINTAINER_TEMPL_REF}
 parameters:
 - name: NAMESPACE
