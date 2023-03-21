@@ -59,7 +59,7 @@ func nsTypes(tier string) []string {
 func roles(tier string) []string {
 	switch tier {
 	case "appstudio":
-		return []string{"admin", "viewer"}
+		return []string{"admin", "maintainer"}
 	default:
 		return []string{"admin"}
 	}
