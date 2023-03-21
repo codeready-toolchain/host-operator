@@ -17,7 +17,7 @@ objects:
   kind: Role
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-user-actions
+    name: appstudio-admin-user-actions
   rules:
   - apiGroups:
     - appstudio.redhat.com
@@ -127,7 +127,7 @@ objects:
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
-    name: appstudio-user-actions
+    name: appstudio-admin-user-actions
   subjects:
   - apiGroup: ""
     kind: ServiceAccount
