@@ -31,16 +31,24 @@ objects:
     - appstudio.redhat.com
     resources:
     - spiaccesstokenbindings
+    - spiaccesschecks
+    - spiaccesstokens
+    - spifilecontentrequest
     verbs:
-    - create
-    - get
-    - list
-    - watch
-    - delete
+    - '*'
   - apiGroups:
     - appstudio.redhat.com
     resources:
-    - spiaccesstokens
+    - promotionruns
+    - snapshotenvironmentbindings
+    - snapshots
+    - environments
+    verbs:
+    - '*'
+  - apiGroups:
+    - managed-gitops.redhat.com
+    resources:
+    - gitopsdeployments
     verbs:
     - get
     - list
@@ -50,14 +58,67 @@ objects:
     resources:
     - pipelineruns
     verbs:
-    - "*"
+    - '*'
   - apiGroups:
-    - ""
+    - results.tekton.dev
+    resources:
+    - results
+    - records
+    verbs:
+    - get
+    - list
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - integrationtestscenarios
+    verbs:
+    - '*'
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - enterprisecontractpolicies
+    verbs:
+    - '*'
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - releases
+    - releasestrategies
+    - releaseplans
+    verbs:
+    - '*'
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
+      - deploymentttargets
+      - deploymenttargetclaims
+    verbs:
+      - '*'
+  - apiGroups:
+    - appstudio.redhat.com
+    resources:
+    - releaseplanadmissions
+    verbs:
+    - '*'
+  - apiGroups:
+    - jvmbuildservice.io
+    resources:
+    - jbsconfigs
+    - artifactbuilds
+    verbs:
+    - '*'
+  - apiGroups:
+    - ''
+    resources:
+    - configmaps
+    verbs:
+    - '*'
+  - apiGroups:
+    - ''
     resources:
     - secrets
     verbs:
-    - create
-    - delete
+    - '*'
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
