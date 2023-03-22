@@ -18,9 +18,12 @@ objects:
         templateRef: ${ADMIN_TEMPL_REF}
       maintainer:
         templateRef: ${MAINTAINER_TEMPL_REF}
+      contributor:
+        templateRef: ${CONTRIBUTOR_TEMPL_REF}
 parameters:
 - name: NAMESPACE
 - name: CLUSTER_TEMPL_REF
 - name: TENANT_TEMPL_REF
 - name: ADMIN_TEMPL_REF
 - name: MAINTAINER_TEMPL_REF
+- name: CONTRIBUTOR_TEMPL_REF

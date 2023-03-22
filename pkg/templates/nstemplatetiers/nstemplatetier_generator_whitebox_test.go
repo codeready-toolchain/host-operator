@@ -59,7 +59,7 @@ func nsTypes(tier string) []string {
 func roles(tier string) []string {
 	switch tier {
 	case "appstudio":
-		return []string{"admin", "maintainer"}
+		return []string{"admin", "maintainer", "contributor"}
 	default:
 		return []string{"admin"}
 	}
@@ -380,7 +380,7 @@ func TestNewNSTemplateTier(t *testing.T) {
 						switch {
 						case strings.Contains(tierTmpl.Name, "clusterresources"):
 							expectedClusterResourcesTmplRef = tierTmpl.Name
-						case strings.Contains(tierTmpl.Name, "admin") || strings.Contains(tierTmpl.Name, "maintainer"):
+						case strings.Contains(tierTmpl.Name, "admin") || strings.Contains(tierTmpl.Name, "maintainer") || strings.Contains(tierTmpl.Name, "contributor"):
 							expectedSpaceRoleTmplRefs = append(expectedSpaceRoleTmplRefs, tierTmpl.Name)
 						default:
 							expectedNamespaceTmplRefs = append(expectedNamespaceTmplRefs, tierTmpl.Name)
