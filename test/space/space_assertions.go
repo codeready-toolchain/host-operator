@@ -83,6 +83,9 @@ func (a *Assertion) HasParentSpace(parentSpaceName string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	assert.Equal(a.t, parentSpaceName, a.space.Spec.ParentSpace)
+	value, found := a.space.Labels[toolchainv1alpha1.ParentSpaceLabelKey]
+	require.True(a.t, found)
+	assert.Equal(a.t, parentSpaceName, value)
 	return a
 }
 

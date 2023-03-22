@@ -63,6 +63,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			subSpace := spacetest.NewSpace("jane-subs",
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
 				spacetest.WithCondition(spacetest.Provisioning()),
 				spacetest.WithSpecParentSpace("jane"),
 				spacetest.WithStatusTargetCluster(member1.Name),
@@ -96,6 +97,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			subSpace := spacetest.NewSpace("jane-subs",
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
 				spacetest.WithCondition(spacetest.Ready()),
 				spacetest.WithSpecParentSpace("jane"),
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
@@ -153,7 +155,8 @@ func TestCreateSpaceRequest(t *testing.T) {
 
 			// then
 			// space request should not be there
-			require.EqualError(t, err, "unable to find SpaceRequest: spacerequests.toolchain.dev.openshift.com \"unknown\" not found")
+			// but it should not return an error by design
+			require.NoError(t, err)
 		})
 		t.Run("unable to get SpaceRequest", func(t *testing.T) {
 			member1Client := test.NewFakeClient(t)
@@ -409,7 +412,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
-			require.EqualError(t, err, "the parentSpace does not exist: spaces.toolchain.dev.openshift.com \"jane\" not found")
+			require.EqualError(t, err, "unable to get parentSpace: spaces.toolchain.dev.openshift.com \"jane\" not found")
 		})
 
 		t.Run("invalid number of subSpaces found", func(t *testing.T) {
@@ -489,6 +492,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 			subSpace := spacetest.NewSpace("jane-subs",
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, parentSpace.GetName()),
 				spacetest.WithCondition(spacetest.Ready()),
 				spacetest.WithSpecParentSpace("jane"),
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
@@ -530,6 +534,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 			subSpace := spacetest.NewSpace("jane-subs",
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, parentSpace.GetName()),
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithCondition(spacetest.Ready()),
 				spacetest.WithSpecParentSpace("jane"),
