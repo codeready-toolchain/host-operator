@@ -12,14 +12,6 @@ objects:
     name: appstudio-user-actions
   rules:
   - apiGroups:
-    - managed-gitops.redhat.com
-    resources:
-    - gitopsdeployments
-    verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
     - appstudio.redhat.com
     resources:
     - applications
@@ -35,13 +27,29 @@ objects:
     - snapshots
     - environments
     verbs:
-    - create
-    - get
-    - list
-    - watch
-    - update
-    - patch
-    - delete
+    - "*"
+  - apiGroups:
+      - managed-gitops.redhat.com
+    resources:
+      - gitopsdeployments
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - tekton.dev
+    resources:
+      - pipelineruns
+    verbs:
+      - "*"
+  - apiGroups:
+      - results.tekton.dev
+    resources:
+      - results
+      - records
+    verbs:
+      - get
+      - list
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -65,13 +73,14 @@ objects:
     - releaseplans
     - releaseplanadmissions
     verbs:
-    - create
-    - get
-    - list
-    - watch
-    - update
-    - patch
-    - delete
+    - "*"
+  - apiGroups:
+      - jvmbuildservice.io
+    resources:
+      - jbsconfigs
+      - artifactbuilds
+    verbs:
+      - "*"
   - apiGroups:
     - appstudio.redhat.com
     resources:
@@ -80,74 +89,19 @@ objects:
     - spiaccesstokens
     - spifilecontentrequests
     verbs:
-    - create
-    - get
-    - list
-    - watch
-    - update
-    - patch
-    - delete
-  - apiGroups:
-    - appstudio.redhat.com
-    resources:
-    - spiaccesstokendataupdates
-    verbs:
-    - create
-  - apiGroups:
-    - tekton.dev
-    resources:
-    - pipelineruns
-    verbs:
     - "*"
   - apiGroups:
     - ""
     resources:
     - secrets
     verbs:
-    - create
-    - delete
+    - "*"
   - apiGroups:
     - ""
     resources:
     - configmaps
     verbs:
-    - create
-    - delete
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - results.tekton.dev
-    resources:
-    - results
-    - records
-    verbs:
-    - get
-    - list
-  - apiGroups:
-    - singapore.open-cluster-management.io
-    resources:
-    - registeredclusters
-    verbs:
-    - create
-    - get
-    - list
-    - watch
-    - delete
-  - apiGroups:
-    - jvmbuildservice.io
-    resources:
-    - jbsconfigs
-    - artifactbuilds
-    verbs:
-    - create
-    - get
-    - list
-    - watch
-    - update
-    - patch
-    - delete
-    - deletecollection
+    - "*"
   # Allow to manage pipeline ServiceAccount for linking secrets used for repositories
   - apiGroups:
     - ""
