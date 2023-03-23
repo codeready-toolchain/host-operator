@@ -302,3 +302,17 @@ func (a *SpacesAssertion) HaveCount(count int) *SpacesAssertion {
 	require.Len(a.t, a.spaces.Items, count)
 	return a
 }
+
+func (a *SpacesAssertion) HasSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) *SpacesAssertion {
+	spaces := &toolchainv1alpha1.SpaceList{}
+	spaceRequestLabel := client.MatchingLabels{
+		toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
+		toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
+		toolchainv1alpha1.ParentSpaceLabelKey:           parentSpace.GetName(),
+	}
+	err := a.client.List(context.TODO(), spaces, spaceRequestLabel, client.InNamespace(a.namespace))
+	require.NoError(a.t, err)
+	require.Len(a.t, spaces.Items, 1) // only 1 sub-space per spacerequest is expected
+	a.spaces = spaces
+	return a
+}

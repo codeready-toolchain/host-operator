@@ -28,23 +28,23 @@ func NewSpace(userSignup *toolchainv1alpha1.UserSignup, targetClusterName string
 }
 
 // NewSubSpace creates a space CR for a SpaceRequest object.
-func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpaceName, subSpaceNamespace string) *toolchainv1alpha1.Space {
+func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) *toolchainv1alpha1.Space {
 	labels := map[string]string{
 		toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
 		toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
-		toolchainv1alpha1.ParentSpaceLabelKey:           parentSpaceName,
+		toolchainv1alpha1.ParentSpaceLabelKey:           parentSpace.GetName(),
 	}
 
 	space := &toolchainv1alpha1.Space{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    subSpaceNamespace,
-			GenerateName: parentSpaceName + "-",
+			Namespace:    parentSpace.GetNamespace(),
+			GenerateName: parentSpace.GetName() + "-",
 			Labels:       labels,
 		},
 		Spec: toolchainv1alpha1.SpaceSpec{
 			TargetClusterRoles: spaceRequest.Spec.TargetClusterRoles,
 			TierName:           spaceRequest.Spec.TierName,
-			ParentSpace:        parentSpaceName,
+			ParentSpace:        parentSpace.GetName(),
 		},
 	}
 	return space

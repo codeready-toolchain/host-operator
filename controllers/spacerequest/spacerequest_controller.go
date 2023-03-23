@@ -95,8 +95,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// if we exited with a notFound error
 	// it means that we couldn't find the spacerequest object on any of the given member clusters
 	if err != nil && errors.IsNotFound(err) {
-		// let's just log the error
-		logger.Error(err, "unable to find SpaceRequest")
+		// let's just log the info
+		logger.Info("unable to find SpaceRequest")
 		return reconcile.Result{}, nil
 	}
 
@@ -220,7 +220,7 @@ func (r *Reconciler) listSubSpaces(spaceRequest *toolchainv1alpha1.SpaceRequest)
 }
 
 func (r *Reconciler) createNewSubSpace(logger logr.Logger, spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) (*toolchainv1alpha1.Space, error) {
-	subSpace := spaceutil.NewSubSpace(spaceRequest, parentSpace.GetName(), r.Namespace)
+	subSpace := spaceutil.NewSubSpace(spaceRequest, parentSpace)
 	err := r.Client.Create(context.TODO(), subSpace)
 	if err != nil {
 		return subSpace, errs.Wrap(err, "unable to create space")
