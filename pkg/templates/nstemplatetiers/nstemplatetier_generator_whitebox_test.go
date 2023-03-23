@@ -442,8 +442,9 @@ func TestNewNSTemplateTier(t *testing.T) {
 					"admin": "123456k-123456k",
 				},
 				"appstudio": {
-					"admin":      "123456c-123456c",
-					"maintainer": "123456d-123456d",
+					"admin":       "123456c-123456c",
+					"maintainer":  "123456d-123456d",
+					"contributor": "123456e-123456e",
 				},
 			}
 			for tier := range namespaceRevisions {
