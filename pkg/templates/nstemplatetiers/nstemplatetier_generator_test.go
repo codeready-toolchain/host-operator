@@ -72,8 +72,9 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					"appstudio-tenant-123456b-123456b",
 				},
 				"spaceRoles": map[string]string{
-					"admin":      "appstudio-admin-123456c-123456c",
-					"maintainer": "appstudio-maintainer-123456d-123456d",
+					"admin":       "appstudio-admin-123456c-123456c",
+					"maintainer":  "appstudio-maintainer-123456d-123456d",
+					"contributor": "appstudio-contributor-123456e-123456e",
 				},
 			},
 		}
@@ -105,7 +106,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			tierTmpls = toolchainv1alpha1.TierTemplateList{}
 			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, 16) // 4 items for advanced and base tiers + 3 for nocluster tier + 4 for appstudio
+			require.Len(t, tierTmpls.Items, 16) // 4 items for advanced and base tiers + 3 for nocluster tier + 5 for appstudio
 			names := []string{}
 			for _, tierTmpl := range tierTmpls.Items {
 				names = append(names, tierTmpl.Name)
