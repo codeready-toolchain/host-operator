@@ -60,7 +60,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasFinalizer()
 			// there should be 1 space that was created from the spacerequest
 			spacetest.AssertThatSpaces(t, hostClient).
-				HasSubSpace(sr, parentSpace)
+				ContainsSubSpace(sr, parentSpace)
 		})
 
 		t.Run("space exists but is not ready yet", func(t *testing.T) {
@@ -145,7 +145,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasSpecTargetClusterRoles(srClusterRoles).
 				HasConditions(spacetest.Provisioning()).
 				HasFinalizer()
-			spacetest.AssertThatSpaces(t, hostClient).HasSubSpace(sr, parentSpace)
+			spacetest.AssertThatSpaces(t, hostClient).ContainsSubSpace(sr, parentSpace)
 		})
 	})
 

@@ -303,7 +303,7 @@ func (a *SpacesAssertion) HaveCount(count int) *SpacesAssertion {
 	return a
 }
 
-func (a *SpacesAssertion) HasSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) *SpacesAssertion {
+func (a *SpacesAssertion) ContainsSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) *SpacesAssertion {
 	spaces := &toolchainv1alpha1.SpaceList{}
 	spaceRequestLabel := client.MatchingLabels{
 		toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
