@@ -177,7 +177,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			ctrl := newReconciler(hostClient, member1)
 
 			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(nil))
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
 			// space request should not be there
@@ -581,7 +581,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 		spacerequesttest.WithFinalizer())         // has finalizer still
 	t.Run("success", func(t *testing.T) {
 		t.Run("spaceRequest should be in terminating while subSpace is deleted", func(t *testing.T) {
-			// when
+			// given
 			subSpace := spacetest.NewSpace("jane-subs",
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
@@ -593,6 +593,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
 			ctrl := newReconciler(hostClient, member1)
+			// when
 			_, err = ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
