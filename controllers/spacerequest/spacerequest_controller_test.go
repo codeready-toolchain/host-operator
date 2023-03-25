@@ -38,8 +38,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		sr := spacerequesttest.NewSpaceRequest("jane", srNamespace.GetName(),
 			spacerequesttest.WithTierName("appstudio"),
-			spacerequesttest.WithTargetClusterRoles(srClusterRoles),
-			spacerequesttest.WithStatusTargetClusterURL("")) // target cluster URL is empty
+			spacerequesttest.WithTargetClusterRoles(srClusterRoles))
 
 		t.Run("space doesn't exists it should be created", func(t *testing.T) {
 			// given
@@ -59,8 +58,9 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasConditions(spacetest.Provisioning()).
 				HasFinalizer()
 			// there should be 1 space that was created from the spacerequest
-			spacetest.AssertThatSpaces(t, hostClient).
-				ContainsSubSpace(sr, parentSpace)
+			spacetest.AssertThatSubSpace(t, hostClient, sr, parentSpace).
+				HasTier("appstudio").
+				HasSpecTargetClusterRoles(srClusterRoles)
 		})
 
 		t.Run("space exists but is not ready yet", func(t *testing.T) {
@@ -142,10 +142,13 @@ func TestCreateSpaceRequest(t *testing.T) {
 			require.NoError(t, err)
 			// spacerequest exists with expected cluster roles and finalizer
 			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member2.Client).
+				HasSpecTierName("appstudio").
 				HasSpecTargetClusterRoles(srClusterRoles).
 				HasConditions(spacetest.Provisioning()).
 				HasFinalizer()
-			spacetest.AssertThatSpaces(t, hostClient).ContainsSubSpace(sr, parentSpace)
+			spacetest.AssertThatSubSpace(t, hostClient, sr, parentSpace).
+				HasTier("appstudio").
+				HasSpecTargetClusterRoles(srClusterRoles)
 		})
 	})
 
@@ -162,7 +165,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			ctrl := newReconciler(hostClient, member1)
 
 			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(nil))
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
 			// space request should not be there

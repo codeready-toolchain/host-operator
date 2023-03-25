@@ -21,9 +21,17 @@ type Assertion struct {
 	client         client.Client
 	namespacedName types.NamespacedName
 	t              test.T
+	spaceRequest   *toolchainv1alpha1.SpaceRequest
+	parentSpace    *toolchainv1alpha1.Space
 }
 
 func (a *Assertion) loadResource() error {
+	if a.spaceRequest != nil && a.parentSpace != nil {
+		// we are testing a spaceRequest scenario
+		return a.loadSubSpace()
+	}
+
+	// default space test scenario
 	space := &toolchainv1alpha1.Space{}
 	err := a.client.Get(context.TODO(), a.namespacedName, space)
 	a.space = space
@@ -303,16 +311,25 @@ func (a *SpacesAssertion) HaveCount(count int) *SpacesAssertion {
 	return a
 }
 
-func (a *SpacesAssertion) ContainsSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) *SpacesAssertion {
+func AssertThatSubSpace(t test.T, client client.Client, spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) *Assertion {
+	return &Assertion{
+		t:            t,
+		client:       client,
+		spaceRequest: spaceRequest,
+		parentSpace:  parentSpace,
+	}
+}
+
+func (a *Assertion) loadSubSpace() error {
 	spaces := &toolchainv1alpha1.SpaceList{}
 	spaceRequestLabel := client.MatchingLabels{
-		toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
-		toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
-		toolchainv1alpha1.ParentSpaceLabelKey:           parentSpace.GetName(),
+		toolchainv1alpha1.SpaceRequestLabelKey:          a.spaceRequest.GetName(),
+		toolchainv1alpha1.SpaceRequestNamespaceLabelKey: a.spaceRequest.GetNamespace(),
+		toolchainv1alpha1.ParentSpaceLabelKey:           a.parentSpace.GetName(),
 	}
-	err := a.client.List(context.TODO(), spaces, spaceRequestLabel, client.InNamespace(a.namespace))
-	require.NoError(a.t, err)
-	require.Len(a.t, spaces.Items, 1) // only 1 sub-space per spacerequest is expected
-	a.spaces = spaces
-	return a
+	err := a.client.List(context.TODO(), spaces, spaceRequestLabel, client.InNamespace(a.parentSpace.GetNamespace()))
+	if len(spaces.Items) > 0 {
+		a.space = &spaces.Items[0]
+	}
+	return err
 }
