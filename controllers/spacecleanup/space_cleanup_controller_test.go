@@ -24,9 +24,9 @@ import (
 
 func TestCleanupSpace(t *testing.T) {
 
-	t.Run("without any SpaceBinding and created more than 30 seconds ago", func(t *testing.T) {
+	t.Run("without any SpaceBinding and created more than 60 seconds ago", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-31*time.Second)))
+		space := spacetest.NewSpace("without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-61*time.Second)))
 		r, req, cl := prepareReconcile(t, space)
 
 		// when
@@ -39,9 +39,9 @@ func TestCleanupSpace(t *testing.T) {
 			DoesNotExist()
 	})
 
-	t.Run("without any SpaceBinding and created less than 30 seconds ago- Space shouldn't be deleted, just requeued", func(t *testing.T) {
+	t.Run("without any SpaceBinding and created less than 60 seconds ago- Space shouldn't be deleted, just requeued", func(t *testing.T) {
 		// given
-		space := spacetest.NewSpace("without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-29*time.Second)))
+		space := spacetest.NewSpace("without-spacebinding", spacetest.WithCreationTimestamp(time.Now().Add(-59*time.Second)))
 		r, req, cl := prepareReconcile(t, space)
 
 		// when
