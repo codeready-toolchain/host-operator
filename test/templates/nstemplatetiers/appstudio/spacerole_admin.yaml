@@ -46,6 +46,13 @@ objects:
     verbs:
     - '*'
   - apiGroups:
+      - appstudio.redhat.com
+    resources:
+      - deploymentttargets
+      - deploymenttargetclaims
+    verbs:
+      - '*'
+  - apiGroups:
     - managed-gitops.redhat.com
     resources:
     - gitopsdeployments
@@ -87,13 +94,6 @@ objects:
     - releaseplans
     verbs:
     - '*'
-  - apiGroups:
-    - appstudio.redhat.com
-    resources:
-      - deploymentttargets
-      - deploymenttargetclaims
-    verbs:
-      - '*'
   - apiGroups:
     - appstudio.redhat.com
     resources:

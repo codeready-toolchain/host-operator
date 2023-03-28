@@ -44,6 +44,15 @@ objects:
         - list
         - watch
     - apiGroups:
+        - appstudio.redhat.com
+      resources:
+        - deploymentttargets
+        - deploymenttargetclaims
+      verbs:
+        - get
+        - list
+        - watch
+    - apiGroups:
         - managed-gitops.redhat.com
       resources:
         - gitopsdeployments
