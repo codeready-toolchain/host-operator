@@ -41,13 +41,19 @@ func (c *Client) Client() analytics.Client {
 
 const AccountActivated = "account activated"
 
-func (c *Client) TrackAccountActivation(username string) {
-	logger.Info("sending event to Segment", "event", AccountActivated, "username_hash", Hash(username))
+func (c *Client) TrackAccountActivation(username, userID, accountID string) {
+	logger.Info("sending event to Segment", "event", AccountActivated, "username_hash", Hash(username), "userid", userID, "accountid", accountID)
 	if err := c.client.Enqueue(analytics.Track{
-		UserId: Hash(username),
-		Event:  AccountActivated,
+		Event:      AccountActivated,
+		UserId:     Hash(username),
+		Properties: analytics.NewProperties().Set("user_id", userID),
+		Context: &analytics.Context{
+			Extra: map[string]interface{}{
+				"account_id": accountID,
+			},
+		},
 	}); err != nil {
-		logger.Error(err, "failed to send event to segment", "action", AccountActivated, "username", username)
+		logger.Error(err, "failed to send event to segment", "action", AccountActivated, "username", username, "userid", userID, "accountid", accountID)
 	}
 }
 
