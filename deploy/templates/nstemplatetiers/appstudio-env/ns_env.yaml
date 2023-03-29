@@ -33,8 +33,7 @@ objects:
     kind: ClusterRole
     name: edit
   subjects:
-  - apiGroup: rbac.authorization.k8s.io
-    kind: ServiceAcount
+  - kind: ServiceAccount
     name: namespace-manager
 
 # Quotas and default limits for not-terminating containers (regular long-running containers)

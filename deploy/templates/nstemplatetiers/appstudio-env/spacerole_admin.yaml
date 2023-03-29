@@ -2,10 +2,5 @@ apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
   name: appstudio-env-spacerole-admin
-objects:
+objects: []
 # The user doesn't have any permissions in the namespace
-parameters:
-- name: NAMESPACE
-  required: true
-- name: USERNAME
-  required: true
