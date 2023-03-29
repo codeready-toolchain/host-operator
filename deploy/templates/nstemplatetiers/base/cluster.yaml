@@ -15,7 +15,7 @@ objects:
         limits.ephemeral-storage: 7Gi
         requests.cpu: 1750m
         requests.memory: ${MEMORY_REQUEST}
-        requests.storage: 15Gi
+        requests.storage: 40Gi
         requests.ephemeral-storage: 7Gi
         count/persistentvolumeclaims: "5"
     selector:
