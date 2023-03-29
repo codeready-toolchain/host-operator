@@ -1,0 +1,170 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: appstudio-env
+objects:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    annotations:
+      openshift.io/description: ${USERNAME}
+      openshift.io/display-name: ${USERNAME}
+      openshift.io/requester: ${USERNAME}
+    labels:
+      name: ${USERNAME}-env
+      toolchain.dev.openshift.com/workspace: ${USERNAME}
+      argocd.argoproj.io/managed-by: gitops-service-argocd
+    name: ${USERNAME}-env
+
+# ServiceAccount to be used by the deployer (eg. ArgoCD) to manage the content of the namespace
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    namespace: ${USERNAME}-env
+    name: namespace-manager
+
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: namespace-manager
+    namespace: ${USERNAME}-env
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: edit
+  subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: ServiceAcount
+    name: namespace-manager
+
+# Quotas and default limits for not-terminating containers (regular long-running containers)
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: compute-deploy
+    namespace: ${USERNAME}-env
+  spec:
+    scopes:
+      - NotTerminating
+    hard:
+      limits.cpu: "20"
+      limits.memory: ${MEMORY_LIMIT}
+      requests.cpu: 1750m
+      requests.memory: ${MEMORY_REQUEST}
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: storage
+    namespace: ${USERNAME}-env
+  spec:
+    hard:
+      limits.ephemeral-storage: 50Gi
+      requests.storage: 50Gi
+      requests.ephemeral-storage: 50Gi
+      count/persistentvolumeclaims: "12"
+- apiVersion: v1
+  kind: LimitRange
+  metadata:
+    name: resource-limits
+    namespace: ${USERNAME}-env
+  spec:
+    limits:
+    - type: "Container"
+      default:
+        cpu: 2000m
+        memory: 2Gi
+      defaultRequest:
+        cpu: 10m
+        memory: 256Mi
+
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-same-namespace
+    namespace: ${USERNAME}-env
+  spec:
+    podSelector: {}
+    ingress:
+    - from:
+      - podSelector: {}
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-openshift-ingress
+    namespace: ${USERNAME}-env
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: ingress
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-openshift-monitoring
+    namespace: ${USERNAME}-env
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: monitoring
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-codeready-workspaces-operator
+    namespace: ${USERNAME}-env
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: codeready-workspaces
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-olm-namespaces
+    namespace: ${USERNAME}-env
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            openshift.io/scc: anyuid
+    podSelector: {}
+    policyTypes:
+    - Ingress
+- apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: allow-from-console-namespaces
+    namespace: ${USERNAME}-env
+  spec:
+    ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            network.openshift.io/policy-group: console
+    podSelector: {}
+    policyTypes:
+    - Ingress
+parameters:
+- name: USERNAME
+  required: true
+- name: MEMORY_LIMIT
+  value: "32Gi"
+- name: MEMORY_REQUEST
+  value: "32Gi"
+- name: MEMORY_BUILD_LIMIT
+  value: "64Gi"
+- name: MEMORY_BUILD_REQUEST
+  value: "32Gi"
