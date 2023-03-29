@@ -98,7 +98,7 @@ objects:
   spec:
     hard:
       limits.ephemeral-storage: 15Gi
-      requests.storage: 15Gi
+      requests.storage: 40Gi
       requests.ephemeral-storage: 15Gi
       count/persistentvolumeclaims: "5"
 - apiVersion: v1
