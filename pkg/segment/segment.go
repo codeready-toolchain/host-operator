@@ -49,7 +49,7 @@ func (c *Client) TrackAccountActivation(username, userID, accountID string) {
 		Properties: analytics.NewProperties().Set("user_id", userID),
 		Context: &analytics.Context{
 			Extra: map[string]interface{}{
-				"account_id": accountID,
+				"groupId": accountID,
 			},
 		},
 	}); err != nil {
