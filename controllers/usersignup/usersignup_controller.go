@@ -504,7 +504,7 @@ func (r *Reconciler) updateUserSignupMetricsByState(logger logr.Logger, userSign
 		metrics.UserSignupApprovedTotal.Inc()
 		// track activation in Segment
 		if r.SegmentClient != nil {
-			r.SegmentClient.TrackAccountActivation(userSignup.Spec.Username)
+			r.SegmentClient.TrackAccountActivation(userSignup.Spec.Username, userSignup.Spec.Userid, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
 		} else {
 			logger.Info("segment client not configure to track account activations")
 		}
