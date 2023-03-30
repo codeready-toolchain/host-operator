@@ -50,6 +50,20 @@ objects:
       limits.memory: ${MEMORY_LIMIT}
       requests.cpu: 1750m
       requests.memory: ${MEMORY_REQUEST}
+# and terminating (short-lived containers like build) containers
+# since builds are not supposed to be created in an environment namespace, then the limits are set to zero
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: compute-build
+    namespace: ${USERNAME}-env
+  spec:
+    scopes:
+      - Terminating
+    hard:
+      cpu: 0
+      memory: 0
+      pods: 0
 - apiVersion: v1
   kind: ResourceQuota
   metadata:
