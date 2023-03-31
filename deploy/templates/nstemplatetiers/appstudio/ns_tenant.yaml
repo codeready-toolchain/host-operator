@@ -103,6 +103,57 @@ objects:
       requests.ephemeral-storage: 50Gi
       count/persistentvolumeclaims: "12"
 - apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: appstudio-crds
+    namespace: ${USERNAME}-tenant
+  spec:
+    hard:
+      count/applications.appstudio.redhat.com: "512"
+      count/buildpipelineselectors.appstudio.redhat.com: "512"
+      count/componentdetectionqueries.appstudio.redhat.com: "512"
+      count/components.appstudio.redhat.com: "512"
+      count/deploymenttargetclaims.appstudio.redhat.com: "512"
+      count/deploymenttargetclasses.appstudio.redhat.com: "512"
+      count/deploymenttargets.appstudio.redhat.com: "512"
+      count/enterprisecontractpolicies.appstudio.redhat.com: "512"
+      count/environments.appstudio.redhat.com: "512"
+      count/internalrequests.appstudio.redhat.com: "512"
+      count/promotionruns.appstudio.redhat.com: "512"
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: appstudio-crds-integration
+    namespace: ${USERNAME}-tenant
+  spec:
+    hard:
+      count/integrationtestscenarios.appstudio.redhat.com: "512"
+      count/snapshotenvironmentbindings.appstudio.redhat.com: "512"
+      count/snapshots.appstudio.redhat.com: "512"
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: appstudio-crds-release
+    namespace: ${USERNAME}-tenant
+  spec:
+    hard:
+      count/releaseplanadmissions.appstudio.redhat.com: "512"
+      count/releaseplans.appstudio.redhat.com: "512"
+      count/releases.appstudio.redhat.com: "512"
+      count/releasestrategies.appstudio.redhat.com: "512"
+- apiVersion: v1
+  kind: ResourceQuota
+  metadata:
+    name: appstudio-crds-spi
+    namespace: ${USERNAME}-tenant
+  spec:
+    hard:
+      count/spiaccesschecks.appstudio.redhat.com: "512"
+      count/spiaccesstokenbindings.appstudio.redhat.com: "512"
+      count/spiaccesstokendataupdates.appstudio.redhat.com: "512"
+      count/spiaccesstokens.appstudio.redhat.com: "512"
+      count/spifilecontentrequests.appstudio.redhat.com: "512"
+- apiVersion: v1
   kind: LimitRange
   metadata:
     name: resource-limits
