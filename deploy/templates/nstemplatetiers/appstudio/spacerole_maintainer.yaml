@@ -45,7 +45,7 @@ objects:
     - apiGroups:
         - appstudio.redhat.com
       resources:
-        - deploymentttargets
+        - deploymenttargets
         - deploymenttargetclaims
       verbs:
         - get
@@ -121,7 +121,7 @@ objects:
         - spiaccesstokenbindings
         - spiaccesschecks
         - spiaccesstokens
-        - spifilecontentrequest
+        - spifilecontentrequests
       verbs:
         - get
         - list
@@ -141,15 +141,14 @@ objects:
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-${USERNAME}-user-actions
+    name: appstudio-maintainer-${USERNAME}-actions-user
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
     name: appstudio-maintainer-user-actions
   subjects:
-    - apiGroup: ""
-      kind: ServiceAccount
-      name: appstudio-${USERNAME}
+    - kind: User
+      name: ${USERNAME}
 # Role & RoleBinding that grants view permissions to the user's SA
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding

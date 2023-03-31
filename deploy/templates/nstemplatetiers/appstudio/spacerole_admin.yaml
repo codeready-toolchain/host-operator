@@ -31,7 +31,7 @@ objects:
   - apiGroups:
       - appstudio.redhat.com
     resources:
-      - deploymentttargets
+      - deploymenttargets
       - deploymenttargetclaims
     verbs:
       - "*"
