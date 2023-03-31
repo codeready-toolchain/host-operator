@@ -58,7 +58,7 @@ type fakeHTTPClient struct {
 	err      error
 }
 
-func (f *fakeHTTPClient) Get(url string) (*http.Response, error) {
+func (f *fakeHTTPClient) Get(_ string) (*http.Response, error) {
 	return &f.response, f.err
 }
 

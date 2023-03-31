@@ -364,7 +364,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 		}
 
 		reqLogger.Info("Setting UserSignup status to 'Complete'")
-		return true, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(reqLogger, mur.Name))
+		return true, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(mur.Name))
 	}
 	return false, nil
 }
@@ -503,7 +503,7 @@ func (r *Reconciler) updateUserSignupMetricsByState(logger logr.Logger, userSign
 		metrics.UserSignupApprovedTotal.Inc()
 		// track activation in Segment
 		if r.SegmentClient != nil {
-			r.SegmentClient.TrackAccountActivation(userSignup.Spec.Username)
+			r.SegmentClient.TrackAccountActivation(userSignup.Spec.Username, userSignup.Spec.Userid, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
 		} else {
 			logger.Info("segment client not configure to track account activations")
 		}
