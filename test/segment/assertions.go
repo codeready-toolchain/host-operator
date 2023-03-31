@@ -20,7 +20,7 @@ func AssertMessageQueued(t *testing.T, cl *segment.Client, us *toolchainv1alpha1
 		Properties: analytics.NewProperties().Set("user_id", us.Spec.Userid),
 		Context: &analytics.Context{
 			Extra: map[string]interface{}{
-				"account_id": us.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey],
+				"groupId": us.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey],
 			},
 		},
 	}, cl.Client().(*MockClient).Queue[0])
