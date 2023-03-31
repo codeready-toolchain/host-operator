@@ -292,11 +292,11 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("oddity")
 			hostClient := test.NewFakeClient(t, s)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj)
+				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -373,11 +373,11 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj)
+				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithTenantRole(t, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -407,11 +407,11 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
 			member1Client := test.NewFakeClient(t)
-			member1Client.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			member1Client.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 					return fmt.Errorf("mock error")
 				}
-				return member1Client.Client.Get(ctx, key, obj)
+				return member1Client.Client.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
@@ -800,11 +800,11 @@ func TestDeleteSpace(t *testing.T) {
 			)
 			hostClient := test.NewFakeClient(t, s)
 			member1Client := test.NewFakeClient(t)
-			member1Client.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			member1Client.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 					return fmt.Errorf("mock error")
 				}
-				return member1Client.Client.Get(ctx, key, obj)
+				return member1Client.Client.Get(ctx, key, obj, opts...)
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)

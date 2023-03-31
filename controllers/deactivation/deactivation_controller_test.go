@@ -378,7 +378,7 @@ func TestReconcile(t *testing.T) {
 			mur := murtest.NewMasterUserRecord(t, username, murtest.TierName(userTier30.Name), murtest.Account("cluster1"), murtest.ProvisionedMur(murProvisionedTime), murtest.UserIDFromUserSignup(userSignupFoobar))
 			mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] = userSignupFoobar.Name
 			r, req, cl := prepareReconcile(t, mur.Name, userTier30, mur, userSignupFoobar, config)
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				_, ok := obj.(*toolchainv1alpha1.UserSignup)
 				if ok {
 					return fmt.Errorf("usersignup get error")

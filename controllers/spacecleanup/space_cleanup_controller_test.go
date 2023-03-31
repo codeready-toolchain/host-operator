@@ -173,7 +173,7 @@ func TestCleanupSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace("get-fails")
 			r, req, cl := prepareReconcile(t, space)
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				return fmt.Errorf("some error")
 			}
 

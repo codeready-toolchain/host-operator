@@ -1616,12 +1616,12 @@ func TestUserSignupMURReadFails(t *testing.T) {
 		}),
 	))
 
-	fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+	fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 		switch obj.(type) {
 		case *toolchainv1alpha1.MasterUserRecord:
 			return errors.New("failed to lookup MUR")
 		default:
-			return fakeClient.Client.Get(ctx, key, obj)
+			return fakeClient.Client.Get(ctx, key, obj, opts...)
 		}
 	}
 

@@ -70,7 +70,7 @@ func TestMapperReturnsEmptyRequestsWhenNoPendingIsFound(t *testing.T) {
 func TestMapperReturnsEmptyRequestsWhenClientReturnsError(t *testing.T) {
 	// given
 	cl := test.NewFakeClient(t)
-	cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+	cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 		return fmt.Errorf("some error")
 	}
 	mapper := NewUserSignupMapper(cl)

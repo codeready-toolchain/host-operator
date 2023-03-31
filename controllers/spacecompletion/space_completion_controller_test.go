@@ -151,7 +151,7 @@ func TestCreateSpace(t *testing.T) {
 			space := spacetest.NewSpace("get-fails",
 				spacetest.WithTierName("advanced"))
 			r, req, cl := prepareReconcile(t, space, NewGetMemberClusters())
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				return fmt.Errorf("some error")
 			}
 
@@ -171,11 +171,11 @@ func TestCreateSpace(t *testing.T) {
 			space := spacetest.NewSpace("oddity",
 				spacetest.WithTierName(""))
 			r, req, cl := prepareReconcile(t, space, NewGetMemberClusters())
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if key.Name == "config" {
 					return fmt.Errorf("some error")
 				}
-				return cl.Client.Get(ctx, key, obj)
+				return cl.Client.Get(ctx, key, obj, opts...)
 			}
 
 			// when
@@ -193,7 +193,7 @@ func TestCreateSpace(t *testing.T) {
 			space := spacetest.NewSpace("oddity",
 				spacetest.WithTierName("advanced"))
 			r, req, cl := prepareReconcile(t, space, NewGetMemberClusters())
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if key.Name == "config" {
 					return fmt.Errorf("some error")
 				}

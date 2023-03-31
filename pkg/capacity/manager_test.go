@@ -340,7 +340,7 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 			// given
 			fakeClient := NewFakeClient(t, toolchainStatus)
 			InitializeCounters(t, toolchainStatus)
-			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				return fmt.Errorf("some error")
 			}
 			InitializeCounters(t, toolchainStatus)
@@ -361,11 +361,11 @@ func TestGetOptimalTargetCluster(t *testing.T) {
 		t.Run("unable to read ToolchainStatus", func(t *testing.T) {
 			// given
 			fakeClient := NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
 					return fmt.Errorf("some error")
 				}
-				return fakeClient.Client.Get(ctx, key, obj)
+				return fakeClient.Client.Get(ctx, key, obj, opts...)
 			}
 			InitializeCounters(t, toolchainStatus)
 			clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
