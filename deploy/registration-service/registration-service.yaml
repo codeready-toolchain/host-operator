@@ -130,10 +130,6 @@ objects:
                 periodSeconds: 1
                 successThreshold: 1
                 timeoutSeconds: 1
-              volumeMounts:
-                - name: captcha-secret
-                  mountPath: /etc/captcha-secret
-                  readOnly: true
               env:
                 - name: WATCH_NAMESPACE
                   value: ${NAMESPACE}
@@ -141,10 +137,6 @@ objects:
                 requests:
                   cpu: "50m"
                   memory: "100M"
-          volumes:
-            - name: captcha-secret
-              secret:
-                secretName: captcha
   - kind: Service
     apiVersion: v1
     metadata:
