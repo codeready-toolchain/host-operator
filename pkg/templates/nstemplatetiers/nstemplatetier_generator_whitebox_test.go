@@ -619,6 +619,7 @@ func assertSpaceRoleTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
+	// there are no space role permissions for appstudio-env because the user doesn't have any permissions in the namespace
 	if tier != "appstudio-env" {
 		assert.NotEmpty(t, actual.Objects)
 	} else {
