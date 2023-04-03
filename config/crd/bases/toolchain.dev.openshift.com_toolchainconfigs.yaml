@@ -255,6 +255,23 @@ spec:
                             description: AWSSenderID the Alphanumeric Sender ID to
                               use, e.g. "DevSandbox"
                             type: string
+                          captcha:
+                            description: Captcha defines any configuration related
+                              to captcha verification
+                            properties:
+                              enabled:
+                                description: Enabled specifies whether the captcha
+                                  verification feature is enabled or not
+                                type: boolean
+                              score:
+                                description: ScoreThreshold defines the captcha assessment
+                                  score threshold. A score equal to or above the threshold
+                                  means the user is most likely human and can proceed
+                                  signing up but a score below the threshold means
+                                  the score is suspicious and further verification
+                                  may be required.
+                                type: string
+                            type: object
                           codeExpiresInMin:
                             description: VerificationCodeExpiresInMin specifies an
                               int representing the number of minutes before a verification
