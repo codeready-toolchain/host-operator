@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
@@ -78,6 +79,7 @@ func NewGetMemberCluster(ok bool, status corev1.ConditionStatus, modifiers ...Mo
 			cachedCluster := &cluster.CachedToolchainCluster{
 				Config: &cluster.Config{
 					Name:              name,
+					APIEndpoint:       fmt.Sprintf("https://api.%s:6433", test.MemberClusterName),
 					Type:              cluster.Member,
 					OperatorNamespace: test.MemberOperatorNs,
 					OwnerClusterName:  test.HostClusterName,

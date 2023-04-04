@@ -96,12 +96,41 @@ var CurrentBasicTemplates = toolchainv1alpha1.NSTemplateTierSpec{
 	},
 }
 
+// AppStudioTemplates current templates for the "appstudio" tier
+var AppStudioTemplates = toolchainv1alpha1.NSTemplateTierSpec{
+	Namespaces: []toolchainv1alpha1.NSTemplateTierNamespace{
+		{
+			TemplateRef: "appstudio-dev-123456new",
+		},
+	},
+	ClusterResources: &toolchainv1alpha1.NSTemplateTierClusterResources{
+		TemplateRef: "appstudio-clusterresources-123456new",
+	},
+	SpaceRoles: map[string]toolchainv1alpha1.NSTemplateTierSpaceRole{
+		"admin": {
+			TemplateRef: "appstudio-admin-123456new",
+		},
+		"viewer": {
+			TemplateRef: "appstudio-viewer-123456new",
+		},
+	},
+}
+
 // BasicTier returns a "basic" NSTemplateTier with template refs in the given spec
 func BasicTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
+	return Tier(t, "basic", spec, options...)
+}
+
+// AppStudioTier returns an "appstudio" NSTemplateTier with template refs in the given spec
+func AppStudioTier(t *testing.T, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
+	return Tier(t, "appstudio", spec, options...)
+}
+
+func Tier(t *testing.T, name string, spec toolchainv1alpha1.NSTemplateTierSpec, options ...TierOption) *toolchainv1alpha1.NSTemplateTier {
 	tier := &toolchainv1alpha1.NSTemplateTier{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "toolchain-host-operator",
-			Name:      "basic",
+			Name:      name,
 		},
 		Spec: spec,
 	}
