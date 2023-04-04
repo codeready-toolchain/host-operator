@@ -13,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/pending"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
+	spaceutil "github.com/codeready-toolchain/host-operator/pkg/space"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -629,7 +630,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 	}
 	tCluster := targetCluster(mur.Spec.UserAccounts[0].TargetCluster)
 
-	space = newSpace(userSignup, tCluster, mur.Name, spaceTier.Name)
+	space = spaceutil.NewSpace(userSignup, tCluster.getClusterName(), mur.Name, spaceTier.Name)
 
 	err = r.Client.Create(context.TODO(), space)
 	if err != nil {
