@@ -32,6 +32,12 @@ func WithSpecTargetClusterRoles(roles []string) Option {
 	}
 }
 
+func WithGenerateName(namePrefix string) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		space.ObjectMeta.GenerateName = namePrefix + "-"
+	}
+}
+
 func WithSpecParentSpace(name string) Option {
 	return func(space *toolchainv1alpha1.Space) {
 		space.Spec.ParentSpace = name

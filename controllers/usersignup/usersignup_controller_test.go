@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/codeready-toolchain/host-operator/pkg/space"
+
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
@@ -1533,7 +1535,7 @@ func TestUserSignupMUROrSpaceOrSpaceBindingCreateFails(t *testing.T) {
 			mur := newMasterUserRecord(userSignup, "member1", deactivate30Tier.Name, "foo")
 			mur.Labels = map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
 
-			space := newSpace(userSignup, "member1", "foo", "base")
+			space := NewSpace(userSignup, "member1", "foo", "base")
 
 			ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
 			initObjs := []runtime.Object{userSignup, baseNSTemplateTier, deactivate30Tier}
@@ -1818,7 +1820,7 @@ func TestUserSignupWithExistingMUROK(t *testing.T) {
 		},
 	}
 
-	space := newSpace(userSignup, "member1", "foo", "base")
+	space := NewSpace(userSignup, "member1", "foo", "base")
 
 	spacebinding := spacebindingtest.NewSpaceBinding("foo", "foo", "admin", userSignup.Name)
 
