@@ -33,7 +33,8 @@ objects:
     - spiaccesstokenbindings
     - spiaccesschecks
     - spiaccesstokens
-    - spifilecontentrequest
+    - spifilecontentrequests
+    - spiaccesstokendataupdates
     verbs:
     - '*'
   - apiGroups:

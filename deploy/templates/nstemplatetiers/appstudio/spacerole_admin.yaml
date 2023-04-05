@@ -82,6 +82,7 @@ objects:
     - spiaccesschecks
     - spiaccesstokens
     - spifilecontentrequests
+    - spiaccesstokendataupdates
     verbs:
     - "*"
   - apiGroups:

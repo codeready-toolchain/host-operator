@@ -122,6 +122,7 @@ objects:
         - spiaccesschecks
         - spiaccesstokens
         - spifilecontentrequests
+        - spiaccesstokendataupdates
       verbs:
         - get
         - list
