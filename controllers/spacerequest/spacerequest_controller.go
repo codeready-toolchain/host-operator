@@ -226,7 +226,7 @@ func (r *Reconciler) createNewSubSpace(logger logr.Logger, spaceRequest *toolcha
 		return subSpace, errs.Wrap(err, "unable to create space")
 	}
 
-	logger.Info("Created subSpace", "name", subSpace.Name, "target_cluster_roles", spaceRequest.Spec.TargetClusterRoles, "tierName", spaceRequest.Spec.TierName)
+	logger.Info("Created subSpace", "name", subSpace.Name, "target_cluster_roles", spaceRequest.Spec.TargetClusterRoles, "tierName", spaceRequest.Spec.TierName, "targetCluster", subSpace.Spec.TargetCluster)
 	return subSpace, nil
 }
 
