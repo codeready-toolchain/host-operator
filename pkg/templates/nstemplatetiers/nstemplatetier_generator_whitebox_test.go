@@ -36,6 +36,7 @@ var expectedProdTiers = map[string]bool{
 	"baseextendedidling": true,
 	"test":               false,
 	"appstudio":          false,
+	"appstudio-env":      false,
 }
 
 var expectedTestTiers = map[string]bool{
@@ -49,6 +50,8 @@ func nsTypes(tier string) []string {
 	switch tier {
 	case "appstudio":
 		return []string{"tenant"}
+	case "appstudio-env":
+		return []string{"env"}
 	case "base1ns", "base1nsnoidling", "base1ns6didler", "test":
 		return []string{"dev"}
 	default:
@@ -58,7 +61,7 @@ func nsTypes(tier string) []string {
 
 func roles(tier string) []string {
 	switch tier {
-	case "appstudio":
+	case "appstudio", "appstudio-env":
 		return []string{"admin", "viewer"}
 	default:
 		return []string{"admin"}
@@ -616,7 +619,12 @@ func assertSpaceRoleTemplate(t *testing.T, decoder runtime.Decoder, actual templ
 	_, _, err = decoder.Decode(content, nil, &expected)
 	require.NoError(t, err)
 	assert.Equal(t, expected, actual)
-	assert.NotEmpty(t, actual.Objects)
+	// there are no space role permissions for appstudio-env because the user doesn't have any permissions in the namespace
+	if tier != "appstudio-env" {
+		assert.NotEmpty(t, actual.Objects)
+	} else {
+		assert.Empty(t, actual.Objects)
+	}
 }
 
 func expectedTemplateFromBasedOnTierConfig(t *testing.T, assets assets.Assets, tier, templateFileName string) string {
