@@ -16,11 +16,11 @@ objects:
     spaceRoles:
       admin:
         templateRef: ${ADMIN_TEMPL_REF}
-      viewer:
-        templateRef: ${VIEWER_TEMPL_REF}
+      maintainer:
+        templateRef: ${MAINTAINER_TEMPL_REF}
 parameters:
 - name: NAMESPACE
 - name: CLUSTER_TEMPL_REF
 - name: ENV_TEMPL_REF
 - name: ADMIN_TEMPL_REF
-- name: VIEWER_TEMPL_REF
+- name: MAINTAINER_TEMPL_REF
