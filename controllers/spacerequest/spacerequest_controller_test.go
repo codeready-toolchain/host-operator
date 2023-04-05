@@ -150,6 +150,31 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasTier("appstudio").
 				HasSpecTargetClusterRoles(srClusterRoles)
 		})
+
+		t.Run("spacerequest has empty target cluster roles", func(t *testing.T) {
+			// when
+			parentSpaceWithTarget := spacetest.NewSpace("jane", spacetest.WithSpecTargetCluster("member-2"))
+			spaceRequest := spacerequesttest.NewSpaceRequest("noroles", srNamespace.GetName(),
+				spacerequesttest.WithTierName("appstudio"))
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithClient(test.NewFakeClient(t, spaceRequest, srNamespace), "member-2", corev1.ConditionTrue) // space request and namespace are on member2
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpaceWithTarget)
+			ctrl := newReconciler(hostClient, member1, member2)
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(spaceRequest))
+
+			// then
+			require.NoError(t, err)
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, spaceRequest.GetName(), member2.Client).
+				HasSpecTierName("appstudio").
+				HasSpecTargetClusterRoles([]string(nil)). // has empty target cluster roles
+				HasConditions(spacetest.Provisioning()).
+				HasFinalizer()
+			spacetest.AssertThatSubSpace(t, hostClient, spaceRequest, parentSpace).
+				HasTier("appstudio").
+				HasSpecTargetClusterRoles([]string(nil)). // has empty target cluster roles
+				HasSpecTargetCluster("member-2")          // subSpace has same target cluster as parentSpace
+		})
 	})
 
 	t.Run("failure", func(t *testing.T) {
