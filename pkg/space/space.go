@@ -47,5 +47,12 @@ func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *tool
 			ParentSpace:        parentSpace.GetName(),
 		},
 	}
+
+	// in case target cluster roles are not specified
+	// let's set target cluster to be same of the parent space
+	if len(spaceRequest.Spec.TargetClusterRoles) == 0 {
+		space.Spec.TargetCluster = parentSpace.Spec.TargetCluster
+	}
+
 	return space
 }
