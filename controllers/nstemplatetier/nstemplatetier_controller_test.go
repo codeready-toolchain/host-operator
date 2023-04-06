@@ -115,11 +115,11 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 				initObjs := []runtime.Object{basicTier}
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return errors.NewNotFound(schema.GroupResource{}, key.Name)
 					}
-					return cl.Client.Get(ctx, key, obj)
+					return cl.Client.Get(ctx, key, obj, opts...)
 				}
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -133,11 +133,11 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 				initObjs := []runtime.Object{basicTier}
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
 					}
-					return cl.Client.Get(ctx, key, obj)
+					return cl.Client.Get(ctx, key, obj, opts...)
 				}
 				// when
 				res, err := r.Reconcile(context.TODO(), req)

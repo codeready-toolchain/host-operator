@@ -138,11 +138,11 @@ func TestNoToolchainStatusFound(t *testing.T) {
 		// given
 		requestName := toolchainconfig.ToolchainStatusName
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
-		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
 			if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
 				return fmt.Errorf("get failed")
 			}
-			return fakeClient.Client.Get(ctx, key, obj)
+			return fakeClient.Client.Get(ctx, key, obj, opts...)
 		}
 
 		// when

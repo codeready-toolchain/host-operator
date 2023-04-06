@@ -93,11 +93,11 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 		for _, boundResourceName := range []string{"lara", "redhat"} {
 			reconciler, request, fakeClient := prepareReconciler(t, sbLaraRedhatAdmin, redhatSpace, laraMur)
-			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if key.Name == boundResourceName {
 					return fmt.Errorf("some error")
 				}
-				return fakeClient.Client.Get(ctx, key, obj)
+				return fakeClient.Client.Get(ctx, key, obj, opts...)
 			}
 
 			// when

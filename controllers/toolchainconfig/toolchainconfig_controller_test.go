@@ -151,7 +151,7 @@ func TestReconcile(t *testing.T) {
 				config.Spec.Host.CapacityThresholds.ResourceCapacityThreshold.DefaultThreshold = &threshold
 				err = hostCl.Update(context.TODO(), config)
 				require.NoError(t, err)
-				hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+				hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
 					return fmt.Errorf("client error")
 				}
 
@@ -192,12 +192,12 @@ func TestReconcile(t *testing.T) {
 			hostCl := test.NewFakeClient(t, config)
 			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
 			controller := newController(t, hostCl, members)
-			hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+			hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
 				_, ok := obj.(*toolchainv1alpha1.ToolchainConfig)
 				if ok {
 					return fmt.Errorf("client error")
 				}
-				return hostCl.Client.Get(ctx, key, obj)
+				return hostCl.Client.Get(ctx, key, obj, opts...)
 			}
 
 			// when
@@ -222,14 +222,14 @@ func TestReconcile(t *testing.T) {
 			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
 			controller := newController(t, hostCl, members)
 			count := 0
-			hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+			hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.ToolchainConfig); ok {
 					count++
 					if count > 1 { // let the first get succeed and then return errors after that
 						return fmt.Errorf("client error")
 					}
 				}
-				return hostCl.Client.Get(ctx, key, obj)
+				return hostCl.Client.Get(ctx, key, obj, opts...)
 			}
 
 			// when

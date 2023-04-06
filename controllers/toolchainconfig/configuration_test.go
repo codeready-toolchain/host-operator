@@ -82,7 +82,7 @@ func TestGetToolchainConfig(t *testing.T) {
 		commonconfig.ResetCache()
 		toolchainCfgObj := testconfig.NewToolchainConfigObj(t, testconfig.Environment("e2e-tests"))
 		cl := test.NewFakeClient(t, toolchainCfgObj)
-		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 			return fmt.Errorf("get failed")
 		}
 
@@ -189,7 +189,7 @@ func TestForceLoadToolchainConfig(t *testing.T) {
 		commonconfig.ResetCache()
 		toolchainCfgObj := testconfig.NewToolchainConfigObj(t, testconfig.Environment("e2e-tests"))
 		cl := test.NewFakeClient(t, toolchainCfgObj)
-		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+		cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 			return fmt.Errorf("get failed")
 		}
 

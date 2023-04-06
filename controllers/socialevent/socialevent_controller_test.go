@@ -91,11 +91,11 @@ func TestReconcileSocialEvent(t *testing.T) {
 			// given
 			event := socialeventtest.NewSocialEvent("notfound", "basic")
 			hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.UserTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj)
+				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
 			ctrl := newReconciler(hostClient)
 
@@ -141,11 +141,11 @@ func TestReconcileSocialEvent(t *testing.T) {
 			// given
 			event := socialeventtest.NewSocialEvent("deactivate30", "notfound")
 			hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj)
+				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
 			ctrl := newReconciler(hostClient)
 

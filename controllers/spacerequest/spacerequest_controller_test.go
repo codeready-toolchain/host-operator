@@ -336,11 +336,11 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj)
+				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
 			ctrl := newReconciler(hostClient, member1)
 
@@ -428,11 +428,11 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
-				return hostClient.Client.Get(ctx, key, obj)
+				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
 			ctrl := newReconciler(hostClient, member1)
 
@@ -840,12 +840,12 @@ func newNamespace(owner string) *corev1.Namespace {
 	return ns
 }
 
-func mockGetSpaceRequestFail(cl client.Client) func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
-	return func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+func mockGetSpaceRequestFail(cl client.Client) func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	return func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 		if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
 			return fmt.Errorf("mock error")
 		}
-		return cl.Get(ctx, key, obj)
+		return cl.Get(ctx, key, obj, opts...)
 	}
 }
 

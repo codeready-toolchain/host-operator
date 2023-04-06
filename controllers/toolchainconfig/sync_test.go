@@ -66,7 +66,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 		t.Run("sync to a member failed", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
 				return fmt.Errorf("client error")
 			}
 			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
@@ -88,11 +88,11 @@ func TestSyncMemberConfigs(t *testing.T) {
 		t.Run("sync to multiple members failed", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
 				return fmt.Errorf("client error")
 			}
 			memberCl2 := test.NewFakeClient(t)
-			memberCl2.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+			memberCl2.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
 				return fmt.Errorf("client2 error")
 			}
 			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
@@ -176,7 +176,7 @@ func TestSyncMemberConfig(t *testing.T) {
 		t.Run("client get error", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
 				return fmt.Errorf("client error")
 			}
 			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)

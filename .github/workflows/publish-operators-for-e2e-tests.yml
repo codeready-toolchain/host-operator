@@ -7,7 +7,7 @@ on:
 
 env:
   GOPATH: /tmp/go
-  GO_VERSION: 1.18.x
+  GO_VERSION: 1.19.x
 
 jobs:
   binary:
