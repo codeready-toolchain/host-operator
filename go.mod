@@ -1,8 +1,8 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20230403155558-be7e62b31d91
-	github.com/codeready-toolchain/toolchain-common v0.0.0-20230308235944-0d18cf5d6c1a
+	github.com/codeready-toolchain/api v0.0.0-20230406073419-4f8108d3a1c6
+	github.com/codeready-toolchain/toolchain-common v0.0.0-20230406074039-c486d404e698
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -108,7 +108,3 @@ require (
 )
 
 go 1.19
-
-replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230403160314-6f2a3be48aea
-
-replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230331125149-52e1310a177b
