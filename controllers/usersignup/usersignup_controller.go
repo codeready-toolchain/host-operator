@@ -502,12 +502,6 @@ func (r *Reconciler) updateUserSignupMetricsByState(logger logr.Logger, userSign
 	switch newState {
 	case toolchainv1alpha1.UserSignupStateLabelValueApproved:
 		metrics.UserSignupApprovedTotal.Inc()
-		// track activation in Segment
-		if r.SegmentClient != nil {
-			r.SegmentClient.TrackAccountActivation(userSignup.Spec.Username, userSignup.Spec.Userid, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
-		} else {
-			logger.Info("segment client not configure to track account activations")
-		}
 	case toolchainv1alpha1.UserSignupStateLabelValueDeactivated:
 		if oldState == toolchainv1alpha1.UserSignupStateLabelValueApproved {
 			metrics.UserSignupDeactivatedTotal.Inc()
@@ -599,6 +593,13 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 	// increment the counter of MasterUserRecords
 	domain := metrics.GetEmailDomain(mur)
 	counter.IncrementMasterUserRecordCount(logger, domain)
+
+	// track the MUR creation as an account activation event in Segment
+	if r.SegmentClient != nil {
+		r.SegmentClient.TrackAccountActivation(compliantUsername, userSignup.Spec.Userid, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
+	} else {
+		logger.Info("segment client not configure to track account activations")
+	}
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil

@@ -5,22 +5,26 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
-	"github.com/segmentio/analytics-go/v3"
 
+	"github.com/segmentio/analytics-go/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func AssertMessageQueued(t *testing.T, cl *segment.Client, us *toolchainv1alpha1.UserSignup, event string) {
+func AssertMessageQueuedForProvisionedMur(t *testing.T, cl *segment.Client, us *toolchainv1alpha1.UserSignup, mur *toolchainv1alpha1.MasterUserRecord) {
+	assertMessageQueued(t, cl, mur.Name, us.Spec.Userid, us.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey], "account activated")
+}
+
+func assertMessageQueued(t *testing.T, cl *segment.Client, username, userID, accountID string, event string) {
 	require.IsType(t, &MockClient{}, cl.Client())
 	require.Len(t, cl.Client().(*MockClient).Queue, 1)
 	assert.Equal(t, analytics.Track{
-		UserId:     segment.Hash(us.Spec.Username),
+		UserId:     segment.Hash(username),
 		Event:      event,
-		Properties: analytics.NewProperties().Set("user_id", us.Spec.Userid),
+		Properties: analytics.NewProperties().Set("user_id", userID),
 		Context: &analytics.Context{
 			Extra: map[string]interface{}{
-				"groupId": us.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey],
+				"groupId": accountID,
 			},
 		},
 	}, cl.Client().(*MockClient).Queue[0])
