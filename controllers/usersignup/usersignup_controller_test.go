@@ -3897,9 +3897,6 @@ func TestMigrateMur(t *testing.T) {
 
 func TestUpdateMetricsByState(t *testing.T) {
 
-	userSignup := commonsignup.NewUserSignup()
-	logger := zap.New(zap.UseDevMode(true))
-
 	t.Run("common state changes", func(t *testing.T) {
 		t.Run("empty -> not-ready - increment UserSignupUniqueTotal", func(t *testing.T) {
 			// given
@@ -3908,7 +3905,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, "", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
+			r.updateUserSignupMetricsByState("", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -3925,7 +3922,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady, "pending")
+			r.updateUserSignupMetricsByState(toolchainv1alpha1.UserSignupStateLabelValueNotReady, "pending")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -3942,7 +3939,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, "pending", "approved")
+			r.updateUserSignupMetricsByState("pending", "approved")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -3958,7 +3955,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, "approved", "deactivated")
+			r.updateUserSignupMetricsByState("approved", "deactivated")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -3975,7 +3972,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, "pending", "deactivated")
+			r.updateUserSignupMetricsByState("pending", "deactivated")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -3992,7 +3989,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, "deactivated", "banned")
+			r.updateUserSignupMetricsByState("deactivated", "banned")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
@@ -4011,7 +4008,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, "any-value", "")
+			r.updateUserSignupMetricsByState("any-value", "")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -4028,7 +4025,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, "any-value", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
+			r.updateUserSignupMetricsByState("any-value", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
@@ -4045,7 +4042,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(logger, userSignup, "any-value", "x")
+			r.updateUserSignupMetricsByState("any-value", "x")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)

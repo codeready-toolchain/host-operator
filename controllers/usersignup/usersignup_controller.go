@@ -488,14 +488,14 @@ func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1al
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
 			"unable to update state label at UserSignup resource")
 	}
-	r.updateUserSignupMetricsByState(logger, userSignup, oldState, state)
+	r.updateUserSignupMetricsByState(oldState, state)
 	// increment the counter *only if the client update did not fail*
 	domain := metrics.GetEmailDomain(userSignup)
 	counter.UpdateUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
 	return nil
 }
 
-func (r *Reconciler) updateUserSignupMetricsByState(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, oldState string, newState string) {
+func (r *Reconciler) updateUserSignupMetricsByState(oldState string, newState string) {
 	if oldState == "" {
 		metrics.UserSignupUniqueTotal.Inc()
 	}
