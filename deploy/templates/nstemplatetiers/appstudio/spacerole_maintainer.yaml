@@ -55,6 +55,9 @@ objects:
         - managed-gitops.redhat.com
       resources:
         - gitopsdeployments
+        - gitopsdeploymentmanagedenvironments
+        - gitopsdeploymentrepositorycredentials
+        - gitopsdeploymentsyncruns
       verbs:
         - get
         - list
