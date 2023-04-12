@@ -488,26 +488,20 @@ func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1al
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
 			"unable to update state label at UserSignup resource")
 	}
-	r.updateUserSignupMetricsByState(logger, userSignup, oldState, state)
+	r.updateUserSignupMetricsByState(oldState, state)
 	// increment the counter *only if the client update did not fail*
 	domain := metrics.GetEmailDomain(userSignup)
 	counter.UpdateUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
 	return nil
 }
 
-func (r *Reconciler) updateUserSignupMetricsByState(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, oldState string, newState string) {
+func (r *Reconciler) updateUserSignupMetricsByState(oldState string, newState string) {
 	if oldState == "" {
 		metrics.UserSignupUniqueTotal.Inc()
 	}
 	switch newState {
 	case toolchainv1alpha1.UserSignupStateLabelValueApproved:
 		metrics.UserSignupApprovedTotal.Inc()
-		// track activation in Segment
-		if r.SegmentClient != nil {
-			r.SegmentClient.TrackAccountActivation(userSignup.Spec.Username, userSignup.Spec.Userid, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
-		} else {
-			logger.Info("segment client not configure to track account activations")
-		}
 	case toolchainv1alpha1.UserSignupStateLabelValueDeactivated:
 		if oldState == toolchainv1alpha1.UserSignupStateLabelValueApproved {
 			metrics.UserSignupDeactivatedTotal.Inc()
@@ -599,6 +593,13 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 	// increment the counter of MasterUserRecords
 	domain := metrics.GetEmailDomain(mur)
 	counter.IncrementMasterUserRecordCount(logger, domain)
+
+	// track the MUR creation as an account activation event in Segment
+	if r.SegmentClient != nil {
+		r.SegmentClient.TrackAccountActivation(compliantUsername, userSignup.Spec.Userid, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
+	} else {
+		logger.Info("segment client not configured to track account activations")
+	}
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
