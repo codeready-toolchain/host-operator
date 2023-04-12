@@ -598,7 +598,7 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 	if r.SegmentClient != nil {
 		r.SegmentClient.TrackAccountActivation(compliantUsername, userSignup.Spec.Userid, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
 	} else {
-		logger.Info("segment client not configure to track account activations")
+		logger.Info("segment client not configured to track account activations")
 	}
 
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
