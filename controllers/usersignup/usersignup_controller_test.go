@@ -3468,6 +3468,7 @@ func TestDeathBy100Signups(t *testing.T) {
 	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+	segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 
 	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 		toolchainv1alpha1.Condition{
@@ -3953,6 +3954,7 @@ func TestUpdateMetricsByState(t *testing.T) {
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
+			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
 		t.Run("approved -> deactivated - increment UserSignupDeactivatedTotal", func(t *testing.T) {
