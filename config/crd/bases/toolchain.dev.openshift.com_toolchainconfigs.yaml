@@ -267,7 +267,7 @@ spec:
                                 description: ProjectID defines the GCP project ID
                                   that has the recaptcha service enabled.
                                 type: string
-                              score:
+                              scoreThreshold:
                                 description: ScoreThreshold defines the captcha assessment
                                   score threshold. A score equal to or above the threshold
                                   means the user is most likely human and can proceed
@@ -331,6 +331,11 @@ spec:
                               awsSecretAccessKey:
                                 description: AWSSecretAccessKey is the AWS credential
                                   used to authenticate in order to access AWS services
+                                type: string
+                              recaptchaServiceAccountFile:
+                                description: RecaptchaServiceAccountFile is the GCP
+                                  service account file contents encoded in base64,
+                                  it is to be used with the recaptcha client for authentication
                                 type: string
                               ref:
                                 description: Reference is the name of the secret resource
