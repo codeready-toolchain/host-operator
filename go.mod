@@ -108,3 +108,5 @@ require (
 )
 
 go 1.19
+
+replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230413235928-1b4923254e3e

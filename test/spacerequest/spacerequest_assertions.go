@@ -7,6 +7,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,6 +67,28 @@ func (a *Assertion) HasStatusTargetClusterURL(targetCluster string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	assert.Equal(a.t, targetCluster, a.spaceRequest.Status.TargetClusterURL)
+	return a
+}
+
+func (a *Assertion) HasNamespaceAccess(namespace, oldSecretRef string) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.True(a.t, len(a.spaceRequest.Status.NamespaceAccess) > 0)
+	assert.Equal(a.t, namespace, a.spaceRequest.Status.NamespaceAccess[0].Name)
+	// check that the secret was created
+	assert.NotEmpty(a.t, a.spaceRequest.Status.NamespaceAccess[0].SecretRef)
+	secret := &corev1.Secret{}
+	err = a.client.Get(context.TODO(), types.NamespacedName{
+		Namespace: a.spaceRequest.Namespace,
+		Name:      a.spaceRequest.Status.NamespaceAccess[0].SecretRef,
+	}, secret)
+	require.NoError(a.t, err)
+	assert.NotEmpty(a.t, secret)
+	if oldSecretRef != "" {
+		// if old secret was provided we check that the name has changed,
+		// meaning a new secret was created.
+		assert.NotEqual(a.t, oldSecretRef, a.spaceRequest.Status.NamespaceAccess[0].SecretRef)
+	}
 	return a
 }
 

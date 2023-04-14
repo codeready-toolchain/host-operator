@@ -294,6 +294,7 @@ func main() { // nolint:gocyclo
 			Client:         mgr.GetClient(),
 			Namespace:      namespace,
 			MemberClusters: clusterScopedMemberClusters,
+			Scheme:         mgr.GetScheme(),
 		}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SpaceRequest")
 			os.Exit(1)
