@@ -495,11 +495,11 @@ func (r *Reconciler) generateKubeConfig(logger logr.Logger, memberClusterWithSpa
 	}
 	// search for the admin secret with type=service-account-token
 	adminSecret := &v1.Secret{}
-	for _, secret := range secretList.Items {
-		if value, found := secret.Annotations[v1.ServiceAccountNameKey]; found &&
+	for i := range secretList.Items {
+		if value, found := secretList.Items[i].Annotations[v1.ServiceAccountNameKey]; found &&
 			value == toolchainv1alpha1.AdminServiceAccountName &&
-			secret.Type == v1.SecretTypeServiceAccountToken {
-			adminSecret = &secret
+			secretList.Items[i].Type == v1.SecretTypeServiceAccountToken {
+			adminSecret = &secretList.Items[i]
 			break
 		}
 	}
