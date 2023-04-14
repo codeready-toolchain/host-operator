@@ -419,7 +419,7 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 
 	var namespaceAccess []toolchainv1alpha1.NamespaceAccess
 	for _, namespace := range subSpace.Status.ProvisionedNamespaces {
-		// check if kubeconfig secret exists then we need to update it
+		// check if kubeconfig secret exists,
 		// if it doesn't exist it will be created
 		secretList := &v1.SecretList{}
 		secretLabels := client.MatchingLabels{
@@ -508,7 +508,7 @@ func (r *Reconciler) generateKubeConfig(logger logr.Logger, memberClusterWithSpa
 	}
 	logger.Info("admin secret found " + adminSecret.Name)
 
-	// create a kubeconfig formatted secret
+	// create apiConfig based on the secret content
 	clusters := make(map[string]*api.Cluster)
 	clusters["default-cluster"] = &api.Cluster{
 		Server:                   memberClusterWithSpaceRequest.Config.APIEndpoint,
