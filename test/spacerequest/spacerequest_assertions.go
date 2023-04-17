@@ -70,24 +70,31 @@ func (a *Assertion) HasStatusTargetClusterURL(targetCluster string) *Assertion {
 	return a
 }
 
-func (a *Assertion) HasNamespaceAccess(namespace, oldSecretRef string) *Assertion {
+func (a *Assertion) HasNamespaceAccess(namespaceAccess []toolchainv1alpha1.NamespaceAccess) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	assert.True(a.t, len(a.spaceRequest.Status.NamespaceAccess) > 0)
-	assert.Equal(a.t, namespace, a.spaceRequest.Status.NamespaceAccess[0].Name)
-	// check that the secret was created
-	assert.NotEmpty(a.t, a.spaceRequest.Status.NamespaceAccess[0].SecretRef)
-	secret := &corev1.Secret{}
-	err = a.client.Get(context.TODO(), types.NamespacedName{
-		Namespace: a.spaceRequest.Namespace,
-		Name:      a.spaceRequest.Status.NamespaceAccess[0].SecretRef,
-	}, secret)
-	require.NoError(a.t, err)
-	assert.NotEmpty(a.t, secret)
-	if oldSecretRef != "" {
-		// if old secret was provided we check that the name has changed,
-		// meaning a new secret was created.
-		assert.NotEqual(a.t, oldSecretRef, a.spaceRequest.Status.NamespaceAccess[0].SecretRef)
+
+	// check if each expected namespace has its access secret provisioned
+	for _, expectedNamespaceAccess := range namespaceAccess {
+		foundItem := toolchainv1alpha1.NamespaceAccess{}
+		for _, actualNamespaceAccess := range a.spaceRequest.Status.NamespaceAccess {
+			if actualNamespaceAccess.Name == expectedNamespaceAccess.Name {
+				foundItem = actualNamespaceAccess
+				break
+			}
+		}
+		assert.NotEmpty(a.t, foundItem, "unable to find namespace access", "namespace", expectedNamespaceAccess.Name)
+
+		// check that the secret was created
+		assert.NotEmpty(a.t, foundItem.SecretRef)
+		secret := &corev1.Secret{}
+		err = a.client.Get(context.TODO(), types.NamespacedName{
+			Namespace: a.spaceRequest.Namespace,
+			Name:      foundItem.SecretRef,
+		}, secret)
+		require.NoError(a.t, err)
+		assert.NotEmpty(a.t, secret)
 	}
 	return a
 }

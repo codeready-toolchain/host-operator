@@ -58,7 +58,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 			source.NewKindWithCache(&toolchainv1alpha1.SpaceRequest{}, memberCluster.Cache),
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-			Watches(&source.Kind{Type: &v1.Secret{}},
+			Watches(source.NewKindWithCache(&v1.Secret{}, memberCluster.Cache),
 				handler.EnqueueRequestsFromMapFunc(MapSecretToSpaceRequest()),
 				builder.WithPredicates(&predicate.GenerationChangedPredicate{}))
 	}
@@ -122,7 +122,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	// list all provisioned namespaces of the subSpace
+	// ensure there is a secret that provides admin access to each provisioned namespaces of the subSpace
 	if err := r.ensureSecretForProvisionedNamespaces(logger, memberClusterWithSpaceRequest, spaceRequest, subSpace); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -466,6 +466,13 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 			namespaceAccess = append(namespaceAccess, toolchainv1alpha1.NamespaceAccess{
 				Name:      namespace.Name,
 				SecretRef: kubeConfigSecret.Name,
+			})
+
+		case len(secretList.Items) == 1:
+			// a secret is already present for this namespace
+			namespaceAccess = append(namespaceAccess, toolchainv1alpha1.NamespaceAccess{
+				Name:      namespace.Name,
+				SecretRef: secretList.Items[0].Name,
 			})
 
 		case len(secretList.Items) > 1:

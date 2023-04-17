@@ -82,12 +82,9 @@ func WithStatusTargetCluster(name string) Option {
 	}
 }
 
-func WithStatusProvisionedNamespace(name string) Option {
+func WithStatusProvisionedNamespaces(provisionedNamespaces []toolchainv1alpha1.SpaceNamespace) Option {
 	return func(space *toolchainv1alpha1.Space) {
-		space.Status.ProvisionedNamespaces = []toolchainv1alpha1.SpaceNamespace{{
-			Name: name,
-			Type: "default",
-		}}
+		space.Status.ProvisionedNamespaces = provisionedNamespaces
 	}
 }
 

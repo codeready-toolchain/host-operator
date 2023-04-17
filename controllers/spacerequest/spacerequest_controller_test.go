@@ -114,7 +114,10 @@ func TestCreateSpaceRequest(t *testing.T) {
 				spacetest.WithSpecParentSpace("jane"),
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
 				spacetest.WithStatusTargetCluster(member1.Name),
-				spacetest.WithStatusProvisionedNamespace("jane-env"),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
+					Name: "jane-env",
+					Type: "default",
+				}}),
 				spacetest.WithTierName(sr.Spec.TierName))
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
 			ctrl := newReconciler(t, hostClient, member1)
@@ -127,9 +130,82 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// spacerequest exists with expected cluster roles and finalizer
 			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
 				HasSpecTargetClusterRoles(srClusterRoles).
-				HasConditions(spacetest.Ready()).               // condition is reflected from space status
-				HasStatusTargetClusterURL(member1.APIEndpoint). // has new target cluster url
-				HasNamespaceAccess("jane-env", "").             // has access details for the provisioned namespace
+				HasConditions(spacetest.Ready()).                                            // condition is reflected from space status
+				HasStatusTargetClusterURL(member1.APIEndpoint).                              // has new target cluster url
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env"}}). // has access details for the provisioned namespace
+				HasFinalizer()
+			// a subspace is created with the tierName and cluster roles from the spacerequest
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasConditions(spacetest.Ready()).
+				HasTier(sr.Spec.TierName).
+				HasParentSpace("jane") // the parent space is set as expected
+		})
+
+		t.Run("space has multiple provisioned namespaces", func(t *testing.T) {
+			// given
+			// admin secret for default namespace
+			adminSecret1 := test.CreateSecret(toolchainv1alpha1.AdminServiceAccountName, "jane-env1", map[string][]byte{
+				"token":  []byte("aSASDb=="),
+				"ca.crt": []byte("xxAdadf78=="),
+			})
+			adminSecret1.Annotations = map[string]string{}
+			adminSecret1.Annotations[corev1.ServiceAccountNameKey] = toolchainv1alpha1.AdminServiceAccountName
+			adminSecret1.Type = corev1.SecretTypeServiceAccountToken
+			// admin secret for dev namespace
+			adminSecret2 := test.CreateSecret(toolchainv1alpha1.AdminServiceAccountName, "jane-env2", map[string][]byte{
+				"token":  []byte("aAEradsar=="),
+				"ca.crt": []byte("xxEadf78=="),
+			})
+			adminSecret2.Annotations = map[string]string{}
+			adminSecret2.Annotations[corev1.ServiceAccountNameKey] = toolchainv1alpha1.AdminServiceAccountName
+			adminSecret2.Type = corev1.SecretTypeServiceAccountToken
+			// the default namespace has already an access secret provisioned
+			accessSecret := test.CreateSecret("existingDevSecret", sr.GetNamespace(), map[string][]byte{
+				"kubeconfig": []byte("Asdfasdd76=="),
+			})
+			accessSecret.Labels = map[string]string{
+				toolchainv1alpha1.SpaceRequestLabelKey:                     sr.GetName(),
+				toolchainv1alpha1.SpaceRequestNamespaceLabelKey:            sr.GetNamespace(),
+				toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: "jane-env1",
+			}
+			accessSecret.Type = corev1.SecretTypeOpaque
+
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace, adminSecret1, adminSecret2, accessSecret), "member-1", corev1.ConditionTrue)
+			// this space has multiple namespaces provisioned
+			subSpace := spacetest.NewSpace("jane-subs",
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithSpecParentSpace("jane"),
+				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
+				spacetest.WithStatusTargetCluster(member1.Name),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{
+					{
+						Name: "jane-env1",
+						Type: "default",
+					},
+					{
+						Name: "jane-env2",
+						Type: "dev",
+					},
+				}),
+				spacetest.WithTierName(sr.Spec.TierName))
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.NoError(t, err)
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasConditions(spacetest.Ready()).                                                                                                  // condition is reflected from space status
+				HasStatusTargetClusterURL(member1.APIEndpoint).                                                                                    // has new target cluster url
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "existingDevSecret"}, {Name: "jane-env2"}}). // one secret is unchanged since already existing, while the other was created.
 				HasFinalizer()
 			// a subspace is created with the tierName and cluster roles from the spacerequest
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
@@ -202,7 +278,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
-			// space request should not be there
+			// space request should not be there,
 			// but it should not return an error by design
 			require.NoError(t, err)
 		})
@@ -454,7 +530,10 @@ func TestCreateSpaceRequest(t *testing.T) {
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
 				spacetest.WithStatusTargetCluster("member-1"),
 				spacetest.WithSpecParentSpace("jane"),
-				spacetest.WithStatusProvisionedNamespace("jane-env"),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
+					Name: "jane-env",
+					Type: "default",
+				}}),
 				spacetest.WithTierName(sr.Spec.TierName))
 			member1Client := test.NewFakeClient(t, sr, srNamespace, kubeconfigSecret1, kubeconfigSecret2)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
@@ -601,7 +680,10 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				spacetest.WithCondition(spacetest.Ready()),
 				spacetest.WithSpecParentSpace("jane"),
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
-				spacetest.WithStatusProvisionedNamespace("jane-env"),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
+					Name: "jane-env",
+					Type: "default",
+				}}),
 				spacetest.WithTierName("appstudio"))
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace, adminSecret), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
@@ -615,7 +697,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 			// spacerequest exists with expected cluster roles and finalizer
 			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
 				HasSpecTierName("appstudio").
-				HasNamespaceAccess("jane-env", "jane-qwerty"). // we provide old secretRef so that we check if a new secret was created.
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env"}}).
 				HasFinalizer()
 		})
 	})
