@@ -263,13 +263,23 @@ spec:
                                 description: Enabled specifies whether the captcha
                                   verification feature is enabled or not
                                 type: boolean
-                              score:
+                              projectID:
+                                description: ProjectID defines the GCP project ID
+                                  that has the recaptcha service enabled.
+                                type: string
+                              scoreThreshold:
                                 description: ScoreThreshold defines the captcha assessment
                                   score threshold. A score equal to or above the threshold
                                   means the user is most likely human and can proceed
                                   signing up but a score below the threshold means
                                   the score is suspicious and further verification
                                   may be required.
+                                type: string
+                              siteKey:
+                                description: SiteKey defines the recaptcha site key
+                                  to use when making recaptcha requests. There can
+                                  be different ones for different environments. eg.
+                                  dev, stage, prod
                                 type: string
                             type: object
                           codeExpiresInMin:
@@ -321,6 +331,11 @@ spec:
                               awsSecretAccessKey:
                                 description: AWSSecretAccessKey is the AWS credential
                                   used to authenticate in order to access AWS services
+                                type: string
+                              recaptchaServiceAccountFile:
+                                description: RecaptchaServiceAccountFile is the GCP
+                                  service account file contents encoded in base64,
+                                  it is to be used with the recaptcha client for authentication
                                 type: string
                               ref:
                                 description: Reference is the name of the secret resource
