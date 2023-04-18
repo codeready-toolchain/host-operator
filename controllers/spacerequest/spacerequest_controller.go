@@ -482,7 +482,7 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 
 	}
 
-	// update space request status in case secretes for provisioned namespace were created.
+	// update space request status in case secrets for provisioned namespace were created.
 	if len(namespaceAccess) > 0 {
 		spaceRequest.Status.NamespaceAccess = namespaceAccess
 		return memberClusterWithSpaceRequest.Client.Status().Update(context.TODO(), spaceRequest)
