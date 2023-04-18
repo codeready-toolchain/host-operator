@@ -558,19 +558,10 @@ func TestDeleteSpace(t *testing.T) {
 			spacetest.WithSpecTargetCluster("member-1"),
 			spacetest.WithStatusTargetCluster("member-1"))
 		nsTmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
-		InitializeCounters(t,
-			NewToolchainStatus(
-				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-					"1,internal": 1,
-				}),
-				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-					string(metrics.Internal): 1,
-				}),
-				WithMember("member-1", WithSpaceCount(1)),
-			))
 
 		t.Run("Space controller deletes NSTemplateSet", func(t *testing.T) {
 			// given
+			InitializeCounters(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
 			hostClient := test.NewFakeClient(t, s, basicTier)
 			memberClient := test.NewFakeClient(t, nsTmplSet)
 			member := NewMemberClusterWithClient(memberClient, "member-1", corev1.ConditionTrue)
@@ -590,11 +581,12 @@ func TestDeleteSpace(t *testing.T) {
 			nstemplatetsettest.AssertThatNSTemplateSet(t, test.MemberOperatorNs, "oddity", member.Client).
 				DoesNotExist()
 			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 1) // counter for space is still there
+				HaveSpacesForCluster("member-1", 0) // counter is decremented
 		})
 
 		t.Run("when NSTemplateSet is being deleted and in terminating state", func(t *testing.T) {
 			// given
+			InitializeCounters(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
 			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithDeletionTimestamp(time.Now()), func(templateSet *toolchainv1alpha1.NSTemplateSet) {
 				templateSet.Status.Conditions = []toolchainv1alpha1.Condition{
 					nstemplatetsettest.Terminating(),
@@ -624,7 +616,7 @@ func TestDeleteSpace(t *testing.T) {
 				HasDeletionTimestamp().
 				HasConditions(nstemplatetsettest.Terminating())
 			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 1) // counter for space is still there
+				HaveSpacesForCluster("member-1", 1) // counter for space is not decremented because the NSTemplateSet is already being deleted
 		})
 
 		t.Run("when using status target cluster", func(t *testing.T) {
@@ -637,7 +629,6 @@ func TestDeleteSpace(t *testing.T) {
 			hostClient := test.NewFakeClient(t, s, basicTier)
 			nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
 			member1Client := test.NewFakeClient(t, nstmplSet)
-			member1Client.MockDelete = mockDeleteNSTemplateSet(member1Client.Client)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
@@ -687,20 +678,19 @@ func TestDeleteSpace(t *testing.T) {
 				HaveSpacesForCluster("member-1", 0) // space counter is not incremented when `.spec.TargetCluster` is not set
 		})
 
-		t.Run("when deleting space", func(t *testing.T) {
+		t.Run("when nstemplateset is gone, then it should remove the finalizer and the client automatically delete the Space", func(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("delete-space",
 				spacetest.WithoutSpecTargetCluster(),          // targetCluster is not specified in spec ...
 				spacetest.WithStatusTargetCluster("member-1"), // ... but is available in status
-				spacetest.WithDeletionTimestamp())
+				spacetest.WithDeletionTimestamp(),
+				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
-			nstmplSet := nstemplatetsettest.NewNSTemplateSet("delete-space", nstemplatetsettest.WithReadyCondition())
-			member1Client := test.NewFakeClient(t, nstmplSet)
-			member1Client.MockDelete = mockDeleteNSTemplateSet(member1Client.Client)
+			member1Client := test.NewFakeClient(t)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
-			InitializeCounters(t, NewToolchainStatus(WithMember("member-1", WithSpaceCount(1))))
+			InitializeCounters(t, NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), reconcile.Request{
@@ -716,7 +706,7 @@ func TestDeleteSpace(t *testing.T) {
 			spacetest.AssertThatSpace(t, s.Namespace, s.Name, hostClient).
 				DoesNotExist()
 			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 0) // space counter is decremented when there are no finalizers on the space resource that is being deleted
+				HaveSpacesForCluster("member-1", 1) // space counter is not decremented
 		})
 	})
 
@@ -1684,7 +1674,6 @@ func TestRetargetSpace(t *testing.T) {
 		hostClient := test.NewFakeClient(t, s, basicTier)
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
 		member1Client := test.NewFakeClient(t, nstmplSet)
-		member1Client.MockDelete = mockDeleteNSTemplateSet(member1Client.Client)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
@@ -1737,7 +1726,6 @@ func TestRetargetSpace(t *testing.T) {
 		hostClient := test.NewFakeClient(t, s, basicTier)
 		nstmplSet := nstemplatetsettest.NewNSTemplateSet("oddity", nstemplatetsettest.WithReadyCondition())
 		member1Client := test.NewFakeClient(t, nstmplSet)
-		member1Client.MockDelete = mockDeleteNSTemplateSet(member1Client.Client)
 		member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 		member2Client := test.NewFakeClient(t)
 		member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
@@ -2003,22 +1991,6 @@ func TestSubSpace(t *testing.T) {
 		})
 
 	})
-}
-
-func mockDeleteNSTemplateSet(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
-	return func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
-		if nstmplSet, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
-			now := metav1.Now()
-			nstmplSet.DeletionTimestamp = &now
-			nstmplSet.Status.Conditions = []toolchainv1alpha1.Condition{
-				nstemplatetsettest.Terminating(),
-			}
-			// instead of deleting the resource in the FakeClient,
-			// we update it with a `DeletionTimestamp`
-			return cl.Update(ctx, obj)
-		}
-		return cl.Delete(ctx, obj, opts...)
-	}
 }
 
 func mockDeleteNSTemplateSetFail(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
