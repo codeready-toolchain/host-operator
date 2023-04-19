@@ -517,7 +517,12 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 	// Check for any forbidden prefixes
 	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
 		if strings.HasPrefix(replaced, prefix) {
-			replaced = fmt.Sprintf("%s%s", "crt-", replaced)
+			if len(replaced) > 16 {
+				// replace prefix instead of append
+				replaced = "crt-" + replaced[3:]
+			} else {
+				replaced = fmt.Sprintf("%s%s", "crt-", replaced)
+			}
 			break
 		}
 	}
@@ -525,7 +530,12 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 	// Check for any forbidden suffixes
 	for _, suffix := range config.Users().ForbiddenUsernameSuffixes() {
 		if strings.HasSuffix(replaced, suffix) {
-			replaced = fmt.Sprintf("%s%s", replaced, "-crt")
+			if len(replaced) > 16 {
+				// replace prefix instead of append
+				replaced = replaced[:len(replaced)-4] + "-crt"
+			} else {
+				replaced = fmt.Sprintf("%s%s", replaced, "-crt")
+			}
 			break
 		}
 	}

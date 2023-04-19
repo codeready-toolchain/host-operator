@@ -1,7 +1,7 @@
 module github.com/codeready-toolchain/host-operator
 
 require (
-	github.com/codeready-toolchain/api v0.0.0-20230406073419-4f8108d3a1c6
+	github.com/codeready-toolchain/api v0.0.0-20230417183849-f62ccbf3bd40
 	github.com/codeready-toolchain/toolchain-common v0.0.0-20230406074039-c486d404e698
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ghodss/yaml v1.0.0
@@ -106,5 +106,7 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/codeready-toolchain/toolchain-common v0.0.0-20230406074039-c486d404e698 => github.com/ranakan19/toolchain-common v0.0.0-20230418043834-417f2d88b510
 
 go 1.19
