@@ -109,7 +109,7 @@ func DecrementSpaceCount(logger logr.Logger, clusterName string) {
 		if cachedCounts.SpacesPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
 			cachedCounts.SpacesPerClusterCounts[clusterName]--
 			metrics.SpaceGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.SpacesPerClusterCounts[clusterName]))
-			logger.Info("decremented Spaces count", "value", cachedCounts.SpacesPerClusterCounts[clusterName])
+			logger.Info("decremented Spaces count", "clusterName", clusterName, "value", cachedCounts.SpacesPerClusterCounts[clusterName])
 		} else {
 			logger.Error(fmt.Errorf("the count of Spaces is zero"),
 				"unable to decrement the number of Spaces for the given cluster", "cluster", clusterName)
@@ -205,7 +205,7 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 	// `masterUserRecordsPerDomain` metric
 	toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey] = toolchainv1alpha1.Metric(cachedCounts.MasterUserRecordPerDomainCounts)
 	for domain, count := range cachedCounts.MasterUserRecordPerDomainCounts {
-		log.Info("synchronized master_user_records gauge", "domaim", domain, "count", count)
+		log.Info("synchronized master_user_records gauge", "domain", domain, "count", count)
 		metrics.MasterUserRecordGaugeVec.WithLabelValues(domain).Set(float64(count))
 	}
 	log.Info("synchronized counters", "counts", cachedCounts.Counts)
