@@ -1832,15 +1832,7 @@ func TestRetargetSpace(t *testing.T) {
 			member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
 			ctrl := newReconciler(hostClient, member1, member2)
 			InitializeCounters(t,
-				NewToolchainStatus(
-					WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-						"1,internal": 1,
-					}),
-					WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-						string(metrics.Internal): 1,
-					}),
-					WithMember("member-1", WithSpaceCount(1)),
-				))
+				NewToolchainStatus(WithEmptyMetrics(), WithMember("member-1", WithSpaceCount(1))))
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1854,8 +1846,8 @@ func TestRetargetSpace(t *testing.T) {
 				HasNoConditions().
 				HasStatusTargetCluster("member-1") // NOT updated
 			AssertThatCountersAndMetrics(t).
-				HaveSpacesForCluster("member-1", 1).
-				HaveSpacesForCluster("member-2", 0) // space counter is unchanged
+				HaveSpacesForCluster("member-1", 0). // counter is decremented according to the value in status
+				HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 		})
 
 	})
