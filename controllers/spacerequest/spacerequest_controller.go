@@ -13,16 +13,21 @@ import (
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
+	authv1 "k8s.io/api/authentication/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -30,6 +35,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+// TokenRequestExpirationSeconds is just a long duration so that the token will never expire.
+// However, this token will provide access only at the namespace scope, so once the namespace will be deleted this token will just be invalid.
+const TokenRequestExpirationSeconds = 3650 * 24 * 60 * 60
 
 // Reconciler reconciles a SpaceRequest object
 type Reconciler struct {
@@ -57,10 +66,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 		b = b.Watches(
 			source.NewKindWithCache(&toolchainv1alpha1.SpaceRequest{}, memberCluster.Cache),
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-			Watches(source.NewKindWithCache(&v1.Secret{}, memberCluster.Cache),
-				handler.EnqueueRequestsFromMapFunc(MapSecretToSpaceRequest()),
-				builder.WithPredicates(&predicate.GenerationChangedPredicate{}))
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	}
 	return b.Complete(r)
 }
@@ -435,7 +441,7 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 		switch {
 		case len(secretList.Items) == 0:
 			// create the secret for this namespace
-			clientConfig, err := r.generateKubeConfig(logger, memberClusterWithSpaceRequest, namespace.Name)
+			clientConfig, err := r.generateKubeConfig(memberClusterWithSpaceRequest, namespace.Name)
 			if err != nil {
 				return err
 			}
@@ -491,35 +497,21 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 	return nil
 }
 
-func (r *Reconciler) generateKubeConfig(logger logr.Logger, memberClusterWithSpaceRequest cluster.Cluster, namespace string) (*api.Config, error) {
-	// get admin secret token
-	secretList := &v1.SecretList{}
-	if err := memberClusterWithSpaceRequest.Client.List(context.TODO(), secretList, client.InNamespace(namespace)); err != nil {
+func (r *Reconciler) generateKubeConfig(memberClusterWithSpaceRequest cluster.Cluster, namespace string) (*api.Config, error) {
+	// create a token request for the admin service account
+	token, err := getServiceAccountToken(memberClusterWithSpaceRequest, types.NamespacedName{
+		Namespace: namespace,
+		Name:      toolchainv1alpha1.AdminServiceAccountName,
+	})
+	if token == "" || err != nil {
 		return nil, err
 	}
-	if len(secretList.Items) == 0 {
-		return nil, fmt.Errorf("no secrets found in namespace %s", namespace)
-	}
-	// search for the admin secret with type=service-account-token
-	adminSecret := &v1.Secret{}
-	for i := range secretList.Items {
-		if value, found := secretList.Items[i].Annotations[v1.ServiceAccountNameKey]; found &&
-			value == toolchainv1alpha1.AdminServiceAccountName &&
-			secretList.Items[i].Type == v1.SecretTypeServiceAccountToken {
-			adminSecret = &secretList.Items[i]
-			break
-		}
-	}
-	if reflect.ValueOf(adminSecret).IsZero() {
-		return nil, fmt.Errorf("unable to find admin token for service account %s namespace %s", toolchainv1alpha1.AdminServiceAccountName, namespace)
-	}
-	logger.Info("admin secret found " + adminSecret.Name)
 
 	// create apiConfig based on the secret content
 	clusters := make(map[string]*api.Cluster)
 	clusters["default-cluster"] = &api.Cluster{
 		Server:                   memberClusterWithSpaceRequest.Config.APIEndpoint,
-		CertificateAuthorityData: adminSecret.Data["ca.crt"],
+		CertificateAuthorityData: memberClusterWithSpaceRequest.Config.RestConfig.CAData,
 	}
 	contexts := make(map[string]*api.Context)
 	contexts["default-context"] = &api.Context{
@@ -529,7 +521,7 @@ func (r *Reconciler) generateKubeConfig(logger logr.Logger, memberClusterWithSpa
 	}
 	authinfos := make(map[string]*api.AuthInfo)
 	authinfos[namespace] = &api.AuthInfo{
-		Token: string(adminSecret.Data["token"]),
+		Token: token,
 	}
 
 	clientConfig := &api.Config{
@@ -541,6 +533,37 @@ func (r *Reconciler) generateKubeConfig(logger logr.Logger, memberClusterWithSpa
 		AuthInfos:      authinfos,
 	}
 	return clientConfig, nil
+}
+
+// getServiceAccountToken returns the SA's token or returns an error if none was found.
+// NOTE: due to a changes in OpenShift 4.11, tokens are not listed as `secrets` in ServiceAccounts.
+// The recommended solution is to use the TokenRequest API when server version >= 4.11
+// (see https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-notable-technical-changes)
+func getServiceAccountToken(memberCluster cluster.Cluster, namespacedName types.NamespacedName) (string, error) {
+	tokenRequest := &authv1.TokenRequest{
+		Spec: authv1.TokenRequestSpec{
+			ExpirationSeconds: pointer.Int64(int64(TokenRequestExpirationSeconds)),
+		},
+	}
+	gvk := schema.GroupVersionKind{
+		Group:   "authentication.k8s.io",
+		Version: "v1",
+		Kind:    "TokenRequest",
+	}
+
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, memberCluster.RestConfig, serializer.NewCodecFactory(memberCluster.Client.Scheme()))
+	if err != nil {
+		return "", err
+	}
+	result := &authv1.TokenRequest{}
+	if err := restClient.Post().
+		AbsPath(fmt.Sprintf("api/v1/namespaces/%s/serviceaccounts/%s/token", namespacedName.Namespace, namespacedName.Name)).
+		Body(tokenRequest).
+		Do(context.TODO()).
+		Into(result); err != nil {
+		return "", err
+	}
+	return result.Status.Token, nil
 }
 
 func (r *Reconciler) setStatusProvisioning(memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) error {
