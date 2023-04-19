@@ -1678,7 +1678,9 @@ func TestRetargetSpace(t *testing.T) {
 		member2 := NewMemberClusterWithTenantRole(t, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
 		InitializeCounters(t,
-			NewToolchainStatus())
+			NewToolchainStatus(WithEmptyMetrics(),
+				WithMember("member-1", WithSpaceCount(1)),
+				WithMember("member-2", WithSpaceCount(0))))
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1692,12 +1694,12 @@ func TestRetargetSpace(t *testing.T) {
 			HasConditions(spacetest.Retargeting()).
 			HasStatusTargetCluster("member-1") // not reset yet
 		AssertThatCountersAndMetrics(t).
-			HaveSpacesForCluster("member-1", 0). // space counter is unchanged
+			HaveSpacesForCluster("member-1", 0). // space counter is decremented
 			HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 
 		t.Run("status target cluster reset when NSTemplateSet is deleted", func(t *testing.T) {
 			// once NSTemplateSet resource is fully deleted, the SpaceController is triggered again
-			// and it can create the NSTemplateSet on member-2 cluster
+			// and it doesn't create any NSTemplateSet since the targetCluster is empty
 
 			// when
 			res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1731,7 +1733,9 @@ func TestRetargetSpace(t *testing.T) {
 		member2 := NewMemberClusterWithClient(member2Client, "member-2", corev1.ConditionTrue)
 		ctrl := newReconciler(hostClient, member1, member2)
 		InitializeCounters(t,
-			NewToolchainStatus())
+			NewToolchainStatus(WithEmptyMetrics(),
+				WithMember("member-1", WithSpaceCount(1)),
+				WithMember("member-2", WithSpaceCount(0))))
 
 		// when
 		res, err := ctrl.Reconcile(context.TODO(), requestFor(s))
@@ -1744,6 +1748,9 @@ func TestRetargetSpace(t *testing.T) {
 			HasSpecTargetCluster("member-2").
 			HasConditions(spacetest.Retargeting()).
 			HasStatusTargetCluster("member-1") // not reset yet
+		AssertThatCountersAndMetrics(t).
+			HaveSpacesForCluster("member-1", 0). // space counter is decremented
+			HaveSpacesForCluster("member-2", 0)  // space counter is unchanged
 
 		t.Run("status target cluster is reset when NSTemplateSet is deleted on member-1", func(t *testing.T) {
 			// when

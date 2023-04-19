@@ -563,7 +563,7 @@ func (r *Reconciler) deleteNSTemplateSetFromCluster(logger logr.Logger, space *t
 		}
 		return false, nil // was already deleted in the mean time
 	}
-	counter.DecrementSpaceCount(logger, space.Spec.TargetCluster)
+	counter.DecrementSpaceCount(logger, space.Status.TargetCluster)
 	logger.Info("deleted the NSTemplateSet resource")
 	return true, nil // requeue until fully deleted
 }
