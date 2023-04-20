@@ -7,27 +7,23 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	restclient "github.com/codeready-toolchain/host-operator/pkg/client"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	spaceutil "github.com/codeready-toolchain/host-operator/pkg/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
-	authv1 "k8s.io/api/authentication/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -499,10 +495,10 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 
 func (r *Reconciler) generateKubeConfig(memberClusterWithSpaceRequest cluster.Cluster, namespace string) (*api.Config, error) {
 	// create a token request for the admin service account
-	token, err := getServiceAccountToken(memberClusterWithSpaceRequest, types.NamespacedName{
+	token, err := restclient.CreateTokenRequest(memberClusterWithSpaceRequest.RESTClient, types.NamespacedName{
 		Namespace: namespace,
 		Name:      toolchainv1alpha1.AdminServiceAccountName,
-	})
+	}, TokenRequestExpirationSeconds)
 	if token == "" || err != nil {
 		return nil, err
 	}
@@ -533,37 +529,6 @@ func (r *Reconciler) generateKubeConfig(memberClusterWithSpaceRequest cluster.Cl
 		AuthInfos:      authinfos,
 	}
 	return clientConfig, nil
-}
-
-// getServiceAccountToken returns the SA's token or returns an error if none was found.
-// NOTE: due to a changes in OpenShift 4.11, tokens are not listed as `secrets` in ServiceAccounts.
-// The recommended solution is to use the TokenRequest API when server version >= 4.11
-// (see https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-notable-technical-changes)
-func getServiceAccountToken(memberCluster cluster.Cluster, namespacedName types.NamespacedName) (string, error) {
-	tokenRequest := &authv1.TokenRequest{
-		Spec: authv1.TokenRequestSpec{
-			ExpirationSeconds: pointer.Int64(int64(TokenRequestExpirationSeconds)),
-		},
-	}
-	gvk := schema.GroupVersionKind{
-		Group:   "authentication.k8s.io",
-		Version: "v1",
-		Kind:    "TokenRequest",
-	}
-
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, memberCluster.RestConfig, serializer.NewCodecFactory(memberCluster.Client.Scheme()))
-	if err != nil {
-		return "", err
-	}
-	result := &authv1.TokenRequest{}
-	if err := restClient.Post().
-		AbsPath(fmt.Sprintf("api/v1/namespaces/%s/serviceaccounts/%s/token", namespacedName.Namespace, namespacedName.Name)).
-		Body(tokenRequest).
-		Do(context.TODO()).
-		Into(result); err != nil {
-		return "", err
-	}
-	return result.Status.Token, nil
 }
 
 func (r *Reconciler) setStatusProvisioning(memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) error {
