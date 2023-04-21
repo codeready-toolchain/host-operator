@@ -359,7 +359,7 @@ func TestCreateSpace(t *testing.T) {
 			require.EqualError(t, err, "unknown target member cluster 'unknown'")
 			assert.False(t, res.Requeue)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
-				HasStatusTargetCluster("unknown").
+				HasStatusTargetCluster(""). // has empty target cluster since it wasn't provisioned
 				HasStateLabel("cluster-assigned").
 				HasConditions(spacetest.ProvisioningFailed("unknown target member cluster 'unknown'"))
 			AssertThatCountersAndMetrics(t).
