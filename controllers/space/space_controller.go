@@ -477,8 +477,7 @@ func extractUsernames(role string, bindings []toolchainv1alpha1.SpaceBinding) []
 func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1alpha1.Space) error {
 	logger.Info("terminating Space")
 	if isBeingDeleted, err := r.deleteNSTemplateSet(logger, space); err != nil {
-		logger.Error(err, "failed to delete the NSTemplateSet")
-		return r.setStatusTerminatingFailed(logger, space, err)
+		logger.Error(err, "failed to delete the NSTemplateSet, deleting the space ...")
 	} else if isBeingDeleted {
 		if err := r.setStatusTerminating(space); err != nil {
 			logger.Error(err, "error updating status")
