@@ -492,7 +492,6 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 		return r.setStatusTerminatingFailed(logger, space, err)
 	}
 
-	counter.DecrementSpaceCount(logger, space.Spec.TargetCluster)
 	logger.Info("removed finalizer")
 	// no need to update the status of the Space once the finalizer has been removed, since
 	// the resource will be deleted
@@ -563,6 +562,7 @@ func (r *Reconciler) deleteNSTemplateSetFromCluster(logger logr.Logger, space *t
 		}
 		return false, nil // was already deleted in the mean time
 	}
+	counter.DecrementSpaceCount(logger, space.Status.TargetCluster)
 	logger.Info("deleted the NSTemplateSet resource")
 	return true, nil // requeue until fully deleted
 }
