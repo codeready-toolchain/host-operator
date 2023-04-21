@@ -179,13 +179,13 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	if err := r.setStateLabel(logger, space, toolchainv1alpha1.SpaceStateLabelValueClusterAssigned); err != nil {
 		return norequeue, err
 	}
-	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
-	space.Status.TargetCluster = space.Spec.TargetCluster
 
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
 		return norequeue, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
 	}
+	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
+	space.Status.TargetCluster = space.Spec.TargetCluster
 
 	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster)
 	// look-up the NSTemplateTier used by this Space
@@ -477,7 +477,12 @@ func extractUsernames(role string, bindings []toolchainv1alpha1.SpaceBinding) []
 func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1alpha1.Space) error {
 	logger.Info("terminating Space")
 	if isBeingDeleted, err := r.deleteNSTemplateSet(logger, space); err != nil {
-		logger.Error(err, "failed to delete the NSTemplateSet, deleting the space ...")
+		// space was already provisioned to a cluster
+		// let's not proceed with deletion
+		if space.Status.TargetCluster != "" {
+			logger.Error(err, "failed to delete the NSTemplateSet")
+			return r.setStatusTerminatingFailed(logger, space, err)
+		}
 	} else if isBeingDeleted {
 		if err := r.setStatusTerminating(space); err != nil {
 			logger.Error(err, "error updating status")
