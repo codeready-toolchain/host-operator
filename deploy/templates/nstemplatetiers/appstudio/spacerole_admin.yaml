@@ -43,7 +43,9 @@ objects:
       - gitopsdeploymentrepositorycredentials
       - gitopsdeploymentsyncruns
     verbs:
-      - '*'
+      - get
+      - list
+      - watch
   - apiGroups:
       - tekton.dev
     resources:
