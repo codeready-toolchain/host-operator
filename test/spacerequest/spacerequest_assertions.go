@@ -73,7 +73,7 @@ func (a *Assertion) HasStatusTargetClusterURL(targetCluster string) *Assertion {
 func (a *Assertion) HasNamespaceAccess(namespaceAccess []toolchainv1alpha1.NamespaceAccess) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
-	assert.True(a.t, len(a.spaceRequest.Status.NamespaceAccess) > 0)
+	assert.Len(a.t, a.spaceRequest.Status.NamespaceAccess, len(namespaceAccess))
 
 	// check if each expected namespace has its access secret provisioned
 	for _, expectedNamespaceAccess := range namespaceAccess {
