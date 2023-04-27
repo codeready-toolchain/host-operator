@@ -111,4 +111,4 @@ go 1.19
 
 replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230417193630-437c99a26fd7
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230427182108-f260bc9a740c
+replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230427201509-55fc7e763c74

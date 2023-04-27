@@ -498,7 +498,7 @@ func (r *Reconciler) generateKubeConfig(memberClusterWithSpaceRequest cluster.Cl
 		Namespace: namespace,
 		Name:      toolchainv1alpha1.AdminServiceAccountName,
 	}, TokenRequestExpirationSeconds)
-	if token == "" || err != nil {
+	if err != nil {
 		return nil, err
 	}
 

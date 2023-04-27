@@ -421,8 +421,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182aff
 github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
 github.com/mfrancisc/api v0.0.0-20230417193630-437c99a26fd7 h1:+VQNj+OTzMHeEmassPGZHby5XBkqKHE1zuE2Ga5rNZ4=
 github.com/mfrancisc/api v0.0.0-20230417193630-437c99a26fd7/go.mod h1:nn3W6eKb9PFIVwSwZW7wDeLACMBOwAV+4kddGuN+ARM=
-github.com/mfrancisc/toolchain-common v0.0.0-20230427182108-f260bc9a740c h1:135PIz6s92ZzBcdtj3dwtqcx0YbnNMJiXQnkcUJHswc=
-github.com/mfrancisc/toolchain-common v0.0.0-20230427182108-f260bc9a740c/go.mod h1:ECXkNiu/ajUtb6VuTtSPTFiL+sTcWwgMO4ovsOyHceE=
+github.com/mfrancisc/toolchain-common v0.0.0-20230427201509-55fc7e763c74 h1:e4XCve1lHD2SQMO++N4osmF1KGSP8GA6mRpha/nXXWM=
+github.com/mfrancisc/toolchain-common v0.0.0-20230427201509-55fc7e763c74/go.mod h1:ECXkNiu/ajUtb6VuTtSPTFiL+sTcWwgMO4ovsOyHceE=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
 github.com/mitchellh/cli v1.0.0/go.mod h1:hNIlj7HEI86fIcpObd7a0FcrxTWetlwJDGcceTlRvqc=
 github.com/mitchellh/copystructure v1.0.0 h1:Laisrj+bAB6b/yJwB5Bt3ITZhGJdqmxquMKeZ+mmkFQ=
