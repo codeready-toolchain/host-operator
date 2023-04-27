@@ -32,9 +32,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// TokenRequestExpirationSeconds is just a long duration so that the token will never expire.
-// However, this token will provide access only at the namespace scope, so once the namespace will be deleted this token will just be invalid.
-const TokenRequestExpirationSeconds = 3650 * 24 * 60 * 60
+// TokenRequestExpirationSeconds is just a long duration so that the token will not expire for the lifespan of the namespace.
+// This token will provide access only at the namespace scope, so once the namespace is deleted this token will just be invalid.
+const TokenRequestExpirationSeconds = 3650 * 24 * 60 * 60 // 10 years
 
 // Reconciler reconciles a SpaceRequest object
 type Reconciler struct {
