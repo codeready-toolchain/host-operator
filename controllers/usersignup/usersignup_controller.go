@@ -512,12 +512,14 @@ func (r *Reconciler) updateUserSignupMetricsByState(oldState string, newState st
 }
 
 func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainConfig, instance *toolchainv1alpha1.UserSignup) (string, error) {
+	// replaced should now be of len
 	replaced := usersignup.TransformUsername(instance.Spec.Username)
-
+	// -4 for "crt-" or "-crt" to be added in following lines. Update this length changing prefix
+	maxlengthWithPrefix := usersignup.MaxLength - 4
 	// Check for any forbidden prefixes
 	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
 		if strings.HasPrefix(replaced, prefix) {
-			if len(replaced) > 16 {
+			if len(replaced) > maxlengthWithPrefix {
 				// replace prefix instead of append
 				replaced = "crt-" + replaced[3:]
 			} else {
@@ -530,7 +532,7 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 	// Check for any forbidden suffixes
 	for _, suffix := range config.Users().ForbiddenUsernameSuffixes() {
 		if strings.HasSuffix(replaced, suffix) {
-			if len(replaced) > 16 {
+			if len(replaced) > maxlengthWithPrefix {
 				// replace prefix instead of append
 				replaced = replaced[:len(replaced)-4] + "-crt"
 			} else {
@@ -546,7 +548,6 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 	}
 
 	transformed := replaced
-
 	for i := 2; i < 101; i++ { // No more than 100 attempts to find a vacant name
 		mur := &toolchainv1alpha1.MasterUserRecord{}
 		// Check if a MasterUserRecord exists with the same transformed name
@@ -563,8 +564,11 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
 			return "", fmt.Errorf(fmt.Sprintf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up.", mur.Name, instance.Name))
 		}
-
-		transformed = fmt.Sprintf("%s-%d", replaced, i)
+		if len(transformed) > maxlengthWithPrefix {
+			transformed = transformed[:maxlengthWithPrefix] + fmt.Sprintf("-%d", i)
+		} else {
+			transformed = fmt.Sprintf("%s-%d", replaced, i)
+		}
 	}
 
 	return "", fmt.Errorf(fmt.Sprintf("unable to transform username [%s] even after 100 attempts", instance.Spec.Username))
