@@ -504,7 +504,7 @@ func (r *Reconciler) generateKubeConfig(memberClusterWithSpaceRequest cluster.Cl
 	}
 
 	// create apiConfig based on the secret content
-	clusters := make(map[string]*api.Cluster)
+	clusters := make(map[string]*api.Cluster, 1)
 	clusters["default-cluster"] = &api.Cluster{
 		Server:                   memberClusterWithSpaceRequest.Config.APIEndpoint,
 		CertificateAuthorityData: memberClusterWithSpaceRequest.Config.RestConfig.CAData,
