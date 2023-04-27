@@ -515,7 +515,7 @@ func (r *Reconciler) generateKubeConfig(memberClusterWithSpaceRequest cluster.Cl
 		Namespace: namespace,
 		AuthInfo:  namespace,
 	}
-	authinfos := make(map[string]*api.AuthInfo)
+	authinfos := make(map[string]*api.AuthInfo, 1)
 	authinfos[namespace] = &api.AuthInfo{
 		Token: token,
 	}
