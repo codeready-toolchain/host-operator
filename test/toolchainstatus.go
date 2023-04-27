@@ -115,6 +115,18 @@ func WithMetric(key string, metric toolchainv1alpha1.Metric) ToolchainStatusOpti
 	}
 }
 
+func WithEmptyMetrics() ToolchainStatusOption {
+	return func(status *toolchainv1alpha1.ToolchainStatus) {
+		if status.Status.Metrics == nil {
+			status.Status.Metrics = map[string]toolchainv1alpha1.Metric{}
+		}
+		status.Status.Metrics = map[string]toolchainv1alpha1.Metric{
+			toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey:        {},
+			toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey: {},
+		}
+	}
+}
+
 func ToBeReady() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
