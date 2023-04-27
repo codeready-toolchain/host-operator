@@ -457,7 +457,7 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 				},
 			}
 			if err := controllerutil.SetControllerReference(spaceRequest, kubeConfigSecret, r.Scheme); err != nil {
-				return errs.Wrap(err, "Error setting controller reference for secret "+kubeConfigSecret.Name)
+				return errs.Wrap(err, "error setting controller reference for secret "+kubeConfigSecret.Name)
 			}
 			if err := memberClusterWithSpaceRequest.Client.Create(context.TODO(), kubeConfigSecret); err != nil {
 				return err
