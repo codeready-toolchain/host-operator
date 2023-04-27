@@ -7,22 +7,22 @@ objects:
   kind: Namespace
   metadata:
     annotations:
-      openshift.io/description: ${USERNAME}-dev
-      openshift.io/display-name: ${USERNAME}-dev
-      openshift.io/requester: ${USERNAME}
+      openshift.io/description: ${SPACE_NAME}-dev
+      openshift.io/display-name: ${SPACE_NAME}-dev
+      openshift.io/requester: ${SPACE_NAME}
     labels:
-      name: ${USERNAME}-dev
+      name: ${SPACE_NAME}-dev
       # For RHODS: Allow user namespace to be treated as a DSP to enable Model Serving on this NS
       modelmesh-enabled: "true"
       opendatahub.io/dashboard: "true"
-    name: ${USERNAME}-dev
+    name: ${SPACE_NAME}-dev
 
 # Role and RoleBindings for CRT administration (not associated with users)
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: Role
   metadata:
     name: exec-pods
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   rules:
   - apiGroups:
     - ""
@@ -39,7 +39,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: crtadmin-view
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
@@ -52,7 +52,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: crtadmin-pods
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
@@ -68,7 +68,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: compute-deploy
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   spec:
     scopes:
       - NotTerminating
@@ -81,7 +81,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: compute-build
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   spec:
     scopes:
       - Terminating
@@ -94,7 +94,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: storage
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   spec:
     hard:
       limits.ephemeral-storage: 15Gi
@@ -105,7 +105,7 @@ objects:
   kind: LimitRange
   metadata:
     name: resource-limits
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   spec:
     limits:
       - type: "Container"
@@ -120,7 +120,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-same-namespace
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   spec:
     podSelector: {}
     ingress:
@@ -130,7 +130,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-ingress
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   spec:
     ingress:
     - from:
@@ -144,7 +144,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-monitoring
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   spec:
     ingress:
     - from:
@@ -158,7 +158,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-codeready-workspaces-operator
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   spec:
     ingress:
       - from:
@@ -172,7 +172,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-olm-namespaces
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   spec:
     ingress:
     - from:
@@ -186,7 +186,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-console-namespaces
-    namespace: ${USERNAME}-dev
+    namespace: ${SPACE_NAME}-dev
   spec:
     ingress:
     - from:
@@ -197,7 +197,7 @@ objects:
     policyTypes:
     - Ingress
 parameters:
-- name: USERNAME
+- name: SPACE_NAME
   required: true
 - name: MEMORY_LIMIT
   value: "14Gi"

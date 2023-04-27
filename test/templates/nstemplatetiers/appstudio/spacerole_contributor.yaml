@@ -8,7 +8,7 @@ objects:
     kind: ServiceAccount
     metadata:
       namespace: ${NAMESPACE}
-      name: appstudio-${USERNAME}
+      name: appstudio-${SPACE_NAME}
 
   # RoleBinding that grants limited CRUD permissions on AppStudio components CRDs & secrets to the user's SA
   # Role(s) and RoleBinding(s) that grant limited CRUD permissions on AppStudio components CRDs & secrets to the user's SA
@@ -141,7 +141,7 @@ objects:
     kind: RoleBinding
     metadata:
       namespace: ${NAMESPACE}
-      name: appstudio-${USERNAME}-user-actions
+      name: appstudio-${SPACE_NAME}-user-actions
     roleRef:
       apiGroup: rbac.authorization.k8s.io
       kind: Role
@@ -149,23 +149,23 @@ objects:
     subjects:
       - apiGroup: ""
         kind: ServiceAccount
-        name: appstudio-${USERNAME}
+        name: appstudio-${SPACE_NAME}
   # Role & RoleBinding that grants view permissions to the user's SA
   - apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
     metadata:
       namespace: ${NAMESPACE}
-      name: appstudio-${USERNAME}-view-user
+      name: appstudio-${SPACE_NAME}-view-user
     roleRef:
       apiGroup: rbac.authorization.k8s.io
       kind: ClusterRole
       name: view
     subjects:
       - kind: User
-        name: ${USERNAME}
+        name: ${SPACE_NAME}
 
 parameters:
   - name: NAMESPACE
     required: true
-  - name: USERNAME
+  - name: SPACE_NAME
     required: true

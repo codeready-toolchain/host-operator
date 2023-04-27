@@ -9,17 +9,17 @@ objects:
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: ${USERNAME}-rbac-edit
+    name: ${SPACE_NAME}-rbac-edit
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
     name: rbac-edit
   subjects:
     - kind: User
-      name: ${USERNAME}
+      name: ${SPACE_NAME}
 
 parameters:
-- name: USERNAME
+- name: SPACE_NAME
   required: true
 - name: NAMESPACE
   required: true

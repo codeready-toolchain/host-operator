@@ -6,7 +6,7 @@ objects:
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}-compute
+    name: for-${SPACE_NAME}-compute
   spec:
     quota:
       hard:
@@ -20,12 +20,12 @@ objects:
         count/persistentvolumeclaims: "5"
     selector:
       annotations:
-        openshift.io/requester: ${USERNAME}
+        openshift.io/requester: ${SPACE_NAME}
       labels: null
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}-deployments
+    name: for-${SPACE_NAME}-deployments
   spec:
     quota:
       hard:
@@ -34,12 +34,12 @@ objects:
         count/pods: "50"
     selector:
       annotations:
-        openshift.io/requester: ${USERNAME}
+        openshift.io/requester: ${SPACE_NAME}
       labels: null
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}-replicas
+    name: for-${SPACE_NAME}-replicas
   spec:
     quota:
       hard:
@@ -47,12 +47,12 @@ objects:
         count/replicationcontrollers: "30"
     selector:
       annotations:
-        openshift.io/requester: ${USERNAME}
+        openshift.io/requester: ${SPACE_NAME}
       labels: null
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}-routes
+    name: for-${SPACE_NAME}-routes
   spec:
     quota:
       hard:
@@ -60,12 +60,12 @@ objects:
         count/routes.route.openshift.io: "30"
     selector:
       annotations:
-        openshift.io/requester: ${USERNAME}
+        openshift.io/requester: ${SPACE_NAME}
       labels: null
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}-jobs
+    name: for-${SPACE_NAME}-jobs
   spec:
     quota:
       hard:
@@ -75,70 +75,70 @@ objects:
         count/statefulsets.apps: "30"
     selector:
       annotations:
-        openshift.io/requester: ${USERNAME}
+        openshift.io/requester: ${SPACE_NAME}
       labels: null
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}-services
+    name: for-${SPACE_NAME}-services
   spec:
     quota:
       hard:
         count/services: "30"
     selector:
       annotations:
-        openshift.io/requester: ${USERNAME}
+        openshift.io/requester: ${SPACE_NAME}
       labels: null
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}-bc
+    name: for-${SPACE_NAME}-bc
   spec:
     quota:
       hard:
         count/buildconfigs.build.openshift.io: "30"
     selector:
       annotations:
-        openshift.io/requester: ${USERNAME}
+        openshift.io/requester: ${SPACE_NAME}
       labels: null
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}-secrets
+    name: for-${SPACE_NAME}-secrets
   spec:
     quota:
       hard:
         count/secrets: "100"
     selector:
       annotations:
-        openshift.io/requester: ${USERNAME}
+        openshift.io/requester: ${SPACE_NAME}
       labels: null
 - apiVersion: quota.openshift.io/v1
   kind: ClusterResourceQuota
   metadata:
-    name: for-${USERNAME}-cm
+    name: for-${SPACE_NAME}-cm
   spec:
     quota:
       hard:
         count/configmaps: "100"
     selector:
       annotations:
-        openshift.io/requester: ${USERNAME}
+        openshift.io/requester: ${SPACE_NAME}
       labels: null
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
-    name: ${USERNAME}-dev
+    name: ${SPACE_NAME}-dev
   spec:
     timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
 - apiVersion: toolchain.dev.openshift.com/v1alpha1
   kind: Idler
   metadata:
-    name: ${USERNAME}-stage
+    name: ${SPACE_NAME}-stage
   spec:
     timeoutSeconds: ${{IDLER_TIMEOUT_SECONDS}}
 parameters:
-- name: USERNAME
+- name: SPACE_NAME
   required: true
 - name: IDLER_TIMEOUT_SECONDS
   # 12 hours
