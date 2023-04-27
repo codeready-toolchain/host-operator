@@ -509,7 +509,7 @@ func (r *Reconciler) generateKubeConfig(memberClusterWithSpaceRequest cluster.Cl
 		Server:                   memberClusterWithSpaceRequest.Config.APIEndpoint,
 		CertificateAuthorityData: memberClusterWithSpaceRequest.Config.RestConfig.CAData,
 	}
-	contexts := make(map[string]*api.Context)
+	contexts := make(map[string]*api.Context, 1)
 	contexts["default-context"] = &api.Context{
 		Cluster:   "default-cluster",
 		Namespace: namespace,
