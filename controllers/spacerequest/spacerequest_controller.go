@@ -7,9 +7,9 @@ import (
 	"time"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	restclient "github.com/codeready-toolchain/host-operator/pkg/client"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	spaceutil "github.com/codeready-toolchain/host-operator/pkg/space"
+	restclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
@@ -426,7 +426,6 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 		secretList := &v1.SecretList{}
 		secretLabels := client.MatchingLabels{
 			toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
-			toolchainv1alpha1.SpaceRequestNamespaceLabelKey:            spaceRequest.GetNamespace(),
 			toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: namespace.Name,
 		}
 		if err := memberClusterWithSpaceRequest.Client.List(context.TODO(), secretList, secretLabels, client.InNamespace(spaceRequest.GetNamespace())); err != nil {
@@ -513,10 +512,10 @@ func (r *Reconciler) generateKubeConfig(memberClusterWithSpaceRequest cluster.Cl
 	contexts["default-context"] = &api.Context{
 		Cluster:   "default-cluster",
 		Namespace: namespace,
-		AuthInfo:  namespace,
+		AuthInfo:  toolchainv1alpha1.AdminServiceAccountName,
 	}
 	authinfos := make(map[string]*api.AuthInfo, 1)
-	authinfos[namespace] = &api.AuthInfo{
+	authinfos[toolchainv1alpha1.AdminServiceAccountName] = &api.AuthInfo{
 		Token: token,
 	}
 

@@ -10,6 +10,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -94,7 +96,16 @@ func (a *Assertion) HasNamespaceAccess(namespaceAccess []toolchainv1alpha1.Names
 			Name:      foundItem.SecretRef,
 		}, secret)
 		require.NoError(a.t, err)
+		// validate the secret content (kubeconfig)
 		assert.NotEmpty(a.t, secret)
+		assert.NotEmpty(a.t, secret.StringData["kubeconfig"])
+		apiConfig, err := clientcmd.Load([]byte(secret.StringData["kubeconfig"]))
+		require.NoError(a.t, err)
+		require.False(a.t, api.IsConfigEmpty(apiConfig))
+		// create a new client with the given kubeconfig
+		kubeconfig, err := clientcmd.NewDefaultClientConfig(*apiConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
+		require.NoError(a.t, err)
+		require.NotNil(a.t, kubeconfig)
 	}
 	return a
 }

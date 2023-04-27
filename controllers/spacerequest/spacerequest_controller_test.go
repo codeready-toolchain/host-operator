@@ -10,12 +10,12 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	. "github.com/codeready-toolchain/host-operator/test"
-	clienttest "github.com/codeready-toolchain/host-operator/test/client"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	clienttest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
 	corev1 "k8s.io/api/core/v1"
@@ -102,13 +102,10 @@ func TestCreateSpaceRequest(t *testing.T) {
 		t.Run("space is provisioned", func(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
-			clienttest.SetupGockForServiceAccounts(t, member1.APIEndpoint, &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      toolchainv1alpha1.AdminServiceAccountName,
-					Namespace: "jane-env",
-				},
+			clienttest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Namespace: "jane-env",
 			})
-			t.Cleanup(gock.OffAll)
 			subSpace := spacetest.NewSpace("jane-subs",
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
@@ -149,20 +146,15 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// given
 			// the default namespace has already an access secret provisioned
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
-			clienttest.SetupGockForServiceAccounts(t, member1.APIEndpoint, &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      toolchainv1alpha1.AdminServiceAccountName,
-					Namespace: "jane-env1",
-				},
+			clienttest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Namespace: "jane-env1",
 			},
-				&corev1.ServiceAccount{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      toolchainv1alpha1.AdminServiceAccountName,
-						Namespace: "jane-env2",
-					},
+				types.NamespacedName{
+					Name:      toolchainv1alpha1.AdminServiceAccountName,
+					Namespace: "jane-env2",
 				},
 			)
-			t.Cleanup(gock.OffAll)
 			// this space has multiple namespaces provisioned
 			subSpace := spacetest.NewSpace("jane-subs",
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
@@ -196,7 +188,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasSpecTargetClusterRoles(srClusterRoles).
 				HasConditions(spacetest.Ready()).                                                                                                  // condition is reflected from space status
 				HasStatusTargetClusterURL(member1.APIEndpoint).                                                                                    // has new target cluster url
-				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "existingDevSecret"}, {Name: "jane-env2"}}). // one secret is unchanged since already existing, while the other was created.
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "existingDevSecret"}, {Name: "jane-env2"}}). // expected secrets are there.
 				HasFinalizer()
 			// a subspace is created with the tierName and cluster roles from the spacerequest
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
@@ -250,6 +242,71 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasTier("appstudio").
 				HasSpecTargetClusterRoles([]string(nil)). // has empty target cluster roles
 				HasSpecTargetCluster("member-2")          // subSpace has same target cluster as parentSpace
+		})
+
+		t.Run("space request has already an existing secret", func(t *testing.T) {
+			// given
+			kubeconfigSecret1 := test.CreateSecret("jane-xyz1", sr.Namespace, map[string][]byte{
+				"kubeconfig": []byte(fakeKubeConfigSecret()),
+			})
+			kubeconfigSecret1.StringData = map[string]string{
+				"kubeconfig": fakeKubeConfigSecret(),
+			}
+			kubeconfigSecret1.Labels = map[string]string{}
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestLabelKey] = sr.GetName()
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] = sr.GetNamespace()
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey] = "jane-env1"
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace, kubeconfigSecret1), "member-1", corev1.ConditionTrue)
+			clienttest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Namespace: "jane-env1",
+			},
+				types.NamespacedName{
+					Name:      toolchainv1alpha1.AdminServiceAccountName,
+					Namespace: "jane-env2",
+				},
+			)
+			// this space has multiple namespaces provisioned
+			subSpace := spacetest.NewSpace("jane-subs",
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithSpecParentSpace("jane"),
+				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
+				spacetest.WithStatusTargetCluster(member1.Name),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{
+					{
+						Name: "jane-env1",
+						Type: "default",
+					},
+					{
+						Name: "jane-env2",
+						Type: "dev",
+					},
+				}),
+				spacetest.WithTierName(sr.Spec.TierName))
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.NoError(t, err)
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasConditions(spacetest.Ready()).                                                                                          // condition is reflected from space status
+				HasStatusTargetClusterURL(member1.APIEndpoint).                                                                            // has new target cluster url
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "jane-xyz1"}, {Name: "jane-env2"}}). // first secret was already there while second one just newly created.
+				HasFinalizer()
+			// a subspace is created with the tierName and cluster roles from the spacerequest
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasConditions(spacetest.Ready()).
+				HasTier(sr.Spec.TierName).
+				HasParentSpace("jane") // the parent space is set as expected
 		})
 	})
 
@@ -560,6 +617,29 @@ func TestCreateSpaceRequest(t *testing.T) {
 	})
 }
 
+func fakeKubeConfigSecret() string {
+	return `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: QVNEZjMzPT0=
+    server: https://api.member-cluster:6433
+  name: default-cluster
+contexts:
+- context:
+    cluster: default-cluster
+    namespace: jane-env
+    user: namespace-manager
+  name: default-context
+current-context: default-context
+kind: Config
+preferences: {}
+users:
+- name: namespace-manager
+  user:
+    token: token-secret-for-namespace-manager
+`
+}
+
 func TestUpdateSpaceRequest(t *testing.T) {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 	err := apis.AddToScheme(scheme.Scheme)
@@ -670,13 +750,10 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				}}),
 				spacetest.WithTierName("appstudio"))
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
-			clienttest.SetupGockForServiceAccounts(t, member1.APIEndpoint, &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      toolchainv1alpha1.AdminServiceAccountName,
-					Namespace: "jane-env",
-				},
+			clienttest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Namespace: "jane-env",
 			})
-			t.Cleanup(gock.OffAll)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
 			ctrl := newReconciler(t, hostClient, member1)
 
