@@ -184,8 +184,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	if !found {
 		return norequeue, r.setStatusProvisioningFailed(logger, space, fmt.Errorf("unknown target member cluster '%s'", space.Spec.TargetCluster))
 	}
-	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
-	space.Status.TargetCluster = space.Spec.TargetCluster
 
 	logger = logger.WithValues("target_member_cluster", space.Spec.TargetCluster)
 	// look-up the NSTemplateTier used by this Space
@@ -202,6 +200,10 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	if err != nil || duration > 0 {
 		return duration, err
 	}
+
+	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
+	// let's set the .Status.TargetCluster only after the NSTemplateSet creation was triggered.
+	space.Status.TargetCluster = space.Spec.TargetCluster
 
 	// we don't need to check if the condition was found here, since it is already done in the `manageNSTemplateSet` function, if we reach this point,
 	// it's guaranteed that it exists and we only need to check the Reason.
@@ -483,6 +485,7 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 			logger.Error(err, "failed to delete the NSTemplateSet")
 			return r.setStatusTerminatingFailed(logger, space, err)
 		}
+		logger.Error(err, "error while deleting NSTemplateSet")
 	} else if isBeingDeleted {
 		if err := r.setStatusTerminating(space); err != nil {
 			logger.Error(err, "error updating status")
