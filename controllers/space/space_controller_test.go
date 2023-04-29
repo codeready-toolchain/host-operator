@@ -393,7 +393,6 @@ func TestCreateSpace(t *testing.T) {
 			assert.False(t, res.Requeue)
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, s.Name, hostClient).
 				HasSpecTargetCluster("member-1").
-				HasStatusTargetCluster("member-1").
 				HasConditions(spacetest.ProvisioningFailed("mock error"))
 			AssertThatCountersAndMetrics(t).
 				HaveSpacesForCluster("member-1", 0).

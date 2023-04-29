@@ -201,10 +201,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 		return duration, err
 	}
 
-	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
-	// let's set the .Status.TargetCluster only after the NSTemplateSet creation was triggered.
-	space.Status.TargetCluster = space.Spec.TargetCluster
-
 	// we don't need to check if the condition was found here, since it is already done in the `manageNSTemplateSet` function, if we reach this point,
 	// it's guaranteed that it exists and we only need to check the Reason.
 	nsTmplSetReady, _ := condition.FindConditionByType(nsTmplSet.Status.Conditions, toolchainv1alpha1.ConditionReady)
@@ -325,6 +321,10 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchai
 // manageNSTemplateSet creates or updates the NSTemplateSet of a given space.
 // returns NSTemplateSet{}, requeueDelay, error
 func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space, memberCluster cluster.Cluster, tmplTier *toolchainv1alpha1.NSTemplateTier) (*toolchainv1alpha1.NSTemplateSet, time.Duration, error) {
+	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
+	// We set the .Status.TargetCluster only when the NSTemplateSet creation was attempted.
+	// When deletion of the Space with space.Status.TargetCluster set is triggered, we know that there might be a NSTemplateSet resource to clean up as well.
+	space.Status.TargetCluster = space.Spec.TargetCluster
 	spaceBindings, err := r.listSpaceBindings(space)
 	if err != nil {
 		logger.Error(err, "failed to list space bindings")
