@@ -287,7 +287,7 @@ objects:
     name: appstudio-pipelines-runner-clusterrole
   subjects:
     - kind: ServiceAccount
-      apiGroup: rbac.authorization.k8s.io
+      namespace: ${USERNAME}-tenant
       name: appstudio-pipeline
 parameters:
 - name: USERNAME
