@@ -52,3 +52,9 @@ func WithStatusTargetClusterURL(targetClusterURL string) Option {
 		spaceRequest.Status.TargetClusterURL = targetClusterURL
 	}
 }
+
+func WithStatusNamespaceAccess(namespaceAccess toolchainv1alpha1.NamespaceAccess) Option {
+	return func(spaceRequest *toolchainv1alpha1.SpaceRequest) {
+		spaceRequest.Status.NamespaceAccess = []toolchainv1alpha1.NamespaceAccess{namespaceAccess}
+	}
+}
