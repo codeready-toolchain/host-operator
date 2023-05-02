@@ -10,9 +10,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var mapperLog = ctrl.Log.WithName("MapSpaceBindingToSubSpaces")
+var mapperLog = ctrl.Log.WithName("MapSpaceBindingToParentAndSubSpaces")
 
-// MapSpaceBindingToSubSpaces maps the SpaceBinding of a given Space to it's subSpaces (if any).
+// MapSpaceBindingToParentAndSubSpaces maps the SpaceBinding of a given Space to it's subSpaces (if any).
 // It enables SpaceBinding inheritance from the parentSpace to the eventual subSpaces.
 //
 // The logic works as following:
@@ -20,7 +20,7 @@ var mapperLog = ctrl.Log.WithName("MapSpaceBindingToSubSpaces")
 // - from the SpaceBinding labels we get the name of the Space object (a.k.a parentSpace)
 // - with the name of the Space (parentSpace) we search for eventual subSpaces
 // - in order to reflect the changes on SpaceBinding we trigger a `reconcile.Request` for the Space (parentSpace) and all it's subSpaces (if any)
-func MapSpaceBindingToSubSpaces(cl client.Client) func(object client.Object) []reconcile.Request {
+func MapSpaceBindingToParentAndSubSpaces(cl client.Client) func(object client.Object) []reconcile.Request {
 	return func(obj client.Object) []reconcile.Request {
 		logger := mapperLog.WithValues("object-name", obj.GetName(), "object-kind", obj.GetObjectKind())
 
