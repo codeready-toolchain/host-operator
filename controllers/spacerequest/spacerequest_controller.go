@@ -9,23 +9,32 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
 	spaceutil "github.com/codeready-toolchain/host-operator/pkg/space"
+	restclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+// TokenRequestExpirationSeconds is just a long duration so that the token will not expire for the lifespan of the namespace.
+// This token will provide access only at the namespace scope, so once the namespace is deleted this token will just be invalid.
+const TokenRequestExpirationSeconds = 3650 * 24 * 60 * 60 // 10 years
 
 // Reconciler reconciles a SpaceRequest object
 type Reconciler struct {
@@ -53,8 +62,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 		b = b.Watches(
 			source.NewKindWithCache(&toolchainv1alpha1.SpaceRequest{}, memberCluster.Cache),
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
-		)
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	}
 	return b.Complete(r)
 }
@@ -114,6 +122,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// let's just return.
 	if err != nil || createdOrUpdated {
 		return ctrl.Result{}, err
+	}
+
+	// ensure there is a secret that provides admin access to each provisioned namespaces of the subSpace
+	if err := r.ensureSecretForProvisionedNamespaces(logger, memberClusterWithSpaceRequest, spaceRequest, subSpace); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// update spaceRequest conditions and target cluster url
@@ -397,6 +410,124 @@ func (r *Reconciler) deleteExistingSubSpace(logger logr.Logger, subSpace *toolch
 	}
 	logger.Info("deleted the subSpace resource", "subSpace name", subSpace.Name)
 	return true, nil
+}
+
+func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, memberClusterWithSpaceRequest cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest, subSpace *toolchainv1alpha1.Space) error {
+	if len(subSpace.Status.ProvisionedNamespaces) == 0 {
+		logger.Info("provisioned namespaces not available yet...")
+		return nil
+	}
+	logger.Info("ensure secret for provisioned namespaces")
+
+	var namespaceAccess []toolchainv1alpha1.NamespaceAccess
+	for _, namespace := range subSpace.Status.ProvisionedNamespaces {
+		// check if kubeconfig secret exists,
+		// if it doesn't exist it will be created
+		secretList := &v1.SecretList{}
+		secretLabels := client.MatchingLabels{
+			toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
+			toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: namespace.Name,
+		}
+		if err := memberClusterWithSpaceRequest.Client.List(context.TODO(), secretList, secretLabels, client.InNamespace(spaceRequest.GetNamespace())); err != nil {
+			return errs.Wrap(err, fmt.Sprintf(`attempt to list Secrets associated with spaceRequest %s in namespace %s failed`, spaceRequest.GetName(), spaceRequest.GetNamespace()))
+		}
+
+		kubeConfigSecret := &v1.Secret{}
+		switch {
+		case len(secretList.Items) == 0:
+			// create the secret for this namespace
+			clientConfig, err := r.generateKubeConfig(memberClusterWithSpaceRequest, namespace.Name)
+			if err != nil {
+				return err
+			}
+			clientConfigFormatted, err := clientcmd.Write(*clientConfig)
+			if err != nil {
+				return err
+			}
+			kubeConfigSecret = &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: spaceRequest.Name + "-",
+					Namespace:    spaceRequest.Namespace,
+					Labels:       secretLabels,
+				},
+				Type: v1.SecretTypeOpaque,
+				StringData: map[string]string{
+					"kubeconfig": string(clientConfigFormatted),
+				},
+			}
+			if err := controllerutil.SetControllerReference(spaceRequest, kubeConfigSecret, r.Scheme); err != nil {
+				return errs.Wrap(err, "error setting controller reference for secret "+kubeConfigSecret.Name)
+			}
+			if err := memberClusterWithSpaceRequest.Client.Create(context.TODO(), kubeConfigSecret); err != nil {
+				return err
+			}
+			logger.Info("Created Secret", "Name", kubeConfigSecret.Name)
+
+			// add provisioned namespace and name of the secret that provides access to the namespace
+			namespaceAccess = append(namespaceAccess, toolchainv1alpha1.NamespaceAccess{
+				Name:      namespace.Name,
+				SecretRef: kubeConfigSecret.Name,
+			})
+
+		case len(secretList.Items) == 1:
+			// a secret is already present for this namespace
+			namespaceAccess = append(namespaceAccess, toolchainv1alpha1.NamespaceAccess{
+				Name:      namespace.Name,
+				SecretRef: secretList.Items[0].Name,
+			})
+
+		case len(secretList.Items) > 1:
+			// some unexpected issue causing to many secrets
+			return fmt.Errorf("invalid number of secrets found. actual %d, expected %d", len(secretList.Items), 1)
+		}
+
+	}
+
+	// update space request status in case secrets for provisioned namespace were created.
+	if len(namespaceAccess) > 0 {
+		spaceRequest.Status.NamespaceAccess = namespaceAccess
+		return memberClusterWithSpaceRequest.Client.Status().Update(context.TODO(), spaceRequest)
+	}
+
+	return nil
+}
+
+func (r *Reconciler) generateKubeConfig(memberClusterWithSpaceRequest cluster.Cluster, namespace string) (*api.Config, error) {
+	// create a token request for the admin service account
+	token, err := restclient.CreateTokenRequest(memberClusterWithSpaceRequest.RESTClient, types.NamespacedName{
+		Namespace: namespace,
+		Name:      toolchainv1alpha1.AdminServiceAccountName,
+	}, TokenRequestExpirationSeconds)
+	if err != nil {
+		return nil, err
+	}
+
+	// create apiConfig based on the secret content
+	clusters := make(map[string]*api.Cluster, 1)
+	clusters["default-cluster"] = &api.Cluster{
+		Server:                   memberClusterWithSpaceRequest.Config.APIEndpoint,
+		CertificateAuthorityData: memberClusterWithSpaceRequest.Config.RestConfig.CAData,
+	}
+	contexts := make(map[string]*api.Context, 1)
+	contexts["default-context"] = &api.Context{
+		Cluster:   "default-cluster",
+		Namespace: namespace,
+		AuthInfo:  toolchainv1alpha1.AdminServiceAccountName,
+	}
+	authinfos := make(map[string]*api.AuthInfo, 1)
+	authinfos[toolchainv1alpha1.AdminServiceAccountName] = &api.AuthInfo{
+		Token: token,
+	}
+
+	clientConfig := &api.Config{
+		Kind:           "Config",
+		APIVersion:     "v1",
+		Clusters:       clusters,
+		Contexts:       contexts,
+		CurrentContext: "default-context",
+		AuthInfos:      authinfos,
+	}
+	return clientConfig, nil
 }
 
 func (r *Reconciler) setStatusProvisioning(memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) error {
