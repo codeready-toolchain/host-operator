@@ -509,7 +509,7 @@ func (r *Reconciler) updateUserSignupMetricsByState(oldState string, newState st
 }
 
 func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainConfig, instance *toolchainv1alpha1.UserSignup) (string, error) {
-	// replaced should now be of len
+	// transformed should now be of maxLength specified in TransformUsername
 	transformed := usersignup.TransformUsername(instance.Spec.Username, config.Users().ForbiddenUsernamePrefixes(), config.Users().ForbiddenUsernameSuffixes())
 	// -4 for "-i" to be added in following lines, max number of characters in i is 3.
 	maxlengthWithPrefix := usersignup.MaxLength - 4
