@@ -511,27 +511,30 @@ func (r *Reconciler) updateUserSignupMetricsByState(oldState string, newState st
 func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainConfig, instance *toolchainv1alpha1.UserSignup) (string, error) {
 	// replaced should now be of len
 	transformed := usersignup.TransformUsername(instance.Spec.Username, config.Users().ForbiddenUsernamePrefixes(), config.Users().ForbiddenUsernameSuffixes())
+	// -4 for "-i" to be added in following lines, max number of characters in i is 3.
+	maxlengthWithPrefix := usersignup.MaxLength - 4
+	newUsername := transformed
 
 	for i := 2; i < 101; i++ { // No more than 100 attempts to find a vacant name
 		mur := &toolchainv1alpha1.MasterUserRecord{}
 		// Check if a MasterUserRecord exists with the same transformed name
-		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: transformed}
+		namespacedMurName := types.NamespacedName{Namespace: instance.Namespace, Name: newUsername}
 		err := r.Client.Get(context.TODO(), namespacedMurName, mur)
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				return "", err
 			}
 			// If there was a NotFound error looking up the mur, it means we found an available name
-			return transformed, nil
+			return newUsername, nil
 		} else if mur.Labels[toolchainv1alpha1.MasterUserRecordOwnerLabelKey] == instance.Name {
 			// If the found MUR has the same UserID as the UserSignup, then *it* is the correct MUR -
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
 			return "", fmt.Errorf(fmt.Sprintf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up.", mur.Name, instance.Name))
 		}
 		if len(transformed) > maxlengthWithPrefix {
-			transformed = transformed[:maxlengthWithPrefix] + fmt.Sprintf("-%d", i)
+			newUsername = transformed[:maxlengthWithPrefix] + fmt.Sprintf("-%d", i)
 		} else {
-			transformed = fmt.Sprintf("%s-%d", replaced, i)
+			newUsername = fmt.Sprintf("%s-%d", transformed, i)
 		}
 	}
 
