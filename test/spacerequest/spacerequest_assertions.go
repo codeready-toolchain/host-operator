@@ -7,8 +7,11 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -66,6 +69,44 @@ func (a *Assertion) HasStatusTargetClusterURL(targetCluster string) *Assertion {
 	err := a.loadResource()
 	require.NoError(a.t, err)
 	assert.Equal(a.t, targetCluster, a.spaceRequest.Status.TargetClusterURL)
+	return a
+}
+
+func (a *Assertion) HasNamespaceAccess(namespaceAccess []toolchainv1alpha1.NamespaceAccess) *Assertion {
+	err := a.loadResource()
+	require.NoError(a.t, err)
+	assert.Len(a.t, a.spaceRequest.Status.NamespaceAccess, len(namespaceAccess))
+
+	// check if each expected namespace has its access secret provisioned
+	for _, expectedNamespaceAccess := range namespaceAccess {
+		foundItem := toolchainv1alpha1.NamespaceAccess{}
+		for _, actualNamespaceAccess := range a.spaceRequest.Status.NamespaceAccess {
+			if actualNamespaceAccess.Name == expectedNamespaceAccess.Name {
+				foundItem = actualNamespaceAccess
+				break
+			}
+		}
+		assert.NotEmpty(a.t, foundItem, "unable to find namespace access", "namespace", expectedNamespaceAccess.Name)
+
+		// check that the secret was created
+		assert.NotEmpty(a.t, foundItem.SecretRef)
+		secret := &corev1.Secret{}
+		err = a.client.Get(context.TODO(), types.NamespacedName{
+			Namespace: a.spaceRequest.Namespace,
+			Name:      foundItem.SecretRef,
+		}, secret)
+		require.NoError(a.t, err)
+		// validate the secret content (kubeconfig)
+		assert.NotEmpty(a.t, secret)
+		assert.NotEmpty(a.t, secret.StringData["kubeconfig"])
+		apiConfig, err := clientcmd.Load([]byte(secret.StringData["kubeconfig"]))
+		require.NoError(a.t, err)
+		require.False(a.t, api.IsConfigEmpty(apiConfig))
+		// create a new client with the given kubeconfig
+		kubeconfig, err := clientcmd.NewDefaultClientConfig(*apiConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
+		require.NoError(a.t, err)
+		require.NotNil(a.t, kubeconfig)
+	}
 	return a
 }
 
