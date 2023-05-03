@@ -3,9 +3,6 @@ package usersignup
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
@@ -23,6 +20,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 	"github.com/redhat-cop/operator-utils/pkg/util"
+	"strconv"
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
@@ -513,34 +511,7 @@ func (r *Reconciler) updateUserSignupMetricsByState(oldState string, newState st
 
 func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainConfig, instance *toolchainv1alpha1.UserSignup) (string, error) {
 	// replaced should now be of len
-	replaced := usersignup.TransformUsername(instance.Spec.Username)
-	// -4 for "crt-" or "-crt" to be added in following lines. Update this length changing prefix
-	maxlengthWithPrefix := usersignup.MaxLength - 4
-	// Check for any forbidden prefixes
-	for _, prefix := range config.Users().ForbiddenUsernamePrefixes() {
-		if strings.HasPrefix(replaced, prefix) {
-			if len(replaced) > maxlengthWithPrefix {
-				// replace prefix instead of append
-				replaced = "crt-" + replaced[3:]
-			} else {
-				replaced = fmt.Sprintf("%s%s", "crt-", replaced)
-			}
-			break
-		}
-	}
-
-	// Check for any forbidden suffixes
-	for _, suffix := range config.Users().ForbiddenUsernameSuffixes() {
-		if strings.HasSuffix(replaced, suffix) {
-			if len(replaced) > maxlengthWithPrefix {
-				// replace prefix instead of append
-				replaced = replaced[:len(replaced)-4] + "-crt"
-			} else {
-				replaced = fmt.Sprintf("%s%s", replaced, "-crt")
-			}
-			break
-		}
-	}
+	replaced := usersignup.TransformUsername(instance.Spec.Username, config.Users().ForbiddenUsernamePrefixes(), config.Users().ForbiddenUsernameSuffixes())
 
 	validationErrors := validation.IsQualifiedName(replaced)
 	if len(validationErrors) > 0 {
