@@ -14,6 +14,7 @@ objects:
       name: ${SPACE_NAME}-env
       toolchain.dev.openshift.com/workspace: ${SPACE_NAME}
       argocd.argoproj.io/managed-by: gitops-service-argocd
+      appstudio.redhat.com/workspace_name: ${SPACE_NAME}
     # The ${SPACE_NAME} here is actually the space (aka workspace) name that is going to be provisioned as environment sub-space (aka sub-workspace).
     # It's a legacy parameter that needs to be renamed
     # related story https://issues.redhat.com/browse/CRT-1766
