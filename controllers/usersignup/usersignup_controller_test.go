@@ -3404,98 +3404,112 @@ func TestUserSignupDeactivatedButStatusUpdateFails(t *testing.T) {
 		})
 }
 
+type testUsername struct {
+	username                  string
+	compliantUsername         string
+	replacedCompliantUsername string
+}
+
 // TestDeathBy100Signups tests the logic of generateCompliantUsername() which allows no more than 100 attempts to find a vacant name
 func TestDeathBy100Signups(t *testing.T) {
 	// given
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
-	userSignup := commonsignup.NewUserSignup(
-		commonsignup.WithName("foo@redhat.com"),
-		commonsignup.ApprovedManually())
+	for testcase, testusername := range map[string]testUsername{
+		"Username less than maxlengthWithSuffix characters":           {username: "foo@redhat.com", compliantUsername: "foo", replacedCompliantUsername: "foo"},
+		"Username length greater than maxlengthWithSuffix characters": {username: "longer-user-names@redhat.com", compliantUsername: "longer-user-names", replacedCompliantUsername: "longer-user-name"},
+	} {
+		t.Run(testcase, func(t *testing.T) {
 
-	initObjs := make([]runtime.Object, 0, 110)
-	initObjs = append(initObjs, userSignup, deactivate30Tier)
-	initObjs = append(initObjs, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+			logf.SetLogger(zap.New(zap.UseDevMode(true)))
+			userSignup := commonsignup.NewUserSignup(
+				commonsignup.WithName(testusername.username),
+				commonsignup.ApprovedManually())
+			initObjs := make([]runtime.Object, 0, 110)
+			initObjs = append(initObjs, userSignup, deactivate30Tier)
+			initObjs = append(initObjs, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
 
-	// create 100 MURs that follow the naming pattern used by `generateCompliantUsername()`: `foo`, `foo-2`, ..., `foo-100`
-	initObjs = append(initObjs, &toolchainv1alpha1.MasterUserRecord{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: test.HostOperatorNs,
-			Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.Must(uuid.NewV4()).String()},
-		},
-	})
+			// create 100 MURs that follow the naming pattern used by `generateCompliantUsername()`: `foo`, `foo-2`, ..., `foo-100`
+			initObjs = append(initObjs, &toolchainv1alpha1.MasterUserRecord{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testusername.compliantUsername,
+					Namespace: test.HostOperatorNs,
+					Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.Must(uuid.NewV4()).String()},
+				},
+			})
 
-	for i := 2; i <= 100; i++ {
-		initObjs = append(initObjs, &toolchainv1alpha1.MasterUserRecord{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("foo-%d", i),
-				Namespace: test.HostOperatorNs,
-				Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.Must(uuid.NewV4()).String()},
-			},
+			for i := 2; i <= 100; i++ {
+				initObjs = append(initObjs, &toolchainv1alpha1.MasterUserRecord{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-%d", testusername.replacedCompliantUsername, i),
+						Namespace: test.HostOperatorNs,
+						Labels:    map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: uuid.Must(uuid.NewV4()).String()},
+					},
+				})
+			}
+
+			initObjs = append(initObjs, baseNSTemplateTier)
+
+			ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
+			r, req, _ := prepareReconcile(t, userSignup.Name, ready, initObjs...)
+			InitializeCounters(t, NewToolchainStatus(
+				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
+					string(metrics.External): 100,
+				}),
+				WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
+					"1,external": 100,
+				}),
+			))
+
+			// when
+			res, err := r.Reconcile(context.TODO(), req)
+
+			// then
+			require.Error(t, err)
+			assert.EqualError(t, err, fmt.Sprintf("Error generating compliant username for %s: unable to transform username [%s] even after 100 attempts", testusername.username, testusername.username))
+			require.Equal(t, reconcile.Result{}, res)
+
+			// Lookup the user signup again
+			err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
+			require.NoError(t, err)
+			assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
+			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
+
+			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
+				toolchainv1alpha1.Condition{
+					Type:    toolchainv1alpha1.UserSignupComplete,
+					Status:  v1.ConditionFalse,
+					Reason:  "UnableToCreateMUR",
+					Message: fmt.Sprintf("unable to transform username [%s] even after 100 attempts", testusername.username),
+				},
+				toolchainv1alpha1.Condition{
+					Type:   toolchainv1alpha1.UserSignupApproved,
+					Status: v1.ConditionTrue,
+					Reason: "ApprovedByAdmin",
+				},
+				toolchainv1alpha1.Condition{
+					Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
+					Status: v1.ConditionFalse,
+					Reason: "UserNotInPreDeactivation",
+				},
+				toolchainv1alpha1.Condition{
+					Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
+					Status: v1.ConditionFalse,
+					Reason: "UserIsActive",
+				},
+			)
+			AssertThatCountersAndMetrics(t).
+				HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
+					string(metrics.External): 100, // unchanged
+				}).
+				HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
+					"1,external": 100,
+					"1,internal": 1, // was incremented, even though associated MUR could not be created
+				})
+
 		})
 	}
-
-	initObjs = append(initObjs, baseNSTemplateTier)
-
-	ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
-	r, req, _ := prepareReconcile(t, userSignup.Name, ready, initObjs...)
-	InitializeCounters(t, NewToolchainStatus(
-		WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
-			string(metrics.External): 100,
-		}),
-		WithMetric(toolchainv1alpha1.UserSignupsPerActivationAndDomainMetricKey, toolchainv1alpha1.Metric{
-			"1,external": 100,
-		}),
-	))
-
-	// when
-	res, err := r.Reconcile(context.TODO(), req)
-
-	// then
-	require.Error(t, err)
-	assert.EqualError(t, err, "Error generating compliant username for foo@redhat.com: unable to transform username [foo@redhat.com] even after 100 attempts")
-	require.Equal(t, reconcile.Result{}, res)
-
-	// Lookup the user signup again
-	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: userSignup.Name, Namespace: req.Namespace}, userSignup)
-	require.NoError(t, err)
-	assert.Equal(t, "approved", userSignup.Labels[toolchainv1alpha1.UserSignupStateLabelKey])
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
-	segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
-
-	test.AssertConditionsMatch(t, userSignup.Status.Conditions,
-		toolchainv1alpha1.Condition{
-			Type:    toolchainv1alpha1.UserSignupComplete,
-			Status:  v1.ConditionFalse,
-			Reason:  "UnableToCreateMUR",
-			Message: "unable to transform username [foo@redhat.com] even after 100 attempts",
-		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupApproved,
-			Status: v1.ConditionTrue,
-			Reason: "ApprovedByAdmin",
-		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-			Status: v1.ConditionFalse,
-			Reason: "UserNotInPreDeactivation",
-		},
-		toolchainv1alpha1.Condition{
-			Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-			Status: v1.ConditionFalse,
-			Reason: "UserIsActive",
-		},
-	)
-	AssertThatCountersAndMetrics(t).
-		HaveMasterUserRecordsPerDomain(toolchainv1alpha1.Metric{
-			string(metrics.External): 100, // unchanged
-		}).
-		HaveUsersPerActivationsAndDomain(toolchainv1alpha1.Metric{
-			"1,external": 100,
-			"1,internal": 1, // was incremented, even though associated MUR could not be created
-		})
 }
 
 func TestUserSignupWithMultipleExistingMURNotOK(t *testing.T) {

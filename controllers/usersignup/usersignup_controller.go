@@ -512,7 +512,7 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 	// transformed should now be of maxLength specified in TransformUsername
 	transformed := usersignup.TransformUsername(instance.Spec.Username, config.Users().ForbiddenUsernamePrefixes(), config.Users().ForbiddenUsernameSuffixes())
 	// -4 for "-i" to be added in following lines, max number of characters in i is 3.
-	maxlengthWithPrefix := usersignup.MaxLength - 4
+	maxlengthWithSuffix := usersignup.MaxLength - 4
 	newUsername := transformed
 
 	for i := 2; i < 101; i++ { // No more than 100 attempts to find a vacant name
@@ -531,8 +531,8 @@ func (r *Reconciler) generateCompliantUsername(config toolchainconfig.ToolchainC
 			// Return an error here and allow the reconcile() function to pick it up on the next loop
 			return "", fmt.Errorf(fmt.Sprintf("INFO: could not generate compliant username as MasterUserRecord with the same name [%s] and user id [%s] already exists. The next reconcile loop will pick it up.", mur.Name, instance.Name))
 		}
-		if len(transformed) > maxlengthWithPrefix {
-			newUsername = transformed[:maxlengthWithPrefix] + fmt.Sprintf("-%d", i)
+		if len(transformed) > maxlengthWithSuffix {
+			newUsername = transformed[:maxlengthWithSuffix] + fmt.Sprintf("-%d", i)
 		} else {
 			newUsername = fmt.Sprintf("%s-%d", transformed, i)
 		}
