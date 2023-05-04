@@ -179,8 +179,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	if err := r.setStateLabel(logger, space, toolchainv1alpha1.SpaceStateLabelValueClusterAssigned); err != nil {
 		return norequeue, err
 	}
-	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
-	space.Status.TargetCluster = space.Spec.TargetCluster
 
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
@@ -323,6 +321,10 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchai
 // manageNSTemplateSet creates or updates the NSTemplateSet of a given space.
 // returns NSTemplateSet{}, requeueDelay, error
 func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space, memberCluster cluster.Cluster, tmplTier *toolchainv1alpha1.NSTemplateTier) (*toolchainv1alpha1.NSTemplateSet, time.Duration, error) {
+	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
+	// We set the .Status.TargetCluster only when the NSTemplateSet creation was attempted.
+	// When deletion of the Space with space.Status.TargetCluster set is triggered, we know that there might be a NSTemplateSet resource to clean up as well.
+	space.Status.TargetCluster = space.Spec.TargetCluster
 	spaceBindings, err := r.listSpaceBindings(space)
 	if err != nil {
 		logger.Error(err, "failed to list space bindings")
@@ -477,8 +479,13 @@ func extractUsernames(role string, bindings []toolchainv1alpha1.SpaceBinding) []
 func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1alpha1.Space) error {
 	logger.Info("terminating Space")
 	if isBeingDeleted, err := r.deleteNSTemplateSet(logger, space); err != nil {
-		logger.Error(err, "failed to delete the NSTemplateSet")
-		return r.setStatusTerminatingFailed(logger, space, err)
+		// space was already provisioned to a cluster
+		// let's not proceed with deletion
+		if space.Status.TargetCluster != "" {
+			logger.Error(err, "failed to delete the NSTemplateSet")
+			return r.setStatusTerminatingFailed(logger, space, err)
+		}
+		logger.Error(err, "error while deleting NSTemplateSet - ignored since the target cluster in the Status is empty")
 	} else if isBeingDeleted {
 		if err := r.setStatusTerminating(space); err != nil {
 			logger.Error(err, "error updating status")
