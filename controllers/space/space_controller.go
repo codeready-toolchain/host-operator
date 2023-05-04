@@ -485,7 +485,7 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 			logger.Error(err, "failed to delete the NSTemplateSet")
 			return r.setStatusTerminatingFailed(logger, space, err)
 		}
-		logger.Error(err, "error while deleting NSTemplateSet")
+		logger.Error(err, "error while deleting NSTemplateSet - ignored since the target cluster in the Status is empty")
 	} else if isBeingDeleted {
 		if err := r.setStatusTerminating(space); err != nil {
 			logger.Error(err, "error updating status")
