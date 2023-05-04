@@ -82,6 +82,12 @@ func WithStatusTargetCluster(name string) Option {
 	}
 }
 
+func WithStatusProvisionedNamespaces(provisionedNamespaces []toolchainv1alpha1.SpaceNamespace) Option {
+	return func(space *toolchainv1alpha1.Space) {
+		space.Status.ProvisionedNamespaces = provisionedNamespaces
+	}
+}
+
 func WithFinalizer() Option {
 	return func(space *toolchainv1alpha1.Space) {
 		space.Finalizers = append(space.Finalizers, toolchainv1alpha1.FinalizerName)
