@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeevent "sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	controllerpredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -47,7 +47,7 @@ var configLog = logf.Log.WithName("automatic_approval_predicate")
 
 // OnlyWhenAutomaticApprovalIsEnabled let the reconcile to be triggered only when the automatic approval is enabled
 type OnlyWhenAutomaticApprovalIsEnabled struct {
-	client client.Client
+	client runtimeclient.Client
 }
 
 // Update implements default UpdateEvent filter for validating no generation change

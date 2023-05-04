@@ -18,11 +18,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -36,8 +36,8 @@ func TestReconcile(t *testing.T) {
 
 		t.Run("config not found", func(t *testing.T) {
 			hostCl := test.NewFakeClient(t)
-			member1 := NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue)
-			member2 := NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue)
 			members := NewGetMemberClusters(member1, member2)
 			controller := newController(t, hostCl, members)
 
@@ -71,8 +71,8 @@ func TestReconcile(t *testing.T) {
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
-			member1 := NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue)
-			member2 := NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue)
+			member1 := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
+			member2 := NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue)
 			members := NewGetMemberClusters(member1, member2)
 			controller := newController(t, hostCl, members)
 
@@ -151,7 +151,7 @@ func TestReconcile(t *testing.T) {
 				config.Spec.Host.CapacityThresholds.ResourceCapacityThreshold.DefaultThreshold = &threshold
 				err = hostCl.Update(context.TODO(), config)
 				require.NoError(t, err)
-				hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+				hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 					return fmt.Errorf("client error")
 				}
 
@@ -190,9 +190,9 @@ func TestReconcile(t *testing.T) {
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
-			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
+			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 			controller := newController(t, hostCl, members)
-			hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+			hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				_, ok := obj.(*toolchainv1alpha1.ToolchainConfig)
 				if ok {
 					return fmt.Errorf("client error")
@@ -219,10 +219,10 @@ func TestReconcile(t *testing.T) {
 				testconfig.Members().Default(defaultMemberConfig.Spec),
 				testconfig.Members().SpecificPerMemberCluster("member1", specificMemberConfig.Spec))
 			hostCl := test.NewFakeClient(t, config)
-			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
+			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 			controller := newController(t, hostCl, members)
 			count := 0
-			hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+			hostCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.ToolchainConfig); ok {
 					count++
 					if count > 1 { // let the first get succeed and then return errors after that
@@ -249,10 +249,10 @@ func TestReconcile(t *testing.T) {
 				testconfig.AutomaticApproval().Enabled(true),
 				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)))
 			hostCl := test.NewFakeClient(t, config)
-			hostCl.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+			hostCl.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 				return fmt.Errorf("create error")
 			}
-			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
+			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 			controller := newController(t, hostCl, members)
 
 			// when
@@ -277,7 +277,7 @@ func TestReconcile(t *testing.T) {
 			config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true), testconfig.Members().Default(defaultMemberConfig.Spec), testconfig.Members().SpecificPerMemberCluster("missing-member", specificMemberConfig.Spec),
 				testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)))
 			hostCl := test.NewFakeClient(t, config)
-			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
+			members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 			controller := newController(t, hostCl, members)
 
 			// when
@@ -306,7 +306,7 @@ func TestWrapErrorWithUpdateStatus(t *testing.T) {
 	config := commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true),
 		testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 321)))
 	hostCl := test.NewFakeClient(t, config)
-	members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue))
+	members := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 	controller := newController(t, hostCl, members)
 	log := logf.Log.WithName("test")
 
@@ -361,7 +361,7 @@ func matchesDefaultConfig(t *testing.T, actual toolchainconfig.ToolchainConfig) 
 	assert.Equal(t, 3, actual.Deactivation().DeactivatingNotificationDays())
 }
 
-func newController(t *testing.T, hostCl client.Client, members cluster.GetMemberClustersFunc) toolchainconfig.Reconciler {
+func newController(t *testing.T, hostCl runtimeclient.Client, members cluster.GetMemberClustersFunc) toolchainconfig.Reconciler {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	s := clientgoscheme.Scheme
 	err := apis.AddToScheme(s)

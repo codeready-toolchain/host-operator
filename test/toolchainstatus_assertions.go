@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ToolchainStatusAssertion struct {
 	toolchainStatus *toolchainv1alpha1.ToolchainStatus
-	client          client.Client
+	client          runtimeclient.Client
 	namespacedName  types.NamespacedName
 	t               test.T
 }
@@ -32,7 +32,7 @@ func (a *ToolchainStatusAssertion) loadToolchainStatus() error {
 	return nil
 }
 
-func AssertThatToolchainStatus(t test.T, namespace, name string, client client.Client) *ToolchainStatusAssertion {
+func AssertThatToolchainStatus(t test.T, namespace, name string, client runtimeclient.Client) *ToolchainStatusAssertion {
 	return &ToolchainStatusAssertion{
 		client:         client,
 		namespacedName: test.NamespacedName(namespace, name),

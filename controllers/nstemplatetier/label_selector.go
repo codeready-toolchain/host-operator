@@ -6,7 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // OutdatedTierSelector creates a label selector to find MasterUserRecords or Spaces which are not up-to-date with
@@ -20,24 +20,24 @@ import (
 // but with a template version (defined by `<hash>`) which is NOT to the expected value (the one provided by `instance`).
 //
 // Note: The `hash` value is computed from the TemplateRefs. See `computeTemplateRefsHash()`
-func OutdatedTierSelector(tier *toolchainv1alpha1.NSTemplateTier) (client.MatchingLabelsSelector, error) {
+func OutdatedTierSelector(tier *toolchainv1alpha1.NSTemplateTier) (runtimeclient.MatchingLabelsSelector, error) {
 	// compute the hash of the `.spec.namespaces[].templateRef` + `.spec.clusteResource.TemplateRef`
 	hash, err := tierutil.ComputeHashForNSTemplateTier(tier)
 	if err != nil {
-		return client.MatchingLabelsSelector{}, err
+		return runtimeclient.MatchingLabelsSelector{}, err
 	}
 	selector := labels.NewSelector()
 	tierLabel, err := labels.NewRequirement(tierutil.TemplateTierHashLabelKey(tier.Name), selection.Exists, []string{})
 	if err != nil {
-		return client.MatchingLabelsSelector{}, err
+		return runtimeclient.MatchingLabelsSelector{}, err
 	}
 	selector = selector.Add(*tierLabel)
 	templateHashLabel, err := labels.NewRequirement(tierutil.TemplateTierHashLabelKey(tier.Name), selection.NotEquals, []string{hash})
 	if err != nil {
-		return client.MatchingLabelsSelector{}, err
+		return runtimeclient.MatchingLabelsSelector{}, err
 	}
 	selector = selector.Add(*templateHashLabel)
-	return client.MatchingLabelsSelector{
+	return runtimeclient.MatchingLabelsSelector{
 		Selector: selector,
 	}, nil
 }

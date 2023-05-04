@@ -12,12 +12,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type ServiceAccountAssertion struct {
 	serviceaccount *corev1.ServiceAccount
-	client         client.Client
+	client         runtimeclient.Client
 	namespacedName types.NamespacedName
 	t              test.T
 }
@@ -32,7 +32,7 @@ func (a *ServiceAccountAssertion) loadServiceAccount() error {
 	return nil
 }
 
-func AssertThatServiceAccount(t test.T, namespace, name string, client client.Client) *ServiceAccountAssertion {
+func AssertThatServiceAccount(t test.T, namespace, name string, client runtimeclient.Client) *ServiceAccountAssertion {
 	return &ServiceAccountAssertion{
 		client:         client,
 		namespacedName: test.NamespacedName(namespace, name),

@@ -8,9 +8,10 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func hasNotReachedMaxNumberOfSpacesThreshold(config toolchainconfig.ToolchainConfig, counts counter.Counts) cluster.Condition {
@@ -51,7 +52,7 @@ func hasMemberREnoughResources(memberStatus toolchainv1alpha1.Member, threshold 
 	return false
 }
 
-func NewClusterManager(getMemberClusters cluster.GetMemberClustersFunc, cl client.Client) *ClusterManager {
+func NewClusterManager(getMemberClusters cluster.GetMemberClustersFunc, cl runtimeclient.Client) *ClusterManager {
 	return &ClusterManager{
 		getMemberClusters: getMemberClusters,
 		client:            cl,
@@ -60,7 +61,7 @@ func NewClusterManager(getMemberClusters cluster.GetMemberClustersFunc, cl clien
 
 type ClusterManager struct {
 	getMemberClusters cluster.GetMemberClustersFunc
-	client            client.Client
+	client            runtimeclient.Client
 	lastUsed          string
 }
 

@@ -37,7 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -113,7 +113,7 @@ type HTTPClient interface {
 
 // Reconciler reconciles a ToolchainStatus object
 type Reconciler struct {
-	Client         client.Client
+	Client         runtimeclient.Client
 	Scheme         *runtime.Scheme
 	GetMembersFunc cluster.GetMemberClustersFunc
 	HTTPClientImpl HTTPClient
@@ -751,7 +751,7 @@ func customMemberStatus(conditions ...toolchainv1alpha1.Condition) toolchainv1al
 
 type regServiceSubstatusHandler struct {
 	httpClientImpl   HTTPClient
-	controllerClient client.Client
+	controllerClient runtimeclient.Client
 }
 
 // addRegistrationServiceDeploymentStatus handles the RegistrationService.Deployment part of the toolchainstatus

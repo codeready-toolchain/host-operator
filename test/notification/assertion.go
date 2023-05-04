@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Assertion struct {
 	notification   *toolchainv1alpha1.Notification
-	client         client.Client
+	client         runtimeclient.Client
 	namespacedName types.NamespacedName
 	t              test.T
 }
@@ -26,7 +26,7 @@ func (a *Assertion) loadNotificationAssertion() error {
 	return err
 }
 
-func AssertThatNotification(t test.T, name string, client client.Client) *Assertion {
+func AssertThatNotification(t test.T, name string, client runtimeclient.Client) *Assertion {
 	return &Assertion{
 		client:         client,
 		namespacedName: test.NamespacedName(test.HostOperatorNs, name),
@@ -41,7 +41,7 @@ func (a *Assertion) HasConditions(expected ...toolchainv1alpha1.Condition) *Asse
 	return a
 }
 
-func AssertNoNotificationsExist(t test.T, cl client.Client) {
+func AssertNoNotificationsExist(t test.T, cl runtimeclient.Client) {
 	notifications := &toolchainv1alpha1.NotificationList{}
 	err := cl.List(context.TODO(), notifications)
 	require.NoError(t, err)
@@ -50,14 +50,14 @@ func AssertNoNotificationsExist(t test.T, cl client.Client) {
 
 type Assert func(test.T, toolchainv1alpha1.Notification)
 
-func OnlyOneNotificationExists(t test.T, cl client.Client, userName, notificationType string, assertions ...Assert) {
+func OnlyOneNotificationExists(t test.T, cl runtimeclient.Client, userName, notificationType string, assertions ...Assert) {
 	notifications := &toolchainv1alpha1.NotificationList{}
 	labels := map[string]string{
 		toolchainv1alpha1.NotificationUserNameLabelKey: userName,
 		// NotificationTypeLabelKey is only used for easy lookup for debugging and e2e tests
 		toolchainv1alpha1.NotificationTypeLabelKey: notificationType,
 	}
-	err := cl.List(context.TODO(), notifications, client.MatchingLabels(labels))
+	err := cl.List(context.TODO(), notifications, runtimeclient.MatchingLabels(labels))
 	require.NoError(t, err)
 	require.Len(t, notifications.Items, 1)
 

@@ -4,9 +4,10 @@ import (
 	"context"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -14,8 +15,8 @@ var mapperLog = ctrl.Log.WithName("MapToSubSpacesByParentObjectName")
 
 // MapToSubSpacesByParentObjectName maps the sup-spaces to the SpaceBinding of a given parent-space.
 // The correct Spaces are listed using the parent-label whose value should equal to the Space name from object's .
-func MapToSubSpacesByParentObjectName(cl client.Client) func(object client.Object) []reconcile.Request {
-	return func(obj client.Object) []reconcile.Request {
+func MapToSubSpacesByParentObjectName(cl runtimeclient.Client) func(object runtimeclient.Object) []reconcile.Request {
+	return func(obj runtimeclient.Object) []reconcile.Request {
 		logger := mapperLog.WithValues("object-name", obj.GetName(), "object-kind", obj.GetObjectKind())
 
 		// initialize request slice to be returned
@@ -45,8 +46,8 @@ func MapToSubSpacesByParentObjectName(cl client.Client) func(object client.Objec
 		// by setting the label value that each sub-space should have.
 		subSpaces := &toolchainv1alpha1.SpaceList{}
 		err := cl.List(context.TODO(), subSpaces,
-			client.InNamespace(obj.GetNamespace()),
-			client.MatchingLabels{toolchainv1alpha1.ParentSpaceLabelKey: parentSpaceName})
+			runtimeclient.InNamespace(obj.GetNamespace()),
+			runtimeclient.MatchingLabels{toolchainv1alpha1.ParentSpaceLabelKey: parentSpaceName})
 		if err != nil {
 			logger.Error(err, "unable to get sub-spaces for an object")
 			return []reconcile.Request{}

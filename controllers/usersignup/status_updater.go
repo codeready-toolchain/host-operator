@@ -9,11 +9,11 @@ import (
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type StatusUpdater struct {
-	Client client.Client
+	Client runtimeclient.Client
 }
 
 func (u *StatusUpdater) setStatusApprovedAutomatically(userSignup *toolchainv1alpha1.UserSignup, message string) error {
