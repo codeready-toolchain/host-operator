@@ -120,30 +120,30 @@ objects:
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-${SPACE_NAME}-actions-user
+    name: appstudio-${USERNAME}-actions-user
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
     name: appstudio-user-actions
   subjects:
   - kind: User
-    name: ${SPACE_NAME}
+    name: ${USERNAME}
 # RoleBinding that grants view permissions to the User
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: appstudio-${SPACE_NAME}-view-user
+    name: appstudio-${USERNAME}-view-user
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
     name: view
   subjects:
   - kind: User
-    name: ${SPACE_NAME}
+    name: ${USERNAME}
 
 parameters:
 - name: NAMESPACE
   required: true
-- name: SPACE_NAME
+- name: USERNAME
   required: true

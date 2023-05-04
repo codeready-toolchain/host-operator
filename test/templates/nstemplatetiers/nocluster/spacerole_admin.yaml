@@ -16,7 +16,7 @@ objects:
     name: rbac-edit
   subjects:
     - kind: User
-      name: ${SPACE_NAME}
+      name: ${USERNAME}
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
@@ -28,10 +28,10 @@ objects:
     name: rbac-edit
   subjects:
     - kind: User
-      name: ${SPACE_NAME}
+      name: ${USERNAME}
 
 parameters:
-- name: SPACE_NAME
+- name: USERNAME
   required: true
 - name: NAMESPACE
   required: true

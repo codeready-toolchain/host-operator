@@ -29,29 +29,29 @@ objects:
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: ${SPACE_NAME}-rbac-edit
+    name: ${USERNAME}-rbac-edit
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
     name: rbac-edit
   subjects:
     - kind: User
-      name: ${SPACE_NAME}
+      name: ${USERNAME}
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     namespace: ${NAMESPACE}
-    name: ${SPACE_NAME}-edit
+    name: ${USERNAME}-edit
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
     name: edit
   subjects:
   - kind: User
-    name: ${SPACE_NAME}
+    name: ${USERNAME}
 
 parameters:
-- name: SPACE_NAME
+- name: USERNAME
   required: true
 - name: NAMESPACE
   required: true
