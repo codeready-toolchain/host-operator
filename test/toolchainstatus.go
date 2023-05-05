@@ -5,7 +5,8 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	condition2 "github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	v1 "k8s.io/api/core/v1"
+
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -130,13 +131,13 @@ func WithEmptyMetrics() ToolchainStatusOption {
 func ToBeReady() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
-		Status: v1.ConditionTrue,
+		Status: corev1.ConditionTrue,
 	}
 }
 
 func ToBeNotReady() toolchainv1alpha1.Condition {
 	return toolchainv1alpha1.Condition{
 		Type:   toolchainv1alpha1.ConditionReady,
-		Status: v1.ConditionFalse,
+		Status: corev1.ConditionFalse,
 	}
 }

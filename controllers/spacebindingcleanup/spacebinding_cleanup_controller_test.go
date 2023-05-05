@@ -11,11 +11,12 @@ import (
 	sb "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -61,7 +62,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 	t.Run("lara-redhat SpaceBinding is being deleted, so no action needed", func(t *testing.T) {
 		sbLaraRedhatAdmin := sbLaraRedhatAdmin.DeepCopy()
-		now := v1.Now()
+		now := metav1.Now()
 		sbLaraRedhatAdmin.DeletionTimestamp = &now
 		reconciler, request, fakeClient := prepareReconciler(t, sbLaraRedhatAdmin, sbJoeRedhatView, sbLaraIbmEdit, laraMur, joeMur, ibmSpace)
 
@@ -93,7 +94,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 
 		for _, boundResourceName := range []string{"lara", "redhat"} {
 			reconciler, request, fakeClient := prepareReconciler(t, sbLaraRedhatAdmin, redhatSpace, laraMur)
-			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			fakeClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if key.Name == boundResourceName {
 					return fmt.Errorf("some error")
 				}
@@ -112,7 +113,7 @@ func TestDeleteSpaceBinding(t *testing.T) {
 	t.Run("fails while deleting the SpaceBinding", func(t *testing.T) {
 
 		reconciler, request, fakeClient := prepareReconciler(t, sbLaraRedhatAdmin, redhatSpace)
-		fakeClient.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+		fakeClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 			return fmt.Errorf("some error")
 		}
 

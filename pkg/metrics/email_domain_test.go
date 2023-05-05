@@ -5,7 +5,8 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +23,7 @@ func TestGetEmailDomain(t *testing.T) {
 		{
 			name: "Red Hatter",
 			object: &toolchainv1alpha1.UserSignup{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "joe",
 					Annotations: map[string]string{
 						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@redhat.com",
@@ -34,7 +35,7 @@ func TestGetEmailDomain(t *testing.T) {
 		{
 			name: "IBMer",
 			object: &toolchainv1alpha1.UserSignup{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "joe",
 					Annotations: map[string]string{
 						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@ibm.com",
@@ -46,7 +47,7 @@ func TestGetEmailDomain(t *testing.T) {
 		{
 			name: "Another IBMer",
 			object: &toolchainv1alpha1.UserSignup{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "joe",
 					Annotations: map[string]string{
 						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@fr.ibm.com",
@@ -58,7 +59,7 @@ func TestGetEmailDomain(t *testing.T) {
 		{
 			name: "Not an IBMer",
 			object: &toolchainv1alpha1.UserSignup{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "joe",
 					Annotations: map[string]string{
 						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@fribm.com",
@@ -70,7 +71,7 @@ func TestGetEmailDomain(t *testing.T) {
 		{
 			name: "External",
 			object: &toolchainv1alpha1.UserSignup{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "joe",
 					Annotations: map[string]string{
 						toolchainv1alpha1.UserSignupUserEmailAnnotationKey: "joe@example.com",
@@ -82,7 +83,7 @@ func TestGetEmailDomain(t *testing.T) {
 		{
 			name: "Missing",
 			object: &toolchainv1alpha1.UserSignup{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name:        "joe",
 					Annotations: map[string]string{
 						// no email

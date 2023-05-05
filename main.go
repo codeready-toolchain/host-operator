@@ -46,7 +46,7 @@ import (
 	klogv1 "k8s.io/klog"
 	klogv2 "k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	runtimecluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -162,7 +162,7 @@ func main() { // nolint:gocyclo
 	}
 
 	// create client that will be used for retrieving the host operator secret & ToolchainCluster CRs
-	cl, err := client.New(cfg, client.Options{
+	cl, err := runtimeclient.New(cfg, runtimeclient.Options{
 		Scheme: scheme,
 	})
 	if err != nil {
@@ -400,7 +400,7 @@ func main() { // nolint:gocyclo
 	}
 }
 
-func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string, namespacedCache bool) (map[string]cluster.Cluster, error) {
+func addMemberClusters(mgr ctrl.Manager, cl runtimeclient.Client, namespace string, namespacedCache bool) (map[string]cluster.Cluster, error) {
 	memberConfigs, err := commoncluster.ListToolchainClusterConfigs(cl, namespace, commoncluster.Member, memberClientTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get ToolchainCluster configs for members")

@@ -9,7 +9,7 @@ import (
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -31,7 +31,7 @@ type ToolchainConfig struct {
 
 // GetToolchainConfig returns a ToolchainConfig using the cache, or if the cache was not initialized
 // then retrieves the latest config using the provided client and updates the cache
-func GetToolchainConfig(cl client.Client) (ToolchainConfig, error) {
+func GetToolchainConfig(cl runtimeclient.Client) (ToolchainConfig, error) {
 	config, secrets, err := commonconfig.GetConfig(cl, &toolchainv1alpha1.ToolchainConfig{})
 	if err != nil {
 		// return default config
@@ -48,7 +48,7 @@ func GetCachedToolchainConfig() ToolchainConfig {
 }
 
 // ForceLoadToolchainConfig updates the cache using the provided client and returns the latest ToolchainConfig
-func ForceLoadToolchainConfig(cl client.Client) (ToolchainConfig, error) {
+func ForceLoadToolchainConfig(cl runtimeclient.Client) (ToolchainConfig, error) {
 	config, secrets, err := commonconfig.LoadLatest(cl, &toolchainv1alpha1.ToolchainConfig{})
 	if err != nil {
 		// return default config

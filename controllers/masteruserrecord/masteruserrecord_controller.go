@@ -12,6 +12,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -26,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -51,7 +51,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager, memberClusters map[st
 
 // Reconciler reconciles a MasterUserRecord object
 type Reconciler struct {
-	Client         client.Client
+	Client         runtimeclient.Client
 	Scheme         *runtime.Scheme
 	Namespace      string
 	MemberClusters map[string]cluster.Cluster
@@ -283,7 +283,7 @@ func (r *Reconciler) deleteUserAccount(logger logr.Logger, targetCluster, name s
 		return requeueTime, nil
 	}
 	propagationPolicy := metav1.DeletePropagationForeground
-	err := memberCluster.Client.Delete(context.TODO(), userAcc, &client.DeleteOptions{
+	err := memberCluster.Client.Delete(context.TODO(), userAcc, &runtimeclient.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
 	if err != nil {
@@ -327,7 +327,7 @@ func toBeProvisionedNotificationCreated() toolchainv1alpha1.Condition {
 }
 
 // updateStatusConditions updates user account status conditions with the new conditions
-func updateStatusConditions(logger logr.Logger, cl client.Client, mur *toolchainv1alpha1.MasterUserRecord, newConditions ...toolchainv1alpha1.Condition) error {
+func updateStatusConditions(logger logr.Logger, cl runtimeclient.Client, mur *toolchainv1alpha1.MasterUserRecord, newConditions ...toolchainv1alpha1.Condition) error {
 	var updated bool
 	mur.Status.Conditions, updated = condition.AddOrUpdateStatusConditions(mur.Status.Conditions, newConditions...)
 	if !updated {

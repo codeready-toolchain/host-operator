@@ -11,7 +11,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/usertiers"
 	testusertiers "github.com/codeready-toolchain/host-operator/test/templates/usertiers"
-	testsupport "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -38,10 +38,10 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		t.Run("create only", func(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
-			clt := testsupport.NewFakeClient(t)
+			clt := commontest.NewFakeClient(t)
 			// verify that no UserTier resources exist prior to creation
 			userTiers := toolchainv1alpha1.UserTierList{}
-			err = clt.List(context.TODO(), &userTiers, client.InNamespace(namespace))
+			err = clt.List(context.TODO(), &userTiers, runtimeclient.InNamespace(namespace))
 			require.NoError(t, err)
 			require.Empty(t, userTiers.Items)
 
@@ -74,7 +74,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		t.Run("create then update with same tier templates", func(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
-			clt := testsupport.NewFakeClient(t)
+			clt := commontest.NewFakeClient(t)
 
 			// when
 			err := usertiers.CreateOrUpdateResources(s, clt, namespace, testassets)
@@ -115,7 +115,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				// error occurs when fetching the content of the 'tier.yaml' template
 				return nil, errors.Errorf("an error")
 			})
-			clt := testsupport.NewFakeClient(t)
+			clt := commontest.NewFakeClient(t)
 			// when
 			err := usertiers.CreateOrUpdateResources(s, clt, namespace, fakeAssets)
 			// then
@@ -127,8 +127,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 			t.Run("failed to create usertiers", func(t *testing.T) {
 				// given
-				clt := testsupport.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+				clt := commontest.NewFakeClient(t)
+				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 					if obj.GetObjectKind().GroupVersionKind().Kind == "UserTier" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
@@ -146,13 +146,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			t.Run("failed to update usertiers", func(t *testing.T) {
 				// given
 				// initialize the client with an existing `advanced` UserTier
-				clt := testsupport.NewFakeClient(t, &toolchainv1alpha1.UserTier{
+				clt := commontest.NewFakeClient(t, &toolchainv1alpha1.UserTier{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: namespace,
 						Name:      "advanced",
 					},
 				})
-				clt.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+				clt.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 					if obj.GetObjectKind().GroupVersionKind().Kind == "UserTier" {
 						// simulate a client/server error
 						return errors.Errorf("an error")

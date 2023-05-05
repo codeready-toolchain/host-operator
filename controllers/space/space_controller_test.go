@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -292,7 +292,7 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("oddity")
 			hostClient := test.NewFakeClient(t, s)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -319,7 +319,7 @@ func TestCreateSpace(t *testing.T) {
 			// given
 			s := spacetest.NewSpace("oddity")
 			hostClient := test.NewFakeClient(t, s)
-			hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			hostClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -373,7 +373,7 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -406,7 +406,7 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
 			member1Client := test.NewFakeClient(t)
-			member1Client.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			member1Client.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -439,7 +439,7 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
 			member1Client := test.NewFakeClient(t)
-			member1Client.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+			member1Client.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -471,7 +471,7 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.WithSpecTargetCluster("member-1"),
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier)
-			hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -505,7 +505,7 @@ func TestCreateSpace(t *testing.T) {
 			hostClient := test.NewFakeClient(t, s, basicTier)
 			nsTmplSet := nstemplatetsettest.NewNSTemplateSet("john", nstemplatetsettest.WithReadyCondition(), nstemplatetsettest.WithReferencesFor(basicTier))
 			member1Client := test.NewFakeClient(t, nsTmplSet)
-			hostClient.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			hostClient.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if space, ok := obj.(*toolchainv1alpha1.Space); ok {
 					if len(space.Status.ProvisionedNamespaces) > 0 {
 						return fmt.Errorf("update error")
@@ -789,7 +789,7 @@ func TestDeleteSpace(t *testing.T) {
 			)
 			hostClient := test.NewFakeClient(t, s)
 			member1Client := test.NewFakeClient(t)
-			member1Client.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			member1Client.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -1316,7 +1316,7 @@ func TestUpdateSpaceTier(t *testing.T) {
 				spacetest.WithStatusTargetCluster("member-1"), // already provisioned on a target cluster
 				spacetest.WithFinalizer())
 			hostClient := test.NewFakeClient(t, s, basicTier, otherTier)
-			hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			hostClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok && obj.GetLabels()[tierutil.TemplateTierHashLabelKey(basicTier.Name)] != "" {
 					return fmt.Errorf("mock error")
 				}
@@ -1991,8 +1991,8 @@ func TestSubSpace(t *testing.T) {
 	})
 }
 
-func mockDeleteNSTemplateSetFail(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
-	return func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+func mockDeleteNSTemplateSetFail(cl runtimeclient.Client) func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
+	return func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 		if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 			return fmt.Errorf("mock error")
 		}
@@ -2000,8 +2000,8 @@ func mockDeleteNSTemplateSetFail(cl client.Client) func(ctx context.Context, obj
 	}
 }
 
-func mockUpdateSpaceStatusFail(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-	return func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+func mockUpdateSpaceStatusFail(cl runtimeclient.Client) func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+	return func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 		if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 			return fmt.Errorf("mock error")
 		}
@@ -2009,8 +2009,8 @@ func mockUpdateSpaceStatusFail(cl client.Client) func(ctx context.Context, obj c
 	}
 }
 
-func mockUpdateNSTemplateSetFail(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-	return func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+func mockUpdateNSTemplateSetFail(cl runtimeclient.Client) func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+	return func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 		if _, ok := obj.(*toolchainv1alpha1.NSTemplateSet); ok {
 			return fmt.Errorf("mock error")
 		}
@@ -2018,7 +2018,7 @@ func mockUpdateNSTemplateSetFail(cl client.Client) func(ctx context.Context, obj
 	}
 }
 
-func newReconciler(hostCl client.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *space.Reconciler {
+func newReconciler(hostCl runtimeclient.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *space.Reconciler {
 	os.Setenv("WATCH_NAMESPACE", test.HostOperatorNs)
 	clusters := map[string]cluster.Cluster{}
 	for _, c := range memberClusters {

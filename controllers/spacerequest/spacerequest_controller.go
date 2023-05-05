@@ -11,10 +11,11 @@ import (
 	spaceutil "github.com/codeready-toolchain/host-operator/pkg/space"
 	restclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	"github.com/redhat-cop/operator-utils/pkg/util"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,7 +24,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,7 +39,7 @@ const TokenRequestExpirationSeconds = 3650 * 24 * 60 * 60 // 10 years
 
 // Reconciler reconciles a SpaceRequest object
 type Reconciler struct {
-	Client         client.Client
+	Client         runtimeclient.Client
 	Scheme         *runtime.Scheme
 	Namespace      string
 	MemberClusters map[string]cluster.Cluster
@@ -148,7 +149,7 @@ func (r *Reconciler) updateSpaceRequest(memberClusterWithSpaceRequest cluster.Cl
 		// subSpace was provisioned so let's set Ready type condition to true on the space request
 		return r.updateStatus(spaceRequest, memberClusterWithSpaceRequest, toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
-			Status: v1.ConditionTrue,
+			Status: corev1.ConditionTrue,
 			Reason: toolchainv1alpha1.SpaceProvisionedReason,
 		})
 	} else if condition.IsFalse(subSpace.Status.Conditions, toolchainv1alpha1.ConditionReady) {
@@ -222,11 +223,11 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, memberCluster cluster.Clust
 
 func (r *Reconciler) listSubSpaces(spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.SpaceList, error) {
 	spaceList := &toolchainv1alpha1.SpaceList{}
-	spaceRequestLabel := client.MatchingLabels{
+	spaceRequestLabel := runtimeclient.MatchingLabels{
 		toolchainv1alpha1.SpaceRequestLabelKey:          spaceRequest.GetName(),
 		toolchainv1alpha1.SpaceRequestNamespaceLabelKey: spaceRequest.GetNamespace(),
 	}
-	if err := r.Client.List(context.TODO(), spaceList, spaceRequestLabel, client.InNamespace(r.Namespace)); err != nil {
+	if err := r.Client.List(context.TODO(), spaceList, spaceRequestLabel, runtimeclient.InNamespace(r.Namespace)); err != nil {
 		return nil, errs.Wrap(err, fmt.Sprintf(`attempt to list Spaces associated with spaceRequest %s in namespace %s failed`, spaceRequest.GetName(), spaceRequest.GetNamespace()))
 	}
 	return spaceList, nil
@@ -309,7 +310,7 @@ func (r *Reconciler) updateSubSpace(logger logr.Logger, subSpace *toolchainv1alp
 // we need to find the parentSpace so we can `link` the 2 spaces and inherit the spacebindings from the parent.
 func (r *Reconciler) getParentSpace(memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.Space, error) {
 	parentSpace := &toolchainv1alpha1.Space{}
-	namespace := &v1.Namespace{}
+	namespace := &corev1.Namespace{}
 	err := memberCluster.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: "",
 		Name:      spaceRequest.Namespace,
@@ -423,16 +424,16 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 	for _, namespace := range subSpace.Status.ProvisionedNamespaces {
 		// check if kubeconfig secret exists,
 		// if it doesn't exist it will be created
-		secretList := &v1.SecretList{}
-		secretLabels := client.MatchingLabels{
+		secretList := &corev1.SecretList{}
+		secretLabels := runtimeclient.MatchingLabels{
 			toolchainv1alpha1.SpaceRequestLabelKey:                     spaceRequest.GetName(),
 			toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey: namespace.Name,
 		}
-		if err := memberClusterWithSpaceRequest.Client.List(context.TODO(), secretList, secretLabels, client.InNamespace(spaceRequest.GetNamespace())); err != nil {
+		if err := memberClusterWithSpaceRequest.Client.List(context.TODO(), secretList, secretLabels, runtimeclient.InNamespace(spaceRequest.GetNamespace())); err != nil {
 			return errs.Wrap(err, fmt.Sprintf(`attempt to list Secrets associated with spaceRequest %s in namespace %s failed`, spaceRequest.GetName(), spaceRequest.GetNamespace()))
 		}
 
-		kubeConfigSecret := &v1.Secret{}
+		kubeConfigSecret := &corev1.Secret{}
 		switch {
 		case len(secretList.Items) == 0:
 			// create the secret for this namespace
@@ -444,13 +445,13 @@ func (r *Reconciler) ensureSecretForProvisionedNamespaces(logger logr.Logger, me
 			if err != nil {
 				return err
 			}
-			kubeConfigSecret = &v1.Secret{
+			kubeConfigSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: spaceRequest.Name + "-",
 					Namespace:    spaceRequest.Namespace,
 					Labels:       secretLabels,
 				},
-				Type: v1.SecretTypeOpaque,
+				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
 					"kubeconfig": string(clientConfigFormatted),
 				},
@@ -536,7 +537,7 @@ func (r *Reconciler) setStatusProvisioning(memberCluster cluster.Cluster, spaceR
 		memberCluster,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
-			Status: v1.ConditionFalse,
+			Status: corev1.ConditionFalse,
 			Reason: toolchainv1alpha1.SpaceProvisioningReason,
 		})
 }
@@ -547,7 +548,7 @@ func (r *Reconciler) setStatusTerminating(memberCluster cluster.Cluster, spaceRe
 		memberCluster,
 		toolchainv1alpha1.Condition{
 			Type:   toolchainv1alpha1.ConditionReady,
-			Status: v1.ConditionFalse,
+			Status: corev1.ConditionFalse,
 			Reason: toolchainv1alpha1.SpaceTerminatingReason,
 		})
 }
@@ -558,7 +559,7 @@ func (r *Reconciler) setStatusTerminatingFailed(logger logr.Logger, memberCluste
 		memberCluster,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
-			Status:  v1.ConditionFalse,
+			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.SpaceTerminatingFailedReason,
 			Message: cause.Error(),
 		}); err != nil {
@@ -574,7 +575,7 @@ func (r *Reconciler) setStatusFailedToCreateSubSpace(logger logr.Logger, memberC
 		memberCluster,
 		toolchainv1alpha1.Condition{
 			Type:    toolchainv1alpha1.ConditionReady,
-			Status:  v1.ConditionFalse,
+			Status:  corev1.ConditionFalse,
 			Reason:  toolchainv1alpha1.SpaceProvisioningFailedReason,
 			Message: cause.Error(),
 		}); err != nil {
