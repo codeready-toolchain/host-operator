@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -34,7 +34,7 @@ import (
 
 // Reconciler reconciles a Space object
 type Reconciler struct {
-	Client              client.Client
+	Client              runtimeclient.Client
 	Namespace           string
 	MemberClusters      map[string]cluster.Cluster
 	NextScheduledUpdate time.Time
@@ -52,7 +52,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, memberClusters map[strin
 			handler.EnqueueRequestsFromMapFunc(MapNSTemplateTierToSpaces(r.Namespace, r.Client)),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&source.Kind{Type: &toolchainv1alpha1.SpaceBinding{}},
-			handler.EnqueueRequestsFromMapFunc(MapToSubSpacesByParentObjectName(r.Client)))
+			handler.EnqueueRequestsFromMapFunc(MapSpaceBindingToParentAndSubSpaces(r.Client)))
 	// watch NSTemplateSets in all the member clusters
 	for _, memberCluster := range memberClusters {
 		b = b.Watches(source.NewKindWithCache(&toolchainv1alpha1.NSTemplateSet{}, memberCluster.Cache),
@@ -179,8 +179,6 @@ func (r *Reconciler) ensureNSTemplateSet(logger logr.Logger, space *toolchainv1a
 	if err := r.setStateLabel(logger, space, toolchainv1alpha1.SpaceStateLabelValueClusterAssigned); err != nil {
 		return norequeue, err
 	}
-	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
-	space.Status.TargetCluster = space.Spec.TargetCluster
 
 	memberCluster, found := r.MemberClusters[space.Spec.TargetCluster]
 	if !found {
@@ -264,8 +262,8 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchai
 	spaceBindings := toolchainv1alpha1.SpaceBindingList{}
 	if err := r.Client.List(context.TODO(),
 		&spaceBindings,
-		client.InNamespace(space.Namespace),
-		client.MatchingLabels{
+		runtimeclient.InNamespace(space.Namespace),
+		runtimeclient.MatchingLabels{
 			toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Name, // use current space name for the search
 		},
 	); err != nil {
@@ -282,8 +280,8 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchai
 	parentSpaceBindings := toolchainv1alpha1.SpaceBindingList{}
 	if err := r.Client.List(context.TODO(),
 		&parentSpaceBindings,
-		client.InNamespace(space.Namespace),
-		client.MatchingLabels{
+		runtimeclient.InNamespace(space.Namespace),
+		runtimeclient.MatchingLabels{
 			toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Spec.ParentSpace, // use parentSpace name for the search
 		},
 	); err != nil {
@@ -323,6 +321,10 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchai
 // manageNSTemplateSet creates or updates the NSTemplateSet of a given space.
 // returns NSTemplateSet{}, requeueDelay, error
 func (r *Reconciler) manageNSTemplateSet(logger logr.Logger, space *toolchainv1alpha1.Space, memberCluster cluster.Cluster, tmplTier *toolchainv1alpha1.NSTemplateTier) (*toolchainv1alpha1.NSTemplateSet, time.Duration, error) {
+	// copying the `space.Spec.TargetCluster` into `space.Status.TargetCluster` in case the former is reset or changed (ie, when retargeting to another cluster)
+	// We set the .Status.TargetCluster only when the NSTemplateSet creation was attempted.
+	// When deletion of the Space with space.Status.TargetCluster set is triggered, we know that there might be a NSTemplateSet resource to clean up as well.
+	space.Status.TargetCluster = space.Spec.TargetCluster
 	spaceBindings, err := r.listSpaceBindings(space)
 	if err != nil {
 		logger.Error(err, "failed to list space bindings")
@@ -477,8 +479,13 @@ func extractUsernames(role string, bindings []toolchainv1alpha1.SpaceBinding) []
 func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1alpha1.Space) error {
 	logger.Info("terminating Space")
 	if isBeingDeleted, err := r.deleteNSTemplateSet(logger, space); err != nil {
-		logger.Error(err, "failed to delete the NSTemplateSet")
-		return r.setStatusTerminatingFailed(logger, space, err)
+		// space was already provisioned to a cluster
+		// let's not proceed with deletion
+		if space.Status.TargetCluster != "" {
+			logger.Error(err, "failed to delete the NSTemplateSet")
+			return r.setStatusTerminatingFailed(logger, space, err)
+		}
+		logger.Error(err, "error while deleting NSTemplateSet - ignored since the target cluster in the Status is empty")
 	} else if isBeingDeleted {
 		if err := r.setStatusTerminating(space); err != nil {
 			logger.Error(err, "error updating status")
@@ -493,7 +500,6 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, space *toolchainv1a
 		return r.setStatusTerminatingFailed(logger, space, err)
 	}
 
-	counter.DecrementSpaceCount(logger, space.Spec.TargetCluster)
 	logger.Info("removed finalizer")
 	// no need to update the status of the Space once the finalizer has been removed, since
 	// the resource will be deleted
@@ -564,6 +570,7 @@ func (r *Reconciler) deleteNSTemplateSetFromCluster(logger logr.Logger, space *t
 		}
 		return false, nil // was already deleted in the mean time
 	}
+	counter.DecrementSpaceCount(logger, space.Status.TargetCluster)
 	logger.Info("deleted the NSTemplateSet resource")
 	return true, nil // requeue until fully deleted
 }

@@ -19,11 +19,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -237,14 +237,14 @@ func TestUserCleanup(t *testing.T) {
 
 		r, req, fakeClient := prepareReconcile(t, userSignup.Name, userSignup)
 		deleted := false
-		fakeClient.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+		fakeClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 			deleted = true
 			require.Len(t, opts, 1)
-			deleteOptions, ok := opts[0].(*client.DeleteOptions)
+			deleteOptions, ok := opts[0].(*runtimeclient.DeleteOptions)
 			require.True(t, ok)
 			require.NotNil(t, deleteOptions)
 			require.NotNil(t, deleteOptions.PropagationPolicy)
-			assert.Equal(t, v1.DeletePropagationForeground, *deleteOptions.PropagationPolicy)
+			assert.Equal(t, corev1.DeletePropagationForeground, *deleteOptions.PropagationPolicy)
 			return nil
 		}
 		_, err := r.Reconcile(context.TODO(), req)

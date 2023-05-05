@@ -9,11 +9,11 @@ import (
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type StatusUpdater struct {
-	Client client.Client
+	Client runtimeclient.Client
 }
 
 func (u *StatusUpdater) setStatusApprovedAutomatically(userSignup *toolchainv1alpha1.UserSignup, message string) error {
@@ -357,7 +357,7 @@ func (u *StatusUpdater) updateIncompleteStatus(userSignup *toolchainv1alpha1.Use
 
 // updateCompleteStatus updates the `CompliantUsername` and `Conditions` in the status, should only be invoked on completion because
 // both completion and the compliant username require the master user record to be created.
-func (u *StatusUpdater) updateCompleteStatus(logger logr.Logger, compliantUsername string) func(userSignup *toolchainv1alpha1.UserSignup, message string) error { //nolint: unparam
+func (u *StatusUpdater) updateCompleteStatus(compliantUsername string) func(userSignup *toolchainv1alpha1.UserSignup, message string) error { //nolint: unparam
 	return func(userSignup *toolchainv1alpha1.UserSignup, message string) error {
 
 		usernameUpdated := userSignup.Status.CompliantUsername != compliantUsername

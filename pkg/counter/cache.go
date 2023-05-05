@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/go-logr/logr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -109,7 +109,7 @@ func DecrementSpaceCount(logger logr.Logger, clusterName string) {
 		if cachedCounts.SpacesPerClusterCounts[clusterName] != 0 || !cachedCounts.initialized { // counter can be decreased even if its current value is `0`, but only if the cache has not been initialized yet
 			cachedCounts.SpacesPerClusterCounts[clusterName]--
 			metrics.SpaceGaugeVec.WithLabelValues(clusterName).Set(float64(cachedCounts.SpacesPerClusterCounts[clusterName]))
-			logger.Info("decremented Spaces count", "value", cachedCounts.SpacesPerClusterCounts[clusterName])
+			logger.Info("decremented Spaces count", "clusterName", clusterName, "value", cachedCounts.SpacesPerClusterCounts[clusterName])
 		} else {
 			logger.Error(fmt.Errorf("the count of Spaces is zero"),
 				"unable to decrement the number of Spaces for the given cluster", "cluster", clusterName)
@@ -159,7 +159,7 @@ func GetCounts() (Counts, error) {
 //
 // If the cached counter is initialized and ToolchainStatus contains already some numbers
 // then it updates the ToolchainStatus numbers with the one taken from the cached counter
-func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func Synchronize(cl runtimeclient.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	cachedCounts.Lock()
 	defer cachedCounts.Unlock()
 
@@ -205,7 +205,7 @@ func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainS
 	// `masterUserRecordsPerDomain` metric
 	toolchainStatus.Status.Metrics[toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey] = toolchainv1alpha1.Metric(cachedCounts.MasterUserRecordPerDomainCounts)
 	for domain, count := range cachedCounts.MasterUserRecordPerDomainCounts {
-		log.Info("synchronized master_user_records gauge", "domaim", domain, "count", count)
+		log.Info("synchronized master_user_records gauge", "domain", domain, "count", count)
 		metrics.MasterUserRecordGaugeVec.WithLabelValues(domain).Set(float64(count))
 	}
 	log.Info("synchronized counters", "counts", cachedCounts.Counts)
@@ -222,7 +222,7 @@ func indexOfMember(members []toolchainv1alpha1.Member, name string) int {
 	return -1
 }
 
-func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func initialize(cl runtimeclient.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// skip if cached counters are already initialized
 	if cachedCounts.initialized {
 		return nil
@@ -246,18 +246,18 @@ func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainSt
 
 // initialize the cached counters from the UserSignup and MasterUserRecord resources.
 // this func lists all UserSignup and MasterUserRecord resources
-func initializeFromResources(cl client.Client, namespace string) error {
+func initializeFromResources(cl runtimeclient.Client, namespace string) error {
 	log.Info("initializing counters from resources")
 	usersignups := &toolchainv1alpha1.UserSignupList{}
-	if err := cl.List(context.TODO(), usersignups, client.InNamespace(namespace)); err != nil {
+	if err := cl.List(context.TODO(), usersignups, runtimeclient.InNamespace(namespace)); err != nil {
 		return err
 	}
 	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	if err := cl.List(context.TODO(), murs, client.InNamespace(namespace)); err != nil {
+	if err := cl.List(context.TODO(), murs, runtimeclient.InNamespace(namespace)); err != nil {
 		return err
 	}
 	spaces := &toolchainv1alpha1.SpaceList{}
-	if err := cl.List(context.TODO(), spaces, client.InNamespace(namespace)); err != nil {
+	if err := cl.List(context.TODO(), spaces, runtimeclient.InNamespace(namespace)); err != nil {
 		return err
 	}
 	reset()

@@ -9,9 +9,10 @@ import (
 	"github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestMapperReturnsOldest(t *testing.T) {
@@ -70,7 +71,7 @@ func TestMapperReturnsEmptyRequestsWhenNoPendingIsFound(t *testing.T) {
 func TestMapperReturnsEmptyRequestsWhenClientReturnsError(t *testing.T) {
 	// given
 	cl := test.NewFakeClient(t)
-	cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+	cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 		return fmt.Errorf("some error")
 	}
 	mapper := NewUserSignupMapper(cl)

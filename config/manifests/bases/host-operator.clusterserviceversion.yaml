@@ -80,7 +80,8 @@ spec:
       kind: UserTier
       name: usersignups.toolchain.dev.openshift.com
       version: v1alpha1
-    - description: ProxyPlugin provides configuration of proxy plug-in's in the registration service
+    - description: ProxyPlugin provides configuration of proxy plug-in's in the registration
+        service
       displayName: Proxy Plugin
       kind: ProxyPlugin
       name: proxyplugins.toolchain.dev.openshift.com

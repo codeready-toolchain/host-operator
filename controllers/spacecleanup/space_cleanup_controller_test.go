@@ -13,12 +13,13 @@ import (
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/host-operator/test/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -91,7 +92,7 @@ func TestCleanupSpace(t *testing.T) {
 		space := spacetest.NewSpace("not-found") // will be disregarded, only included for call to prepareReconcile func
 		r, req, _ := prepareReconcile(t, space)
 		empty := test.NewFakeClient(t) // with space disregarded
-		empty.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+		empty.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 			return fmt.Errorf("shouldn't be called")
 		}
 		r.Client = empty
@@ -173,7 +174,7 @@ func TestCleanupSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace("get-fails")
 			r, req, cl := prepareReconcile(t, space)
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("some error")
 			}
 
@@ -192,7 +193,7 @@ func TestCleanupSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace("list-fails")
 			r, req, cl := prepareReconcile(t, space)
-			cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+			cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				return fmt.Errorf("some error")
 			}
 
@@ -210,7 +211,7 @@ func TestCleanupSpace(t *testing.T) {
 			// given
 			space := spacetest.NewSpace("delete-fails", spacetest.WithCreationTimestamp(time.Now().Add(-time.Minute)))
 			r, req, cl := prepareReconcile(t, space)
-			cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+			cl.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 				return fmt.Errorf("some error")
 			}
 

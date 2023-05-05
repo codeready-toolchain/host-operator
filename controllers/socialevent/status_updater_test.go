@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestUpdateStatusCondition(t *testing.T) {
@@ -74,7 +74,7 @@ func TestUpdateStatusCondition(t *testing.T) {
 			socialeventtest.WithConditions(c1), // with pre-existing status condition
 		)
 		hostClient := test.NewFakeClient(t, event)
-		hostClient.MockStatusUpdate = func(_ context.Context, _ client.Object, _ ...client.UpdateOption) error {
+		hostClient.MockStatusUpdate = func(_ context.Context, _ runtimeclient.Object, _ ...runtimeclient.UpdateOption) error {
 			return fmt.Errorf("mock error")
 		}
 		statusUpdater := StatusUpdater{Client: hostClient}

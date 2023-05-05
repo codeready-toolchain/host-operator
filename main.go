@@ -34,6 +34,8 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	authv1 "k8s.io/api/authentication/v1"
+	"k8s.io/client-go/rest"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -44,7 +46,7 @@ import (
 	klogv1 "k8s.io/klog"
 	klogv2 "k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	runtimecluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -160,7 +162,7 @@ func main() { // nolint:gocyclo
 	}
 
 	// create client that will be used for retrieving the host operator secret & ToolchainCluster CRs
-	cl, err := client.New(cfg, client.Options{
+	cl, err := runtimeclient.New(cfg, runtimeclient.Options{
 		Scheme: scheme,
 	})
 	if err != nil {
@@ -294,6 +296,7 @@ func main() { // nolint:gocyclo
 			Client:         mgr.GetClient(),
 			Namespace:      namespace,
 			MemberClusters: clusterScopedMemberClusters,
+			Scheme:         mgr.GetScheme(),
 		}).SetupWithManager(mgr, clusterScopedMemberClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SpaceRequest")
 			os.Exit(1)
@@ -397,7 +400,7 @@ func main() { // nolint:gocyclo
 	}
 }
 
-func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string, namespacedCache bool) (map[string]cluster.Cluster, error) {
+func addMemberClusters(mgr ctrl.Manager, cl runtimeclient.Client, namespace string, namespacedCache bool) (map[string]cluster.Cluster, error) {
 	memberConfigs, err := commoncluster.ListToolchainClusterConfigs(cl, namespace, commoncluster.Member, memberClientTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to get ToolchainCluster configs for members")
@@ -420,10 +423,20 @@ func addMemberClusters(mgr ctrl.Manager, cl client.Client, namespace string, nam
 		if err := mgr.Add(memberCluster); err != nil {
 			return nil, errors.Wrapf(err, "unable to add member cluster to the manager for "+memberConfig.Name)
 		}
+		// These fields need to be set when using the REST client
+		memberConfig.RestConfig.ContentConfig = rest.ContentConfig{
+			GroupVersion:         &authv1.SchemeGroupVersion,
+			NegotiatedSerializer: clientgoscheme.Codecs,
+		}
+		restClient, err := rest.RESTClientFor(memberConfig.RestConfig)
+		if err != nil {
+			return nil, errors.Wrapf(err, "unable to create member cluster rest client "+memberConfig.Name)
+		}
 		memberClusters[memberConfig.Name] = cluster.Cluster{
-			Config: memberConfig,
-			Client: memberCluster.GetClient(),
-			Cache:  memberCluster.GetCache(),
+			Config:     memberConfig,
+			Client:     memberCluster.GetClient(),
+			RESTClient: restClient,
+			Cache:      memberCluster.GetCache(),
 		}
 	}
 	return memberClusters, nil

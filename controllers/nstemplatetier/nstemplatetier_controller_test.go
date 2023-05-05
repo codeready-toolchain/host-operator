@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -115,11 +115,11 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 				initObjs := []runtime.Object{basicTier}
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return errors.NewNotFound(schema.GroupResource{}, key.Name)
 					}
-					return cl.Client.Get(ctx, key, obj)
+					return cl.Client.Get(ctx, key, obj, opts...)
 				}
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -133,11 +133,11 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 				initObjs := []runtime.Object{basicTier}
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object) error {
+				cl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
 					}
-					return cl.Client.Get(ctx, key, obj)
+					return cl.Client.Get(ctx, key, obj, opts...)
 				}
 				// when
 				res, err := r.Reconcile(context.TODO(), req)
@@ -155,7 +155,7 @@ func TestReconcile(t *testing.T) {
 				basicTier := tiertest.BasicTier(t, tiertest.CurrentBasicTemplates)
 				initObjs := []runtime.Object{basicTier}
 				r, req, cl := prepareReconcile(t, basicTier.Name, initObjs...)
-				cl.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+				cl.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 						return fmt.Errorf("mock error")
 					}

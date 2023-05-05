@@ -1,0 +1,177 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: appstudio-spacerole-maintainer
+objects:
+
+# ServiceAccounts that represents the AppStudio user - the token of this SA is used by the proxy for forwarding the requests from UI (or any other client)
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    namespace: ${NAMESPACE}
+    name: appstudio-${USERNAME}
+
+# RoleBinding that grants limited CRUD permissions on AppStudio components CRDs & secrets to the user's SA
+# Role(s) and RoleBinding(s) that grant limited CRUD permissions on AppStudio components CRDs & secrets to the user's SA
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    namespace: ${NAMESPACE}
+    name: appstudio-maintainer-user-actions
+  rules:
+    - apiGroups:
+        - appstudio.redhat.com
+      resources:
+        - applications
+        - components
+        - componentdetectionqueries
+      verbs:
+        - get
+        - list
+        - watch
+        - create
+        - update
+        - patch
+    - apiGroups:
+        - appstudio.redhat.com
+      resources:
+        - promotionruns
+        - snapshotenvironmentbindings
+        - snapshots
+        - environments
+      verbs:
+        - get
+        - list
+        - watch
+    - apiGroups:
+        - appstudio.redhat.com
+      resources:
+        - deploymentttargets
+        - deploymenttargetclaims
+      verbs:
+        - get
+        - list
+        - watch
+    - apiGroups:
+        - managed-gitops.redhat.com
+      resources:
+        - gitopsdeployments
+        - gitopsdeploymentmanagedenvironments
+        - gitopsdeploymentrepositorycredentials
+        - gitopsdeploymentsyncruns
+      verbs:
+        - get
+        - list
+        - watch
+    - apiGroups:
+        - tekton.dev
+      resources:
+        - pipelineruns
+      verbs:
+        - get
+        - list
+        - watch
+    - apiGroups:
+        - results.tekton.dev
+      resources:
+        - results
+        - records
+      verbs:
+        - get
+        - list
+    - apiGroups:
+        - appstudio.redhat.com
+      resources:
+        - integrationtestscenarios
+      verbs:
+        - '*'
+    - apiGroups:
+        - appstudio.redhat.com
+      resources:
+        - enterprisecontractpolicies
+      verbs:
+        - get
+        - list
+        - watch
+    - apiGroups:
+        - appstudio.redhat.com
+      resources:
+        - releases
+        - releasestrategies
+        - releaseplans
+      verbs:
+        - '*'
+    - apiGroups:
+        - appstudio.redhat.com
+      resources:
+        - releaseplanadmissions
+      verbs:
+        - '*'
+    - apiGroups:
+        - jvmbuildservice.io
+      resources:
+        - jbsconfigs
+        - artifactbuilds
+      verbs:
+        - get
+        - list
+        - watch
+        - create
+        - update
+        - patch
+    - apiGroups:
+        - appstudio.redhat.com
+      resources:
+        - spiaccesstokenbindings
+        - spiaccesschecks
+        - spiaccesstokens
+        - spifilecontentrequests
+        - spiaccesstokendataupdates
+      verbs:
+        - get
+        - list
+        - watch
+        - create
+        - update
+        - patch
+    - apiGroups:
+        - ''
+      resources:
+        - configmaps
+      verbs:
+        - get
+        - list
+        - watch
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    namespace: ${NAMESPACE}
+    name: appstudio-${USERNAME}-user-actions
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: appstudio-maintainer-user-actions
+  subjects:
+    - apiGroup: ""
+      kind: ServiceAccount
+      name: appstudio-${USERNAME}
+# Role & RoleBinding that grants view permissions to the user's SA
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    namespace: ${NAMESPACE}
+    name: appstudio-${USERNAME}-view
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: view
+  subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: appstudio-${USERNAME}
+
+parameters:
+- name: USERNAME
+  required: true
+- name: NAMESPACE
+  required: true

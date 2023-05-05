@@ -15,7 +15,7 @@ objects:
         limits.ephemeral-storage: 7Gi
         requests.cpu: 1750m
         requests.memory: ${MEMORY_REQUEST}
-        requests.storage: 15Gi
+        requests.storage: 40Gi
         requests.ephemeral-storage: 7Gi
         count/persistentvolumeclaims: "5"
     selector:
@@ -56,8 +56,8 @@ objects:
   spec:
     quota:
       hard:
-        count/ingresses.extensions: "10"
-        count/routes.route.openshift.io: "10"
+        count/ingresses.extensions: "30"
+        count/routes.route.openshift.io: "30"
     selector:
       annotations:
         openshift.io/requester: ${USERNAME}

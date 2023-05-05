@@ -9,10 +9,11 @@ import (
 	"github.com/codeready-toolchain/host-operator/test/space"
 	sb "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -33,7 +34,7 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 
 	t.Run("should return one Space when has no sub-spaces", func(t *testing.T) {
 		// when
-		requests := MapToSubSpacesByParentObjectName(cl)(sbSpaceNoSubspaces)
+		requests := MapSpaceBindingToParentAndSubSpaces(cl)(sbSpaceNoSubspaces)
 
 		// then
 		require.Len(t, requests, 1)
@@ -42,7 +43,7 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 
 	t.Run("should return two Spaces when there is a sub-space", func(t *testing.T) {
 		// when
-		requests := MapToSubSpacesByParentObjectName(cl)(sbSpaceWithSubspaces)
+		requests := MapSpaceBindingToParentAndSubSpaces(cl)(sbSpaceWithSubspaces)
 
 		// then
 		require.Len(t, requests, 2)
@@ -52,7 +53,7 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 
 	t.Run("should not return any Space request when there is no for the given SpaceBinding", func(t *testing.T) {
 		// when
-		requests := MapToSubSpacesByParentObjectName(cl)(sbOrphan)
+		requests := MapSpaceBindingToParentAndSubSpaces(cl)(sbOrphan)
 
 		// then
 		require.Empty(t, requests)
@@ -61,12 +62,12 @@ func TestMapToSubSpacesByParentObjectName(t *testing.T) {
 	t.Run("should not return any Space requests when list fails", func(t *testing.T) {
 		// given
 		cl := test.NewFakeClient(t, parentSpace, subSpace, singleSpace)
-		cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+		cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 			return fmt.Errorf("some error")
 		}
 
 		// when
-		requests := MapToSubSpacesByParentObjectName(cl)(sbSpaceNoSubspaces)
+		requests := MapSpaceBindingToParentAndSubSpaces(cl)(sbSpaceNoSubspaces)
 
 		// then
 		require.Empty(t, requests)

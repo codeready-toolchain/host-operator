@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
   name: toolchainconfigs.toolchain.dev.openshift.com
 spec:
@@ -255,6 +255,33 @@ spec:
                             description: AWSSenderID the Alphanumeric Sender ID to
                               use, e.g. "DevSandbox"
                             type: string
+                          captcha:
+                            description: Captcha defines any configuration related
+                              to captcha verification
+                            properties:
+                              enabled:
+                                description: Enabled specifies whether the captcha
+                                  verification feature is enabled or not
+                                type: boolean
+                              projectID:
+                                description: ProjectID defines the GCP project ID
+                                  that has the recaptcha service enabled.
+                                type: string
+                              scoreThreshold:
+                                description: ScoreThreshold defines the captcha assessment
+                                  score threshold. A score equal to or above the threshold
+                                  means the user is most likely human and can proceed
+                                  signing up but a score below the threshold means
+                                  the score is suspicious and further verification
+                                  may be required.
+                                type: string
+                              siteKey:
+                                description: SiteKey defines the recaptcha site key
+                                  to use when making recaptcha requests. There can
+                                  be different ones for different environments. eg.
+                                  dev, stage, prod
+                                type: string
+                            type: object
                           codeExpiresInMin:
                             description: VerificationCodeExpiresInMin specifies an
                               int representing the number of minutes before a verification
@@ -266,8 +293,16 @@ spec:
                               within a 24 hour period
                             type: integer
                           enabled:
-                            description: VerificationEnabled specifies whether the
-                              phone verification feature is enabled or not
+                            description: 'VerificationEnabled specifies whether verification
+                              is enabled or not Verification enablement works in the
+                              following way: 1. verification.enabled == false No verification
+                              during the signup process at all. (no phone, no captcha)
+                              2. verification.enabled == true && verification.captcha.enabled
+                              == true Captcha is enabled and will bypass phone verification
+                              if the score is above the threshold but if the score
+                              is below the threshold then phone verification kicks
+                              in. 3. verification.enabled == true && verification.captcha.enabled
+                              == false Only phone verification is effect.'
                             type: boolean
                           excludedEmailDomains:
                             description: VerificationExcludedEmailDomains specifies
@@ -296,6 +331,11 @@ spec:
                               awsSecretAccessKey:
                                 description: AWSSecretAccessKey is the AWS credential
                                   used to authenticate in order to access AWS services
+                                type: string
+                              recaptchaServiceAccountFile:
+                                description: RecaptchaServiceAccountFile is the GCP
+                                  service account file contents encoded in base64,
+                                  it is to be used with the recaptcha client for authentication
                                 type: string
                               ref:
                                 description: Reference is the name of the secret resource

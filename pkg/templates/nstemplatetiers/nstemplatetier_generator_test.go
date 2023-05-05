@@ -12,7 +12,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/nstemplatetiers"
 	testnstemplatetiers "github.com/codeready-toolchain/host-operator/test/templates/nstemplatetiers"
-	testsupport "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -72,8 +72,9 @@ func TestCreateOrUpdateResources(t *testing.T) {
 					"appstudio-tenant-123456b-123456b",
 				},
 				"spaceRoles": map[string]string{
-					"admin":  "appstudio-admin-123456c-123456c",
-					"viewer": "appstudio-viewer-123456d-123456d",
+					"admin":       "appstudio-admin-123456c-123456c",
+					"maintainer":  "appstudio-maintainer-123456d-123456d",
+					"contributor": "appstudio-contributor-123456e-123456e",
 				},
 			},
 		}
@@ -81,15 +82,15 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		t.Run("create only", func(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
-			clt := testsupport.NewFakeClient(t)
+			clt := commontest.NewFakeClient(t)
 			// verify that no NSTemplateTier resources exist prior to creation
 			nsTmplTiers := toolchainv1alpha1.NSTemplateTierList{}
-			err = clt.List(context.TODO(), &nsTmplTiers, client.InNamespace(namespace))
+			err = clt.List(context.TODO(), &nsTmplTiers, runtimeclient.InNamespace(namespace))
 			require.NoError(t, err)
 			require.Empty(t, nsTmplTiers.Items)
 			// verify that no TierTemplate resources exist prior to creation
 			tierTmpls := toolchainv1alpha1.TierTemplateList{}
-			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
+			err = clt.List(context.TODO(), &tierTmpls, runtimeclient.InNamespace(namespace))
 			require.NoError(t, err)
 			require.Empty(t, tierTmpls.Items)
 
@@ -103,9 +104,9 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 			// verify that TierTemplates were created
 			tierTmpls = toolchainv1alpha1.TierTemplateList{}
-			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
+			err = clt.List(context.TODO(), &tierTmpls, runtimeclient.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, 15) // 4 items for advanced and base tiers + 3 for nocluster tier + 4 for appstudio
+			require.Len(t, tierTmpls.Items, 16) // 4 items for advanced and base tiers + 3 for nocluster tier + 5 for appstudio
 			names := []string{}
 			for _, tierTmpl := range tierTmpls.Items {
 				names = append(names, tierTmpl.Name)
@@ -125,7 +126,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				"appstudio-clusterresources-654321a-654321a",
 				"appstudio-tenant-123456b-123456b",
 				"appstudio-admin-123456c-123456c",
-				"appstudio-viewer-123456d-123456d",
+				"appstudio-maintainer-123456d-123456d",
+				"appstudio-contributor-123456e-123456e",
 			}, names)
 
 			// verify that 4 NSTemplateTier CRs were created:
@@ -164,7 +166,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		t.Run("create then update with same tier templates", func(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
-			clt := testsupport.NewFakeClient(t)
+			clt := commontest.NewFakeClient(t)
 
 			// when
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
@@ -177,9 +179,9 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			require.NoError(t, err)
 			// verify that all TierTemplate CRs were updated
 			tierTmpls := toolchainv1alpha1.TierTemplateList{}
-			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
+			err = clt.List(context.TODO(), &tierTmpls, runtimeclient.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, 15) // 4 items for advanced and base tiers + 3 for nocluster tier + 4 for appstudio
+			require.Len(t, tierTmpls.Items, 16) // 4 items for advanced and base tiers + 3 for nocluster tier + 4 for appstudio
 			for _, tierTmpl := range tierTmpls.Items {
 				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
 			}
@@ -220,7 +222,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 		t.Run("create then update with new tier templates", func(t *testing.T) {
 			// given
 			namespace := "host-operator" + uuid.Must(uuid.NewV4()).String()[:7]
-			clt := testsupport.NewFakeClient(t)
+			clt := commontest.NewFakeClient(t)
 
 			// when
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, testassets)
@@ -241,7 +243,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 							`appstudio/cluster: "444444a"` + "\n" +
 							`appstudio/ns_tenant: "444444b"` + "\n" +
 							`appstudio/spacerole_admin: "444444c"` + "\n" +
-							`appstudio/spacerole_viewer: "444444d"` + "\n"), nil
+							`appstudio/spacerole_maintainer: "444444d"` + "\n" +
+							`appstudio/spacerole_contributor: "444444e"` + "\n"), nil
 				}
 				// return default content for other assets
 				return testnstemplatetiers.Asset(name)
@@ -254,9 +257,9 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			require.NoError(t, err)
 			// verify that all TierTemplate CRs for the new revisions were created
 			tierTmpls := toolchainv1alpha1.TierTemplateList{}
-			err = clt.List(context.TODO(), &tierTmpls, client.InNamespace(namespace))
+			err = clt.List(context.TODO(), &tierTmpls, runtimeclient.InNamespace(namespace))
 			require.NoError(t, err)
-			require.Len(t, tierTmpls.Items, 30) // two versions of: 4 items for advanced and base tiers + 3 for nocluster tier + 4 for appstudio
+			require.Len(t, tierTmpls.Items, 32) // two versions of: 4 items for advanced and base tiers + 3 for nocluster tier + 4 for appstudio
 			for _, tierTmpl := range tierTmpls.Items {
 				assert.Equal(t, int64(1), tierTmpl.ObjectMeta.Generation) // unchanged
 			}
@@ -298,8 +301,9 @@ func TestCreateOrUpdateResources(t *testing.T) {
 						"appstudio-stage-444444b-444444b",
 					},
 					"spaceRoles": map[string]string{
-						"admin":  "appstudio-admin-444444c-444444c",
-						"viewer": "appstudio-viewer-444444d-444444d",
+						"admin":       "appstudio-admin-444444c-444444c",
+						"maintainer":  "appstudio-maintainer-444444d-444444d",
+						"contributor": "appstudio-contributor-444444e-444444e",
 					},
 				},
 			}
@@ -350,7 +354,7 @@ func TestCreateOrUpdateResources(t *testing.T) {
 				// error occurs when fetching the content of the 'advanced-code.yaml' template
 				return nil, errors.Errorf("an error")
 			})
-			clt := testsupport.NewFakeClient(t)
+			clt := commontest.NewFakeClient(t)
 			// when
 			err := nstemplatetiers.CreateOrUpdateResources(s, clt, namespace, fakeAssets)
 			// then
@@ -362,8 +366,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
 				// given
-				clt := testsupport.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+				clt := commontest.NewFakeClient(t)
+				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
@@ -381,13 +385,13 @@ func TestCreateOrUpdateResources(t *testing.T) {
 			t.Run("failed to update nstemplatetiers", func(t *testing.T) {
 				// given
 				// initialize the client with an existing `advanced` NSTemplatetier
-				clt := testsupport.NewFakeClient(t, &toolchainv1alpha1.NSTemplateTier{
+				clt := commontest.NewFakeClient(t, &toolchainv1alpha1.NSTemplateTier{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: namespace,
 						Name:      "advanced",
 					},
 				})
-				clt.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+				clt.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 					if obj.GetObjectKind().GroupVersionKind().Kind == "NSTemplateTier" {
 						// simulate a client/server error
 						return errors.Errorf("an error")
@@ -407,8 +411,8 @@ func TestCreateOrUpdateResources(t *testing.T) {
 
 			t.Run("failed to create nstemplatetiers", func(t *testing.T) {
 				// given
-				clt := testsupport.NewFakeClient(t)
-				clt.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+				clt := commontest.NewFakeClient(t)
+				clt.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 					if _, ok := obj.(*toolchainv1alpha1.TierTemplate); ok {
 						// simulate a client/server error
 						return errors.Errorf("an error")

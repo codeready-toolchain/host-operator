@@ -6,8 +6,9 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+
 	"github.com/pkg/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type targetCluster string
@@ -29,7 +30,7 @@ func (c targetCluster) getClusterName() string {
 // If the user is not approved manually, then it loads ToolchainConfig to check if automatic approval is enabled or not. If it is then it checks
 // capacity thresholds and the actual use if there is any suitable member cluster. If it is not then it returns false as the first value and
 // targetCluster unknown as the second value.
-func getClusterIfApproved(cl client.Client, userSignup *toolchainv1alpha1.UserSignup, clusterManager *capacity.ClusterManager) (bool, targetCluster, error) {
+func getClusterIfApproved(cl runtimeclient.Client, userSignup *toolchainv1alpha1.UserSignup, clusterManager *capacity.ClusterManager) (bool, targetCluster, error) {
 	config, err := toolchainconfig.GetToolchainConfig(cl)
 	if err != nil {
 		return false, unknown, errors.Wrapf(err, "unable to get ToolchainConfig")

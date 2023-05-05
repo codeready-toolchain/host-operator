@@ -10,13 +10,14 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	. "github.com/codeready-toolchain/host-operator/test"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
-	. "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGetClusterIfApproved(t *testing.T) {
@@ -46,7 +47,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			testconfig.CapacityThresholds().
 				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000), testconfig.PerMemberCluster("member2", 1000)).
 				ResourceCapacityThreshold(80, testconfig.PerMemberCluster("member1", 70), testconfig.PerMemberCluster("member2", 75)))
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
@@ -66,7 +67,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			testconfig.AutomaticApproval().
 				Enabled(true),
 		)
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(
 			NewMemberClusterWithoutClusterRoles(t, "member1", corev1.ConditionTrue), // no cluster-role label on this member
@@ -91,7 +92,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
 				Enabled(true))
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(
 			// member1 doesn't have the cluster-role tenant but it's preferred one
@@ -113,7 +114,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.AutomaticApproval().
 				Enabled(true))
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters()
 
@@ -128,7 +129,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("automatic approval not enabled and user not approved", func(t *testing.T) {
 		// given
-		fakeClient := NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t))
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t))
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
@@ -143,7 +144,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("ToolchainConfig not found and user not approved", func(t *testing.T) {
 		// given
-		fakeClient := NewFakeClient(t, toolchainStatus)
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 
@@ -158,7 +159,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 	t.Run("ToolchainConfig not found and user manually approved without target cluster", func(t *testing.T) {
 		// given
-		fakeClient := NewFakeClient(t, toolchainStatus)
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
@@ -177,7 +178,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.CapacityThresholds().ResourceCapacityThreshold(50),
 		)
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
@@ -197,7 +198,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 			testconfig.CapacityThresholds().
 				MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 2000)).
 				ResourceCapacityThreshold(62))
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually())
@@ -215,7 +216,7 @@ func TestGetClusterIfApproved(t *testing.T) {
 		// given
 		toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
 			testconfig.CapacityThresholds().MaxNumberOfSpaces(testconfig.PerMemberCluster("member1", 1000)))
-		fakeClient := NewFakeClient(t, toolchainStatus, toolchainConfig)
+		fakeClient := commontest.NewFakeClient(t, toolchainStatus, toolchainConfig)
 		InitializeCounters(t, toolchainStatus)
 		clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue))
 		signup := commonsignup.NewUserSignup(commonsignup.ApprovedManually(), commonsignup.WithTargetCluster("member1"))
@@ -232,9 +233,9 @@ func TestGetClusterIfApproved(t *testing.T) {
 	t.Run("failures", func(t *testing.T) {
 		t.Run("unable to get ToolchainConfig", func(t *testing.T) {
 			// given
-			fakeClient := NewFakeClient(t, toolchainStatus)
+			fakeClient := commontest.NewFakeClient(t, toolchainStatus)
 			InitializeCounters(t, toolchainStatus)
-			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			fakeClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("some error")
 			}
 			InitializeCounters(t, toolchainStatus)
@@ -251,12 +252,12 @@ func TestGetClusterIfApproved(t *testing.T) {
 
 		t.Run("unable to read ToolchainStatus", func(t *testing.T) {
 			// given
-			fakeClient := NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
-			fakeClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+			fakeClient := commontest.NewFakeClient(t, toolchainStatus, commonconfig.NewToolchainConfigObjWithReset(t, testconfig.AutomaticApproval().Enabled(true)))
+			fakeClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
 					return fmt.Errorf("some error")
 				}
-				return fakeClient.Client.Get(ctx, key, obj)
+				return fakeClient.Client.Get(ctx, key, obj, opts...)
 			}
 			InitializeCounters(t, toolchainStatus)
 			clusters := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))

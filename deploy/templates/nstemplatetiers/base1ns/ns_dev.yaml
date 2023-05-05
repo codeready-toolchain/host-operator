@@ -75,7 +75,7 @@ objects:
     hard:
       limits.cpu: 20000m
       limits.memory: ${MEMORY_LIMIT}
-      requests.cpu: 1750m
+      requests.cpu: 3000m
       requests.memory: ${MEMORY_REQUEST}
 - apiVersion: v1
   kind: ResourceQuota
@@ -88,7 +88,7 @@ objects:
     hard:
       limits.cpu: 20000m
       limits.memory: ${MEMORY_BUILD_LIMIT}
-      requests.cpu: 2000m
+      requests.cpu: 3000m
       requests.memory: ${MEMORY_BUILD_REQUEST}
 - apiVersion: v1
   kind: ResourceQuota
@@ -98,7 +98,7 @@ objects:
   spec:
     hard:
       limits.ephemeral-storage: 15Gi
-      requests.storage: 15Gi
+      requests.storage: 40Gi
       requests.ephemeral-storage: 15Gi
       count/persistentvolumeclaims: "5"
 - apiVersion: v1

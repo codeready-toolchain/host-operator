@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Assertion an assertion helper for an NSTemplateTier
 type Assertion struct {
 	tier           *toolchainv1alpha1.NSTemplateTier
-	client         client.Client
+	client         runtimeclient.Client
 	namespacedName types.NamespacedName
 	t              test.T
 }
@@ -28,7 +28,7 @@ func (a *Assertion) loadResource() error {
 }
 
 // AssertThatNSTemplateTier helper func to begin with the assertions on an NSTemplateTier
-func AssertThatNSTemplateTier(t test.T, name string, client client.Client) *Assertion {
+func AssertThatNSTemplateTier(t test.T, name string, client runtimeclient.Client) *Assertion {
 	return &Assertion{
 		client:         client,
 		namespacedName: test.NamespacedName(test.HostOperatorNs, name),

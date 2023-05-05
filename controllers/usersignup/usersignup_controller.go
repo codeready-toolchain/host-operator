@@ -13,6 +13,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/pending"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
+	spaceutil "github.com/codeready-toolchain/host-operator/pkg/space"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	commoncontrollers "github.com/codeready-toolchain/toolchain-common/controllers"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
@@ -31,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -240,7 +241,7 @@ func (r *Reconciler) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1
 		if emailHashLbl, exists := userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
 
 			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
-			opts := client.MatchingLabels(labels)
+			opts := runtimeclient.MatchingLabels(labels)
 			bannedUserList := &toolchainv1alpha1.BannedUserList{}
 
 			// Query BannedUser for resources that match the same email hash
@@ -284,7 +285,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 	// List all MasterUserRecord resources that have an owner label equal to the UserSignup.Name
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
 	labels := map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	if err := r.Client.List(context.TODO(), murList, opts); err != nil {
 		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err,
 			"Failed to list MasterUserRecords by owner")
@@ -364,7 +365,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 		}
 
 		reqLogger.Info("Setting UserSignup status to 'Complete'")
-		return true, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(reqLogger, mur.Name))
+		return true, r.updateStatus(reqLogger, userSignup, r.updateCompleteStatus(mur.Name))
 	}
 	return false, nil
 }
@@ -487,26 +488,20 @@ func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1al
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
 			"unable to update state label at UserSignup resource")
 	}
-	r.updateUserSignupMetricsByState(logger, userSignup, oldState, state)
+	r.updateUserSignupMetricsByState(oldState, state)
 	// increment the counter *only if the client update did not fail*
 	domain := metrics.GetEmailDomain(userSignup)
 	counter.UpdateUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
 	return nil
 }
 
-func (r *Reconciler) updateUserSignupMetricsByState(logger logr.Logger, userSignup *toolchainv1alpha1.UserSignup, oldState string, newState string) {
+func (r *Reconciler) updateUserSignupMetricsByState(oldState string, newState string) {
 	if oldState == "" {
 		metrics.UserSignupUniqueTotal.Inc()
 	}
 	switch newState {
 	case toolchainv1alpha1.UserSignupStateLabelValueApproved:
 		metrics.UserSignupApprovedTotal.Inc()
-		// track activation in Segment
-		if r.SegmentClient != nil {
-			r.SegmentClient.TrackAccountActivation(userSignup.Spec.Username)
-		} else {
-			logger.Info("segment client not configure to track account activations")
-		}
 	case toolchainv1alpha1.UserSignupStateLabelValueDeactivated:
 		if oldState == toolchainv1alpha1.UserSignupStateLabelValueApproved {
 			metrics.UserSignupDeactivatedTotal.Inc()
@@ -599,6 +594,13 @@ func (r *Reconciler) provisionMasterUserRecord(logger logr.Logger, config toolch
 	domain := metrics.GetEmailDomain(mur)
 	counter.IncrementMasterUserRecordCount(logger, domain)
 
+	// track the MUR creation as an account activation event in Segment
+	if r.SegmentClient != nil {
+		r.SegmentClient.TrackAccountActivation(compliantUsername, userSignup.Spec.Userid, userSignup.Annotations[toolchainv1alpha1.SSOAccountIDAnnotationKey])
+	} else {
+		logger.Info("segment client not configured to track account activations")
+	}
+
 	logger.Info("Created MasterUserRecord", "Name", mur.Name, "TargetCluster", targetCluster)
 	return nil
 }
@@ -629,7 +631,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, userSignup *toolchainv1alph
 	}
 	tCluster := targetCluster(mur.Spec.UserAccounts[0].TargetCluster)
 
-	space = newSpace(userSignup, tCluster, mur.Name, spaceTier.Name)
+	space = spaceutil.NewSpace(userSignup, tCluster.getClusterName(), mur.Name, spaceTier.Name)
 
 	err = r.Client.Create(context.TODO(), space)
 	if err != nil {
@@ -649,7 +651,7 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchai
 		toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: mur.Name,
 		toolchainv1alpha1.SpaceBindingSpaceLabelKey:            space.Name,
 	}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	if err := r.Client.List(context.TODO(), spaceBindings, opts); err != nil {
 		return errs.Wrap(err, fmt.Sprintf(`attempt to list SpaceBinding associated with mur '%s' and space '%s' failed`, mur.Name, space.Name))
 	}
@@ -723,7 +725,7 @@ func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, config too
 		toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
 		toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeDeactivating,
 	}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	notificationList := &toolchainv1alpha1.NotificationList{}
 	if err := r.Client.List(context.TODO(), notificationList, opts); err != nil {
 		return err
@@ -759,7 +761,7 @@ func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config tool
 		toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
 		toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeDeactivated,
 	}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	notificationList := &toolchainv1alpha1.NotificationList{}
 	if err := r.Client.List(context.TODO(), notificationList, opts); err != nil {
 		return err
