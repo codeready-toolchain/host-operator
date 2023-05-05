@@ -15,7 +15,8 @@ import (
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	clienttest "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -102,7 +103,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 		t.Run("space is provisioned", func(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
-			clienttest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
 				Name:      toolchainv1alpha1.AdminServiceAccountName,
 				Namespace: "jane-env",
 			})
@@ -146,7 +147,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// given
 			// the default namespace has already an access secret provisioned
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
-			clienttest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
 				Name:      toolchainv1alpha1.AdminServiceAccountName,
 				Namespace: "jane-env1",
 			},
@@ -257,7 +258,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] = sr.GetNamespace()
 			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey] = "jane-env1"
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace, kubeconfigSecret1), "member-1", corev1.ConditionTrue)
-			clienttest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
 				Name:      toolchainv1alpha1.AdminServiceAccountName,
 				Namespace: "jane-env1",
 			},
@@ -349,7 +350,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			hostClient.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+			hostClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.SpaceList); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -469,7 +470,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -489,7 +490,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			hostClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+			hostClient.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -600,7 +601,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -750,7 +751,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				}}),
 				spacetest.WithTierName("appstudio"))
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
-			clienttest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
 				Name:      toolchainv1alpha1.AdminServiceAccountName,
 				Namespace: "jane-env",
 			})
@@ -787,7 +788,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
-			hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			hostClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -940,7 +941,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
 				spacetest.WithSpecParentSpace("jane"))
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1Client.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			member1Client.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -960,7 +961,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 		t.Run("failed to remove finalizer", func(t *testing.T) {
 			// given
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1Client.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			member1Client.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -982,7 +983,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			hostClient.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+			hostClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.SpaceList); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -1006,7 +1007,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace)
-			hostClient.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+			hostClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -1024,14 +1025,14 @@ func TestDeleteSpaceRequest(t *testing.T) {
 	})
 }
 
-func newReconciler(t *testing.T, hostCl client.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *spacerequest.Reconciler {
+func newReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *spacerequest.Reconciler {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)
 
 	clusters := map[string]cluster.Cluster{}
 	for _, c := range memberClusters {
-		restClient, err := clienttest.NewRESTClient("fake_secret", c.APIEndpoint)
+		restClient, err := commontest.NewRESTClient("fake_secret", c.APIEndpoint)
 		restClient.Client.Transport = gock.DefaultTransport // make sure that the underlying client's request are intercepted by Gock
 		require.NoError(t, err)
 		clusters[c.Name] = cluster.Cluster{
@@ -1094,8 +1095,8 @@ func newNamespace(owner string) *corev1.Namespace {
 	return ns
 }
 
-func mockGetSpaceRequestFail(cl client.Client) func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	return func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+func mockGetSpaceRequestFail(cl runtimeclient.Client) func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+	return func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 		if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
 			return fmt.Errorf("mock error")
 		}
@@ -1103,8 +1104,8 @@ func mockGetSpaceRequestFail(cl client.Client) func(ctx context.Context, key cli
 	}
 }
 
-func mockUpdateSpaceRequestFail(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-	return func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+func mockUpdateSpaceRequestFail(cl runtimeclient.Client) func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+	return func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 		if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
 			return fmt.Errorf("mock error")
 		}

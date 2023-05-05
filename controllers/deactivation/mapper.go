@@ -3,18 +3,18 @@ package deactivation
 import (
 	"errors"
 
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var mapperLog = ctrl.Log.WithName("UserSignupToMasterUserRecordMapper")
 
-func MapUserSignupToMasterUserRecord() func(object client.Object) []reconcile.Request {
-	return func(obj client.Object) []reconcile.Request {
+func MapUserSignupToMasterUserRecord() func(object runtimeclient.Object) []reconcile.Request {
+	return func(obj runtimeclient.Object) []reconcile.Request {
 		if userSignup, ok := obj.(*toolchainv1alpha1.UserSignup); ok {
 
 			if userSignup.Status.CompliantUsername != "" {

@@ -5,7 +5,6 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	tierutil "github.com/codeready-toolchain/host-operator/controllers/nstemplatetier/util"
-
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/assert"
@@ -13,12 +12,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Assertion struct {
 	space          *toolchainv1alpha1.Space
-	client         client.Client
+	client         runtimeclient.Client
 	namespacedName types.NamespacedName
 	t              test.T
 	spaceRequest   *toolchainv1alpha1.SpaceRequest
@@ -39,7 +38,7 @@ func (a *Assertion) loadResource() error {
 }
 
 // AssertThatSpace helper func to begin with the assertions on a Space
-func AssertThatSpace(t test.T, namespace, name string, client client.Client) *Assertion {
+func AssertThatSpace(t test.T, namespace, name string, client runtimeclient.Client) *Assertion {
 	return &Assertion{
 		client:         client,
 		namespacedName: test.NamespacedName(namespace, name),
@@ -284,12 +283,12 @@ func TerminatingFailed(msg string) toolchainv1alpha1.Condition {
 // Assertions on multiple Spaces at once
 type SpacesAssertion struct {
 	spaces    *toolchainv1alpha1.SpaceList
-	client    client.Client
+	client    runtimeclient.Client
 	namespace string
 	t         test.T
 }
 
-func AssertThatSpaces(t test.T, client client.Client) *SpacesAssertion {
+func AssertThatSpaces(t test.T, client runtimeclient.Client) *SpacesAssertion {
 	return &SpacesAssertion{
 		client:    client,
 		namespace: test.HostOperatorNs,
@@ -299,7 +298,7 @@ func AssertThatSpaces(t test.T, client client.Client) *SpacesAssertion {
 
 func (a *SpacesAssertion) loadSpaces() error {
 	spaces := &toolchainv1alpha1.SpaceList{}
-	err := a.client.List(context.TODO(), spaces, client.InNamespace(a.namespace))
+	err := a.client.List(context.TODO(), spaces, runtimeclient.InNamespace(a.namespace))
 	a.spaces = spaces
 	return err
 }
@@ -311,7 +310,7 @@ func (a *SpacesAssertion) HaveCount(count int) *SpacesAssertion {
 	return a
 }
 
-func AssertThatSubSpace(t test.T, client client.Client, spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) *Assertion {
+func AssertThatSubSpace(t test.T, client runtimeclient.Client, spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) *Assertion {
 	return &Assertion{
 		t:            t,
 		client:       client,
@@ -322,12 +321,12 @@ func AssertThatSubSpace(t test.T, client client.Client, spaceRequest *toolchainv
 
 func (a *Assertion) loadSubSpace() error {
 	spaces := &toolchainv1alpha1.SpaceList{}
-	spaceRequestLabel := client.MatchingLabels{
+	spaceRequestLabel := runtimeclient.MatchingLabels{
 		toolchainv1alpha1.SpaceRequestLabelKey:          a.spaceRequest.GetName(),
 		toolchainv1alpha1.SpaceRequestNamespaceLabelKey: a.spaceRequest.GetNamespace(),
 		toolchainv1alpha1.ParentSpaceLabelKey:           a.parentSpace.GetName(),
 	}
-	err := a.client.List(context.TODO(), spaces, spaceRequestLabel, client.InNamespace(a.parentSpace.GetNamespace()))
+	err := a.client.List(context.TODO(), spaces, spaceRequestLabel, runtimeclient.InNamespace(a.parentSpace.GetNamespace()))
 	if len(spaces.Items) > 0 {
 		a.space = &spaces.Items[0]
 	}

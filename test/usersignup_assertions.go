@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type UserSignupAssertion struct {
 	usersignup     *toolchainv1alpha1.UserSignup
-	client         client.Client
+	client         runtimeclient.Client
 	namespacedName types.NamespacedName
 	t              test.T
 }
@@ -30,7 +30,7 @@ func (a *UserSignupAssertion) loadUserSignup() error {
 	return nil
 }
 
-func AssertThatUserSignup(t test.T, namespace, name string, client client.Client) *UserSignupAssertion {
+func AssertThatUserSignup(t test.T, namespace, name string, client runtimeclient.Client) *UserSignupAssertion {
 	return &UserSignupAssertion{
 		client:         client,
 		namespacedName: test.NamespacedName(namespace, name),

@@ -9,8 +9,7 @@ import (
 
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type notificationDeliveryServiceConfig interface {
@@ -32,7 +31,7 @@ type DeliveryService interface {
 }
 
 type DeliveryServiceFactory struct {
-	Client client.Client
+	Client runtimeclient.Client
 	Config DeliveryServiceFactoryConfig
 }
 
@@ -41,7 +40,7 @@ type DeliveryServiceFactoryConfig interface {
 	MailgunConfig
 }
 
-func NewNotificationDeliveryServiceFactory(client client.Client, config DeliveryServiceFactoryConfig) *DeliveryServiceFactory {
+func NewNotificationDeliveryServiceFactory(client runtimeclient.Client, config DeliveryServiceFactoryConfig) *DeliveryServiceFactory {
 	return &DeliveryServiceFactory{
 		Client: client,
 		Config: config,

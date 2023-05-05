@@ -3,17 +3,17 @@ package usersignup
 import (
 	"context"
 	"errors"
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"testing"
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestBannedUserToUserSignupMapper(t *testing.T) {
@@ -63,7 +63,7 @@ func TestBannedUserToUserSignupMapper(t *testing.T) {
 
 	t.Run("test BannedUserToUserSignupMapper returns nil when client list fails", func(t *testing.T) {
 		c := test.NewFakeClient(t)
-		c.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+		c.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 			return errors.New("err happened")
 		}
 

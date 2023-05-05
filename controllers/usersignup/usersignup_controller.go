@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -238,7 +238,7 @@ func (r *Reconciler) isUserBanned(reqLogger logr.Logger, userSignup *toolchainv1
 		if emailHashLbl, exists := userSignup.Labels[toolchainv1alpha1.UserSignupUserEmailHashLabelKey]; exists {
 
 			labels := map[string]string{toolchainv1alpha1.BannedUserEmailHashLabelKey: emailHashLbl}
-			opts := client.MatchingLabels(labels)
+			opts := runtimeclient.MatchingLabels(labels)
 			bannedUserList := &toolchainv1alpha1.BannedUserList{}
 
 			// Query BannedUser for resources that match the same email hash
@@ -282,7 +282,7 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 	// List all MasterUserRecord resources that have an owner label equal to the UserSignup.Name
 	murList := &toolchainv1alpha1.MasterUserRecordList{}
 	labels := map[string]string{toolchainv1alpha1.MasterUserRecordOwnerLabelKey: userSignup.Name}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	if err := r.Client.List(context.TODO(), murList, opts); err != nil {
 		return false, r.wrapErrorWithStatusUpdate(reqLogger, userSignup, r.setStatusInvalidMURState, err,
 			"Failed to list MasterUserRecords by owner")
@@ -632,7 +632,7 @@ func (r *Reconciler) ensureSpaceBinding(logger logr.Logger, userSignup *toolchai
 		toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: mur.Name,
 		toolchainv1alpha1.SpaceBindingSpaceLabelKey:            space.Name,
 	}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	if err := r.Client.List(context.TODO(), spaceBindings, opts); err != nil {
 		return errs.Wrap(err, fmt.Sprintf(`attempt to list SpaceBinding associated with mur '%s' and space '%s' failed`, mur.Name, space.Name))
 	}
@@ -706,7 +706,7 @@ func (r *Reconciler) sendDeactivatingNotification(logger logr.Logger, config too
 		toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
 		toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeDeactivating,
 	}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	notificationList := &toolchainv1alpha1.NotificationList{}
 	if err := r.Client.List(context.TODO(), notificationList, opts); err != nil {
 		return err
@@ -742,7 +742,7 @@ func (r *Reconciler) sendDeactivatedNotification(logger logr.Logger, config tool
 		toolchainv1alpha1.NotificationUserNameLabelKey: userSignup.Status.CompliantUsername,
 		toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeDeactivated,
 	}
-	opts := client.MatchingLabels(labels)
+	opts := runtimeclient.MatchingLabels(labels)
 	notificationList := &toolchainv1alpha1.NotificationList{}
 	if err := r.Client.List(context.TODO(), notificationList, opts); err != nil {
 		return err

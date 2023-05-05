@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/go-logr/logr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -159,7 +159,7 @@ func GetCounts() (Counts, error) {
 //
 // If the cached counter is initialized and ToolchainStatus contains already some numbers
 // then it updates the ToolchainStatus numbers with the one taken from the cached counter
-func Synchronize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func Synchronize(cl runtimeclient.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	cachedCounts.Lock()
 	defer cachedCounts.Unlock()
 
@@ -222,7 +222,7 @@ func indexOfMember(members []toolchainv1alpha1.Member, name string) int {
 	return -1
 }
 
-func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
+func initialize(cl runtimeclient.Client, toolchainStatus *toolchainv1alpha1.ToolchainStatus) error {
 	// skip if cached counters are already initialized
 	if cachedCounts.initialized {
 		return nil
@@ -246,18 +246,18 @@ func initialize(cl client.Client, toolchainStatus *toolchainv1alpha1.ToolchainSt
 
 // initialize the cached counters from the UserSignup and MasterUserRecord resources.
 // this func lists all UserSignup and MasterUserRecord resources
-func initializeFromResources(cl client.Client, namespace string) error {
+func initializeFromResources(cl runtimeclient.Client, namespace string) error {
 	log.Info("initializing counters from resources")
 	usersignups := &toolchainv1alpha1.UserSignupList{}
-	if err := cl.List(context.TODO(), usersignups, client.InNamespace(namespace)); err != nil {
+	if err := cl.List(context.TODO(), usersignups, runtimeclient.InNamespace(namespace)); err != nil {
 		return err
 	}
 	murs := &toolchainv1alpha1.MasterUserRecordList{}
-	if err := cl.List(context.TODO(), murs, client.InNamespace(namespace)); err != nil {
+	if err := cl.List(context.TODO(), murs, runtimeclient.InNamespace(namespace)); err != nil {
 		return err
 	}
 	spaces := &toolchainv1alpha1.SpaceList{}
-	if err := cl.List(context.TODO(), spaces, client.InNamespace(namespace)); err != nil {
+	if err := cl.List(context.TODO(), spaces, runtimeclient.InNamespace(namespace)); err != nil {
 		return err
 	}
 	reset()

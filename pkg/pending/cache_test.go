@@ -11,11 +11,12 @@ import (
 	"github.com/codeready-toolchain/host-operator/test/space"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGetOldestSignupPendingApproval(t *testing.T) {
@@ -286,7 +287,7 @@ func TestGetOldestPendingApprovalWithMultipleUserSignupsInParallel(t *testing.T)
 	assert.Nil(t, foundPending)
 }
 
-func newCache(t *testing.T, objectType client.Object, listPendingObjects ListPendingObjects, initObjects ...runtime.Object) (*cache, *test.FakeClient) {
+func newCache(t *testing.T, objectType runtimeclient.Object, listPendingObjects ListPendingObjects, initObjects ...runtime.Object) (*cache, *test.FakeClient) {
 	s := scheme.Scheme
 	err := apis.AddToScheme(s)
 	require.NoError(t, err)

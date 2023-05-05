@@ -9,14 +9,14 @@ import (
 	"github.com/codeready-toolchain/host-operator/pkg/templates/assets"
 	commonclient "github.com/codeready-toolchain/toolchain-common/pkg/client"
 	commonTemplate "github.com/codeready-toolchain/toolchain-common/pkg/template"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/kubernetes/scheme"
 
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/kubernetes/scheme"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -24,7 +24,7 @@ var log = logf.Log.WithName("usertiers")
 
 // CreateOrUpdateResources generates the UserTier resources,
 // then uses the manager's client to create or update the resources on the cluster.
-func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) error {
+func CreateOrUpdateResources(s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) error {
 
 	// initialize tier generator, loads templates from assets
 	generator, err := newUserTierGenerator(s, client, namespace, assets)
@@ -42,7 +42,7 @@ func CreateOrUpdateResources(s *runtime.Scheme, client client.Client, namespace 
 }
 
 type tierGenerator struct {
-	client          client.Client
+	client          runtimeclient.Client
 	namespace       string
 	scheme          *runtime.Scheme
 	templatesByTier map[string]*tierData
@@ -51,7 +51,7 @@ type tierGenerator struct {
 type tierData struct {
 	name         string
 	rawTemplates *templates
-	objects      []client.Object
+	objects      []runtimeclient.Object
 }
 
 // templates: any resources belonging to a given user tier ("advanced", "base", "team", etc.), currently only a single template
@@ -65,7 +65,7 @@ type template struct {
 }
 
 // newUserTierGenerator loads templates from the provided assets and processes the UserTiers
-func newUserTierGenerator(s *runtime.Scheme, client client.Client, namespace string, assets assets.Assets) (*tierGenerator, error) {
+func newUserTierGenerator(s *runtime.Scheme, client runtimeclient.Client, namespace string, assets assets.Assets) (*tierGenerator, error) {
 	// load templates from assets
 	templatesByTier, err := loadTemplatesByTiers(assets)
 	if err != nil {
@@ -227,7 +227,7 @@ func (t *tierGenerator) createUserTiers() error {
 //	  deactivationTimeoutDays: 30
 //
 // ------
-func (t *tierGenerator) newUserTier(sourceTierName, tierName string, userTierTemplate template, parameters []templatev1.Parameter) ([]client.Object, error) {
+func (t *tierGenerator) newUserTier(sourceTierName, tierName string, userTierTemplate template, parameters []templatev1.Parameter) ([]runtimeclient.Object, error) {
 	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDeserializer()
 	if reflect.DeepEqual(userTierTemplate, template{}) {
 		return nil, fmt.Errorf("tier %s is missing a tier.yaml file", tierName)
