@@ -16,21 +16,21 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
+
 	"github.com/mailgun/mailgun-go/v4"
 	events2 "github.com/mailgun/mailgun-go/v4/events"
-	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrl "sigs.k8s.io/controller-runtime"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -75,7 +75,7 @@ func TestNotificationSuccess(t *testing.T) {
 		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).Create("jane@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
-		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
+		notification.Status.Conditions[0].LastTransitionTime = metav1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 		require.NoError(t, cl.Update(context.TODO(), notification))
 
 		// when
@@ -95,7 +95,7 @@ func TestNotificationSentFailure(t *testing.T) {
 		// given
 		ds, _ := mockDeliveryService(defaultTemplateLoader())
 		controller, cl := newController(t, ds, toolchainConfig)
-		cl.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+		cl.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 			return fmt.Errorf("error")
 		}
 
@@ -104,7 +104,7 @@ func TestNotificationSentFailure(t *testing.T) {
 			Create("abc123@acme.com")
 		require.NoError(t, err)
 		notification.Status.Conditions = []toolchainv1alpha1.Condition{sentCond()}
-		notification.Status.Conditions[0].LastTransitionTime = v1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
+		notification.Status.Conditions[0].LastTransitionTime = metav1.Time{Time: time.Now().Add(-cast.ToDuration("10s"))}
 		require.NoError(t, cl.Update(context.TODO(), notification))
 
 		// when
@@ -138,9 +138,9 @@ func TestNotificationDelivery(t *testing.T) {
 				Company:    "Red Hat",
 			},
 		}
-		controller, client := newController(t, ds, userSignup)
+		controller, cl := newController(t, ds, userSignup)
 
-		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithUserContext(userSignup).
 			WithSubjectAndContent("foo", "test content").
 			Create("foo@redhat.com")
@@ -159,7 +159,7 @@ func TestNotificationDelivery(t *testing.T) {
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
-		err = client.Get(context.TODO(), key, instance)
+		err = cl.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
 
 		test.AssertConditionsMatch(t, instance.Status.Conditions,
@@ -186,9 +186,9 @@ func TestNotificationDelivery(t *testing.T) {
 
 	t.Run("test admin notification delivery ok", func(t *testing.T) {
 		// given
-		controller, client := newController(t, ds)
+		controller, cl := newController(t, ds)
 
-		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			WithSubjectAndContent("Alert", "Something bad happened").
 			Create("sandbox-admin@developers.redhat.com")
 		require.NoError(t, err)
@@ -206,7 +206,7 @@ func TestNotificationDelivery(t *testing.T) {
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
-		err = client.Get(context.TODO(), key, instance)
+		err = cl.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
 
 		test.AssertConditionsMatch(t, instance.Status.Conditions,
@@ -245,9 +245,9 @@ func TestNotificationDelivery(t *testing.T) {
 			},
 		}
 		// pass in nil for deliveryService since send won't be used (sending skipped)
-		controller, client := newController(t, nil, userSignup, toolchainConfig)
+		controller, cl := newController(t, nil, userSignup, toolchainConfig)
 
-		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			Create("jane@redhat.com")
 		require.NoError(t, err)
 
@@ -264,10 +264,10 @@ func TestNotificationDelivery(t *testing.T) {
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
-		err = client.Get(context.TODO(), key, instance)
+		err = cl.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
 
-		ntest.AssertThatNotification(t, instance.Name, client).
+		ntest.AssertThatNotification(t, instance.Name, cl).
 			HasConditions(sentCond())
 	})
 
@@ -283,9 +283,9 @@ func TestNotificationDelivery(t *testing.T) {
 			},
 		}
 		mds := &MockDeliveryService{}
-		controller, client := newController(t, mds, userSignup)
+		controller, cl := newController(t, mds, userSignup)
 
-		notification, err := notify.NewNotificationBuilder(client, test.HostOperatorNs).
+		notification, err := notify.NewNotificationBuilder(cl, test.HostOperatorNs).
 			Create("foo@redhat.com")
 		require.NoError(t, err)
 
@@ -303,10 +303,10 @@ func TestNotificationDelivery(t *testing.T) {
 			Name:      notification.Name,
 		}
 		instance := &toolchainv1alpha1.Notification{}
-		err = client.Get(context.TODO(), key, instance)
+		err = cl.Get(context.TODO(), key, instance)
 		require.NoError(t, err)
 
-		ntest.AssertThatNotification(t, instance.Name, client).
+		ntest.AssertThatNotification(t, instance.Name, cl).
 			HasConditions(deliveryErrorCond("delivery error"))
 	})
 }
@@ -332,11 +332,11 @@ func mockDeliveryService(templateLoader TemplateLoader) (DeliveryService, mailgu
 	return mgds, mgs
 }
 
-func AssertThatNotificationIsDeleted(t *testing.T, cl client.Client, name string) {
+func AssertThatNotificationIsDeleted(t *testing.T, cl runtimeclient.Client, name string) {
 	notification := &toolchainv1alpha1.Notification{}
 	err := cl.Get(context.TODO(), test.NamespacedName(test.HostOperatorNs, name), notification)
 	require.Error(t, err)
-	assert.IsType(t, v1.StatusReasonNotFound, apierrors.ReasonForError(err))
+	assert.IsType(t, metav1.StatusReasonNotFound, apierrors.ReasonForError(err))
 }
 
 func sentCond() toolchainv1alpha1.Condition {
@@ -344,7 +344,7 @@ func sentCond() toolchainv1alpha1.Condition {
 		Type:               toolchainv1alpha1.NotificationSent,
 		Status:             apiv1.ConditionTrue,
 		Reason:             "Sent",
-		LastTransitionTime: v1.Time{Time: time.Now()},
+		LastTransitionTime: metav1.Time{Time: time.Now()},
 	}
 }
 
@@ -363,7 +363,7 @@ func deletionCond(msg string) toolchainv1alpha1.Condition {
 		Status:             apiv1.ConditionTrue,
 		Reason:             toolchainv1alpha1.NotificationDeletionErrorReason,
 		Message:            msg,
-		LastTransitionTime: v1.Time{Time: time.Now()},
+		LastTransitionTime: metav1.Time{Time: time.Now()},
 	}
 }
 

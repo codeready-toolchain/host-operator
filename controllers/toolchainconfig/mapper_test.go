@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-
 	"github.com/stretchr/testify/require"
 
 	corev1 "k8s.io/api/core/v1"

@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -22,7 +22,7 @@ import (
 
 // Reconciler reconciles a SocialEvent object
 type Reconciler struct {
-	client.Client
+	runtimeclient.Client
 	Namespace     string
 	StatusUpdater *StatusUpdater
 }
@@ -68,8 +68,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// and update the SocialEvent.Status.ActivationCount accordingly
 	usersignups := &toolchainv1alpha1.UserSignupList{}
 	if err := r.Client.List(context.TODO(), usersignups,
-		client.InNamespace(r.Namespace),
-		client.MatchingLabels{
+		runtimeclient.InNamespace(r.Namespace),
+		runtimeclient.MatchingLabels{
 			toolchainv1alpha1.SocialEventUserSignupLabelKey: event.Name,
 			toolchainv1alpha1.UserSignupStateLabelKey:       toolchainv1alpha1.UserSignupStateLabelValueApproved,
 		}); err != nil {

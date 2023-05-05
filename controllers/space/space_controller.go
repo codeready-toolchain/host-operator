@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -34,7 +34,7 @@ import (
 
 // Reconciler reconciles a Space object
 type Reconciler struct {
-	Client              client.Client
+	Client              runtimeclient.Client
 	Namespace           string
 	MemberClusters      map[string]cluster.Cluster
 	NextScheduledUpdate time.Time
@@ -262,8 +262,8 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchai
 	spaceBindings := toolchainv1alpha1.SpaceBindingList{}
 	if err := r.Client.List(context.TODO(),
 		&spaceBindings,
-		client.InNamespace(space.Namespace),
-		client.MatchingLabels{
+		runtimeclient.InNamespace(space.Namespace),
+		runtimeclient.MatchingLabels{
 			toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Name, // use current space name for the search
 		},
 	); err != nil {
@@ -280,8 +280,8 @@ func (r *Reconciler) listSpaceBindings(space *toolchainv1alpha1.Space) (toolchai
 	parentSpaceBindings := toolchainv1alpha1.SpaceBindingList{}
 	if err := r.Client.List(context.TODO(),
 		&parentSpaceBindings,
-		client.InNamespace(space.Namespace),
-		client.MatchingLabels{
+		runtimeclient.InNamespace(space.Namespace),
+		runtimeclient.MatchingLabels{
 			toolchainv1alpha1.SpaceBindingSpaceLabelKey: space.Spec.ParentSpace, // use parentSpace name for the search
 		},
 	); err != nil {

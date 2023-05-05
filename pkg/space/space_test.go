@@ -7,11 +7,11 @@ import (
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
 
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/stretchr/testify/assert"
 )
 

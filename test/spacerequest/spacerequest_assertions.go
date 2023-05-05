@@ -5,6 +5,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -12,12 +13,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Assertion struct {
 	spaceRequest   *toolchainv1alpha1.SpaceRequest
-	client         client.Client
+	client         runtimeclient.Client
 	namespacedName types.NamespacedName
 	t              test.T
 }
@@ -30,7 +31,7 @@ func (a *Assertion) loadResource() error {
 }
 
 // AssertThatSpaceRequest helper func to begin with the assertions on a SpaceRequests
-func AssertThatSpaceRequest(t test.T, namespace, name string, client client.Client) *Assertion {
+func AssertThatSpaceRequest(t test.T, namespace, name string, client runtimeclient.Client) *Assertion {
 	return &Assertion{
 		client:         client,
 		namespacedName: test.NamespacedName(namespace, name),
