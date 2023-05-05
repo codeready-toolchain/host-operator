@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"os"
 	"strings"
 	"testing"
@@ -12,12 +11,10 @@ import (
 
 	. "github.com/codeready-toolchain/host-operator/pkg/space"
 
-	"github.com/codeready-toolchain/host-operator/pkg/capacity"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
+	"github.com/codeready-toolchain/host-operator/pkg/capacity"
 	"github.com/codeready-toolchain/host-operator/pkg/counter"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/host-operator/pkg/segment"
@@ -33,6 +30,7 @@ import (
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	commonsocialevent "github.com/codeready-toolchain/toolchain-common/pkg/socialevent"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 	murtest "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	testsocialevent "github.com/codeready-toolchain/toolchain-common/pkg/test/socialevent"
@@ -3453,7 +3451,7 @@ func TestDeathBy100Signups(t *testing.T) {
 
 			initObjs = append(initObjs, baseNSTemplateTier)
 
-			ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue))
+			ready := NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue))
 			r, req, _ := prepareReconcile(t, userSignup.Name, ready, initObjs...)
 			InitializeCounters(t, NewToolchainStatus(
 				WithMetric(toolchainv1alpha1.MasterUserRecordsPerDomainMetricKey, toolchainv1alpha1.Metric{
@@ -3464,10 +3462,9 @@ func TestDeathBy100Signups(t *testing.T) {
 				}),
 			))
 
-
 			// when
 			res, err := r.Reconcile(context.TODO(), req)
-      
+
 			// then
 			require.Error(t, err)
 			assert.EqualError(t, err, fmt.Sprintf("Error generating compliant username for %s: unable to transform username [%s] even after 100 attempts", testusername.username, testusername.username))
@@ -3485,23 +3482,23 @@ func TestDeathBy100Signups(t *testing.T) {
 			test.AssertConditionsMatch(t, userSignup.Status.Conditions,
 				toolchainv1alpha1.Condition{
 					Type:    toolchainv1alpha1.UserSignupComplete,
-					Status:  v1.ConditionFalse,
+					Status:  corev1.ConditionFalse,
 					Reason:  "UnableToCreateMUR",
 					Message: fmt.Sprintf("unable to transform username [%s] even after 100 attempts", testusername.username),
 				},
 				toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.UserSignupApproved,
-					Status: v1.ConditionTrue,
+					Status: corev1.ConditionTrue,
 					Reason: "ApprovedByAdmin",
 				},
 				toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.UserSignupUserDeactivatingNotificationCreated,
-					Status: v1.ConditionFalse,
+					Status: corev1.ConditionFalse,
 					Reason: "UserNotInPreDeactivation",
 				},
 				toolchainv1alpha1.Condition{
 					Type:   toolchainv1alpha1.UserSignupUserDeactivatedNotificationCreated,
-					Status: v1.ConditionFalse,
+					Status: corev1.ConditionFalse,
 					Reason: "UserIsActive",
 				},
 			)
