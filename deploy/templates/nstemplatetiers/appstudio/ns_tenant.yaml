@@ -284,7 +284,7 @@ objects:
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
-    name: appstudio-pipelines-runner-clusterrole
+    name: appstudio-pipelines-runner
   subjects:
     - kind: ServiceAccount
       namespace: ${USERNAME}-tenant
