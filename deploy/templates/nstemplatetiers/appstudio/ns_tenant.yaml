@@ -269,6 +269,26 @@ objects:
     podSelector: {}
     policyTypes:
     - Ingress
+# ServiceAccount and RoleBindings for running Pipelines.
+# appstudio-pipelines-runner-clusterrole is deployed by the pipeline-service component.
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: appstudio-pipeline
+    namespace: ${USERNAME}-tenant
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: appstudio-pipelines-runner-rolebinding
+    namespace: ${USERNAME}-tenant
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: appstudio-pipelines-runner
+  subjects:
+    - kind: ServiceAccount
+      namespace: ${USERNAME}-tenant
+      name: appstudio-pipeline
 parameters:
 - name: USERNAME
   required: true
