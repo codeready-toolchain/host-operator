@@ -5,6 +5,7 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,10 +44,12 @@ func (a *UserSignupAssertion) Get() *toolchainv1alpha1.UserSignup {
 	return a.usersignup
 }
 
+// Checks that the CompliantUsername matches the given string and is less than the maxLegth (20 characsters)
 func (a *UserSignupAssertion) HasCompliantUsername(name string) *UserSignupAssertion {
 	err := a.loadUserSignup()
 	require.NoError(a.t, err)
 	assert.Equal(a.t, name, a.usersignup.Status.CompliantUsername)
+	assert.LessOrEqual(a.t, len(a.usersignup.Status.CompliantUsername), usersignup.MaxLength)
 	return a
 }
 
