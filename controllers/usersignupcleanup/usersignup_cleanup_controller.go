@@ -4,19 +4,19 @@ import (
 	"context"
 	"time"
 
-	errs "github.com/pkg/errors"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/metrics"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
+
 	"github.com/go-logr/logr"
+	errs "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -33,7 +33,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 
 // Reconciler cleans up old UserSignup resources
 type Reconciler struct {
-	Client client.Client
+	Client runtimeclient.Client
 	Scheme *runtime.Scheme
 }
 
@@ -156,7 +156,7 @@ func (r *Reconciler) DeleteUserSignup(userSignup *toolchainv1alpha1.UserSignup, 
 	_, phoneVerificationTriggered := userSignup.Annotations[toolchainv1alpha1.UserSignupVerificationCodeAnnotationKey]
 
 	propagationPolicy := metav1.DeletePropagationForeground
-	err := r.Client.Delete(context.TODO(), userSignup, &client.DeleteOptions{
+	err := r.Client.Delete(context.TODO(), userSignup, &runtimeclient.DeleteOptions{
 		PropagationPolicy: &propagationPolicy,
 	})
 	if err != nil {

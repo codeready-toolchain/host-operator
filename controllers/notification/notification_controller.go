@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
+	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -38,7 +38,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager, config toolchainconfi
 
 // Reconciler reconciles a Notification object
 type Reconciler struct {
-	Client          client.Client
+	Client          runtimeclient.Client
 	Scheme          *runtime.Scheme
 	deliveryService DeliveryService
 }
@@ -124,7 +124,7 @@ func (r *Reconciler) checkTransitionTimeAndDelete(log logr.Logger, durationBefor
 	if timeSinceCompletion >= durationBeforeNotificationDeletion {
 		log.Info("the Notification has been sent for a longer time than the 'durationBeforeNotificationDeletion', so it's ready to be deleted",
 			"durationBeforeNotificationDeletion", durationBeforeNotificationDeletion.String())
-		if err := r.Client.Delete(context.TODO(), notification, &client.DeleteOptions{}); err != nil {
+		if err := r.Client.Delete(context.TODO(), notification, &runtimeclient.DeleteOptions{}); err != nil {
 			return false, 0, errs.Wrapf(err, "unable to delete Notification object '%s'", notification.Name)
 		}
 		return true, 0, nil

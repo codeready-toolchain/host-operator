@@ -7,8 +7,9 @@ import (
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type GetMemberClusterFunc func(clusters ...ClientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool)
@@ -47,7 +48,7 @@ func NewMemberClusterWithTenantRole(t *testing.T, name string, status corev1.Con
 	return NewMemberClusterWithClient(test.NewFakeClient(t), name, status, clusterRoleLabelModifier)
 }
 
-func NewMemberClusterWithClient(cl client.Client, name string, status corev1.ConditionStatus, modifiers ...Modifier) *cluster.CachedToolchainCluster {
+func NewMemberClusterWithClient(cl runtimeclient.Client, name string, status corev1.ConditionStatus, modifiers ...Modifier) *cluster.CachedToolchainCluster {
 	toolchainCluster, _ := NewGetMemberCluster(true, status, modifiers...)(ClusterClient(name, cl))(name)
 	return toolchainCluster
 }
@@ -66,7 +67,7 @@ func NewGetMemberCluster(ok bool, status corev1.ConditionStatus, modifiers ...Mo
 		}
 	}
 	return func(clusters ...ClientForCluster) func(name string) (*cluster.CachedToolchainCluster, bool) {
-		mapping := map[string]client.Client{}
+		mapping := map[string]runtimeclient.Client{}
 		for _, clusterClient := range clusters {
 			n, cl := clusterClient()
 			mapping[n] = cl
@@ -103,10 +104,10 @@ func NewGetMemberCluster(ok bool, status corev1.ConditionStatus, modifiers ...Mo
 	}
 }
 
-type ClientForCluster func() (string, client.Client)
+type ClientForCluster func() (string, runtimeclient.Client)
 
-func ClusterClient(name string, cl client.Client) ClientForCluster {
-	return func() (string, client.Client) {
+func ClusterClient(name string, cl runtimeclient.Client) ClientForCluster {
+	return func() (string, runtimeclient.Client) {
 		return name, cl
 	}
 }

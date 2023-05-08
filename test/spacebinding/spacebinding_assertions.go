@@ -6,14 +6,15 @@ import (
 
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Assertion struct {
 	spaceBinding *toolchainv1alpha1.SpaceBinding
-	client       client.Client
+	client       runtimeclient.Client
 	namespace    string
 	murName      string
 	spaceName    string
@@ -26,8 +27,8 @@ func (a *Assertion) loadResource() error {
 		toolchainv1alpha1.SpaceBindingMasterUserRecordLabelKey: a.murName,
 		toolchainv1alpha1.SpaceBindingSpaceLabelKey:            a.spaceName,
 	}
-	opts := client.MatchingLabels(labels)
-	err := a.client.List(context.TODO(), spacebindings, client.InNamespace(a.namespace), opts)
+	opts := runtimeclient.MatchingLabels(labels)
+	err := a.client.List(context.TODO(), spacebindings, runtimeclient.InNamespace(a.namespace), opts)
 
 	if err == nil && len(spacebindings.Items) == 0 {
 		return fmt.Errorf("no spacebinding found")
@@ -38,7 +39,7 @@ func (a *Assertion) loadResource() error {
 }
 
 // AssertThatSpaceBinding helper func to begin with the assertions on a SpaceBinding
-func AssertThatSpaceBinding(t test.T, namespace, murName, spaceName string, client client.Client) *Assertion {
+func AssertThatSpaceBinding(t test.T, namespace, murName, spaceName string, client runtimeclient.Client) *Assertion {
 	return &Assertion{
 		client:    client,
 		namespace: namespace,
@@ -87,12 +88,12 @@ func (a *Assertion) HasSpec(murName, spaceName, spaceRole string) *Assertion {
 // Assertions on multiple SpaceBindings at once
 type SpaceBindingsAssertion struct {
 	spacebindings *toolchainv1alpha1.SpaceBindingList
-	client        client.Client
+	client        runtimeclient.Client
 	namespace     string
 	t             test.T
 }
 
-func AssertThatSpaceBindings(t test.T, client client.Client) *SpaceBindingsAssertion {
+func AssertThatSpaceBindings(t test.T, client runtimeclient.Client) *SpaceBindingsAssertion {
 	return &SpaceBindingsAssertion{
 		client:    client,
 		namespace: test.HostOperatorNs,
@@ -102,7 +103,7 @@ func AssertThatSpaceBindings(t test.T, client client.Client) *SpaceBindingsAsser
 
 func (a *SpaceBindingsAssertion) loadSpaceBindings() error {
 	spacebindings := &toolchainv1alpha1.SpaceBindingList{}
-	err := a.client.List(context.TODO(), spacebindings, client.InNamespace(a.namespace))
+	err := a.client.List(context.TODO(), spacebindings, runtimeclient.InNamespace(a.namespace))
 	a.spacebindings = spacebindings
 	return err
 }

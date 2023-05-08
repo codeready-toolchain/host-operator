@@ -3,11 +3,11 @@ package usersignup
 import (
 	"testing"
 
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	commonmur "github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
 	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
 	testusertier "github.com/codeready-toolchain/host-operator/test/usertier"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 
 	"github.com/stretchr/testify/assert"
 )

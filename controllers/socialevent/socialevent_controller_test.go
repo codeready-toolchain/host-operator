@@ -19,7 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -91,7 +91,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 			// given
 			event := socialeventtest.NewSocialEvent("notfound", "basic")
 			hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.UserTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
 				}
@@ -141,7 +141,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 			// given
 			event := socialeventtest.NewSocialEvent("deactivate30", "notfound")
 			hostClient := test.NewFakeClient(t, event, baseUserTier, baseSpaceTier)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok && key.Name == "notfound" {
 					return fmt.Errorf("mock error")
 				}
@@ -189,7 +189,7 @@ func TestReconcileSocialEvent(t *testing.T) {
 	})
 }
 
-func newReconciler(hostClient client.Client) *socialevent.Reconciler {
+func newReconciler(hostClient runtimeclient.Client) *socialevent.Reconciler {
 	return &socialevent.Reconciler{
 		Client:    hostClient,
 		Namespace: test.HostOperatorNs,

@@ -2,8 +2,9 @@ package pending
 
 import (
 	"github.com/codeready-toolchain/api/api/v1alpha1"
+
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -13,17 +14,17 @@ type ObjectsMapper struct {
 }
 
 // NewUserSignupMapper creates an instance of UserSignupMapper that maps any object to an oldest unapproved UserSignup
-func NewUserSignupMapper(client client.Client) ObjectsMapper {
+func NewUserSignupMapper(client runtimeclient.Client) ObjectsMapper {
 	return NewPendingObjectsMapper(client, &v1alpha1.UserSignup{}, listPendingUserSignups)
 }
 
 // NewSpaceMapper creates an instance of SpaceMapper that maps any object to an oldest unapproved Space
-func NewSpaceMapper(client client.Client) ObjectsMapper {
+func NewSpaceMapper(client runtimeclient.Client) ObjectsMapper {
 	return NewPendingObjectsMapper(client, &v1alpha1.Space{}, listPendingSpaces)
 }
 
 // NewPendingObjectsMapper creates an instance of ObjectsMapper that maps any object to an oldest pending object
-func NewPendingObjectsMapper(client client.Client, objectType client.Object, listPendingObjects ListPendingObjects) ObjectsMapper {
+func NewPendingObjectsMapper(client runtimeclient.Client, objectType runtimeclient.Object, listPendingObjects ListPendingObjects) ObjectsMapper {
 	return ObjectsMapper{
 		unapprovedCache: &cache{
 			client:             client,
@@ -33,7 +34,7 @@ func NewPendingObjectsMapper(client client.Client, objectType client.Object, lis
 	}
 }
 
-func (b ObjectsMapper) MapToOldestPending(obj client.Object) []reconcile.Request {
+func (b ObjectsMapper) MapToOldestPending(obj runtimeclient.Object) []reconcile.Request {
 	pendingObject := b.unapprovedCache.getOldestPendingObject(obj.GetNamespace())
 	if pendingObject == nil {
 		return []reconcile.Request{}

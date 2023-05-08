@@ -15,12 +15,16 @@ import (
 	spacerequesttest "github.com/codeready-toolchain/host-operator/test/spacerequest"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/require"
+	"gopkg.in/h2non/gock.v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/rest"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -44,10 +48,10 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+			_, err = ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
 			require.NoError(t, err)
@@ -76,7 +80,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
 				spacetest.WithTierName(sr.Spec.TierName))
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -99,6 +103,10 @@ func TestCreateSpaceRequest(t *testing.T) {
 		t.Run("space is provisioned", func(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
+			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Namespace: "jane-env",
+			})
 			subSpace := spacetest.NewSpace("jane-subs",
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
@@ -107,9 +115,69 @@ func TestCreateSpaceRequest(t *testing.T) {
 				spacetest.WithSpecParentSpace("jane"),
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
 				spacetest.WithStatusTargetCluster(member1.Name),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
+					Name: "jane-env",
+					Type: "default",
+				}}),
 				spacetest.WithTierName(sr.Spec.TierName))
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err = ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.NoError(t, err)
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasConditions(spacetest.Ready()).                                            // condition is reflected from space status
+				HasStatusTargetClusterURL(member1.APIEndpoint).                              // has new target cluster url
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env"}}). // has access details for the provisioned namespace
+				HasFinalizer()
+			// a subspace is created with the tierName and cluster roles from the spacerequest
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasConditions(spacetest.Ready()).
+				HasTier(sr.Spec.TierName).
+				HasParentSpace("jane") // the parent space is set as expected
+		})
+
+		t.Run("space has multiple provisioned namespaces", func(t *testing.T) {
+			// given
+			// the default namespace has already an access secret provisioned
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
+			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Namespace: "jane-env1",
+			},
+				types.NamespacedName{
+					Name:      toolchainv1alpha1.AdminServiceAccountName,
+					Namespace: "jane-env2",
+				},
+			)
+			// this space has multiple namespaces provisioned
+			subSpace := spacetest.NewSpace("jane-subs",
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithSpecParentSpace("jane"),
+				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
+				spacetest.WithStatusTargetCluster(member1.Name),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{
+					{
+						Name: "jane-env1",
+						Type: "default",
+					},
+					{
+						Name: "jane-env2",
+						Type: "dev",
+					},
+				}),
+				spacetest.WithTierName(sr.Spec.TierName))
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -119,8 +187,9 @@ func TestCreateSpaceRequest(t *testing.T) {
 			// spacerequest exists with expected cluster roles and finalizer
 			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
 				HasSpecTargetClusterRoles(srClusterRoles).
-				HasConditions(spacetest.Ready()).               // condition is reflected from space status
-				HasStatusTargetClusterURL(member1.APIEndpoint). // has new target cluster url
+				HasConditions(spacetest.Ready()).                                                                                                  // condition is reflected from space status
+				HasStatusTargetClusterURL(member1.APIEndpoint).                                                                                    // has new target cluster url
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "existingDevSecret"}, {Name: "jane-env2"}}). // expected secrets are there.
 				HasFinalizer()
 			// a subspace is created with the tierName and cluster roles from the spacerequest
 			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
@@ -135,7 +204,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-2", corev1.ConditionTrue) // space request and namespace are on member2
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			ctrl := newReconciler(hostClient, member1, member2)
+			ctrl := newReconciler(t, hostClient, member1, member2)
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
@@ -159,7 +228,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-1", corev1.ConditionTrue)
 			member2 := NewMemberClusterWithClient(test.NewFakeClient(t, spaceRequest, srNamespace), "member-2", corev1.ConditionTrue) // space request and namespace are on member2
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpaceWithTarget)
-			ctrl := newReconciler(hostClient, member1, member2)
+			ctrl := newReconciler(t, hostClient, member1, member2)
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(spaceRequest))
 
 			// then
@@ -175,6 +244,71 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasSpecTargetClusterRoles([]string(nil)). // has empty target cluster roles
 				HasSpecTargetCluster("member-2")          // subSpace has same target cluster as parentSpace
 		})
+
+		t.Run("space request has already an existing secret", func(t *testing.T) {
+			// given
+			kubeconfigSecret1 := test.CreateSecret("jane-xyz1", sr.Namespace, map[string][]byte{
+				"kubeconfig": []byte(fakeKubeConfigSecret()),
+			})
+			kubeconfigSecret1.StringData = map[string]string{
+				"kubeconfig": fakeKubeConfigSecret(),
+			}
+			kubeconfigSecret1.Labels = map[string]string{}
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestLabelKey] = sr.GetName()
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] = sr.GetNamespace()
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey] = "jane-env1"
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace, kubeconfigSecret1), "member-1", corev1.ConditionTrue)
+			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Namespace: "jane-env1",
+			},
+				types.NamespacedName{
+					Name:      toolchainv1alpha1.AdminServiceAccountName,
+					Namespace: "jane-env2",
+				},
+			)
+			// this space has multiple namespaces provisioned
+			subSpace := spacetest.NewSpace("jane-subs",
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithSpecParentSpace("jane"),
+				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
+				spacetest.WithStatusTargetCluster(member1.Name),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{
+					{
+						Name: "jane-env1",
+						Type: "default",
+					},
+					{
+						Name: "jane-env2",
+						Type: "dev",
+					},
+				}),
+				spacetest.WithTierName(sr.Spec.TierName))
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.NoError(t, err)
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasConditions(spacetest.Ready()).                                                                                          // condition is reflected from space status
+				HasStatusTargetClusterURL(member1.APIEndpoint).                                                                            // has new target cluster url
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "jane-xyz1"}, {Name: "jane-env2"}}). // first secret was already there while second one just newly created.
+				HasFinalizer()
+			// a subspace is created with the tierName and cluster roles from the spacerequest
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
+				HasSpecTargetClusterRoles(srClusterRoles).
+				HasConditions(spacetest.Ready()).
+				HasTier(sr.Spec.TierName).
+				HasParentSpace("jane") // the parent space is set as expected
+		})
 	})
 
 	t.Run("failure", func(t *testing.T) {
@@ -187,13 +321,13 @@ func TestCreateSpaceRequest(t *testing.T) {
 		t.Run("unable to find SpaceRequest", func(t *testing.T) {
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
-			// space request should not be there
+			// space request should not be there,
 			// but it should not return an error by design
 			require.NoError(t, err)
 		})
@@ -202,7 +336,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client.MockGet = mockGetSpaceRequestFail(member1Client)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -216,13 +350,13 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			hostClient.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+			hostClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.SpaceList); ok {
 					return fmt.Errorf("mock error")
 				}
 				return member1Client.List(ctx, list, opts...)
 			}
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -236,7 +370,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client.MockUpdate = mockUpdateSpaceRequestFail(member1Client)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -249,7 +383,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -267,7 +401,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -285,7 +419,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				spacetest.WithDeletionTimestamp(),                                                       // space is being deleted ...
 				spacetest.WithSpecParentSpace("jane"))
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -303,7 +437,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -322,7 +456,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -336,13 +470,13 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.NSTemplateTier); ok {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -356,13 +490,13 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			hostClient.MockCreate = func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+			hostClient.MockCreate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.CreateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Client.Create(ctx, obj, opts...)
 			}
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -378,7 +512,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -392,7 +526,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -414,7 +548,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace1, subSpace2, parentSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -423,18 +557,57 @@ func TestCreateSpaceRequest(t *testing.T) {
 			require.EqualError(t, err, "invalid number of subSpaces found. actual 2, expected 1")
 		})
 
+		t.Run("invalid number of secrets found", func(t *testing.T) {
+			// given
+			kubeconfigSecret1 := test.CreateSecret("jane-xyz1", sr.Namespace, map[string][]byte{
+				"kubeconfig": []byte("kubeconfig1"),
+			})
+			kubeconfigSecret1.Labels = map[string]string{}
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestLabelKey] = sr.GetName()
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] = sr.GetNamespace()
+			kubeconfigSecret1.Labels[toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey] = "jane-env"
+			kubeconfigSecret2 := test.CreateSecret("jane-xyz2", sr.Namespace, map[string][]byte{
+				"kubeconfig": []byte("kubeconfig2"),
+			})
+			kubeconfigSecret2.Labels = map[string]string{}
+			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestLabelKey] = sr.GetName()
+			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] = sr.GetNamespace()
+			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey] = "jane-env"
+			subSpace := spacetest.NewSpace("jane-subs",
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
+				spacetest.WithStatusTargetCluster("member-1"),
+				spacetest.WithSpecParentSpace("jane"),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
+					Name: "jane-env",
+					Type: "default",
+				}}),
+				spacetest.WithTierName(sr.Spec.TierName))
+			member1Client := test.NewFakeClient(t, sr, srNamespace, kubeconfigSecret1, kubeconfigSecret2)
+			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
+			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.EqualError(t, err, "invalid number of secrets found. actual 2, expected 1")
+		})
+
 		t.Run("unable to get parent space", func(t *testing.T) {
 			// given
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			hostClient.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			hostClient.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Client.Get(ctx, key, obj, opts...)
 			}
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -443,6 +616,29 @@ func TestCreateSpaceRequest(t *testing.T) {
 			require.EqualError(t, err, "unable to get parentSpace: mock error")
 		})
 	})
+}
+
+func fakeKubeConfigSecret() string {
+	return `apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: QVNEZjMzPT0=
+    server: https://api.member-cluster:6433
+  name: default-cluster
+contexts:
+- context:
+    cluster: default-cluster
+    namespace: jane-env
+    user: namespace-manager
+  name: default-context
+current-context: default-context
+kind: Config
+preferences: {}
+users:
+- name: namespace-manager
+  user:
+    token: token-secret-for-namespace-manager
+`
 }
 
 func TestUpdateSpaceRequest(t *testing.T) {
@@ -473,7 +669,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				spacetest.WithTierName("appstudio")) // subSpace doesn't have yet the new tier
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, newTier, parentSpace, subSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -511,7 +707,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				spacetest.WithTierName("appstudio"))
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -528,6 +724,50 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				HasSpecTargetClusterRoles(updatedSRClusterRoles). // now also subSpace has the updated cluster roles
 				HasTier("appstudio").
 				HasParentSpace("jane")
+		})
+		t.Run("update namespace access secret name", func(t *testing.T) {
+			// given
+			sr := spacerequesttest.NewSpaceRequest("jane",
+				srNamespace.GetName(),
+				spacerequesttest.WithTierName("appstudio"),
+				spacerequesttest.WithTargetClusterRoles(srClusterRoles),
+				spacerequesttest.WithStatusNamespaceAccess(toolchainv1alpha1.NamespaceAccess{
+					Name:      "jane-env",
+					SecretRef: "jane-qwerty", // secret doesn't exist and name of the secret will change when it will be created
+				}),
+				spacerequesttest.WithFinalizer())
+			subSpace := spacetest.NewSpace("jane-subs",
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
+				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, parentSpace.GetName()),
+				spacetest.WithSpecTargetCluster("member-1"),
+				spacetest.WithStatusTargetCluster("member-1"),
+				spacetest.WithCondition(spacetest.Ready()),
+				spacetest.WithSpecParentSpace("jane"),
+				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
+				spacetest.WithStatusProvisionedNamespaces([]toolchainv1alpha1.SpaceNamespace{{
+					Name: "jane-env",
+					Type: "default",
+				}}),
+				spacetest.WithTierName("appstudio"))
+			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
+			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
+				Name:      toolchainv1alpha1.AdminServiceAccountName,
+				Namespace: "jane-env",
+			})
+			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
+			ctrl := newReconciler(t, hostClient, member1)
+
+			// when
+			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
+
+			// then
+			require.NoError(t, err)
+			// spacerequest exists with expected cluster roles and finalizer
+			spacerequesttest.AssertThatSpaceRequest(t, srNamespace.Name, sr.GetName(), member1.Client).
+				HasSpecTierName("appstudio").
+				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env"}}).
+				HasFinalizer()
 		})
 	})
 
@@ -548,13 +788,13 @@ func TestUpdateSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace, subSpace)
-			hostClient.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			hostClient.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Update(ctx, obj, opts...)
 			}
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -581,7 +821,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				spacetest.WithTierName("appstudio"))
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -620,7 +860,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 				spacetest.WithTierName(sr.Spec.TierName))
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 			// when
 			_, err = ctrl.Reconcile(context.TODO(), requestFor(sr))
 
@@ -658,7 +898,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -685,7 +925,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace1, subSpace2, parentSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -701,7 +941,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
 				spacetest.WithSpecParentSpace("jane"))
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1Client.MockStatusUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			member1Client.MockStatusUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -709,7 +949,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -721,7 +961,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 		t.Run("failed to remove finalizer", func(t *testing.T) {
 			// given
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1Client.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			member1Client.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
 					return fmt.Errorf("mock error")
 				}
@@ -729,7 +969,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			}
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -743,13 +983,13 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier)
-			hostClient.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+			hostClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				if _, ok := list.(*toolchainv1alpha1.SpaceList); ok {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Client.List(ctx, list, opts...)
 			}
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -767,13 +1007,13 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, subSpace)
-			hostClient.MockDelete = func(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+			hostClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
 				}
 				return hostClient.Client.Delete(ctx, obj, opts...)
 			}
-			ctrl := newReconciler(hostClient, member1)
+			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
@@ -785,21 +1025,36 @@ func TestDeleteSpaceRequest(t *testing.T) {
 	})
 }
 
-func newReconciler(hostCl client.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *spacerequest.Reconciler {
+func newReconciler(t *testing.T, hostCl runtimeclient.Client, memberClusters ...*commoncluster.CachedToolchainCluster) *spacerequest.Reconciler {
+	s := scheme.Scheme
+	err := apis.AddToScheme(s)
+	require.NoError(t, err)
+
 	clusters := map[string]cluster.Cluster{}
 	for _, c := range memberClusters {
+		restClient, err := commontest.NewRESTClient("fake_secret", c.APIEndpoint)
+		restClient.Client.Transport = gock.DefaultTransport // make sure that the underlying client's request are intercepted by Gock
+		require.NoError(t, err)
 		clusters[c.Name] = cluster.Cluster{
 			Config: &commoncluster.Config{
 				Type:              commoncluster.Member,
 				APIEndpoint:       c.APIEndpoint,
 				OperatorNamespace: c.OperatorNamespace,
 				OwnerClusterName:  test.MemberClusterName,
+				RestConfig: &rest.Config{
+					Host: c.APIEndpoint,
+					TLSClientConfig: rest.TLSClientConfig{
+						CAData: []byte("ASDf33=="),
+					},
+				},
 			},
-			Client: c.Client,
+			RESTClient: restClient,
+			Client:     c.Client,
 		}
 	}
 	return &spacerequest.Reconciler{
 		Client:         hostCl,
+		Scheme:         s,
 		Namespace:      test.HostOperatorNs,
 		MemberClusters: clusters,
 	}
@@ -840,8 +1095,8 @@ func newNamespace(owner string) *corev1.Namespace {
 	return ns
 }
 
-func mockGetSpaceRequestFail(cl client.Client) func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	return func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+func mockGetSpaceRequestFail(cl runtimeclient.Client) func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
+	return func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 		if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
 			return fmt.Errorf("mock error")
 		}
@@ -849,8 +1104,8 @@ func mockGetSpaceRequestFail(cl client.Client) func(ctx context.Context, key cli
 	}
 }
 
-func mockUpdateSpaceRequestFail(cl client.Client) func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-	return func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+func mockUpdateSpaceRequestFail(cl runtimeclient.Client) func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
+	return func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 		if _, ok := obj.(*toolchainv1alpha1.SpaceRequest); ok {
 			return fmt.Errorf("mock error")
 		}
