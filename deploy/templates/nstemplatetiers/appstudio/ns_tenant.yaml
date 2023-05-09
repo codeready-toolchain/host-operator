@@ -275,19 +275,19 @@ objects:
   kind: ServiceAccount
   metadata:
     name: appstudio-pipeline
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     name: appstudio-pipelines-runner-rolebinding
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
     name: appstudio-pipelines-runner
   subjects:
     - kind: ServiceAccount
-      namespace: ${USERNAME}-tenant
+      namespace: ${SPACE_NAME}-tenant
       name: appstudio-pipeline
 parameters:
 - name: SPACE_NAME
