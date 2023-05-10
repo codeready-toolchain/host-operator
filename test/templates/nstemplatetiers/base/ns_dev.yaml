@@ -9,13 +9,13 @@ objects:
   kind: Namespace
   metadata:
     annotations:
-      openshift.io/description: ${USERNAME}-dev
-      openshift.io/display-name: ${USERNAME}-dev
-      openshift.io/requester: ${USERNAME}
+      openshift.io/description: ${SPACE_NAME}-dev
+      openshift.io/display-name: ${SPACE_NAME}-dev
+      openshift.io/requester: ${SPACE_NAME}
     labels:
       toolchain.dev.openshift.com/provider: codeready-toolchain
-      name: ${USERNAME}-dev
-    name: ${USERNAME}-dev
+      name: ${SPACE_NAME}-dev
+    name: ${SPACE_NAME}-dev
 parameters:
-- name: USERNAME
+- name: SPACE_NAME
   required: true

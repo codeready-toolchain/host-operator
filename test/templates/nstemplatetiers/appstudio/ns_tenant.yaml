@@ -7,16 +7,16 @@ objects:
   kind: Namespace
   metadata:
     annotations:
-      openshift.io/description: ${USERNAME}
-      openshift.io/display-name: ${USERNAME}
-      openshift.io/requester: ${USERNAME}
+      openshift.io/description: ${SPACE_NAME}
+      openshift.io/display-name: ${SPACE_NAME}
+      openshift.io/requester: ${SPACE_NAME}
     labels:
-      name: ${USERNAME}-tenant
-      toolchain.dev.openshift.com/workspace: ${USERNAME}
-    name: ${USERNAME}-tenant
+      name: ${SPACE_NAME}-tenant
+      toolchain.dev.openshift.com/workspace: ${SPACE_NAME}
+    name: ${SPACE_NAME}-tenant
 
 parameters:
-- name: USERNAME
+- name: SPACE_NAME
   required: true
 - name: MEMBER_OPERATOR_NAMESPACE
   value: toolchain-member-operator
