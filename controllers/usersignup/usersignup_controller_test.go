@@ -3904,6 +3904,11 @@ func TestMigrateMur(t *testing.T) {
 }
 
 func TestUpdateMetricsByState(t *testing.T) {
+	manuallyApprovedSignup := commonsignup.NewUserSignup(
+		commonsignup.ApprovedManually(),
+		commonsignup.WithTargetCluster("east"))
+
+	automaticallyApprovedSignup := commonsignup.NewUserSignup()
 
 	t.Run("common state changes", func(t *testing.T) {
 		t.Run("empty -> not-ready - increment UserSignupUniqueTotal", func(t *testing.T) {
@@ -3913,13 +3918,16 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState("", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
+			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
+			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupUniqueTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
+			AssertMetricsCounterEquals(t, 2, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
 
@@ -3930,12 +3938,15 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState(toolchainv1alpha1.UserSignupStateLabelValueNotReady, "pending")
+			r.updateUserSignupMetricsByState(manuallyApprovedSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady, "pending")
+			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, toolchainv1alpha1.UserSignupStateLabelValueNotReady, "pending")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
@@ -3947,12 +3958,15 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState("pending", "approved")
+			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "pending", "approved")
+			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "pending", "approved")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 2, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			AssertMetricsCounterEquals(t, 1, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
@@ -3964,12 +3978,15 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState("approved", "deactivated")
+			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "approved", "deactivated")
+			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "approved", "deactivated")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupDeactivatedTotal)
+			AssertMetricsCounterEquals(t, 2, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
@@ -3981,12 +3998,15 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState("pending", "deactivated")
+			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "pending", "deactivated")
+			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "pending", "deactivated")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
@@ -3998,12 +4018,15 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState("deactivated", "banned")
+			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "deactivated", "banned")
+			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "deactivated", "banned")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
-			AssertMetricsCounterEquals(t, 1, metrics.UserSignupBannedTotal)
+			AssertMetricsCounterEquals(t, 2, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
@@ -4017,12 +4040,15 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState("any-value", "")
+			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "any-value", "")
+			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "any-value", "")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
@@ -4034,12 +4060,15 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState("any-value", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
+			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "any-value", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
+			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "any-value", toolchainv1alpha1.UserSignupStateLabelValueNotReady)
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})
@@ -4051,12 +4080,15 @@ func TestUpdateMetricsByState(t *testing.T) {
 				SegmentClient: segment.NewClient(segmenttest.NewClient()),
 			}
 			// when
-			r.updateUserSignupMetricsByState("any-value", "x")
+			r.updateUserSignupMetricsByState(manuallyApprovedSignup, "any-value", "x")
+			r.updateUserSignupMetricsByState(automaticallyApprovedSignup, "any-value", "x")
 			// then
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupAutoDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupBannedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupDeactivatedTotal)
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedTotal)
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual"))
+			AssertMetricsCounterEquals(t, 0, metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic"))
 			AssertMetricsCounterEquals(t, 0, metrics.UserSignupUniqueTotal)
 			segmenttest.AssertNoMessageQueued(t, r.SegmentClient)
 		})

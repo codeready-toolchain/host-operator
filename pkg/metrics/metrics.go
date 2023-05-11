@@ -16,6 +16,9 @@ var (
 	// UserSignupApprovedTotal is incremented each time a user signup is approved, can be multiple times per user if they reactivate multiple times
 	UserSignupApprovedTotal prometheus.Counter
 
+	// UserSignupApprovedWithMethodTotal is incremented each time a user signup is approved and includes either 'automatic' or 'manual' labels, can be multiple times per user if they reactivate multiple times
+	UserSignupApprovedWithMethodTotal *prometheus.CounterVec
+
 	// UserSignupBannedTotal is incremented each time a user signup is banned
 	UserSignupBannedTotal prometheus.Counter
 
@@ -44,9 +47,10 @@ var (
 
 // collections
 var (
-	allCounters  = []prometheus.Counter{}
-	allGauges    = []prometheus.Gauge{}
-	allGaugeVecs = []*prometheus.GaugeVec{}
+	allCounters    = []prometheus.Counter{}
+	allCounterVecs = []*prometheus.CounterVec{}
+	allGauges      = []prometheus.Gauge{}
+	allGaugeVecs   = []*prometheus.GaugeVec{}
 )
 
 func init() {
@@ -60,6 +64,7 @@ func initMetrics() {
 	// Counters
 	UserSignupUniqueTotal = newCounter("user_signups_total", "Total number of unique UserSignups")
 	UserSignupApprovedTotal = newCounter("user_signups_approved_total", "Total number of approved UserSignups")
+	UserSignupApprovedWithMethodTotal = newCounterVec("user_signups_approved_with_method_total", "Total number of UserSignups approved, includes either 'automatic' or 'manual' labels for the approval method", "method")
 	UserSignupBannedTotal = newCounter("user_signups_banned_total", "Total number of banned UserSignups")
 	UserSignupDeactivatedTotal = newCounter("user_signups_deactivated_total", "Total number of deactivated UserSignups")
 	UserSignupAutoDeactivatedTotal = newCounter("user_signups_auto_deactivated_total", "Total number of automatically deactivated UserSignups")
@@ -87,6 +92,15 @@ func newCounter(name, help string) prometheus.Counter {
 	return c
 }
 
+func newCounterVec(name, help string, labels ...string) *prometheus.CounterVec {
+	c := prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: metricsPrefix + name,
+		Help: help,
+	}, labels)
+	allCounterVecs = append(allCounterVecs, c)
+	return c
+}
+
 func newGauge(name, help string) prometheus.Gauge {
 	g := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: metricsPrefix + name,
@@ -109,6 +123,9 @@ func newGaugeVec(name, help string, labels ...string) *prometheus.GaugeVec {
 func RegisterCustomMetrics() {
 	// register metrics
 	for _, c := range allCounters {
+		k8smetrics.Registry.MustRegister(c)
+	}
+	for _, c := range allCounterVecs {
 		k8smetrics.Registry.MustRegister(c)
 	}
 	for _, g := range allGauges {
