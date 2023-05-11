@@ -16,11 +16,12 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	"github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
+
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -134,7 +135,7 @@ func TestCreateSpace(t *testing.T) {
 				spacetest.WithTierName("advanced"))
 			r, req, _ := prepareReconcile(t, space, NewGetMemberClusters())
 			empty := test.NewFakeClient(t)
-			empty.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			empty.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				return fmt.Errorf("shouldn't be called")
 			}
 			r.Client = empty
@@ -151,7 +152,7 @@ func TestCreateSpace(t *testing.T) {
 			space := spacetest.NewSpace("get-fails",
 				spacetest.WithTierName("advanced"))
 			r, req, cl := prepareReconcile(t, space, NewGetMemberClusters())
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("some error")
 			}
 
@@ -171,7 +172,7 @@ func TestCreateSpace(t *testing.T) {
 			space := spacetest.NewSpace("oddity",
 				spacetest.WithTierName(""))
 			r, req, cl := prepareReconcile(t, space, NewGetMemberClusters())
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if key.Name == "config" {
 					return fmt.Errorf("some error")
 				}
@@ -193,7 +194,7 @@ func TestCreateSpace(t *testing.T) {
 			space := spacetest.NewSpace("oddity",
 				spacetest.WithTierName("advanced"))
 			r, req, cl := prepareReconcile(t, space, NewGetMemberClusters())
-			cl.MockGet = func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			cl.MockGet = func(ctx context.Context, key runtimeclient.ObjectKey, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				if key.Name == "config" {
 					return fmt.Errorf("some error")
 				}

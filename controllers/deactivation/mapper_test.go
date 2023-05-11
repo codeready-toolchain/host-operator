@@ -1,15 +1,14 @@
 package deactivation
 
 import (
-	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
-	"github.com/stretchr/testify/require"
+	commontest "github.com/codeready-toolchain/toolchain-common/pkg/test"
+	commonsignup "github.com/codeready-toolchain/toolchain-common/pkg/test/usersignup"
 
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -61,7 +60,7 @@ func TestUserSignupToMasterUserRecordMapper(t *testing.T) {
 		mur := &toolchainv1alpha1.MasterUserRecord{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              "echo",
-				Namespace:         test.HostOperatorNs,
+				Namespace:         commontest.HostOperatorNs,
 				CreationTimestamp: metav1.Now(),
 			},
 			Spec: toolchainv1alpha1.MasterUserRecordSpec{

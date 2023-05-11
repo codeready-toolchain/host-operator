@@ -7,21 +7,21 @@ objects:
   kind: Namespace
   metadata:
     annotations:
-      openshift.io/description: ${USERNAME}
-      openshift.io/display-name: ${USERNAME}
-      openshift.io/requester: ${USERNAME}
+      openshift.io/description: ${SPACE_NAME}
+      openshift.io/display-name: ${SPACE_NAME}
+      openshift.io/requester: ${SPACE_NAME}
     labels:
-      name: ${USERNAME}-tenant
-      toolchain.dev.openshift.com/workspace: ${USERNAME}
+      name: ${SPACE_NAME}-tenant
+      toolchain.dev.openshift.com/workspace: ${SPACE_NAME}
       argocd.argoproj.io/managed-by: gitops-service-argocd
-    name: ${USERNAME}-tenant
+    name: ${SPACE_NAME}-tenant
 
 # Built-n developer environment is available for all users OOTB
 - apiVersion: appstudio.redhat.com/v1alpha1
   kind: Environment
   metadata:
     name: development
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     deploymentStrategy: AppStudioAutomated
     displayName: Development
@@ -33,7 +33,7 @@ objects:
   kind: Role
   metadata:
     name: toolchain-sa-read
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   rules:
   - apiGroups:
     - ""
@@ -53,7 +53,7 @@ objects:
   kind: RoleBinding
   metadata:
     name: member-operator-sa-read
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: Role
@@ -69,7 +69,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: compute-deploy
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     scopes:
       - NotTerminating
@@ -82,7 +82,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: compute-build
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     scopes:
       - Terminating
@@ -95,7 +95,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: storage
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     hard:
       limits.ephemeral-storage: 50Gi
@@ -106,7 +106,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: appstudio-crds
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     hard:
       count/applications.appstudio.redhat.com: "512"
@@ -116,7 +116,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: appstudio-crds-build
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     hard:
       count/buildpipelineselectors.appstudio.redhat.com: "512"
@@ -124,7 +124,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: appstudio-crds-gitops
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     hard:
       count/environments.appstudio.redhat.com: "512"
@@ -136,7 +136,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: appstudio-crds-integration
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     hard:
       count/integrationtestscenarios.appstudio.redhat.com: "512"
@@ -146,7 +146,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: appstudio-crds-release
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     hard:
       count/releaseplanadmissions.appstudio.redhat.com: "512"
@@ -158,7 +158,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: appstudio-crds-enterprisecontract
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     hard:
       count/enterprisecontractpolicies.appstudio.redhat.com: "512"
@@ -166,7 +166,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: appstudio-crds-spi
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     hard:
       count/spiaccesschecks.appstudio.redhat.com: "512"
@@ -178,7 +178,7 @@ objects:
   kind: LimitRange
   metadata:
     name: resource-limits
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     limits:
     - type: "Container"
@@ -193,7 +193,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-same-namespace
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     podSelector: {}
     ingress:
@@ -203,7 +203,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-ingress
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     ingress:
     - from:
@@ -217,7 +217,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-monitoring
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     ingress:
     - from:
@@ -231,7 +231,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-codeready-workspaces-operator
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     ingress:
     - from:
@@ -245,7 +245,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-olm-namespaces
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     ingress:
     - from:
@@ -259,7 +259,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-console-namespaces
-    namespace: ${USERNAME}-tenant
+    namespace: ${SPACE_NAME}-tenant
   spec:
     ingress:
     - from:
@@ -269,8 +269,28 @@ objects:
     podSelector: {}
     policyTypes:
     - Ingress
+# ServiceAccount and RoleBindings for running Pipelines.
+# appstudio-pipelines-runner-clusterrole is deployed by the pipeline-service component.
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: appstudio-pipeline
+    namespace: ${SPACE_NAME}-tenant
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: appstudio-pipelines-runner-rolebinding
+    namespace: ${SPACE_NAME}-tenant
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: appstudio-pipelines-runner
+  subjects:
+    - kind: ServiceAccount
+      namespace: ${SPACE_NAME}-tenant
+      name: appstudio-pipeline
 parameters:
-- name: USERNAME
+- name: SPACE_NAME
   required: true
 - name: MEMBER_OPERATOR_NAMESPACE
   value: toolchain-member-operator

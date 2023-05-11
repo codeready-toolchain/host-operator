@@ -13,6 +13,7 @@ import (
 
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
+	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -26,7 +27,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/status"
-	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
 
 	"github.com/stretchr/testify/assert"
@@ -37,7 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -138,7 +138,7 @@ func TestNoToolchainStatusFound(t *testing.T) {
 		// given
 		requestName := toolchainconfig.ToolchainStatusName
 		reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"})
-		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+		fakeClient.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 			if _, ok := obj.(*toolchainv1alpha1.ToolchainStatus); ok {
 				return fmt.Errorf("get failed")
 			}
@@ -679,7 +679,7 @@ func TestToolchainStatusConditions(t *testing.T) {
 			memberStatus := newMemberStatus(ready())
 			reconciler, req, fakeClient := prepareReconcile(t, requestName, newResponseGood(), []string{"member-1", "member-2"},
 				hostOperatorDeployment, memberStatus, registrationServiceDeployment, emptyToolchainStatus, proxyRoute())
-			fakeClient.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+			fakeClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 				return fmt.Errorf("some error")
 			}
 
@@ -1122,7 +1122,7 @@ func overrideLastTransitionTime(t *testing.T, toolchainStatus *toolchainv1alpha1
 
 func assertToolchainStatusNotificationCreated(t *testing.T, fakeClient *test.FakeClient) *toolchainv1alpha1.Notification {
 	notifications := &toolchainv1alpha1.NotificationList{}
-	err := fakeClient.List(context.Background(), notifications, &client.ListOptions{
+	err := fakeClient.List(context.Background(), notifications, &runtimeclient.ListOptions{
 		Namespace: test.HostOperatorNs,
 	})
 	require.NoError(t, err)
@@ -1132,7 +1132,7 @@ func assertToolchainStatusNotificationCreated(t *testing.T, fakeClient *test.Fak
 
 func assertToolchainStatusNotificationNotCreated(t *testing.T, fakeClient *test.FakeClient, notificationType string) {
 	notifications := &toolchainv1alpha1.NotificationList{}
-	err := fakeClient.List(context.Background(), notifications, &client.ListOptions{
+	err := fakeClient.List(context.Background(), notifications, &runtimeclient.ListOptions{
 		Namespace: test.HostOperatorNs,
 	})
 	require.NoError(t, err)
@@ -1472,7 +1472,7 @@ func newDeploymentWithConditions(deploymentName string, deploymentConditions ...
 	}
 }
 
-func cachedToolchainCluster(cl client.Client, name string, status corev1.ConditionStatus, lastProbeTime metav1.Time) *cluster.CachedToolchainCluster {
+func cachedToolchainCluster(cl runtimeclient.Client, name string, status corev1.ConditionStatus, lastProbeTime metav1.Time) *cluster.CachedToolchainCluster {
 	return &cluster.CachedToolchainCluster{
 		Config: &cluster.Config{
 			Name:              name,

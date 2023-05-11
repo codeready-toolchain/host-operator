@@ -6,24 +6,23 @@ import (
 	"reflect"
 	"time"
 
+	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
-	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
-
-	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/pkg/templates/notificationtemplates"
 	"github.com/codeready-toolchain/toolchain-common/pkg/condition"
-	errs "github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/types"
+	notify "github.com/codeready-toolchain/toolchain-common/pkg/notification"
 
 	"github.com/go-logr/logr"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	errs "github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/apimachinery/pkg/types"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Synchronizer struct {
-	hostClient        client.Client
+	hostClient        runtimeclient.Client
 	memberCluster     cluster.Cluster
 	memberUserAcc     *toolchainv1alpha1.UserAccount
 	recordSpecUserAcc toolchainv1alpha1.UserAccountEmbedded
@@ -183,7 +182,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 	// set ProvisionedTime if it is not already set, this information will be used for things like the start time for automatic user deactivation.
 	// the MUR status can change from provisioned to something else and back to provisioned but the time should only be set the first time.
 	if s.record.Status.ProvisionedTime == nil {
-		s.record.Status.ProvisionedTime = &v1.Time{Time: time.Now()}
+		s.record.Status.ProvisionedTime = &metav1.Time{Time: time.Now()}
 	}
 
 	if condition.IsNotTrue(s.record.Status.Conditions, toolchainv1alpha1.MasterUserRecordUserProvisionedNotificationCreated) {
@@ -191,7 +190,7 @@ func (s *Synchronizer) alignReadiness() (bool, error) {
 			toolchainv1alpha1.NotificationUserNameLabelKey: s.record.Name,
 			toolchainv1alpha1.NotificationTypeLabelKey:     toolchainv1alpha1.NotificationTypeProvisioned,
 		}
-		opts := client.MatchingLabels(labels)
+		opts := runtimeclient.MatchingLabels(labels)
 		notificationList := &toolchainv1alpha1.NotificationList{}
 		if err := s.hostClient.List(context.TODO(), notificationList, opts); err != nil {
 			return false, err

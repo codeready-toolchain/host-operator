@@ -7,30 +7,30 @@ objects:
   kind: Namespace
   metadata:
     annotations:
-      openshift.io/description: ${USERNAME}
-      openshift.io/display-name: ${USERNAME}
-      openshift.io/requester: ${USERNAME}
+      openshift.io/description: ${SPACE_NAME}
+      openshift.io/display-name: ${SPACE_NAME}
+      openshift.io/requester: ${SPACE_NAME}
     labels:
-      name: ${USERNAME}-env
-      toolchain.dev.openshift.com/workspace: ${USERNAME}
+      name: ${SPACE_NAME}-env
+      toolchain.dev.openshift.com/workspace: ${SPACE_NAME}
       argocd.argoproj.io/managed-by: gitops-service-argocd
-    # The ${USERNAME} here is actually the space (aka workspace) name that is going to be provisioned as environment sub-space (aka sub-workspace).
+    # The ${SPACE_NAME} here is actually the space (aka workspace) name that is going to be provisioned as environment sub-space (aka sub-workspace).
     # It's a legacy parameter that needs to be renamed
     # related story https://issues.redhat.com/browse/CRT-1766
-    name: ${USERNAME}-env
+    name: ${SPACE_NAME}-env
 
 # ServiceAccount to be used by the deployer (eg. ArgoCD) to manage the content of the namespace
 - apiVersion: v1
   kind: ServiceAccount
   metadata:
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
     name: namespace-manager
 
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     name: namespace-manager
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
   roleRef:
     apiGroup: rbac.authorization.k8s.io
     kind: ClusterRole
@@ -44,7 +44,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: compute-deploy
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
   spec:
     scopes:
       - NotTerminating
@@ -59,7 +59,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: compute-build
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
   spec:
     scopes:
       - Terminating
@@ -71,7 +71,7 @@ objects:
   kind: ResourceQuota
   metadata:
     name: storage
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
   spec:
     hard:
       limits.ephemeral-storage: 50Gi
@@ -82,7 +82,7 @@ objects:
   kind: LimitRange
   metadata:
     name: resource-limits
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
   spec:
     limits:
     - type: "Container"
@@ -97,7 +97,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-same-namespace
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
   spec:
     podSelector: {}
     ingress:
@@ -107,7 +107,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-ingress
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
   spec:
     ingress:
     - from:
@@ -121,7 +121,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-openshift-monitoring
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
   spec:
     ingress:
     - from:
@@ -135,7 +135,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-codeready-workspaces-operator
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
   spec:
     ingress:
     - from:
@@ -149,7 +149,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-olm-namespaces
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
   spec:
     ingress:
     - from:
@@ -163,7 +163,7 @@ objects:
   kind: NetworkPolicy
   metadata:
     name: allow-from-console-namespaces
-    namespace: ${USERNAME}-env
+    namespace: ${SPACE_NAME}-env
   spec:
     ingress:
     - from:
@@ -174,10 +174,7 @@ objects:
     policyTypes:
     - Ingress
 parameters:
-# The ${USERNAME} here is actually the space (aka workspace) name that is going to be provisioned as environment sub-space (aka sub-workspace).
-# It's a legacy parameter that needs to be renamed
-# related story https://issues.redhat.com/browse/CRT-1766
-- name: USERNAME
+- name: SPACE_NAME
   required: true
 - name: MEMORY_LIMIT
   value: "32Gi"

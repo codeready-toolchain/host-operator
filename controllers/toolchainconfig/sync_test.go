@@ -11,13 +11,13 @@ import (
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	testconfig "github.com/codeready-toolchain/toolchain-common/pkg/test/config"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestSyncMemberConfigs(t *testing.T) {
@@ -50,7 +50,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
 				ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-				NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", v1.ConditionTrue)),
+				NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithTenantRole(t, "member2", corev1.ConditionTrue)),
 			)
 
 			// when
@@ -66,7 +66,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 		t.Run("sync to a member failed", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("client error")
 			}
 			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
@@ -74,7 +74,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
 				ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-				NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", v1.ConditionTrue), NewMemberClusterWithClient(memberCl, "member2", v1.ConditionTrue)),
+				NewGetMemberClusters(NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue), NewMemberClusterWithClient(memberCl, "member2", corev1.ConditionTrue)),
 			)
 
 			// when
@@ -88,11 +88,11 @@ func TestSyncMemberConfigs(t *testing.T) {
 		t.Run("sync to multiple members failed", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("client error")
 			}
 			memberCl2 := test.NewFakeClient(t)
-			memberCl2.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+			memberCl2.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("client2 error")
 			}
 			toolchainConfig := commonconfig.NewToolchainConfigObjWithReset(t,
@@ -100,7 +100,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
 				ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-				NewGetMemberClusters(NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue), NewMemberClusterWithClient(memberCl2, "member2", v1.ConditionTrue)),
+				NewGetMemberClusters(NewMemberClusterWithClient(memberCl, "member1", corev1.ConditionTrue), NewMemberClusterWithClient(memberCl2, "member2", corev1.ConditionTrue)),
 			)
 
 			// when
@@ -120,7 +120,7 @@ func TestSyncMemberConfigs(t *testing.T) {
 				testconfig.Members().SpecificPerMemberCluster("member2", specificMemberConfig.Spec))
 			s := toolchainconfig.NewSynchronizer(
 				ctrl.Log.WithName("controllers").WithName("ToolchainConfig"),
-				NewGetMemberClusters(NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)),
+				NewGetMemberClusters(NewMemberClusterWithClient(memberCl, "member1", corev1.ConditionTrue)),
 			)
 
 			// when
@@ -139,7 +139,7 @@ func TestSyncMemberConfig(t *testing.T) {
 		t.Run("memberoperatorconfig created", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
+			memberCluster := NewMemberClusterWithClient(memberCl, "member1", corev1.ConditionTrue)
 			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
@@ -157,7 +157,7 @@ func TestSyncMemberConfig(t *testing.T) {
 			// given
 			originalConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("10s"))
 			memberCl := test.NewFakeClient(t, originalConfig)
-			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
+			memberCluster := NewMemberClusterWithClient(memberCl, "member1", corev1.ConditionTrue)
 			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
@@ -176,10 +176,10 @@ func TestSyncMemberConfig(t *testing.T) {
 		t.Run("client get error", func(t *testing.T) {
 			// given
 			memberCl := test.NewFakeClient(t)
-			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+			memberCl.MockGet = func(ctx context.Context, key types.NamespacedName, obj runtimeclient.Object, opts ...runtimeclient.GetOption) error {
 				return fmt.Errorf("client error")
 			}
-			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
+			memberCluster := NewMemberClusterWithClient(memberCl, "member1", corev1.ConditionTrue)
 			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when
@@ -196,10 +196,10 @@ func TestSyncMemberConfig(t *testing.T) {
 			// given
 			originalConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("10s"))
 			memberCl := test.NewFakeClient(t, originalConfig)
-			memberCl.MockUpdate = func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+			memberCl.MockUpdate = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.UpdateOption) error {
 				return fmt.Errorf("client update error")
 			}
-			memberCluster := NewMemberClusterWithClient(memberCl, "member1", v1.ConditionTrue)
+			memberCluster := NewMemberClusterWithClient(memberCl, "member1", corev1.ConditionTrue)
 			memberConfig := testconfig.NewMemberOperatorConfigObj(testconfig.MemberStatus().RefreshPeriod("5s"))
 
 			// when

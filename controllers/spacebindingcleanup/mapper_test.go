@@ -10,10 +10,11 @@ import (
 	sb "github.com/codeready-toolchain/host-operator/test/spacebinding"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test"
 	"github.com/codeready-toolchain/toolchain-common/pkg/test/masteruserrecord"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -80,7 +81,7 @@ func TestMapToSpaceBindingByBoundObject(t *testing.T) {
 	t.Run("should not return any SpaceBinding requests when list fails", func(t *testing.T) {
 		// given
 		cl := test.NewFakeClient(t, sbLaraCompAdmin, sbJoeCompView, sbLaraOtherEdit)
-		cl.MockList = func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+		cl.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
 			return fmt.Errorf("some error")
 		}
 
