@@ -13,6 +13,7 @@ objects:
     labels:
       name: ${SPACE_NAME}-tenant
       toolchain.dev.openshift.com/workspace: ${SPACE_NAME}
+      appstudio.redhat.com/workspace_name: ${SPACE_NAME}
     name: ${SPACE_NAME}-tenant
 
 parameters:
