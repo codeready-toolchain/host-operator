@@ -3,6 +3,8 @@ package usersignup
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	toolchainv1alpha1 "github.com/codeready-toolchain/api/api/v1alpha1"
 	"github.com/codeready-toolchain/host-operator/controllers/toolchainconfig"
 	"github.com/codeready-toolchain/host-operator/pkg/capacity"
@@ -20,7 +22,6 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/pkg/states"
 	"github.com/codeready-toolchain/toolchain-common/pkg/usersignup"
 	"github.com/redhat-cop/operator-utils/pkg/util"
-	"strconv"
 
 	"github.com/go-logr/logr"
 	errs "github.com/pkg/errors"
@@ -370,7 +371,13 @@ func (r *Reconciler) checkIfMurAlreadyExists(reqLogger logr.Logger, config toolc
 func (r *Reconciler) ensureNewMurIfApproved(reqLogger logr.Logger, config toolchainconfig.ToolchainConfig, userSignup *toolchainv1alpha1.UserSignup) error {
 	// Check if the user requires phone verification, and do not proceed further if they do
 	if states.VerificationRequired(userSignup) {
-		return r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
+		alreadyVerificationRequired := condition.IsFalseWithReason(userSignup.Status.Conditions, toolchainv1alpha1.UserSignupComplete, toolchainv1alpha1.UserSignupVerificationRequiredReason)
+		err := r.updateStatus(reqLogger, userSignup, r.setStatusVerificationRequired)
+		if err == nil && !alreadyVerificationRequired {
+			// increment the verification required counter only the first time the UserSignup status is set to verification required
+			metrics.UserSignupVerificationRequiredTotal.Inc()
+		}
+		return err
 	}
 
 	approved, targetCluster, err := getClusterIfApproved(r.Client, userSignup, r.ClusterManager)
