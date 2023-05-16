@@ -485,20 +485,25 @@ func (r *Reconciler) setStateLabel(logger logr.Logger, userSignup *toolchainv1al
 		return r.wrapErrorWithStatusUpdate(logger, userSignup, r.setStatusFailedToUpdateStateLabel, err,
 			"unable to update state label at UserSignup resource")
 	}
-	r.updateUserSignupMetricsByState(oldState, state)
+	r.updateUserSignupMetricsByState(userSignup, oldState, state)
 	// increment the counter *only if the client update did not fail*
 	domain := metrics.GetEmailDomain(userSignup)
 	counter.UpdateUsersPerActivationCounters(logger, activations, domain) // will ignore if `activations == 0`
 	return nil
 }
 
-func (r *Reconciler) updateUserSignupMetricsByState(oldState string, newState string) {
+func (r *Reconciler) updateUserSignupMetricsByState(userSignup *toolchainv1alpha1.UserSignup, oldState string, newState string) {
 	if oldState == "" {
 		metrics.UserSignupUniqueTotal.Inc()
 	}
 	switch newState {
 	case toolchainv1alpha1.UserSignupStateLabelValueApproved:
 		metrics.UserSignupApprovedTotal.Inc()
+		if states.ApprovedManually(userSignup) {
+			metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("manual").Inc()
+		} else {
+			metrics.UserSignupApprovedWithMethodTotal.WithLabelValues("automatic").Inc()
+		}
 	case toolchainv1alpha1.UserSignupStateLabelValueDeactivated:
 		if oldState == toolchainv1alpha1.UserSignupStateLabelValueApproved {
 			metrics.UserSignupDeactivatedTotal.Inc()
