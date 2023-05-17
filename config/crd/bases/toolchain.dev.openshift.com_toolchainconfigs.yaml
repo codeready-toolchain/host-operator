@@ -180,7 +180,7 @@ spec:
                         description: Keeps parameters necessary for the registration
                           service analytics config
                         properties:
-                          devSpacesAnalytics:
+                          devSpaces:
                             description: DevSpaceAnalytics contains the configuration
                               parameters for DevSpaces
                             properties:

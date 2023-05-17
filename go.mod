@@ -108,3 +108,5 @@ require (
 )
 
 go 1.19
+
+replace github.com/codeready-toolchain/api v0.0.0-20230502074949-f8c1d80bac96 => github.com/ranakan19/api v0.0.0-20230517150152-a329a2d90f1a
