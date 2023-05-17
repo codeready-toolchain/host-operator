@@ -181,8 +181,8 @@ spec:
                           service analytics config
                         properties:
                           devSpaces:
-                            description: DevSpaceAnalytics contains the configuration
-                              parameters for DevSpaces
+                            description: DevSpaces contains the analytics configuration
+                              parameters for devspaces
                             properties:
                               segmentWriteKey:
                                 description: SegmentWriteKey specifies the segment
