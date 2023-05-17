@@ -332,16 +332,13 @@ func TestUserSignupVerificationRequiredMetric(t *testing.T) {
 	// set verification required to true in spec only, status will be added during reconcile
 	states.SetVerificationRequired(userSignup, true)
 	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
-	AssertMetricsCounterEquals(t, 0, metrics.UserSignupVerificationRequiredTotal)
+	AssertMetricsCounterEquals(t, 0, metrics.UserSignupVerificationRequiredTotal) // nothing yet since not reconciled yet
 
 	// when
 	_, err := r.Reconcile(context.TODO(), req)
 
 	// then
 	require.NoError(t, err)
-
-	// Verify the metric
-	AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal)
 
 	// assert that usersignup status has verification required condition
 	updatedUserSignup := &toolchainv1alpha1.UserSignup{}
@@ -358,8 +355,10 @@ func TestUserSignupVerificationRequiredMetric(t *testing.T) {
 		Reason: toolchainv1alpha1.UserSignupVerificationRequiredReason,
 	})
 
-	// metrics counter still equals 1 after second reconcile
-	t.Run("second reconcile", func(t *testing.T) {
+	// Verify the metric
+	AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal) // should be 1 since verification required status was set
+
+	t.Run("second reconcile - metrics counter still equals 1", func(t *testing.T) {
 		// when
 		_, err := r.Reconcile(context.TODO(), req)
 
@@ -367,7 +366,7 @@ func TestUserSignupVerificationRequiredMetric(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify the metric
-		AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal)
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal) // should still be 1 since verification required status was already set
 	})
 }
 
