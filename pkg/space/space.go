@@ -37,9 +37,9 @@ func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *tool
 
 	space := &toolchainv1alpha1.Space{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    parentSpace.GetNamespace(),
-			GenerateName: parentSpace.GetName() + "-",
-			Labels:       labels,
+			Namespace: parentSpace.GetNamespace(),
+			Name:      SubSpaceName(spaceRequest, parentSpace),
+			Labels:    labels,
 		},
 		Spec: toolchainv1alpha1.SpaceSpec{
 			TargetClusterRoles: spaceRequest.Spec.TargetClusterRoles,
@@ -55,4 +55,8 @@ func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *tool
 	}
 
 	return space
+}
+
+func SubSpaceName(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) string {
+	return parentSpace.GetName() + "-" + spaceRequest.GetName()
 }
