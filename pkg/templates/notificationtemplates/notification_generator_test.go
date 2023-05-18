@@ -91,7 +91,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
-			assert.Equal(t, "Notice: Your account will be deactivated soon", template.Subject)
+			assert.Equal(t, "Notice: Your RHTAP account will be deactivated soon", template.Subject)
 			assert.Contains(t, template.Content, "The Red Hat Trusted Application Pipeline team")
 			assert.NotContains(t, template.Content, "Sandbox")
 			assert.Equal(t, UserDeactivatingTemplateName, template.Name)
@@ -103,7 +103,7 @@ func TestGetNotificationTemplate(t *testing.T) {
 			// then
 			require.NoError(t, err)
 			require.NotNil(t, template)
-			assert.Equal(t, "Notice: Your account is deactivated", template.Subject)
+			assert.Equal(t, "Notice: Your RHTAP account is deactivated", template.Subject)
 			assert.Contains(t, template.Content, "The Red Hat Trusted Application Pipeline team")
 			assert.NotContains(t, template.Content, "Sandbox")
 			assert.Equal(t, UserDeactivatedTemplateName, template.Name)
