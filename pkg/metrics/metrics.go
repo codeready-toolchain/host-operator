@@ -33,6 +33,9 @@ var (
 
 	// UserSignupDeletedWithoutInitiatingVerificationTotal is incremented each time a user signup is deleted due to verification time trial expired, and verification was NOT initiated
 	UserSignupDeletedWithoutInitiatingVerificationTotal prometheus.Counter
+
+	// UserSignupVerificationRequiredTotal is incremented only the first time a user signup requires verification, can be multiple times per user if they reactivate multiple times
+	UserSignupVerificationRequiredTotal prometheus.Counter
 )
 
 // gauge with labels
@@ -70,6 +73,7 @@ func initMetrics() {
 	UserSignupAutoDeactivatedTotal = newCounter("user_signups_auto_deactivated_total", "Total number of automatically deactivated UserSignups")
 	UserSignupDeletedWithInitiatingVerificationTotal = newCounter("user_signups_deleted_with_initiating_verification_total", "Total number of UserSignups deleted after verification time trial and with verification initiated")
 	UserSignupDeletedWithoutInitiatingVerificationTotal = newCounter("user_signups_deleted_without_initiating_verification_total", "Total number of deleted UserSignups after verification time trial but without verification initiated")
+	UserSignupVerificationRequiredTotal = newCounter("user_signups_verification_required_total", "Total number of UserSignups that require verification, does not count verification attempts")
 	// Gauges with labels
 	SpaceGaugeVec = newGaugeVec("spaces_current", "Current number of Spaces (per member cluster)", "cluster_name")
 	UserSignupsPerActivationAndDomainGaugeVec = newGaugeVec("users_per_activations_and_domain", "Number of UserSignups per activations and domain", []string{"activations", "domain"}...)
