@@ -57,6 +57,7 @@ func NewSubSpace(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *tool
 	return space
 }
 
+// SubSpaceName generates a name for a subSpace based on the spacerequest and parentSpace names.
 func SubSpaceName(spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) string {
 	return parentSpace.GetName() + "-" + spaceRequest.GetName()
 }

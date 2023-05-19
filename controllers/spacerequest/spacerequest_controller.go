@@ -225,7 +225,7 @@ func (r *Reconciler) createNewSubSpace(logger logr.Logger, spaceRequest *toolcha
 		return subSpace, errs.Wrap(err, "unable to create subSpace")
 	}
 
-	logger.Info("created subSpace", "name", subSpace.Name, "target_cluster_roles", spaceRequest.Spec.TargetClusterRoles, "tierName", spaceRequest.Spec.TierName, "targetCluster", subSpace.Spec.TargetCluster)
+	logger.Info("created subSpace", "subSpace.Name", subSpace.Name, "spaceRequest.Spec.TargetClusterRoles", spaceRequest.Spec.TargetClusterRoles, "spaceRequest.Spec.TierName", spaceRequest.Spec.TierName, "subSpace.Spec.TargetCluster", subSpace.Spec.TargetCluster)
 	return subSpace, nil
 }
 
@@ -287,7 +287,7 @@ func (r *Reconciler) updateSubSpace(logger logr.Logger, subSpace *toolchainv1alp
 		return false, errs.Wrap(err, "unable to update tiername and targetclusterroles")
 	}
 
-	logger.Info("subSpace updated", "name", subSpace.Name, "target_cluster_roles", subSpace.Spec.TargetClusterRoles, "tierName", subSpace.Spec.TierName)
+	logger.Info("subSpace updated", "subSpace.name", subSpace.Name, "subSpace.Spec.TargetClusterRoles", subSpace.Spec.TargetClusterRoles, "subSpace.Spec.TierName", subSpace.Spec.TierName)
 	return true, nil
 }
 
@@ -358,6 +358,7 @@ func (r *Reconciler) deleteSubSpace(logger logr.Logger, spaceRequest *toolchainv
 	}, subSpace); err != nil {
 		if errors.IsNotFound(err) {
 			// no spaces found, already deleted
+			logger.Info("subSpace was already deleted", "subSpace.name", subSpace.Name)
 			return false, nil
 		}
 		// failed to get subSpace
