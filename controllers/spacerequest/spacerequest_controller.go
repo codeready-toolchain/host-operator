@@ -109,26 +109,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	// find parent space from namespace labels
-	parentSpace, err := r.getParentSpace(memberClusterWithSpaceRequest, spaceRequest)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	// parentSpace is being deleted
-	if util.IsBeingDeleted(parentSpace) {
-		return ctrl.Result{}, errs.New("parentSpace is being deleted")
-	}
-
 	if util.IsBeingDeleted(spaceRequest) {
 		logger.Info("spaceRequest is being deleted")
-		return reconcile.Result{}, r.ensureSpaceDeletion(logger, memberClusterWithSpaceRequest, spaceRequest, parentSpace)
+		return reconcile.Result{}, r.ensureSpaceDeletion(logger, memberClusterWithSpaceRequest, spaceRequest)
 	}
 	// Add the finalizer if it is not present
 	if err := r.addFinalizer(logger, memberClusterWithSpaceRequest, spaceRequest); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	subSpace, createdOrUpdated, err := r.ensureSpace(logger, memberClusterWithSpaceRequest, spaceRequest, parentSpace)
+	subSpace, createdOrUpdated, err := r.ensureSpace(logger, memberClusterWithSpaceRequest, spaceRequest)
 	// if there was an error or if subSpace was just created or updated,
 	// let's just return.
 	if err != nil || createdOrUpdated {
@@ -183,8 +173,18 @@ func (r *Reconciler) addFinalizer(logger logr.Logger, memberCluster cluster.Clus
 	return nil
 }
 
-func (r *Reconciler) ensureSpace(logger logr.Logger, memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) (*toolchainv1alpha1.Space, bool, error) {
+func (r *Reconciler) ensureSpace(logger logr.Logger, memberCluster cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) (*toolchainv1alpha1.Space, bool, error) {
 	logger.Info("ensuring subSpace")
+
+	// find parent space from namespace labels
+	parentSpace, err := r.getParentSpace(memberCluster, spaceRequest)
+	if err != nil {
+		return nil, false, err
+	}
+	// parentSpace is being deleted
+	if util.IsBeingDeleted(parentSpace) {
+		return nil, false, errs.New("parentSpace is being deleted")
+	}
 
 	// validate tierName
 	if err := r.validateNSTemplateTier(spaceRequest.Spec.TierName); err != nil {
@@ -195,7 +195,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, memberCluster cluster.Clust
 	subSpace := &toolchainv1alpha1.Space{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: r.Namespace,
-		Name:      spaceutil.SubSpaceName(spaceRequest, parentSpace),
+		Name:      spaceutil.SubSpaceName(parentSpace),
 	}, subSpace); err != nil {
 		if errors.IsNotFound(err) {
 			// no spaces found, let's create it
@@ -321,14 +321,18 @@ func (r *Reconciler) getParentSpace(memberCluster cluster.Cluster, spaceRequest 
 	return parentSpace, nil // all good
 }
 
-func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, memberClusterWithSpaceRequest cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) error {
+func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, memberClusterWithSpaceRequest cluster.Cluster, spaceRequest *toolchainv1alpha1.SpaceRequest) error {
 	logger.Info("ensure subSpace deletion")
 	if !util.HasFinalizer(spaceRequest, toolchainv1alpha1.FinalizerName) {
 		// finalizer was already removed, nothing to delete anymore...
 		return nil
 	}
-
-	if isBeingDeleted, err := r.deleteSubSpace(logger, spaceRequest, parentSpace); err != nil {
+	// find parent space from namespace labels
+	parentSpace, err := r.getParentSpace(memberClusterWithSpaceRequest, spaceRequest)
+	if err != nil {
+		return err
+	}
+	if isBeingDeleted, err := r.deleteSubSpace(logger, parentSpace); err != nil {
 		return r.setStatusTerminatingFailed(logger, memberClusterWithSpaceRequest, spaceRequest, err)
 	} else if isBeingDeleted {
 		if err := r.setStatusTerminating(memberClusterWithSpaceRequest, spaceRequest); err != nil {
@@ -350,11 +354,11 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, memberClusterWithSp
 // returns true/nil if the deletion of the subSpace was triggered
 // returns false/nil if the subSpace was already deleted
 // return false/err if something went wrong
-func (r *Reconciler) deleteSubSpace(logger logr.Logger, spaceRequest *toolchainv1alpha1.SpaceRequest, parentSpace *toolchainv1alpha1.Space) (bool, error) {
+func (r *Reconciler) deleteSubSpace(logger logr.Logger, parentSpace *toolchainv1alpha1.Space) (bool, error) {
 	subSpace := &toolchainv1alpha1.Space{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: r.Namespace,
-		Name:      spaceutil.SubSpaceName(spaceRequest, parentSpace),
+		Name:      spaceutil.SubSpaceName(parentSpace),
 	}, subSpace); err != nil {
 		if errors.IsNotFound(err) {
 			// no spaces found, already deleted
