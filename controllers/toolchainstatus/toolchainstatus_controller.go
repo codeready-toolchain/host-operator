@@ -12,6 +12,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/google/go-github/v52/github"
 	routev1 "github.com/openshift/api/route/v1"
 	"k8s.io/client-go/rest"
 
@@ -48,6 +49,11 @@ const (
 	memberStatusName = "toolchain-member-status"
 
 	registrationServiceHealthURL = "http://registration-service/api/v1/health"
+
+	hostOperatorRepoName              = "host-operator"
+	registrationServiceRepoName       = "registration-service"
+	hostOperatorRepoBranchName        = "master"
+	registrationServiceRepoBranchName = hostOperatorRepoBranchName
 )
 
 // error messages
@@ -113,11 +119,13 @@ type HTTPClient interface {
 
 // Reconciler reconciles a ToolchainStatus object
 type Reconciler struct {
-	Client         runtimeclient.Client
-	Scheme         *runtime.Scheme
-	GetMembersFunc cluster.GetMemberClustersFunc
-	HTTPClientImpl HTTPClient
-	Namespace      string
+	Client          runtimeclient.Client
+	Scheme          *runtime.Scheme
+	GetMembersFunc  cluster.GetMemberClustersFunc
+	HTTPClientImpl  HTTPClient
+	Namespace       string
+	GithubClient    *github.Client
+	toolchainConfig toolchainconfig.ToolchainConfig
 }
 
 //+kubebuilder:rbac:groups=toolchain.dev.openshift.com,resources=toolchainstatuses,verbs=get;list;watch;create;update;patch;delete
@@ -129,11 +137,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	reqLogger := log.FromContext(ctx)
 	reqLogger.Info("Reconciling ToolchainStatus")
 
-	config, err := toolchainconfig.GetToolchainConfig(r.Client)
+	toolchainConfig, err := toolchainconfig.GetToolchainConfig(r.Client)
+	r.toolchainConfig = toolchainConfig
 	if err != nil {
 		return reconcile.Result{}, errs.Wrapf(err, "unable to get ToolchainConfig")
 	}
-	requeueTime := config.ToolchainStatus().ToolchainStatusRefreshTime()
+	requeueTime := toolchainConfig.ToolchainStatus().ToolchainStatusRefreshTime()
 
 	// fetch the ToolchainStatus
 	toolchainStatus := &toolchainv1alpha1.ToolchainStatus{}
@@ -278,11 +287,11 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 		BuildTimestamp: version.BuildTime,
 	}
 	// look up name of the host operator deployment
-	hostOperatorName, err := commonconfig.GetOperatorName()
-	if err != nil {
-		reqLogger.Error(err, status.ErrMsgCannotGetDeployment)
+	hostOperatorName, errDeploy := commonconfig.GetOperatorName()
+	if errDeploy != nil {
+		reqLogger.Error(errDeploy, status.ErrMsgCannotGetDeployment)
 		errCondition := status.NewComponentErrorCondition(toolchainv1alpha1.ToolchainStatusDeploymentNotFoundReason,
-			fmt.Sprintf("%s: %s", status.ErrMsgCannotGetDeployment, err.Error()))
+			fmt.Sprintf("%s: %s", status.ErrMsgCannotGetDeployment, errDeploy.Error()))
 		operatorStatus.Conditions = []toolchainv1alpha1.Condition{*errCondition}
 		toolchainStatus.Status.HostOperator = operatorStatus
 		return false
@@ -292,14 +301,28 @@ func (r *Reconciler) hostOperatorHandleStatus(reqLogger logr.Logger, toolchainSt
 
 	// check host operator deployment status
 	deploymentConditions := status.GetDeploymentStatusConditions(r.Client, hostOperatorDeploymentName, toolchainStatus.Namespace)
-	err = status.ValidateComponentConditionReady(deploymentConditions...)
-	if err != nil {
-		reqLogger.Error(err, "host operator deployment is not ready")
+	errDeploy = status.ValidateComponentConditionReady(deploymentConditions...)
+	if errDeploy != nil {
+		reqLogger.Error(errDeploy, "host operator deployment is not ready")
 	}
-	// update toolchainStatus
 	operatorStatus.Conditions = deploymentConditions
+	// update toolchainStatus
 	toolchainStatus.Status.HostOperator = operatorStatus
-	return err == nil
+
+	// if we are running in production we also
+	// check that deployed version matches source code repository commit
+	var errVersionCheck error
+	if r.toolchainConfig.Environment() == "prod" {
+		versionCondition := status.CheckDeployedVersionIsUpToDate(r.GithubClient, hostOperatorRepoName, hostOperatorRepoBranchName, version.Commit)
+		errVersionCheck = status.ValidateComponentConditionReady([]toolchainv1alpha1.Condition{*versionCondition}...)
+		toolchainStatus.Status.HostOperator.Conditions = append(toolchainStatus.Status.HostOperator.Conditions, *versionCondition)
+		if errVersionCheck != nil {
+			reqLogger.Error(errVersionCheck, "host operator deployment is not up to date")
+			return false // we can return
+		}
+	}
+
+	return errDeploy == nil && errVersionCheck == nil
 }
 
 // registrationServiceHandleStatus retrieves the Deployment for the registration service and adds its status to ToolchainStatus. It returns false
@@ -309,6 +332,8 @@ func (r *Reconciler) registrationServiceHandleStatus(reqLogger logr.Logger, tool
 	s := regServiceSubstatusHandler{
 		controllerClient: r.Client,
 		httpClientImpl:   r.HTTPClientImpl,
+		githubClient:     r.GithubClient,
+		toolchainConfig:  r.toolchainConfig,
 	}
 
 	// gather the functions for handling registration service status eg. deployment, health endpoint
@@ -752,6 +777,8 @@ func customMemberStatus(conditions ...toolchainv1alpha1.Condition) toolchainv1al
 type regServiceSubstatusHandler struct {
 	httpClientImpl   HTTPClient
 	controllerClient runtimeclient.Client
+	githubClient     *github.Client
+	toolchainConfig  toolchainconfig.ToolchainConfig
 }
 
 // addRegistrationServiceDeploymentStatus handles the RegistrationService.Deployment part of the toolchainstatus
@@ -828,6 +855,19 @@ func (s regServiceSubstatusHandler) addRegistrationServiceHealthStatus(reqLogger
 
 	componentReadyCondition := status.NewComponentReadyCondition(toolchainv1alpha1.ToolchainStatusRegServiceReadyReason)
 	toolchainStatus.Status.RegistrationService.Health.Conditions = []toolchainv1alpha1.Condition{*componentReadyCondition}
+
+	// if we are running in production we also
+	// check that deployed version matches source code repository commit
+	if s.toolchainConfig.Environment() == "prod" {
+		versionCondition := status.CheckDeployedVersionIsUpToDate(s.githubClient, registrationServiceRepoName, registrationServiceRepoBranchName, healthStatus.Revision)
+		err = status.ValidateComponentConditionReady([]toolchainv1alpha1.Condition{*versionCondition}...)
+		toolchainStatus.Status.RegistrationService.Health.Conditions = append(toolchainStatus.Status.RegistrationService.Health.Conditions, *versionCondition)
+		if err != nil {
+			reqLogger.Error(err, "registration service deployment is not up to date")
+			return false
+		}
+	}
+
 	return true
 }
 

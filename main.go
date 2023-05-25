@@ -34,6 +34,7 @@ import (
 	"github.com/codeready-toolchain/toolchain-common/controllers/toolchaincluster"
 	commoncluster "github.com/codeready-toolchain/toolchain-common/pkg/cluster"
 	commonconfig "github.com/codeready-toolchain/toolchain-common/pkg/configuration"
+	"github.com/google/go-github/v52/github"
 	authv1 "k8s.io/api/authentication/v1"
 	"k8s.io/client-go/rest"
 
@@ -261,6 +262,7 @@ func main() { // nolint:gocyclo
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
 		HTTPClientImpl: &http.Client{},
+		GithubClient:   github.NewClient(nil),
 		GetMembersFunc: commoncluster.GetMemberClusters,
 		Namespace:      namespace,
 	}).SetupWithManager(mgr); err != nil {
