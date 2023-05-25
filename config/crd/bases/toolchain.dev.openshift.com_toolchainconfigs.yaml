@@ -516,6 +516,10 @@ spec:
                             description: Defines the console route name
                             type: string
                         type: object
+                      environment:
+                        description: Environment specifies the member-operator environment
+                          such as prod, stage, unit-tests, e2e-tests, dev, etc
+                        type: string
                       memberStatus:
                         description: Keeps parameters concerned with member status
                         properties:
@@ -640,6 +644,10 @@ spec:
                               description: Defines the console route name
                               type: string
                           type: object
+                        environment:
+                          description: Environment specifies the member-operator environment
+                            such as prod, stage, unit-tests, e2e-tests, dev, etc
+                          type: string
                         memberStatus:
                           description: Keeps parameters concerned with member status
                           properties:
