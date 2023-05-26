@@ -321,6 +321,55 @@ func TestDeletingUserSignupShouldNotUpdateMetrics(t *testing.T) {
 
 }
 
+func TestUserSignupVerificationRequiredMetric(t *testing.T) {
+	// given
+	member := NewMemberClusterWithTenantRole(t, "member1", corev1.ConditionTrue)
+	defer counter.Reset()
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	userSignup := commonsignup.NewUserSignup(
+		commonsignup.ApprovedManually(),
+	)
+	// set verification required to true in spec only, status will be added during reconcile
+	states.SetVerificationRequired(userSignup, true)
+	r, req, _ := prepareReconcile(t, userSignup.Name, NewGetMemberClusters(member), userSignup, baseNSTemplateTier)
+	AssertMetricsCounterEquals(t, 0, metrics.UserSignupVerificationRequiredTotal) // nothing yet since not reconciled yet
+
+	// when
+	_, err := r.Reconcile(context.TODO(), req)
+
+	// then
+	require.NoError(t, err)
+
+	// assert that usersignup status has verification required condition
+	updatedUserSignup := &toolchainv1alpha1.UserSignup{}
+	err = r.Client.Get(context.TODO(), types.NamespacedName{
+		Namespace: test.HostOperatorNs,
+		Name:      userSignup.Name,
+	}, updatedUserSignup)
+	require.NoError(t, err)
+
+	// verify that the status has the verification required condition
+	test.AssertContainsCondition(t, updatedUserSignup.Status.Conditions, toolchainv1alpha1.Condition{
+		Type:   toolchainv1alpha1.UserSignupComplete,
+		Status: corev1.ConditionFalse,
+		Reason: toolchainv1alpha1.UserSignupVerificationRequiredReason,
+	})
+
+	// Verify the metric
+	AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal) // should be 1 since verification required status was set
+
+	t.Run("second reconcile - metrics counter still equals 1", func(t *testing.T) {
+		// when
+		_, err := r.Reconcile(context.TODO(), req)
+
+		// then
+		require.NoError(t, err)
+
+		// Verify the metric
+		AssertMetricsCounterEquals(t, 1, metrics.UserSignupVerificationRequiredTotal) // should still be 1 since verification required status was already set
+	})
+}
+
 func TestUserSignupWithAutoApprovalWithoutTargetCluster(t *testing.T) {
 	// given
 	userSignup := commonsignup.NewUserSignup()

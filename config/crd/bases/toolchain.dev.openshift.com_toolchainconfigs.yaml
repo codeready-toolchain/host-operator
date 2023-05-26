@@ -180,13 +180,27 @@ spec:
                         description: Keeps parameters necessary for the registration
                           service analytics config
                         properties:
+                          devSpaces:
+                            description: DevSpaces contains the analytics configuration
+                              parameters for devspaces
+                            properties:
+                              segmentWriteKey:
+                                description: SegmentWriteKey specifies the segment
+                                  write key
+                                type: string
+                              woopraDomain:
+                                description: WoopraDomain specifies the woopra domain
+                                  name
+                                type: string
+                            type: object
                           segmentWriteKey:
                             description: SegmentWriteKey specifies the segment write
-                              key
+                              key for sandbox
                             type: string
                           woopraDomain:
                             description: WoopraDomain specifies the woopra domain
-                              name
+                              name TODO remove once config updated to have woopra
+                              in devspaces
                             type: string
                         type: object
                       auth:
