@@ -9,6 +9,7 @@ import (
 	"github.com/codeready-toolchain/host-operator/controllers/spacerequest"
 	"github.com/codeready-toolchain/host-operator/pkg/apis"
 	"github.com/codeready-toolchain/host-operator/pkg/cluster"
+	spaceutil "github.com/codeready-toolchain/host-operator/pkg/space"
 	. "github.com/codeready-toolchain/host-operator/test"
 	tiertest "github.com/codeready-toolchain/host-operator/test/nstemplatetier"
 	spacetest "github.com/codeready-toolchain/host-operator/test/space"
@@ -44,7 +45,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			spacerequesttest.WithTierName("appstudio"),
 			spacerequesttest.WithTargetClusterRoles(srClusterRoles))
 
-		t.Run("space doesn't exists it should be created", func(t *testing.T) {
+		t.Run("subSpace doesn't exists it should be created", func(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
@@ -61,13 +62,13 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasSpecTierName("appstudio").
 				HasConditions(spacetest.Provisioning()).
 				HasFinalizer()
-			// there should be 1 space that was created from the spacerequest
+			// there should be 1 subSpace that was created from the spacerequest
 			spacetest.AssertThatSubSpace(t, hostClient, sr, parentSpace).
 				HasTier("appstudio").
 				HasSpecTargetClusterRoles(srClusterRoles)
 		})
 
-		t.Run("space exists but is not ready yet", func(t *testing.T) {
+		t.Run("subSpace exists but is not ready yet", func(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			subSpace := spacetest.NewSpace("jane-subs",
@@ -100,14 +101,14 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasParentSpace("jane") // the parent space is set as expected
 		})
 
-		t.Run("space is provisioned", func(t *testing.T) {
+		t.Run("subSpace is provisioned", func(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
 			commontest.SetupGockForServiceAccounts(t, member1.APIEndpoint, types.NamespacedName{
 				Name:      toolchainv1alpha1.AdminServiceAccountName,
 				Namespace: "jane-env",
 			})
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
@@ -136,14 +137,14 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env"}}). // has access details for the provisioned namespace
 				HasFinalizer()
 			// a subspace is created with the tierName and cluster roles from the spacerequest
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr), hostClient).
 				HasSpecTargetClusterRoles(srClusterRoles).
 				HasConditions(spacetest.Ready()).
 				HasTier(sr.Spec.TierName).
 				HasParentSpace("jane") // the parent space is set as expected
 		})
 
-		t.Run("space has multiple provisioned namespaces", func(t *testing.T) {
+		t.Run("subSpace has multiple provisioned namespaces", func(t *testing.T) {
 			// given
 			// the default namespace has already an access secret provisioned
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
@@ -157,7 +158,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				},
 			)
 			// this space has multiple namespaces provisioned
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
@@ -192,7 +193,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "existingDevSecret"}, {Name: "jane-env2"}}). // expected secrets are there.
 				HasFinalizer()
 			// a subspace is created with the tierName and cluster roles from the spacerequest
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr), hostClient).
 				HasSpecTargetClusterRoles(srClusterRoles).
 				HasConditions(spacetest.Ready()).
 				HasTier(sr.Spec.TierName).
@@ -245,7 +246,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasSpecTargetCluster("member-2")          // subSpace has same target cluster as parentSpace
 		})
 
-		t.Run("space request has already an existing secret", func(t *testing.T) {
+		t.Run("spacerequest has already an existing secret", func(t *testing.T) {
 			// given
 			kubeconfigSecret1 := test.CreateSecret("jane-xyz1", sr.Namespace, map[string][]byte{
 				"kubeconfig": []byte(fakeKubeConfigSecret()),
@@ -268,7 +269,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				},
 			)
 			// this space has multiple namespaces provisioned
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, "jane"),
@@ -303,7 +304,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				HasNamespaceAccess([]toolchainv1alpha1.NamespaceAccess{{Name: "jane-env1", SecretRef: "jane-xyz1"}, {Name: "jane-env2"}}). // first secret was already there while second one just newly created.
 				HasFinalizer()
 			// a subspace is created with the tierName and cluster roles from the spacerequest
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr), hostClient).
 				HasSpecTargetClusterRoles(srClusterRoles).
 				HasConditions(spacetest.Ready()).
 				HasTier(sr.Spec.TierName).
@@ -346,30 +347,11 @@ func TestCreateSpaceRequest(t *testing.T) {
 			require.EqualError(t, err, "unable to get the current SpaceRequest: mock error")
 		})
 
-		t.Run("unable to list subSpaces", func(t *testing.T) {
-			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
-			hostClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
-				if _, ok := list.(*toolchainv1alpha1.SpaceList); ok {
-					return fmt.Errorf("mock error")
-				}
-				return member1Client.List(ctx, list, opts...)
-			}
-			ctrl := newReconciler(t, hostClient, member1)
-
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
-
-			// then
-			require.EqualError(t, err, "attempt to list Spaces associated with spaceRequest jane in namespace jane-tenant failed: mock error")
-		})
-
 		t.Run("error while adding finalizer", func(t *testing.T) {
-			member1Client := test.NewFakeClient(t, sr)
+			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1Client.MockUpdate = mockUpdateSpaceRequestFail(member1Client)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, appstudioTier)
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
 			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
@@ -413,7 +395,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 		t.Run("unable to update space since it's being deleted", func(t *testing.T) {
 			// given
 			member1 := NewMemberClusterWithClient(test.NewFakeClient(t, sr, srNamespace), "member-1", corev1.ConditionTrue)
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithDeletionTimestamp(),                                                       // space is being deleted ...
@@ -455,7 +437,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles))
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, appstudioTier)
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
 			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
@@ -485,7 +467,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			require.EqualError(t, err, "unable to get the current NSTemplateTier: mock error")
 		})
 
-		t.Run("error creating space", func(t *testing.T) {
+		t.Run("error creating subSpace", func(t *testing.T) {
 			// given
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
@@ -502,7 +484,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
 
 			// then
-			require.EqualError(t, err, "unable to create space: mock error")
+			require.EqualError(t, err, "unable to create subSpace: mock error")
 		})
 		t.Run("parent space is being deleted", func(t *testing.T) {
 			// given
@@ -535,28 +517,6 @@ func TestCreateSpaceRequest(t *testing.T) {
 			require.EqualError(t, err, "unable to get parentSpace: spaces.toolchain.dev.openshift.com \"jane\" not found")
 		})
 
-		t.Run("invalid number of subSpaces found", func(t *testing.T) {
-			// given
-			subSpace1 := spacetest.NewSpace("jane-subs",
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
-				spacetest.WithSpecParentSpace("jane"))
-			subSpace2 := spacetest.NewSpace("jane-subs2",
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
-				spacetest.WithSpecParentSpace("jane"))
-			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, appstudioTier, subSpace1, subSpace2, parentSpace)
-			ctrl := newReconciler(t, hostClient, member1)
-
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
-
-			// then
-			require.EqualError(t, err, "invalid number of subSpaces found. actual 2, expected 1")
-		})
-
 		t.Run("invalid number of secrets found", func(t *testing.T) {
 			// given
 			kubeconfigSecret1 := test.CreateSecret("jane-xyz1", sr.Namespace, map[string][]byte{
@@ -573,7 +533,7 @@ func TestCreateSpaceRequest(t *testing.T) {
 			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestLabelKey] = sr.GetName()
 			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestNamespaceLabelKey] = sr.GetNamespace()
 			kubeconfigSecret2.Labels[toolchainv1alpha1.SpaceRequestProvisionedNamespaceLabelKey] = "jane-env"
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithSpecTargetClusterRoles(srClusterRoles),
@@ -659,7 +619,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				spacerequesttest.WithTierName(newTier.Name), // space request uses new tier
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles),
 				spacerequesttest.WithFinalizer())
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, parentSpace.GetName()),
@@ -682,7 +642,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				HasSpecTierName(newTier.Name). // space request still has the new tier
 				HasFinalizer()
 			// the subspace is updated with tierName and cluster roles from the spacerequests
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr), hostClient).
 				HasSpecTargetClusterRoles(srClusterRoles).
 				HasTier(newTier.Name). // now also the subSpace reflects same tier
 				HasParentSpace("jane")
@@ -696,7 +656,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				spacerequesttest.WithTierName("appstudio"),
 				spacerequesttest.WithTargetClusterRoles(updatedSRClusterRoles), // add a new cluster role label to check if it's reflected on the subSpace
 				spacerequesttest.WithFinalizer())
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, parentSpace.GetName()),
@@ -720,7 +680,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				HasSpecTierName("appstudio").
 				HasFinalizer()
 			// the subspace is updated with the tierName and new cluster roles from the spacerequest
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr), hostClient).
 				HasSpecTargetClusterRoles(updatedSRClusterRoles). // now also subSpace has the updated cluster roles
 				HasTier("appstudio").
 				HasParentSpace("jane")
@@ -736,7 +696,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 					SecretRef: "jane-qwerty", // secret doesn't exist and name of the secret will change when it will be created
 				}),
 				spacerequesttest.WithFinalizer())
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.ParentSpaceLabelKey, parentSpace.GetName()),
@@ -778,7 +738,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				srNamespace.GetName(),
 				spacerequesttest.WithTierName("appstudio"),
 				spacerequesttest.WithFinalizer())
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
 				spacetest.WithSpecTargetCluster("member-1"),
@@ -811,7 +771,7 @@ func TestUpdateSpaceRequest(t *testing.T) {
 				spacerequesttest.WithTargetClusterRoles(srClusterRoles),
 				spacerequesttest.WithStatusTargetClusterURL(""), // target cluster URL is empty
 				spacerequesttest.WithFinalizer())
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithStatusTargetCluster("invalid"),                                            // let's force an invalid name in the subSpace
@@ -850,7 +810,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		t.Run("spaceRequest should be in terminating while subSpace is deleted", func(t *testing.T) {
 			// given
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),               // subSpace was created from spaceRequest
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()), // subSpace was created from spaceRequest
 				spacetest.WithSpecTargetCluster("member-1"),
@@ -872,7 +832,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 				HasConditions(spacetest.Terminating()).
 				HasFinalizer() // finalizer is still there until subSpace is gone
 			// subSpace is deleted
-			spacetest.AssertThatSpace(t, test.HostOperatorNs, "jane-subs", hostClient).
+			spacetest.AssertThatSpace(t, test.HostOperatorNs, spaceutil.SubSpaceName(parentSpace, sr), hostClient).
 				DoesNotExist() // subSpace is gone
 
 			t.Run("spaceRequest is deleted when subSpace is gone", func(t *testing.T) {
@@ -897,7 +857,7 @@ func TestDeleteSpaceRequest(t *testing.T) {
 				spacerequesttest.WithDeletionTimestamp()) // spaceRequest was deleted
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, appstudioTier)
+			hostClient := test.NewFakeClient(t, appstudioTier, parentSpace)
 			ctrl := newReconciler(t, hostClient, member1)
 
 			// when
@@ -912,31 +872,9 @@ func TestDeleteSpaceRequest(t *testing.T) {
 	})
 
 	t.Run("failure", func(t *testing.T) {
-		t.Run("unexpected number of subSpaces", func(t *testing.T) {
-			// given
-			subSpace1 := spacetest.NewSpace("jane-subs",
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
-				spacetest.WithSpecParentSpace("jane"))
-			subSpace2 := spacetest.NewSpace("jane-subs2",
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
-				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
-				spacetest.WithSpecParentSpace("jane"))
-			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, appstudioTier, subSpace1, subSpace2, parentSpace)
-			ctrl := newReconciler(t, hostClient, member1)
-
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
-
-			// then
-			require.EqualError(t, err, "invalid number of subSpaces found. actual 2, expected 1")
-		})
-
 		t.Run("unable to set status terminating", func(t *testing.T) {
 			// given
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
 				spacetest.WithSpecParentSpace("jane"))
@@ -978,35 +916,15 @@ func TestDeleteSpaceRequest(t *testing.T) {
 			require.EqualError(t, err, "failed to remove finalizer: mock error")
 		})
 
-		t.Run("unable to list subSpaces", func(t *testing.T) {
-			// given
-			member1Client := test.NewFakeClient(t, sr, srNamespace)
-			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, appstudioTier)
-			hostClient.MockList = func(ctx context.Context, list runtimeclient.ObjectList, opts ...runtimeclient.ListOption) error {
-				if _, ok := list.(*toolchainv1alpha1.SpaceList); ok {
-					return fmt.Errorf("mock error")
-				}
-				return hostClient.Client.List(ctx, list, opts...)
-			}
-			ctrl := newReconciler(t, hostClient, member1)
-
-			// when
-			_, err := ctrl.Reconcile(context.TODO(), requestFor(sr))
-
-			// then
-			require.EqualError(t, err, "attempt to list Spaces associated with spaceRequest jane in namespace jane-tenant failed: mock error")
-		})
-
 		t.Run("unable to delete subSpace", func(t *testing.T) {
 			// given
-			subSpace := spacetest.NewSpace("jane-subs",
+			subSpace := spacetest.NewSpace(spaceutil.SubSpaceName(parentSpace, sr),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestLabelKey, sr.GetName()),
 				spacetest.WithLabel(toolchainv1alpha1.SpaceRequestNamespaceLabelKey, sr.GetNamespace()),
 				spacetest.WithSpecParentSpace("jane"))
 			member1Client := test.NewFakeClient(t, sr, srNamespace)
 			member1 := NewMemberClusterWithClient(member1Client, "member-1", corev1.ConditionTrue)
-			hostClient := test.NewFakeClient(t, appstudioTier, subSpace)
+			hostClient := test.NewFakeClient(t, appstudioTier, subSpace, parentSpace)
 			hostClient.MockDelete = func(ctx context.Context, obj runtimeclient.Object, opts ...runtimeclient.DeleteOption) error {
 				if _, ok := obj.(*toolchainv1alpha1.Space); ok {
 					return fmt.Errorf("mock error")
