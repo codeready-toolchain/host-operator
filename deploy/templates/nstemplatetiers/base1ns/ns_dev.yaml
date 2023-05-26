@@ -204,6 +204,6 @@ parameters:
 - name: MEMORY_REQUEST
   value: "14Gi"
 - name: MEMORY_BUILD_LIMIT
-  value: "10Gi"
+  value: "14Gi"
 - name: MEMORY_BUILD_REQUEST
-  value: "10Gi"
+  value: "14Gi"
