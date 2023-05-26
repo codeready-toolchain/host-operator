@@ -43,7 +43,7 @@ func TestNewSubSpace(t *testing.T) {
 	subSpace := NewSubSpace(sr, parentSpace)
 
 	// then
-	expectedSubSpace := spacetest.NewSpace(SubSpaceName(parentSpace),
+	expectedSubSpace := spacetest.NewSpace(SubSpaceName(parentSpace, sr),
 		spacetest.WithSpecParentSpace(parentSpace.GetName()),
 		spacetest.WithTierName("appstudio"),
 		spacetest.WithSpecTargetClusterRoles([]string{cluster.RoleLabel(cluster.Tenant)}),

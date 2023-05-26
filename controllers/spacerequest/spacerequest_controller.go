@@ -195,7 +195,7 @@ func (r *Reconciler) ensureSpace(logger logr.Logger, memberCluster cluster.Clust
 	subSpace := &toolchainv1alpha1.Space{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: r.Namespace,
-		Name:      spaceutil.SubSpaceName(parentSpace),
+		Name:      spaceutil.SubSpaceName(parentSpace, spaceRequest),
 	}, subSpace); err != nil {
 		if errors.IsNotFound(err) {
 			// no spaces found, let's create it
@@ -332,7 +332,7 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, memberClusterWithSp
 	if err != nil {
 		return err
 	}
-	if isBeingDeleted, err := r.deleteSubSpace(logger, parentSpace); err != nil {
+	if isBeingDeleted, err := r.deleteSubSpace(logger, parentSpace, spaceRequest); err != nil {
 		return r.setStatusTerminatingFailed(logger, memberClusterWithSpaceRequest, spaceRequest, err)
 	} else if isBeingDeleted {
 		if err := r.setStatusTerminating(memberClusterWithSpaceRequest, spaceRequest); err != nil {
@@ -354,11 +354,11 @@ func (r *Reconciler) ensureSpaceDeletion(logger logr.Logger, memberClusterWithSp
 // returns true/nil if the deletion of the subSpace was triggered
 // returns false/nil if the subSpace was already deleted
 // return false/err if something went wrong
-func (r *Reconciler) deleteSubSpace(logger logr.Logger, parentSpace *toolchainv1alpha1.Space) (bool, error) {
+func (r *Reconciler) deleteSubSpace(logger logr.Logger, parentSpace *toolchainv1alpha1.Space, spaceRequest *toolchainv1alpha1.SpaceRequest) (bool, error) {
 	subSpace := &toolchainv1alpha1.Space{}
 	if err := r.Client.Get(context.TODO(), types.NamespacedName{
 		Namespace: r.Namespace,
-		Name:      spaceutil.SubSpaceName(parentSpace),
+		Name:      spaceutil.SubSpaceName(parentSpace, spaceRequest),
 	}, subSpace); err != nil {
 		if errors.IsNotFound(err) {
 			// no spaces found, already deleted
