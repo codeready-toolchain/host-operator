@@ -115,6 +115,6 @@ require (
 
 go 1.19
 
-replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230525182712-2ebe769b59d7
+replace github.com/codeready-toolchain/toolchain-common => github.com/mfrancisc/toolchain-common v0.0.0-20230529173140-a83bdc6c0b40
 
-replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230522130332-8a6a3150589c
+replace github.com/codeready-toolchain/api => github.com/mfrancisc/api v0.0.0-20230526093749-f4f301177237
