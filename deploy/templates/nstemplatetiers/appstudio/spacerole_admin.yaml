@@ -107,7 +107,7 @@ objects:
     resources:
     - serviceaccounts 
     resourceNames:
-    - pipeline  
+    - appstudio-pipeline  
     verbs:
     - get
     - list

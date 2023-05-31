@@ -188,19 +188,10 @@ spec:
                                 description: SegmentWriteKey specifies the segment
                                   write key
                                 type: string
-                              woopraDomain:
-                                description: WoopraDomain specifies the woopra domain
-                                  name
-                                type: string
                             type: object
                           segmentWriteKey:
                             description: SegmentWriteKey specifies the segment write
                               key for sandbox
-                            type: string
-                          woopraDomain:
-                            description: WoopraDomain specifies the woopra domain
-                              name TODO remove once config updated to have woopra
-                              in devspaces
                             type: string
                         type: object
                       auth:
