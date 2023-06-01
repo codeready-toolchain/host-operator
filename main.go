@@ -193,7 +193,7 @@ func main() { // nolint:gocyclo
 	}
 
 	// initialize pendo client
-	pendoClient, err := pendo.DefaultClient(crtConfig.RegistrationService().Analytics().SegmentWriteKey())
+	pendoClient, err := pendo.DefaultClient(crtConfig.RegistrationService().Analytics().PendoTrackEventKey())
 	if err != nil {
 		setupLog.Error(err, "unable to init the pendo client")
 		os.Exit(1)

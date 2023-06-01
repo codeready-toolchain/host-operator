@@ -263,6 +263,10 @@ func (r AnalyticsConfig) SegmentWriteKey() string {
 	return commonconfig.GetString(r.c.SegmentWriteKey, "")
 }
 
+func (r AnalyticsConfig) PendoTrackEventKey() string {
+	return commonconfig.GetString(r.c.PendoTrackEventKey, "")
+}
+
 func (r RegistrationServiceConfig) RegistrationServiceURL() string {
 	return commonconfig.GetString(r.c.RegistrationServiceURL, "https://registration.crt-placeholder.com")
 }
